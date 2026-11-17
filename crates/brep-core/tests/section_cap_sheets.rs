@@ -1718,3 +1718,38 @@ fn bounds_the_sum_of_irrational_areas_at_the_requested_width() {
     }
     assert!(lower <= check_lower && upper >= check_upper);
 }
+
+#[test]
+fn counts_shared_polyhedral_edges_once_and_returns_exact_rational_lengths() {
+    use brep_core::{
+        analysis::bounded_polyhedral_edge_length, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let lengths = bounded_polyhedral_edge_length(solid, 1e-9, 1_000_000).unwrap();
+    assert_eq!(lengths.edge_count, 24);
+    assert_eq!(
+        lengths.bounds_mm,
+        [56, 56].map(|n| Q::from_integer(n.into()))
+    );
+    assert!(bounded_polyhedral_edge_length(solid, 1e-9, lengths.exact_work).is_ok());
+    assert!(bounded_polyhedral_edge_length(solid, 1e-9, lengths.exact_work - 1).is_err());
+}
+
+#[test]
+fn bounds_irrational_oblique_edge_lengths() {
+    use brep_core::{
+        analysis::bounded_polyhedral_edge_length, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let source = open_prism_with_nonbinary_cap_support();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let report = bounded_polyhedral_edge_length(&result.section.solid, 1e-9, 1_000_000).unwrap();
+    let expected = Q::from_float(8. + 4. * (8_f64.sqrt() + 6_f64.sqrt())).unwrap();
+    let [lower, upper] = report.bounds_mm;
+    assert_eq!(report.edge_count, 12);
+    assert!(lower < expected && expected < upper);
+    assert!(upper - lower <= Q::from_float(1e-9).unwrap());
+}

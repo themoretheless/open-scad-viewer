@@ -212,26 +212,109 @@ pub fn bounded_polyhedral_area(
     max_width_mm2: f64,
     max_exact_work: u64,
 ) -> Result<BoundedPolyhedralArea> {
-    let tolerance = Q::from_float(max_width_mm2)
+    let tolerance = enclosure_width(max_width_mm2)?;
+    let report = exact_polyhedral_area(solid, max_exact_work)?;
+    let mut remaining = max_exact_work - report.exact_work;
+    let bounds_mm2 = bound_root_sum(report.face_area_squared_mm4, tolerance, &mut remaining)?;
+    Ok(BoundedPolyhedralArea {
+        bounds_mm2,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+#[derive(Clone, Debug)]
+pub struct BoundedPolyhedralEdgeLength {
+    /// Lower and upper bounds for the length of the unique material edges.
+    pub bounds_mm: [Q; 2],
+    pub edge_count: usize,
+    pub exact_work: u64,
+}
+
+/// Enclose the total length of full clamped piecewise-linear material edges.
+/// Each topological edge contributes once, regardless of its coedge count.
+pub fn bounded_polyhedral_edge_length(
+    solid: &QualifiedClosedSolid,
+    max_width_mm: f64,
+    max_exact_work: u64,
+) -> Result<BoundedPolyhedralEdgeLength> {
+    let tolerance = enclosure_width(max_width_mm)?;
+    validate_work(max_exact_work)?;
+    let agreement = &solid.geometry().boundary.agreement;
+    if !agreement.all_equal || !agreement.all_joins_exact {
+        return Err(refuse(
+            "Exact edge length requires exact boundary identity and joins",
+        ));
+    }
+    let model = solid.model();
+    let mut remaining = max_exact_work;
+    let mut visited = std::collections::BTreeSet::new();
+    let mut squares = Vec::new();
+    for body in &model.bodies {
+        for shell in std::iter::once(&body.outer_shell).chain(&body.inner_shells) {
+            for face_use in &model.shells[*shell].faces {
+                let face = &model.faces[face_use.face];
+                for wire in std::iter::once(&face.outer).chain(&face.holes) {
+                    for coedge in &model.loops[*wire].coedges {
+                        spend(&mut remaining, 1)?;
+                        let edge = &model.edges[coedge.edge];
+                        require_linear_edge(edge, coedge)?;
+                        if !visited.insert(coedge.edge) {
+                            continue;
+                        }
+                        let curve = &edge.curve;
+                        spend(&mut remaining, 3)?;
+                        let mut previous = lift(&curve.control_points[0]);
+                        for (i, pole) in curve.control_points.iter().enumerate().skip(1) {
+                            spend(&mut remaining, 12)?;
+                            require_linear_span(&curve.knots, i)?;
+                            let current = lift(pole);
+                            squares.push(
+                                previous
+                                    .iter()
+                                    .zip(&current)
+                                    .map(|(a, b)| (a - b).pow(2))
+                                    .sum(),
+                            );
+                            previous = current;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    let bounds_mm = bound_root_sum(squares, tolerance, &mut remaining)?;
+    Ok(BoundedPolyhedralEdgeLength {
+        bounds_mm,
+        edge_count: visited.len(),
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn enclosure_width(width: f64) -> Result<Q> {
+    Q::from_float(width)
         .filter(|value| value.is_positive())
         .ok_or_else(|| {
             Error::new(
                 "BREP_INVALID_INPUT",
-                "Area enclosure width must be finite and positive",
+                "Enclosure width must be finite and positive",
             )
-        })?;
-    let report = exact_polyhedral_area(solid, max_exact_work)?;
-    let mut remaining = max_exact_work - report.exact_work;
-    spend(&mut remaining, 8)?;
+        })
+}
+
+fn bound_root_sum(squares: Vec<Q>, tolerance: Q, remaining: &mut u64) -> Result<[Q; 2]> {
+    if squares.is_empty() {
+        return Ok([Q::zero(), Q::zero()]);
+    }
+    spend(remaining, 8)?;
     // A common grid gives each irrational term an interval no wider than
     // tolerance / face count, so their widths sum to at most tolerance.
-    let count = Q::from_integer(report.face_area_squared_mm4.len().into());
+    let count = Q::from_integer(squares.len().into());
     let denominator = (count / tolerance).ceil().to_integer();
     let denominator_squared = &denominator * &denominator;
     let mut lower = Q::zero();
     let mut upper = Q::zero();
-    for square in report.face_area_squared_mm4 {
-        spend(&mut remaining, 16)?;
+    for square in squares {
+        spend(remaining, 16)?;
         let numerator_root = square.numer().sqrt();
         let denominator_root = square.denom().sqrt();
         if &numerator_root * &numerator_root == *square.numer()
@@ -247,10 +330,7 @@ pub fn bounded_polyhedral_area(
             upper += Q::new(grid_floor + 1, denominator.clone());
         }
     }
-    Ok(BoundedPolyhedralArea {
-        bounds_mm2: [lower, upper],
-        exact_work: max_exact_work - remaining,
-    })
+    Ok([lower, upper])
 }
 
 fn visit_polyhedral_boundary(
@@ -258,12 +338,7 @@ fn visit_polyhedral_boundary(
     remaining: &mut u64,
     mut visit: impl FnMut(usize, &[Q; 3], &[Q; 3], &[Q; 3], bool, &mut u64) -> Result<()>,
 ) -> Result<()> {
-    if !(1..=1_000_000).contains(remaining) {
-        return Err(Error::new(
-            "BREP_INVALID_INPUT",
-            "Exact polyhedral work must be in 1..1000000",
-        ));
-    }
+    validate_work(*remaining)?;
     let agreement = &solid.geometry().boundary.agreement;
     if !agreement.all_equal || !agreement.all_joins_exact {
         return Err(refuse(
@@ -299,29 +374,13 @@ fn visit_polyhedral_boundary(
                         let edge = &model.edges[coedge.edge];
                         let curve = &edge.curve;
                         let knots = &curve.knots;
-                        let n = curve.control_points.len();
-                        if edge.degenerate
-                            || coedge.trim().is_some()
-                            || curve.degree != 1
-                            || curve.periodic
-                            || knots[0] != knots[1]
-                            || knots[n] != knots[n + 1]
-                        {
-                            return Err(refuse(
-                                "Exact polyhedral integration requires full clamped degree-one edges",
-                            ));
-                        }
-
+                        require_linear_edge(edge, coedge)?;
                         let reversed = coedge.reversed ^ face_use.reversed;
                         spend(remaining, 3)?;
                         let mut previous = lift(&curve.control_points[0]);
                         for (i, pole) in curve.control_points.iter().enumerate().skip(1) {
                             spend(remaining, 3)?;
-                            if knots[i] >= knots[i + 1] {
-                                return Err(refuse(
-                                    "Exact polyhedral integration requires nonzero linear spans",
-                                ));
-                            }
+                            require_linear_span(knots, i)?;
                             let current = lift(pole);
                             visit(
                                 face_use.face,
@@ -337,6 +396,44 @@ fn visit_polyhedral_boundary(
                 }
             }
         }
+    }
+    Ok(())
+}
+
+fn validate_work(work: u64) -> Result<()> {
+    if !(1..=1_000_000).contains(&work) {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Exact polyhedral work must be in 1..1000000",
+        ));
+    }
+    Ok(())
+}
+
+fn require_linear_edge(edge: &crate::Edge, coedge: &crate::Coedge) -> Result<()> {
+    let curve = &edge.curve;
+    let knots = &curve.knots;
+    let n = curve.control_points.len();
+    if edge.degenerate
+        || coedge.trim().is_some()
+        || curve.degree != 1
+        || curve.periodic
+        || knots[0] != knots[1]
+        || knots[n] != knots[n + 1]
+    {
+        return Err(refuse(
+            "Exact polyhedral integration requires full clamped degree-one edges",
+        ));
+    }
+
+    Ok(())
+}
+
+fn require_linear_span(knots: &[f64], i: usize) -> Result<()> {
+    if knots[i] >= knots[i + 1] {
+        return Err(refuse(
+            "Exact polyhedral integration requires nonzero linear spans",
+        ));
     }
     Ok(())
 }
