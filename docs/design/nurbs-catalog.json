@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 510,
-  "unallocatedCount": 490,
+  "specifiedCount": 511,
+  "unallocatedCount": 489,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13188,6 +13188,26 @@
       "remainingQualification": [
         "Extract a clamped subcurve across the periodic seam with its unwrapped parameter coordinates preserved.",
         "Rotate to the requested start, lift at most one full turn, and exactly clamp only the requested interval.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0511",
+      "name": "Точное извлечение участка NURBS-кривой через несколько периодов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::restrict_exact_periodic_curve_over_turns",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-511-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-511-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Lift complete and partial periodic turns into one exactly clamped parameter interval under bounded storage and work.",
+        "Extend the exact cyclic basis only until the endpoint is covered and clamp the requested interval without normalizing the parameters.",
         "WASM and application integration are separate."
       ]
     }

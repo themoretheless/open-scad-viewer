@@ -1439,6 +1439,26 @@ pub fn restrict_exact_periodic_curve(
     interval: [f64; 2],
     max_work: u64,
 ) -> Result<GaugeMergeReport> {
+    restrict_periodic_interval(source, interval, max_work, false)
+}
+
+/// Extract a clamped NURBS segment over multiple periods, with the start in
+/// the source's half-open domain. Extend the exact cyclic basis until the
+/// requested end is covered, subject to the curve control and work limits.
+pub fn restrict_exact_periodic_curve_over_turns(
+    source: &Curve,
+    interval: [f64; 2],
+    max_work: u64,
+) -> Result<GaugeMergeReport> {
+    restrict_periodic_interval(source, interval, max_work, true)
+}
+
+fn restrict_periodic_interval(
+    source: &Curve,
+    interval: [f64; 2],
+    max_work: u64,
+    allow_multiple_turns: bool,
+) -> Result<GaugeMergeReport> {
     use super::rational_edit::Work;
 
     let [lo, hi] = interval;
@@ -1451,17 +1471,18 @@ pub fn restrict_exact_periodic_curve(
         used: rotated.work_used,
         limit: max_work,
     };
-    let Some(curve) = rotated.curve else {
+    let Some(mut curve) = rotated.curve else {
         return Ok(rotated);
     };
-    if hi > curve.domain()[1] {
+    if !allow_multiple_turns && hi > curve.domain()[1] {
         return Ok(GaugeMergeReport {
             curve: None,
             work_used: work.used,
             refusal: Some(GaugeMergeRefusal::Join(Refusal::NonAdjacentDomain)),
         });
     }
-    let out = clamp_curve_interval(&curve, interval, &mut work);
+    let out = extend_periodic_support(&mut curve, hi, &mut work)
+        .and_then(|()| clamp_curve_interval(&curve, interval, &mut work));
     Ok(match out {
         Ok(curve) => GaugeMergeReport {
             curve: Some(curve),
@@ -1474,4 +1495,39 @@ pub fn restrict_exact_periodic_curve(
             refusal: Some(GaugeMergeRefusal::Exact(reason)),
         },
     })
+}
+
+fn extend_periodic_support(
+    curve: &mut Curve,
+    end: f64,
+    work: &mut super::rational_edit::Work,
+) -> std::result::Result<(), super::rational_factor::Refusal> {
+    use super::rational_factor::Refusal as ExactRefusal;
+
+    let [lo, hi] = curve.domain();
+    if end <= hi {
+        return Ok(());
+    }
+    let cycle = curve.control_points.len() - curve.degree;
+    let lo = work.lift(lo)?;
+    let hi = work.lift(hi)?;
+    let period = work.op(&hi, &lo, |a, b| a - b)?;
+    // The extension is a finite window of the infinite cyclic basis. It
+    // has more active controls than one period, so it is not cyclic storage.
+    curve.periodic = false;
+    while end > curve.domain()[1] {
+        let count = curve.control_points.len();
+        if count == 256 {
+            return Err(ExactRefusal::InvalidOutput);
+        }
+        let index = curve.knots.len() - cycle;
+        let prior = work.lift(curve.knots[index])?;
+        let shifted = work.op(&prior, &period, |a, b| a + b)?;
+        curve.knots.push(work.float(&shifted)?);
+        curve
+            .control_points
+            .push(curve.control_points[count % cycle].clone());
+        curve.weights.push(curve.weights[count % cycle]);
+    }
+    Ok(())
 }

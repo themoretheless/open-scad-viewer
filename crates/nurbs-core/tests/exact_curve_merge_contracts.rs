@@ -1457,3 +1457,48 @@ fn periodic_restriction_accepts_one_turn_and_refuses_more() {
         Some(GaugeMergeRefusal::Join(Refusal::NonAdjacentDomain))
     );
 }
+
+#[test]
+fn multiple_periods_keep_their_original_parameter_coordinates() {
+    use nurbs_core::editing::exact_curve_merge::restrict_exact_periodic_curve_over_turns;
+    let source = periodic_unit_square();
+    let interval = [3.5, 13.25];
+    let report = restrict_exact_periodic_curve_over_turns(&source, interval, 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let curve = report.curve.unwrap();
+    assert_eq!(curve.domain(), interval);
+    for i in 14..=53 {
+        let t = i as f64 / 4.;
+        assert_eq!(
+            curve.evaluate(t).unwrap().point,
+            source.evaluate(t % 4.).unwrap().point
+        );
+    }
+    assert!(
+        restrict_exact_periodic_curve_over_turns(&source, interval, report.work_used)
+            .unwrap()
+            .curve
+            .is_some()
+    );
+    assert!(
+        restrict_exact_periodic_curve_over_turns(&source, interval, report.work_used - 1)
+            .unwrap()
+            .curve
+            .is_none()
+    );
+}
+
+#[test]
+fn multiple_periods_refuse_to_exceed_the_curve_control_limit() {
+    use nurbs_core::editing::exact_curve_merge::{
+        GaugeMergeRefusal, restrict_exact_periodic_curve_over_turns,
+    };
+    use nurbs_core::editing::rational_factor::Refusal as ExactRefusal;
+    let source = periodic_unit_square();
+    let report = restrict_exact_periodic_curve_over_turns(&source, [0., 1024.], 1_000_000).unwrap();
+    assert_eq!(
+        report.refusal,
+        Some(GaugeMergeRefusal::Exact(ExactRefusal::InvalidOutput))
+    );
+    assert!(report.curve.is_none());
+}
