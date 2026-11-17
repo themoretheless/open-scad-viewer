@@ -102,12 +102,20 @@ fn trim_loop(section: &Curve, solved: usize, side: f64, reverse: bool) -> PResul
     }
     let first = trace.control_points[0].clone();
     let last = trace.control_points[trace.control_points.len() - 1].clone();
+    Ok([trace, trim_perimeter(first, last, solved, side)?])
+}
+
+pub(super) fn trim_perimeter(
+    first: Vec<f64>,
+    last: Vec<f64>,
+    solved: usize,
+    side: f64,
+) -> PResult<Curve> {
     let mut after = last.clone();
     let mut before = first.clone();
     after[solved] = side;
     before[solved] = side;
     let mut perimeter = vec![last, after, before, first];
     perimeter.dedup();
-    let perimeter = Curve::from_polyline(perimeter).map_err(|_| Refusal::InvalidOutput)?;
-    Ok([trace, perimeter])
+    Curve::from_polyline(perimeter).map_err(|_| Refusal::InvalidOutput)
 }

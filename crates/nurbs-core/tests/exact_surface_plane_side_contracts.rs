@@ -7,7 +7,8 @@ use nurbs_core::{
         approximate_surface_plane_graph, approximate_surface_plane_graph_xyz,
         approximate_surface_plane_strip_xyz, audit_surface_plane_graphs, audit_surface_plane_side,
         close_periodic_surface_plane_strip_xyz, refine_surface_plane_side,
-        sample_surface_plane_graph, split_surface_cell_by_plane, stitch_surface_plane_graph_strip,
+        sample_surface_plane_graph, split_periodic_surface_strip_by_plane,
+        split_surface_cell_by_plane, stitch_surface_plane_graph_strip,
         store_periodic_surface_plane_section, store_surface_plane_section_curve,
         store_surface_plane_section_pair,
     },
@@ -988,4 +989,65 @@ fn refuses_a_periodic_pair_when_the_lifted_curve_has_nonzero_gap_at_zero_toleran
     )
     .unwrap();
     assert!(matches!(result.outcome, Err(Refusal::UnprovedIdentity)));
+}
+
+#[test]
+fn builds_two_complementary_trim_loops_for_the_full_period() {
+    use nurbs_core::trim::trim_domain::{Location, TrimDomain, exact_loop_joins};
+    let patch = periodic_section_patch();
+    let options = periodic_section_options();
+    let report =
+        split_periodic_surface_strip_by_plane(&patch, [0., 0., 1.], 0., options, 0.05).unwrap();
+    let trimmed = report.outcome.unwrap();
+    assert_eq!(trimmed.section.uv_period, q(4));
+    for (curves, inside, outside) in [
+        (&trimmed.negative, [0.1, 1.5], [0.8, 1.5]),
+        (&trimmed.positive, [0.8, 1.5], [0.1, 1.5]),
+    ] {
+        assert_eq!(curves.len(), trimmed.section.pieces.len() + 1);
+        assert_eq!(exact_loop_joins(curves).unwrap(), Some(true));
+        let domain = TrimDomain::new(&[curves.clone()], 1e-8).unwrap();
+        let sample = domain.classify_point(inside, 10_000).unwrap();
+        assert_eq!(sample.location, Location::Inside);
+        assert_eq!(sample.winding, Some(1));
+        assert_eq!(
+            domain.classify_point(outside, 10_000).unwrap().location,
+            Location::Outside
+        );
+    }
+    let limited = split_periodic_surface_strip_by_plane(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldStripOptions {
+            strip: SurfacePlaneGraphStripOptions {
+                max_work: report.work_used - 1,
+                ..options.strip
+            },
+            ..options
+        },
+        0.05,
+    )
+    .unwrap();
+    assert!(matches!(limited.outcome, Err(Refusal::ResourceLimit)));
+}
+
+#[test]
+fn reverses_periodic_trim_labels_when_the_plane_normal_flips() {
+    let patch = periodic_section_patch();
+    let options = periodic_section_options();
+    let positive = split_periodic_surface_strip_by_plane(&patch, [0., 0., 1.], 0., options, 0.05)
+        .unwrap()
+        .outcome
+        .unwrap();
+    let negative = split_periodic_surface_strip_by_plane(&patch, [0., 0., -1.], 0., options, 0.05)
+        .unwrap()
+        .outcome
+        .unwrap();
+    for (a, b) in positive.negative.iter().zip(&negative.positive) {
+        assert_eq!(a.control_points, b.control_points);
+    }
+    for (a, b) in positive.positive.iter().zip(&negative.negative) {
+        assert_eq!(a.control_points, b.control_points);
+    }
 }

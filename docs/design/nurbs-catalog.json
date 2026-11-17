@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 371,
-  "unallocatedCount": 629,
+  "specifiedCount": 372,
+  "unallocatedCount": 628,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9533,6 +9533,32 @@
       "remainingQualification": [
         "Store a certified periodic section as synchronized spatial and UV curve pairs with exact binary64 seam joins.",
         "Every cell has a synchronized degree-one pair and continuous lifted gap proof. Stored XYZ endpoints close exactly and the UV wrap retains the original period.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0372",
+      "name": "Два замкнутых контура обрезки после разреза периодической NURBS-поверхности",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::split_periodic_surface_strip_by_plane",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs",
+        "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/split_trim.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/store_periodic.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/split_periodic.rs",
+        "crates/nurbs-core/src/trim/trim_domain.rs",
+        "docs/qualification/nurbs-curvature-field-372-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-372-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Split a full periodic knot strip into complementary positively oriented UV trim loops along a certified section chain.",
+        "Strict monotone traversal and exact joins close both unwrapped UV loops. They use opposite directions of the shared section and retain its certified periodic identification and sign orientation.",
         "WASM and application integration are separate."
       ]
     }

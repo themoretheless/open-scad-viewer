@@ -278,3 +278,9 @@ pub use store_periodic::{
     StoredPeriodicSurfacePlaneSection, StoredPeriodicSurfacePlaneSectionReport,
     store_periodic_surface_plane_section,
 };
+
+mod split_periodic;
+pub use split_periodic::{
+    PeriodicSurfacePlaneTrimSplit, PeriodicSurfacePlaneTrimSplitReport,
+    split_periodic_surface_strip_by_plane,
+};

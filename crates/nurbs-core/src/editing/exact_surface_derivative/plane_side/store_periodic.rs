@@ -7,6 +7,8 @@ use super::{
 };
 use crate::editing::exact_projective::{UvAxis, pcurve_gap::certify_pcurve_edge_gap};
 
+use num_traits::Signed;
+
 #[derive(Clone, Debug)]
 pub struct StoredPeriodicSurfacePlaneSection {
     /// Ordered curve pairs in original knot-cell order.
@@ -31,6 +33,21 @@ pub fn store_periodic_surface_plane_section(
     options: SurfacePlaneWorldStripOptions,
     correspondence_tolerance: f64,
 ) -> Result<StoredPeriodicSurfacePlaneSectionReport> {
+    let (outcome, work_used) =
+        store_with_orientation(surface, normal, offset, options, correspondence_tolerance)?;
+    Ok(StoredPeriodicSurfacePlaneSectionReport {
+        outcome: outcome.map(|(section, _)| section),
+        work_used,
+    })
+}
+
+pub(super) fn store_with_orientation(
+    surface: &Surface,
+    normal: [f64; 3],
+    offset: f64,
+    options: SurfacePlaneWorldStripOptions,
+    correspondence_tolerance: f64,
+) -> Result<(PResult<(StoredPeriodicSurfacePlaneSection, bool)>, u64)> {
     check(
         options.max_xyz_error.is_finite()
             && options.max_xyz_error > 0.
@@ -58,6 +75,14 @@ pub fn store_periodic_surface_plane_section(
         limit: options.strip.max_work,
     };
     let outcome = traced.outcome.and_then(|geometry| {
+        let increasing = geometry
+            .strip
+            .cells
+            .first()
+            .ok_or(Refusal::InvalidOutput)?
+            .graph
+            .derivative[0]
+            .is_positive();
         store(
             surface,
             normal,
@@ -67,11 +92,9 @@ pub fn store_periodic_surface_plane_section(
             geometry,
             &mut work,
         )
+        .map(|section| (section, increasing))
     });
-    Ok(StoredPeriodicSurfacePlaneSectionReport {
-        outcome,
-        work_used: work.used,
-    })
+    Ok((outcome, work.used))
 }
 
 fn store(
