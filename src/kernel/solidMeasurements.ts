@@ -17,7 +17,7 @@ export interface SolidMassMeasurement {
 export const solidVertexCount=(body:DirectBody)=>body.brep?body.brep.vertices.length:body.mesh.positions.length/3
 function vertex(body:DirectBody,index:number) {
  if(!Number.isInteger(index)||index<0||index>=solidVertexCount(body))throw Error('Choose an existing vertex.')
- if(body.brep)return body.brep.vertices[index].point
+ if(body.brep)return body.brep.vertices[index]!.point
  const p=body.mesh.positions,o=index*3
  return [p[o],p[o+1],p[o+2]]
 }
@@ -30,24 +30,26 @@ export function measureSolidEdgeCurvature(body:DirectBody,edge:number,t:number):
  return callGeometryRust('cad_curve_curvature',{curve:body.brep.edges[edge].curve,t})
 }
 function symmetricEigenvalues3x3(m:readonly [readonly [number,number,number],readonly [number,number,number],readonly [number,number,number]]):[number,number,number] {
- const a=[[m[0][0],m[0][1],m[0][2]],[m[1][0],m[1][1],m[1][2]],[m[2][0],m[2][1],m[2][2]]]
+ // Row-major 3x3 storage; every index below is in 0..8.
+ const a=[m[0][0],m[0][1],m[0][2],m[1][0],m[1][1],m[1][2],m[2][0],m[2][1],m[2][2]]
+ const at=(r:number,c:number)=>a[3*r+c]!
  for(let iter=0;iter<24;iter++){
-  let p=0,q=1,max=Math.abs(a[0][1])
+  let p=0,q=1,max=Math.abs(at(0,1))
   for(const [r,c] of [[0,2],[1,2]] as const){
-   const v=Math.abs(a[r][c])
+   const v=Math.abs(at(r,c))
    if(v>max){max=v;p=r;q=c}
   }
   if(max<=1e-12)break
-  const diff=a[q][q]-a[p][p],apq=a[p][q]
+  const diff=at(q,q)-at(p,p),apq=at(p,q)
   const t=Math.abs(diff)<=1e-15?1:diff/(2*apq),tau=Math.sign(t||1)/(Math.abs(t)+Math.hypot(1,t))
   const c=1/Math.hypot(1,tau),s=tau*c
-  const app=a[p][p],aqq=a[q][q]
-  a[p][p]=app-tau*apq;a[q][q]=aqq+tau*apq;a[p][q]=0;a[q][p]=0
-  const r=3-p-q,arp=a[r][p],arq=a[r][q]
-  a[r][p]=c*arp-s*arq;a[p][r]=a[r][p]
-  a[r][q]=s*arp+c*arq;a[q][r]=a[r][q]
+  const app=at(p,p),aqq=at(q,q)
+  a[3*p+p]=app-tau*apq;a[3*q+q]=aqq+tau*apq;a[3*p+q]=0;a[3*q+p]=0
+  const r=3-p-q,arp=at(r,p),arq=at(r,q)
+  a[3*r+p]=c*arp-s*arq;a[3*p+r]=at(r,p)
+  a[3*r+q]=s*arp+c*arq;a[3*q+r]=at(r,q)
  }
- const vals:[number,number,number]=[Math.max(0,a[0][0]),Math.max(0,a[1][1]),Math.max(0,a[2][2])]
+ const vals:[number,number,number]=[Math.max(0,at(0,0)),Math.max(0,at(1,1)),Math.max(0,at(2,2))]
  vals.sort((x,y)=>x-y)
  return vals
 }
@@ -59,7 +61,7 @@ export function measureSolidMassProperties(body:DirectBody):SolidMassMeasurement
  if(pos.length<9||pos.length%3!==0)throw Error('Body has no valid mesh positions.')
  let minX=Infinity,minY=Infinity,minZ=Infinity,maxX=-Infinity,maxY=-Infinity,maxZ=-Infinity
  for(let i=0;i<pos.length;i+=3){
-  const x=pos[i],y=pos[i+1],z=pos[i+2]
+  const x=pos[i]!,y=pos[i+1]!,z=pos[i+2]!
   if(x<minX)minX=x;if(x>maxX)maxX=x
   if(y<minY)minY=y;if(y>maxY)maxY=y
   if(z<minZ)minZ=z;if(z>maxZ)maxZ=z
@@ -84,10 +86,10 @@ export function measureSolidMassProperties(body:DirectBody):SolidMassMeasurement
  }
  let vol6=0,area2=0,cx=0,cy=0,cz=0
  for(let i=0;i+2<idx.length;i+=3){
-  const i0=idx[i]*3,i1=idx[i+1]*3,i2=idx[i+2]*3
-  const x0=pos[i0],y0=pos[i0+1],z0=pos[i0+2]
-  const x1=pos[i1],y1=pos[i1+1],z1=pos[i1+2]
-  const x2=pos[i2],y2=pos[i2+1],z2=pos[i2+2]
+  const i0=idx[i]!*3,i1=idx[i+1]!*3,i2=idx[i+2]!*3
+  const x0=pos[i0]!,y0=pos[i0+1]!,z0=pos[i0+2]!
+  const x1=pos[i1]!,y1=pos[i1+1]!,z1=pos[i1+2]!
+  const x2=pos[i2]!,y2=pos[i2+1]!,z2=pos[i2+2]!
   const ux=x1-x0,uy=y1-y0,uz=z1-z0
   const vx=x2-x0,vy=y2-y0,vz=z2-z0
   const nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx
@@ -105,10 +107,10 @@ export function measureSolidMassProperties(body:DirectBody):SolidMassMeasurement
   :[(minX+maxX)/2,(minY+maxY)/2,(minZ+maxZ)/2]
  let ixx=0,iyy=0,izz=0,ixy=0,ixz=0,iyz=0
  for(let i=0;i+2<idx.length;i+=3){
-  const i0=idx[i]*3,i1=idx[i+1]*3,i2=idx[i+2]*3
-  const ax=pos[i0]-centerOfMass[0],ay=pos[i0+1]-centerOfMass[1],az=pos[i0+2]-centerOfMass[2]
-  const bx=pos[i1]-centerOfMass[0],by=pos[i1+1]-centerOfMass[1],bz=pos[i1+2]-centerOfMass[2]
-  const dx=pos[i2]-centerOfMass[0],dy=pos[i2+1]-centerOfMass[1],dz=pos[i2+2]-centerOfMass[2]
+  const i0=idx[i]!*3,i1=idx[i+1]!*3,i2=idx[i+2]!*3
+  const ax=pos[i0]!-centerOfMass[0],ay=pos[i0+1]!-centerOfMass[1],az=pos[i0+2]!-centerOfMass[2]
+  const bx=pos[i1]!-centerOfMass[0],by=pos[i1+1]!-centerOfMass[1],bz=pos[i1+2]!-centerOfMass[2]
+  const dx=pos[i2]!-centerOfMass[0],dy=pos[i2+1]!-centerOfMass[1],dz=pos[i2+2]!-centerOfMass[2]
   const det=ax*(by*dz-bz*dy)+ay*(bz*dx-bx*dz)+az*(bx*dy-by*dx)
   const sx2=ax*ax+bx*bx+dx*dx+ax*bx+ax*dx+bx*dx
   const sy2=ay*ay+by*by+dy*dy+ay*by+ay*dy+by*dy

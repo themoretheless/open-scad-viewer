@@ -85,10 +85,10 @@ export async function buildBrepSemanticScene(
     const provenanceByOperation = new Map(execution.program.provenance.map(p => [p.operation, p]))
     for (let index = 0; index < execution.outputs.length; index++) {
       checkControl(control)
-      const output = execution.outputs[index], item = output.reference
+      const output = execution.outputs[index]!, item = output.reference
       const entityId = output.occurrence.sceneEntityId
       if (entityId === null) throw new Error('B-rep result occurrence has no scene identity')
-      const operationId = execution.program.core.operations[output.occurrence.operation].operationId
+      const operationId = execution.program.core.operations[output.occurrence.operation]!.operationId
       const identity = {occurrenceId: output.occurrence.occurrenceId, operationId, entityId, nodeIndex: item.node}
       if (output.value.tag === 'empty') {
         outputs.push(Object.freeze({...identity, empty: true, snapshotRevision: null, geometryAssetId: null, topologyFaceIds: Object.freeze([])}))
@@ -109,7 +109,7 @@ export async function buildBrepSemanticScene(
       if (nativeCharacters > MAX_NATIVE_GEOMETRY_CHARACTERS) throw new RangeError('B-rep scene exceeds its aggregate native snapshot limit')
       const vertices = new Float32Array(mesh.displayVertices), indices = new Uint32Array(mesh.displayIndices)
       surfaceArea += mesh.surfaceArea
-      const sourceOccurrence = execution.program.core.occurrences[item.producerOccurrence]
+      const sourceOccurrence = execution.program.core.occurrences[item.producerOccurrence]!
       const source = provenanceByOperation.get(sourceOccurrence.operation)
       const edges = extractSemanticEdges(vertices, indices)
       const assetId = geometryAssetId(vertices, indices)

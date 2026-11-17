@@ -38,7 +38,7 @@ export function applySolidBoolean(source:DirectDocument,options:SolidBooleanOpti
   const result=combine(acc,bodyOf(id),'union')
   if(!result)throw Error(label('Результат пуст: тела не пересекаются так, как требует операция.','The result is empty: the bodies do not overlap the way this operation needs.'))
   return result
- },bodyOf(values[0]))
+ },bodyOf(values[0]!))
  const result=combine(fold(a),fold(b),operation),removed=new Set(ids)
  // Instance operands arrive resolved; the result is new geometry, so it no longer follows a source.
  if(result)delete result.instance
@@ -74,7 +74,7 @@ function booleanPair(a:DirectBody,b:DirectBody,operation:BrepBooleanOperation,se
  if(operation==='xor')throw Error(label('XOR доступен только для двух точных тел B-rep.','XOR is available only for two exact B-rep bodies.'))
  // Tessellated meshes can carry duplicated seam vertices, which the BSP boolean rejects as
  // unstitched. Weld each input at a size-relative tolerance, then retry once coarser.
- const extent=(mesh:{positions:ArrayLike<number>})=>{let span=0;for(let axis=0;axis<3;axis++){let min=Infinity,max=-Infinity;for(let i=axis;i<mesh.positions.length;i+=3){min=Math.min(min,mesh.positions[i]);max=Math.max(max,mesh.positions[i])}span=Math.max(span,max-min)}return span}
+ const extent=(mesh:{positions:ArrayLike<number>})=>{let span=0;for(let axis=0;axis<3;axis++){let min=Infinity,max=-Infinity;for(let i=axis;i<mesh.positions.length;i+=3){min=Math.min(min,mesh.positions[i]!);max=Math.max(max,mesh.positions[i]!)}span=Math.max(span,max-min)}return span}
  const scale=Math.max(extent(a.mesh),extent(b.mesh))
  const weldedBoolean=(tolerance:number)=>booleanPolygonMeshes(mergeByDistance(a.mesh,tolerance),mergeByDistance(b.mesh,tolerance),operation as 'union'|'difference'|'intersection')
  let built

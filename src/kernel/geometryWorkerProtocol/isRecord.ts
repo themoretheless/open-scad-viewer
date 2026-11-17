@@ -281,14 +281,14 @@ export function isMeshBvh(
 
     const boundsOffset = node * 6
     for (let axis = 0; axis < 3; axis++) {
-      const minimum = bounds[boundsOffset + axis]
-      const maximum = bounds[boundsOffset + axis + 3]
+      const minimum = bounds[boundsOffset + axis]!
+      const maximum = bounds[boundsOffset + axis + 3]!
       if (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum > maximum) return false
     }
 
     const dataOffset = node * 2
-    const firstOrLeft = nodes[dataOffset]
-    const metadata = nodes[dataOffset + 1]
+    const firstOrLeft = nodes[dataOffset]!
+    const metadata = nodes[dataOffset + 1]!
     if ((metadata & BVH_LEAF_BIT) !== 0) {
       const count = metadata & BVH_LEAF_COUNT_MASK
       if (count === 0 || count > value.leafSize

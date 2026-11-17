@@ -22,8 +22,9 @@ export function editExactFullRoundSceneMesh(
   }
   // A single source attribution can be retained. Multiple triangle-dependent
   // runs require a real lineage remap, which this feature does not invent.
-  if (previous.provenance.length !== 1 || previous.provenance[0].triangleStart !== 0
-    || previous.provenance[0].triangleEnd !== previous.indices.length / 3) {
+  const sourceRun = previous.provenance[0]
+  if (previous.provenance.length !== 1 || !sourceRun || sourceRun.triangleStart !== 0
+    || sourceRun.triangleEnd !== previous.indices.length / 3) {
     throw new Error('Exact history edit requires one complete source attribution')
   }
   const restored = restoreExactFullRoundSnapshot(snapshot)
@@ -56,7 +57,7 @@ export function editExactFullRoundSceneMesh(
     edgeIndices: edges.indices, faceIds: new Uint32Array(display.faceIds), faceIdsAuthoritative: true,
     faceIdsInferred: false, transform: new Float32Array(previous.transform),
     color: [...previous.color],
-    provenance: [{ ...previous.provenance[0], triangleStart: 0, triangleEnd: indices.length / 3 }],
+    provenance: [{ ...sourceRun, triangleStart: 0, triangleEnd: indices.length / 3 }],
     topology: { boundary: display.report.boundaryEdges, nonManifold: display.report.nonManifoldEdges,
       degenerate: display.report.degenerateTriangles, crease: edges.diagnostics.crease },
   }

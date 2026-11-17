@@ -24,8 +24,8 @@ const bool=(x:unknown)=>x===null||typeof x==='boolean'
 export function materialExpectation(options:MaterialOptions,mode:'segment'|'chord') {
  return {mode,normalAudit:structuredClone(options.normalAudit??null),source:brepSourceSnapshot(options.model),origin:snapshot(options.origin),direction:snapshot(options.direction),toleranceUv:options.toleranceUv,limits:structuredClone(options.limits),
   shells:options.model.shells.map((_,i)=>!options.model.bodies.some(b=>b.innerShells.includes(i))),
-  normalSpans:options.model.faces.map(({surface:s})=>[s.knotsU.slice(s.degreeU,s.controlPoints.length+1),s.knotsV.slice(s.degreeV,s.controlPoints[0].length+1)]),
-  domains:options.model.faces.map(({surface:s})=>[[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length]],[s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0].length]]] as [Interval,Interval])}
+  normalSpans:options.model.faces.map(({surface:s})=>[s.knotsU.slice(s.degreeU,s.controlPoints.length+1),s.knotsV.slice(s.degreeV,s.controlPoints[0]!.length+1)]),
+  domains:options.model.faces.map(({surface:s})=>[[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length]],[s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0]!.length]]] as [Interval,Interval])}
 }
 export function validMaterial(e:ReturnType<typeof materialExpectation>,value:unknown):value is MaterialResult {
  const r=value as MaterialResult
@@ -40,7 +40,7 @@ export function validMaterial(e:ReturnType<typeof materialExpectation>,value:unk
  }
  if(!v.boundaryProven&&v.nestingRolesConsistent!==null)return false
  if(v.proven!==(v.boundaryProven&&v.nestingRolesConsistent===true&&oriented))return false
- const uv=(c:Crossing|Unresolved)=>c&&work(c.face,e.domains.length-1)&&Array.isArray(c.uv)&&c.uv.length===2&&c.uv.every((x,k)=>interval(x)&&x[0]>=e.domains[c.face][k][0]&&x[1]<=e.domains[c.face][k][1])
+ const uv=(c:Crossing|Unresolved)=>c&&work(c.face,e.domains.length-1)&&Array.isArray(c.uv)&&c.uv.length===2&&c.uv.every((x,k)=>interval(x)&&x[0]>=e.domains[c.face]![k]![0]&&x[1]<=e.domains[c.face]![k]![1])
  const crossing=(c:Crossing,finite:boolean)=>uv(c)&&interval(c.parameter)&&c.parameter[0]>0&&(!finite||c.parameter[1]<1)
  const unresolved=(c:Unresolved)=>uv(c)&&['work-limit','domain-work-limit','root-not-isolated','trim-boundary','endpoint-band','origin-band','overlapping-root-intervals'].includes(c.reason)
  const seed=r.seed
@@ -50,7 +50,7 @@ export function validMaterial(e:ReturnType<typeof materialExpectation>,value:unk
   for(const [i,a] of seed.attempts.entries()){
    if(!a||!bool(a.inside)||!work(a.cells,e.limits.pointCells)||!work(a.domainCells,e.limits.pointDomainCells)||!Array.isArray(a.crossings)||!a.crossings.every(c=>crossing(c,false))||!Array.isArray(a.unresolved)||!a.unresolved.every(unresolved))return false
    if(a.inside!==(a.unresolved.length?null:a.crossings.length%2===1)||i<seed.attempts.length-1&&a.inside!==null)return false
-   for(let j=1;j<a.crossings.length;j++)if(a.crossings[j-1].parameter[0]>a.crossings[j].parameter[0]||a.inside!==null&&a.crossings[j-1].parameter[1]>=a.crossings[j].parameter[0])return false
+   for(let j=1;j<a.crossings.length;j++)if(a.crossings[j-1]!.parameter[0]>a.crossings[j]!.parameter[0]||a.inside!==null&&a.crossings[j-1]!.parameter[1]>=a.crossings[j]!.parameter[0])return false
    cells+=a.cells;domains+=a.domainCells
   }
   if(cells!==seed.cells||domains!==seed.domainCells||seed.inside!==seed.attempts.at(-1)!.inside)return false
@@ -68,7 +68,7 @@ export function validMaterial(e:ReturnType<typeof materialExpectation>,value:unk
  let reason='volume-unproven'
  if(v.proven){
   if(!seed)return false
-  reason=seed.inside!==false?(seed.inside===true?'seed-inside':'seed-unresolved'):b.unresolved.length?'boundary-unresolved':b.contacts.length!==2?'requires-two-crossings':b.contacts[0].parameter[1]>=b.contacts[1].parameter[0]?'overlapping-root-intervals':'material-chord'
+  reason=seed.inside!==false?(seed.inside===true?'seed-inside':'seed-unresolved'):b.unresolved.length?'boundary-unresolved':b.contacts.length!==2?'requires-two-crossings':b.contacts[0]!.parameter[1]>=b.contacts[1]!.parameter[0]?'overlapping-root-intervals':'material-chord'
  }else if(seed!==null)return false
  if(r.reason!==reason||r.proven!==(reason==='material-chord'))return false
  if(!r.proven)return r.lengthIntervalMm===null&&r.pointEnclosures===null
@@ -92,7 +92,7 @@ function validNormals(e:ReturnType<typeof materialExpectation>,r:MaterialChord):
   const c=r.boundary.contacts[i]
   if(!r.proven||!c||a.face!==c.face||snapshot(a.uv)!==snapshot(c.uv)||!bool(a.aligned)||!work(a.spans,config.maxSpans-spans))return false
   const available=config.maxSpans-spans
-  const required=e.normalSpans[a.face].reduce((total,knots,axis)=>total*knots.slice(0,-1).filter((lo,j)=>lo<knots[j+1]&&a.uv[axis][0]<=knots[j+1]&&a.uv[axis][1]>=lo).length,1)
+  const required=e.normalSpans[a.face]!.reduce((total,knots,axis)=>total*knots.slice(0,-1).filter((lo,j)=>lo<knots[j+1]!&&a.uv[axis]![0]<=knots[j+1]!&&a.uv[axis]![1]>=lo).length,1)
   if(required<1||a.spans!==Math.min(required,available)||(a.reason==='span-limit')!==(required>available))return false
   spans+=a.spans
   const d=a.sineSquaredInterval,h=a.normalComponents

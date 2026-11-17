@@ -18,7 +18,7 @@ export function applySolidSketchEdit(source:DirectDocument,p:SolidSketchEditOpti
  if(!sketch)throw Error('Select an existing sketch.')
  if(p.operation==='array'){
   let i=0
-  const copies=circularDirectCopies(sketch,p.count,p.center,p.sweep,()=>p.copyIds[i++])
+  const copies=circularDirectCopies(sketch,p.count,p.center,p.sweep,()=>p.copyIds[i++]!)
   if(p.copyIds.length!==p.count-1||new Set(p.copyIds).size!==p.copyIds.length||p.copyIds.some(id=>!id||document.sketches.some(s=>s.id===id)))throw Error('Copies require distinct identities.')
   document.sketches.push(...copies)
  }else document.sketches[index]=directCornerTool(sketch,p.vertex,p.radius,p.operation)

@@ -15,7 +15,7 @@ export interface ExpressionMeshReport {
 }
 const count=(n:unknown):n is number=>Number.isSafeInteger(n)&&(n as number)>=0
 const finite=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n)
-const interval=(v:unknown)=>Array.isArray(v)&&v.length===2&&v.every(finite)&&v[0]<=v[1]
+const interval=(v:unknown)=>Array.isArray(v)&&v.length===2&&v.every(finite)&&v[0]!<=v[1]!
 const domain=(v:unknown)=>Array.isArray(v)&&v.length===2&&v.every(interval)
 export function validExpressionMeshLimits(l:ExpressionMeshLimits):boolean {
  return !!l&&finite(l.maxDeviationMm)&&l.maxDeviationMm>0&&finite(l.toleranceUv)&&l.toleranceUv>0

@@ -18,29 +18,29 @@ const SCRATCH_INV_F64 = new Float64Array(16)
 const SCRATCH_TRANSFORM = new Float32Array(16)
 
 export function dot3(a: ArrayLike<number>, b: ArrayLike<number>): number {
-  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+  return a[0]! * b[0]! + a[1]! * b[1]! + a[2]! * b[2]!
 }
 
 export function cross3(a: ArrayLike<number>, b: ArrayLike<number>): Vec3 {
   return [
-    a[1] * b[2] - a[2] * b[1],
-    a[2] * b[0] - a[0] * b[2],
-    a[0] * b[1] - a[1] * b[0],
+    a[1]! * b[2]! - a[2]! * b[1]!,
+    a[2]! * b[0]! - a[0]! * b[2]!,
+    a[0]! * b[1]! - a[1]! * b[0]!,
   ]
 }
 
 export function unit3(a: ArrayLike<number>): Vec3 {
-  const n = Math.hypot(a[0], a[1], a[2])
+  const n = Math.hypot(a[0]!, a[1]!, a[2]!)
   if (n < 1e-9) throw new Error('Zero direction')
   const inv = 1 / n
-  return [a[0] * inv, a[1] * inv, a[2] * inv]
+  return [a[0]! * inv, a[1]! * inv, a[2]! * inv]
 }
 
 export function normalizeVec3(v: ArrayLike<number>, fallback: Vec3 = [0, 0, 1]): Vec3 {
-  const len = Math.hypot(v[0], v[1], v[2])
+  const len = Math.hypot(v[0]!, v[1]!, v[2]!)
   if (len < 1e-12) return [fallback[0], fallback[1], fallback[2]]
   const inv = 1 / len
-  return [v[0] * inv, v[1] * inv, v[2] * inv]
+  return [v[0]! * inv, v[1]! * inv, v[2]! * inv]
 }
 
 const EDGE_KEY_STRIDE = 67108864 // 2^26 (52-bit safe integer pair limit)
@@ -89,9 +89,9 @@ export function multiply(a: Mat4, b: Mat4): Mat4 {
   const out = new Float32Array(16)
   for (let r = 0; r < 4; r++) {
     const r4 = r * 4
-    const a0 = a[r4], a1 = a[r4 + 1], a2 = a[r4 + 2], a3 = a[r4 + 3]
+    const a0 = a[r4]!, a1 = a[r4 + 1]!, a2 = a[r4 + 2]!, a3 = a[r4 + 3]!
     for (let c = 0; c < 4; c++) {
-      const v = Math.fround(a0 * b[c] + a1 * b[4 + c] + a2 * b[8 + c] + a3 * b[12 + c])
+      const v = Math.fround(a0 * b[c]! + a1 * b[4 + c]! + a2 * b[8 + c]! + a3 * b[12 + c]!)
       if (!Number.isFinite(v)) throw new Error('Matrix result exceeds finite GPU storage')
       out[r4 + c] = v
     }
@@ -202,7 +202,7 @@ export function transpose(m: Mat4): Mat4 {
   }
   const out = new Float32Array(16)
   for (let i = 0; i < 16; i++) {
-    out[i] = Math.fround(m[(i % 4) * 4 + ((i / 4) | 0)])
+    out[i] = Math.fround(m[(i % 4) * 4 + ((i / 4) | 0)]!)
   }
   return out
 }
@@ -219,23 +219,23 @@ export function invert(a: Mat4, out?: Mat4): Mat4 {
   if (!values) throw new Error('Singular or unrepresentable matrix inverse')
   // The native boundary stores results as f32 and refuses non-finite storage.
   for (let i = 0; i < 16; i++) {
-    const v = Math.fround(values[i])
+    const v = Math.fround(values[i]!)
     if (!Number.isFinite(v)) throw new Error('Matrix result exceeds finite GPU storage')
   }
   const target = out ?? new Float32Array(16)
-  for (let i = 0; i < 16; i++) target[i] = Math.fround(values[i])
+  for (let i = 0; i < 16; i++) target[i] = Math.fround(values[i]!)
   return target
 }
 
 /** Transform a point by a row-major matrix, including homogeneous division. */
 export function transformPoint(m: Mat4, point: Vec3): Vec3 {
   const [x, y, z] = point
-  const w = m[12]*x + m[13]*y + m[14]*z + m[15]
+  const w = m[12]!*x + m[13]!*y + m[14]!*z + m[15]!
   const iw = Number.isFinite(w) && Math.abs(w) > 1e-12 ? 1 / w : 1
   return [
-    (m[0]*x + m[1]*y + m[2]*z + m[3]) * iw,
-    (m[4]*x + m[5]*y + m[6]*z + m[7]) * iw,
-    (m[8]*x + m[9]*y + m[10]*z + m[11]) * iw,
+    (m[0]!*x + m[1]!*y + m[2]!*z + m[3]!) * iw,
+    (m[4]!*x + m[5]!*y + m[6]!*z + m[7]!) * iw,
+    (m[8]!*x + m[9]!*y + m[10]!*z + m[11]!) * iw,
   ]
 }
 
@@ -243,9 +243,9 @@ export function transformPoint(m: Mat4, point: Vec3): Vec3 {
 export function transformVector(m: Mat4, vector: Vec3): Vec3 {
   const [x, y, z] = vector
   return [
-    m[0]*x + m[1]*y + m[2]*z,
-    m[4]*x + m[5]*y + m[6]*z,
-    m[8]*x + m[9]*y + m[10]*z,
+    m[0]!*x + m[1]!*y + m[2]!*z,
+    m[4]!*x + m[5]!*y + m[6]!*z,
+    m[8]!*x + m[9]!*y + m[10]!*z,
   ]
 }
 
@@ -260,10 +260,10 @@ export function rayAabbDistance(ray: Ray3, bounds: Aabb3, maxDistance = Infinity
   let near = 0
   let far = maxDistance
   for (let axis = 0; axis < 3; axis++) {
-    const origin = ray.origin[axis]
-    const direction = ray.direction[axis]
-    const min = bounds.min[axis]
-    const max = bounds.max[axis]
+    const origin = ray.origin[axis]!
+    const direction = ray.direction[axis]!
+    const min = bounds.min[axis]!
+    const max = bounds.max[axis]!
     if (Math.abs(direction) < 1e-12) {
       if (origin < min || origin > max) return null
       continue
@@ -325,14 +325,14 @@ export function rayIndexedMeshDistance(
   let nearest = maxDistance
   let hit = false
   for (let i = 0; i + 2 < indices.length; i += 3) {
-    const ia = indices[i] * vertexStride
-    const ib = indices[i+1] * vertexStride
-    const ic = indices[i+2] * vertexStride
+    const ia = indices[i]! * vertexStride
+    const ib = indices[i+1]! * vertexStride
+    const ic = indices[i+2]! * vertexStride
     if (ic + 2 >= vertices.length || ib + 2 >= vertices.length || ia + 2 >= vertices.length) continue
 
-    const ax = vertices[ia], ay = vertices[ia+1], az = vertices[ia+2]
-    const e1x = vertices[ib]-ax, e1y = vertices[ib+1]-ay, e1z = vertices[ib+2]-az
-    const e2x = vertices[ic]-ax, e2y = vertices[ic+1]-ay, e2z = vertices[ic+2]-az
+    const ax = vertices[ia]!, ay = vertices[ia+1]!, az = vertices[ia+2]!
+    const e1x = vertices[ib]!-ax, e1y = vertices[ib+1]!-ay, e1z = vertices[ib+2]!-az
+    const e2x = vertices[ic]!-ax, e2y = vertices[ic+1]!-ay, e2z = vertices[ic+2]!-az
     const px = ray.direction[1]*e2z - ray.direction[2]*e2y
     const py = ray.direction[2]*e2x - ray.direction[0]*e2z
     const pz = ray.direction[0]*e2y - ray.direction[1]*e2x

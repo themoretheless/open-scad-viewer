@@ -116,7 +116,7 @@ const color=(rgba:StepRgba|null)=>{
 }
 const applySceneToBody=(body:DirectBody,scene:DirectStepSceneTree,display:DirectStepDisplay,lod?:CachedStepLod0Import)=>{
   const product=scene.products.length===1?scene.products[0]:undefined
-  const name=product?.name.trim()||product?.shapeName?.trim()||(lod?.lod0Shells.length===1?lod.lod0Shells[0].name.trim():'')
+  const name=product?.name.trim()||product?.shapeName?.trim()||(lod?.lod0Shells.length===1?lod.lod0Shells[0]!.name.trim():'')
   if(name)body.name=name.slice(0,100)
   const bodyColors=display.bodies.map(item=>item.rgba).filter((rgba):rgba is StepRgba=>!!rgba)
   const firstBodyColor=bodyColors[0]

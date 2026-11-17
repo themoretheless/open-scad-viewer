@@ -86,7 +86,7 @@ export function matchMeshesByProvenance(
     const positionalIdentityIsSafe = options.sameSourceSnapshot
       || (previousByPositionalGroup.get(group) === 1 && replacementByPositionalGroup.get(group) === 1)
     if (positionalIdentityIsSafe && replacementIndices.length === 1 && previousIndices?.length === 1) {
-      matches[replacementIndices[0]] = previousIndices[0]
+      matches[replacementIndices[0]!] = previousIndices[0]!
     }
   }
 
@@ -113,7 +113,7 @@ export function matchMeshesByProvenance(
   for (const [key, replacementIndices] of replacementByProvenance) {
     const previousIndices = previousByProvenance.get(key)
     if (replacementIndices.length === 1 && previousIndices?.length === 1) {
-      matches[replacementIndices[0]] = previousIndices[0]
+      matches[replacementIndices[0]!] = previousIndices[0]!
     }
   }
 
@@ -277,9 +277,9 @@ export function inspectMeshManifoldDiagnostics(
       degenerateTriangleCount++
       continue
     }
-    const ax = SCRATCH_WORLD_PTS[0], ay = SCRATCH_WORLD_PTS[1], az = SCRATCH_WORLD_PTS[2]
-    const bx = SCRATCH_WORLD_PTS[3], by = SCRATCH_WORLD_PTS[4], bz = SCRATCH_WORLD_PTS[5]
-    const cx = SCRATCH_WORLD_PTS[6], cy = SCRATCH_WORLD_PTS[7], cz = SCRATCH_WORLD_PTS[8]
+    const ax = SCRATCH_WORLD_PTS[0]!, ay = SCRATCH_WORLD_PTS[1]!, az = SCRATCH_WORLD_PTS[2]!
+    const bx = SCRATCH_WORLD_PTS[3]!, by = SCRATCH_WORLD_PTS[4]!, bz = SCRATCH_WORLD_PTS[5]!
+    const cx = SCRATCH_WORLD_PTS[6]!, cy = SCRATCH_WORLD_PTS[7]!, cz = SCRATCH_WORLD_PTS[8]!
 
     const abx = bx - ax, aby = by - ay, abz = bz - az
     const acx = cx - ax, acy = cy - ay, acz = cz - az

@@ -34,7 +34,7 @@ export function validSourceGraphG2Preview(value:unknown,expected:SourceGraphPrev
  if(r.radiusDecision==='exceeds'&&(r.radiusWitnessMm===null||r.radiusWitnessUv===null))return false
  const n=p.controlPoints?.length,m=p.controlPoints?.[0]?.length
  if(!n||!m||n>4096||m>4096||!Number.isSafeInteger(p.degreeU)||!Number.isSafeInteger(p.degreeV)||p.degreeU<1||p.degreeV!==6||p.degreeU>=n||p.degreeV>=m)return false
- for(const [knots,count,degree] of [[p.knotsU,n,p.degreeU],[p.knotsV,m,p.degreeV]] as const)if(!Array.isArray(knots)||knots.length!==count+degree+1||knots.some((v,i)=>!Number.isFinite(v)||(i>0&&v<knots[i-1])))return false
+ for(const [knots,count,degree] of [[p.knotsU,n,p.degreeU],[p.knotsV,m,p.degreeV]] as const)if(!Array.isArray(knots)||knots.length!==count+degree+1||knots.some((v,i)=>!Number.isFinite(v)||(i>0&&v<knots[i-1]!)))return false
  if(p.controlPoints.some(row=>!Array.isArray(row)||row.length!==m||row.some(x=>!Array.isArray(x)||x.length!==3||!x.every(Number.isFinite)))||p.weights?.length!==n||p.weights.some(row=>!Array.isArray(row)||row.length!==m||row.some(x=>!Number.isFinite(x)||x<=0)))return false
  return true
  }catch{return false}

@@ -16,7 +16,7 @@ export const isNonnegativeFinite = (value: unknown): value is number =>
   finite(value) && value >= 0
 
 export const isOrderedInterval = (value: unknown): value is [number, number] =>
-  arrayOf(value, 2, finite) && (value as number[])[0] <= (value as number[])[1]
+  arrayOf(value, 2, finite) && (value as number[])[0]! <= (value as number[])[1]!
 
 export function validDirectDocument(value: unknown): value is DirectDocument {
   if (!isObjectRecord(value)) return false

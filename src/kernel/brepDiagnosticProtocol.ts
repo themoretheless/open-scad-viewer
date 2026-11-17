@@ -151,8 +151,8 @@ function sceneMatches(value: unknown, programJson: unknown, request: BrepDiagnos
   const entities = new Set<string>()
   for (let outputIndex = 0; outputIndex < value.outputs.length; outputIndex++) {
     const output = value.outputs[outputIndex]
-    const expectedOutput = expectedOutputs[outputIndex]
-    const occurrence = program.core.occurrences[expectedOutput.identityOccurrence]
+    const expectedOutput = expectedOutputs[outputIndex]!
+    const occurrence = program.core.occurrences[expectedOutput.identityOccurrence]!
     if (!keys(output, ['occurrenceId','operationId','entityId','nodeIndex','empty','snapshotRevision','geometryAssetId','topologyFaceIds'])
       || typeof output.entityId !== 'string' || !/^entity:v2:[a-f0-9]{64}$/.test(output.entityId)
       || typeof output.occurrenceId !== 'string' || !/^occv1:[a-f0-9]{64}$/.test(output.occurrenceId)
@@ -161,7 +161,7 @@ function sceneMatches(value: unknown, programJson: unknown, request: BrepDiagnos
       || !Array.isArray(output.topologyFaceIds) || output.topologyFaceIds.length > 4096
       || output.topologyFaceIds.some(id => typeof id !== 'string' || id.length > 128)
       || entities.has(output.entityId) || output.entityId !== occurrence.sceneEntityId
-      || output.occurrenceId !== occurrence.occurrenceId || output.operationId !== program.core.operations[occurrence.operation].operationId
+      || output.occurrenceId !== occurrence.occurrenceId || output.operationId !== program.core.operations[occurrence.operation]!.operationId
       || output.nodeIndex !== expectedOutput.node) return false
     entities.add(output.entityId)
     const mesh = meshes.get(output.entityId)
@@ -175,7 +175,7 @@ function sceneMatches(value: unknown, programJson: unknown, request: BrepDiagnos
         || mesh.topology.boundary !== 0 || mesh.topology.nonManifold !== 0 || mesh.topology.degenerate !== 0
         || mesh.nativeGeometry.documentJson !== programJson
         || mesh.color.some((v, index) => v !== expectedOutput.color[index])) return false
-      const producer = program.core.occurrences[expectedOutput.producerOccurrence]
+      const producer = program.core.occurrences[expectedOutput.producerOccurrence]!
       const source = provenance.get(producer.operation)
       const run = mesh.provenance[0]
       if (mesh.provenance.length !== 1 || !keys(run, ['triangleStart','triangleEnd','backside','source'])
@@ -188,7 +188,7 @@ function sceneMatches(value: unknown, programJson: unknown, request: BrepDiagnos
       } else if (run.source !== null) return false
       // Snapshot hashes are checked by the existing mesh validator; additionally
       // bind the advertised face list and triangle indices to that exact snapshot.
-      const geometry = diagnosticSnapshotGeometry(mesh.nativeGeometry, program.core.nodes[expectedOutput.node].valueType.representation)
+      const geometry = diagnosticSnapshotGeometry(mesh.nativeGeometry, program.core.nodes[expectedOutput.node]!.valueType.representation)
       const topologyIds = geometry?.topologyIds
       const faceList = record(topologyIds) ? topologyIds.faces : null
       const reportedFaces = output.topologyFaceIds

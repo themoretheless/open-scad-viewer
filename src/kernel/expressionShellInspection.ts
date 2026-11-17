@@ -49,7 +49,7 @@ export function validExpressionInspection(expected:ReturnType<typeof expressionI
   const c=i.contacts
   if(c.version!==1||c.kind!=='expression-shell-contact-audit'||!count(c.pendingPairs)||!Array.isArray(c.faces)||c.faces.length!==s.faceCount||!Array.isArray(c.pairs)||c.pairs.length!==s.faceCount*(s.faceCount-1)/2)return false
   for(const [key,max] of [['cells',l.contacts.cells],['spans',l.contacts.spans],['domainCells',l.contacts.domainCells],['exactWork',l.contacts.exactWork],['driverCells',l.contacts.driverCells],['linearCells',l.linearCells]] as const)if(!count(c[key])||c[key]>max)return false
-  if(!c.faces.every((f,n)=>f.index===n&&f.kind===s.faces[n].kind&&(f.kind==='original'?f.sourceFace===s.faces[n].source:f.kind==='retained'?f.retainedSide===s.faces[n].source:true)))return false
+  if(!c.faces.every((f,n)=>f.index===n&&f.kind===s.faces[n]?.kind&&(f.kind==='original'?f.sourceFace===s.faces[n]!.source:f.kind==='retained'?f.retainedSide===s.faces[n]!.source:true)))return false
   const seen=new Set<string>();let pending=0
   for(const p of c.pairs){
    if(!Array.isArray(p.faces)||p.faces.length!==2||!p.faces.every(count)||p.faces[0]>=p.faces[1]||p.faces[1]>=s.faceCount||!proofs.has(p.proof)||typeof p.reason!=='string'||!p.reason||!Array.isArray(p.sharedEdges)||!p.sharedEdges.every(n=>count(n)&&n<s.pairCount)||!products(p.pendingProducts)||!products(p.outsideProducts)||!products(p.separatedProducts))return false

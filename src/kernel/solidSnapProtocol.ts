@@ -16,11 +16,11 @@ export function validBodySnapGeometry(value:unknown,maxPoints:number,maxSegments
    if(!curve||!finite(start)||!finite(end)||start>end)return false
    if(!curves.has(curve)){
     const {degree,knots,weights,controlPoints}=curve
-    if(!Number.isSafeInteger(degree)||degree<1||!Array.isArray(controlPoints)||controlPoints.length<=degree||!controlPoints.every(vector)||!Array.isArray(weights)||weights.length!==controlPoints.length||!weights.every(w=>finite(w)&&w>0)||!Array.isArray(knots)||knots.length!==controlPoints.length+degree+1||!knots.every((k,i)=>finite(k)&&(i===0||k>=knots[i-1])))return false
-    if(!(knots[degree]<knots[controlPoints.length]))return false
+    if(!Number.isSafeInteger(degree)||degree<1||!Array.isArray(controlPoints)||controlPoints.length<=degree||!controlPoints.every(vector)||!Array.isArray(weights)||weights.length!==controlPoints.length||!weights.every(w=>finite(w)&&w>0)||!Array.isArray(knots)||knots.length!==controlPoints.length+degree+1||!knots.every((k,i)=>finite(k)&&(i===0||k>=knots[i-1]!)))return false
+    if(!(knots[degree]!<knots[controlPoints.length]!))return false
     curves.add(curve)
    }
-   if(start<curve.knots[curve.degree]||end>curve.knots[curve.controlPoints.length])return false
+   if(start<curve.knots[curve.degree]!||end>curve.knots[curve.controlPoints.length]!)return false
   }
  }
  return true

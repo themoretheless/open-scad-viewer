@@ -50,11 +50,11 @@ export function applySolidSceneEdit(document:DirectDocument,p:SolidSceneEditOpti
   }
   case 'sketch-transform':{
    const i=d.sketches.findIndex(s=>s.id===p.id);if(i<0)throw Error('Select an existing sketch.')
-   d.sketches[i]=transformSketch(d.sketches[i],[p.x,p.y],p.angle,p.scale);return d
+   d.sketches[i]=transformSketch(d.sketches[i]!,[p.x,p.y],p.angle,p.scale);return d
   }
   case 'instance-place':{
    const body=d.bodies.find(b=>b.id===p.id);if(!body?.instance)throw Error('Select a linked instance.')
-   body.instance.matrix[0][3]=p.x;body.instance.matrix[1][3]=p.y;body.instance.matrix[2][3]=p.z
+   const m=body.instance.matrix,r0=m[0]!,r1=m[1]!,r2=m[2]!;r0[3]=p.x;r1[3]=p.y;r2[3]=p.z
    return resolveSolidInstances(d,instanceCache)
   }
   case 'loft':if(p.ids.length<2||p.ids.length>64)throw new DirectInputError('DIRECT_LOFT_SECTIONS','Select 2–64 closed polygon sketches in loft order.',undefined,p.ids);d.bodies.push({id:p.createdId,name:'Ruled loft',...createRuledSketchLoft(d.sketches,p.ids)});return parseDirectDocument(stringifyMeshJson(d))
@@ -70,5 +70,5 @@ function instanceArraySpec(document:DirectDocument,p:SolidSceneEditOptions,direc
  const sketch=document.sketches.find(s=>s.id===a.pathId)
  if(!sketch||sketch.points.length<2)throw new DirectInputError('DIRECT_PATTERN_ARRAY','Select a sketch line or a NURBS curve as the array path.','patternCount',[])
  const points=worldPoints(sketch.points,sketch.plane)
- return {kind:'path',points:sketch.closed?[...points,points[0]]:points,closed:!!sketch.closed,count:a.count,align:!!a.align}
+ return {kind:'path',points:sketch.closed?[...points,points[0]!]:points,closed:!!sketch.closed,count:a.count,align:!!a.align}
 }

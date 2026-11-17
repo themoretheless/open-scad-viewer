@@ -72,7 +72,7 @@ export function nurbsCurveToSketch(item: SolidNurbsCurve): DirectSketch {
     throw new Error('Only planar XY NURBS curves can be copied to a sketch.')
   }
   const points = sampleSolidNurbsCurve(item.curve).map(point => [point[0], point[1]] as Point2)
-  const closed = Math.hypot(points[0][0] - points.at(-1)![0], points[0][1] - points.at(-1)![1]) < 1e-7
+  const closed = Math.hypot(points[0]![0] - points.at(-1)![0], points[0]![1] - points.at(-1)![1]) < 1e-7
   if (closed) points.pop()
   return { id: crypto.randomUUID(), name: `${item.name} · sampled sketch`, points, closed }
 }
@@ -132,7 +132,10 @@ export function updateSolidNurbsControlPoint(
   } else if (surface) {
     if (!surface.surface.controlPoints[u]?.[v]) throw new Error('NURBS surface CV is out of range.')
     surface.surface.controlPoints[u][v] = [...point]
-    if (weight !== undefined) surface.surface.weights[u][v] = weight
+    if (weight !== undefined) {
+      const weightRow = surface.surface.weights[u]!
+      weightRow[v] = weight
+    }
   } else {
     throw new Error('NURBS object was not found.')
   }

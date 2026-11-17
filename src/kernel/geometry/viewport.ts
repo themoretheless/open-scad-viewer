@@ -18,14 +18,14 @@ function finite(values: ArrayLike<number>): boolean {
 
 function homogeneous(m: ArrayLike<number>, p: readonly number[]): number[] {
   const q = new Array<number>(4)
-  for (let r = 0; r < 4; r++) q[r] = m[r * 4] * p[0] + m[r * 4 + 1] * p[1] + m[r * 4 + 2] * p[2] + m[r * 4 + 3]
+  for (let r = 0; r < 4; r++) q[r] = m[r * 4]! * p[0]! + m[r * 4 + 1]! * p[1]! + m[r * 4 + 2]! * p[2]! + m[r * 4 + 3]!
   return q
 }
 
 function point(m: ArrayLike<number>, p: readonly number[]): Vec3 | null {
   const q = homogeneous(m, p)
   if (q[3] === 0 || !q.every(Number.isFinite)) return null
-  const result: Vec3 = [q[0] / q[3], q[1] / q[3], q[2] / q[3]]
+  const result: Vec3 = [q[0]! / q[3]!, q[1]! / q[3]!, q[2]! / q[3]!]
   return result.every(Number.isFinite) ? result : null
 }
 
@@ -62,10 +62,10 @@ export function projectPointInKernel(matrix: Mat4, point: readonly number[], siz
   if (!finite(matrix) || !finite(point) || !finite(size)) return null
   if (!(size[0] > 0 && size[1] > 0)) return null
   const q = homogeneous(matrix, point)
-  if (q[3] <= 1e-8 || !q.every(Number.isFinite)) return null
+  if (q[3]! <= 1e-8 || !q.every(Number.isFinite)) return null
   const result: [number, number] = [
-    (q[0] / q[3] + 1) * size[0] / 2,
-    (1 - q[1] / q[3]) * size[1] / 2,
+    (q[0]! / q[3]! + 1) * size[0]! / 2,
+    (1 - q[1]! / q[3]!) * size[1]! / 2,
   ]
   return result.every(Number.isFinite) ? result : null
 }
@@ -74,6 +74,6 @@ export function projectPointInKernel(matrix: Mat4, point: readonly number[], siz
 export function selectedCornerInKernel(matrix: Mat4, vertices: Vec3[], weights: Vec3): Vec3 | null {
   if (!finite(matrix) || !vertices.every(finite) || !finite(weights)) return null
   let corner = 0
-  for (let i = 1; i < 3; i++) if (weights[i] > weights[corner]) corner = i
-  return point(matrix, vertices[corner])
+  for (let i = 1; i < 3; i++) if (weights[i]! > weights[corner]!) corner = i
+  return point(matrix, vertices[corner]!)
 }

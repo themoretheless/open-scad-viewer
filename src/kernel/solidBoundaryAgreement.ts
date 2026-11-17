@@ -7,7 +7,7 @@ export interface BoundaryAgreement {
  complete:boolean;allWithinTolerance:boolean;uses:BoundaryUse[];mismatchCount:number;unresolvedCount:number;cells:number;maxCells:number;toleranceMm:number
  lines:{edge:number;points:number[][]}[]
 }
-export function boundaryExpectation(model:NurbsBrep,maxCells:number){return {maxCells,toleranceMm:model.toleranceMm,uses:model.faces.flatMap((f,face)=>[f.outer,...f.holes].flatMap(wire=>model.loops[wire].coedges.map((c,coedge)=>({face,wire,coedge,edge:c.edge}))))}}
+export function boundaryExpectation(model:NurbsBrep,maxCells:number){return {maxCells,toleranceMm:model.toleranceMm,uses:model.faces.flatMap((f,face)=>[f.outer,...f.holes].flatMap(wire=>model.loops[wire]!.coedges.map((c,coedge)=>({face,wire,coedge,edge:c.edge}))))}}
 export function validBoundaryAgreement(e:ReturnType<typeof boundaryExpectation>,value:unknown):value is BoundaryAgreement {
  const v=value as BoundaryAgreement
  if(!v||v.method!=='interval-curve-surface-agreement'||v.scope!=='edge-surface-correspondence'||v.solidGeometryStatus!=='not-certified'
@@ -15,7 +15,7 @@ export function validBoundaryAgreement(e:ReturnType<typeof boundaryExpectation>,
   ||!Array.isArray(v.uses)||v.uses.length!==e.uses.length||!Array.isArray(v.lines))return false
  let mismatch=0,unresolved=0
  for(let i=0;i<e.uses.length;i++){
-  const u=v.uses[i],expected=e.uses[i]
+  const u=v.uses[i],expected=e.uses[i]!
   if(!u||!(['face','wire','coedge','edge'] as const).every(k=>u[k]===expected[k]))return false
   if(u.status==='mismatch'){
    mismatch++
@@ -38,6 +38,6 @@ export function validBoundaryAgreement(e:ReturnType<typeof boundaryExpectation>,
 }
 export function inspectBoundaryAgreement(model:NurbsBrep,maxCells:number):BoundaryAgreement {
  const result=callGeometryRust<Omit<BoundaryAgreement,'lines'>>('cad_boundary_agreement',{model,maxCells})
- const lines=[...new Set(result.uses.filter(u=>u.status==='mismatch').map(u=>u.edge))].map(edge=>({edge,points:sampleSolidNurbsCurve(model.edges[edge].curve,32)}))
+ const lines=[...new Set(result.uses.filter(u=>u.status==='mismatch').map(u=>u.edge))].map(edge=>({edge,points:sampleSolidNurbsCurve(model.edges[edge]!.curve,32)}))
  return {...result,lines}
 }

@@ -71,7 +71,7 @@ export async function executeBrepNativeProgram(input:SemanticLoweringSuccess,con
   session=undefined // commit consumes native ownership on success and refusal
   if(report.tag==='failed')failure(report)
   checkSemanticExecutionControl(control,null)
-  let outputs:readonly BrepNativeOutput[]=freeze(report.resultItems.map(item=>({reference:item.reference,value:report.outcomes[item.outcomeIndex],occurrence:core.occurrences[item.reference.identityOccurrence],color:item.reference.color})))
+  let outputs:readonly BrepNativeOutput[]=freeze(report.resultItems.map(item=>({reference:item.reference,value:report.outcomes[item.outcomeIndex]!,occurrence:core.occurrences[item.reference.identityOccurrence]!,color:item.reference.color})))
   let disposed=false
   const dispose=async()=>{outputs=[];disposed=true}
   return Object.freeze({program,attestation:trusted.attestation,get outputs(){return outputs},get disposed(){return disposed},dispose,[Symbol.asyncDispose]:dispose})

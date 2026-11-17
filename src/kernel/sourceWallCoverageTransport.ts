@@ -91,13 +91,13 @@ export function validCoverage(e:SourceWallCoverageOptions|undefined,r:SourceWall
    if(!allowed.includes(f.reason))return false
    if(!f.qualified){
     const u=f.uncertain
-    if(!Array.isArray(u)||u.length!==2||u.some(d=>!Array.isArray(d)||d.length!==2||d.some(t=>!Array.isArray(t)||t.length!==2||!t.every(Number.isFinite)||t[0]>t[1])))return false
+    if(!Array.isArray(u)||u.length!==2||u.some(d=>!Array.isArray(d)||d.length!==2||d.some(t=>!Array.isArray(t)||t.length!==2||!t.every(Number.isFinite)||t[0]!>t[1]!)))return false
    }
    if(f.unresolvedPairs!==undefined||f.endpointExchangeSymmetric!==undefined){
     const pairs=f.unresolvedPairs
     if(f.endpointExchangeSymmetric!==true||!Array.isArray(pairs)||pairs.length!==f.pending
      ||pairs.some(u=>!Array.isArray(u)||u.length!==2||u.some(d=>!Array.isArray(d)||d.length!==2
-      ||d.some(t=>!Array.isArray(t)||t.length!==2||!t.every(Number.isFinite)||t[0]>t[1])))
+      ||d.some(t=>!Array.isArray(t)||t.length!==2||!t.every(Number.isFinite)||t[0]!>t[1]!)))
      ||(pairs.length>0&&key(pairs[pairs.length-1])!==key(f.uncertain)))return false
    }
    cells+=f.cells;spans+=f.spans;allSelf=allSelf&&f.qualified
@@ -138,7 +138,7 @@ export function validCoverage(e:SourceWallCoverageOptions|undefined,r:SourceWall
     successes.add(p.faces.join(','))
    }else{
     if(!['source-retained-gap-work-limit','source-retained-gap-resolution-limit'].includes(p.reason)||(entry.pair.proven&&!(e.mixedProducts&&entry.pair.reason==='source-wall-mixed-product-qualified')))return false
-    if(p.unresolvedProducts.some(u=>!Array.isArray(u)||u.length!==2||u.some(d=>!Array.isArray(d)||d.length!==2||d.some(t=>!Array.isArray(t)||t.length!==2||!t.every(Number.isFinite)||t[0]>t[1]))))return false
+    if(p.unresolvedProducts.some(u=>!Array.isArray(u)||u.length!==2||u.some(d=>!Array.isArray(d)||d.length!==2||d.some(t=>!Array.isArray(t)||t.length!==2||!t.every(Number.isFinite)||t[0]!>t[1]!))))return false
    }
    cells+=p.cells;spans+=p.spans;domainCells+=p.domainCells;domainQueries+=p.domainQueries;endpointQueries+=p.endpointQueries
   }
@@ -167,7 +167,7 @@ export function validCoverage(e:SourceWallCoverageOptions|undefined,r:SourceWall
     successes.add(p.faces.join(','))
    }else{
     if(!['source-wall-pair-work-limit','source-wall-pair-resolution-limit','source-wall-pair-numeric-limit'].includes(p.reason)||entry.pair.proven)return false
-    if(p.unresolvedProducts.some(u=>!Array.isArray(u)||u.length!==2||u.some(d=>!Array.isArray(d)||d.length!==2||d.some(t=>!Array.isArray(t)||t.length!==2||!t.every(Number.isFinite)||t[0]>t[1]))))return false
+    if(p.unresolvedProducts.some(u=>!Array.isArray(u)||u.length!==2||u.some(d=>!Array.isArray(d)||d.length!==2||d.some(t=>!Array.isArray(t)||t.length!==2||!t.every(Number.isFinite)||t[0]!>t[1]!))))return false
    }
    normalSpans+=p.normalSpans;normalProducts+=p.normalProducts;cells+=p.cells;spans+=p.spans;domainCells+=p.domainCells;domainQueries+=p.domainQueries;endpointQueries+=p.endpointQueries
   }

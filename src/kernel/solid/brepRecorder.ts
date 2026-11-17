@@ -148,51 +148,51 @@ export function createBrepRecordingKernelOps(
 
     translate(input, offset) {
       return derive(base.translate(input, offset), [input], ([value]) => graph.transform(
-        value, translationMatrix(offset[0] ?? 0, offset[1] ?? 0, offset[2] ?? 0),
+        value!, translationMatrix(offset[0] ?? 0, offset[1] ?? 0, offset[2] ?? 0),
       ))
     },
 
     scale(input, factors) {
       const [x, y, z] = [factors[0] ?? 1, factors[1] ?? factors[0] ?? 1, factors[2] ?? factors[0] ?? 1]
       return derive(base.scale(input, factors), [input], ([value]) =>
-        graph.transform(value, scaleMatrix(x, y, z)))
+        graph.transform(value!, scaleMatrix(x, y, z)))
     },
 
     rotate(input, angles) {
       const vector = typeof angles === 'number' ? [0, 0, angles] : angles
       const matrix = rotationMatrix(vector[0] ?? 0, vector[1] ?? 0, vector[2] ?? 0)
-      return derive(base.rotate(input, angles), [input], ([value]) => graph.transform(value, matrix))
+      return derive(base.rotate(input, angles), [input], ([value]) => graph.transform(value!, matrix))
     },
 
     mirror(input, normal) {
       const matrix = mirrorMatrix(normal[0] ?? 0, normal[1] ?? 0, normal[2] ?? 0)
       return derive(base.mirror(input, normal), [input], ([value]) => (matrix === null
         ? refuse('mirror about a degenerate plane')
-        : graph.transform(value, matrix)))
+        : graph.transform(value!, matrix)))
     },
 
     transform3(input, matrix) {
       // The kernel matrix is a column-major 4x4; the graph wants rows.
       const rows = [0, 1, 2].map(row => [0, 1, 2, 3].map(column => matrix[column * 4 + row] ?? 0))
       return derive(base.transform3(input, matrix), [input], ([value]) =>
-        graph.transform(value, [...rows, [0, 0, 0, 1]] as [number[], number[], number[], number[]]))
+        graph.transform(value!, [...rows, [0, 0, 0, 1]] as [number[], number[], number[], number[]]))
     },
 
     transform3Projective(input, matrix) {
       // Projective transforms keep the authored homogeneous fourth row.
       const rows = [0, 1, 2, 3].map(row => [0, 1, 2, 3].map(column => matrix[column * 4 + row] ?? (row === column ? 1 : 0)))
       return derive(base.transform3Projective(input, matrix), [input], ([value]) =>
-        graph.transform(value, rows as [number[], number[], number[], number[]]))
+        graph.transform(value!, rows as [number[], number[], number[], number[]]))
     },
 
     translateZ(input, distance) {
       return derive(base.translateZ(input, distance), [input], ([value]) =>
-        graph.transform(value, translationMatrix(0, 0, distance)))
+        graph.transform(value!, translationMatrix(0, 0, distance)))
     },
 
     mirrorZ(input) {
       return derive(base.mirrorZ(input), [input], ([value]) =>
-        graph.transform(value, scaleMatrix(1, 1, -1)))
+        graph.transform(value!, scaleMatrix(1, 1, -1)))
     },
 
     asOriginal(input) { return tag(base.asOriginal(input), solidOf(input)) },

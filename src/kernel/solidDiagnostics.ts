@@ -11,7 +11,7 @@ export function inspectSolidDisplay(mesh:PolygonMesh,offset:number,normal:number
   ...locations.boundaryEdges.map(edge=>({kind:'boundary',points:edge.map(point)})),
   ...locations.nonManifoldEdges.map(edge=>({kind:'non-manifold',points:edge.map(point)})),
   ...locations.orientationEdges.map(edge=>({kind:'orientation',points:edge.map(point)})),
-  ...locations.degenerateTriangles.map(i=>{const [a,b,c]=Array.from(mesh.indices.slice(i*3,i*3+3));return {kind:'degenerate',points:[a,b,c,a].map(point)}}),
+  ...locations.degenerateTriangles.map(i=>{const [a,b,c]=Array.from(mesh.indices.slice(i*3,i*3+3));return {kind:'degenerate',points:[a!,b!,c!,a!].map(point)}}),
  ]
  let boundaries:number[][][]=[],boundaryError='',sectionError=''
  let section:SolidPlaneSection={normal,offsetMm:offset,candidateTriangles:0,contours:[],collapsedSegmentTriangles:[]}
@@ -28,7 +28,7 @@ export function inspectSolidIntersections(mesh:PolygonMesh,options:SolidIntersec
  const result=callGeometryRust<SolidIntersectionReport>('cad_mesh_intersections',{mesh,relativeTolerance:1e-9,maxWork:options.maxWork??200_000,maxContacts:options.maxContacts??10_000})
  const triangleIds=[...new Set(result.contacts.flatMap(c=>c.triangles))].sort((a,b)=>a-b)
  return {...result,contact:result.contacts[0]??null,triangleIds,lines:triangleIds.map(i=>{
-  const vertices=Array.from(mesh.indices.slice(i*3,i*3+3));vertices.push(vertices[0])
+  const vertices=Array.from(mesh.indices.slice(i*3,i*3+3));vertices.push(vertices[0]!)
   return vertices.map(v=>Array.from(mesh.positions.slice(v*3,v*3+3)))
  })}
 }

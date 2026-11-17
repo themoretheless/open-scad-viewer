@@ -20,7 +20,7 @@ export function validMaterialWall(e:ReturnType<typeof materialWallExpectation>,v
   if(c.normalAlignment!=='angular-tolerance')reason=c.normalAlignment==='oblique'?'candidate-oblique':'candidate-normal-unresolved'
   else{
    const f=c.boundary.contacts.map(x=>x.face)
-   reason=e.groups[0].includes(f[0])&&e.groups[1].includes(f[1])||e.groups[0].includes(f[1])&&e.groups[1].includes(f[0])?'material-thickness-bounds':'candidate-outside-groups'
+   reason=e.groups[0].includes(f[0]!)&&e.groups[1].includes(f[1]!)||e.groups[0].includes(f[1]!)&&e.groups[1].includes(f[0]!)?'material-thickness-bounds':'candidate-outside-groups'
   }
  }
  if(r.reason!==reason)return false

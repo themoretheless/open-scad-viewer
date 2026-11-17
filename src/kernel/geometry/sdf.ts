@@ -99,9 +99,9 @@ export async function tessellateSdfMarchingCubesGpu(
   const { runGpuMarchingIsosurface } = await import('../../render/gpuMarchingCubes')
   return runGpuMarchingIsosurface(
     {
-      cells: [grid.cells[0], grid.cells[1], grid.cells[2]],
-      min: [grid.min[0], grid.min[1], grid.min[2]],
-      max: [grid.max[0], grid.max[1], grid.max[2]],
+      cells: [grid.cells[0]!, grid.cells[1]!, grid.cells[2]!],
+      min: [grid.min[0]!, grid.min[1]!, grid.min[2]!],
+      max: [grid.max[0]!, grid.max[1]!, grid.max[2]!],
       isoLevel: isoValue,
     },
     scalarField,

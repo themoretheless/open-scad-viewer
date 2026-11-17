@@ -22,7 +22,7 @@ export interface ProfileIntersectionOptions {toleranceMm?:number;maxPairs?:numbe
 const record=(value:unknown):value is Record<string,unknown>=>typeof value==='object'&&value!==null&&!Array.isArray(value)
 const integer=(value:unknown):value is number=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0
 const finite=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value)
-const interval=(value:unknown):value is [number,number]=>Array.isArray(value)&&value.length===2&&value.every(finite)&&value[0]<=value[1]
+const interval=(value:unknown):value is [number,number]=>Array.isArray(value)&&value.length===2&&value.every(finite)&&value[0]!<=value[1]!
 const invalid=():never=>{throw new GeometryKernelError('CAD_PROTOCOL','Invalid profile intersection report')}
 
 /** Validates source ownership and aggregate work before a report enters the UI. */

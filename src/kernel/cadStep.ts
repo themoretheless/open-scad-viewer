@@ -5,14 +5,14 @@ const UTF8_ENCODER=new TextEncoder()
 /** ISO 10303-21/AP214 faceted BREP in millimetres. No analytic surface reconstruction. */
 export function exportFacetedStep(bodies:DirectBody[]):string{
  if(!bodies.length)throw Error('Select bodies to export.')
- const entities:string[]=[],add=(s:string)=>{entities.push(`#${entities.length+1}=${s};`);return '#'+entities.length},num=(v:number)=>{if(!Number.isFinite(v))throw Error('Invalid STEP coordinate.');const s=String(v);return s.includes('.')||/e/i.test(s)?s.replace('e','E'):s+'.'},tuple=(p:number[])=>`(${num(p[0])},${num(p[1])},${num(p[2])})`
+ const entities:string[]=[],add=(s:string)=>{entities.push(`#${entities.length+1}=${s};`);return '#'+entities.length},num=(v:number)=>{if(!Number.isFinite(v))throw Error('Invalid STEP coordinate.');const s=String(v);return s.includes('.')||/e/i.test(s)?s.replace('e','E'):s+'.'},tuple=(p:number[])=>`(${num(p[0]!)},${num(p[1]!)},${num(p[2]!)})`
  const app=add("APPLICATION_CONTEXT('automotive_design')");add(`APPLICATION_PROTOCOL_DEFINITION('international standard','automotive_design',2000,${app})`)
  const pc=add(`PRODUCT_CONTEXT('',${app},'mechanical')`),product=add(`PRODUCT('model','model','',(${pc}))`),formation=add(`PRODUCT_DEFINITION_FORMATION('1','',${product})`),dc=add(`PRODUCT_DEFINITION_CONTEXT('part definition',${app},'design')`),definition=add(`PRODUCT_DEFINITION('design','',${formation},${dc})`),shape=add(`PRODUCT_DEFINITION_SHAPE('','',${definition})`)
  const length=add('(LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.))'),angle=add('(NAMED_UNIT(*) PLANE_ANGLE_UNIT() SI_UNIT($,.RADIAN.))'),solidAngle=add('(NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT())'),uncertainty=add(`UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-6),${length},'distance_accuracy_value','')`),context=add(`(GEOMETRIC_REPRESENTATION_CONTEXT(3) GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((${uncertainty})) GLOBAL_UNIT_ASSIGNED_CONTEXT((${length},${angle},${solidAngle})) REPRESENTATION_CONTEXT('','3D'))`)
  const solids=bodies.map(b=>{
   const r=inspectPolygonMesh(b.mesh);if(!r.closed||r.signedVolumeMm3<=0)throw Error('STEP export requires closed outward-oriented solids.')
   const p=bodyPoints(b),points=p.map(pt=>add(`CARTESIAN_POINT('',${tuple(pt)})`)),faces:string[]=[]
-  for(let i=0;i<b.mesh.indices.length;i+=3){const i0=b.mesh.indices[i],i1=b.mesh.indices[i+1],i2=b.mesh.indices[i+2],a=p[i0],bPt=p[i1],cPt=p[i2],u=unit3([bPt[0]-a[0],bPt[1]-a[1],bPt[2]-a[2]]),n=unit3(cross3(u,[cPt[0]-a[0],cPt[1]-a[1],cPt[2]-a[2]])),loop=add(`POLY_LOOP('',(${points[i0]},${points[i1]},${points[i2]}))`),bound=add(`FACE_OUTER_BOUND('',${loop},.T.)`),normal=add(`DIRECTION('',${tuple(n)})`),direction=add(`DIRECTION('',${tuple(u)})`),placement=add(`AXIS2_PLACEMENT_3D('',${points[i0]},${normal},${direction})`),plane=add(`PLANE('',${placement})`);faces.push(add(`FACE_SURFACE('',(${bound}),${plane},.T.)`))}
+  for(let i=0;i<b.mesh.indices.length;i+=3){const i0=b.mesh.indices[i]!,i1=b.mesh.indices[i+1]!,i2=b.mesh.indices[i+2]!,a=p[i0]!,bPt=p[i1]!,cPt=p[i2]!,u=unit3([bPt[0]!-a[0]!,bPt[1]!-a[1]!,bPt[2]!-a[2]!]),n=unit3(cross3(u,[cPt[0]!-a[0]!,cPt[1]!-a[1]!,cPt[2]!-a[2]!])),loop=add(`POLY_LOOP('',(${points[i0]},${points[i1]},${points[i2]}))`),bound=add(`FACE_OUTER_BOUND('',${loop},.T.)`),normal=add(`DIRECTION('',${tuple(n)})`),direction=add(`DIRECTION('',${tuple(u)})`),placement=add(`AXIS2_PLACEMENT_3D('',${points[i0]},${normal},${direction})`),plane=add(`PLANE('',${placement})`);faces.push(add(`FACE_SURFACE('',(${bound}),${plane},.T.)`))}
   return add(`FACETED_BREP('${b.name.replace(/[^\x20-\x7e]/g,'_').replace(/'/g,"''")}',${add(`CLOSED_SHELL('',(${faces.join(',')}))`)})`)
  });const representation=add(`FACETED_BREP_SHAPE_REPRESENTATION('',(${solids.join(',')}),${context})`);add(`SHAPE_DEFINITION_REPRESENTATION(${shape},${representation})`)
  return `ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('Faceted solids'),'2;1');\nFILE_NAME('model.step','${new Date().toISOString()}',(''),(''),'OpenSCAD Viewer','OpenSCAD Viewer','');\nFILE_SCHEMA(('AUTOMOTIVE_DESIGN'));\nENDSEC;\nDATA;\n${entities.join('\n')}\nENDSEC;\nEND-ISO-10303-21;\n`
@@ -22,13 +22,13 @@ export function importFacetedStep(text:string):DirectBody[]{
  if(text.length>20_000_000)throw Error('STEP file exceeds 20 MB.')
  if(!text.startsWith('ISO-10303-21;')||!text.includes('END-ISO-10303-21;'))throw Error('Invalid STEP exchange file.')
  if(/\b(ADVANCED_FACE|MANIFOLD_SOLID_BREP|BREP_WITH_VOIDS|MAPPED_ITEM|CONVERSION_BASED_UNIT)\s*\(/i.test(text))throw Error('This importer supports planar FACETED_BREP in SI units only; analytic faces, void shells, mapped instances and converted units are not supported.')
- const units=[...text.matchAll(/SI_UNIT\(\s*(\$|\.\w+\.)\s*,\s*\.METRE\.\s*\)/gi)].map(m=>m[1].toUpperCase());if(!units.length||new Set(units).size!==1||!['.MILLI.','$'].includes(units[0]))throw Error('STEP must use uniform metres or millimetres.');const scale=units[0]==='$'?1000:1
- const entities=new Map<string,{type:string;args:string}>();for(const m of text.matchAll(/#(\d+)\s*=\s*([A-Z_0-9]+)\s*\(((?:[^']|'(?:[^']|'')*')*?)\)\s*;/gi)){if(entities.has(m[1]))throw Error('Duplicate STEP entity.');entities.set(m[1],{type:m[2].toUpperCase(),args:m[3]})}
- const entity=(id:string,type?:string)=>{const e=entities.get(id);if(!e||type&&e.type!==type)throw Error('Unsupported or missing STEP '+(type??'entity')+' #'+id);return e},refs=(args:string)=>[...args.replace(/'(?:[^']|'')*'/g,"''").matchAll(/#(\d+)/g)].map(m=>m[1])
- const point=(id:string)=>{const args=entity(id,'CARTESIAN_POINT').args,tuple=args.match(/\(([^()]*)\)\s*$/)?.[1];const values=tuple?.split(',').map(v=>Number(v.replace(/D/i,'E'))*scale);if(!values||values.length!==3||!values.every(Number.isFinite))throw Error('Invalid STEP point.');return values}
+ const units=[...text.matchAll(/SI_UNIT\(\s*(\$|\.\w+\.)\s*,\s*\.METRE\.\s*\)/gi)].map(m=>m[1]!.toUpperCase());if(!units.length||new Set(units).size!==1||!['.MILLI.','$'].includes(units[0]!))throw Error('STEP must use uniform metres or millimetres.');const scale=units[0]==='$'?1000:1
+ const entities=new Map<string,{type:string;args:string}>();for(const m of text.matchAll(/#(\d+)\s*=\s*([A-Z_0-9]+)\s*\(((?:[^']|'(?:[^']|'')*')*?)\)\s*;/gi)){if(entities.has(m[1]!))throw Error('Duplicate STEP entity.');entities.set(m[1]!,{type:m[2]!.toUpperCase(),args:m[3]!})}
+ const entity=(id:string,type?:string)=>{const e=entities.get(id);if(!e||type&&e.type!==type)throw Error('Unsupported or missing STEP '+(type??'entity')+' #'+id);return e},refs=(args:string)=>[...args.replace(/'(?:[^']|'')*'/g,"''").matchAll(/#(\d+)/g)].map(m=>m[1]!)
+ const point=(id:string)=>{const args=entity(id,'CARTESIAN_POINT').args,tuple=args.match(/\(([^()]*)\)\s*$/)?.[1];const values=tuple?.split(',').map(v=>Number(v.replace(/D/i,'E'))*scale);if(!values||values.length!==3||!values.every(Number.isFinite))throw Error('Invalid STEP point.');return values as [number,number,number]}
  const solids=[...entities.values()].filter(e=>e.type==='FACETED_BREP');if(!solids.length)throw Error('No FACETED_BREP solids found.')
- return solids.map((solid,index)=>{const positions:number[]=[],indices:number[]=[],weld=new Map<string,number>();const vertex=(p:number[])=>{const key=`${p[0]},${p[1]},${p[2]}`;let i=weld.get(key);if(i===undefined){i=positions.length/3;weld.set(key,i);positions.push(p[0],p[1],p[2])}return i};const shell=entity(refs(solid.args)[0],'CLOSED_SHELL')
-  for(const faceId of refs(shell.args)){const face=entity(faceId);if(face.type!=='FACE_SURFACE'&&face.type!=='FACE')throw Error('Unsupported STEP face.');const fr=refs(face.args),boundsList=face.args.match(/\(([^()]*)\)/)?.[1];if(!boundsList||refs(boundsList).length!==1)throw Error('STEP faces with holes are not supported.');if(face.type==='FACE_SURFACE')entity(fr[1],'PLANE');const bound=entity(fr[0]);if(bound.type!=='FACE_OUTER_BOUND'&&bound.type!=='FACE_BOUND')throw Error('Unsupported STEP face bound.');const loop=entity(refs(bound.args)[0],'POLY_LOOP'),p=refs(loop.args).map(point);if(p.length<3)throw Error('Invalid STEP polygon.');if(/\.F\.\s*$/.test(bound.args))p.reverse();const p0=p[0],p1=p[1],p2=p[2],normal=unit3(cross3([p1[0]-p0[0],p1[1]-p0[1],p1[2]-p0[2]],[p2[0]-p0[0],p2[1]-p0[1],p2[2]-p0[2]]));for(let i=0;i<p.length;i++){const pi=p[i];if(Math.abs((pi[0]-p0[0])*normal[0]+(pi[1]-p0[1])*normal[1]+(pi[2]-p0[2])*normal[2])>1e-6)throw Error('Nonplanar STEP polygon.');const a=pi,b=p[(i+1)%p.length],c=p[(i+2)%p.length];if(dot3(cross3([b[0]-a[0],b[1]-a[1],b[2]-a[2]],[c[0]-b[0],c[1]-b[1],c[2]-b[2]]),normal)<-1e-8)throw Error('Concave STEP poly-loop is not supported.')}const ids=p.map(vertex);for(let i=1;i<ids.length-1;i++)indices.push(ids[0],ids[i],ids[i+1])}
+ return solids.map((solid,index)=>{const positions:number[]=[],indices:number[]=[],weld=new Map<string,number>();const vertex=(p:number[])=>{const key=`${p[0]},${p[1]},${p[2]}`;let i=weld.get(key);if(i===undefined){i=positions.length/3;weld.set(key,i);positions.push(p[0]!,p[1]!,p[2]!)}return i};const shell=entity(refs(solid.args)[0]!,'CLOSED_SHELL')
+  for(const faceId of refs(shell.args)){const face=entity(faceId);if(face.type!=='FACE_SURFACE'&&face.type!=='FACE')throw Error('Unsupported STEP face.');const fr=refs(face.args),boundsList=face.args.match(/\(([^()]*)\)/)?.[1];if(!boundsList||refs(boundsList).length!==1)throw Error('STEP faces with holes are not supported.');if(face.type==='FACE_SURFACE')entity(fr[1]!,'PLANE');const bound=entity(fr[0]!);if(bound.type!=='FACE_OUTER_BOUND'&&bound.type!=='FACE_BOUND')throw Error('Unsupported STEP face bound.');const loop=entity(refs(bound.args)[0]!,'POLY_LOOP'),p=refs(loop.args).map(point);if(p.length<3)throw Error('Invalid STEP polygon.');if(/\.F\.\s*$/.test(bound.args))p.reverse();const p0=p[0]!,p1=p[1]!,p2=p[2]!,normal=unit3(cross3([p1[0]-p0[0],p1[1]-p0[1],p1[2]-p0[2]],[p2[0]-p0[0],p2[1]-p0[1],p2[2]-p0[2]]));for(let i=0;i<p.length;i++){const pi=p[i]!;if(Math.abs((pi[0]-p0[0])*normal[0]+(pi[1]-p0[1])*normal[1]+(pi[2]-p0[2])*normal[2])>1e-6)throw Error('Nonplanar STEP polygon.');const a=pi,b=p[(i+1)%p.length]!,c=p[(i+2)%p.length]!;if(dot3(cross3([b[0]-a[0],b[1]-a[1],b[2]-a[2]],[c[0]-b[0],c[1]-b[1],c[2]-b[2]]),normal)<-1e-8)throw Error('Concave STEP poly-loop is not supported.')}const ids=p.map(vertex);for(let i=1;i<ids.length-1;i++)indices.push(ids[0]!,ids[i]!,ids[i+1]!)}
   const mesh={positions:new Float64Array(positions),indices:new Uint32Array(indices)},r=inspectPolygonMesh(mesh);if(!r.closed||r.signedVolumeMm3<=0)throw Error('STEP shell is not a closed outward-oriented solid.');return {id:crypto.randomUUID(),name:'STEP '+(index+1),mesh}
  })
 }
@@ -51,9 +51,9 @@ const splitStepArgs=(value:string)=>{
  out.push(value.slice(last));return out.map(field=>field.trim())
 }
 const stepIdentity=(value:string)=>{let hash=2166136261;for(const byte of UTF8_ENCODER.encode(value.replace(/#\d+/g,'#'))){hash^=byte;hash=Math.imul(hash,16777619)}return `step10:${(hash>>>0).toString(16).padStart(8,'0')}`}
-const indexRows=(value:string)=>[...value.matchAll(/\(([\d,\s]+)\)/g)].map(match=>match[1].split(',').map(Number)).filter(row=>row.length>=3&&row.every(Number.isInteger))
-const stripTriangles=(row:number[])=>Array.from({length:row.length-2},(_,i)=>i%2?[row[i+1],row[i],row[i+2]]:[row[i],row[i+1],row[i+2]])
-const fanTriangles=(row:number[])=>Array.from({length:row.length-2},(_,i)=>[row[0],row[i+1],row[i+2]])
+const indexRows=(value:string)=>[...value.matchAll(/\(([\d,\s]+)\)/g)].map(match=>match[1]!.split(',').map(Number)).filter(row=>row.length>=3&&row.every(Number.isInteger))
+const stripTriangles=(row:number[])=>Array.from({length:row.length-2},(_,i)=>i%2?[row[i+1]!,row[i]!,row[i+2]!]:[row[i]!,row[i+1]!,row[i+2]!])
+const fanTriangles=(row:number[])=>Array.from({length:row.length-2},(_,i)=>[row[0]!,row[i+1]!,row[i+2]!])
 
 /** AP242 tessellated decoder. Presentation remains explicitly tessellated and is never promoted to B-rep. */
 export function importTessellatedStepV10(text:string):TessellatedStepImport{
@@ -61,8 +61,8 @@ export function importTessellatedStepV10(text:string):TessellatedStepImport{
  if(!/\bTESSELLATED_SHAPE_REPRESENTATION\s*\(/i.test(text))throw Error('No TESSELLATED_SHAPE_REPRESENTATION product found.')
  const entities=new Map<string,{type:string;args:string}>()
  for(const match of text.matchAll(/#(\d+)\s*=\s*([A-Z_0-9]+)\s*\((.*?)\)\s*;/gis)){
-  if(entities.has(match[1]))throw Error('Duplicate STEP tessellated entity.')
-  entities.set(match[1],{type:match[2].toUpperCase(),args:match[3]})
+  if(entities.has(match[1]!))throw Error('Duplicate STEP tessellated entity.')
+  entities.set(match[1]!,{type:match[2]!.toUpperCase(),args:match[3]!})
  }
  const number=(value:string)=>Number(value.replace(/[dD]/,'E'))
  const pointLists=new Map<string,number[][]>()
@@ -76,7 +76,7 @@ export function importTessellatedStepV10(text:string):TessellatedStepImport{
   const t=entity.type
   if(t==='CARTESIAN_POINT_LIST_3D'){
    const points=[...entity.args.matchAll(/\(\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][+-]?\d+)?)\s*,\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][+-]?\d+)?)\s*,\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][+-]?\d+)?)\s*\)/g)]
-     .map(match=>[number(match[1]),number(match[2]),number(match[3])])
+     .map(match=>[number(match[1]!),number(match[2]!),number(match[3]!)])
    if(!points.length||points.some(point=>!Number.isFinite(point[0])||!Number.isFinite(point[1])||!Number.isFinite(point[2])))throw Error(`Invalid CARTESIAN_POINT_LIST_3D #${id}.`)
    pointLists.set(id,points)
   }else if(t==='TRIANGULATED_FACE_SET'||t==='COMPLEX_TRIANGULATED_FACE_SET'){
@@ -98,7 +98,7 @@ export function importTessellatedStepV10(text:string):TessellatedStepImport{
   let triples=indexRows(entity.args).filter(row=>row.length===3)
   let primitive:StepTessellatedPresentation['primitive']='triangles'
   if(entity.type==='COMPLEX_TRIANGULATED_FACE_SET'&&fields.length>=7){
-   const strips=indexRows(fields[5]),fans=indexRows(fields[6])
+   const strips=indexRows(fields[5]!),fans=indexRows(fields[6]!)
    if(strips.length||fans.length){triples=[...strips.flatMap(stripTriangles),...fans.flatMap(fanTriangles)];primitive='strips-and-fans'}
   }
   triples=triples.filter(indices=>indices.every(index=>index>=1&&index<=points.length))

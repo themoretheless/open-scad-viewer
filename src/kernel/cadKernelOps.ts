@@ -238,14 +238,14 @@ export function createCadKernelOps(
     polyhedron(vertices, triangles) {
       const vertexData = new Float64Array(vertices.length * 3)
       for (let i = 0, o = 0; i < vertices.length; i++, o += 3) {
-        const v = vertices[i]
+        const v = vertices[i]!
         vertexData[o] = v[0]
         vertexData[o + 1] = v[1]
         vertexData[o + 2] = v[2]
       }
       const triangleData = new Uint32Array(triangles.length * 3)
       for (let i = 0, o = 0; i < triangles.length; i++, o += 3) {
-        const t = triangles[i]
+        const t = triangles[i]!
         triangleData[o] = t[0]
         triangleData[o + 1] = t[1]
         triangleData[o + 2] = t[2]

@@ -23,11 +23,11 @@ export interface SolidSweepBodyOptions {
 }
 
 const lift = (p: readonly number[]): [number, number, number] => [p[0] ?? 0, p[1] ?? 0, p[2] ?? 0]
-const sub = (a: readonly number[], b: readonly number[]) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+const sub = (a: readonly number[], b: readonly number[]) => [a[0]! - b[0]!, a[1]! - b[1]!, a[2]! - b[2]!]
 const cross = (a: readonly number[], b: readonly number[]): [number, number, number] => [
-  a[1] * b[2] - a[2] * b[1],
-  a[2] * b[0] - a[0] * b[2],
-  a[0] * b[1] - a[1] * b[0],
+  a[1]! * b[2]! - a[2]! * b[1]!,
+  a[2]! * b[0]! - a[0]! * b[2]!,
+  a[0]! * b[1]! - a[1]! * b[0]!,
 ]
 
 function curveById(document: DirectDocument, id: string, reversed: boolean): NurbsCurve {
@@ -50,7 +50,7 @@ export function buildSweepToolBrep(
   const profile = curveById(document, options.profileId, !!options.reversed?.[0])
   const path = curveById(document, options.pathId, !!options.reversed?.[1])
   const ends = [profile.controlPoints[0], profile.controlPoints.at(-1)].map(p => lift(p ?? []))
-  if (!profile.periodic && Math.hypot(...sub(ends[0], ends[1])) > 1e-7)
+  if (!profile.periodic && Math.hypot(...sub(ends[0]!, ends[1]!)) > 1e-7)
     throw new DirectInputError('DIRECT_SURFACE_INPUTS', 'A solid sweep needs a closed profile curve.', undefined, [
       options.profileId,
     ])
@@ -58,13 +58,15 @@ export function buildSweepToolBrep(
   // carried along them with a rotation-minimizing frame.
   if (path.degree !== 1 || path.periodic)
     return buildSmoothSweepToolBrep(profile, path, [options.profileId, options.pathId], options.pathTolerance)
-  const points = path.controlPoints.map(lift).filter((p, i, all) => i === 0 || Math.hypot(...sub(p, all[i - 1])) > 1e-9)
+  const points = path.controlPoints
+    .map(lift)
+    .filter((p, i, all) => i === 0 || Math.hypot(...sub(p, all[i - 1]!)) > 1e-9)
   if (points.length < 2)
     throw new DirectInputError('DIRECT_SURFACE_INPUTS', 'The sweep path needs two distinct points.', undefined, [
       options.pathId,
     ])
-  const tangent = sub(points[1], points[0]),
-    axis = [0, 1, 2].reduce((m, i) => (Math.abs(tangent[i]) < Math.abs(tangent[m]) ? i : m), 0)
+  const tangent = sub(points[1]!, points[0]!),
+    axis = [0, 1, 2].reduce((m, i) => (Math.abs(tangent[i]!) < Math.abs(tangent[m]!) ? i : m), 0)
   const normal = cross(
     tangent,
     [0, 1, 2].map(i => (i === axis ? 1 : 0)),

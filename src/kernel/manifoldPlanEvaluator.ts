@@ -35,8 +35,8 @@ export interface ManifoldPlanEvaluationOptions extends LegacyV5AssemblyOptions {
 function producerPosition(artifact: SemanticLoweringSuccess, nodeIndex: number): number {
   for (const occurrence of artifact.program.core.occurrences) {
     if (occurrence.node !== nodeIndex || occurrence.outputOrdinal === null) continue
-    const operation = artifact.program.core.operations[occurrence.operation]
-    if (!semanticNodeProducerOperationNames(artifact.program.core.nodes[nodeIndex]).includes(operation.name)) {
+    const operation = artifact.program.core.operations[occurrence.operation]!
+    if (!semanticNodeProducerOperationNames(artifact.program.core.nodes[nodeIndex]!).includes(operation.name)) {
       continue
     }
     return artifact.program.provenance[occurrence.operation]?.span.start ?? 0
@@ -71,7 +71,7 @@ function legacyKernelError(
       'Semantic execution failed and Manifold session cleanup also failed',
     )
   }
-  const node = artifact.program.core.nodes[failure.node]
+  const node = artifact.program.core.nodes[failure.node]!
   const position = producerPosition(artifact, failure.node)
   const detail = backendCauseText(failure.backendCause)
   if (node.kind === 'polyhedron') {

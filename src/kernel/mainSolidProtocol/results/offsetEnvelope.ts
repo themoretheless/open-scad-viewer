@@ -14,22 +14,22 @@ export function validOffsetEnvelope(job:Extract<MainSolidExpectation,{kind:'offs
       &&(v.reason==='center-regularity-unproven'?!v.centerTangent.centerRegularityProven:
         v.centerTangent.centerRegularityProven&&['source-jet-enclosure-unresolved','antipodal-contact-unresolved','arc-weight-unresolved'].includes(v.reason))
     if(!v.centerTangent.centerRegularityProven||v.visitedCells!==2*v.cells.length-1)return false
-    const interval=(r:unknown)=>arrayOf(r,2,finite)&&(r as number[])[0]<=(r as number[])[1]
+    const interval=(r:unknown)=>arrayOf(r,2,finite)&&(r as number[])[0]!<=(r as number[])[1]!
     let end=0,regular=true
     for(const c of v.cells) {
-      if(!c||!interval(c.arcParameter)||c.arcParameter[0]!==end||c.arcParameter[1]<=end||c.arcParameter[1]>1
+      if(!c||!interval(c.arcParameter)||c.arcParameter[0]!==end||c.arcParameter[1]!<=end||c.arcParameter[1]!>1
         ||!arrayOf(c.imageIntervalsMm,3,interval)||!arrayOf(c.centerDerivativeIntervalsMm,3,interval)
         ||!arrayOf(c.arcDerivativeIntervalsMm,3,interval)||!interval(c.areaSpeedIntervalMm2)
-        ||c.areaSpeedIntervalMm2[0]<0||typeof c.regularityProven!=='boolean'
-        ||c.regularityProven!==(c.areaSpeedIntervalMm2[0]>0))return false
+        ||c.areaSpeedIntervalMm2[0]!<0||typeof c.regularityProven!=='boolean'
+        ||c.regularityProven!==(c.areaSpeedIntervalMm2[0]!>0))return false
       if(c.regularityProven&&(c.centerDerivativeIntervalsMm.every(r=>r[0]<=0&&r[1]>=0)
         ||c.arcDerivativeIntervalsMm.every(r=>r[0]<=0&&r[1]>=0)))return false
       if(c.regularityProven) {
-        const mul=(a:number[],b:number[])=>{const p=[a[0]*b[0],a[0]*b[1],a[1]*b[0],a[1]*b[1]];return [Math.min(...p),Math.max(...p)]}
+        const mul=(a:number[],b:number[])=>{const p=[a[0]!*b[0]!,a[0]!*b[1]!,a[1]!*b[0]!,a[1]!*b[1]!];return [Math.min(...p),Math.max(...p)]}
         const crossIncludesZero=[0,1,2].every(k=>{
-          const a=mul(c.centerDerivativeIntervalsMm[(k+1)%3],c.arcDerivativeIntervalsMm[(k+2)%3])
-          const b=mul(c.centerDerivativeIntervalsMm[(k+2)%3],c.arcDerivativeIntervalsMm[(k+1)%3])
-          return a[0]-b[1]<=0&&a[1]-b[0]>=0
+          const a=mul(c.centerDerivativeIntervalsMm[(k+1)%3]!,c.arcDerivativeIntervalsMm[(k+2)%3]!)
+          const b=mul(c.centerDerivativeIntervalsMm[(k+2)%3]!,c.arcDerivativeIntervalsMm[(k+1)%3]!)
+          return a[0]!-b[1]!<=0&&a[1]!-b[0]!>=0
         })
         if(crossIncludesZero)return false
       }

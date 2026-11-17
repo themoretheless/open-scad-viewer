@@ -278,13 +278,13 @@ export class SolidGpuLayer {
       const rough = body.roughness ?? (body.metallic !== undefined ? 0.5 : -1)
       for (let i = 0; i < count; i++) {
         const pIdx = i * 3
-        data[offset++] = body.positions[pIdx]
-        data[offset++] = body.positions[pIdx + 1]
-        data[offset++] = body.positions[pIdx + 2]
-        data[offset++] = body.normals[pIdx]
-        data[offset++] = body.normals[pIdx + 1]
-        data[offset++] = body.normals[pIdx + 2]
-        data[offset++] = body.hues[(i / 3) | 0]
+        data[offset++] = body.positions[pIdx]!
+        data[offset++] = body.positions[pIdx + 1]!
+        data[offset++] = body.positions[pIdx + 2]!
+        data[offset++] = body.normals[pIdx]!
+        data[offset++] = body.normals[pIdx + 1]!
+        data[offset++] = body.normals[pIdx + 2]!
+        data[offset++] = body.hues[(i / 3) | 0]!
         data[offset++] = c0
         data[offset++] = c1
         data[offset++] = c2
@@ -329,10 +329,10 @@ export class SolidGpuLayer {
       const slice = this.dragScratch.length === needed ? this.dragScratch : this.dragScratch.subarray(0, needed)
       for (let i = 0; i < range.count; i++) {
         const from = (range.start + i) * 13, to = i * 13
-        slice[to] = packed[from] + dx
-        slice[to + 1] = packed[from + 1] + dy
-        slice[to + 2] = packed[from + 2] + dz
-        for (let k = 3; k < 13; k++) slice[to + k] = packed[from + k]
+        slice[to] = packed[from]! + dx
+        slice[to + 1] = packed[from + 1]! + dy
+        slice[to + 2] = packed[from + 2]! + dz
+        for (let k = 3; k < 13; k++) slice[to + k] = packed[from + k]!
       }
       device.queue.writeBuffer(buffer, range.start * 13 * 4, slice)
     }
@@ -372,7 +372,7 @@ export class SolidGpuLayer {
         const display=new Float32Array(packed)
         for(const [id,delta] of this.dragOffsets){
           const range=this.ranges.get(id)!
-          for(let i=0;i<range.count;i++)for(let k=0;k<3;k++)display[(range.start+i)*13+k]+=delta[k]
+          for(let i=0;i<range.count;i++)for(let k=0;k<3;k++){const j=(range.start+i)*13+k;display[j]=display[j]!+delta[k]!}
         }
         this.device.queue.writeBuffer(this.vertexBuffer,0,display)
       }

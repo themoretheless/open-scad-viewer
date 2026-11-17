@@ -27,7 +27,7 @@ export function solidDistanceExpectation(o:SolidDistanceOptions){
  return {toleranceMm:o.toleranceMm,toleranceUv:o.toleranceUv,
   limits:{maxPairs:o.maxPairs,maxContactPairs:o.maxContactPairs,maxCells:o.maxCells,maxDomainCells:o.maxDomainCells,validity:{...o.validityLimits}},
   models:[o.a,o.b].map(m=>({shells:m.shells.map((_,i)=>!m.bodies.some(b=>b.innerShells.includes(i))),
-   domains:m.faces.map(({surface:s})=>[[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length]],[s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0].length]]] as [Interval,Interval])}))}
+   domains:m.faces.map(({surface:s})=>[[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length]],[s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0]!.length]]] as [Interval,Interval])}))}
 }
 const integer=(x:unknown,max:number):x is number=>typeof x==='number'&&Number.isSafeInteger(x)&&x>=0&&x<=max
 const interval=(x:unknown):x is Interval=>Array.isArray(x)&&x.length===2&&x.every(Number.isFinite)&&x[0]<=x[1]
@@ -40,34 +40,34 @@ export function validSolidDistance(e:ReturnType<typeof solidDistanceExpectation>
  if(!Array.isArray(r.validity)||r.validity.length!==2||typeof r.converged!=='boolean'||!nullableBool(r.materialOverlap))return false
  for(let i=0;i<2;i++){
   const v=r.validity[i]
-  if(!v||!['proven','boundaryProven','exactAgreement','exactJoins','trimValid','selfIntersectionAbsent'].every(k=>typeof v[k as keyof Validity]==='boolean')||!nullableBool(v.nestingRolesConsistent)||!Array.isArray(v.orientations)||v.orientations.length!==e.models[i].shells.length)return false
+  if(!v||!['proven','boundaryProven','exactAgreement','exactJoins','trimValid','selfIntersectionAbsent'].every(k=>typeof v[k as keyof Validity]==='boolean')||!nullableBool(v.nestingRolesConsistent)||!Array.isArray(v.orientations)||v.orientations.length!==e.models[i]!.shells.length)return false
   if(v.boundaryProven&&!(v.exactAgreement&&v.exactJoins&&v.trimValid&&v.selfIntersectionAbsent))return false
   let oriented=true
   for(let j=0;j<v.orientations.length;j++){
    const o=v.orientations[j]
-   if(!o||o.shell!==j||o.expectedOutward!==e.models[i].shells[j]||!nullableBool(o.outward))return false
+   if(!o||o.shell!==j||o.expectedOutward!==e.models[i]!.shells[j]||!nullableBool(o.outward))return false
    if((!v.boundaryProven||v.nestingRolesConsistent!==true)&&o.outward!==null)return false
    oriented&&=o.outward===o.expectedOutward
   }
   if(!v.boundaryProven&&v.nestingRolesConsistent!==null)return false
   if(v.proven!==(v.boundaryProven&&v.nestingRolesConsistent===true&&oriented))return false
  }
- const total=e.models[0].shells.length*e.models[1].shells.length
- if(r.totalShellPairs!==total||!integer(r.visitedShellPairs,Math.min(total,e.limits.maxPairs))||!integer(r.contactPairsVisited,Math.min(e.models[0].domains.length*e.models[1].domains.length,e.limits.maxContactPairs))||!integer(r.cells,e.limits.maxCells)||!integer(r.domainCells,e.limits.maxDomainCells))return false
+ const total=e.models[0]!.shells.length*e.models[1]!.shells.length
+ if(r.totalShellPairs!==total||!integer(r.visitedShellPairs,Math.min(total,e.limits.maxPairs))||!integer(r.contactPairsVisited,Math.min(e.models[0]!.domains.length*e.models[1]!.domains.length,e.limits.maxContactPairs))||!integer(r.cells,e.limits.maxCells)||!integer(r.domainCells,e.limits.maxDomainCells))return false
  const d=r.distanceIntervalMm
  if(d!==null&&(!interval(d)||d[0]<0))return false
  const w=r.separationWitness
  if(w!==null){
-  if(!w||r.materialOverlap!==false||d===null||!Array.isArray(w.faces)||w.faces.length!==2||!w.faces.every((f,i)=>integer(f,e.models[i].domains.length-1)))return false
-  if(!Array.isArray(w.parameters)||w.parameters.length!==2||!w.parameters.every((uv,i)=>Array.isArray(uv)&&uv.length===2&&uv.every((t,k)=>Number.isFinite(t)&&t>=e.models[i].domains[w.faces[i]][k][0]&&t<=e.models[i].domains[w.faces[i]][k][1])))return false
+  if(!w||r.materialOverlap!==false||d===null||!Array.isArray(w.faces)||w.faces.length!==2||!w.faces.every((f,i)=>integer(f,e.models[i]!.domains.length-1)))return false
+  if(!Array.isArray(w.parameters)||w.parameters.length!==2||!w.parameters.every((uv,i)=>Array.isArray(uv)&&uv.length===2&&uv.every((t,k)=>Number.isFinite(t)&&t>=e.models[i]!.domains[w.faces[i]!]![k]![0]&&t<=e.models[i]!.domains[w.faces[i]!]![k]![1])))return false
   if(!Array.isArray(w.points)||w.points.length!==2||!w.points.every(p=>Array.isArray(p)&&p.length===3&&p.every(Number.isFinite))||!Array.isArray(w.pointEnclosures)||w.pointEnclosures.length!==2)return false
-  for(let i=0;i<2;i++){const bounds=w.pointEnclosures[i];if(!Array.isArray(bounds)||bounds.length!==3||!bounds.every((x,k)=>interval(x)&&x[0]<=w.points[i][k]&&x[1]>=w.points[i][k]))return false}
+  for(let i=0;i<2;i++){const bounds=w.pointEnclosures[i];if(!Array.isArray(bounds)||bounds.length!==3||!bounds.every((x,k)=>interval(x)&&x[0]<=w.points[i]![k]!&&x[1]>=w.points[i]![k]!))return false}
   if(!callGeometryRust<boolean>('cad_client_geometry',{operation:'distanceWitness',points:w.points,bounds:w.pointEnclosures,lo:d[0],hi:d[1],strictUpper:false}))return false
  }else if(r.materialOverlap===false&&d!==null)return false
  if(r.contact!==null){
   const c=r.contact
-  if(!c||!Array.isArray(c.faces)||c.faces.length!==2||!c.faces.every((f,i)=>integer(f,e.models[i].domains.length-1))||r.contactPairsVisited===0)return false
-  for(const [i,uv] of [c.firstUv,c.secondUv].entries())if(!Array.isArray(uv)||uv.length!==2||!uv.every((x,k)=>interval(x)&&x[0]>=e.models[i].domains[c.faces[i]][k][0]&&x[1]<=e.models[i].domains[c.faces[i]][k][1]))return false
+  if(!c||!Array.isArray(c.faces)||c.faces.length!==2||!c.faces.every((f,i)=>integer(f,e.models[i]!.domains.length-1))||r.contactPairsVisited===0)return false
+  for(const [i,uv] of [c.firstUv,c.secondUv].entries())if(!Array.isArray(uv)||uv.length!==2||!uv.every((x,k)=>interval(x)&&x[0]>=e.models[i]!.domains[c.faces[i]!]![k]![0]&&x[1]<=e.models[i]!.domains[c.faces[i]!]![k]![1]))return false
   if(!c.firstUv.some(x=>x[0]===x[1])||!Array.isArray(c.pointIntervalMm)||c.pointIntervalMm.length!==3||!c.pointIntervalMm.every(interval)||!Number.isFinite(c.contractionUpper)||c.contractionUpper<0||c.contractionUpper>=0.5)return false
  }
  if(r.validity.some(v=>!v.proven))return r.reason==='volume-validity-unproven'&&d===null&&r.materialOverlap===null&&!r.converged&&r.contact===null&&r.visitedShellPairs===0&&r.contactPairsVisited===0&&r.cells===0&&r.domainCells===0

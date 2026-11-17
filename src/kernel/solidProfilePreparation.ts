@@ -41,16 +41,16 @@ export function prepareSolidProfile(document:DirectDocument,ids:string[],toleran
  const projection=items.some(i=>i.curve)?callGeometryRust<{plane:SketchPlane;curves:NurbsCurve[];projectionMaxDeviationMm:number}>('cad_client_geometry',{operation:'profileProjection',curves:items.filter(i=>i.curve).map(i=>i.curve!.curve),plane:sourcePlane}):null
  const plane=projection?.plane??sourcePlane!
  let projectedIndex=0
- if(items.some(({sketch:s})=>{if(!s)return false;const p=s.plane??xyPlane();return ![p.origin,p.u,p.v].every((a,i)=>a.every((x,j)=>x===[plane.origin,plane.u,plane.v][i][j]))}))throw Error('Profile inputs must use the same sketch plane.')
+ if(items.some(({sketch:s})=>{if(!s)return false;const p=s.plane??xyPlane();return ![p.origin,p.u,p.v].every((a,i)=>a.every((x,j)=>x===[plane.origin,plane.u,plane.v][i]![j]))}))throw Error('Profile inputs must use the same sketch plane.')
  const projectionMaxDeviationMm=projection?.projectionMaxDeviationMm??0
  const sketches:(DirectSketch&{curves?:NurbsCurve[]})[]=items.map(({sketch,curve})=>{
   if(sketch)return sketch
   const source=curve!.curve,n=source.controlPoints.length
   if(source.periodic||source.knots.slice(0,source.degree+1).some(k=>k!==source.knots[source.degree])||source.knots.slice(n).some(k=>k!==source.knots[n]))throw Error(`Profile input ${curve!.id} requires exactly clamped non-periodic endpoints.`)
-  const projected=projection!.curves[projectedIndex++]
+  const projected=projection!.curves[projectedIndex++]!
   return {id:curve!.id,name:curve!.name,...(curve!.group!==undefined?{group:curve!.group}:{}),closed:false,points:[],plane,curves:[projected]}
  })
- const first=sketches[0]
+ const first=sketches[0]!
  const report=items.some(i=>i.curve)||sketches.some(s=>s.analytic)
   ?callGeometryRust<ProfilePreparationReport>('cad_prepare_retained_profile',{sketches,tolerance})
   :callGeometryRust<ProfilePreparationReport>('cad_prepare_profile',{chains:sketches.map(s=>s.points),tolerance})
@@ -68,7 +68,7 @@ export function prepareSolidProfile(document:DirectDocument,ids:string[],toleran
   catch(error){report.intersectionDiagnosticError=error instanceof Error?error.message:String(error)}
  }
  if(items.some(i=>i.curve))report.projectionMaxDeviationMm=projectionMaxDeviationMm
- if(report.profile)report.points=retainedProfileDisplay(report.profile)[0]
+ if(report.profile)report.points=retainedProfileDisplay(report.profile)[0]!
  const next=structuredClone(document)
  if(report.accepted){
   next.sketches=next.sketches.filter(s=>!ids.slice(1).includes(s.id))

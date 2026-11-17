@@ -88,7 +88,7 @@ export function createG2RunoutSurface(source:import('./nurbsSurface').NurbsSurfa
  return result
 }
 function isNonDecreasingKnots(k:number[]):boolean {
- for(let i=0;i<k.length;i++){const v=k[i];if(!Number.isFinite(v)||(i>0&&v<k[i-1]))return false}
+ for(let i=0;i<k.length;i++){const v=k[i];if(!Number.isFinite(v)||(i>0&&v!<k[i-1]!))return false}
  return true
 }
 function isValidWeightsGrid(weights:number[][],n:number,m:number):boolean {
@@ -96,7 +96,7 @@ function isValidWeightsGrid(weights:number[][],n:number,m:number):boolean {
  for(let i=0;i<n;i++){
   const row=weights[i]
   if(!Array.isArray(row)||row.length!==m)return false
-  for(let j=0;j<m;j++){const w=row[j];if(!Number.isFinite(w)||w<=0)return false}
+  for(let j=0;j<m;j++){const w=row[j];if(!Number.isFinite(w)||w!<=0)return false}
  }
  return true
 }

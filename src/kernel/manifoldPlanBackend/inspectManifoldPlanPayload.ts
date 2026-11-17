@@ -101,9 +101,9 @@ export function requirePayload(
 
 export function matrix3FromMatrix4(matrix: readonly number[]): readonly number[] {
   return [
-    matrix[0], matrix[1], 0,
-    matrix[4], matrix[5], 0,
-    matrix[12], matrix[13], 1,
+    matrix[0]!, matrix[1]!, 0,
+    matrix[4]!, matrix[5]!, 0,
+    matrix[12]!, matrix[13]!, 1,
   ]
 }
 

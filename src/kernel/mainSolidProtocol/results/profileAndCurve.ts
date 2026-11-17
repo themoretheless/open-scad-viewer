@@ -246,7 +246,7 @@ export function validProfilePrepareResult(
           !s ||
           !Number.isInteger(s.curve) ||
           s.curve < 0 ||
-          s.curve >= r.diagnosticLoops![0].length ||
+          s.curve >= r.diagnosticLoops![0]!.length ||
           !['intersection', 'overlap', 'unproven'].includes(s.kind) ||
           !Array.isArray(s.points) ||
           s.points.length < 2 ||
@@ -299,7 +299,7 @@ export function validProfilePrepareResult(
             (s.connector === false
               ? Number.isInteger(s.segment) &&
                 s.segment >= 0 &&
-                (!job.chainSegments || s.segment < job.chainSegments[s.chain])
+                (!job.chainSegments || s.segment < job.chainSegments[s.chain]!)
               : s.connector === true &&
                 ['start', 'end'].includes(s.end) &&
                 Number.isInteger(s.nextChain) &&

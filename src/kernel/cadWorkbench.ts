@@ -12,13 +12,13 @@ export const bounds=(bodies:DirectBody[])=>callGeometryRust<{min:number[];max:nu
 export function pathPoints(path:number[][],fractions:number[]):number[][] {
  return callGeometryRust('cad_path_points',{path,fractions})
 }
-export function pathPoint(path:number[][],fraction:number):number[]{return pathPoints(path,[fraction])[0]}
+export function pathPoint(path:number[][],fraction:number):number[]{return pathPoints(path,[fraction])[0]!}
 export function cadOperation(input:DirectDocument,o:CadOptions):DirectDocument{
  const d=structuredClone(input)
  const indexById=new Map<string,number>()
- for(let i=0;i<d.bodies.length;i++)indexById.set(d.bodies[i].id,i)
+ for(let i=0;i<d.bodies.length;i++)indexById.set(d.bodies[i]!.id,i)
  const selected:DirectBody[]=[]
- for(const id of o.ids){const idx=indexById.get(id);if(idx!==undefined)selected.push(d.bodies[idx])}
+ for(const id of o.ids){const idx=indexById.get(id);if(idx!==undefined)selected.push(d.bodies[idx]!)}
  if(!(Number.isFinite(o.origin[0])&&Number.isFinite(o.origin[1])&&Number.isFinite(o.origin[2])&&Number.isFinite(o.amount)&&Number.isFinite(o.width)&&Number.isFinite(o.height)&&Number.isFinite(o.depth)&&Number.isFinite(o.pitch)&&Number.isFinite(o.secondary)))throw Error('Enter finite parameters.')
  const replace=(b:DirectBody)=>{const idx=indexById.get(b.id);if(idx!==undefined)d.bodies[idx]=b}
  if(o.action==='mirror'){

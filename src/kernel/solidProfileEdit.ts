@@ -25,7 +25,7 @@ export function applySolidProfileEdit(document:DirectDocument,p:SolidProfileEdit
   if(p.operation==='offset')d.sketches[index]=offsetSketch(sketch,p.distance)
   else if(p.operation==='extend'){
    const plane=sketch.plane??xyPlane()
-   d.sketches[index]=extendSketch(sketch,p.end,d.sketches.filter(s=>{const other=s.plane??xyPlane();return [plane.origin,plane.u,plane.v].every((a,i)=>a.every((x,j)=>Math.abs(x-[other.origin,other.u,other.v][i][j])<1e-7))}))
+   d.sketches[index]=extendSketch(sketch,p.end,d.sketches.filter(s=>{const other=s.plane??xyPlane();return [plane.origin,plane.u,plane.v].every((a,i)=>a.every((x,j)=>Math.abs(x-[other.origin,other.u,other.v][i]![j]!)<1e-7))}))
   }else if(p.operation==='curve'){
    if(!sketch.analytic)throw Error('Select an analytic circle or arc.')
    sketch.analytic={...sketch.analytic,center:[p.cx,p.cy],radius:p.radius,start:p.start,sweep:p.sweep}

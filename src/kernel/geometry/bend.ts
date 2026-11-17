@@ -11,7 +11,7 @@ export function bendCadMesh(id:number,radius:number,center:number,reverse:boolea
   for(let pass=0;pass<24;pass++) {
     const edges=callGeometryRust<Array<[number,number]>>('mesh_editor',{action:'edges',mesh})
     const ids:number[]=[]
-    edges.forEach(([a,b],i)=>{if(Math.abs(mesh.positions[a*3+2]-mesh.positions[b*3+2])>step*(1+1e-9))ids.push(i)})
+    edges.forEach(([a,b],i)=>{if(Math.abs(mesh.positions[a*3+2]!-mesh.positions[b*3+2]!)>step*(1+1e-9))ids.push(i)})
     if(ids.length===0) {
       const bent=deformPolygonMesh(mesh,{kind:'bend',origin:[0,0,0],radius})
       return transformPolygonMesh(bent,[[0,0,1,center],[0,direction,0,0],[1,0,0,0],[0,0,0,1]])

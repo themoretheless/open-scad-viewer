@@ -69,8 +69,8 @@ export function extractSemanticEdges(
   }
   if (mergeFrom && mergeTo) {
     for (let i = 0; i < mergeFrom.length; i++) {
-      validateVertexIndex(mergeFrom[i], vertexCount, 'mergeFromVert')
-      validateVertexIndex(mergeTo[i], vertexCount, 'mergeToVert')
+      validateVertexIndex(mergeFrom[i]!, vertexCount, 'mergeFromVert')
+      validateVertexIndex(mergeTo[i]!, vertexCount, 'mergeToVert')
     }
   }
 
@@ -98,7 +98,7 @@ export function extractSemanticEdges(
 
 function validateIndices(indices: Uint32Array, vertexCount: number) {
   for (let i = 0; i < indices.length; i++) {
-    validateVertexIndex(indices[i], vertexCount, 'triangleIndices')
+    validateVertexIndex(indices[i]!, vertexCount, 'triangleIndices')
   }
 }
 

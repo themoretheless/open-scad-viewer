@@ -148,7 +148,7 @@ export function sourceBodyExpectation(options:SourceBodyOptions) {
   ||!Number.isFinite(face.toleranceUv)||face.toleranceUv<=0||s.regions.length*face.divisions**2>65536
   ||s.regions.length*face.domainCellsPerFace>1000000))throw new Error('Source face display exceeds transport limits')
  const edges=s.pairs.map(pair=>{
-  if(!pair||!Array.isArray(pair.uses)||pair.uses.length!==2||!pair.uses.every(a=>Array.isArray(a)&&a.length===3&&a.every(n=>integer(n,1000000))&&a[0]<s.regions.length))throw new Error('Invalid source edge address')
+  if(!pair||!Array.isArray(pair.uses)||pair.uses.length!==2||!pair.uses.every(a=>Array.isArray(a)&&a.length===3&&a.every(n=>integer(n,1000000))&&a[0]!<s.regions.length))throw new Error('Invalid source edge address')
   return {definition:key(pair.edge),uses:key(pair.uses)}
  })
  return {wallCoverage:coverage,wallScan:scan,wallQualification:wall,seamQualification:seam?key(seam):null,seamEndpointWork:seam?.endpointLimitsExactWork,seamLimits:seam?{...seam.limits}:undefined,stepExchange:step?key(step):null,stepTolerance:step?.toleranceMm,definition:key({version:1,...(d.kind?{kind:d.kind}:{}),shell:s,...(inverse?{inverseShear:{axes:inverse.axes,coefficient:inverse.coefficient}}:{})}),faces:s.regions.length,poles:s.poles.length,edges,

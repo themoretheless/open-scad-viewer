@@ -56,7 +56,7 @@ export class MeshInstances {
     }
     let changed = this.meshes.length !== meshes.length || this.edges !== edges
     for (let i = 0; !changed && i < meshes.length; i++) {
-      changed = this.meshes[i] !== meshes[i] || (edges && (this.edgeBuffers[i] !== meshes[i].edgeIB || this.edgeCounts[i] !== meshes[i].edgeIC))
+      changed = this.meshes[i] !== meshes[i] || (edges && (this.edgeBuffers[i] !== meshes[i]!.edgeIB || this.edgeCounts[i] !== meshes[i]!.edgeIC))
     }
     // Edge buffers can become available after publication. Recheck their identity.
     for (const group of this.groups) {
@@ -65,10 +65,10 @@ export class MeshInstances {
     if (changed) {
       this.groups.length = 0
       for (let start = 0; start < meshes.length;) {
-        const mesh = meshes[start], ib = (edges ? mesh.edgeIB : mesh.ib)!, ic = edges ? mesh.edgeIC : mesh.ic
+        const mesh = meshes[start]!, ib = (edges ? mesh.edgeIB : mesh.ib)!, ic = edges ? mesh.edgeIC : mesh.ic
         let end = start + 1
-        while (end < meshes.length && meshes[end].vb === mesh.vb
-          && (edges ? meshes[end].edgeIB : meshes[end].ib) === ib && (edges ? meshes[end].edgeIC : meshes[end].ic) === ic) end++
+        while (end < meshes.length && meshes[end]!.vb === mesh.vb
+          && (edges ? meshes[end]!.edgeIB : meshes[end]!.ib) === ib && (edges ? meshes[end]!.edgeIC : meshes[end]!.ic) === ic) end++
         this.groups.push({ mesh, start, count: end - start, ib, ic })
         start = end
       }
@@ -96,7 +96,7 @@ export class MeshInstances {
       // Hover/selection touches only the 4 style floats of a few instances;
       // write those 16-byte slices instead of the whole buffer.
       for (let i = 0; i < meshes.length; i++) {
-        const mesh = meshes[i], offset = i * INSTANCE_FLOATS
+        const mesh = meshes[i]!, offset = i * INSTANCE_FLOATS
         const alpha = Math.fround(mesh.styleAlpha), selected = Math.fround(mesh.styleSelected)
         const edge = Math.fround(mesh.styleEdge), hovered = Math.fround(mesh.styleHovered)
         if (this.data[offset + STYLE_FLOAT_OFFSET] !== alpha || this.data[offset + STYLE_FLOAT_OFFSET + 1] !== selected
@@ -116,8 +116,8 @@ export class MeshInstances {
     if (changed) this.uploadPending = true
     if (this.uploadPending) {
       for (let i = 0; i < meshes.length; i++) {
-        const mesh = meshes[i], offset = i * INSTANCE_FLOATS
-        for (let row = 0; row < 4; row++) for (let column = 0; column < 4; column++) this.data[offset + column * 4 + row] = mesh.transform[row * 4 + column]
+        const mesh = meshes[i]!, offset = i * INSTANCE_FLOATS
+        for (let row = 0; row < 4; row++) for (let column = 0; column < 4; column++) this.data[offset + column * 4 + row] = mesh.transform[row * 4 + column]!
         this.data.set(mesh.inverseTransform, offset + 16)
         this.data.set(mesh.color, offset + 32)
         this.data[offset + STYLE_FLOAT_OFFSET] = mesh.styleAlpha; this.data[offset + STYLE_FLOAT_OFFSET + 1] = mesh.styleSelected

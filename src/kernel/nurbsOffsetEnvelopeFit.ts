@@ -32,33 +32,33 @@ export function envelopeFitExpectation(o:OffsetEnvelopeFitOptions):EnvelopeFitEx
  return {domain:[[...o.fixedInterval],[0,1]],radiusMm:Math.abs(o.distances[0]),toleranceMm:o.toleranceMm,maxCells:o.maxCells,candidate:o.candidate?surfaceSnapshot(o.candidate):null}
 }
 const finite=(v:unknown):v is number=>typeof v==='number'&&Number.isFinite(v)
-const interval=(v:unknown):v is [number,number]=>Array.isArray(v)&&v.length===2&&v.every(finite)&&v[0]<=v[1]
+const interval=(v:unknown):v is [number,number]=>Array.isArray(v)&&v.length===2&&v.every(finite)&&v[0]!<=v[1]!
 const rectangle=(v:unknown):v is SurfaceDomain=>Array.isArray(v)&&v.length===2&&v.every(interval)&&v.every(x=>x[0]<x[1])
-function sameRectangle(a:SurfaceDomain,b:SurfaceDomain){return a.every((x,k)=>x[0]===b[k][0]&&x[1]===b[k][1])}
+function sameRectangle(a:SurfaceDomain,b:SurfaceDomain){return a.every((x,k)=>x[0]===b[k]![0]&&x[1]===b[k]![1])}
 function validSurface(s:unknown,expected:EnvelopeFitExpectation):s is NurbsSurface {
  if(!s||typeof s!=='object')return false
- const v=s as NurbsSurface,n=v.controlPoints?.length,m=v.controlPoints?.[0]?.length
+ const v=s as NurbsSurface,n=v.controlPoints?.length??NaN,m=v.controlPoints?.[0]?.length??NaN
  if(!Array.isArray(v.controlPoints)||!Number.isSafeInteger(n)||n<2||n>256||!Number.isSafeInteger(m)||m<2||m>256
   ||!Number.isSafeInteger(v.degreeU)||v.degreeU<1||v.degreeU>=n||!Number.isSafeInteger(v.degreeV)||v.degreeV<1||v.degreeV>=m
   ||!Array.isArray(v.knotsU)||v.knotsU.length!==n+v.degreeU+1||!Array.isArray(v.knotsV)||v.knotsV.length!==m+v.degreeV+1)return false
- for(const knots of [v.knotsU,v.knotsV])if(!knots.every(finite)||knots.some((x,k)=>k>0&&x<knots[k-1]))return false
+ for(const knots of [v.knotsU,v.knotsV])if(!knots.every(finite)||knots.some((x,k)=>k>0&&x<knots[k-1]!))return false
  if(!v.controlPoints.every(row=>Array.isArray(row)&&row.length===m&&row.every(p=>Array.isArray(p)&&p.length===3&&p.every(finite)))
   ||!Array.isArray(v.weights)||v.weights.length!==n||!v.weights.every(row=>Array.isArray(row)&&row.length===m&&row.every(w=>finite(w)&&w>0))
   ||typeof v.periodicU!=='boolean'||typeof v.periodicV!=='boolean')return false
  let lo=Infinity,hi=0;for(const row of v.weights)for(const w of row){lo=Math.min(lo,w);hi=Math.max(hi,w)}
  if(hi/lo>1e12)return false
- if(!sameRectangle([[v.knotsU[v.degreeU],v.knotsU[n]],[v.knotsV[v.degreeV],v.knotsV[m]]],expected.domain))return false
+ if(!sameRectangle([[v.knotsU[v.degreeU]!,v.knotsU[n]!],[v.knotsV[v.degreeV]!,v.knotsV[m]!]],expected.domain))return false
  if(expected.candidate!==null)return surfaceSnapshot(v)===expected.candidate
  return n===2&&m===3&&v.degreeU===1&&v.degreeV===2&&!v.periodicU&&!v.periodicV
   &&JSON.stringify(v.knotsU)===JSON.stringify([expected.domain[0][0],expected.domain[0][0],expected.domain[0][1],expected.domain[0][1]])
   &&JSON.stringify(v.knotsV)==='[0,0,0,1,1,1]'
 }
 function smooth(s:NurbsSurface):boolean {
- for(const [degree,knots,count,periodic] of [[s.degreeU,s.knotsU,s.controlPoints.length,s.periodicU],[s.degreeV,s.knotsV,s.controlPoints[0].length,s.periodicV]] as const){
+ for(const [degree,knots,count,periodic] of [[s.degreeU,s.knotsU,s.controlPoints.length,s.periodicU],[s.degreeV,s.knotsV,s.controlPoints[0]!.length,s.periodicV]] as const){
   if(periodic)return false
   const start=knots[degree],end=knots[count]
   for(let i=0;i<knots.length;){let j=i+1;while(j<knots.length&&knots[j]===knots[i])j++
-   if(knots[i]>start&&knots[i]<end&&degree-(j-i)<1)return false;i=j
+   if(knots[i]!>start!&&knots[i]!<end!&&degree-(j-i)<1)return false;i=j
   }
  }
  return true
@@ -95,7 +95,7 @@ export function validEnvelopeFit(expected:EnvelopeFitExpectation,value:unknown):
   nodes.add(i);const n=q.partition[i]
   if(!n||!rectangle(n.domain)||!sameRectangle(n.domain,domain))return false
   if(n.children===null){
-   if(n.splitAxis!==null||!Number.isSafeInteger(n.leaf)||n.leaf!<0||n.leaf!>=q.cells.length||leaves.has(n.leaf!)||!sameRectangle(q.cells[n.leaf!].domain,domain))return false
+   if(n.splitAxis!==null||!Number.isSafeInteger(n.leaf)||n.leaf!<0||n.leaf!>=q.cells.length||leaves.has(n.leaf!)||!sameRectangle(q.cells[n.leaf!]!.domain,domain))return false
    leaves.add(n.leaf!)
   }else{
    if(n.leaf!==null||(n.splitAxis!==0&&n.splitAxis!==1)||!Array.isArray(n.children)||n.children.length!==2)return false

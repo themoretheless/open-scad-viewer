@@ -22,11 +22,11 @@ export function applySolidMinkowski(source:DirectDocument,options:SolidMinkowski
  const precision='f32' as const
  const result=authored?certifyNurbsMinkowski(inputs[0] as MinkowskiAuthoredSource,inputs[1] as MinkowskiAuthoredSource,options.maximumSourceDeviationMm??1,precision):certifyMinkowski3d(inputs[0] as ReturnType<typeof minkowskiSource>,inputs[1] as ReturnType<typeof minkowskiSource>,precision)
  const pos=result.mesh.positions
- for(let i=0;i<pos.length;i++){const x=pos[i];if(!Number.isFinite(x)||Math.abs(x)>1e6)throw Error(label('Результат выходит за пределы координат проекта.','The result exceeds the project coordinate range.'))}
+ for(let i=0;i<pos.length;i++){const x=pos[i]!;if(!Number.isFinite(x)||Math.abs(x)>1e6)throw Error(label('Результат выходит за пределы координат проекта.','The result exceeds the project coordinate range.'))}
  const proof=(authored?{version:2,a:inputs[0],b:inputs[1],certificate:result.certificate,meshPrecision:precision}:{version:1,a:inputs[0],b:inputs[1],certificate:result.certificate,meshPrecision:precision}) as MinkowskiProof
  // Recheck the exported witness before publishing a document transaction.
  verifyMinkowskiProof(proof)
  const d=structuredClone(source),resultId=result.mesh.indices.length?options.createdId:null
- if(resultId)d.bodies.push({id:resultId,name:label('Сумма Минковского','Minkowski sum'),mesh:result.mesh,...bodies[0].group?{group:bodies[0].group}:{}})
+ if(resultId)d.bodies.push({id:resultId,name:label('Сумма Минковского','Minkowski sum'),mesh:result.mesh,...bodies[0]!.group?{group:bodies[0]!.group}:{}})
  return {document:d,resultId,proof,volumeMm3:result.volumeMm3,maximumCoordinateRoundingMm:result.maximumCoordinateRoundingMm,sourceHadBrep:authored,curvedSourceErrorCertified:result.curvedSourceErrorCertified,maximumSetDeviationMm:result.maximumSetDeviationMm,roundingTopologyCertified:true,approximationTopology:'approximationTopology' in result?result.approximationTopology:null,sourceApproximationTopology:'sourceApproximationTopology' in result&&result.sourceApproximationTopology?result.sourceApproximationTopology:authored?[0,1].map(i=>{const c=result.certificate as import('./geometry/minkowski3d').NurbsMinkowskiCertificate;return c.sourceHomotopyBounds?.[i]?.[0]==='0'||!!c.sourceTopology?.[i]}) as [boolean,boolean]:[true,true]}
 }

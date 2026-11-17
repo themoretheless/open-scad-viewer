@@ -109,7 +109,7 @@ export function createBrepGraphBuilder(): BrepGraphBuilder {
     curve(1, [0, 0, 1, 1], [[from[0], from[1], 0], [to[0], to[1], 0]], [1, 1])
 
   const polylineLoop = (ring: readonly (readonly [number, number])[]): string[] =>
-    ring.map((from, index) => line(from, ring[(index + 1) % ring.length]))
+    ring.map((from, index) => line(from, ring[(index + 1) % ring.length]!))
 
   return {
     nodes,
@@ -133,7 +133,7 @@ export function createBrepGraphBuilder(): BrepGraphBuilder {
       ? requireExact(inputs, ids => ids.slice(1).reduce<BrepValue>(
         (left, right) => requireExact([left], ([id]) =>
           node({ op: 'brep_boolean', inputs: [id, right], operation })),
-        { kind: 'node', id: ids[0] },
+        { kind: 'node', id: ids[0]! },
       ))
       : inexact('empty boolean')),
 

@@ -8,7 +8,7 @@ export interface PackedTransparentBsp {
 export function buildTransparentBsp(triangles:readonly TransparentTriangle[],limit:number,tolerance:number,operationLimit:number):PackedTransparentBsp {
   const width=triangles[0]?.[0].length??0
   for(let i=0;i<triangles.length;i++){
-    const t=triangles[i]
+    const t=triangles[i]!
     if(t[0].length!==width||t[1].length!==width||t[2].length!==width)throw Error('Inconsistent transparency vertex width')
   }
   if(triangles.length>limit||triangles.length>operationLimit)throw Error('Transparency input limit exceeded')
@@ -18,10 +18,10 @@ export function buildTransparentBsp(triangles:readonly TransparentTriangle[],lim
   const input=new Float64Array(length)
   let offset=0
   for(let i=0;i<triangles.length;i++){
-    const t=triangles[i]
+    const t=triangles[i]!
     for(let j=0;j<3;j++){
-      const v=t[j]
-      for(let k=0;k<width;k++)input[offset++]=v[k]
+      const v=t[j]!
+      for(let k=0;k<width;k++)input[offset++]=v[k]!
     }
   }
   const {exports:wasm,memory,takeResponse}=kernelRuntime()

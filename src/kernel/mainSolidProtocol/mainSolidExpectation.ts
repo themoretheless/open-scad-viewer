@@ -65,8 +65,8 @@ if(job.kind==='g2RunoutSurface')return {kind:job.kind,maxCells:job.options.maxCe
   if(job.kind==='selfIntersection')return {kind:job.kind,...selfIntersectionExpectation(job.model,job.toleranceUv,job.limits,job.maxSpans,job.boundaryAudit)}
   if(job.kind==='faceContacts')return {kind:job.kind,...faceContactExpectation(job.model,job.toleranceUv,job.limits)}
   if(job.kind==='boundaryAgreement')return {kind:job.kind,...boundaryExpectation(job.model,job.maxCells)}
-  if(job.kind==='shellDistance'){const o=job.options;return {kind:job.kind,domains:[o.a,o.b].map(m=>m.faces.map(({surface:s})=>[[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length]],[s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0]?.length??0]]])),toleranceMm:o.toleranceMm,toleranceUv:o.toleranceUv,maxCells:o.maxCells,maxDomainCells:o.maxDomainCells}}
-  if(job.kind==='faceDistance'){const o=job.options;return {kind:job.kind,domains:[o.a.faces[o.faceA]?.surface,o.b.faces[o.faceB]?.surface].map(s=>s?[[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length]],[s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0]?.length??0]]]:[]),toleranceMm:o.toleranceMm,toleranceUv:o.toleranceUv,maxCells:o.maxCells,maxDomainCells:o.maxDomainCells}}
+  if(job.kind==='shellDistance'){const o=job.options;return {kind:job.kind,domains:[o.a,o.b].map(m=>m.faces.map(({surface:s})=>[[s.knotsU[s.degreeU]!,s.knotsU[s.controlPoints.length]!],[s.knotsV[s.degreeV]!,s.knotsV[s.controlPoints[0]?.length??0]!]])),toleranceMm:o.toleranceMm,toleranceUv:o.toleranceUv,maxCells:o.maxCells,maxDomainCells:o.maxDomainCells}}
+  if(job.kind==='faceDistance'){const o=job.options;return {kind:job.kind,domains:[o.a.faces[o.faceA]?.surface,o.b.faces[o.faceB]?.surface].map(s=>s?[[s.knotsU[s.degreeU]!,s.knotsU[s.controlPoints.length]!],[s.knotsV[s.degreeV]!,s.knotsV[s.controlPoints[0]?.length??0]!]]:[]),toleranceMm:o.toleranceMm,toleranceUv:o.toleranceUv,maxCells:o.maxCells,maxDomainCells:o.maxDomainCells}}
   if(job.kind==='offsetContactQualification')return {kind:job.kind,...contactQualificationExpectation(job.options)}
   if(job.kind==='offsetEnvelopeFit')return {kind:job.kind,...envelopeFitExpectation(job.options)}
   if(job.kind==='offsetEnvelope') {
@@ -94,8 +94,8 @@ if(job.kind==='g2RunoutSurface')return {kind:job.kind,maxCells:job.options.maxCe
     first[o.fixedAxis]=o.fixedInterval
     return {kind:job.kind,fixedAxis:o.fixedAxis,domains:[first.map(r=>[r[0],r[1]]) as typeof first,o.secondDomain.map(r=>[r[0],r[1]]) as typeof first]}
   }
-  if(job.kind==='surfaceDistance')return {kind:job.kind,domains:[job.a,job.b].map(s=>[[s.knotsU[s.degreeU],s.knotsU[s.controlPoints.length]],[s.knotsV[s.degreeV],s.knotsV[s.controlPoints[0]?.length??0]]]),toleranceMm:job.toleranceMm,maxCells:job.maxCells}
-  if(job.kind==='curveDistance')return {kind:job.kind,dimension:job.a.controlPoints[0]?.length??0,domains:[job.a,job.b].map(c=>[c.knots[c.degree],c.knots[c.controlPoints.length]]),toleranceMm:job.toleranceMm,maxCells:job.maxCells}
+  if(job.kind==='surfaceDistance')return {kind:job.kind,domains:[job.a,job.b].map(s=>[[s.knotsU[s.degreeU]!,s.knotsU[s.controlPoints.length]!],[s.knotsV[s.degreeV]!,s.knotsV[s.controlPoints[0]?.length??0]!]]),toleranceMm:job.toleranceMm,maxCells:job.maxCells}
+  if(job.kind==='curveDistance')return {kind:job.kind,dimension:job.a.controlPoints[0]?.length??0,domains:[job.a,job.b].map(c=>[c.knots[c.degree]!,c.knots[c.controlPoints.length]!]),toleranceMm:job.toleranceMm,maxCells:job.maxCells}
   if(job.kind==='sketchSnaps'){const s=job.sketch,n=s.retainedProfile?s.retainedProfile.loops.reduce((sum,loop)=>sum+loop.length,0):s.points.length;return {kind:job.kind,maxPoints:s.retainedProfile?n*3:s.analytic?5:n*2+2,maxSegments:s.retainedProfile?s.retainedProfile.loops.flat().reduce((sum,c)=>sum+(c.controlPoints.length-c.degree)*(c.degree===1?1:16),0):s.analytic?0:n,maxCircles:!s.retainedProfile&&s.analytic?1:0}}
   if(job.kind==='bodySnaps'){const edges=job.body.brep?.edges.length??job.body.mesh.indices.length;return {kind:job.kind,maxPoints:edges*4+job.body.mesh.indices.length/3+1,maxSegments:edges*16}}
   if(job.kind==='bodyEdges')return {kind:job.kind,vertices:job.body.brep?.vertices.length??job.body.mesh.positions.length/3,edges:job.body.brep?.edges.length??job.body.mesh.indices.length,exact:!!job.body.brep}

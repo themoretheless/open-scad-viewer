@@ -31,7 +31,7 @@ export function resolveSolidInstances(document:DirectDocument,cache?:SolidInstan
   if(!source||source===body)throw Error('Instance source is missing or refers to itself. Make the instance independent before deleting its source.')
   if(source.instance)throw Error('Instance sources must be independent bodies; reference the original source.')
   const m=link.matrix
-  if(!Array.isArray(m)||m.length!==4||!m.every(row=>Array.isArray(row)&&row.length===4&&row.every(Number.isFinite))||m[3].some((x,i)=>x!==(i===3?1:0)))throw Error('Instance placement must be a finite affine 4×4 matrix.')
+  if(!Array.isArray(m)||m.length!==4||!m.every(row=>Array.isArray(row)&&row.length===4&&row.every(Number.isFinite))||m[3]!.some((x,i)=>x!==(i===3?1:0)))throw Error('Instance placement must be a finite affine 4×4 matrix.')
   const group=groups.get(source.id)??[];group.push(body);groups.set(source.id,group)
  }
  const geometry=new Map<string,Pick<DirectBody,'mesh'|'brep'>>()
@@ -54,7 +54,7 @@ export function resolveSolidInstances(document:DirectDocument,cache?:SolidInstan
    const input={mesh:source.mesh,...(source.brep?{brep:source.brep}:{}),matrices:batch.map(body=>body.instance!.matrix)}
    const result=callGeometryRust<Pick<DirectBody,'mesh'|'brep'>[]>('cad_instances',input)
    if(result.length!==batch.length)throw Error('Instance batch returned an incomplete result.')
-   result.forEach((item,i)=>{if(cache)cache.set(keyOf(batch[i]),[item]);normalizePolygonMesh(item.mesh);geometry.set(batch[i].id,item)})
+   result.forEach((item,i)=>{if(cache)cache.set(keyOf(batch[i]!),[item]);normalizePolygonMesh(item.mesh);geometry.set(batch[i]!.id,item)})
   }
  }
  const resolved=document.bodies.map(body=>{

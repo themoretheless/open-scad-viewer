@@ -16,10 +16,10 @@ export function constructSolidSurface(document:DirectDocument,ids:string[],kind:
  if(kind==='nurbs-sweep'&&ids.length!==2)throw new DirectInputError('DIRECT_SURFACE_INPUTS','Sweep needs a profile and path.',undefined,ids)
  if(kind==='nurbs-loft'&&(ids.length<2||ids.length>32))throw new DirectInputError('DIRECT_SURFACE_INPUTS','Loft requires 2..32 ordered sections.',undefined,ids)
  const curves=ids.map((id,i)=>{const item=document.curves?.find(c=>c.id===id);if(!item)throw new DirectInputError('DIRECT_CURVE_MISSING','Curve missing. Choose inputs again.');return reversed[i]?reverseNurbsCurve(item.curve):item.curve})
- const framed=kind==='nurbs-sweep'&&sweep?.mode==='framed'?framedSweepNurbsCurve(curves[0],curves[1],sweep.normal,sweep.sections,sweep.maxDeviation):null
+ const framed=kind==='nurbs-sweep'&&sweep?.mode==='framed'?framedSweepNurbsCurve(curves[0]!,curves[1]!,sweep.normal,sweep.sections,sweep.maxDeviation):null
  if(framed)onSweepReport?.(framed.report)
  if(framed&&!framed.surface)throw new DirectInputError('DIRECT_SWEEP_DEVIATION',`Sweep sampled deviation ${framed.report.sampledControlDeviation} exceeds budget ${framed.report.budget}. Adjust sections or budget.`,'sweepDeviation')
- const surface=kind==='nurbs-patch'?coonsNurbsPatch(curves):kind==='nurbs-sweep'?(framed?.surface??sweepNurbsCurve(curves[0],curves[1])):loftAlignedNurbsCurves(curves)
+ const surface=kind==='nurbs-patch'?coonsNurbsPatch(curves):kind==='nurbs-sweep'?(framed?.surface??sweepNurbsCurve(curves[0]!,curves[1]!)):loftAlignedNurbsCurves(curves)
  return {id,name:kind==='nurbs-patch'?'Coons patch':kind==='nurbs-sweep'?(framed?'Framed sweep':'Translation sweep'):'NURBS loft',surface,segmentsU:24,segmentsV:24,...group?{group}:{}}
 }
 

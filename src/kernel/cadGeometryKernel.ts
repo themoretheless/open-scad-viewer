@@ -114,7 +114,8 @@ function ownModuleGeometry(module: CadToplevel): () => void {
     const errors: unknown[] = []
     for (let index = pending.length - 1; index >= 0; index--) {
       try {
-        if (!pending[index].isDeleted()) pending[index].delete()
+        const item = pending[index]!
+        if (!item.isDeleted()) item.delete()
       } catch (error) { errors.push(error) }
     }
     if (errors.length) throw new AggregateError(errors, 'CAD geometry cleanup failed')

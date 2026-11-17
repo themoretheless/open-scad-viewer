@@ -61,7 +61,7 @@ function alignedPlacement(from: Vec3, to: Vec3, pivot: Vec3, offset: Vec3): numb
     [z * x * k - y * s, z * y * k + x * s, c + z * z * k],
   ]
   const target: Vec3 = [pivot[0] + offset[0], pivot[1] + offset[1], pivot[2] + offset[2]]
-  return [...r.map((row, i) => [...row, target[i] - dot(row as Vec3, pivot)]), [0, 0, 0, 1]]
+  return [...r.map((row, i) => [...row, target[i]! - dot(row as Vec3, pivot)]), [0, 0, 0, 1]]
 }
 
 function refuse(message: string): never {
@@ -86,32 +86,32 @@ export function solidInstanceArrayPlacements(spec: SolidInstanceArraySpec): numb
   if (points.length < 2 || points.length > 10_000 || !points.every(p => p.length === 3 && finite(p)))
     refuse('Path array needs 2–10000 finite points.')
   const cumulative = [0]
-  for (let i = 1; i < points.length; i++) cumulative.push(cumulative[i - 1] + len(sub(points[i], points[i - 1])))
-  const total = cumulative[cumulative.length - 1]
+  for (let i = 1; i < points.length; i++) cumulative.push(cumulative[i - 1]! + len(sub(points[i]!, points[i - 1]!)))
+  const total = cumulative[cumulative.length - 1]!
   if (!(total > 1e-9)) refuse('Path array needs a path of non-zero length.')
   const segmentAt = (distance: number) => {
     let i = 1
-    while (i < points.length - 1 && cumulative[i] < distance) i++
+    while (i < points.length - 1 && cumulative[i]! < distance) i++
     // Skip zero-length segments so the tangent stays defined.
     while (i > 1 && cumulative[i] === cumulative[i - 1]) i--
     return i
   }
   const tangentAt = (i: number): Vec3 => {
     for (let j = i; j < points.length; j++) {
-      const d = sub(points[j], points[j - 1])
+      const d = sub(points[j]!, points[j - 1]!)
       if (len(d) > 1e-12) return unit(d)
     }
-    return unit(sub(points[points.length - 1], points[0]))
+    return unit(sub(points[points.length - 1]!, points[0]!))
   }
-  const start = points[0],
+  const start = points[0]!,
     startTangent = tangentAt(1)
   return Array.from({ length: spec.count - 1 }, (_, n) => {
     const distance = (total * (n + 1)) / (spec.closed ? spec.count : spec.count - 1),
       i = segmentAt(distance)
-    const a = points[i - 1],
-      b = points[i],
-      span = cumulative[i] - cumulative[i - 1],
-      t = span > 0 ? (distance - cumulative[i - 1]) / span : 1
+    const a = points[i - 1]!,
+      b = points[i]!,
+      span = cumulative[i]! - cumulative[i - 1]!,
+      t = span > 0 ? (distance - cumulative[i - 1]!) / span : 1
     const at: Vec3 = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
     const offset = sub(at, start)
     return spec.align ? alignedPlacement(startTangent, tangentAt(i), start, offset) : translation(offset)
@@ -150,7 +150,7 @@ export function createSolidInstanceArray(
   next.bodies.push(
     ...placements.map((matrix, i): DirectBody => ({
       ...structuredClone(template),
-      id: ids[i],
+      id: ids[i]!,
       name: `${name} · ${i + 2}`,
       instance: { sourceId, matrix: structuredClone(matrix) },
     })),

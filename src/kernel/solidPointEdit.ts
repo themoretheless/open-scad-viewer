@@ -38,7 +38,7 @@ export function applySolidPointEdit(source:DirectDocument,p:SolidPointEditOption
   const d=structuredClone(source),body=d.bodies.find(b=>b.id===p.id)
   if(!body||body.brep)throw Error('Select vertices of a mesh body.')
   if(!p.delta.every(Number.isFinite)||!p.indices.length||p.indices.some(i=>!Number.isInteger(i)||i<0||i*3+2>=body.mesh.positions.length))throw Error('Invalid vertex edit.')
-  for(const i of new Set(p.indices))for(let k=0;k<3;k++)body.mesh.positions[i*3+k]+=p.delta[k]
+  for(const i of new Set(p.indices))for(let k=0;k<3;k++)body.mesh.positions[i*3+k]=body.mesh.positions[i*3+k]!+p.delta[k]!
   return d
  }
  const d=updateSolidNurbsControlPoint(source,p.id,p.u,p.v,p.point,p.weight),curves=d.curves??[]

@@ -227,16 +227,16 @@ export function metricsManifoldInKernel(
     const floats = new Float64Array(new Float64Array(buffer, wasm.abi_array_field(handle, 4), wasm.abi_array_field(handle, 5)))
     const components: KernelManifoldComponentMetrics[] = []
     for (let c = 0; c < stats.length / 6; c++) {
-      const genus = stats[c * 6 + 5]
+      const genus = stats[c * 6 + 5]!
       components.push({
-        triangleCount: stats[c * 6],
-        vertexCount: stats[c * 6 + 1],
-        edgeCount: stats[c * 6 + 2],
-        boundaryEdges: stats[c * 6 + 3],
-        eulerCharacteristic: stats[c * 6 + 4] | 0,
+        triangleCount: stats[c * 6]!,
+        vertexCount: stats[c * 6 + 1]!,
+        edgeCount: stats[c * 6 + 2]!,
+        boundaryEdges: stats[c * 6 + 3]!,
+        eulerCharacteristic: stats[c * 6 + 4]! | 0,
         genus: genus === 0 ? null : genus - 1,
-        signedVolume: componentFloats[c * 2],
-        surfaceArea: componentFloats[c * 2 + 1],
+        signedVolume: componentFloats[c * 2]!,
+        surfaceArea: componentFloats[c * 2 + 1]!,
       })
     }
     return {
@@ -245,8 +245,8 @@ export function metricsManifoldInKernel(
       edgeCount: wasm.abi_array_field(handle, 8),
       eulerCharacteristic: wasm.abi_array_field(handle, 9) | 0,
       componentCount: wasm.abi_array_field(handle, 10),
-      signedVolume: floats[0],
-      surfaceArea: floats[1],
+      signedVolume: floats[0]!,
+      surfaceArea: floats[1]!,
       watertight: (wasm.abi_array_field(handle, 11) & 1) !== 0,
       components,
     }
@@ -337,7 +337,7 @@ export function booleanManifoldInKernel(
       indices: new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, 2), wasm.abi_array_field(handle, 3))),
       operandRepaired: [wasm.abi_array_field(handle, 7) !== 0, wasm.abi_array_field(handle, 8) !== 0],
       kernel: {
-        toleranceMm: floats[0],
+        toleranceMm: floats[0]!,
         work: wasm.abi_array_field(handle, 10),
         fragments: wasm.abi_array_field(handle, 9),
         inputTriangles: [wasm.abi_array_field(handle, 11), wasm.abi_array_field(handle, 12)],
@@ -454,31 +454,31 @@ export function diagnoseManifoldInKernel(
     const clearancePairs: KernelManifoldClearancePair[] = []
     for (let p = 0; p < clearance.length / 4; p++) {
       clearancePairs.push({
-        componentA: clearance[p * 4],
-        componentB: clearance[p * 4 + 1],
-        distance: floats[17 + p],
-        triangleA: clearance[p * 4 + 2],
-        triangleB: clearance[p * 4 + 3],
+        componentA: clearance[p * 4]!,
+        componentB: clearance[p * 4 + 1]!,
+        distance: floats[17 + p]!,
+        triangleA: clearance[p * 4 + 2]!,
+        triangleB: clearance[p * 4 + 3]!,
       })
     }
     return {
       selfIntersectionPairs: u32(0),
       selfIntersectionCandidatePairs: wasm.abi_array_field(handle, 8),
       selfIntersectionTruncated: (flags & 1) !== 0,
-      minThickness: finiteOrNull(floats[0]),
-      maxThickness: finiteOrNull(floats[1]),
+      minThickness: finiteOrNull(floats[0]!),
+      maxThickness: finiteOrNull(floats[1]!),
       minThicknessTriangle: minTriangle === 0 ? null : minTriangle - 1,
       thicknessSamples: wasm.abi_array_field(handle, 10),
       thicknessMissed: wasm.abi_array_field(handle, 11),
       thinTriangles: u32(2),
-      minGap: finiteOrNull(floats[2]),
+      minGap: finiteOrNull(floats[2]!),
       minGapTriangle: gapTriangle === 0 ? null : gapTriangle - 1,
       componentCount: wasm.abi_array_field(handle, 12),
       clearancePairs,
       mass: (flags & 2) === 0 ? null : {
-        volume: floats[3],
-        mass: floats[4],
-        centerOfMass: [floats[5], floats[6], floats[7]],
+        volume: floats[3]!,
+        mass: floats[4]!,
+        centerOfMass: [floats[5]!, floats[6]!, floats[7]!],
         inertia: Array.from(floats.subarray(8, 17)),
       },
     }

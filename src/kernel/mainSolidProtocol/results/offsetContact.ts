@@ -11,7 +11,7 @@ export function validOffsetContact(job:OffsetContactExpectation,value:unknown,ma
     if(!mainSolidResult({kind:'offsetContactBand',fixedAxis:job.fixedAxis,domains:job.domains},
       {method:'interval-offset-band-krawczyk',scope:'parameter-band-within-tube',status:v.contactStatus,witness:v.contactWitness,
        rootForEveryParameterProven:unique,uniqueWithinTube:unique,continuousBranchProven:unique,wholeCurveComplete:false,trimMembershipProven:false,topologyAuthority:false}))return false
-    const interval=(r:unknown)=>arrayOf(r,2,finite)&&(r as number[])[0]<=(r as number[])[1]
+    const interval=(r:unknown)=>arrayOf(r,2,finite)&&(r as number[])[0]!<=(r as number[])[1]!
     if(v.centerTangentIntervalsMm===null)return v.parameterDerivativeIntervals===null&&v.speedIntervalMm===null&&!v.centerRegularityProven
       &&(v.reason==='offset-carriers-excluded'?v.contactStatus==='excluded':v.reason==='contact-band-unresolved'?v.contactStatus==='unresolved':unique&&['source-jet-continuity-unproven','offset-jacobian-unresolved','implicit-jacobian-unresolved'].includes(v.reason))
     if(!unique||!arrayOf(v.centerTangentIntervalsMm,3,interval)||!arrayOf(v.parameterDerivativeIntervals,3,interval)
@@ -29,7 +29,7 @@ export function validOffsetContact(job:OffsetContactExpectation,value:unknown,ma
       ||!count(v.exactWork,job.maxExactWork)||!count(v.agreementCells,job.maxAgreementCells)
       ||!Array.isArray(v.audits)||v.audits.length>v.totalCoedges)return false
     if(!v.audits.every((a,i)=>{
-      if(!a||a.side!==job.addresses[i][0]||a.loop!==job.addresses[i][1]||a.curve!==job.addresses[i][2]
+      if(!a||a.side!==job.addresses[i]![0]||a.loop!==job.addresses[i]![1]||a.curve!==job.addresses[i]![2]
         ||!['equal','different','unresolved','unsupported'].includes(a.exactStatus)
         ||!count(a.exactWork,job.maxExactWork)||!count(a.cells,job.maxAgreementCells))return false
       if(a.agreementStatus==='exact')return a.exactStatus==='equal'&&a.cells===0&&a.witnessParameter===null&&a.witnessDistanceMm===null
@@ -70,7 +70,7 @@ export function validOffsetContact(job:OffsetContactExpectation,value:unknown,ma
       ||!Array.isArray(v.regions)||v.regions.length>2||!Array.isArray(v.classifications)||v.classifications.length>2)return false
     if(!v.regions.every((r,i)=>r&&[true,false,null].includes(r.valid)&&typeof r.reason==='string'
       &&count(r.pairs,job.maxPairs)&&count(r.cells,job.maxCells)&&count(r.domainCells,job.maxDomainCells)
-      &&(r.problemLoops===null||arrayOf(r.problemLoops,2,n=>count(n,job.loopCounts[i]-1)))))return false
+      &&(r.problemLoops===null||arrayOf(r.problemLoops,2,n=>count(n,job.loopCounts[i]!-1)))))return false
     if(!v.classifications.every(c=>c&&['inside','outside','unresolved'].includes(c.location)&&typeof c.reason==='string'&&count(c.cells,job.maxDomainCells)))return false
     if(v.pairs!==v.regions.reduce((n,r)=>n+r.pairs,0)||v.cells!==v.regions.reduce((n,r)=>n+r.cells,0)
       ||v.domainCells!==v.regions.reduce((n,r)=>n+r.domainCells,0)+v.classifications.reduce((n,c)=>n+c.cells,0))return false
@@ -91,7 +91,7 @@ export function validOffsetContact(job:OffsetContactExpectation,value:unknown,ma
   if(job.kind==='offsetContactBand') {
     const v=value as OffsetContactBand
     const unique=v.status==='continuous-branch'
-    const interval=(r:unknown)=>arrayOf(r,2,finite)&&(r as number[])[0]<=(r as number[])[1]
+    const interval=(r:unknown)=>arrayOf(r,2,finite)&&(r as number[])[0]!<=(r as number[])[1]!
     if(v.method!=='interval-offset-band-krawczyk'||v.scope!=='parameter-band-within-tube'
       ||!['continuous-branch','excluded','unresolved'].includes(v.status)
       ||v.rootForEveryParameterProven!==unique||v.uniqueWithinTube!==unique||v.continuousBranchProven!==unique
@@ -101,7 +101,7 @@ export function validOffsetContact(job:OffsetContactExpectation,value:unknown,ma
     if(!w||!finite(w.contractionUpper)||w.contractionUpper<0||w.contractionUpper>=.5
       ||!arrayOf(w.centerIntervalMm,3,interval)||!arrayOf(w.firstUV,2,interval)||!arrayOf(w.secondUV,2,interval))return false
     return [w.firstUV,w.secondUV].every((uv,side)=>uv.every((r,axis)=>{
-      const d=job.domains[side][axis]
+      const d=job.domains[side]![axis]!
       return side===0&&axis===job.fixedAxis?r[0]===d[0]&&r[1]===d[1]:r[0]>d[0]&&r[1]<d[1]
     }))
   }

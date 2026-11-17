@@ -297,21 +297,21 @@ export async function tessellateNurbsSurfaceOnGpu(
 ): Promise<GpuNurbsTessellationResult | null> {
   if (surface.periodicU || surface.periodicV) return null
   const numCtrlU = surface.controlPoints.length
-  const numCtrlV = numCtrlU > 0 ? surface.controlPoints[0].length : 0
+  const numCtrlV = numCtrlU > 0 ? surface.controlPoints[0]!.length : 0
   if (numCtrlU === 0 || numCtrlV === 0) return null
 
   const totalCp = numCtrlU * numCtrlV
   const controlPoints = new Float32Array(totalCp * 3)
   const weights = new Float32Array(totalCp)
   for (let i = 0; i < numCtrlU; i++) {
-    const row = surface.controlPoints[i]
+    const row = surface.controlPoints[i]!
     const wRow = surface.weights[i]
     for (let j = 0, idx = i; j < numCtrlV; j++, idx += numCtrlU) {
-      const pt = row[j]
+      const pt = row[j]!
       const cIdx = idx * 3
-      controlPoints[cIdx] = pt[0]
-      controlPoints[cIdx + 1] = pt[1]
-      controlPoints[cIdx + 2] = pt[2]
+      controlPoints[cIdx] = pt[0]!
+      controlPoints[cIdx + 1] = pt[1]!
+      controlPoints[cIdx + 2] = pt[2]!
       weights[idx] = wRow !== undefined ? (wRow[j] ?? 1) : 1
     }
   }
@@ -361,8 +361,9 @@ export function computeNurbsSurfaceBoundingBox(
         const v = vMin + (j / steps) * spanV
         const pt = evaluator(u, v).point
         for (let axis = 0; axis < 3; axis++) {
-          if (pt[axis] < min[axis]) min[axis] = pt[axis]
-          if (pt[axis] > max[axis]) max[axis] = pt[axis]
+          const value = pt[axis]!
+          if (value < min[axis]!) min[axis] = value
+          if (value > max[axis]!) max[axis] = value
         }
       }
     }

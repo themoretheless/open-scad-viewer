@@ -104,7 +104,7 @@ export function resolveTrussScenario(scenario: TrussScenario): ResolvedTrussScen
     const source = cases.find(item => item.id === term.caseId)
     if (!source) invalid('A combination must reference existing load cases, not combinations.')
     const mask = restraints(source.restrained, nodesMm.length)
-    if (restrained && mask.some((axes, i) => axes.some((fixed, k) => fixed !== restrained![i][k]))) {
+    if (restrained && mask.some((axes, i) => axes.some((fixed, k) => fixed !== restrained![i]![k]))) {
       throw new TrussScenarioError('TRUSS_SCENARIO_SUPPORTS', 'Combined load cases must have identical XYZ restraints.')
     }
     restrained ??= mask

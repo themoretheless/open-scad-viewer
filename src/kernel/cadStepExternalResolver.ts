@@ -41,7 +41,7 @@ const digest=async(text:string)=>{
   const bytes=UTF8_ENCODER.encode(text)
   const hash=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))
   let hex=''
-  for(let i=0;i<hash.length;i++)hex+=HEX_BYTE[hash[i]]
+  for(let i=0;i<hash.length;i++)hex+=HEX_BYTE[hash[i]!]
   return hex
 }
 const cancelled=(signal:AbortSignal)=>{if(signal.aborted)throw new DOMException('STEP external resolution cancelled','AbortError')}
@@ -102,8 +102,8 @@ export async function importStepV6WithResolver(
     const definitions=source.imported.definitionIdentities
     if(definitions.length===0)throw Error(`STEP /9 document ${source.uri} has no definition identity`)
     for(let index=0;index<source.imported.model.bodies.length;index++){
-      occurrences.push({uri:source.uri,topoId:bodyIds[bodyOffset++],
-        definitionId:definitions[Math.min(index,definitions.length-1)],digest:source.digest})
+      occurrences.push({uri:source.uri,topoId:bodyIds[bodyOffset++]!,
+        definitionId:definitions[Math.min(index,definitions.length-1)]!,digest:source.digest})
     }
   }
   return {

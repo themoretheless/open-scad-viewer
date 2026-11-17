@@ -18,6 +18,6 @@ function candidates(model:NurbsBrep,groups:[number[],number[]]|null,evaluate:Eva
  // Keep the explicit caller-supplied evaluation hook. Native code selects the
  // bounded queries and computes proposals from the returned sample values.
  const plan=callGeometryRust<{targets:Query[];sources:Query[]}>('cad_client_geometry',{operation:'wallPlan',...request})
- const sample=({face,uv}:Query)=>{const value=evaluate(model.faces[face].surface,...uv);return {point:value.point,normal:value.normal??null}}
+ const sample=({face,uv}:Query)=>{const value=evaluate(model.faces[face]!.surface,...uv);return {point:value.point,normal:value.normal??null}}
  return callGeometryRust('cad_client_geometry',{operation:'wallCandidates',...request,samples:{targets:plan.targets.map(sample),sources:plan.sources.map(sample)}})
 }

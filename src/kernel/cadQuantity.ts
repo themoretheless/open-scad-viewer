@@ -30,7 +30,7 @@ export function evaluateSafeMathExpression(expression: string): number | null {
   let depth = 0
 
   const skipSpaces = () => {
-    while (pos < input.length && /\s/.test(input[pos])) pos++
+    while (pos < input.length && /\s/.test(input[pos]!)) pos++
   }
 
   const parseExpression = (): number => {
@@ -118,14 +118,14 @@ export function evaluateSafeMathExpression(expression: string): number | null {
         if (pos >= input.length || input[pos] !== ')') return Number.NaN
         pos++
         depth--
-        if (name === 'sqrt' && args.length === 1) return args[0] < 0 ? Number.NaN : Math.sqrt(args[0])
-        if (name === 'abs' && args.length === 1) return Math.abs(args[0])
-        if (name === 'sin' && args.length === 1) return Math.sin((args[0] * Math.PI) / 180)
-        if (name === 'cos' && args.length === 1) return Math.cos((args[0] * Math.PI) / 180)
-        if (name === 'tan' && args.length === 1) return Math.tan((args[0] * Math.PI) / 180)
-        if (name === 'round' && args.length === 1) return Math.round(args[0])
-        if (name === 'floor' && args.length === 1) return Math.floor(args[0])
-        if (name === 'ceil' && args.length === 1) return Math.ceil(args[0])
+        if (name === 'sqrt' && args.length === 1) return args[0]! < 0 ? Number.NaN : Math.sqrt(args[0]!)
+        if (name === 'abs' && args.length === 1) return Math.abs(args[0]!)
+        if (name === 'sin' && args.length === 1) return Math.sin((args[0]! * Math.PI) / 180)
+        if (name === 'cos' && args.length === 1) return Math.cos((args[0]! * Math.PI) / 180)
+        if (name === 'tan' && args.length === 1) return Math.tan((args[0]! * Math.PI) / 180)
+        if (name === 'round' && args.length === 1) return Math.round(args[0]!)
+        if (name === 'floor' && args.length === 1) return Math.floor(args[0]!)
+        if (name === 'ceil' && args.length === 1) return Math.ceil(args[0]!)
         if (name === 'min' && args.length >= 1) return Math.min(...args)
         if (name === 'max' && args.length >= 1) return Math.max(...args)
         return Number.NaN
@@ -166,7 +166,7 @@ export function parseCadQuantity(text: string, kind: QuantityKind, min?: number,
   if (rawUnit && !(rawUnit in allowedUnits)) return { valid: false, reason: 'unit' }
   const evaluated = evaluateSafeMathExpression(exprPart)
   if (evaluated === null || !Number.isFinite(evaluated)) return { valid: false, reason: 'number' }
-  const factor = rawUnit ? allowedUnits[rawUnit] : 1
+  const factor = rawUnit ? allowedUnits[rawUnit]! : 1
   const converted = evaluated * factor
   if (!Number.isFinite(converted)) return { valid: false, reason: 'number' }
   if ((min !== undefined && converted < min) || (max !== undefined && converted > max)) {

@@ -161,17 +161,18 @@ function validClosedNetworkShells(topology: ClosedSsNetworkBooleanReport['topolo
     for (const use of shell) {
       if (usedFaces.has(use.face)) return false
       usedFaces.add(use.face)
-      const face = topology.faces[use.face]
+      const face = topology.faces[use.face]!
       for (const loop of [face.outer, ...face.holes]) {
         if (usedLoops.has(loop)) return false
         usedLoops.add(loop)
-        for (const coedge of topology.loops[loop]) {
-          const edge = topology.edges[coedge.edge]
+        for (const coedge of topology.loops[loop]!) {
+          const edge = topology.edges[coedge.edge]!
           usedEdges.add(coedge.edge)
           edge.vertices.forEach(id => usedVertices.add(id))
           if (edge.degenerate) continue
           const counts = incidence.get(coedge.edge) ?? [0, 0]
-          counts[Number(coedge.reversed !== use.reversed)] += 1
+          const side = Number(coedge.reversed !== use.reversed)
+          counts[side] = counts[side]! + 1
           incidence.set(coedge.edge, counts)
         }
       }

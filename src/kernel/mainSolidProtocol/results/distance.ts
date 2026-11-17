@@ -41,7 +41,7 @@ export function validShellDistanceResult(
     v.toleranceUv !== job.toleranceUv ||
     v.maxCells !== job.maxCells ||
     v.maxDomainCells !== job.maxDomainCells ||
-    v.pairs !== job.domains[0].length * job.domains[1].length ||
+    v.pairs !== job.domains[0]!.length * job.domains[1]!.length ||
     !Number.isInteger(v.evaluatedPairs) ||
     v.evaluatedPairs < 0 ||
     v.evaluatedPairs > v.pairs ||
@@ -73,12 +73,12 @@ export function validShellDistanceResult(
     !finite(hi) ||
     hi < lo ||
     !arrayOf(v.faces, 2, f => Number.isInteger(f) && Number(f) >= 0) ||
-    !v.faces!.every((f, i) => !!job.domains[i][f]) ||
+    !v.faces!.every((f, i) => !!job.domains[i]![f]) ||
     !arrayOf(v.parameters, 2, uv => arrayOf(uv, 2, finite)) ||
     !v.parameters!.every((uv, i) =>
       uv.every(
         (t, k) =>
-          t >= job.domains[i][v.faces![i]][k][0] && t <= job.domains[i][v.faces![i]][k][1],
+          t >= job.domains[i]![v.faces![i]!]![k]![0] && t <= job.domains[i]![v.faces![i]!]![k]![1],
       ),
     ) ||
     !arrayOf(v.points, 2, vector) ||
@@ -140,7 +140,7 @@ export function validFaceDistanceResult(
     !v.parameters!.every((uv, i) =>
       uv.every(
         (t, k) =>
-          !!job.domains[i][k] && t >= job.domains[i][k][0] && t <= job.domains[i][k][1],
+          !!job.domains[i]![k] && t >= job.domains[i]![k][0] && t <= job.domains[i]![k][1],
       ),
     ) ||
     !arrayOf(v.points, 2, vector) ||
@@ -174,7 +174,7 @@ export function validSurfaceDistanceResult(
     v.distanceIntervalMm[0] >= 0 &&
     arrayOf(v.parameters, 2, uv => arrayOf(uv, 2, finite)) &&
     v.parameters.every((uv, i) =>
-      uv.every((t, k) => t >= job.domains[i][k][0] && t <= job.domains[i][k][1]),
+      uv.every((t, k) => t >= job.domains[i]![k]![0] && t <= job.domains[i]![k]![1]),
     ) &&
     arrayOf(v.points, 2, vector) &&
     arrayOf(v.pointEnclosures, 2, p => arrayOf(p, 3, isOrderedInterval)) &&
@@ -212,7 +212,7 @@ export function validCurveDistanceResult(
     isOrderedInterval(v.distanceIntervalMm) &&
     v.distanceIntervalMm[0] >= 0 &&
     arrayOf(v.parameters, 2, finite) &&
-    v.parameters.every((t, i) => t >= job.domains[i][0] && t <= job.domains[i][1]) &&
+    v.parameters.every((t, i) => t >= job.domains[i]![0] && t <= job.domains[i]![1]) &&
     arrayOf(v.points, 2, p => arrayOf(p, job.dimension, finite)) &&
     arrayOf(v.pointEnclosures, 2, p => arrayOf(p, job.dimension, isOrderedInterval)) &&
     typeof v.converged === 'boolean' &&

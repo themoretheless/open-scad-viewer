@@ -51,7 +51,7 @@ export function validProfileBridgeChordReport(expected:ReturnType<typeof profile
   if((e.cells===0||e.spans===0||expected.maxControls===0)&&(c.completeExclusion||c.cells!==0||c.spans!==0||c.exclusions!==0))return false
   const rect=(v:unknown):boolean=>Array.isArray(v)&&v.length===2&&v.every((axis,k)=>
    Array.isArray(axis)&&axis.length===2&&axis.every(x=>typeof x==='number'&&Number.isFinite(x))
-   &&axis[0]<axis[1]&&axis[0]>=e.domain[k][0]&&axis[1]<=e.domain[k][1])
+   &&axis[0]<axis[1]&&axis[0]>=e.domain[k]![0]&&axis[1]<=e.domain[k]![1])
   if(!c.unresolvedPairs.every(pair=>Array.isArray(pair)&&pair.length===2&&pair.every(rect)))return false
   if(c.completeExclusion&&(c.cells===0||c.spans===0||c.exclusions===0))return false
   if(r.reason==='profile-bridge-profile-unproven'&&(c.completeExclusion||c.cells!==0||c.spans!==0||c.exclusions!==0))return false

@@ -131,8 +131,8 @@ export function createDrawingViews(mesh: DrawingMesh, options: DrawingViewsOptio
  * right of the projected extents (model mm, so ISO and SECTION get them too).
  */
 function overallDimensions(box: number[], scale: number, ox: number, oy: number): string {
-  const w = box[2] - box[0]
-  const h = box[3] - box[1]
+  const w = box[2]! - box[0]!
+  const h = box[3]! - box[1]!
   const x1 = ox + w * scale
   const y1 = oy + h * scale
   const label = (x: number, y: number, value: number, rotate: boolean) =>
@@ -172,7 +172,7 @@ function drawingSvg(raw: RustDrawing, checks: DrawingPrintChecks, title: string)
       label: VIEW_LABELS[v.view],
       box,
       body: (s, ox, oy) => {
-        const p = (q: [number, number]) => `${fmt(ox + (q[0] - box[0]) * s)} ${fmt(oy + (box[3] - q[1]) * s)}`
+        const p = (q: [number, number]) => `${fmt(ox + (q[0] - box[0]!) * s)} ${fmt(oy + (box[3]! - q[1]) * s)}`
         const path = (list: DrawingSegment[]) => list.map(x => `M${p(x.a)}L${p(x.b)}`).join('')
         const visible = v.segments.filter(x => !x.hidden)
         const hidden = v.segments.filter(x => x.hidden)
@@ -192,9 +192,9 @@ function drawingSvg(raw: RustDrawing, checks: DrawingPrintChecks, title: string)
       label: `SECTION ${VIEW_LABELS[sec.view]}`,
       box,
       body: (s, ox, oy) => {
-        const p = (q: [number, number]) => `${fmt(ox + (q[0] - box[0]) * s)} ${fmt(oy + (box[3] - q[1]) * s)}`
+        const p = (q: [number, number]) => `${fmt(ox + (q[0] - box[0]!) * s)} ${fmt(oy + (box[3]! - q[1]) * s)}`
         const area = sec.rings.map(r => `M${r.map(p).join('L')}Z`).join('')
-        const hatch = sec.hatch.map(h => `M${p(h[0])}L${p(h[1])}`).join('')
+        const hatch = sec.hatch.map(h => `M${p(h[0]!)}L${p(h[1]!)}`).join('')
         return (
           `<path class="section" d="${area}" fill="#ddd" fill-rule="evenodd" stroke-width=".35"/>` +
           `<path class="hatch" d="${hatch}" stroke-width=".13"/>`
@@ -205,12 +205,12 @@ function drawingSvg(raw: RustDrawing, checks: DrawingPrintChecks, title: string)
   const columns = Math.min(3, Math.max(1, cells.length))
   const cell = 90
   const rows = Math.ceil(cells.length / columns)
-  const span = Math.max(1e-9, ...cells.map(c => Math.max(c.box[2] - c.box[0], c.box[3] - c.box[1])))
+  const span = Math.max(1e-9, ...cells.map(c => Math.max(c.box[2]! - c.box[0]!, c.box[3]! - c.box[1]!)))
   const scale = (cell - 20) / span
   const width = 10 + columns * cell
   const height = 20 + rows * cell + 40
   const parts = cells.map((c, i) => {
-    const ox = 10 + (i % columns) * cell + (cell - 20 - (c.box[2] - c.box[0]) * scale) / 2
+    const ox = 10 + (i % columns) * cell + (cell - 20 - (c.box[2]! - c.box[0]!) * scale) / 2
     const oy = 20 + Math.floor(i / columns) * cell + 8
     const lx = 10 + (i % columns) * cell
     return `<g data-view="${escapeXml(c.label)}"><text x="${fmt(lx)}" y="${fmt(oy - 3)}" fill="black" stroke="none" font-family="sans-serif" font-size="3">${escapeXml(c.label)}</text>${c.body(scale, ox, oy)}${overallDimensions(c.box, scale, ox, oy)}</g>`

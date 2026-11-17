@@ -26,7 +26,7 @@ export function contactQualificationExpectation(options:OffsetContactQualificati
 }
 const record=(x:unknown):x is RecordValue=>!!x&&typeof x==='object'&&!Array.isArray(x)
 const finite=(x:unknown):x is number=>typeof x==='number'&&Number.isFinite(x)
-const interval=(x:unknown):x is [number,number]=>Array.isArray(x)&&x.length===2&&x.every(finite)&&x[0]<=x[1]
+const interval=(x:unknown):x is [number,number]=>Array.isArray(x)&&x.length===2&&x.every(finite)&&x[0]!<=x[1]!
 const count=(x:unknown,max:number)=>typeof x==='number'&&Number.isSafeInteger(x)&&x>=0&&x<=max
 const closed=(v:RecordValue,keys:string[])=>keys.every(k=>v[k]===false)
 const curveSnapshot=(v:unknown)=>record(v)?canonical([v.degree,v.knots,v.controlPoints,v.weights,v.periodic??false]):''
@@ -98,7 +98,7 @@ export function validContactQualification(expected:ContactQualificationExpectati
  if(c.patchBoundaryIdentityProven===true){
   if(!Array.isArray(c.worldCurves)||c.worldCurves.length!==2||!record(value.candidateSurface))return false
   const surface=value.candidateSurface as unknown as NurbsSurface
-  for(let i=0;i<2;i++){const j=i===0?0:surface.controlPoints[0].length-1
+  for(let i=0;i<2;i++){const j=i===0?0:surface.controlPoints[0]!.length-1
    if(curveSnapshot(c.worldCurves[i])!==curveSnapshot({degree:surface.degreeU,knots:surface.knotsU,controlPoints:surface.controlPoints.map(row=>row[j]),weights:surface.weights.map(row=>row[j]),periodic:surface.periodicU??false}))return false
   }
  }

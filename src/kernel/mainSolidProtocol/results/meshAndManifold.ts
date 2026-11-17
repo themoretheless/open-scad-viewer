@@ -328,7 +328,7 @@ export function validMeshContactsResult(
           2,
           t => Number.isInteger(t) && Number(t) >= 0 && Number(t) < job.triangles,
         ) &&
-        c.triangles[0] < c.triangles[1] &&
+        c.triangles[0]! < c.triangles[1]! &&
         vector(c.point) &&
         finite(c.toleranceMm) &&
         c.toleranceMm > 0 &&
@@ -336,9 +336,9 @@ export function validMeshContactsResult(
         c.sharedVertices >= 0 &&
         c.sharedVertices <= 3 &&
         (i === 0 ||
-          v.contacts[i - 1].triangles[0] < c.triangles[0] ||
-          (v.contacts[i - 1].triangles[0] === c.triangles[0] &&
-            v.contacts[i - 1].triangles[1] < c.triangles[1])),
+          v.contacts[i - 1]!.triangles[0]! < c.triangles[0]! ||
+          (v.contacts[i - 1]!.triangles[0] === c.triangles[0] &&
+            v.contacts[i - 1]!.triangles[1]! < c.triangles[1]!)),
     )
   ) {
     return false
