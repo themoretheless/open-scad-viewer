@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 515,
-  "unallocatedCount": 485,
+  "specifiedCount": 516,
+  "unallocatedCount": 484,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13291,6 +13291,27 @@
       "remainingQualification": [
         "Clamp one periodic surface axis in exact homogeneous arithmetic with a single tensor-wide weight gauge.",
         "Clamp a complete period of each homogeneous row, then store the assembled tensor in one exact weight gauge while keeping the transverse axis.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0516",
+      "name": "Точное извлечение полосы NURBS-поверхности через периодический шов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::restrict_exact_periodic_surface_axis",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-516-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-516-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Extract a clamped strip through the periodic seam in either axis on the lifted tensor clock.",
+        "Move the start seam once, then clamp the requested strip over the lifted period with one exact homogeneous gauge.",
         "WASM and application integration are separate."
       ]
     }

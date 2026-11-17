@@ -159,11 +159,51 @@ pub fn open_exact_periodic_surface_axis(
         used: 0,
         limit: max_work,
     };
-    let domain = reference.domain();
-    let opened = rebuild_surface_axis(source, axis, false, &mut work, |row, work| {
-        super::exact_curve_merge::clamp_curve_net(row, domain, work)
+    Ok(clamp_surface_axis(
+        source,
+        axis,
+        reference.domain(),
+        &mut work,
+    ))
+}
+
+/// Restrict a periodic surface to a clamped strip along one axis, using the
+/// original parameter units. The start is in the source half-open domain;
+/// the end may cross its seam by up to one full period from the start.
+pub fn restrict_exact_periodic_surface_axis(
+    source: &Surface,
+    axis: Axis,
+    interval: [f64; 2],
+    max_work: u64,
+) -> Result<Report> {
+    let [lo, hi] = interval;
+    crate::check(
+        lo.is_finite() && hi.is_finite() && lo < hi,
+        "Periodic surface restriction needs an increasing finite interval",
+    )?;
+    let rotated = insert_and_rotate_periodic_surface_seam(source, axis, lo, max_work)?;
+    let Some(surface) = rotated.surface else {
+        return Ok(rotated);
+    };
+    if hi > row(&surface, axis, 0).domain()[1] {
+        return Ok(Report {
+            surface: None,
+            work_used: rotated.work_used,
+            refusal: Some(GaugeMergeRefusal::Join(Refusal::NonAdjacentDomain)),
+        });
+    }
+    let mut work = Work {
+        used: rotated.work_used,
+        limit: max_work,
+    };
+    Ok(clamp_surface_axis(&surface, axis, interval, &mut work))
+}
+
+fn clamp_surface_axis(source: &Surface, axis: Axis, interval: [f64; 2], work: &mut Work) -> Report {
+    let opened = rebuild_surface_axis(source, axis, false, work, |row, work| {
+        super::exact_curve_merge::clamp_curve_net(row, interval, work)
     });
-    Ok(match opened {
+    match opened {
         Ok(surface) => Report {
             surface: Some(surface),
             work_used: work.used,
@@ -174,7 +214,7 @@ pub fn open_exact_periodic_surface_axis(
             work_used: work.used,
             refusal: Some(GaugeMergeRefusal::Exact(reason)),
         },
-    })
+    }
 }
 
 fn rebuild_surface_axis(

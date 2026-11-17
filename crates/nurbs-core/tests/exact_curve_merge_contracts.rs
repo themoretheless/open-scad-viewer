@@ -1761,3 +1761,79 @@ fn exact_surface_opening_rejects_an_unstorable_endpoint_in_any_row() {
         Some(GaugeMergeRefusal::Exact(Refusal::NotRepresentable))
     );
 }
+
+#[test]
+fn exact_periodic_surface_strip_crosses_the_seam_in_both_axes() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::restrict_exact_periodic_surface_axis,
+        surface::{Axis, extrude},
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let mut source = extrude(&profile, [0., 0., 2.]).unwrap();
+    for weights in &mut source.weights {
+        weights[1] = 3.;
+    }
+    let interval = [3.5, 4.5];
+    let report =
+        restrict_exact_periodic_surface_axis(&source, Axis::U, interval, 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let strip = report.surface.unwrap();
+    assert!(!strip.periodic_u);
+    assert_eq!(strip.knots_u, vec![3.5, 3.5, 4., 4.5, 4.5]);
+    assert_eq!(strip.knots_v, source.knots_v);
+    let transposed = nurbs_geometry::surface_transpose::transpose(&source).unwrap();
+    let other = restrict_exact_periodic_surface_axis(&transposed, Axis::V, interval, 1_000_000)
+        .unwrap()
+        .surface
+        .unwrap();
+    assert_eq!(
+        other,
+        nurbs_geometry::surface_transpose::transpose(&strip).unwrap()
+    );
+    for u in [3.5, 3.75, 4., 4.25, 4.5] {
+        for v in [0., 0.25, 0.5, 1.] {
+            assert_eq!(
+                strip.evaluate(u, v).unwrap().point,
+                source.evaluate(u % 4., v).unwrap().point
+            );
+        }
+    }
+    assert!(
+        restrict_exact_periodic_surface_axis(&source, Axis::U, interval, report.work_used)
+            .unwrap()
+            .surface
+            .is_some()
+    );
+    assert!(
+        restrict_exact_periodic_surface_axis(&source, Axis::U, interval, report.work_used - 1)
+            .unwrap()
+            .surface
+            .is_none()
+    );
+}
+
+#[test]
+fn exact_periodic_surface_strip_rejects_intervals_longer_than_one_turn() {
+    use nurbs_core::{
+        editing::{
+            exact_curve_merge::{GaugeMergeRefusal, Refusal},
+            exact_periodic_surface::restrict_exact_periodic_surface_axis,
+        },
+        surface::{Axis, extrude},
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = extrude(&profile, [0., 0., 2.]).unwrap();
+    let refused =
+        restrict_exact_periodic_surface_axis(&source, Axis::U, [3., 7.5], 1_000_000).unwrap();
+    assert!(refused.surface.is_none());
+    assert_eq!(
+        refused.refusal,
+        Some(GaugeMergeRefusal::Join(Refusal::NonAdjacentDomain))
+    );
+}
