@@ -70,3 +70,37 @@ fn refusal_and_invalid_budget_do_not_publish_geometry() {
     let response = run(&request);
     assert_eq!(response["ok"], false, "{response}");
 }
+
+#[test]
+fn binding_operation_retains_model_and_returns_edge_id_and_segment_intervals() {
+    let mut request = request();
+    let original = run(&request);
+    assert!(original["value"].get("edgeBindings").is_none());
+    request["op"] = json!("brep_build_exact_periodic_trim_sheet_with_bindings");
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    assert_eq!(report["model"], original["value"]["model"]);
+    let bindings = report["edgeBindings"].as_array().unwrap();
+    let ids = report["model"]["topologyIds"]["edges"].as_array().unwrap();
+    assert_eq!(bindings.len(), ids.len());
+    for (binding, id) in bindings.iter().zip(ids) {
+        assert_eq!(&binding["edgeId"], id);
+    }
+    assert_eq!(bindings[0]["interval"], json!([0., 0.5]));
+    assert_eq!(bindings[1]["interval"], json!([0.5, 1.]));
+    assert_eq!(bindings[1]["segment"], 0);
+    assert!(bindings.iter().any(|binding| binding["contour"] == 1));
+}
+
+#[test]
+fn exhausted_binding_request_withholds_model_and_bindings() {
+    let mut request = request();
+    request["op"] = json!("brep_build_exact_periodic_trim_sheet_with_bindings");
+    request["maxWork"] = json!(1);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    assert!(response["value"]["model"].is_null());
+    assert_eq!(response["value"]["edgeBindings"], json!([]));
+    assert_eq!(response["value"]["refusalStage"], "patch");
+}

@@ -16,7 +16,9 @@ interface Report {
     faces: { holes: number[] }[]
     shells: { closed: boolean }[]
     bodies: unknown[]
+    topologyIds: { edges: string[] }
   } | null
+  edgeBindings?: { edgeId: string; contour: number; segment: number; interval: [number, number] }[]
   workUsed: number
   refusalStage: string | null
 }
@@ -42,8 +44,8 @@ const request = {
   maxWork: 1_000_000,
 }
 
-function call(maxWork: number): Report {
-  const bytes = encodeBinary({ ...request, maxWork })
+function call(maxWork: number, op = request.op): Report {
+  const bytes = encodeBinary({ ...request, maxWork, op })
   const ptr = writeLinear(kernel.memory, kernel.abi_alloc, bytes)
   assert.ok(ptr)
   try {
@@ -72,3 +74,18 @@ const refusal = call(1)
 assert.equal(refusal.model, null)
 assert.equal(refusal.refusalStage, 'patch')
 console.log('WASM ABI preserved the open periodic trim sheet and hole and refused exhausted work.')
+
+const bindingOp = 'brep_build_exact_periodic_trim_sheet_with_bindings'
+const bound = call(request.maxWork, bindingOp)
+assert.deepEqual(bound.model, result.model)
+assert.ok(bound.edgeBindings)
+assert.deepEqual(bound.edgeBindings.map(binding => binding.edgeId), result.model.topologyIds.edges)
+assert.deepEqual(
+  bound.edgeBindings.filter(binding => binding.contour === 0 && binding.segment === 0)
+    .map(binding => binding.interval),
+  [[0, 0.5], [0.5, 1]],
+)
+const refusedBound = call(1, bindingOp)
+assert.equal(refusedBound.model, null)
+assert.deepEqual(refusedBound.edgeBindings, [])
+console.log('WASM ABI retained persistent edge IDs and source intervals.')

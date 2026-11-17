@@ -6,6 +6,7 @@ mod closed_ss;
 const OPS: &[&str] = &[
     "brep_partition_closed_ss", "brep_partition_all_closed_ss",
     "brep_build_exact_periodic_trim_sheet",
+    "brep_build_exact_periodic_trim_sheet_with_bindings",
     "brep_qualify_periodic_band", "brep_intersect_periodic_stock_band",
     "brep_qualify_isolated_ss_contact",
     "brep_assemble_closed_ss_boolean", "brep_assemble_closed_ss_network_boolean",
@@ -86,6 +87,7 @@ fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
         "brep_partition_closed_ss" => closed_ss::partition(v),
         "brep_build_exact_periodic_trim_sheet" => brep::exact_periodic_trim_sheet_request(&v),
+        "brep_build_exact_periodic_trim_sheet_with_bindings" => brep::exact_periodic_trim_sheet_bindings_request(&v),
         "brep_qualify_periodic_band" => closed_ss::qualify_periodic_band(v),
         "brep_intersect_periodic_stock_band" => closed_ss::intersect_periodic_stock_band(v),
         "brep_qualify_isolated_ss_contact" => closed_ss::qualify_isolated_contact(v),
