@@ -92,7 +92,10 @@ import {
 import { TextureResources } from './textureResources'
 import { GpuCsgRenderer, type GpuCsgTree } from './gpuCsgPreview'
 export type { GpuCsgTree } from './gpuCsgPreview'
-import { GpuPicker } from './gpuPicker'
+import { CanvasPicker } from './canvasPicker'
+import { CsgDepthStencil } from './csgDepthStencil'
+import { OverlayComposer, sameOverlayTarget } from './overlayComposer'
+import { ResizeWatcher } from './resizeWatcher'
 export { GpuPicker } from './gpuPicker'
 import { GpuWboitRenderer } from './gpuWboit'
 export { GpuWboitRenderer } from './gpuWboit'
@@ -114,7 +117,6 @@ import {
   WHEEL_HISTORY_IDLE_MS,
   type Bounds,
   type GMesh,
-  type OverlaySlot,
   type WebGPUFrameDiagnostics,
 } from './types'
 export {
@@ -126,13 +128,7 @@ export {
   type WebGPUFrameDiagnostics,
 } from './types'
 export { sortEdgeDraws, sortOpaqueDraws } from './drawSorting'
-import {
-  pointForOverlay,
-  rebuildMeasurementBufferData,
-  rebuildSelectionOverlaySlots,
-  rebuildSourceHighlightOverlaySlots,
-  releaseOverlaySlot,
-} from './overlayBuilder'
+import { rebuildMeasurementBufferData } from './overlayBuilder'
 import {
   destroySceneMeshes,
   preservedBuffers,
@@ -235,9 +231,8 @@ export class WebGPURenderer {
   private depthView: GPUTextureView | null = null
   private csgRenderer: GpuCsgRenderer | null = null
   private csgPreviewTree: GpuCsgTree | null = null
-  private csgDepthStencil: GPUTexture | null = null
-  private csgDepthStencilView: GPUTextureView | null = null
-  private gpuPicker: GpuPicker | null = null
+  private readonly csgDepthStencil = new CsgDepthStencil()
+  private readonly canvasPicker = new CanvasPicker()
   private wboit: GpuWboitRenderer | null = null
   private gpuBufferArena: GpuBufferArena | null = null
   private transparencyMode: 'sorted' | 'wboit' = 'sorted'
@@ -272,12 +267,8 @@ export class WebGPURenderer {
   private measurementPoints: Vec3[] = []
   private measurementVB: GPUBuffer | null = null
   private measurementVC = 0
-  private selectionFaceSlot: OverlaySlot = { buffer: null, capacity: 0, count: 0 }
-  private selectionLineSlot: OverlaySlot = { buffer: null, capacity: 0, count: 0 }
-  private deepSelectionLineSlot: OverlaySlot = { buffer: null, capacity: 0, count: 0 }
+  private readonly overlays = new OverlayComposer()
   private sourceHighlightId: number | null = null
-  private sourceFaceSlot: OverlaySlot = { buffer: null, capacity: 0, count: 0 }
-  private sourceLineSlot: OverlaySlot = { buffer: null, capacity: 0, count: 0 }
   private cameraHistory = new CameraHistory(32)
   private depthCycleState: DepthCycleState | null = null
   private styleScratch = new Float32Array(4)
@@ -354,7 +345,7 @@ export class WebGPURenderer {
   private lost = false
   private generation = 0
   private drawable = false
-  private resizeObserver: ResizeObserver | null = null
+  private readonly resizeWatcher = new ResizeWatcher()
   private inputBound = false
   private previousTouchAction = ''
   private drag = false; private pan = false
@@ -536,39 +527,15 @@ export class WebGPURenderer {
     })
   }
 
-  private ensureCsgDepthStencil(dev: GPUDevice, width: number, height: number) {
-    if (!this.csgDepthStencil || this.csgDepthStencil.width !== width || this.csgDepthStencil.height !== height) {
-      this.csgDepthStencil?.destroy()
-      this.csgDepthStencil = dev.createTexture({
-        size: [width, height],
-        format: 'depth24plus-stencil8',
-        usage: GPUTextureUsage.RENDER_ATTACHMENT,
-      })
-      this.csgDepthStencilView = this.csgDepthStencil.createView()
-    }
-  }
-
   async gpuPickAt(clientX: number, clientY: number): Promise<number | null> {
     const canvas = this.canvas, dev = this.dev
     if (!canvas || !dev || !this.initialized || this.dead || this.lost || this.meshes.length === 0) return null
-    const rect = canvas.getBoundingClientRect()
-    const px = clientX - rect.left
-    const py = clientY - rect.top
-    if (px < 0 || py < 0 || px >= rect.width || py >= rect.height) return null
-
-    if (!this.gpuPicker) {
-      this.gpuPicker = new GpuPicker()
-    }
-
-    const cam = this.cameraState()
-    return this.gpuPicker.pick(dev, this.meshes, {
-      cameraViewProjection: cam.viewProjection,
-      viewportWidth: rect.width,
-      viewportHeight: rect.height,
+    return this.canvasPicker.pickAt(dev, canvas.getBoundingClientRect(), clientX, clientY, this.meshes, () => ({
+      cameraViewProjection: this.cameraState().viewProjection,
       sectionNormal: this.sectionNormal,
       sectionOffset: this.sectionOffset,
       sectionEnabled: this.sectionEnabled,
-    }, px, py)
+    }))
   }
 
   getTransparencyMode(): 'sorted' | 'wboit' {
@@ -1359,9 +1326,7 @@ export class WebGPURenderer {
       this.depth?.destroy()
       this.depth = null
       this.depthView = null
-      this.csgDepthStencil?.destroy()
-      this.csgDepthStencil = null
-      this.csgDepthStencilView = null
+      this.csgDepthStencil.release()
       return changed
     }
 
@@ -1375,11 +1340,7 @@ export class WebGPURenderer {
       const target = createDepthTarget(dev, size)
       this.depth = target.texture
       this.depthView = target.view
-      if (this.csgDepthStencil) {
-        this.csgDepthStencil.destroy()
-        this.csgDepthStencil = null
-        this.csgDepthStencilView = null
-      }
+      this.csgDepthStencil.release()
     }
     this.drawable = true
     return changed
@@ -1487,17 +1448,14 @@ export class WebGPURenderer {
       opaqueBundle: this.opaqueBundle,
       sectionCapBundle: this.sectionCapBundle,
       edgeBundle: this.edgeBundle,
-      sourceFaceSlot: this.sourceFaceSlot,
-      selectionFaceSlot: this.selectionFaceSlot,
-      sourceLineSlot: this.sourceLineSlot,
-      selectionLineSlot: this.selectionLineSlot,
-      deepSelectionLineSlot: this.deepSelectionLineSlot,
+      sourceFaceSlot: this.overlays.sourceFaceSlot,
+      selectionFaceSlot: this.overlays.selectionFaceSlot,
+      sourceLineSlot: this.overlays.sourceLineSlot,
+      selectionLineSlot: this.overlays.selectionLineSlot,
+      deepSelectionLineSlot: this.overlays.deepSelectionLineSlot,
       styleScratch: this.styleScratch,
       csgPreviewTree: this.csgPreviewTree,
-      ensureCsgDepthStencil: (device, width, height) => {
-        this.ensureCsgDepthStencil(device, width, height)
-        return this.csgDepthStencilView
-      },
+      ensureCsgDepthStencil: (device, width, height) => this.csgDepthStencil.ensure(device, width, height),
       getCsgRenderer: () => {
         if (!this.csgRenderer) {
           this.csgRenderer = new GpuCsgRenderer(this.fmt)
@@ -1809,55 +1767,35 @@ export class WebGPURenderer {
   }
 
   private clearSelectionOverlayBuffers() {
-    releaseOverlaySlot(this.selectionFaceSlot)
-    releaseOverlaySlot(this.selectionLineSlot)
-    releaseOverlaySlot(this.deepSelectionLineSlot)
+    this.overlays.clearSelection()
   }
 
   private clearSourceHighlightOverlayBuffers() {
-    releaseOverlaySlot(this.sourceFaceSlot)
-    releaseOverlaySlot(this.sourceLineSlot)
+    this.overlays.clearSourceHighlight()
   }
 
   private sameOverlayTarget(a: PickHit | null, b: PickHit | null) {
-    if (!a || !b || a.meshIndex !== b.meshIndex) return false
-    if (this.selectionMode === 'object') return true
-    if (this.selectionMode === 'face') {
-      return a.faceId !== null && b.faceId !== null
-        ? a.faceId === b.faceId
-        : a.triangleIndex === b.triangleIndex
-    }
-    const ap = pointForOverlay(this.meshes, a)
-    const bp = pointForOverlay(this.meshes, b)
-    if (!ap || !bp) return false
-    const scale = Math.max(1, ...ap.map(Math.abs), ...bp.map(Math.abs))
-    return Math.hypot(ap[0] - bp[0], ap[1] - bp[1], ap[2] - bp[2]) <= scale * 1e-7
+    return sameOverlayTarget(this.selectionMode, this.meshes, a, b)
   }
 
   private rebuildSelectionOverlays() {
-    rebuildSelectionOverlaySlots({
+    this.overlays.rebuildSelection({
       dev: this.dev,
       selectionMode: this.selectionMode,
       meshes: this.meshes,
       boundsRadius: this.bounds?.radius,
       selectedHit: this.selectedHit,
       hoveredHit: this.hoveredHit,
-      sameOverlayTarget: (a, b) => this.sameOverlayTarget(a, b),
       isMeshVisible: index => this.isMeshVisible(index),
-      selectionFaceSlot: this.selectionFaceSlot,
-      selectionLineSlot: this.selectionLineSlot,
-      deepSelectionLineSlot: this.deepSelectionLineSlot,
     })
   }
 
   private rebuildSourceHighlightOverlay() {
-    rebuildSourceHighlightOverlaySlots({
+    this.overlays.rebuildSourceHighlight({
       dev: this.dev,
       sourceHighlightId: this.sourceHighlightId,
       meshes: this.meshes,
       isMeshVisible: index => this.isMeshVisible(index),
-      sourceFaceSlot: this.sourceFaceSlot,
-      sourceLineSlot: this.sourceLineSlot,
     })
   }
 
@@ -2028,9 +1966,7 @@ export class WebGPURenderer {
   }
 
   private observeResize() {
-    if (!this.canvas || typeof ResizeObserver === 'undefined') return
-    this.resizeObserver = new ResizeObserver(() => this.resize())
-    this.resizeObserver.observe(this.canvas)
+    this.resizeWatcher.observe(this.canvas, () => this.resize())
   }
 
   private destroyMeshes(meshes: GMesh[], retained: ReadonlySet<GPUBuffer> = new Set()) {
@@ -2063,8 +1999,7 @@ export class WebGPURenderer {
     this.frameRetryCount = 0
     this.cancelPendingHover()
     this.cancelEdgeBufferWarmup()
-    this.resizeObserver?.disconnect()
-    this.resizeObserver = null
+    this.resizeWatcher.disconnect()
 
     const c = this.canvas
     if (c && this.inputBound) {
@@ -2122,12 +2057,9 @@ export class WebGPURenderer {
     this.depthView = null
     this.csgRenderer?.destroy()
     this.csgRenderer = null
-    this.csgDepthStencil?.destroy()
-    this.csgDepthStencil = null
-    this.csgDepthStencilView = null
+    this.csgDepthStencil.release()
     this.csgPreviewTree = null
-    this.gpuPicker?.destroy()
-    this.gpuPicker = null
+    this.canvasPicker.destroy()
     this.wboit?.destroy()
     this.wboit = null
     this.gpuBufferArena?.destroy()

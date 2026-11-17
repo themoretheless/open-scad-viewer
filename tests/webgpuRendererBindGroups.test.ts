@@ -232,7 +232,7 @@ describe('WebGPURenderer bind-group validation', () => {
       internal.measurementVB = {}
       internal.measurementVC = 2
       for (const slot of ['sourceFaceSlot', 'sourceLineSlot', 'selectionFaceSlot', 'selectionLineSlot', 'deepSelectionLineSlot']) {
-        internal[slot] = { buffer: {}, capacity: 1, count: 2 }
+        Object.assign(internal.overlays[slot], { buffer: {}, capacity: 1, count: 2 })
       }
       internal.render()
       expect(errors, `gridVisible=${gridVisible}`).toEqual([])
