@@ -153,16 +153,18 @@ pub(super) fn build(
             {
                 let anchor = &region.cap.face.loops[0][0].control_points[0];
                 let anchor = [anchor[0], anchor[1]];
-                for refine in [true, false] {
+                // Prefer smaller extensions while retaining the prior candidates
+                // for charts where fine endpoint coordinates cannot be stored.
+                for refinement in [Some(3), Some(1), Some(0), None] {
                     const EXPANSION_WORK: u64 = 48;
                     let remaining = options.max_exact_work - exact_work;
                     if remaining <= EXPANSION_WORK {
                         return Err(unresolved("Section plane expansion budget exhausted"));
                     }
                     exact_work += EXPANSION_WORK;
-                    let expanded = match expanded_support::expand(projection, anchor, refine) {
+                    let expanded = match expanded_support::expand(projection, anchor, refinement) {
                         Ok(expanded) => expanded,
-                        Err(_) if refine => continue,
+                        Err(_) if refinement.is_some() => continue,
                         Err(error) => return Err(error),
                     };
                     lift = lift_planar_surface(&expanded, remaining - EXPANSION_WORK)?;

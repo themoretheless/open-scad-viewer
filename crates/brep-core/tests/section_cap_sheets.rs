@@ -1150,3 +1150,35 @@ fn refines_exact_oblique_support_for_submillimeter_rims() {
         );
     }
 }
+
+#[test]
+fn compact_exact_cap_support_stays_inside_the_vertex_coordinate_range() {
+    use brep_core::planar_cap::build_section_sheets_with_expanded_exact_support;
+    let y = 999_997.75;
+    let points = [
+        [0., y, 2.],
+        [2., y - 2., 2.],
+        [3., y, 3.],
+        [1., y + 2., 3.],
+        [0., y, 2.],
+    ];
+    let wire: Vec<_> = points
+        .windows(2)
+        .map(|pair| Curve::from_polyline(pair.iter().map(|p| p.to_vec()).collect()).unwrap())
+        .collect();
+    let report = build_section_sheets_with_expanded_exact_support(
+        &[&wire],
+        [-1., -1., 3.],
+        6. - y,
+        options(),
+    )
+    .unwrap();
+    let support = &report.model.faces[0].surface;
+    assert!(support.knots_v[3] >= y + 2.);
+    assert!(support.knots_v[3] <= 1e6);
+    assert!(
+        brep_core::boundary_agreement::verify_exact(&report.model, 1_000_000)
+            .unwrap()
+            .all_equal
+    );
+}
