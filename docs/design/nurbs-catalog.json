@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 492,
-  "unallocatedCount": 508,
+  "specifiedCount": 493,
+  "unallocatedCount": 507,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12822,6 +12822,26 @@
       "remainingQualification": [
         "Join clamped adjacent NURBS curves with different weight gauges without rounding.",
         "Align the rational seam gauges before exact global storage. Equal Cartesian seam poles and adjacent source domains preserve both laws; unstoreable gauges are refused atomically.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0493",
+      "name": "Точная склейка цепочки NURBS-кривых с общим масштабом весов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::merge_chain_with_weight_scaling",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-493-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-493-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Join an ordered chain of NURBS curves using one exact global weight gauge.",
+        "Compose exact weight scales at every join and store the complete chain only once. Any structural or representability refusal leaves no partially joined output.",
         "WASM and application integration are separate."
       ]
     }

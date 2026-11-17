@@ -354,3 +354,74 @@ fn exact_gauge_merge_refuses_mismatched_geometry_and_unstoreable_common_weights(
     );
     assert!(result.curve.is_none());
 }
+
+#[test]
+fn exact_gauge_merge_chain_composes_all_scale_factors_before_storage() {
+    use nurbs_core::editing::exact_curve_merge::merge_chain_with_weight_scaling;
+    let segment = |start, end, start_weight, end_weight| Curve {
+        degree: 1,
+        knots: vec![start, start, end, end],
+        control_points: vec![vec![start, 0.], vec![end, 0.]],
+        weights: vec![start_weight, end_weight],
+        periodic: false,
+    };
+    let a = segment(0., 1., 1., 2.);
+    let b = segment(1., 2., 3., 5.);
+    let c = segment(2., 3., 7., 11.);
+    let chain = [&a, &b, &c];
+    let report = merge_chain_with_weight_scaling(&chain, 1_000_000).unwrap();
+    let curve = report.curve.unwrap();
+    assert_eq!(curve.weights, [21. / 64., 42. / 64., 70. / 64., 110. / 64.]);
+    assert_eq!(curve.knots, [0., 0., 1., 2., 3., 3.]);
+    for (source, parameter) in [(&a, 0.5), (&b, 1.5), (&c, 2.5)] {
+        let expected = source.evaluate(parameter).unwrap().point[0];
+        assert!((curve.evaluate(parameter).unwrap().point[0] - expected).abs() < 1e-12);
+    }
+    assert_eq!(
+        merge_chain_with_weight_scaling(&chain, report.work_used)
+            .unwrap()
+            .curve,
+        Some(curve)
+    );
+    assert!(
+        merge_chain_with_weight_scaling(&chain, report.work_used - 1)
+            .unwrap()
+            .curve
+            .is_none()
+    );
+}
+
+#[test]
+fn exact_gauge_merge_chain_rejects_a_late_mismatch_atomically() {
+    use nurbs_core::editing::exact_curve_merge::{
+        GaugeMergeRefusal, merge_chain_with_weight_scaling,
+    };
+    let a = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![1., 0.]],
+        weights: vec![1., 2.],
+        periodic: false,
+    };
+    let b = Curve {
+        knots: vec![1., 1., 2., 2.],
+        control_points: vec![vec![1., 0.], vec![2., 0.]],
+        ..a.clone()
+    };
+    let c = Curve {
+        knots: vec![2., 2., 3., 3.],
+        control_points: vec![vec![2., 1.], vec![3., 1.]],
+        ..a.clone()
+    };
+    let report = merge_chain_with_weight_scaling(&[&a, &b, &c], 1_000_000).unwrap();
+    assert!(report.curve.is_none());
+    assert_eq!(
+        report.refusal,
+        Some(GaugeMergeRefusal::Join(Refusal::SeamMismatch))
+    );
+    assert_eq!(
+        merge_chain_with_weight_scaling(&[&a], 1).unwrap().curve,
+        Some(a)
+    );
+    assert!(merge_chain_with_weight_scaling(&[], 1_000_000).is_err());
+}

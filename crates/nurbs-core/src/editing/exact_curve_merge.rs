@@ -174,11 +174,25 @@ pub fn merge_with_weight_scaling(
     right: &Curve,
     max_work: u64,
 ) -> Result<GaugeMergeReport> {
+    merge_chain_with_weight_scaling(&[left, right], max_work)
+}
+
+/// Concatenate an ordered chain with one rational weight scale per source.
+/// The complete chain is stored once, using a single common exact gauge.
+pub fn merge_chain_with_weight_scaling(
+    sources: &[&Curve],
+    max_work: u64,
+) -> Result<GaugeMergeReport> {
     use super::rational_edit::{Work, store};
     use num_rational::BigRational as Q;
 
-    left.validate()?;
-    right.validate()?;
+    crate::check(
+        !sources.is_empty() && sources.len() <= 256,
+        "Curve chain needs 1..=256 sources",
+    )?;
+    for source in sources {
+        source.validate()?;
+    }
     crate::check(
         (1..=cad_predicates::MAX_WORK).contains(&max_work),
         "Exact gauge merge work must be in 1..=1000000",
@@ -188,29 +202,47 @@ pub fn merge_with_weight_scaling(
         work_used,
         refusal: Some(reason),
     };
-    if let Some(reason) = incompatibility(left, right, false) {
-        return Ok(refused(GaugeMergeRefusal::Join(reason), 0));
+    if sources.len() == 1 {
+        return Ok(GaugeMergeReport {
+            curve: Some(sources[0].clone()),
+            work_used: 0,
+            refusal: None,
+        });
+    }
+    let merged_controls = 1 + sources
+        .iter()
+        .map(|source| source.control_points.len() - 1)
+        .sum::<usize>();
+    if merged_controls > 256 {
+        return Ok(refused(GaugeMergeRefusal::Join(Refusal::ControlLimit), 0));
+    }
+    for pair in sources.windows(2) {
+        if let Some(reason) = incompatibility(pair[0], pair[1], false) {
+            return Ok(refused(GaugeMergeRefusal::Join(reason), 0));
+        }
     }
     let mut work = Work {
         used: 0,
         limit: max_work,
     };
     let mut build = || {
-        let seam_left = work.lift(*left.weights.last().unwrap())?;
-        let seam_right = work.lift(right.weights[0])?;
-        let scale = work.op(&seam_left, &seam_right, |a, b| a / b)?;
-        let left_weights = left
+        let mut curve = sources[0].clone();
+        let mut weights = curve
             .weights
             .iter()
             .map(|&weight| work.lift(weight))
             .collect::<std::result::Result<Vec<_>, _>>()?;
-        let mut weights = left_weights;
-        for &weight in &right.weights[1..] {
-            let weight = work.lift(weight)?;
-            weights.push(work.op(&weight, &scale, |a, b| a * b)?);
+        for right in &sources[1..] {
+            let seam = work.lift(right.weights[0])?;
+            let scale = work.op(weights.last().expect("validated weights"), &seam, |a, b| {
+                a / b
+            })?;
+            for &weight in &right.weights[1..] {
+                let weight = work.lift(weight)?;
+                weights.push(work.op(&weight, &scale, |a, b| a * b)?);
+            }
+            append(&mut curve, right);
         }
-        let mut curve = left.clone();
-        append(&mut curve, right);
         let dimension = curve.control_points[0].len();
         let mut homogeneous = vec![Vec::<Q>::new(); dimension + 1];
         for (pole, weight) in curve.control_points.iter().zip(weights) {
