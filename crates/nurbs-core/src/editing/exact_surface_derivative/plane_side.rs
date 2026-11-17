@@ -263,3 +263,9 @@ pub use stitch::{
     SurfacePlaneGraphJunction, SurfacePlaneGraphStrip, SurfacePlaneGraphStripCell,
     SurfacePlaneGraphStripOptions, SurfacePlaneGraphStripReport, stitch_surface_plane_graph_strip,
 };
+
+mod world_strip;
+pub use world_strip::{
+    SurfacePlaneWorldStrip, SurfacePlaneWorldStripOptions, SurfacePlaneWorldStripReport,
+    approximate_surface_plane_strip_xyz,
+};

@@ -3,8 +3,9 @@ use nurbs_core::{
     editing::exact_surface_derivative::{
         PlaneGraphPosition, Refusal, SurfacePlaneGraphSampleOptions, SurfacePlaneGraphStatus,
         SurfacePlaneGraphStripOptions, SurfacePlanePolylineOptions, SurfacePlaneSide,
-        SurfacePlaneWorldPolylineOptions, approximate_surface_plane_graph,
-        approximate_surface_plane_graph_xyz, audit_surface_plane_graphs, audit_surface_plane_side,
+        SurfacePlaneWorldPolylineOptions, SurfacePlaneWorldStripOptions,
+        approximate_surface_plane_graph, approximate_surface_plane_graph_xyz,
+        approximate_surface_plane_strip_xyz, audit_surface_plane_graphs, audit_surface_plane_side,
         refine_surface_plane_side, sample_surface_plane_graph, split_surface_cell_by_plane,
         stitch_surface_plane_graph_strip, store_surface_plane_section_curve,
         store_surface_plane_section_pair,
@@ -759,4 +760,79 @@ fn refuses_a_strip_whose_continuation_lacks_a_graph() {
     };
     let report = stitch_surface_plane_graph_strip(&patch, [0., 0., 1.], 0., options).unwrap();
     assert_eq!(report.outcome, Err(Refusal::UnprovedIdentity));
+}
+
+#[test]
+fn shares_one_world_vertex_at_a_repeated_knot_and_retains_the_xyz_error_bound() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let patch = repeated_seam_patch();
+    let options = SurfacePlaneWorldStripOptions {
+        strip: SurfacePlaneGraphStripOptions {
+            solve_axis: UvAxis::U,
+            solved_span: 1,
+            transverse_spans: [2, 4],
+            max_normalized_width: 1e-10,
+            max_work: WORK,
+        },
+        max_xyz_error: 0.02,
+        max_segments_per_cell: 128,
+    };
+    let report = approximate_surface_plane_strip_xyz(&patch, [0., 0., 1.], 0., options).unwrap();
+    let strip = report.outcome.unwrap();
+    let [first, second] = strip.cell_vertices.as_slice() else {
+        panic!("{:?}", strip.cell_vertices);
+    };
+    let joint = first[1];
+    assert_eq!(joint, second[0]);
+    assert_eq!(first[0], 0);
+    assert_eq!(second[1] + 1, strip.xyz.len());
+    assert_eq!(strip.uv.len(), strip.xyz.len());
+    assert_eq!(strip.uv[joint][1], q(1));
+    assert_eq!(strip.uv.iter().filter(|p| p[1] == q(1)).count(), 1);
+    assert_eq!(strip.xyz[joint][1], q(2));
+    let expected = Q::new(1.into(), 3.into());
+    let squared = (&strip.xyz[joint][0] - expected).pow(2) + strip.xyz[joint][2].pow(2);
+    for bound in &strip.cell_error_upper {
+        assert!(squared <= bound.pow(2));
+        assert!(bound <= &Q::from_float(options.max_xyz_error).unwrap());
+    }
+    let limited = approximate_surface_plane_strip_xyz(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldStripOptions {
+            strip: SurfacePlaneGraphStripOptions {
+                max_work: report.work_used - 1,
+                ..options.strip
+            },
+            ..options
+        },
+    )
+    .unwrap();
+    assert_eq!(limited.outcome, Err(Refusal::ResourceLimit));
+}
+
+#[test]
+fn produces_no_partial_polyline_if_a_later_cell_lacks_a_branch() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let mut patch = repeated_seam_patch();
+    patch.control_points[0][4][2] = 1.;
+    let result = approximate_surface_plane_strip_xyz(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldStripOptions {
+            strip: SurfacePlaneGraphStripOptions {
+                solve_axis: UvAxis::U,
+                solved_span: 1,
+                transverse_spans: [2, 4],
+                max_normalized_width: 1e-8,
+                max_work: WORK,
+            },
+            max_xyz_error: 0.02,
+            max_segments_per_cell: 128,
+        },
+    )
+    .unwrap();
+    assert_eq!(result.outcome, Err(Refusal::UnprovedIdentity));
 }

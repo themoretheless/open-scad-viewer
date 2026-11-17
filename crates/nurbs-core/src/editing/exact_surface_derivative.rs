@@ -324,6 +324,8 @@ fn apply(source: &Surface, field: Field, max_work: u64) -> Result<Report> {
 
 mod plane_side;
 pub use plane_side::{
+    SurfacePlaneWorldStrip, SurfacePlaneWorldStripOptions, SurfacePlaneWorldStripReport,
+    approximate_surface_plane_strip_xyz,
     SurfacePlaneGraphJunction, SurfacePlaneGraphStrip, SurfacePlaneGraphStripCell,
     SurfacePlaneGraphStripOptions, SurfacePlaneGraphStripReport, stitch_surface_plane_graph_strip,
     SurfacePlaneTrimSplit, SurfacePlaneTrimSplitReport, split_surface_cell_by_plane,

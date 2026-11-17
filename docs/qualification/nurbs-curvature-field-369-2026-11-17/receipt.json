@@ -1,0 +1,37 @@
+{
+  "id": "NURBS-0369",
+  "testedBase": "89a1bca272cebd9fe10c60d044469c236948b7bc",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_pcurve_gap_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 66,
+  "scope": [
+    "Build a continuous multi-cell XYZ section polyline with exactly shared seam vertices and certified per-cell error.",
+    "Consecutive certified graphs share a single rational UV and XYZ vertex. The exact endpoint displacement is added to the continuous chord error of the next cell."
+  ],
+  "logSha256": "868a99dbd1c6ce24c06990f3150cae48612c0c7a57021dd31d452682cecff791",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "978148e6f048e0901940779d4cb917f756b962fafad63bfca11cd0d73bb461fc",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs": "a47125c7d8fd831ba42f68d955ed0e11a1c02d7c84f7c4bb288f36ddb2ab74da",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "13c74cc94adafab6a07cfb3b1d442aa6ac3512dd8c4543b60bed425613281275",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "e7ed271777c6cb74d84d2eefe35d8e5681ec872da59a1b6ee1546b211a21c455",
+    "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs": "32c12cd2555ae2cf7c94dfe96e72fb9fe1c4fbcfce7968b3ca21cbcda6a012ae",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/stitch.rs": "7fa2e6e821b9b374b82205256f6192a36b71921a8f9827b6798a6a9f86ecd5f5",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/world_polyline.rs": "51f5279d822609d4ad0974abbfe9022a88051d6b8ebf2aa8c9db373452c0c794",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/world_strip.rs": "56af861843703bd12780c652e898b1a41189d272039e37521c9278458b3663a3"
+  }
+}
