@@ -2834,3 +2834,144 @@ pub fn intersect_transverse_exact_planar_polyline_regions(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactCoplanarPolylineRegionOverlapArea {
+    /// Area vector oriented by the first profile.
+    pub area_vector_mm2: [Q; 3],
+    pub area_squared_mm4: Q,
+    pub exact_work: u64,
+}
+
+/// Measure exact common area of two coplanar profiles with disjoint holes.
+/// Boundary-only intersection gives zero area.
+pub fn exact_coplanar_planar_polyline_region_overlap_area(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    max_exact_work: u64,
+) -> Result<ExactCoplanarPolylineRegionOverlapArea> {
+    let a =
+        exact_planar_spatial_polyline_region_mass(first_outer_mm, first_holes_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - a.exact_work;
+    if remaining == 0 {
+        return Err(super::work_exhausted());
+    }
+    let b = exact_planar_spatial_polyline_region_mass(second_outer_mm, second_holes_mm, remaining)?;
+    remaining -= b.exact_work;
+    let normal = &a.area_vector_mm2;
+    let axes = plane_axes(normal);
+    for point in second_outer_mm {
+        spend(&mut remaining, 16)?;
+        let offset = std::array::from_fn(|i| &point[i] - &first_outer_mm[0][i]);
+        if !dot(&offset, normal).is_zero() {
+            return Err(refuse("Profile supports must coincide"));
+        }
+    }
+    let first = projected_profile_triangles(first_outer_mm, first_holes_mm, axes, &mut remaining)?;
+    let second =
+        projected_profile_triangles(second_outer_mm, second_holes_mm, axes, &mut remaining)?;
+    let mut twice_area = Q::zero();
+    for (a_hole, a) in &first {
+        for (b_hole, b) in &second {
+            let overlap = projected_triangle_overlap_double_area(a, b, &mut remaining)?;
+            if a_hole == b_hole {
+                twice_area += overlap;
+            } else {
+                twice_area -= overlap;
+            }
+        }
+    }
+    spend(&mut remaining, 16)?;
+    if twice_area.is_negative() {
+        return Err(refuse("Negative exact profile overlap area"));
+    }
+    let scale = twice_area / (normal[3 - axes[0] - axes[1]].abs() * Q::from_integer(2.into()));
+    let area_vector_mm2 = normal.each_ref().map(|component| component * &scale);
+    Ok(ExactCoplanarPolylineRegionOverlapArea {
+        area_squared_mm4: dot(&area_vector_mm2, &area_vector_mm2),
+        area_vector_mm2,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+type ProjectedTriangle = [[Q; 2]; 3];
+
+fn projected_profile_triangles(
+    outer: &[[Q; 3]],
+    holes: &[&[[Q; 3]]],
+    [u, v]: [usize; 2],
+    remaining: &mut u64,
+) -> Result<Vec<(bool, ProjectedTriangle)>> {
+    let mut triangles = Vec::new();
+    for (index, contour) in std::iter::once(outer)
+        .chain(holes.iter().copied())
+        .enumerate()
+    {
+        if *remaining == 0 {
+            return Err(super::work_exhausted());
+        }
+        let report = triangulate_exact_planar_spatial_polyline(contour, *remaining)?;
+        *remaining -= report.exact_work;
+        for indices in report.triangles {
+            spend(remaining, 12)?;
+            triangles.push((
+                index != 0,
+                indices.map(|i| [contour[i][u].clone(), contour[i][v].clone()]),
+            ));
+        }
+    }
+    Ok(triangles)
+}
+
+fn projected_triangle_overlap_double_area(
+    a: &ProjectedTriangle,
+    b: &ProjectedTriangle,
+    remaining: &mut u64,
+) -> Result<Q> {
+    spend(remaining, 12)?;
+    let side = |a: &[Q; 2], b: &[Q; 2], p: &[Q; 2]| {
+        (&b[0] - &a[0]) * (&p[1] - &a[1]) - (&b[1] - &a[1]) * (&p[0] - &a[0])
+    };
+    let positive = side(&b[0], &b[1], &b[2]).is_positive();
+    let inside = |s: &Q| s.is_zero() || s.is_positive() == positive;
+    let mut polygon = a.to_vec();
+    for edge in 0..3 {
+        let start = &b[edge];
+        let end = &b[(edge + 1) % 3];
+        let Some(mut previous) = polygon.last() else {
+            return Ok(Q::zero());
+        };
+        spend(remaining, 8)?;
+        let mut previous_side = side(start, end, previous);
+        let mut clipped = Vec::new();
+        for point in &polygon {
+            spend(remaining, 12)?;
+            let current_side = side(start, end, point);
+            if inside(&previous_side) != inside(&current_side)
+                && !previous_side.is_zero()
+                && !current_side.is_zero()
+            {
+                spend(remaining, 16)?;
+                let t = &previous_side / (&previous_side - &current_side);
+                clipped.push(std::array::from_fn(|i| {
+                    &previous[i] + &t * (&point[i] - &previous[i])
+                }));
+            }
+            if inside(&current_side) {
+                clipped.push(point.clone());
+            }
+            previous = point;
+            previous_side = current_side;
+        }
+        polygon = clipped;
+    }
+    spend(remaining, 8 * polygon.len() as u64)?;
+    let area: Q = polygon
+        .iter()
+        .zip(polygon.iter().cycle().skip(1))
+        .map(|(a, b)| &a[0] * &b[1] - &a[1] * &b[0])
+        .sum();
+    Ok(area.abs())
+}
