@@ -2294,26 +2294,57 @@ pub fn clip_spatial_path_to_exact_planar_polyline(
     path_mm: &[[Q; 3]],
     max_exact_work: u64,
 ) -> Result<ExactPlanarPolylinePathClip> {
+    clip_path_to_planar_region(contour_mm, &[], path_mm, max_exact_work)
+}
+
+/// Clip to the closed material of a planar polygon with disjoint holes.
+/// Hole interiors are excluded and their boundaries are retained.
+pub fn clip_spatial_path_to_exact_planar_polyline_region(
+    outer_mm: &[[Q; 3]],
+    holes_mm: &[&[[Q; 3]]],
+    path_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPlanarPolylinePathClip> {
+    clip_path_to_planar_region(outer_mm, holes_mm, path_mm, max_exact_work)
+}
+
+fn clip_path_to_planar_region(
+    outer_mm: &[[Q; 3]],
+    holes_mm: &[&[[Q; 3]]],
+    path_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPlanarPolylinePathClip> {
     if path_mm.len() < 2 {
         return Err(Error::new(
             "BREP_INVALID_INPUT",
             "Clip path requires at least two vertices",
         ));
     }
-    let area = exact_planar_spatial_polyline_area(contour_mm, max_exact_work)?;
-    let mut remaining = max_exact_work - area.exact_work;
+    let (normal, used) = if holes_mm.is_empty() {
+        let area = exact_planar_spatial_polyline_area(outer_mm, max_exact_work)?;
+        (area.area_vector_mm2, area.exact_work)
+    } else {
+        let mass = exact_planar_spatial_polyline_region_mass(outer_mm, holes_mm, max_exact_work)?;
+        (mass.area_vector_mm2, mass.exact_work)
+    };
+    let mut remaining = max_exact_work - used;
     for point in path_mm {
         spend(&mut remaining, 4)?;
         validate_point(point)?;
     }
-    spend(&mut remaining, 8 * (contour_mm.len() as u64 - 1))?;
+    let mut segments = Vec::new();
+    for contour in std::iter::once(outer_mm).chain(holes_mm.iter().copied()) {
+        spend(&mut remaining, 8 * (contour.len() as u64 - 1))?;
+        segments.extend(
+            contour
+                .windows(2)
+                .map(|pair| [pair[0].clone(), pair[1].clone()]),
+        );
+    }
     let boundary = FaceBoundary {
-        origin: contour_mm[0].clone(),
-        normal: Some(area.area_vector_mm2),
-        segments: contour_mm
-            .windows(2)
-            .map(|pair| [pair[0].clone(), pair[1].clone()])
-            .collect(),
+        origin: outer_mm[0].clone(),
+        normal: Some(normal),
+        segments,
     };
     let mut span_intervals = Vec::new();
     for pair in path_mm.windows(2) {

@@ -5098,3 +5098,85 @@ fn exact_planar_polyline_region_mass_refuses_touching_nested_and_off_plane_holes
     assert!(exact_planar_spatial_polyline_region_mass(&outer, &[&touching], 1_000_000).is_err());
     assert!(exact_planar_spatial_polyline_region_mass(&outer, &[&off_plane], 1_000_000).is_err());
 }
+
+#[test]
+fn exact_planar_polyline_region_path_clip_preserves_holes_and_their_edges() {
+    use brep_core::analysis::clip_spatial_path_to_exact_planar_polyline_region;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x: i64, y: i64| [q(x, 1), q(y, 1), q(x + y, 1)];
+    let rect = |x, y, a, b| [p(x, y), p(a, y), p(a, b), p(x, b), p(x, y)];
+    let outer = rect(0, 0, 6, 6);
+    let a = rect(1, 1, 2, 3);
+    let b = rect(4, 1, 5, 3).into_iter().rev().collect::<Vec<_>>();
+    let holes = [&a[..], &b[..]];
+    let path = [p(-1, 2), p(7, 2), p(7, 1), p(-1, 1)];
+    let report =
+        clip_spatial_path_to_exact_planar_polyline_region(&outer, &holes, &path, 1_000_000)
+            .unwrap();
+    assert_eq!(
+        report.span_intervals,
+        [
+            vec![[q(1, 8), q(1, 4)], [q(3, 8), q(5, 8)], [q(3, 4), q(7, 8)]],
+            vec![],
+            vec![[q(1, 8), q(7, 8)]],
+        ],
+    );
+    assert_eq!(
+        clip_spatial_path_to_exact_planar_polyline_region(&outer, &holes, &path, report.exact_work)
+            .unwrap(),
+        report
+    );
+    assert!(
+        clip_spatial_path_to_exact_planar_polyline_region(
+            &outer,
+            &holes,
+            &path,
+            report.exact_work - 1
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn exact_planar_polyline_region_path_clip_checks_transverse_hole_intersections() {
+    use brep_core::analysis::clip_spatial_path_to_exact_planar_polyline_region;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y, z| [q(x, 1), q(y, 1), q(z, 1)];
+    let rect = |lo, hi| {
+        [
+            p(lo, lo, 0),
+            p(hi, lo, 0),
+            p(hi, hi, 0),
+            p(lo, hi, 0),
+            p(lo, lo, 0),
+        ]
+    };
+    let outer = rect(0, 4);
+    let hole = rect(1, 3);
+    for (x, expected) in [
+        (0, true),
+        (1, true),
+        (2, false),
+        (3, true),
+        (4, true),
+        (5, false),
+    ] {
+        let path = [p(x, 2, -1), p(x, 2, 1)];
+        let report =
+            clip_spatial_path_to_exact_planar_polyline_region(&outer, &[&hole], &path, 1_000_000)
+                .unwrap();
+        let intervals = if expected {
+            vec![[q(1, 2), q(1, 2)]]
+        } else {
+            vec![]
+        };
+        assert_eq!(report.span_intervals, [intervals]);
+    }
+    let path = [p(0, 2, -1), p(0, 2, 1)];
+    assert!(
+        clip_spatial_path_to_exact_planar_polyline_region(&outer, &[&outer], &path, 1_000_000)
+            .is_err()
+    );
+}
