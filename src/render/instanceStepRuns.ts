@@ -10,7 +10,7 @@
  * transparent order intact; `order: 'asset'` groups by geometry, for passes
  * whose result does not depend on draw order (shadow depth, caps, edges).
  */
-import { INSTANCE_RECORD_BYTES, INSTANCE_RECORD_FLOATS } from './instancedScene'
+import { INSTANCE_RECORD_BYTES, INSTANCE_RECORD_FLOATS, instanceVertexUsage } from './instancedScene'
 
 /** The subset of `GMesh` an instance-step pass reads. */
 export interface InstanceStepMesh {
@@ -123,7 +123,7 @@ export class InstanceStepRuns {
       this.buffer?.destroy()
       this.buffer = device.createBuffer({
         size: capacity * 4,
-        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        usage: instanceVertexUsage(),
       })
       this.data = new Float32Array(capacity)
       this.uploaded = new Float32Array(capacity)

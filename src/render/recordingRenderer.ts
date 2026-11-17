@@ -12,6 +12,7 @@ import { DEFAULT_DISPLAY_BUDGET, sameDisplayBudget, type DisplayBudget } from '.
 import { carryMeshPublication, deltaMeshFromMeshData, diffSceneEntities } from './sceneDelta'
 import { countOperation } from '../dev/operationCounters'
 import { InstancedSceneBuffers, instancePickId, resolveInstancePick, type InstancingMetrics } from './instancedScene'
+import { RecordingInstanceSteps, type InstanceStepMetrics } from './recordingInstanceSteps'
 import { CameraHistory, cameraStatesEqual, type CameraHistorySnapshot, type CameraState } from './cameraHistory'
 import { clampGestureDistance, computeOrbitUpdate, computePanUpdate, computeWheelDistance } from './cameraGestures'
 import type { KeyboardCameraStep } from './keyboardCamera'
@@ -118,6 +119,9 @@ export class RecordingRenderer implements PublicRenderer {
   private sceneUploads = 0
   private uploadMetrics: SceneUploadMetrics = { geometryUploadBytes: 0, geometryBuffersCreated: 0, reusedEntities: 0 }
   private readonly instanced = new InstancedSceneBuffers(NULL_DEVICE)
+  /** Shadow, section cap, transparent and edge instance-step runs; staged only while instancing is on. */
+  private readonly instanceSteps = new RecordingInstanceSteps()
+  private section = false
 
   private record(method: string) {
     this.callCounts.set(method, (this.callCounts.get(method) ?? 0) + 1)
@@ -207,6 +211,7 @@ export class RecordingRenderer implements PublicRenderer {
     this.raf = 0
     this.canvas = null
     this.instanced.destroy()
+    this.instanceSteps.clear()
     this.setStatus({ status: 'destroyed' })
   }
 
@@ -257,6 +262,10 @@ export class RecordingRenderer implements PublicRenderer {
   get instancingMetrics(): InstancingMetrics {
     return { ...this.instanced.metrics }
   }
+  /** Instance-step passes of the last staged frame (all idle while instancing is off). */
+  get instanceStepMetrics(): InstanceStepMetrics {
+    return this.instanceSteps.metrics
+  }
   /** Mesh index for the pick id an instanced draw writes, or null. */
   resolveInstancePick(pickId: number): number | null {
     return resolveInstancePick(this.instanced.plan, pickId)
@@ -300,6 +309,7 @@ export class RecordingRenderer implements PublicRenderer {
 
   requestRender(_resetFrameRetry = true) {
     this.framesRequested++
+    if (this.instancing && this.status.status === 'ready') this.stageInstanceSteps()
     if (this.raf || this.status.status !== 'ready' || typeof requestAnimationFrame !== 'function') return
     this.raf = requestAnimationFrame(() => {
       this.raf = 0
@@ -348,6 +358,21 @@ export class RecordingRenderer implements PublicRenderer {
     if (this.displayMode === 'edges') this.ensureInspectionEdges()
     this.pendingFrameToken = options.frameToken ?? null
     this.requestRender()
+  }
+
+  /** Stage the instance-step passes the WebGPU frame would encode with the current state. */
+  private stageInstanceSteps() {
+    const { visibility, isolated, selected } = this
+    this.instanceSteps.stage({
+      meshes: this.meshes,
+      visible: index => visibility[index] !== false && (!isolated || index === selected),
+      selected,
+      displayMode: this.displayMode,
+      shadingModel: this.shadingModel,
+      shadows: this.shadows,
+      section: this.section,
+      transparency: this.transparency,
+    })
   }
 
   /** Inspection edges are built only when a mode needs them, once per asset. */
@@ -568,8 +593,9 @@ export class RecordingRenderer implements PublicRenderer {
     this.selectionMode = mode
     this.requestRender()
   }
-  setSection(_enabled: boolean, _normal: readonly [number, number, number], _offset: number) {
+  setSection(enabled: boolean, _normal: readonly [number, number, number], _offset: number) {
     this.record('setSection')
+    this.section = enabled
     this.requestRender()
   }
   setDisplayBudget(budget: DisplayBudget) {
@@ -588,6 +614,7 @@ export class RecordingRenderer implements PublicRenderer {
   setInstancingEnabled(enabled: boolean) {
     this.record('setInstancingEnabled')
     this.instancing = enabled
+    if (!enabled) this.instanceSteps.clear()
     this.requestRender()
   }
   getTransparencyMode(): 'sorted' | 'wboit' {

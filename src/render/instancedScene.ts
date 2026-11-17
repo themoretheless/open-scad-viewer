@@ -213,6 +213,8 @@ const VERTEX = 0x20,
   COPY_DST = 0x8
 const usage = (name: 'VERTEX' | 'INDEX' | 'COPY_DST', fallback: number) =>
   typeof GPUBufferUsage === 'undefined' ? fallback : GPUBufferUsage[name]
+/** Vertex + copy-dst usage that also resolves without WebGPU (the recording renderer's buffer-less device). */
+export const instanceVertexUsage = () => usage('VERTEX', VERTEX) | usage('COPY_DST', COPY_DST)
 
 /**
  * Owns per-asset geometry and per-batch instance buffers across publications.

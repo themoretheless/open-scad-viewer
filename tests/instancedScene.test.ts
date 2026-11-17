@@ -14,6 +14,7 @@ const sharedGeometry = {
   vertices: new Float32Array(18),
   indices: new Uint32Array([0, 1, 2]),
   edgeIndices: new Uint32Array([0, 1, 1, 2, 2, 0]),
+  color: [1, 1, 1, 1],
 }
 
 function instance(index: number, asset = 'asset:bolt'): MeshData {
@@ -118,5 +119,42 @@ describe('recording renderer instancing metrics', () => {
     expect(renderer.instancingMetrics.edgeUploads).toBe(1)
     renderer.setMeshes(hundred())
     expect(renderer.instancingMetrics.geometryUploads).toBe(0)
+  })
+
+  it('stages the shadow, cap, transparent and edge instance-step passes only with instancing on', async () => {
+    const renderer = new RecordingRenderer()
+    await renderer.init({ clientHeight: 100 } as HTMLCanvasElement)
+    const glass = (index: number) => {
+      const mesh = instance(index, 'asset:glass')
+      return { ...mesh, color: [1, 1, 1, 0.5] } as MeshData
+    }
+    renderer.setShadowsEnabled(true)
+    renderer.setSection(true, [0, 0, 1], 0)
+    renderer.setMeshes([...hundred(), glass(200), glass(201)])
+    expect(renderer.instanceStepMetrics.shadow.drawCalls).toBe(0)
+    renderer.setInstancingEnabled(true)
+    const on = renderer.instanceStepMetrics
+    expect(on.shadow).toMatchObject({ drawCalls: 1, instances: 100, recordWrites: 1 })
+    expect(on.sectionCap).toMatchObject({ drawCalls: 1, instances: 100 })
+    expect(on.transparent).toMatchObject({ drawCalls: 1, instances: 2, perEntity: false })
+    expect(on.edges.instances).toBe(0)
+    renderer.selectMesh(37)
+    const selected = renderer.instanceStepMetrics
+    expect(selected.edges).toMatchObject({ drawCalls: 1, instances: 1 })
+    // Selection changes one record of the shadow runs: one slice write, not a full upload.
+    expect(selected.shadow.recordWrites).toBe(1)
+    renderer.setDisplayMode('edges')
+    expect(renderer.instanceStepMetrics.edges).toMatchObject({ drawCalls: 2, instances: 102 })
+    renderer.setInstancingEnabled(false)
+    expect(renderer.instanceStepMetrics.shadow.drawCalls).toBe(0)
+  })
+
+  it('reports per-entity fallback for transparent meshes with a material', async () => {
+    const renderer = new RecordingRenderer()
+    await renderer.init({ clientHeight: 100 } as HTMLCanvasElement)
+    renderer.setInstancingEnabled(true)
+    const tinted = { ...instance(0, 'asset:tint'), color: [1, 1, 1, 0.5], material: {} } as unknown as MeshData
+    renderer.setMeshes([...hundred(), tinted])
+    expect(renderer.instanceStepMetrics.transparent).toMatchObject({ drawCalls: 0, perEntity: true })
   })
 })
