@@ -6191,3 +6191,68 @@ fn trim_projected_area_cell(
     }
     Ok(bounds)
 }
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimDirectionalAreaBounds {
+    /// Signed projected area in the orientation of the supplied normal.
+    pub bounds: Option<[f64; 2]>,
+    pub cells: usize,
+    pub minimum_cells: usize,
+    pub within_tolerance: bool,
+}
+
+impl PeriodicTrimInputEdges {
+    /// Enclose the signed projection of a trimmed patch onto a plane with
+    /// the given normal. The plane position and the normal magnitude do not
+    /// enter the result. Holes retain their canonical opposite orientation.
+    pub fn bound_input_patch_area_along_normal(
+        &self,
+        outer_contour: usize,
+        normal: [f64; 3],
+        tolerance: f64,
+        max_cells: usize,
+    ) -> Result<PeriodicTrimDirectionalAreaBounds> {
+        use crate::distance_bounds::{Interval, box_distance};
+
+        let scale = normal.iter().map(|n| n.abs()).fold(0.0_f64, f64::max);
+        crate::check(
+            normal.iter().all(|n| n.is_finite()) && scale > 0.,
+            "Projected area needs a nonzero finite normal",
+        )?;
+        crate::check(
+            tolerance.is_finite() && tolerance > 0.,
+            "Projected area needs positive finite tolerance",
+        )?;
+        let scale = BigRational::from_float(scale).unwrap();
+        let mut scaled = [Interval::point(0.); 3];
+        for (out, component) in scaled.iter_mut().zip(normal) {
+            let component = BigRational::from_float(component).unwrap() / &scale;
+            let [lo, hi] = trim_clock_bracket(&component)?;
+            *out = Interval::new(lo, hi)?;
+        }
+        let (lo, hi) = box_distance(&scaled, &[Interval::point(0.); 3])?;
+        let magnitude = Interval::new(lo, hi)?;
+        let component_tolerance = (tolerance * 0.5).max(f64::from_bits(1));
+        let area =
+            self.bound_input_patch_projected_area(outer_contour, component_tolerance, max_cells)?;
+        let bounds = area
+            .bounds
+            .map(|bounds| -> Result<[f64; 2]> {
+                let mut dot = Interval::point(0.);
+                for (component, [lo, hi]) in scaled.into_iter().zip(bounds) {
+                    if component.lo != 0. || component.hi != 0. {
+                        dot = dot.add(component.mul(Interval::new(lo, hi)?)?)?;
+                    }
+                }
+                let projected = dot.div(magnitude)?;
+                Ok([projected.lo, projected.hi])
+            })
+            .transpose()?;
+        Ok(PeriodicTrimDirectionalAreaBounds {
+            within_tolerance: bounds.is_some_and(|[lo, hi]| (hi - lo).next_up() <= tolerance),
+            bounds,
+            cells: area.cells,
+            minimum_cells: area.minimum_cells,
+        })
+    }
+}

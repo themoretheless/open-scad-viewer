@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 599,
-  "unallocatedCount": 401,
+  "specifiedCount": 600,
+  "unallocatedCount": 400,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14994,6 +14994,25 @@
         "Expose signed YZ, ZX and XY area bounds with hole subtraction and cell diagnostics.",
         "Verify hole subtraction, coarse certified bounds, initial-cell shortages and unavailable faces through the binary ABI.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0600",
+      "name": "Гарантированная площадь проекции периодической грани на плоскость произвольного направления",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::bound_input_patch_area_along_normal",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-600-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-600-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the signed area projection along a finite nonzero normal with exact scale reduction.",
+        "Verify an oblique projection with holes, orientation reversal, extreme normal scales, invalid normals, and cell limits.",
+        "WASM and application integration are separate."
       ]
     }
   ],

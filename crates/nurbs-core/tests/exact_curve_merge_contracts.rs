@@ -5785,3 +5785,73 @@ fn periodic_trim_patch_projected_area_reserves_initial_cells_for_every_wire() {
     assert!(!coarse.within_tolerance);
     assert_eq!(coarse.cells, 12);
 }
+
+#[test]
+fn periodic_trim_directional_area_encloses_oblique_projection_with_hole() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let hole = [
+        [0.125, 0.25],
+        [0.375, 0.25],
+        [0.375, 0.75],
+        [0.125, 0.75],
+        [0.125, 0.25],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer, &hole], 1_000_000)
+            .unwrap();
+    let expected = -1.25 / 2.0_f64.sqrt();
+    for (normal, expected) in [
+        ([1., 1., 0.], expected),
+        ([f64::MAX, f64::MAX, 0.], expected),
+        ([f64::from_bits(1), f64::from_bits(1), 0.], expected),
+        ([-1., -1., 0.], -expected),
+    ] {
+        let report = result
+            .bound_input_patch_area_along_normal(0, normal, 1e-8, 100)
+            .unwrap();
+        let [lo, hi] = report.bounds.unwrap();
+        assert!(lo <= expected && expected <= hi);
+        assert!(report.within_tolerance);
+    }
+}
+
+#[test]
+fn periodic_trim_directional_area_rejects_null_normal_and_preserves_budget() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let result = build_exact_periodic_surface_trim_input_edges(
+        &doubly_periodic_tensor(),
+        &[&outer],
+        1_000_000,
+    )
+    .unwrap();
+    assert!(
+        result
+            .bound_input_patch_area_along_normal(0, [0.; 3], 1e-8, 100)
+            .is_err()
+    );
+    let report = result
+        .bound_input_patch_area_along_normal(0, [0., 0., 1.], 1e-8, 7)
+        .unwrap();
+    assert_eq!(report.minimum_cells, 8);
+    assert!(report.bounds.is_none());
+    assert!(!report.within_tolerance);
+}
