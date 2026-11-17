@@ -4369,3 +4369,58 @@ fn exact_spatial_polyline_projection_coalesces_stationary_and_shared_endpoint_mi
         }]
     );
 }
+
+#[test]
+fn exact_spatial_polyline_intersections_reject_skew_pairs_and_keep_crossings() {
+    use brep_core::analysis::{SpatialPolylineIntersection, intersect_exact_spatial_polylines};
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y, z| [q(x, 1), q(y, 1), q(z, 1)];
+    let first = [p(0, 0, 0), p(3, 3, 3)];
+    let second = [p(1, 0, 2), p(1, 2, 2), p(1, 0, 0)];
+    let report = intersect_exact_spatial_polylines(&first, &second, 1_000_000).unwrap();
+    assert_eq!(
+        report.intersections,
+        [SpatialPolylineIntersection {
+            spans: [0, 1],
+            parameters: [[q(1, 3), q(1, 3)], [q(1, 2), q(1, 2)]],
+            points_mm: [p(1, 1, 1), p(1, 1, 1)],
+        }],
+    );
+    assert_eq!(
+        intersect_exact_spatial_polylines(&first, &second, report.exact_work).unwrap(),
+        report
+    );
+    assert!(intersect_exact_spatial_polylines(&first, &second, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_spatial_polyline_intersections_preserve_reversed_and_stationary_overlap() {
+    use brep_core::analysis::{SpatialPolylineIntersection, intersect_exact_spatial_polylines};
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x| [q(x, 1), q(x, 1), q(x, 1)];
+    let first = [p(0), p(4), p(4)];
+    let second = [p(5), p(2), p(2)];
+    let report = intersect_exact_spatial_polylines(&first, &second, 1_000_000).unwrap();
+    assert_eq!(
+        report.intersections,
+        [
+            SpatialPolylineIntersection {
+                spans: [0, 0],
+                parameters: [[q(1, 2), q(1, 1)], [q(1, 1), q(1, 3)]],
+                points_mm: [p(2), p(4)],
+            },
+            SpatialPolylineIntersection {
+                spans: [0, 1],
+                parameters: [[q(1, 2), q(1, 2)], [q(0, 1), q(1, 1)]],
+                points_mm: [p(2), p(2)],
+            },
+            SpatialPolylineIntersection {
+                spans: [1, 0],
+                parameters: [[q(0, 1), q(1, 1)], [q(1, 3), q(1, 3)]],
+                points_mm: [p(4), p(4)],
+            },
+        ],
+    );
+}

@@ -1688,3 +1688,117 @@ pub fn project_point_to_exact_spatial_polyline(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SpatialPolylineIntersection {
+    pub spans: [usize; 2],
+    /// Local endpoint parameters for each span, in first-span traversal
+    /// order. The second pair can descend. A stationary span has [0, 1].
+    pub parameters: [[Q; 2]; 2],
+    /// Coincident spatial endpoints. Equal endpoints denote point contact.
+    pub points_mm: [[Q; 3]; 2],
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactSpatialPolylineIntersections {
+    /// One record per intersecting span pair, in lexicographic span order.
+    pub intersections: Vec<SpatialPolylineIntersection>,
+    pub exact_work: u64,
+}
+
+/// Intersect two rational spatial polylines. Shared vertices can appear
+/// in multiple records, preserving their incident spans.
+pub fn intersect_exact_spatial_polylines(
+    first_mm: &[[Q; 3]],
+    second_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactSpatialPolylineIntersections> {
+    super::validate_work(max_exact_work)?;
+    if first_mm.len() < 2 || second_mm.len() < 2 {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Each intersection path requires two or more points",
+        ));
+    }
+    let mut remaining = max_exact_work;
+    for point in first_mm.iter().chain(second_mm) {
+        spend(&mut remaining, 4)?;
+        validate_point(point)?;
+    }
+    let mut intersections = Vec::new();
+    for (i, a) in first_mm.windows(2).enumerate() {
+        for (j, b) in second_mm.windows(2).enumerate() {
+            spend(&mut remaining, 64)?;
+            if let Some((parameters, points_mm)) = intersect_spatial_segments(a, b) {
+                intersections.push(SpatialPolylineIntersection {
+                    spans: [i, j],
+                    parameters,
+                    points_mm,
+                });
+            }
+        }
+    }
+    Ok(ExactSpatialPolylineIntersections {
+        intersections,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn intersect_spatial_segments(a: &[[Q; 3]], b: &[[Q; 3]]) -> Option<([[Q; 2]; 2], [[Q; 3]; 2])> {
+    let unit = Q::zero()..=Q::one();
+    let (u, v, offset): ([Q; 3], [Q; 3], [Q; 3]) = (
+        std::array::from_fn(|i| &a[1][i] - &a[0][i]),
+        std::array::from_fn(|i| &b[1][i] - &b[0][i]),
+        std::array::from_fn(|i| &b[0][i] - &a[0][i]),
+    );
+    let point_on_a = |t: &Q| std::array::from_fn(|i| &a[0][i] + t * &u[i]);
+    let point_on_b = |t: &Q| std::array::from_fn(|i| &b[0][i] + t * &v[i]);
+    let a_axis = u.iter().position(|coord| !coord.is_zero());
+    let b_axis = v.iter().position(|coord| !coord.is_zero());
+    let (Some(axis), Some(b_axis)) = (a_axis, b_axis) else {
+        let (point, target, swapped) = if a_axis.is_none() {
+            (&a[0], b, false)
+        } else {
+            (&b[0], a, true)
+        };
+        let (_, distance, t) = super::project_segment_point(point, &target[0], &target[1]);
+        let span = || [Q::zero(), Q::one()];
+        let projected = t.map_or_else(span, |t| [t.clone(), t]);
+        let parameters = if swapped {
+            [projected, span()]
+        } else {
+            [span(), projected]
+        };
+        return distance
+            .is_zero()
+            .then(|| (parameters, [point.clone(), point.clone()]));
+    };
+    for (i, j) in [(0, 1), (0, 2), (1, 2)] {
+        let determinant = &u[j] * &v[i] - &u[i] * &v[j];
+        if !determinant.is_zero() {
+            let ta = (&offset[j] * &v[i] - &offset[i] * &v[j]) / &determinant;
+            let tb = (&u[i] * &offset[j] - &u[j] * &offset[i]) / determinant;
+            if !unit.contains(&ta) || !unit.contains(&tb) {
+                return None;
+            }
+            let point = point_on_a(&ta);
+            return (point == point_on_b(&tb))
+                .then(|| ([[ta.clone(), ta], [tb.clone(), tb]], [point.clone(), point]));
+        }
+    }
+    let start = &offset[axis] / &u[axis];
+    if point_on_a(&start) != b[0] {
+        return None;
+    }
+    let end = (&b[1][axis] - &a[0][axis]) / &u[axis];
+    let lo = start.clone().min(end.clone()).max(Q::zero());
+    let hi = start.max(end).min(Q::one());
+    if lo > hi {
+        return None;
+    }
+    let points = [point_on_a(&lo), point_on_a(&hi)];
+    let on_b = points
+        .each_ref()
+        .map(|q| (&q[b_axis] - &b[0][b_axis]) / &v[b_axis]);
+    Some(([[lo, hi], on_b], points))
+}

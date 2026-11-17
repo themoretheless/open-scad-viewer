@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0452",
+  "testedBase": "5952376815b5952b770937fc69db217013c1fff0",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 228,
+  "scope": [
+    "Find exact spatial path intersections and overlaps with parameters on both paths.",
+    "Solve rational segment intersections and verify every spatial coordinate. Collinear and stationary overlaps retain both parameter ranges."
+  ],
+  "logSha256": "e2980c9336a4890901f198ccb6e309778481578aeb6605f6c5a483328f4d8bbc",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "ec816b3bd1ab203cd57535c1b7c2a410cd254ac6aa1efaa4df374d483654a7cf",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "90e31cc5857a6ab8e27b8a2f38074c0696d812eca28b2c5915263ed4e4f16478",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs": "18acd0a32cb3c9cfcf70568c292c13b3cf69ff3ef6b681b24e33396dcc698d7e",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs": "8ede062350dde59a85651b267d276bf360e29d8b374169c9e434cf3e7b9805f7"
+  }
+}
