@@ -1950,6 +1950,39 @@ it('blocks a coarse framed sweep and preserves mode and sections when repeating'
  await ui.click('↶');await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
 
+it('C9: Sweep offers a Boolean result step with several target bodies',async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const {circleNurbsCurve}=await import('../src/kernel/nurbsConstructors')
+ const {applySolidSweepBody}=await import('../src/kernel/solidSweepBody')
+ const line=(a:number[],b:number[])=>({degree:1,controlPoints:[a,b],weights:[1,1],knots:[0,0,1,1]})
+ let seed={version:1,sketches:[],bodies:[],curves:[
+  {id:'big',name:'Seed profile',curve:circleNurbsCurve([0,0,0],[0,0,1],3)},
+  {id:'path',name:'Seed path',curve:line([0,0,0],[0,0,10])},
+  {id:'small',name:'Cutter profile',curve:circleNurbsCurve([0,0,-1],[0,0,1],1)},
+  {id:'cut',name:'Cutter path',curve:line([0,0,-1],[0,0,11])},
+ ]} as unknown as DirectDocument
+ seed=applySolidSweepBody(seed,{profileId:'big',pathId:'path',operation:'new',targetId:'',id:'a',name:'Part A'})
+ seed=applySolidSweepBody(seed,{profileId:'big',pathId:'path',operation:'new',targetId:'',id:'b',name:'Part B'})
+ const {surfaces:_empty,...draft}=seed;const ui=await mount({},stringifyMeshJson(draft as DirectDocument))
+ await ui.click('Cutter profile');await ui.click('Cutter path',true);const before=ui.doc()
+ await ui.click('Sweep')
+ expect(ui.button('Surface').props['aria-checked']).toBe(true)
+ expect(ui.all().some(n=>n.props['data-sweep-extra-targets']!==undefined)).toBe(false)
+ await ui.click('Cut');await flushClearance()
+ expect(ui.button('Cut').props['aria-checked']).toBe(true)
+ const fieldset=ui.all().find(n=>n.props['data-sweep-extra-targets']!==undefined)!
+ expect(ui.text(fieldset)).toContain('Also apply to bodies')
+ const boxes=ui.all(fieldset).filter(n=>n.tag==='input')
+ expect(boxes.map(n=>n.props.value)).toEqual(['b'])
+ boxes[0].props['onUpdate:modelValue'](['b']);await flushClearance();await settle()
+ await commandKey(ui,'Enter')
+ const after=ui.doc()
+ expect(after.bodies.map(b=>b.id)).toEqual(['a','b'])
+ expect(after.surfaces??[]).toHaveLength(0)
+ for(const body of after.bodies)expect(body.brep!.faces.length).toBeGreaterThan(before.bodies[0].brep!.faces.length)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
 it('rebuilds a periodic curve while preserving its seam, identity, history and saved parameters',async()=>{
  await geometryKernel.warmGeometryKernel()
  const curve={id:'periodic-ui',name:'Periodic rebuild input',curve:{degree:2,knots:Array.from({length:9},(_,i)=>i),controlPoints:[[1,0,0],[0,1,0],[-1,0,0],[0,-1,0],[1,0,0],[0,1,0]],weights:[1,.8,1.2,1,1,.8],periodic:true}}

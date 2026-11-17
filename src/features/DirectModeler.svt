@@ -51,6 +51,7 @@ import ModelingGridControls from '../components/ModelingGridControls.svt'
 import WorkspaceActionBar from '../components/WorkspaceActionBar.svt'
 import {createSolidPreviewWorker} from '../kernel/solidPreviewWorker'
 import { previewTargetBodies, sameSketchPlane, type DirectExtrusionOperation as ExtrusionMode } from '../app/directExtrusion'
+import type { SweepResultMode } from '../kernel/solidSweepBody'
 import { useModelingGrid } from '../app/modelingGrid'
 import { resolveModelingSnap, type SnapKind, type SnapGeometry } from '../app/modelingSnaps'
 import CommandPalette from '../components/CommandPalette.svt'
@@ -378,7 +379,7 @@ function setProfileTarget(id:string){
 const pointTrimPick=shallowRef<{point:[number,number];matrix:NurbsScreenProjection;radius:number}|null>(null)
 const activePlane=ref<SketchPlane>(xyPlane()),advancedOp=ref<'nurbs-offset'|'nurbs-point-trim'|'instance-transform'|'instance-create'|'instance-place'|'instance-array'|'push'|'chamfer'|'edge-fillet'|'shell'|'split'|'offset'|'extend'|'curve'|'transform'|'loft'|'nurbs-loft'|'nurbs-sweep'|'nurbs-rebuild'|'nurbs-reduce'|'nurbs-surface-rebuild'|'nurbs-surface-reduce'|'nurbs-patch'|'nurbs-runout'|'nurbs-match'|'nurbs-prepare'|'nurbs-curve-match'|'profile-prepare'|'profile-union'|'profile-difference'|'profile-intersection'|null>(null)
 const loftPreviewId=ref(''),surfaceInputs=ref<string[]>([]),surfaceReversed=ref<boolean[]>([])
-const advanced=ref({runoutPosition:90,runoutTangentLength:.1,runoutFlip:false,offsetJoin:'smooth' as 'smooth'|'bevel'|'trim-nonzero'|'trim-evenodd',patchPrepare:false,patchError:1e-6,profileGap:.01,curveEndA:'end' as 'start'|'end',curveEndB:'start' as 'start'|'end',curveAngle:1e-6,prepareOpenPeriodic:false,matchOrder:1 as 1|2,matchBoundaryA:'uMax' as SurfaceJetBoundary,matchBoundaryB:'uMin' as SurfaceJetBoundary,matchScale:1,matchReverse:false,matchError:1e-6,sweepMode:'translation' as 'translation'|'framed',sweepSections:24,sweepDeviation:.01,sweepNormalX:0,sweepNormalY:0,sweepNormalZ:1,surfaceAxis:'u' as 'u'|'v',rebuildControls:6,reduceDegree:1,maxError:.01,distance:2,radius:2,endRadius:3,filletMode:'constant' as 'constant'|'variable'|'corner'|'partial-preview',axis:'z' as 'x'|'y'|'z',x:0,y:0,z:0,angle:0,scale:1,cx:0,cy:0,start:0,sweep:180,end:'end' as 'start'|'end',arrayKind:'step' as 'step'|'extent'|'path',arrayCount:4,arrayAlign:false})
+const advanced=ref({runoutPosition:90,runoutTangentLength:.1,runoutFlip:false,offsetJoin:'smooth' as 'smooth'|'bevel'|'trim-nonzero'|'trim-evenodd',patchPrepare:false,patchError:1e-6,profileGap:.01,curveEndA:'end' as 'start'|'end',curveEndB:'start' as 'start'|'end',curveAngle:1e-6,prepareOpenPeriodic:false,matchOrder:1 as 1|2,matchBoundaryA:'uMax' as SurfaceJetBoundary,matchBoundaryB:'uMin' as SurfaceJetBoundary,matchScale:1,matchReverse:false,matchError:1e-6,sweepMode:'translation' as 'translation'|'framed',sweepSections:24,sweepDeviation:.01,sweepNormalX:0,sweepNormalY:0,sweepNormalZ:1,sweepResult:'surface' as SweepResultMode,sweepTarget:'',sweepExtraTargets:[] as string[],surfaceAxis:'u' as 'u'|'v',rebuildControls:6,reduceDegree:1,maxError:.01,distance:2,radius:2,endRadius:3,filletMode:'constant' as 'constant'|'variable'|'corner'|'partial-preview',axis:'z' as 'x'|'y'|'z',x:0,y:0,z:0,angle:0,scale:1,cx:0,cy:0,start:0,sweep:180,end:'end' as 'start'|'end',arrayKind:'step' as 'step'|'extent'|'path',arrayCount:4,arrayAlign:false})
 const brepSegments=ref(4),filletSegments=ref(12)
 const revolveGeometry=ref<'faceted'|'exact'>('faceted')
 function setPickedEdge(index:number){edgeIndex.value=index;edgeIndexes.value=index>=0?[index]:[];advancedOp.value=null}
@@ -812,7 +813,7 @@ watch(()=>[props.open,bodyEditRevision.value,advancedOp.value,document.value,sel
     return
    }
    if(isSolidSurfaceBuild(operation)){
-    const result=await bodyEditWorker.run({kind:'surfaceBuild',document:source,options:{kind:operation,ids:options.inputs,id:loftPreviewId.value,group:activeGroup.value||undefined,reversed:[...surfaceReversed.value],runout:{sourceBoundary:options.matchBoundaryA,sourcePosition:options.runoutPosition/100,tangentLengthMm:options.runoutTangentLength,flipSide:options.runoutFlip,reverse:options.matchReverse},patchPreparation:{enabled:options.patchPrepare,maxError:options.patchError},sweep:{mode:options.sweepMode,normal:[options.sweepNormalX,options.sweepNormalY,options.sweepNormalZ],sections:options.sweepSections,maxDeviation:options.sweepDeviation}}})
+    const result=await bodyEditWorker.run({kind:'surfaceBuild',document:source,options:{kind:operation,ids:options.inputs,id:loftPreviewId.value,group:activeGroup.value||undefined,reversed:[...surfaceReversed.value],runout:{sourceBoundary:options.matchBoundaryA,sourcePosition:options.runoutPosition/100,tangentLengthMm:options.runoutTangentLength,flipSide:options.runoutFlip,reverse:options.matchReverse},patchPreparation:{enabled:options.patchPrepare,maxError:options.patchError},sweep:{mode:options.sweepMode,normal:[options.sweepNormalX,options.sweepNormalY,options.sweepNormalZ],sections:options.sweepSections,maxDeviation:options.sweepDeviation},...sweepBodyOptions(operation,options)}})
     if(generation===bodyEditGeneration){surfaceBuildResult.value=result;if(result.report&&!result.report.accepted)markError(new DirectInputError('DIRECT_SWEEP_DEVIATION',result.error,'sweepDeviation',[...options.inputs]));if(operation==='nurbs-runout'&&result.runoutReport?.complete===false)bodyEditRetryVisible.value=true}
     return
    }
@@ -894,7 +895,8 @@ watch(() => document.value, d => {
   isolationStack.value = pruneIsolation(isolationStack.value, id => ids.has(id))
 })
 // C9: the primary target and every extra target show their previewed result before Apply.
-const renderBodies=computed(()=>previewReplacesTarget.value?previewTargetBodies(sceneBodies.value,extraTargetIds.value,solidPreviewResult.value?.bodies,{id:targetBody.value,body:previewBody.value}):sceneBodies.value)
+const sweepTargetIds=computed(()=>{const a=advanced.value;if(advancedOp.value!=='nurbs-sweep'||a.sweepResult==='surface'||a.sweepResult==='new')return [];return [a.sweepTarget,...a.sweepExtraTargets.filter(id=>id!==a.sweepTarget)].filter(id=>document.value.bodies.some(b=>b.id===id))})
+const renderBodies=computed(()=>previewReplacesTarget.value?previewTargetBodies(sceneBodies.value,extraTargetIds.value,solidPreviewResult.value?.bodies,{id:targetBody.value,body:previewBody.value}):sweepTargetIds.value.length&&advancedPreview.value.document?previewTargetBodies(sceneBodies.value,sweepTargetIds.value,advancedPreview.value.document.bodies):sceneBodies.value)
 const {
   fps,
   frameMs,
@@ -1272,6 +1274,13 @@ const profileChoices=computed(()=>document.value.sketches.filter(s=>s.closed&&sa
 /** C9: further bodies the same tool combines with, never repeating the primary target. */
 const extraTargetIds=computed(()=>extrusionMode.value==='new'?[]:extraTargetBodies.value.filter(id=>id!==targetBody.value&&document.value.bodies.some(b=>b.id===id)))
 const extraTargetChoices=computed(()=>document.value.bodies.filter(b=>b.id!==targetBody.value))
+// C9 Sweep result step: 'surface' keeps the open NURBS surface; other modes build a capped solid and combine it.
+function sweepBodyOptions(operation:string|null,a:typeof advanced.value){
+ if(operation!=='nurbs-sweep'||a.sweepResult==='surface')return {}
+ const [targetId='',...targetIds]=a.sweepResult==='new'?[]:[a.sweepTarget,...a.sweepExtraTargets.filter(id=>id!==a.sweepTarget)]
+ return {body:{operation:a.sweepResult,targetId,targetIds,name:label('Тело протяжки','Sweep body'),tessellation:brepSegments.value}}
+}
+function setSweepResult(mode:SweepResultMode){const a=advanced.value;a.sweepResult=mode;if(mode!=='surface'&&mode!=='new'&&!document.value.bodies.some(b=>b.id===a.sweepTarget))a.sweepTarget=document.value.bodies.find(b=>b.brep)?.id??document.value.bodies[0]?.id??''}
 function extrusionOptions(id='preview') { return {sketchIds:[...profileIds.value],height:height.value,offset:baseZ.value,operation:extrusionMode.value,targetId:targetBody.value,targetIds:[...extraTargetIds.value],id,segments:brepSegments.value} }
 // C2: the result mode is one tab stop; arrow keys move the checked radio (roving tabindex).
 function extrusionModeKey(e: KeyboardEvent) {
@@ -2993,6 +3002,10 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <CoonsPreparationControls v-if="advancedOp==='nurbs-patch'" v-model:enabled="advanced.patchPrepare" v-model:budget="advanced.patchError" :locale="locale" :reports="surfaceBuildResult?.patchReports" @validity="quantityValidity('patchError',$event)" />
                 <small v-if="advancedOp!=='nurbs-patch' &amp;&amp; (advancedOp!=='nurbs-sweep'||advanced.sweepMode==='translation')">{{ advancedOp==='nurbs-sweep'?label('Профиль переносится вдоль пути с неизменной ориентацией. Результат — открытая NURBS-поверхность.','The profile translates along the path with fixed orientation. The result is an open NURBS surface.'):label('Сечения соединяются линейчато в указанном порядке. Степени и узлы согласуются без изменения кривых.','Sections are joined with ruled spans in the given order. Degrees and knots are aligned without changing the curves.') }}</small>
                 <template v-if="advancedOp==='nurbs-sweep'">
+                  <div class="segmented" role="radiogroup" data-sweep-result :aria-label="label('Результат протяжки','Sweep result')"><button v-for="(name,value) in {surface:label('Поверхность','Surface'),new:label('Новое тело','New body'),union:label('Добавить','Add'),difference:label('Вычесть','Cut'),intersection:label('Пересечь','Intersect')}" :key="value" type="button" role="radio" :aria-checked="advanced.sweepResult===value" :data-mode="value" @click="setSweepResult(value)">{{ name }}</button></div>
+                  <small v-if="advanced.sweepResult!=='surface'">{{ label('Замкнутый профиль протягивается по ломаной пути с торцами. Профиль должен лежать в плоскости, перпендикулярной первому отрезку пути.','The closed profile is swept along a polyline path and capped. The profile must lie in the plane normal to the first path segment.') }}</small>
+                  <label v-if="advanced.sweepResult!=='surface'&amp;&amp;advanced.sweepResult!=='new'">{{ label('Тело','Body') }}<select v-model="advanced.sweepTarget" data-sweep-target><option v-for="b in document.bodies" :key="b.id" :value="b.id">{{ b.name }}</option></select></label>
+                  <fieldset v-if="advanced.sweepResult!=='surface'&amp;&amp;advanced.sweepResult!=='new'&amp;&amp;document.bodies.length>1" class="profile-choices" data-sweep-extra-targets><legend>{{ label('Также применить к телам','Also apply to bodies') }}</legend><label v-for="b in document.bodies.filter(b=>b.id!==advanced.sweepTarget)" :key="b.id"><input v-model="advanced.sweepExtraTargets" type="checkbox" :value="b.id">{{ b.name }}</label><small>{{ label('Каждое тело комбинируется с инструментом отдельно.','Each body is combined with the tool separately.') }}</small></fieldset>
                   <label>{{ label('Ориентация профиля','Profile orientation') }}<select v-model="advanced.sweepMode" aria-label="Sweep orientation" @change="quantityValidity('sweepDeviation',true)"><option value="translation">{{ label('Постоянная','Fixed') }}</option><option value="framed">{{ label('По касательной пути','Follow path tangent') }}</option></select></label>
                   <template v-if="advanced.sweepMode==='framed'">
                     <label>{{ label('Число сечений','Sections') }}<input v-model.number="advanced.sweepSections" type="number" min="2" max="32" step="1" aria-label="Sweep sections"></label>

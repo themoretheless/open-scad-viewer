@@ -4,6 +4,7 @@ import type {DirectDocument} from '../app/directModeling'
 import type {SolidNurbsSurface} from './solidNurbs'
 import {loftAlignedNurbsCurves,sweepNurbsCurve,coonsNurbsPatch,framedSweepNurbsCurve,type FramedSweepResult,prepareCoonsBoundaryWeights,type CoonsBoundaryPreparation} from './nurbsConstructors'
 import {createG2WorldRunout,type G2RunoutReport} from './geometricG2'
+import {applySolidSweepBody,type SolidSweepBodyOptions} from './solidSweepBody'
 
 export type SolidSurfaceConstruction = 'nurbs-loft'|'nurbs-sweep'|'nurbs-patch'|'nurbs-runout'
 export interface SweepOptions {mode:'translation'|'framed';normal:[number,number,number];sections:number;maxDeviation:number}
@@ -22,7 +23,9 @@ export function constructSolidSurface(document:DirectDocument,ids:string[],kind:
  return {id,name:kind==='nurbs-patch'?'Coons patch':kind==='nurbs-sweep'?(framed?'Framed sweep':'Translation sweep'):'NURBS loft',surface,segmentsU:24,segmentsV:24,...group?{group}:{}}
 }
 
-export interface SolidSurfaceBuildOptions {kind:SolidSurfaceConstruction;ids:string[];id:string;group?:string;reversed:boolean[];sweep:SweepOptions;patchPreparation?:{enabled:boolean;maxError:number};runout?:Parameters<typeof createG2WorldRunout>[3]}
+export interface SolidSurfaceBuildOptions {kind:SolidSurfaceConstruction;ids:string[];id:string;group?:string;reversed:boolean[];sweep:SweepOptions;patchPreparation?:{enabled:boolean;maxError:number};runout?:Parameters<typeof createG2WorldRunout>[3];
+ /** Sweep only: close the profile into a solid and add or combine it instead of adding a surface. */
+ body?:Pick<SolidSweepBodyOptions,'operation'|'targetId'|'targetIds'|'name'|'tessellation'>}
 const SOLID_SURFACE_BUILDS = new Set<string>(['nurbs-loft','nurbs-sweep','nurbs-patch','nurbs-runout'])
 export function isSolidSurfaceBuild(kind:unknown):kind is SolidSurfaceConstruction{return typeof kind==='string'&&SOLID_SURFACE_BUILDS.has(kind)}
 export function buildSolidSurface(document:DirectDocument,p:SolidSurfaceBuildOptions):{document:DirectDocument|null;error:string;report:FramedSweepResult['report']|null;patchReports?:CoonsBoundaryPreparation['report'][];runoutReport?:G2RunoutReport}{
@@ -42,6 +45,7 @@ export function buildSolidSurface(document:DirectDocument,p:SolidSurfaceBuildOpt
    }
    return {document:{...document,surfaces:[...document.surfaces??[],...surfaces]},error:'',report:null,runoutReport:result.report}
   }
+  if(p.kind==='nurbs-sweep'&&p.body)return {document:applySolidSweepBody(document,{...p.body,profileId:p.ids[0]??'',pathId:p.ids[1]??'',reversed:p.reversed,id:p.id}),error:'',report:null}
   let source=document
   const patchReports:CoonsBoundaryPreparation['report'][]=[]
   if(p.kind==='nurbs-patch'&&p.patchPreparation?.enabled){
