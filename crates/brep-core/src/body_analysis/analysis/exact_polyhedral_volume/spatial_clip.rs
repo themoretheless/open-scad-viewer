@@ -3152,3 +3152,146 @@ pub fn classify_exact_coplanar_planar_polyline_regions(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactCoplanarPolylineRegionOverlapCells {
+    /// Convex three- or four-vertex cells in first-profile winding.
+    /// Interiors are disjoint. The union is the closure of the area overlap.
+    pub cells_mm: Vec<Vec<[Q; 3]>>,
+    pub exact_work: u64,
+}
+
+/// Construct the positive-area intersection of two profiles on a common
+/// plane. The exact cells retain holes and disconnected material.
+pub fn decompose_exact_coplanar_planar_polyline_region_overlap(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    max_exact_work: u64,
+) -> Result<ExactCoplanarPolylineRegionOverlapCells> {
+    super::validate_work(max_exact_work)?;
+    let mut remaining = max_exact_work;
+    let first = prepare_planar_polyline_region(first_outer_mm, first_holes_mm, &mut remaining)?;
+    let second = prepare_planar_polyline_region(second_outer_mm, second_holes_mm, &mut remaining)?;
+    let normal = face_normal(&first)?;
+    let [u, v] = plane_axes(normal);
+    let axis = 3 - u - v;
+    let mut cuts = Vec::new();
+    for [a, b] in first.segments.iter().chain(&second.segments) {
+        spend(&mut remaining, 16)?;
+        let offset = std::array::from_fn(|i| &a[i] - &first.origin[i]);
+        if !dot(&offset, normal).is_zero() {
+            return Err(refuse("Profile supports must coincide"));
+        }
+        cuts.extend([a[u].clone(), b[u].clone()]);
+    }
+    for a in &first.segments {
+        for b in &second.segments {
+            spend(&mut remaining, 64)?;
+            if let Some((_, points)) = intersect_spatial_segments(a, b) {
+                cuts.extend(points.map(|point| point[u].clone()));
+            }
+        }
+    }
+    let count = cuts.len() as u64;
+    spend(
+        &mut remaining,
+        count.saturating_mul(8 * u64::from(count.ilog2() + 1)),
+    )?;
+    cuts.sort_unstable();
+    cuts.dedup();
+    let two = Q::from_integer(2.into());
+    let lift = |x: &Q, y: &Q| {
+        let mut point = [Q::zero(), Q::zero(), Q::zero()];
+        point[u] = x.clone();
+        point[v] = y.clone();
+        point[axis] = &first.origin[axis]
+            - (&normal[u] * (x - &first.origin[u]) + &normal[v] * (y - &first.origin[v]))
+                / &normal[axis];
+        point
+    };
+    let mut cells_mm = Vec::new();
+    for window in cuts.windows(2) {
+        spend(&mut remaining, 4)?;
+        let lo = &window[0];
+        let hi = &window[1];
+        let mid = (lo + hi) / &two;
+        let a = profile_slice_crossings(&first, [u, v], &mid, &mut remaining)?;
+        let b = profile_slice_crossings(&second, [u, v], &mid, &mut remaining)?;
+        let mut a = a.chunks_exact(2).peekable();
+        let mut b = b.chunks_exact(2).peekable();
+        while let (Some(a_band), Some(b_band)) = (a.peek(), b.peek()) {
+            spend(&mut remaining, 8)?;
+            let lower = if a_band[0].0 >= b_band[0].0 {
+                &a_band[0]
+            } else {
+                &b_band[0]
+            };
+            let upper = if a_band[1].0 <= b_band[1].0 {
+                &a_band[1]
+            } else {
+                &b_band[1]
+            };
+            if lower.0 < upper.0 {
+                spend(&mut remaining, 64)?;
+                let mut cell = vec![
+                    lift(lo, &profile_edge_ordinate(lower.1, [u, v], lo)),
+                    lift(hi, &profile_edge_ordinate(lower.1, [u, v], hi)),
+                    lift(hi, &profile_edge_ordinate(upper.1, [u, v], hi)),
+                    lift(lo, &profile_edge_ordinate(upper.1, [u, v], lo)),
+                ];
+                cell.dedup();
+                if cell.first() == cell.last() {
+                    cell.pop();
+                }
+                if normal[axis].is_negative() {
+                    cell.reverse();
+                }
+                cells_mm.push(cell);
+            }
+            let comparison = a_band[1].0.cmp(&b_band[1].0);
+            if !comparison.is_gt() {
+                a.next();
+            }
+            if !comparison.is_lt() {
+                b.next();
+            }
+        }
+    }
+    Ok(ExactCoplanarPolylineRegionOverlapCells {
+        cells_mm,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn profile_slice_crossings<'a>(
+    face: &'a FaceBoundary,
+    axes: [usize; 2],
+    at: &Q,
+    remaining: &mut u64,
+) -> Result<Vec<(Q, &'a [[Q; 3]; 2])>> {
+    let [u, _] = axes;
+    let mut crossings = Vec::new();
+    for edge in &face.segments {
+        spend(remaining, 4)?;
+        if (&edge[0][u] < at) != (&edge[1][u] < at) {
+            spend(remaining, 12)?;
+            crossings.push((profile_edge_ordinate(edge, axes, at), edge));
+        }
+    }
+    let count = crossings.len() as u64;
+    spend(
+        remaining,
+        count.saturating_mul(8 * (u64::from(count.checked_ilog2().unwrap_or(0)) + 1)),
+    )?;
+    crossings.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+    if crossings.len() % 2 != 0 {
+        return Err(refuse("Unexpected open planar slice"));
+    }
+    Ok(crossings)
+}
+
+fn profile_edge_ordinate([a, b]: &[[Q; 3]; 2], [u, v]: [usize; 2], at: &Q) -> Q {
+    &a[v] + (at - &a[u]) * (&b[v] - &a[v]) / (&b[u] - &a[u])
+}

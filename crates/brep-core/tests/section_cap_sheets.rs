@@ -5536,3 +5536,75 @@ fn exact_coplanar_profile_relation_respects_voids_and_hole_boundary_contact() {
         assert_eq!(report.relation, expected);
     }
 }
+
+#[test]
+fn exact_coplanar_overlap_cells_partition_a_holed_tilted_profile() {
+    use brep_core::analysis::decompose_exact_coplanar_planar_polyline_region_overlap;
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |u: i64, v: i64| [q(-u - v + 3), q(u), q(v)];
+    let rect = |a, b, c, d| [p(a, b), p(c, b), p(c, d), p(a, d), p(a, b)];
+    let a = rect(0, 0, 6, 6);
+    let hole = rect(2, 2, 4, 4);
+    let b = rect(1, 1, 5, 5);
+    let report =
+        decompose_exact_coplanar_planar_polyline_region_overlap(&a, &[&hole], &b, &[], 1_000_000)
+            .unwrap();
+    assert_eq!(
+        report.cells_mm,
+        [
+            rect(1, 1, 2, 5)[..4].to_vec(),
+            rect(2, 1, 4, 2)[..4].to_vec(),
+            rect(2, 4, 4, 5)[..4].to_vec(),
+            rect(4, 1, 5, 5)[..4].to_vec(),
+        ]
+    );
+    assert_eq!(
+        decompose_exact_coplanar_planar_polyline_region_overlap(
+            &a,
+            &[&hole],
+            &b,
+            &[],
+            report.exact_work
+        )
+        .unwrap(),
+        report
+    );
+    assert!(
+        decompose_exact_coplanar_planar_polyline_region_overlap(
+            &a,
+            &[&hole],
+            &b,
+            &[],
+            report.exact_work - 1
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn exact_coplanar_overlap_cells_split_at_crossings_and_ignore_edge_only_contact() {
+    use brep_core::analysis::decompose_exact_coplanar_planar_polyline_region_overlap;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y| [q(x, 1), q(y, 1), q(0, 1)];
+    let a = [p(0, 0), p(5, 0), p(5, 2), p(0, 2), p(0, 0)];
+    let b = [p(1, -1), p(4, 2), p(1, 2), p(1, -1)];
+    let report =
+        decompose_exact_coplanar_planar_polyline_region_overlap(&a, &[], &b, &[], 1_000_000)
+            .unwrap();
+    assert_eq!(
+        report.cells_mm,
+        [
+            vec![p(1, 0), p(2, 0), p(2, 2), p(1, 2)],
+            vec![p(2, 0), p(4, 2), p(2, 2)],
+        ]
+    );
+    let contact = [p(0, 2), p(5, 2), p(5, 4), p(0, 4), p(0, 2)];
+    assert!(
+        decompose_exact_coplanar_planar_polyline_region_overlap(&a, &[], &contact, &[], 1_000_000)
+            .unwrap()
+            .cells_mm
+            .is_empty()
+    );
+}
