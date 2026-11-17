@@ -1313,3 +1313,79 @@ fn expanded_exact_discovery_rejects_a_partial_oblique_rim() {
     assert_eq!(err.message, "Section boundary has an open chain");
     assert_eq!(source, before);
 }
+
+#[test]
+fn closes_both_oblique_rims_with_exact_expanded_caps_under_shared_budgets() {
+    use brep_core::planar_cap::{SectionPlane, close_shell_with_expanded_exact_section_caps};
+    let (mut source, _) = open_prism(false);
+    remove_prism_cap(&mut source, 0.);
+    map_prism_to_nonbinary_cap_support(&mut source);
+    let planes = [6., 0.].map(|offset| SectionPlane {
+        normal: [-1., -1., 3.],
+        offset,
+    });
+    let report =
+        close_shell_with_expanded_exact_section_caps(&source, 0, &planes, 1_000_000, 10_000)
+            .unwrap();
+    assert_eq!(report.cap_faces.len(), 2);
+    assert!(report.model.shells[0].closed);
+    assert_eq!(report.model.edges, source.edges);
+    assert_eq!(report.model.vertices, source.vertices);
+    for (&face, plane) in report.cap_faces.iter().zip(planes) {
+        let pole = &report.model.faces[face].surface.control_points[0][0];
+        assert_eq!(-pole[0] - pole[1] + 3. * pole[2], plane.offset);
+    }
+    assert!(
+        brep_core::boundary_agreement::verify_exact(&report.model, 1_000_000)
+            .unwrap()
+            .all_equal
+    );
+    assert!(
+        close_shell_with_expanded_exact_section_caps(
+            &source,
+            0,
+            &planes,
+            report.exact_work,
+            report.verification_cells
+        )
+        .is_ok()
+    );
+    assert!(
+        close_shell_with_expanded_exact_section_caps(
+            &source,
+            0,
+            &planes,
+            report.exact_work - 1,
+            report.verification_cells
+        )
+        .is_err()
+    );
+    assert!(
+        close_shell_with_expanded_exact_section_caps(
+            &source,
+            0,
+            &planes,
+            report.exact_work,
+            report.verification_cells - 1
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn refuses_to_commit_an_expanded_cap_when_a_later_plane_misses_its_rim() {
+    use brep_core::planar_cap::{SectionPlane, close_shell_with_expanded_exact_section_caps};
+    let (mut source, _) = open_prism(false);
+    remove_prism_cap(&mut source, 0.);
+    map_prism_to_nonbinary_cap_support(&mut source);
+    let before = source.clone();
+    let planes = [6., 1.].map(|offset| SectionPlane {
+        normal: [-1., -1., 3.],
+        offset,
+    });
+    assert!(
+        close_shell_with_expanded_exact_section_caps(&source, 0, &planes, 1_000_000, 10_000)
+            .is_err()
+    );
+    assert_eq!(source, before);
+}

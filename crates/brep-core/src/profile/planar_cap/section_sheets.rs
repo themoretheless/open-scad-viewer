@@ -80,6 +80,7 @@ pub fn build_section_sheets_with_expanded_exact_support(
     build(rings, normal, offset, options, Support::ExpandedExact).map(|report| report.sheet)
 }
 
+#[derive(Clone, Copy)]
 pub(super) enum Support {
     Tight,
     ExpandedExact,

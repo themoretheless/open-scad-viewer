@@ -274,6 +274,44 @@ pub fn close_shell_with_section_caps(
     max_exact_work: u64,
     max_verification_cells: usize,
 ) -> Result<AttachedSectionCaps> {
+    close_exact(
+        source,
+        shell,
+        planes,
+        max_exact_work,
+        max_verification_cells,
+        Support::Tight,
+    )
+}
+
+/// Close one shell with exact supports that may expand in UV to fit the
+/// original rims. Plane order determines cap order. An incomplete closure
+/// or an exhausted shared budget returns an error.
+pub fn close_shell_with_expanded_exact_section_caps(
+    source: &Model,
+    shell: usize,
+    planes: &[SectionPlane],
+    max_exact_work: u64,
+    max_verification_cells: usize,
+) -> Result<AttachedSectionCaps> {
+    close_exact(
+        source,
+        shell,
+        planes,
+        max_exact_work,
+        max_verification_cells,
+        Support::ExpandedExact,
+    )
+}
+
+fn close_exact(
+    source: &Model,
+    shell: usize,
+    planes: &[SectionPlane],
+    max_exact_work: u64,
+    max_verification_cells: usize,
+    support: Support,
+) -> Result<AttachedSectionCaps> {
     close_shell(
         source,
         shell,
@@ -281,14 +319,7 @@ pub fn close_shell_with_section_caps(
         max_exact_work,
         max_verification_cells,
         |current, plane, work, cells| {
-            let report = discover_and_attach_section_caps(
-                current,
-                shell,
-                plane.normal,
-                plane.offset,
-                work,
-                cells,
-            )?;
+            let report = discover_exact(current, shell, *plane, work, cells, support)?;
             Ok((report.attachment, report.discovery_work))
         },
     )

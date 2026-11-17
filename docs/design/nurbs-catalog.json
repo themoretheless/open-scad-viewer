@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 396,
-  "unallocatedCount": 604,
+  "specifiedCount": 397,
+  "unallocatedCount": 603,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -10192,6 +10192,35 @@
       "remainingQualification": [
         "Automatically find exact free rim cycles on a selected plane and sew compact expanded exact caps.",
         "Plane membership is exact and only complete free cycles are accepted. Discovery and exact capping share the work budget and retain source topology.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0397",
+      "name": "Атомарное закрытие оболочки расширенными точными крышками по заданным плоскостям",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::planar_cap::close_shell_with_expanded_exact_section_caps",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets/expanded_support.rs",
+        "crates/brep-core/src/contact/boundary_agreement.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
+        "docs/qualification/nurbs-curvature-field-397-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-397-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Close a shell over multiple supplied planes with expandable exact supports and cumulative budgets.",
+        "Plane order determines cap order. Shared work limits cover every discovery and lift; the operation publishes a model only after complete closure.",
         "WASM and application integration are separate."
       ]
     }
