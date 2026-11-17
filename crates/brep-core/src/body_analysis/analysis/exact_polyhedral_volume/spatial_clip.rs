@@ -3660,3 +3660,102 @@ pub fn triangulate_exact_coplanar_planar_polyline_region_boolean(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactCoplanarPolylineBooleanExtrusion {
+    pub vertices_mm: Vec<[Q; 3]>,
+    /// Outward-oriented triangles of the closed shell or shells.
+    pub triangles: Vec<[usize; 3]>,
+    pub volume_mm3: Q,
+    pub exact_work: u64,
+}
+
+/// Extrude a regularized planar Boolean result along a rational vector.
+/// Reject tangential sweeps of nonempty regions and point-pinched boundaries.
+pub fn extrude_exact_coplanar_planar_polyline_region_boolean(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    operation: CoplanarPolylineBoolean,
+    sweep_mm: &[Q; 3],
+    max_exact_work: u64,
+) -> Result<ExactCoplanarPolylineBooleanExtrusion> {
+    validate_point(sweep_mm)?;
+    if sweep_mm.iter().all(Zero::is_zero) {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Extrusion requires a nonzero vector",
+        ));
+    }
+    let mesh = triangulate_exact_coplanar_planar_polyline_region_boolean(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        operation,
+        max_exact_work,
+    )?;
+    let mut remaining = max_exact_work - mesh.exact_work;
+    let mut vertices_mm = mesh.vertices_mm;
+    let vertex_count = vertices_mm.len();
+    let mut edges = BTreeMap::<[usize; 2], i32>::new();
+    let mut triangles = Vec::new();
+    let mut twice_volume = Q::zero();
+    for [a, b, c] in mesh.triangles {
+        spend(&mut remaining, 32)?;
+        let u = std::array::from_fn(|i| &vertices_mm[b][i] - &vertices_mm[a][i]);
+        let v = std::array::from_fn(|i| &vertices_mm[c][i] - &vertices_mm[a][i]);
+        let volume = super::determinant(&u, &v, sweep_mm);
+        if volume.is_zero() {
+            return Err(refuse("Extrusion vector lies in the profile plane"));
+        }
+        let [a, b, c] = if volume.is_positive() {
+            [a, b, c]
+        } else {
+            [a, c, b]
+        };
+        twice_volume += volume.abs();
+        triangles.push([a, c, b]);
+        triangles.push([a + vertex_count, b + vertex_count, c + vertex_count]);
+        for (from, to) in [(a, b), (b, c), (c, a)] {
+            let depth = u64::from((edges.len() + 1).ilog2()) + 1;
+            spend(&mut remaining, 8 * depth)?;
+            *edges.entry([from.min(to), from.max(to)]).or_default() +=
+                if from < to { 1 } else { -1 };
+        }
+    }
+    spend(&mut remaining, 4 * vertex_count as u64)?;
+    let mut boundary_degree = vec![0_u8; vertex_count];
+    for ([a, b], winding) in edges {
+        spend(&mut remaining, 8)?;
+        let [a, b] = match winding {
+            0 => continue,
+            1 => [a, b],
+            -1 => [b, a],
+            _ => return Err(refuse("Invalid cap edge incidence")),
+        };
+        for index in [a, b] {
+            boundary_degree[index] += 1;
+            if boundary_degree[index] > 2 {
+                return Err(refuse("Extrusion boundary is pinched at a vertex"));
+            }
+        }
+        triangles.push([a, b, b + vertex_count]);
+        triangles.push([a, b + vertex_count, a + vertex_count]);
+    }
+    if boundary_degree.contains(&1) {
+        return Err(refuse("Extrusion boundary is open"));
+    }
+    for index in 0..vertex_count {
+        spend(&mut remaining, 8)?;
+        let lifted = std::array::from_fn(|i| &vertices_mm[index][i] + &sweep_mm[i]);
+        vertices_mm.push(lifted);
+    }
+    Ok(ExactCoplanarPolylineBooleanExtrusion {
+        vertices_mm,
+        triangles,
+        volume_mm3: twice_volume / Q::from_integer(2.into()),
+        exact_work: max_exact_work - remaining,
+    })
+}

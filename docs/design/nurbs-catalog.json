@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 476,
-  "unallocatedCount": 524,
+  "specifiedCount": 477,
+  "unallocatedCount": 523,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12390,6 +12390,35 @@
       "remainingQualification": [
         "Triangulate exact planar Boolean results without hanging nodes on cell seams.",
         "Node each slab seam at all exact incident vertices. Triangulate convex cells about exact interior centers with shared vertex indices and consistent winding.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0477",
+      "name": "Точное выдавливание плоского булева профиля в замкнутую оболочку",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::extrude_exact_coplanar_planar_polyline_region_boolean",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "docs/qualification/nurbs-curvature-field-477-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-477-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Extrude exact planar Boolean regions as closed outward triangle shells with rational volume.",
+        "Sweep a conforming exact cap mesh and emit walls on the directed boundary. Reject pinched vertices and tangential sweeps, and integrate rational volume from cap determinants.",
         "WASM and application integration are separate."
       ]
     }

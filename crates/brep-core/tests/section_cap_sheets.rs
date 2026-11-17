@@ -6030,3 +6030,136 @@ fn exact_coplanar_boolean_mesh_preserves_tilted_hole_and_winding() {
     }
     assert_eq!(twice_area, q(-64));
 }
+
+#[test]
+fn exact_coplanar_boolean_extrusion_builds_a_closed_holed_shell_with_exact_volume() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Difference, extrude_exact_coplanar_planar_polyline_region_boolean,
+    };
+    use num_rational::BigRational as Q;
+    use std::collections::BTreeMap;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x: i64, y: i64| [q(x), q(y), q(x + y)];
+    let rect = |lo, hi| [p(lo, lo), p(lo, hi), p(hi, hi), p(hi, lo), p(lo, lo)];
+    let a = rect(0, 6);
+    let b = rect(2, 4);
+    let sweep = [q(1), q(0), q(4)];
+    let report = extrude_exact_coplanar_planar_polyline_region_boolean(
+        &a,
+        &[],
+        &b,
+        &[],
+        Difference,
+        &sweep,
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(report.volume_mm3, q(96));
+    let mut incidence = BTreeMap::<_, Vec<_>>::new();
+    let mut six_volume = q(0);
+    for &[a, b, c] in &report.triangles {
+        for [from, to] in [[a, b], [b, c], [c, a]] {
+            incidence
+                .entry([from.min(to), from.max(to)])
+                .or_default()
+                .push(from < to);
+        }
+        let [a, b, c] = [a, b, c].map(|i| &report.vertices_mm[i]);
+        for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)] {
+            six_volume += &a[i] * (&b[j] * &c[k] - &b[k] * &c[j]);
+        }
+    }
+    assert!(
+        incidence
+            .values()
+            .all(|pair| pair.len() == 2 && pair[0] != pair[1])
+    );
+    assert_eq!(six_volume, q(576));
+    assert_eq!(
+        extrude_exact_coplanar_planar_polyline_region_boolean(
+            &a,
+            &[],
+            &b,
+            &[],
+            Difference,
+            &sweep,
+            report.exact_work
+        )
+        .unwrap(),
+        report
+    );
+    assert!(
+        extrude_exact_coplanar_planar_polyline_region_boolean(
+            &a,
+            &[],
+            &b,
+            &[],
+            Difference,
+            &sweep,
+            report.exact_work - 1
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn exact_coplanar_boolean_extrusion_rejects_pinched_and_tangential_sweeps() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::*, extrude_exact_coplanar_planar_polyline_region_boolean,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y| [q(x), q(y), q(0)];
+    let rect = |lo, hi| [p(lo, lo), p(hi, lo), p(hi, hi), p(lo, hi), p(lo, lo)];
+    let a = rect(0, 2);
+    let touching = rect(2, 4);
+    let distant = rect(3, 5);
+    let normal = [q(0), q(0), q(-1)];
+    assert!(
+        extrude_exact_coplanar_planar_polyline_region_boolean(
+            &a,
+            &[],
+            &touching,
+            &[],
+            Union,
+            &normal,
+            1_000_000
+        )
+        .is_err()
+    );
+    assert!(
+        extrude_exact_coplanar_planar_polyline_region_boolean(
+            &a,
+            &[],
+            &distant,
+            &[],
+            Union,
+            &p(1, 0),
+            1_000_000
+        )
+        .is_err()
+    );
+    let report = extrude_exact_coplanar_planar_polyline_region_boolean(
+        &a,
+        &[],
+        &distant,
+        &[],
+        Union,
+        &normal,
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(report.volume_mm3, q(8));
+    let empty = extrude_exact_coplanar_planar_polyline_region_boolean(
+        &a,
+        &[],
+        &distant,
+        &[],
+        Intersection,
+        &normal,
+        1_000_000,
+    )
+    .unwrap();
+    assert!(empty.triangles.is_empty());
+    assert_eq!(empty.volume_mm3, q(0));
+}
