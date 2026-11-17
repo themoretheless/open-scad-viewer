@@ -21,6 +21,7 @@ interface Report {
     topologyIds: { edges: string[] }
   } | null
   edgeBindings?: { edgeId: string; contour: number; segment: number; interval?: [number, number]; parameters?: [Rational, Rational] }[]
+  stations?: { parameterBounds: [number, number] | null; pointBoundsMm: [number, number][] | null; status: string }[] | null
   pointBoundsMm?: [number, number][] | null
   parameterBounds?: [number, number] | null
   status?: string
@@ -169,3 +170,16 @@ const outsideStation = call(request.maxWork, stationBoundsOp, {
 assert.equal(outsideStation.status, 'outside')
 assert.equal(outsideStation.pointBoundsMm, null)
 console.log('WASM ABI returned a certified world box for an available seam station.')
+
+const divisionOp = 'brep_divide_exact_periodic_trim_contour_by_length'
+const divisionOptions = { contour: 0, divisions: 5, parameterTolerance: 1e-6 }
+const divided = call(request.maxWork, divisionOp, { ...divisionOptions, maxCells: 2048 })
+assert.ok(divided.stations)
+assert.equal(divided.stations.length, 6)
+assert.deepEqual(divided.stations[0].parameterBounds, [0, 0])
+assert.deepEqual(divided.stations[5].parameterBounds, [4, 4])
+assert.ok(divided.stations.every(station => station.status === 'tolerance' && station.pointBoundsMm?.length === 3))
+const coarseDivision = call(request.maxWork, divisionOp, { ...divisionOptions, maxCells: 6 })
+assert.equal(coarseDivision.stations?.[1].status, 'workLimit')
+assert.ok(coarseDivision.stations?.[1].pointBoundsMm)
+console.log('WASM ABI returned ordered equal-length contour station boxes and closure.')

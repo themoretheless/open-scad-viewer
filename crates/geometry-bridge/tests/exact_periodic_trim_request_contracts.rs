@@ -308,3 +308,46 @@ fn contour_station_bounds_operation_encloses_coarse_brackets_only_when_proved() 
     assert_eq!(refused["value"]["status"], "buildRefused");
     assert!(refused["value"]["pointBoundsMm"].is_null());
 }
+
+fn contour_division_request(cells: usize) -> Value {
+    let mut request = contour_station_request(0., cells);
+    request["op"] = json!("brep_divide_exact_periodic_trim_contour_by_length");
+    request["divisions"] = json!(5);
+    request
+}
+
+#[test]
+fn contour_division_operation_returns_ordered_world_boxes_and_closure() {
+    let response = run(&contour_division_request(2048));
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    assert_eq!(report["tableCells"], 6);
+    assert!(report["cells"].as_u64().unwrap() <= 2048);
+    let stations = report["stations"].as_array().unwrap();
+    assert_eq!(stations.len(), 6);
+    assert_eq!(stations[0]["parameterBounds"], json!([0., 0.]));
+    assert_eq!(stations[5]["parameterBounds"], json!([4., 4.]));
+    assert!(
+        stations
+            .iter()
+            .all(|station| station["status"] == "tolerance")
+    );
+    for station in [&stations[0], &stations[5]] {
+        let y = &station["pointBoundsMm"][1];
+        assert!(y[0].as_f64().unwrap() <= 0.5 && y[1].as_f64().unwrap() >= 0.5);
+    }
+}
+
+#[test]
+fn contour_division_operation_keeps_proved_boxes_under_cell_limit() {
+    let response = run(&contour_division_request(6));
+    assert_eq!(response["ok"], true, "{response}");
+    let stations = response["value"]["stations"].as_array().unwrap();
+    assert_eq!(stations[1]["status"], "workLimit");
+    assert!(stations[1]["pointBoundsMm"].as_array().is_some());
+    let mut request = contour_division_request(6);
+    request["maxWork"] = json!(1);
+    let response = run(&request);
+    assert!(response["value"]["stations"].is_null());
+    assert_eq!(response["value"]["refusalStage"], "build");
+}
