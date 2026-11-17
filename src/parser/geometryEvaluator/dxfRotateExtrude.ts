@@ -51,17 +51,18 @@ export function stableRotateExtrudeSections(
   evaluated: ReadonlyMap<string, Value>,
   sections: Shape[],
 ): Shape[] {
-  if (sections.length === 0) return []
-  if (sections[0].dimension !== 2) evaluationError(ctx, node.p, `${node.name}() requires 2D children`)
-  const bounds = ctx.kernel.isEmpty(sections[0].geometry)
+  const [firstSection] = sections
+  if (!firstSection) return []
+  if (firstSection.dimension !== 2) evaluationError(ctx, node.p, `${node.name}() requires 2D children`)
+  const bounds = ctx.kernel.isEmpty(firstSection.geometry)
     ? { min: [0, 0], max: [0, 0] }
-    : ctx.kernel.bounds(sections[0].geometry)
+    : ctx.kernel.bounds(firstSection.geometry)
   const radius = Math.max(Math.abs(bounds.min[0] ?? 0), Math.abs(bounds.max[0] ?? 0))
   const fragmentInput = stableFragmentInputFromEvaluated(evaluated, ctx, radius)
   const resolved = resolveOpenScadRotateExtrude({
     angle: evaluated.get('angle'),
-    profileXMin: bounds.min[0],
-    profileXMax: bounds.max[0],
+    profileXMin: bounds.min[0] ?? 0,
+    profileXMax: bounds.max[0] ?? 0,
     fn: fragmentInput.fn,
     fa: fragmentInput.fa,
     fs: fragmentInput.fs,
@@ -73,12 +74,12 @@ export function stableRotateExtrudeSections(
   if (resolved.reduced) ctx.reduced.value = true
   if (resolved.empty) return []
   const profile = resolved.reflectProfileX
-    ? ctx.kernel.transform2(sections[0].geometry, [
+    ? ctx.kernel.transform2(firstSection.geometry, [
         -1, 0, 0,
         0, 1, 0,
         0, 0, 1,
       ])
-    : sections[0].geometry
+    : firstSection.geometry
   try {
     let geometry = ctx.kernel.rotateExtrude(
       profile,
@@ -88,7 +89,7 @@ export function stableRotateExtrudeSections(
     if (resolved.postRotateDegrees !== 0) {
       geometry = ctx.kernel.rotate(geometry, [0, 0, resolved.postRotateDegrees])
     }
-    return [trackedSolid(geometry, sections[0].color, node, ctx)]
+    return [trackedSolid(geometry, firstSection.color, node, ctx)]
   } catch (error) {
     evaluationError(ctx, node.p, `${node.name}() failed: ${error instanceof Error ? error.message : String(error)}`)
   }
@@ -139,15 +140,16 @@ export async function rotateExtrude(
     return stableRotateExtrudeSections(node, ctx, evaluated, sections)
   }
 
-  if (sections.length === 0) return []
-  if (sections[0].dimension !== 2) evaluationError(ctx, node.p, 'rotate_extrude() requires 2D children')
-  const bounds = ctx.kernel.bounds(sections[0].geometry)
+  const [firstSection] = sections
+  if (!firstSection) return []
+  if (firstSection.dimension !== 2) evaluationError(ctx, node.p, 'rotate_extrude() requires 2D children')
+  const bounds = ctx.kernel.bounds(firstSection.geometry)
   const radius = Math.max(Math.abs(bounds.min[0] ?? 0), Math.abs(bounds.max[0] ?? 0))
   const angle = finiteNumber(arg(node, 'angle', -1, 360, ctx), ctx, node.p, 'revolve angle')
   const circularSegments = segments(node, ctx, 48, 3, radius)
   try {
-    const geometry = ctx.kernel.rotateExtrude(sections[0].geometry, circularSegments, angle)
-    return [trackedSolid(geometry, sections[0].color, node, ctx)]
+    const geometry = ctx.kernel.rotateExtrude(firstSection.geometry, circularSegments, angle)
+    return [trackedSolid(geometry, firstSection.color, node, ctx)]
   } catch (error) {
     evaluationError(ctx, node.p, `rotate_extrude() failed: ${error instanceof Error ? error.message : String(error)}`)
   }
@@ -164,7 +166,7 @@ export function parseLegacyColor(value: Value, ctx: EvalContext, p: number): RGB
   if (named) return [...named]
   const match = value.match(/^#([0-9a-f]{6}|[0-9a-f]{8})$/i)
   if (match) {
-    const hex = match[1]
+    const hex = match[1] ?? ''
     return [parseInt(hex.slice(0, 2), 16) / 255, parseInt(hex.slice(2, 4), 16) / 255, parseInt(hex.slice(4, 6), 16) / 255, hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1]
   }
   evaluationError(ctx, p, `Unknown color ${value}`)

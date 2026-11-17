@@ -454,7 +454,10 @@ export function evalBuiltin(expr: Extract<Expr, { kind: 'call' }>, ctx: EvalCont
   const values = isStableProfile(ctx)
     ? createDeferredOpenScadBuiltinArguments(
         expr.args.length,
-        index => evaluateArgument(expr.args[index]),
+        index => {
+          const arg = expr.args[index]
+          return arg ? evaluateArgument(arg) : undefined
+        },
       )
     : expr.args.map(evaluateArgument)
   let result: ReturnType<typeof evaluateOpenScadBuiltinFunction>

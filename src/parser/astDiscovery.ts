@@ -100,8 +100,11 @@ export function bindAssertArguments(node: CallNode, ctx: EvalContext): BoundAsse
   const span = node.argSpans[conditionKey]
   const rawCondition = span ? ctx.source.slice(span.start, span.end) : 'condition'
 
+  const condition = node.args[conditionKey]
+  if (!condition) evaluationError(ctx, node.p, 'assert() requires a condition')
+
   return {
-    condition: node.args[conditionKey],
+    condition,
     conditionText: compactDiagnosticText(rawCondition),
     message: messageKey ? node.args[messageKey] : undefined,
   }

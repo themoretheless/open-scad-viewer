@@ -16,11 +16,12 @@ export function prepareGcodePreviewTransfer(response: GcodePreviewResponse): {
   const {moves, ...metadata} = response.result.preview
   if (moves.length > GCODE_MAX_MOVE_ROWS / GCODE_MOVE_ROW_WIDTH) throw new Error('Invalid packed G-code moves')
   const moveRows = new Float64Array(moves.length * GCODE_MOVE_ROW_WIDTH)
-  for (let i = 0, j = 0; i < moves.length; i++, j += GCODE_MOVE_ROW_WIDTH) {
-    const move = moves[i]
+  let j = 0
+  for (const move of moves) {
     moveRows[j] = move.x; moveRows[j + 1] = move.y; moveRows[j + 2] = move.z
     moveRows[j + 3] = move.e; moveRows[j + 4] = move.feedrateMmS
     moveRows[j + 5] = move.layerIndex; moveRows[j + 6] = move.extruded ? 1 : 0
+    j += GCODE_MOVE_ROW_WIDTH
   }
   return {response: {...response, responseFormat: 'f64-moves-v1',
     result: {...response.result, preview: {...metadata, moveRows}}}, transfer: [moveRows.buffer]}

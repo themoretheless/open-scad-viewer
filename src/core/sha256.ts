@@ -56,14 +56,14 @@ export function sha256Hex(input: string | Uint8Array): string {
   for (let offset = 0; offset < paddedLength; offset += 64) {
     for (let index = 0, at = offset; index < 16; index++, at += 4) {
       // Big-endian word, as DataView.getUint32(at, false) reads it.
-      schedule[index] = ((padded[at] << 24) | (padded[at + 1] << 16) | (padded[at + 2] << 8) | padded[at + 3]) >>> 0
+      schedule[index] = (((padded[at] ?? 0) << 24) | ((padded[at + 1] ?? 0) << 16) | ((padded[at + 2] ?? 0) << 8) | (padded[at + 3] ?? 0)) >>> 0
     }
     for (let index = 16; index < 64; index++) {
-      const left = schedule[index - 15]
-      const right = schedule[index - 2]
+      const left = schedule[index - 15] ?? 0
+      const right = schedule[index - 2] ?? 0
       const s0 = rotateRight(left, 7) ^ rotateRight(left, 18) ^ (left >>> 3)
       const s1 = rotateRight(right, 17) ^ rotateRight(right, 19) ^ (right >>> 10)
-      schedule[index] = (schedule[index - 16] + s0 + schedule[index - 7] + s1) >>> 0
+      schedule[index] = ((schedule[index - 16] ?? 0) + s0 + (schedule[index - 7] ?? 0) + s1) >>> 0
     }
 
     let a = h0
@@ -77,7 +77,7 @@ export function sha256Hex(input: string | Uint8Array): string {
     for (let index = 0; index < 64; index++) {
       const sum1 = rotateRight(e, 6) ^ rotateRight(e, 11) ^ rotateRight(e, 25)
       const choose = (e & f) ^ (~e & g)
-      const temporary1 = (h + sum1 + choose + ROUND_CONSTANTS[index] + schedule[index]) >>> 0
+      const temporary1 = (h + sum1 + choose + (ROUND_CONSTANTS[index] ?? 0) + (schedule[index] ?? 0)) >>> 0
       const sum0 = rotateRight(a, 2) ^ rotateRight(a, 13) ^ rotateRight(a, 22)
       const majority = (a & b) ^ (a & c) ^ (b & c)
       const temporary2 = (sum0 + majority) >>> 0

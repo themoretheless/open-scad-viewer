@@ -58,14 +58,15 @@ export async function differenceChildren(
   evalNodes: EvalNodesFn,
   evalPreparedNodes: EvalPreparedNodesFn,
 ): Promise<Shape[]> {
-  if (node.children.length === 0) return []
+  const [firstChild] = node.children
+  if (firstChild === undefined) return []
   const childContext = isStableProfile(ctx)
     ? enterStableStatementScope(node.children, ctx)
     : null
   const base = await booleanShapesCooperative(
     childContext === null
-      ? await evalNodes([node.children[0]], ctx)
-      : await evalPreparedNodes([node.children[0]], childContext),
+      ? await evalNodes([firstChild], ctx)
+      : await evalPreparedNodes([firstChild], childContext),
     'union',
     ctx,
     node.p,
@@ -83,8 +84,10 @@ export async function differenceChildren(
     cutterOperands.push(...await booleanShapesCooperative(shapes, 'union', ctx, node.p))
   }
   const cutters = homogeneousShapes(cutterOperands, 'union', ctx, node.p)
-  if (base.length === 0 || cutters.length === 0) return base
-  if (base[0].dimension !== cutters[0].dimension) {
+  const [baseShape] = base
+  const [firstCutter] = cutters
+  if (!baseShape || !firstCutter) return base
+  if (baseShape.dimension !== firstCutter.dimension) {
     if (isStableProfile(ctx)) {
       warn(ctx, 'difference() ignored child geometry with a different dimension')
       return base
@@ -92,30 +95,31 @@ export async function differenceChildren(
     evaluationError(ctx, node.p, 'difference() cannot mix 2D and 3D children')
   }
   ctx.control?.poll()
-  if (base[0].dimension === 3) {
-    const operands = [base[0].geometry, ...cutters.map(cutter => (cutter as Shape3D).geometry)]
+  if (baseShape.dimension === 3) {
+    const operands = [baseShape.geometry, ...cutters.map(cutter => (cutter as Shape3D).geometry)]
     return [{
       dimension: 3,
       geometry: ctx.control?.cooperative && ctx.kernel.boolean3Cooperatively !== undefined
         ? await cooperativeBoolean3(ctx, node.p, 'difference', operands)
         : kernelCall(ctx, node.p, () => ctx.kernel.boolean3('difference', operands)),
-      color: base[0].color,
+      color: baseShape.color,
       entityId: currentEntityId(ctx),
     }]
   }
-  const operands = [base[0].geometry, ...cutters.map(cutter => (cutter as Shape2D).geometry)]
+  const operands = [baseShape.geometry, ...cutters.map(cutter => (cutter as Shape2D).geometry)]
   return [{
     dimension: 2,
     geometry: kernelCall(ctx, node.p, () => ctx.kernel.boolean2('difference', operands)),
-    color: base[0].color,
+    color: baseShape.color,
     entityId: currentEntityId(ctx),
   }]
 }
 
 
 export function hullShapes(shapes: Shape[], node: CallNode, ctx: EvalContext): Shape[] {
-  if (shapes.length === 0) return []
-  const dimension = shapes[0].dimension
+  const [firstShape] = shapes
+  if (!firstShape) return []
+  const dimension = firstShape.dimension
   if (shapes.some(shape => shape.dimension !== dimension)) {
     if (!isStableProfile(ctx)) evaluationError(ctx, node.p, 'hull() cannot mix 2D and 3D children')
     warn(ctx, 'hull() ignored child geometry with a different dimension')
@@ -124,12 +128,12 @@ export function hullShapes(shapes: Shape[], node: CallNode, ctx: EvalContext): S
   ctx.control?.poll()
   if (dimension === 3) {
     const geometry = kernelCall(ctx, node.p, () => ctx.kernel.hull3(shapes.map(shape => (shape as Shape3D).geometry)))
-    return [trackedSolid(geometry, shapes[0].color, node, ctx)]
+    return [trackedSolid(geometry, firstShape.color, node, ctx)]
   }
   return [{
     dimension: 2,
     geometry: kernelCall(ctx, node.p, () => ctx.kernel.hull2(shapes.map(shape => (shape as Shape2D).geometry))),
-    color: shapes[0].color,
+    color: firstShape.color,
     entityId: currentEntityId(ctx),
   }]
 }
@@ -149,9 +153,10 @@ export async function resizeChildren(
   const rawNewsize = evaluated.get('newsize')
   const rawAuto = evaluated.get('auto') ?? false
   const shapes = await evalNodes(node.children, ctx)
-  if (shapes.length === 0) return shapes
+  const [firstShape] = shapes
+  if (!firstShape) return shapes
 
-  const dimension = shapes[0].dimension
+  const dimension = firstShape.dimension
   if (shapes.some(shape => shape.dimension !== dimension)) {
     evaluationError(ctx, node.p, 'resize() cannot mix 2D and 3D children')
   }
@@ -176,16 +181,17 @@ export async function resizeChildren(
     geometry: ctx.kernel.scale(
       shape.geometry,
       shape.dimension === 3
-        ? [resolved.scales[0], resolved.scales[1], resolved.scales[2]]
-        : [resolved.scales[0], resolved.scales[1]],
+        ? [resolved.scales[0] ?? 1, resolved.scales[1] ?? 1, resolved.scales[2] ?? 1]
+        : [resolved.scales[0] ?? 1, resolved.scales[1] ?? 1],
     ),
   }))
 }
 
 
 export function minkowskiShapes(shapes: Shape[], node: CallNode, ctx: EvalContext): Shape[] {
-  if (shapes.length === 0) return []
-  const dimension = shapes[0].dimension
+  const [firstShape] = shapes
+  if (!firstShape) return []
+  const dimension = firstShape.dimension
   if (shapes.some(shape => shape.dimension !== dimension)) {
     evaluationError(ctx, node.p, 'minkowski() cannot mix 2D and 3D children')
   }
@@ -197,14 +203,14 @@ export function minkowskiShapes(shapes: Shape[], node: CallNode, ctx: EvalContex
       return [{
         dimension: 2,
         geometry,
-        color: shapes[0].color,
+        color: firstShape.color,
         entityId: currentEntityId(ctx),
       }]
     }
-    let geometry = (shapes[0] as Shape3D).geometry
+    let geometry = (firstShape as Shape3D).geometry
     if (ctx.kernel.isEmpty(geometry)) return []
-    for (let index = 1; index < shapes.length; index++) {
-      const right = (shapes[index] as Shape3D).geometry
+    for (const shape of shapes.slice(1)) {
+      const right = (shape as Shape3D).geometry
       if (ctx.kernel.isEmpty(right)) return []
       // The kernel exposes the right operand as an anchored dilation. Normalize
       // it around a point that is genuinely in the solid (a real mesh vertex),
@@ -221,7 +227,7 @@ export function minkowskiShapes(shapes: Shape[], node: CallNode, ctx: EvalContex
         anchor,
       )
     }
-    return [trackedSolid(geometry, shapes[0].color, node, ctx)]
+    return [trackedSolid(geometry, firstShape.color, node, ctx)]
   } catch (error) {
     evaluationError(ctx, node.p, `minkowski() failed: ${error instanceof Error ? error.message : String(error)}`)
   }
@@ -234,9 +240,10 @@ export function stableLinearExtrudeSections(
   evaluated: ReadonlyMap<string, Value>,
   sections: Shape[],
 ): Shape[] {
-  if (sections.length === 0) return []
-  if (sections[0].dimension !== 2) evaluationError(ctx, node.p, `${node.name}() requires 2D children`)
-  const profilePoints = ctx.kernel.polygons(sections[0].geometry).flatMap(polygon => (
+  const [firstSection] = sections
+  if (!firstSection) return []
+  if (firstSection.dimension !== 2) evaluationError(ctx, node.p, `${node.name}() requires 2D children`)
+  const profilePoints = ctx.kernel.polygons(firstSection.geometry).flatMap(polygon => (
     polygon.map(point => [point[0], point[1]] as const)
   ))
   const fragmentInput = stableFragmentInputFromEvaluated(evaluated, ctx, 0)
@@ -256,14 +263,14 @@ export function stableLinearExtrudeSections(
   if (resolved.empty) return []
   try {
     const geometry = ctx.kernel.linearExtrude(
-      sections[0].geometry,
+      firstSection.geometry,
       resolved.height,
       resolved.manifoldNDivisions,
       resolved.twist,
       [...resolved.scale] as Vec2,
       resolved.center,
     )
-    return [trackedSolid(geometry, sections[0].color, node, ctx)]
+    return [trackedSolid(geometry, firstSection.color, node, ctx)]
   } catch (error) {
     evaluationError(ctx, node.p, `${node.name}() failed: ${error instanceof Error ? error.message : String(error)}`)
   }
@@ -289,8 +296,9 @@ export async function linearExtrude(
     return stableLinearExtrudeSections(node, ctx, evaluated, sections)
   }
 
-  if (sections.length === 0) return []
-  if (sections[0].dimension !== 2) evaluationError(ctx, node.p, 'linear_extrude() requires 2D children')
+  const [firstSection] = sections
+  if (!firstSection) return []
+  if (firstSection.dimension !== 2) evaluationError(ctx, node.p, 'linear_extrude() requires 2D children')
 
   const height = finiteNumber(arg(node, 'height', 0, 1, ctx), ctx, node.p, 'extrusion height')
   if (height <= 0) evaluationError(ctx, node.p, 'linear_extrude() height must be positive')
@@ -302,8 +310,8 @@ export async function linearExtrude(
   const scaleValues = Array.isArray(rawScale) ? vectorValue(rawScale, ctx, node.p, 'extrusion scale') : [finiteNumber(rawScale, ctx, node.p, 'extrusion scale')]
   const scale: Vec2 = [scaleValues[0] ?? 1, scaleValues[1] ?? scaleValues[0] ?? 1]
   try {
-    const geometry = ctx.kernel.linearExtrude(sections[0].geometry, height, slices, twist, scale, arg(node, 'center', -1, false, ctx) === true)
-    return [trackedSolid(geometry, sections[0].color, node, ctx)]
+    const geometry = ctx.kernel.linearExtrude(firstSection.geometry, height, slices, twist, scale, arg(node, 'center', -1, false, ctx) === true)
+    return [trackedSolid(geometry, firstSection.color, node, ctx)]
   } catch (error) {
     evaluationError(ctx, node.p, `linear_extrude() failed: ${error instanceof Error ? error.message : String(error)}`)
   }
@@ -324,7 +332,7 @@ export async function dxfLinearExtrude(
   const values = new Map(evaluated.values)
   if (values.get('height') === undefined) {
     const first = evaluated.authored[0]
-    const firstValue = first?.name === undefined ? evaluated.evaluated.get(first) : undefined
+    const firstValue = first !== undefined && first.name === undefined ? evaluated.evaluated.get(first) : undefined
     if (typeof firstValue === 'number' && Number.isFinite(firstValue)) values.set('height', firstValue)
   }
 

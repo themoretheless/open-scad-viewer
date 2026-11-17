@@ -105,7 +105,7 @@ export function encodeBinary(value: unknown): Uint8Array {
       offset += 5
       for (let i = 0; i < len; i++) {
         data[offset] = 7
-        view.setUint32(offset + 1, v[i], true)
+        view.setUint32(offset + 1, v[i] ?? 0, true)
         view.setUint32(offset + 5, 0, true)
         offset += 9
       }
@@ -120,7 +120,7 @@ export function encodeBinary(value: unknown): Uint8Array {
       view.setUint32(offset + 1, len, true)
       offset += 5
       for (let i = 0; i < len; i++) {
-        const x = v[i]
+        const x = v[i] ?? 0
         data[offset] = x >= 0 ? 7 : 8
         view.setInt32(offset + 1, x, true)
         view.setInt32(offset + 5, x >= 0 ? 0 : -1, true)
@@ -146,6 +146,7 @@ export function encodeBinary(value: unknown): Uint8Array {
       let written = 0
       for (let i = 0; i < keys.length; i++) {
         const k = keys[i]
+        if (k === undefined) continue
         const item = rec[k]
         if (item === undefined) continue
         written++

@@ -81,6 +81,7 @@ export function deriveSemanticCapabilityClosure(
     }
     for (const inputIndex of semanticNodeInputs(node)) {
       const input = core.nodes[inputIndex]
+      if (!input) continue
       if (input.valueType.geometryKind !== node.valueType.geometryKind
         || input.valueType.space !== node.valueType.space) {
         capabilities.add(

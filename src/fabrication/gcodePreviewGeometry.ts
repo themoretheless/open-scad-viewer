@@ -87,18 +87,17 @@ export function gcodeMeshBounds(mesh: GcodeSceneMesh): GcodeMeshBounds {
   }
   const vertexCount = vertices.length / 6
   const visited = new Uint8Array(vertexCount)
-  const m0 = transform[0], m1 = transform[1], m2 = transform[2], m3 = transform[3]
-  const m4 = transform[4], m5 = transform[5], m6 = transform[6], m7 = transform[7]
-  const m8 = transform[8], m9 = transform[9], m10 = transform[10], m11 = transform[11]
+  const m0 = transform[0] ?? NaN, m1 = transform[1] ?? NaN, m2 = transform[2] ?? NaN, m3 = transform[3] ?? NaN
+  const m4 = transform[4] ?? NaN, m5 = transform[5] ?? NaN, m6 = transform[6] ?? NaN, m7 = transform[7] ?? NaN
+  const m8 = transform[8] ?? NaN, m9 = transform[9] ?? NaN, m10 = transform[10] ?? NaN, m11 = transform[11] ?? NaN
   let minX = Infinity, minY = Infinity, minZ = Infinity
   let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity
-  for (let i = 0; i < indices.length; i++) {
-    const index = indices[i]
+  for (const index of indices) {
     if (index >= vertexCount) throw new Error('Mesh contains an invalid vertex index.')
     if (visited[index]) continue
     visited[index] = 1
     const vo = index * 6
-    const vx = vertices[vo], vy = vertices[vo + 1], vz = vertices[vo + 2]
+    const vx = vertices[vo] ?? NaN, vy = vertices[vo + 1] ?? NaN, vz = vertices[vo + 2] ?? NaN
     const wx = m0 * vx + m1 * vy + m2 * vz + m3
     const wy = m4 * vx + m5 * vy + m6 * vz + m7
     const wz = m8 * vx + m9 * vy + m10 * vz + m11
@@ -123,13 +122,13 @@ export function gcodeLayerRange(preview: GcodePreviewResult, layerIndex: number)
     let left = 0, right = moveCount
     while (left < right) {
       const middle = Math.floor((left + right) / 2)
-      if (rows[middle * GCODE_MOVE_ROW_WIDTH + 5] < layer) left = middle + 1
+      if ((rows[middle * GCODE_MOVE_ROW_WIDTH + 5] ?? NaN) < layer) left = middle + 1
       else right = middle
     }
     return left
   }
   const start = lowerBound(layerIndex), end = lowerBound(layerIndex + 1)
-  return { start, end, z: start < end ? rows[start * GCODE_MOVE_ROW_WIDTH + 2] : null }
+  return { start, end, z: start < end ? rows[start * GCODE_MOVE_ROW_WIDTH + 2] ?? null : null }
 }
 
 export function drawGcodeLayer(canvas: HTMLCanvasElement, preview: GcodePreviewResult, layerIndex: number, showTravel: boolean) {
@@ -152,7 +151,7 @@ export function drawGcodeLayer(canvas: HTMLCanvasElement, preview: GcodePreviewR
     for (let index = Math.max(1, range.start); index < range.end; index++) {
       const current = index * GCODE_MOVE_ROW_WIDTH, previous = current - GCODE_MOVE_ROW_WIDTH
       if ((rows[current + 6] === 1) !== extrusion) continue
-      context.moveTo(x(rows[previous]), y(rows[previous + 1])); context.lineTo(x(rows[current]), y(rows[current + 1]))
+      context.moveTo(x(rows[previous] ?? NaN), y(rows[previous + 1] ?? NaN)); context.lineTo(x(rows[current] ?? NaN), y(rows[current + 1] ?? NaN))
     }
     context.strokeStyle = extrusion ? '#5bcbff' : '#e8ad61'
     context.lineWidth = extrusion ? 2 : 1.2

@@ -94,8 +94,9 @@ export function compatibilityDxfProfile(
       region.fillRule === 'evenodd' ? 'EvenOdd' : 'NonZero',
     ))
     if (sections.length === 0) return []
-    const geometry = sections.length === 1
-      ? sections[0]
+    const [onlySection] = sections
+    const geometry = sections.length === 1 && onlySection
+      ? onlySection
       : ctx.kernel.boolean2('union', sections)
     if (ctx.kernel.isEmpty(geometry)) return []
     return [{

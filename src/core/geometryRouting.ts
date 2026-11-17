@@ -114,29 +114,30 @@ export function parseGeometrySourceRoutingHeader(source: string): GeometrySource
     const requiresMatch = /^\s*\/\/\s*@requires\s+(.+?)\s*$/.exec(directiveLine)
     const engineMatch = /^\s*\/\/\s*@engine(?:\s+.*)?$/.exec(directiveLine)
 
-    if (languageMatch) {
+    const declaredLanguage = languageMatch?.[1]
+    if (languageMatch && declaredLanguage !== undefined) {
       if (bodyStarted || codeBeforeDirective) {
         throw new GeometryLanguageContractError(
           'The @language directive must be in the leading source header.',
-          languageMatch[1],
+          declaredLanguage,
           lineNumber,
         )
       }
       if (languageDirectiveLine !== null) {
         throw new GeometryLanguageContractError(
           `The @language directive is duplicated (first declared on line ${languageDirectiveLine}).`,
-          languageMatch[1],
+          declaredLanguage,
           lineNumber,
         )
       }
-      if (languageMatch[1] !== 'legacy/current' && languageMatch[1] !== 'openscad-viewer/brep-1') {
+      if (declaredLanguage !== 'legacy/current' && declaredLanguage !== 'openscad-viewer/brep-1') {
         throw new GeometryLanguageContractError(
-          `Unsupported geometry language contract ${languageMatch[1]}.`,
-          languageMatch[1],
+          `Unsupported geometry language contract ${declaredLanguage}.`,
+          declaredLanguage,
           lineNumber,
         )
       }
-      languageContract = languageMatch[1]
+      languageContract = declaredLanguage
       languageDirectiveLine = lineNumber
       continue
     }
@@ -149,7 +150,7 @@ export function parseGeometrySourceRoutingHeader(source: string): GeometrySource
           lineNumber,
         )
       }
-      const identifiers = requiresMatch[1].split(/[\s,]+/).filter(Boolean)
+      const identifiers = (requiresMatch[1] ?? '').split(/[\s,]+/).filter(Boolean)
       if (!identifiers.length || identifiers.some(identifier => !CAPABILITY_ID.test(identifier))) {
         throw new GeometryLanguageContractError(
           'The @requires directive contains an invalid capability identifier.',
@@ -181,7 +182,7 @@ export function parseGeometrySourceRoutingHeader(source: string): GeometrySource
     const malformedReservedDirective = /^\s*\/\/\s*@(language|requires|engine)\b/i.exec(directiveLine)
     if (malformedReservedDirective) {
       throw new GeometryLanguageContractError(
-        `Malformed @${malformedReservedDirective[1].toLowerCase()} directive.`,
+        `Malformed @${(malformedReservedDirective[1] ?? '').toLowerCase()} directive.`,
         languageContract,
         lineNumber,
       )

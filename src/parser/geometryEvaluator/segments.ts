@@ -121,7 +121,7 @@ export function makePolyhedron(node: CallNode, ctx: EvalContext): Shape[] {
   for (const point of points) {
     const vector = vectorValue(point, ctx, node.p, 'polyhedron point')
     if (vector.length < 3) evaluationError(ctx, node.p, 'Each polyhedron point needs three coordinates')
-    vertices.push(vector[0], vector[1], vector[2])
+    vertices.push(vector[0] ?? 0, vector[1] ?? 0, vector[2] ?? 0)
   }
   const indices: number[] = []
   for (const face of faces) {
@@ -131,7 +131,7 @@ export function makePolyhedron(node: CallNode, ctx: EvalContext): Shape[] {
     // OpenSCAD faces are wound clockwise viewed from outside; the kernel
     // requires counter-clockwise — reverse the fan so spec-correct
     // polyhedra build outward-facing instead of inside-out.
-    for (let i = 1; i < polygon.length - 1; i++) indices.push(polygon[0], polygon[i + 1], polygon[i])
+    for (let i = 1; i < polygon.length - 1; i++) indices.push(polygon[0] ?? 0, polygon[i + 1] ?? 0, polygon[i] ?? 0)
   }
   try {
     // Weld duplicated coordinates first: OpenSCAD accepts point lists with
@@ -215,9 +215,9 @@ export async function transformStableChildren(
     node.p,
     node.name,
   )
-  if (shapes.length === 0) return []
+  const [shape] = shapes
+  if (!shape) return []
 
-  const shape = shapes[0]
   const singular = shape.dimension === 3 ? plan.matrix3dSingular : plan.matrix2dSingular
   if (plan.dropsChildren || singular) {
     if (singular) warn(ctx, `${node.name}() produced empty geometry from a singular transform`)
@@ -326,8 +326,9 @@ export function homogeneousShapes(
   p: number,
   diagnosticName: string = operation,
 ): Shape[] {
-  if (shapes.length === 0) return []
-  const dimension = shapes[0].dimension
+  const [firstShape] = shapes
+  if (!firstShape) return []
+  const dimension = firstShape.dimension
   if (!shapes.some(shape => shape.dimension !== dimension)) return shapes
   if (!isStableProfile(ctx)) {
     evaluationError(ctx, p, `${diagnosticName}() cannot mix 2D and 3D children`)
@@ -346,16 +347,17 @@ export function booleanShapes(
   diagnosticName: string = operation,
 ): Shape[] {
   const shapes = homogeneousShapes(sourceShapes, operation, ctx, p, diagnosticName)
-  if (shapes.length <= 1) return shapes
+  const [firstShape] = shapes
+  if (shapes.length <= 1 || !firstShape) return shapes
   ctx.control?.poll()
-  if (shapes[0].dimension === 3) {
+  if (firstShape.dimension === 3) {
     const solids = shapes.map(shape => (shape as Shape3D).geometry)
     const geometry = kernelCall(ctx, p, () => ctx.kernel.boolean3(operation, solids))
-    return [{ dimension: 3, geometry, color: shapes[0].color, entityId: currentEntityId(ctx) }]
+    return [{ dimension: 3, geometry, color: firstShape.color, entityId: currentEntityId(ctx) }]
   }
   const sections = shapes.map(shape => (shape as Shape2D).geometry)
   const geometry = kernelCall(ctx, p, () => ctx.kernel.boolean2(operation, sections))
-  return [{ dimension: 2, geometry, color: shapes[0].color, entityId: currentEntityId(ctx) }]
+  return [{ dimension: 2, geometry, color: firstShape.color, entityId: currentEntityId(ctx) }]
 }
 
 /**

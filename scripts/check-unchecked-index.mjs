@@ -6,7 +6,15 @@ import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 /** Path prefixes (relative to the repository root) that compile cleanly under the flag. */
-export const CLEAN_PATHS = Object.freeze(['src/composables/', 'src/data/', 'src/dev/', 'src/main.ts'])
+export const CLEAN_PATHS = Object.freeze([
+  'src/composables/',
+  'src/core/',
+  'src/data/',
+  'src/dev/',
+  'src/fabrication/',
+  'src/main.ts',
+  'src/parser/',
+])
 
 const ERROR_LINE = /^(.+?)\(\d+,\d+\): error TS\d+:/
 

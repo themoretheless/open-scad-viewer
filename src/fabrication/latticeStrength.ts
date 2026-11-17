@@ -60,9 +60,11 @@ export function analyzeLatticeStrength(mesh: LatticeGraphMesh, options: Lighteni
 export function weakSpotMarkerMeshes(spots: readonly LatticeWeakSpot[], markerMm = 1.6): MeshData[] {
   const soups = callGeometryRust<number[][]>('cad_lattice_weak_spot_markers', {spots: spots.map(s => ({at: s.at, score: s.score})), markerMm})
   return soups.map((soup, i) => {
+    const spot = spots[i]
+    if (!spot) throw new Error('Weak-spot marker without a matching spot.')
     const positions = new Float32Array(soup)
-    const mesh = importedStlToMeshData({positions, triangleCount: positions.length / 9}, spots[i].color)
-    return {...mesh, entityId: `entity:weak-spot/${spots[i].kind}/${i}` as SceneEntityId}
+    const mesh = importedStlToMeshData({positions, triangleCount: positions.length / 9}, spot.color)
+    return {...mesh, entityId: `entity:weak-spot/${spot.kind}/${i}` as SceneEntityId}
   })
 }
 

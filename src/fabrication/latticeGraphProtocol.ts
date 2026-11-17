@@ -45,7 +45,7 @@ export function isNominalLatticeGraph(value: unknown): value is NominalLatticeGr
     coordinates.add(key)
   }
   for (let k = 0; k < 3; k++) {
-    const values = graph.nodes.map(node => node[k])
+    const values = graph.nodes.map(node => node[k] ?? NaN)
     if (!(Math.max(...values) > Math.min(...values))) return false
   }
   for (const edge of graph.edges) {

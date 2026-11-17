@@ -70,7 +70,7 @@ function hashBytes(hash: number, bytes: Uint8Array) {
     index = full
   }
   for (; index < bytes.length; index++) {
-    next ^= bytes[index]
+    next ^= bytes[index] ?? 0
     next = Math.imul(next, 0x01000193) >>> 0
   }
   return next
@@ -96,8 +96,7 @@ export function geometrySceneFromMeshes(meshes: readonly MeshData[]): GeometrySc
   const assets: GeometryAsset[] = []
   const assetsById = new Map<GeometryAssetId, GeometryAsset>()
   const entities: SceneEntity[] = []
-  for (let index = 0; index < meshes.length; index++) {
-    const mesh = meshes[index]
+  for (const [index, mesh] of meshes.entries()) {
     let id = mesh.geometryAssetId ?? geometryAssetId(mesh.vertices, mesh.indices)
     const existing = assetsById.get(id)
     if (existing && (!sameView(existing.vertices, mesh.vertices) || !sameView(existing.indices, mesh.indices))) {

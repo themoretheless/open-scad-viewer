@@ -15,10 +15,11 @@ export function gcodePreviewMoveRows(preview:GcodePreviewResult):Float64Array {
   let rows=previewRows.get(preview)
   if(rows)return rows
   rows=new Float64Array(preview.moves.length*GCODE_MOVE_ROW_WIDTH)
-  for(let i=0,j=0;i<preview.moves.length;i++,j+=GCODE_MOVE_ROW_WIDTH){
-    const move=preview.moves[i]
+  let j=0
+  for(const move of preview.moves){
     rows[j]=move.x;rows[j+1]=move.y;rows[j+2]=move.z;rows[j+3]=move.e
     rows[j+4]=move.feedrateMmS;rows[j+5]=move.layerIndex;rows[j+6]=move.extruded?1:0
+    j+=GCODE_MOVE_ROW_WIDTH
   }
   previewRows.set(preview,rows)
   return rows
@@ -40,7 +41,7 @@ export function unpackGcodePreview({moveRows,...metadata}:Omit<PackedGcodePrevie
   // Copy once, so the unpacked preview never retains or aliases the wire buffer.
   const rows=moveRows instanceof Float64Array?moveRows.slice():Float64Array.from(moveRows)
   for(let i=0;i<rows.length;i+=GCODE_MOVE_ROW_WIDTH){
-    const x=rows[i],y=rows[i+1],z=rows[i+2],e=rows[i+3],feedrateMmS=rows[i+4],layerIndex=rows[i+5],flag=rows[i+6]
+    const x=rows[i]??NaN,y=rows[i+1]??NaN,z=rows[i+2]??NaN,e=rows[i+3]??NaN,feedrateMmS=rows[i+4]??NaN,layerIndex=rows[i+5]??NaN,flag=rows[i+6]
     if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(z)||!Number.isFinite(e)||!Number.isFinite(feedrateMmS)
       ||!Number.isInteger(layerIndex)||layerIndex<0||layerIndex>=2048||(flag!==0&&flag!==1))throw new Error('Invalid packed G-code move')
   }
@@ -51,7 +52,7 @@ export function unpackGcodePreview({moveRows,...metadata}:Omit<PackedGcodePrevie
     if(!moves){
       moves=new Array(count)
       for(let i=0,j=0;j<count;i+=GCODE_MOVE_ROW_WIDTH,j++)
-        moves[j]={x:rows[i],y:rows[i+1],z:rows[i+2],e:rows[i+3],feedrateMmS:rows[i+4],layerIndex:rows[i+5],extruded:rows[i+6]===1}
+        moves[j]={x:rows[i]??NaN,y:rows[i+1]??NaN,z:rows[i+2]??NaN,e:rows[i+3]??NaN,feedrateMmS:rows[i+4]??NaN,layerIndex:rows[i+5]??NaN,extruded:rows[i+6]===1}
     }
     return moves
   }})
