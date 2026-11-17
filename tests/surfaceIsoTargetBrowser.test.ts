@@ -1,29 +1,35 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
 import { SurfaceSelfIntersectionBrowser } from '../src/kernel/surfaceSelfIntersectionBrowser'
-import type { SurfaceIsoTargetQuery } from '../src/kernel/surfaceIsoTargetProtocol'
+import type { SurfaceIsoTargetQuery, SurfaceIsoTargetReport } from '../src/kernel/surfaceIsoTargetProtocol'
+import type { NurbsSurface } from '../src/kernel/nurbsSurface'
+import type {
+  OriginalPatchContactsQuery,
+  OriginalPatchContactsReport,
+} from '../src/kernel/originalPatchContactsProtocol'
+type WorkerHandler = (event: { data: unknown }) => void
 class FakeWorker {
   static all: FakeWorker[] = []
-  onmessage: any
-  onerror: any
-  onmessageerror: any
-  sent: any
+  onmessage!: WorkerHandler
+  onerror!: WorkerHandler
+  onmessageerror!: WorkerHandler
+  sent!: Record<string, unknown>
   terminated = 0
   constructor() {
     FakeWorker.all.push(this)
   }
-  postMessage(v: any) {
+  postMessage(v: Record<string, unknown>) {
     this.sent = v
   }
   terminate() {
     this.terminated++
   }
-  reply(report: any) {
+  reply(report: unknown) {
     this.onmessage({ data: { type: 'surface-self-result/1', id: this.sent.id, ok: true, report } })
   }
 }
 const query = (): SurfaceIsoTargetQuery => ({
-  source: {} as any,
-  target: {} as any,
+  source: {} as NurbsSurface,
+  target: {} as NurbsSurface,
   axis: 0,
   parameter: 0.5,
   window: [
@@ -33,7 +39,7 @@ const query = (): SurfaceIsoTargetQuery => ({
   ],
   maxCells: 100,
 })
-const report = (): any => ({
+const report = (): SurfaceIsoTargetReport => ({
   schema: 'nurbs-surface-iso-target-window/1',
   status: 'absent-in-window',
   axis: 0,
@@ -105,7 +111,7 @@ describe('iso target browser ownership', () => {
     const l = lane(),
       c = new AbortController(),
       p = l.inspectIsoTarget(query(), { signal: c.signal })
-    await expect(l.inspect({} as any, 100)).rejects.toThrow('busy')
+    await expect(l.inspect({} as NurbsSurface, 100)).rejects.toThrow('busy')
     c.abort()
     await expect(p).rejects.toThrow('cancelled')
     expect(l.snapshot()).toEqual({ active: false, workersStarted: 1, workersTerminated: 1 })
@@ -131,8 +137,14 @@ describe('iso target browser ownership', () => {
   })
 })
 
-const patchQuery = () => ({ curve: {} as any, patch: {} as any, tolerance: 1e-9, maxSpans: 10, maxExactWork: 100000 })
-const patchReport = (): any => ({
+const patchQuery = (): OriginalPatchContactsQuery => ({
+  curve: {} as OriginalPatchContactsQuery['curve'],
+  patch: {} as OriginalPatchContactsQuery['patch'],
+  tolerance: 1e-9,
+  maxSpans: 10,
+  maxExactWork: 100000,
+})
+const patchReport = (): OriginalPatchContactsReport => ({
   schema: 'nurbs-original-affine-patch-contacts/1',
   status: 'absent-on-patch',
   presenceProven: false,

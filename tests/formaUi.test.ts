@@ -16,10 +16,13 @@ import topbarUi from '../src/ui/Topbar.ui?raw'
 import viewerToolbarUi from '../src/ui/ViewerToolbar.ui?raw'
 import workspaceActionBarUi from '../src/ui/WorkspaceActionBar.ui?raw'
 
+type HostHandler = (event: unknown) => void
+type HostProps = Record<string, unknown> & { onClick: HostHandler; onChange: HostHandler; onInput: HostHandler }
+
 class TestNode {
   parent: TestNode | null = null
   children: TestNode[] = []
-  props: Record<string, any> = {}
+  props = {} as HostProps
   text = ''
   constructor(public tag: string) {}
 }

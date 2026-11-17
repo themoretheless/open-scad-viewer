@@ -1,14 +1,29 @@
 import { readFileSync } from 'node:fs'
 import { createRenderer, nextTick, ref, h } from 'svet'
-import { it, expect, vi } from 'vitest'
-const state = vi.hoisted(() => ({ tasks: [] as any[], worker: null as any }))
+import { it, expect, vi, type Mock } from 'vitest'
+import type { NurbsSurface } from '../src/kernel/nurbsSurface'
+import type { MainSolidJob } from '../src/kernel/mainSolidProtocol'
+import type { MainSolidPort } from '../src/kernel/mainSolidWorkerClient'
+type PreviewTask = { resolve: (value: unknown) => void; reject: (reason: unknown) => void; job: unknown }
+type PreviewWorker = { cancel: Mock; dispose: Mock; run: Mock }
+type HostHandler = (event?: unknown) => unknown
+type HostNode = {
+  type: string
+  children: HostNode[]
+  props: Record<string, unknown> & { onClick: HostHandler; onToggle: HostHandler }
+  parent: HostNode | null
+  text: string
+}
+type PreviewDisplay = { witness: unknown; lines: unknown[] } | null
+type TestPort = MainSolidPort & { postMessage: Mock; terminate: Mock }
+const state = vi.hoisted(() => ({ tasks: [] as PreviewTask[], worker: null as PreviewWorker | null }))
 vi.mock('../src/kernel/solidPreviewWorker', () => ({
   createSolidPreviewWorker: () => {
     state.tasks = []
     state.worker = {
       cancel: vi.fn(),
       dispose: vi.fn(),
-      run: vi.fn((job: any) => new Promise((resolve, reject) => state.tasks.push({ resolve, reject, job }))),
+      run: vi.fn((job: unknown) => new Promise((resolve, reject) => state.tasks.push({ resolve, reject, job }))),
     }
     return state.worker
   },
@@ -31,8 +46,14 @@ vi.mock('../src/kernel/nurbsSurface', () => ({
 import Panel from '../src/components/SourceGraphG2Preview.svt'
 const actual = JSON.parse(readFileSync('tests/fixtures/source-graph-g2-preview-v1.json', 'utf8')).direct
 it('opens preview, cancels stale work, retries and clears diagnostics on source edits and close', async () => {
-  const node = (type: string) => ({ type, children: [] as any[], props: {} as any, parent: null as any, text: '' })
-  const renderer = createRenderer<any, any>({
+  const node = (type: string): HostNode => ({
+    type,
+    children: [],
+    props: {} as HostNode['props'],
+    parent: null,
+    text: '',
+  })
+  const renderer = createRenderer<HostNode, HostNode>({
     createElement: node,
     createText: t => ({ ...node('text'), text: t }),
     createComment: node,
@@ -52,21 +73,21 @@ it('opens preview, cancels stale work, retries and clears diagnostics on source 
   })
   const surfaces = ref([actual.patch, structuredClone(actual.patch)]),
     active = ref(true),
-    displays: any[] = [],
+    displays: PreviewDisplay[] = [],
     root = node('root')
   const app = renderer.createApp({
     render: () =>
       h(Panel, {
-        surfaces: surfaces.value as any,
+        surfaces: surfaces.value as [NurbsSurface, NurbsSurface],
         active: active.value,
         ru: false,
-        onDisplay: (d: any) => displays.push(d),
+        onDisplay: (d: PreviewDisplay) => displays.push(d),
       }),
   })
   app.mount(root)
-  const all = (n: any): any[] => [n, ...n.children.flatMap(all)]
-  const button = (text: string) => all(root).find(n => n.type === 'button' && n.text === text)
-  const details = () => all(root).find(n => n.type === 'details')
+  const all = (n: HostNode): HostNode[] => [n, ...n.children.flatMap(all)]
+  const button = (text: string) => all(root).find(n => n.type === 'button' && n.text === text)!
+  const details = () => all(root).find(n => n.type === 'details')!
   const flush = async () => {
     await nextTick()
     await nextTick()
@@ -90,8 +111,8 @@ it('opens preview, cancels stale work, retries and clears diagnostics on source 
     await flush()
     state.tasks[2].resolve(structuredClone(actual))
     await flush()
-    expect(displays.at(-1).witness).toEqual([1, 2, 3])
-    expect(displays.at(-1).lines).toHaveLength(10)
+    expect(displays.at(-1)!.witness).toEqual([1, 2, 3])
+    expect(displays.at(-1)!.lines).toHaveLength(10)
     expect(all(root).some(n => n.type === 'output' && n.text.includes('not maintained over the whole surface'))).toBe(
       true,
     )
@@ -107,22 +128,28 @@ it('opens preview, cancels stale work, retries and clears diagnostics on source 
     expect(displays.at(-1)).toBe(null)
     details().props.onToggle({ target: { open: false } })
     await flush()
-    expect(state.worker.cancel).toHaveBeenCalled()
+    expect(state.worker!.cancel).toHaveBeenCalled()
   } finally {
     app.unmount()
-    expect(state.worker.dispose).toHaveBeenCalledOnce()
+    expect(state.worker!.dispose).toHaveBeenCalledOnce()
   }
 })
 
 it('discards a captured late worker reply after cancellation and accepts Retry', async () => {
   const { MainSolidWorkerClient } = await import('../src/kernel/mainSolidWorkerClient')
-  const ports: any[] = []
+  const ports: TestPort[] = []
   const client = new MainSolidWorkerClient(() => {
-    const p: any = { onmessage: null, onerror: null, onmessageerror: null, terminate: vi.fn(), postMessage: vi.fn() }
+    const p: TestPort = {
+      onmessage: null,
+      onerror: null,
+      onmessageerror: null,
+      terminate: vi.fn(),
+      postMessage: vi.fn(),
+    }
     ports.push(p)
     return p
   })
-  const job: any = {
+  const job: Extract<MainSolidJob, { kind: 'sourceGraphG2Preview' }> = {
     kind: 'sourceGraphG2Preview',
     sources: [actual.patch, actual.patch],
     width: {
@@ -139,19 +166,19 @@ it('discards a captured late worker reply after cancellation and accepts Retry',
   try {
     const first = client.run(job),
       rejected = expect(first).rejects.toMatchObject({ name: 'AbortError' }),
-      late = ports[0].onmessage
+      late = ports[0].onmessage!
     client.cancel()
     await rejected
     const retry = client.run(job)
     let settled = false
     void retry.then(() => (settled = true))
-    late({ data: { version: 1, id: 1, kind: job.kind, ok: true, result: structuredClone(actual) } })
+    late({ data: { version: 1, id: 1, kind: job.kind, ok: true, result: structuredClone(actual) } } as MessageEvent)
     await Promise.resolve()
     expect(settled).toBe(false)
-    const request = ports[1].postMessage.mock.lastCall[0]
-    ports[1].onmessage({
+    const request = ports[1].postMessage.mock.lastCall![0]
+    ports[1].onmessage!({
       data: { version: 1, id: request.id, kind: job.kind, ok: true, result: structuredClone(actual) },
-    })
+    } as MessageEvent)
     await expect(retry).resolves.toEqual(actual)
   } finally {
     client.dispose()

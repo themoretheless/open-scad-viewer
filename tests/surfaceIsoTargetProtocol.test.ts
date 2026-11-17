@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { isSurfaceIsoTargetReport } from '../src/kernel/surfaceIsoTargetProtocol'
-function report(): any {
+import { isSurfaceIsoTargetReport, type SurfaceIsoTargetReport } from '../src/kernel/surfaceIsoTargetProtocol'
+function report(): SurfaceIsoTargetReport & Record<string, unknown> {
   return {
     schema: 'nurbs-surface-iso-target-window/1',
     status: 'present',

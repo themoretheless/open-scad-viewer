@@ -3,9 +3,12 @@ import { gunzipSync } from 'node:zlib'
 import { it, expect, vi } from 'vitest'
 const native = vi.hoisted(() => vi.fn())
 vi.mock('../src/kernel/geometry/nurbs', () => ({ callNurbsRust: native }))
-import { displayFrozenGraphBody } from '../src/kernel/frozenGraphBody'
+import { displayFrozenGraphBody, type FrozenGraphDisplay } from '../src/kernel/frozenGraphBody'
+type DisplayResult = Omit<FrozenGraphDisplay, 'display'> & {
+  display: Omit<FrozenGraphDisplay['display'], 'polylineDeviationCertified'> & { polylineDeviationCertified: boolean }
+}
 const artifact = JSON.parse(gunzipSync(readFileSync('tests/fixtures/frozen-graph-body.json.gz')).toString())
-function result(): any {
+function result(): DisplayResult {
   const g = artifact.geometry,
     n = g.faces.length
   return {
@@ -37,7 +40,7 @@ function result(): any {
     display: {
       method: 'native-exact-graph-edges/1',
       segments: 8,
-      edges: g.edges.map((e: any, edge: number) => ({
+      edges: g.edges.map((e: { root: number }, edge: number) => ({
         edge,
         root: e.root,
         points: Array.from({ length: 9 }, () => [0, 0, 0]),
@@ -58,13 +61,13 @@ it('exposes stable edge slots without promoting display to a geometry certificat
 })
 it('refuses incomplete coverage, duplicated edges, wrong roots and invalid sample data', () => {
   for (const mutate of [
-    (r: any) => r.display.edges.pop(),
-    (r: any) => (r.display.edges[1].edge = 0),
-    (r: any) => (r.display.edges[0].root = -1),
-    (r: any) => (r.display.edges[0].points[0][0] = NaN),
-    (r: any) => r.display.edges[0].points.pop(),
-    (r: any) => (r.display.polylineDeviationCertified = true),
-    (r: any) => (r.display.sampleStorageErrorUpperMm = -1),
+    (r: DisplayResult) => r.display.edges.pop(),
+    (r: DisplayResult) => (r.display.edges[1].edge = 0),
+    (r: DisplayResult) => (r.display.edges[0].root = -1),
+    (r: DisplayResult) => (r.display.edges[0].points[0][0] = NaN),
+    (r: DisplayResult) => r.display.edges[0].points.pop(),
+    (r: DisplayResult) => (r.display.polylineDeviationCertified = true),
+    (r: DisplayResult) => (r.display.sampleStorageErrorUpperMm = -1),
   ]) {
     const r = result()
     mutate(r)
