@@ -324,7 +324,9 @@ const {
 } = build
 watch(code, clearSweepViewportPreview, { flush: 'sync' })
 const files = useWorkspaceFileActions({
-  code, fileName, error, canExport, sceneMeshes, buildCounters, performanceSamples, markFitNextRender, showNotice, translate: t
+  code, fileName, error, canExport, sceneMeshes,
+  visibleMeshes: () => sceneMeshes.value.filter((_, index) => meshVisibility.value[index] !== false && (!sceneState.value.isolated || index === selectedMesh.value)),
+  buildCounters, performanceSamples, markFitNextRender, showNotice, translate: t
 })
 const {
   fileInputRef, convertInputRef, exportDialogOpen, additionalExportFormat, exportMeshQuality, conversionPending, conversionProgress, conversionOperation,
@@ -880,7 +882,7 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
         <p :id="viewportKeysId" class="sr-only">{{ lang === 'ru' ? 'Стрелки вращают камеру, Shift со стрелками сдвигает, плюс и минус приближают и отдаляют.' : 'Arrow keys orbit the camera, Shift with arrows pans, plus and minus zoom.' }}</p>
         <SweepEvidenceStatus :lang="lang" :meshes="sceneMeshes" :current="!rendering && !stale && renderedSource === code" :progress="sweepViewportProgress" :format-number="formatNumber" />
         <div v-if="!gpuOk" class="no-gpu" role="alert"><span>{{ rendererInitializing ? t('initializingViewport') : (rendererUnavailableMessage || t('noGpu')) }}</span><button v-if="!rendererInitializing" class="btn" type="button" @click="initializeViewportRenderer">{{ t('retryRenderer') }}</button></div>
-        <div class="view-cube-wrap" :class="{ 'with-dock': dockOpen }"><ViewCube :active-view="activeView" :yaw="cameraYaw" :pitch="cameraPitch" @view="setStandardView" @orbit-step="angles => getRenderer()?.setOrbitAngles(angles.yaw, angles.pitch)" /></div>
+        <div class="view-cube-wrap" :class="{ 'with-dock': dockOpen }"><ViewCube :active-view="activeView" :yaw="cameraYaw" :pitch="cameraPitch" @view="setStandardView" @orbit-step="angles => getRenderer()?.setOrbitAngles(angles.yaw, angles.pitch)" @orient="target => getRenderer()?.setOrbitAngles(target.yaw, target.pitch)" /></div>
         <div v-if="dockOpen" id="cad-sidebar" class="cad-dock">
           <div class="dock-body">
           <div id="dock-panel" class="dock-panel" role="tabpanel" :aria-labelledby="`dock-tab-${dockTab}`">

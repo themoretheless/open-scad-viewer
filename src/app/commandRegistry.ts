@@ -119,6 +119,14 @@ export const COMMAND_REGISTRY = [
     palette: true,
   },
   {
+    id: 'export-glb',
+    labelKey: 'exportGlb',
+    aliasKeys: ['exportGlb'],
+    keywords: ['gltf', 'glb', 'mesh', 'web', 'ar', 'interchange'],
+    scopes: ['global'],
+    palette: true,
+  },
+  {
     id: 'convert-mesh',
     labelKey: 'convertFile',
     aliasKeys: ['convertFile'],

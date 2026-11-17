@@ -9,6 +9,7 @@ import type {
 import type { MeshData } from '../core/mesh'
 import type { CameraState } from '../render/cameraHistory'
 import { inspectMesh } from '../kernel/meshInspection'
+import { measureBodyProperties, type BodyProperties } from '../app/bodyProperties'
 import { useModelingGrid } from '../app/modelingGrid'
 import type {
   DisplayMode,
@@ -64,8 +65,6 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
     measurement,
     renderedSource,
     code,
-    surfaceArea,
-    volume,
     mainCameraRevision,
     dockOpen,
     dockTab,
@@ -147,6 +146,25 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
   const selectedSceneMeshId = computed(() => sceneMeshId(selectedMesh.value))
   const hoveredMesh = computed(() => sceneMeshId(hoveredHit.value?.meshIndex ?? null))
 
+  const bodyPropertiesCache = new WeakMap<MeshData, BodyProperties>()
+  /** Per-body measured properties of the selected body; volume only when the body is closed. */
+  function bodyInspection(mesh: MeshData): Partial<InspectSelection> {
+    let properties = bodyPropertiesCache.get(mesh)
+    if (!properties) {
+      properties = measureBodyProperties(mesh)
+      bodyPropertiesCache.set(mesh, properties)
+    }
+    return {
+      surfaceArea: properties.surfaceArea,
+      ...(properties.closed ? { volume: Math.abs(properties.volume) } : {}),
+      vertexCount: properties.vertexCount,
+      edgeCount: properties.edgeCount,
+      faceCount: properties.faceCount,
+      closed: properties.closed,
+      ...(properties.centroid ? { centroid: properties.centroid } : {}),
+    }
+  }
+
   const currentInspection = computed<InspectSelection | null>(() => {
     const index = selectedMesh.value
     const mesh = index === null ? null : sceneMeshes.value[index]
@@ -172,8 +190,7 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
       meshId: mesh.entityId ?? index,
       meshName: `${t('object')} ${index + 1}`,
       triangleCount: facts.triangles,
-      ...(sceneMeshes.value.length === 1 && surfaceArea.value !== undefined ? { surfaceArea: surfaceArea.value } : {}),
-      ...(sceneMeshes.value.length === 1 && volume.value !== undefined ? { volume: volume.value } : {}),
+      ...bodyInspection(mesh),
       ...(hit?.point !== undefined ? { position: hit.point } : {}),
       ...(hit?.normal !== undefined ? { normal: hit.normal } : {}),
       ...(facts.bounds != null ? { bounds: facts.bounds } : {}),

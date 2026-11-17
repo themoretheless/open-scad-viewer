@@ -12606,10 +12606,186 @@ it('C2 viewer commands: camera, display, panel and file commands reach their vie
   expect(effect('save')).toEqual(['file.saveSource()'])
   expect(effect('export-stl')).toEqual(['file.exportStl()'])
   expect(effect('export-obj')).toEqual(['file.exportObj()'])
+  expect(effect('export-glb')).toEqual(['file.exportGlb()'])
   expect(effect('convert-mesh')).toEqual(['file.triggerConvert()'])
   expect(effect('share')).toEqual(['file.shareSource()'])
   // Every registry command reaches some effect; none is a silent no-op.
   expect(COMMAND_REGISTRY.filter(definition => !effect(definition.id).length).map(d => d.id)).toEqual([])
+})
+
+async function mountP10(component: unknown, props: Record<string, unknown>) {
+  const root = new Node('root')
+  const app = renderer.createApp({ setup: () => () => h(component as never, props) })
+  app.mount(root)
+  mounts.push(() => app.unmount())
+  await nextTick()
+  const all = (n: Node): Node[] => [n, ...n.children.flatMap(all)]
+  const textOf = (n: Node): string => n.text + n.children.map(textOf).join('')
+  return { root, all: () => all(root), textOf }
+}
+
+it('P10 ViewCube: edge and corner hotspots orient the recording renderer by click and keyboard', async () => {
+  const ViewCube = (await import('../src/components/ViewCube.svt')).default
+  const { RecordingRenderer } = await import('../src/render/recordingRenderer')
+  const { VIEW_CUBE_TARGETS, viewCubeTargetActive } = await import('../src/render/viewportModel')
+  const renderer3d = new RecordingRenderer()
+  const oriented: string[] = []
+  const ui = await mountP10(ViewCube, {
+    activeView: 'iso',
+    onOrient: (target: { id: string; yaw: number; pitch: number }) => {
+      oriented.push(target.id)
+      renderer3d.setOrbitAngles(target.yaw, target.pitch)
+    },
+  })
+  const hotspots = ui.all().filter(n => n.props['data-view-cube-target'])
+  expect(hotspots.filter(n => n.props['data-view-cube-kind'] === 'edge')).toHaveLength(9)
+  expect(hotspots.filter(n => n.props['data-view-cube-kind'] === 'corner')).toHaveLength(6)
+  for (const hotspot of hotspots) {
+    expect(hotspot.props.role).toBe('button')
+    expect(hotspot.props.tabindex).toBe('0')
+    expect(hotspot.props['aria-label']).toMatch(/ \/ (Ребро|Угол): /)
+  }
+  const edge = hotspots.find(n => n.props['data-view-cube-target'] === 'top-back')!
+  edge.props.onClick()
+  let camera = renderer3d.getCameraState()
+  expect(
+    viewCubeTargetActive(
+      VIEW_CUBE_TARGETS.find(t => t.id === 'top-back')!,
+      camera.yaw,
+      camera.pitch,
+    ),
+  ).toBe(true)
+  const corner = hotspots.find(n => n.props['data-view-cube-target'] === 'bottom-front-left')!
+  for (const handler of [corner.props.onKeydown].flat())
+    handler({ key: 'Enter', preventDefault() {}, stopPropagation() {} })
+  camera = renderer3d.getCameraState()
+  expect(oriented).toEqual(['top-back', 'bottom-front-left'])
+  expect(camera.pitch).toBeLessThan(0)
+  expect(renderer3d.callCounts.get('setOrbitAngles')).toBe(2)
+})
+
+it('P10 ViewCube: the hotspot matching the camera is pressed', async () => {
+  const ViewCube = (await import('../src/components/ViewCube.svt')).default
+  const { VIEW_CUBE_TARGETS } = await import('../src/render/viewportModel')
+  const target = VIEW_CUBE_TARGETS.find(t => t.id === 'front-right')!
+  const ui = await mountP10(ViewCube, { activeView: 'custom', yaw: target.yaw, pitch: target.pitch })
+  const pressed = ui.all().filter(n => n.props['aria-pressed'] === true)
+  expect(pressed.map(n => n.props['data-view-cube-target'])).toEqual(['front-right'])
+})
+
+it.each(['en', 'ru'] as const)('P10 Inspect panel shows the selected body properties in %s', async locale => {
+  const InspectPanel = (await import('../src/components/InspectPanel.svt')).default
+  const ui = await mountP10(InspectPanel, {
+    locale,
+    selection: {
+      meshId: 0,
+      meshName: 'Body 1',
+      triangleCount: 12,
+      vertexCount: 8,
+      edgeCount: 18,
+      faceCount: 6,
+      closed: true,
+      surfaceArea: 52,
+      volume: 24,
+      centroid: [1, 1.5, 2],
+      bounds: { min: [0, 0, 0], max: [2, 3, 4] },
+    },
+  })
+  const row = (name: string) => ui.textOf(ui.all().find(n => n.props['data-inspect-property'] === name)!)
+  const labels =
+    locale === 'ru'
+      ? {
+          vertices: 'Вершины',
+          edges: 'Рёбра',
+          faces: 'Грани',
+          closure: 'Замкнутое тело',
+          area: 'Площадь',
+          volume: 'Объём',
+          centroid: 'Центр масс',
+        }
+      : {
+          vertices: 'Vertices',
+          edges: 'Edges',
+          faces: 'Faces',
+          closure: 'Closed solid',
+          area: 'Surface',
+          volume: 'Volume',
+          centroid: 'Centroid',
+        }
+  expect(row('vertices')).toContain(labels.vertices)
+  expect(row('vertices')).toContain('8')
+  expect(row('edges')).toContain(labels.edges)
+  expect(row('edges')).toContain('18')
+  expect(row('faces')).toContain(labels.faces)
+  expect(row('faces')).toContain('6')
+  expect(row('closure')).toContain(labels.closure)
+  expect(row('area')).toContain(labels.area)
+  expect(row('area')).toContain('52')
+  expect(row('volume')).toContain(labels.volume)
+  expect(row('volume')).toContain('24')
+  expect(row('centroid')).toContain(labels.centroid)
+  expect(ui.textOf(ui.root)).toContain(locale === 'ru' ? 'Границы' : 'Bounds')
+})
+
+it('P10 Inspect panel marks an open surface and omits volume', async () => {
+  const InspectPanel = (await import('../src/components/InspectPanel.svt')).default
+  const ui = await mountP10(InspectPanel, {
+    locale: 'en',
+    selection: { meshId: 0, meshName: 'Body 1', closed: false, surfaceArea: 5, vertexCount: 8 },
+  })
+  expect(ui.all().some(n => n.props['data-inspect-property'] === 'volume')).toBe(false)
+  expect(ui.textOf(ui.all().find(n => n.props['data-inspect-property'] === 'closure')!)).toContain('Open surface')
+})
+
+it('P10 GLB export: the palette command downloads a valid binary glTF of visible bodies only', async () => {
+  const { useWorkspaceFileActions } = await import('../src/composables/useWorkspaceFileActions')
+  const { validateGlb } = await import('../src/exchange/glbExport')
+  const { computed, ref, shallowRef } = await import('svet')
+  const quad = (z: number, color: [number, number, number, number]) => ({
+    vertices: new Float32Array([0, 0, z, 0, 0, 1, 1, 0, z, 0, 0, 1, 0, 1, z, 0, 0, 1]),
+    indices: new Uint32Array([0, 1, 2]),
+    transform: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
+    color,
+  })
+  const meshes = [quad(0, [1, 0, 0, 1]), quad(1, [0, 1, 0, 1])] as never[]
+  const blobs: Array<{ blob: Blob; name: string }> = []
+  vi.stubGlobal(
+    'URL',
+    Object.assign(Object.create(URL), {
+      createObjectURL: (blob: Blob) => {
+        blobs.push({ blob, name: '' })
+        return 'blob:x'
+      },
+      revokeObjectURL: () => {},
+    }),
+  )
+  vi.stubGlobal('document', {
+    createElement: () => {
+      const link = { href: '', download: '', click: () => (blobs[blobs.length - 1]!.name = link.download) }
+      return link
+    },
+  })
+  const actions = useWorkspaceFileActions({
+    code: ref('cube(1);'),
+    fileName: ref('part.scad'),
+    error: ref(''),
+    canExport: computed(() => true),
+    sceneMeshes: computed(() => meshes),
+    visibleMeshes: () => [meshes[1]!],
+    buildCounters: shallowRef({ builds: 0, superseded: 0, workerStarts: 0, hardRestarts: 0 }),
+    performanceSamples: shallowRef([]),
+    markFitNextRender: () => {},
+    showNotice: () => {},
+    translate: key => key,
+  })
+  actions.exportGlb()
+  expect(blobs).toHaveLength(1)
+  expect(blobs[0]!.name).toBe('part.glb')
+  expect(blobs[0]!.blob.type).toBe('model/gltf-binary')
+  const result = validateGlb(new Uint8Array(await blobs[0]!.blob.arrayBuffer()))
+  expect(result.errors).toEqual([])
+  expect(result.json!.meshes).toHaveLength(1)
+  expect(result.json!.materials[0].pbrMetallicRoughness.baseColorFactor).toEqual([0, 1, 0, 1])
 })
 
 it.each([

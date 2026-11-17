@@ -156,7 +156,9 @@ describe('ViewCube semantics', () => {
     expect(group.props['aria-label']).toMatch(/View presets/)
     expect(all().find(node => node.props.id === group.props['aria-describedby'])).toBeDefined()
     const buttons = all().filter(node => node.props.role === 'button')
-    expect(buttons).toHaveLength(7)
+    // 7 presets plus 9 edge and 6 corner hotspots (the top-front-right corner is the ISO preset).
+    expect(buttons).toHaveLength(22)
+    expect(buttons.filter(button => button.props['data-view-cube-target'])).toHaveLength(15)
     for (const button of buttons) {
       expect(button.props['aria-label']).toBeTruthy()
       expect(button.props.tabindex).toBe('0')

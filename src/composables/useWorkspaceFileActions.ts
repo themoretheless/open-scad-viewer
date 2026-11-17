@@ -9,6 +9,7 @@ import type { ExportMeshQualityPreset } from '../exchange/meshConvert'
 import { SOURCE_FILE_EXTENSION, withSourceExtension } from '../language/rushFrontendDetect'
 import { MAX_WORKSPACE_FILE_NAME_LENGTH, MAX_WORKSPACE_SOURCE_LENGTH } from '../app/workspaceDocument'
 import { encodeWorkspaceShare } from '../app/workspaceShare'
+import { encodeGlb } from '../exchange/glbExport'
 
 export interface UseWorkspaceFileActionsOptions {
   code: Ref<string>
@@ -16,6 +17,8 @@ export interface UseWorkspaceFileActionsOptions {
   error: Ref<string>
   canExport: ComputedRef<boolean>
   sceneMeshes: ComputedRef<MeshData[]>
+  /** Meshes shown in the viewport (hidden and non-isolated bodies removed); defaults to every scene mesh. */
+  visibleMeshes?: () => readonly MeshData[]
   buildCounters: ShallowRef<{
     builds: number
     superseded: number
@@ -214,6 +217,16 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
     return exportScene('obj', SOURCE_FILE_EXTENSION)
   }
 
+  /** Binary glTF of the visible bodies with their colours and materials. */
+  function exportGlb() {
+    if (disposed || !canExport.value) return
+    const meshes = options.visibleMeshes?.() ?? sceneMeshes.value
+    if (!meshes.length) return
+    const data = encodeGlb(meshes)
+    const stem = sanitizeFileName(fileName.value).replace(SOURCE_FILE_EXTENSION, '') || 'model'
+    downloadBlob(new Blob([data.buffer as ArrayBuffer], { type: 'model/gltf-binary' }), `${stem}.glb`)
+  }
+
   async function shareSource() {
     const url = new URL(window.location.href)
     url.hash = `code=${encodeWorkspaceShare(code.value)}`
@@ -250,6 +263,7 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
     exportStl,
     exportPerformance,
     exportObj,
+    exportGlb,
     shareSource,
   }
 }

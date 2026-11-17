@@ -4,7 +4,12 @@ export { computeSteppedOrbitAngles, type ViewOrbitDirection }
 </script>
 <script setup lang="ts">
 import { computed } from 'svet'
-import { projectAxesToScreen, type StandardView } from '../render/viewportModel'
+import {
+  projectAxesToScreen,
+  viewCubeHotspots,
+  viewCubeTargetActive,
+  type StandardView,
+} from '../render/viewportModel'
 
 const props = withDefaults(defineProps<{
   activeView: StandardView | 'custom'
@@ -19,7 +24,19 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   view: [view: StandardView]
   orbitStep: [angles: { yaw: number; pitch: number; stepDegrees: 15 | 90; direction: ViewOrbitDirection }]
+  /** Edge or corner hotspot: orbit to look from that direction. */
+  orient: [target: { id: string; yaw: number; pitch: number }]
 }>()
+
+/** The top-front-right corner sits under the ISO button, which already orients there. */
+const hotspots = viewCubeHotspots().filter(hotspot => hotspot.target.id !== 'top-front-right')
+const activeHotspot = computed(
+  () => hotspots.find(hotspot => viewCubeTargetActive(hotspot.target, props.yaw, props.pitch))?.target.id ?? null,
+)
+
+function orient(hotspot: (typeof hotspots)[number]) {
+  emit('orient', { id: hotspot.target.id, yaw: hotspot.target.yaw, pitch: hotspot.target.pitch })
+}
 
 const labels: Record<StandardView, string> = {
   iso: 'Isometric / Изометрия',
@@ -103,7 +120,7 @@ function handleOrbitKeydown(event: KeyboardEvent) {
     title="View presets. On a focused preset, arrow keys orbit 15°, Shift+Arrow 90°"
     @keydown="handleOrbitKeydown"
   >
-    <span id="view-cube-help" class="view-cube-sr">Fixed preset faces with a live axis compass. On a focused preset, arrow keys orbit 15°, Shift+Arrow 90°. / Фиксированные кнопки видов и живой компас осей. Стрелки на кнопке вращают на 15°, Shift+стрелка на 90°.</span>
+    <span id="view-cube-help" class="view-cube-sr">Fixed preset faces, edge and corner hotspots with a live axis compass. On a focused preset, arrow keys orbit 15°, Shift+Arrow 90°. / Фиксированные кнопки видов, рёбер и углов и живой компас осей. Стрелки на кнопке вращают на 15°, Shift+стрелка на 90°.</span>
     <span class="view-cube-sr" role="status" aria-live="polite">{{ currentViewText }}</span>
     <svg class="cube-svg" viewBox="0 0 128 132">
       <g class="axes" aria-hidden="true">
@@ -177,6 +194,26 @@ function handleOrbitKeydown(event: KeyboardEvent) {
         <title>{{ labels.right }}</title>
         <polygon class="face face-right" points="64,62 104,40 104,86 64,108" />
         <text class="face-label" x="84" y="77">RIGHT</text>
+      </g>
+
+      <g
+        v-for="hotspot in hotspots"
+        :key="hotspot.target.id"
+        class="cube-action hotspot-action"
+        :class="[`hotspot-${hotspot.target.kind}`, { active: activeHotspot === hotspot.target.id }]"
+        role="button"
+        tabindex="0"
+        :data-view-cube-target="hotspot.target.id"
+        :data-view-cube-kind="hotspot.target.kind"
+        :aria-label="hotspot.target.label"
+        :title="hotspot.target.label"
+        :aria-pressed="activeHotspot === hotspot.target.id"
+        @click="orient(hotspot)"
+        @keydown.enter.prevent="orient(hotspot)"
+        @keydown.space.prevent="orient(hotspot)"
+      >
+        <title>{{ hotspot.target.label }}</title>
+        <polygon v-for="(points, index) in hotspot.polygons" :key="index" class="hotspot" :points="points" />
       </g>
 
       <g
@@ -349,6 +386,16 @@ function handleOrbitKeydown(event: KeyboardEvent) {
 }
 .iso-label { font-size: 7px; }
 
+.hotspot {
+  fill: rgba(235, 241, 250, 0);
+  stroke: none;
+  pointer-events: all;
+  transition: fill 100ms ease;
+}
+.hotspot-action:hover .hotspot { fill: color-mix(in srgb, var(--accent, #559dff) 60%, transparent); }
+.hotspot-action.active .hotspot { fill: color-mix(in srgb, var(--accent, #559dff) 85%, transparent); stroke: #ffffff; stroke-width: 1.2; }
+.hotspot-action:focus-visible .hotspot { stroke: var(--focus, #8ec1ff); stroke-width: 2; }
+
 .cube-action:hover .face,
 .cube-action:hover .badge,
 .cube-action:hover .iso-button {
@@ -385,6 +432,7 @@ function handleOrbitKeydown(event: KeyboardEvent) {
 @media (prefers-reduced-motion: reduce) {
   .face,
   .badge,
+  .hotspot,
   .iso-button { transition-duration: 0.01ms; }
 }
 </style>

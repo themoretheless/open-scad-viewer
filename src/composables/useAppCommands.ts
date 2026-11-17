@@ -55,6 +55,7 @@ export function usePaletteCommands(options: UsePaletteCommandsOptions) {
       render: { enabled: !options.rendering.value, disabledReason: t('buildInProgress') },
       'export-stl': needsFullBuild,
       'export-obj': needsFullBuild,
+      'export-glb': needsFullBuild,
       focus: { enabled: hasSelection || hasVisibleModel, disabledReason: t('needsModel') },
       isolate: { label: options.isolated.value ? t('unisolate') : t('isolate'), ...needsSelection },
       deselect: needsSelection,
@@ -126,7 +127,7 @@ export interface UseCommandDispatchOptions {
   section: ReturnType<typeof useSectionPlaneControls>
   files: Pick<
     ReturnType<typeof useWorkspaceFileActions>,
-    'triggerOpen' | 'saveSource' | 'exportStl' | 'exportObj' | 'triggerConvert' | 'shareSource'
+    'triggerOpen' | 'saveSource' | 'exportStl' | 'exportObj' | 'exportGlb' | 'triggerConvert' | 'shareSource'
   >
   openEditorFind: ReturnType<typeof useEditorFind>['openEditorFind']
 }
@@ -146,6 +147,7 @@ export function useCommandDispatch(options: UseCommandDispatchOptions) {
     'shortcut-help': () => (options.shortcutHelpOpen.value = true),
     'export-stl': files.exportStl,
     'export-obj': files.exportObj,
+    'export-glb': files.exportGlb,
     'convert-mesh': files.triggerConvert,
     share: () => void files.shareSource(),
     fit: v.fitView,
