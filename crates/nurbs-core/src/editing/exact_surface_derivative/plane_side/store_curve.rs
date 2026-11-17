@@ -70,6 +70,26 @@ fn store(
 
 pub(super) fn store_world(
     world: &SurfacePlaneWorldPolyline,
+    normal: [f64; 3],
+    offset: f64,
+    tolerance: &Q,
+    work: &mut Work,
+) -> PResult<StoredSurfacePlaneCurve> {
+    store_world_vertices(
+        &world.xyz,
+        world.domain,
+        &world.xyz_error_upper,
+        normal,
+        offset,
+        tolerance,
+        work,
+    )
+}
+
+pub(super) fn store_world_vertices(
+    xyz: &[[Q; 3]],
+    domain: [[f64; 2]; 2],
+    model_error: &Q,
     [x, y, z]: [f64; 3],
     offset: f64,
     tolerance: &Q,
@@ -78,10 +98,10 @@ pub(super) fn store_world(
     let normal = [work.lift(x)?, work.lift(y)?, work.lift(z)?];
     let offset = work.lift(offset)?;
     let norm_squared = dot(&normal, &normal, work)?;
-    let mut points = Vec::with_capacity(world.xyz.len());
+    let mut points = Vec::with_capacity(xyz.len());
     let mut rounding = Q::zero();
     let mut plane_residual_upper = Q::zero();
-    for vertex in &world.xyz {
+    for vertex in xyz {
         let product = dot(&normal, vertex, work)?;
         let residual = work.op(&product, &offset, |a, b| a - b)?;
         let scale = work.op(&residual, &norm_squared, |a, b| a / b)?;
@@ -110,13 +130,13 @@ pub(super) fn store_world(
         plane_residual_upper = plane_residual_upper.max(residual);
         points.push(point);
     }
-    let xyz_error_upper = work.op(&world.xyz_error_upper, &rounding, |a, b| a + b)?;
+    let xyz_error_upper = work.op(model_error, &rounding, |a, b| a + b)?;
     if xyz_error_upper > *tolerance {
         return Err(Refusal::NotRepresentable);
     }
     let curve = Curve::from_polyline(points).map_err(|_| Refusal::InvalidOutput)?;
     Ok(StoredSurfacePlaneCurve {
-        domain: world.domain,
+        domain,
         curve,
         xyz_error_upper,
         plane_residual_upper,

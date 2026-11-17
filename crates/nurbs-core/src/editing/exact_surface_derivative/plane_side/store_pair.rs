@@ -129,10 +129,25 @@ fn store_uv(uv: &[[Q; 2]], domain: [[f64; 2]; 2], work: &mut Work) -> PResult<Cu
     }
     let mut points = Vec::with_capacity(uv.len());
     for vertex in uv {
-        let mut point = Vec::with_capacity(2);
+        let mut absolute = [Q::zero(), Q::zero()];
         for i in 0..2 {
             let delta = work.op(&widths[i], &vertex[i], |a, b| a * b)?;
-            let absolute = work.op(&origins[i], &delta, |a, b| a + b)?;
+            absolute[i] = work.op(&origins[i], &delta, |a, b| a + b)?;
+        }
+        points.push(absolute);
+    }
+    store_absolute_uv(&points, domain, work)
+}
+
+pub(super) fn store_absolute_uv(
+    uv: &[[Q; 2]],
+    domain: [[f64; 2]; 2],
+    work: &mut Work,
+) -> PResult<Curve> {
+    let mut points = Vec::with_capacity(uv.len());
+    for vertex in uv {
+        let mut point = Vec::with_capacity(2);
+        for (i, absolute) in vertex.iter().enumerate() {
             work.charge(1 + (absolute.numer().bits() + absolute.denom().bits()) / 64)?;
             let stored = absolute
                 .to_f64()
@@ -151,7 +166,7 @@ fn store_uv(uv: &[[Q; 2]], domain: [[f64; 2]; 2], work: &mut Work) -> PResult<Cu
     Curve::from_polyline(points).map_err(|_| Refusal::InvalidOutput)
 }
 
-fn trace_refusal(reason: TraceRefusal) -> Refusal {
+pub(super) fn trace_refusal(reason: TraceRefusal) -> Refusal {
     match reason {
         TraceRefusal::ResourceLimit => Refusal::ResourceLimit,
         TraceRefusal::NotRepresentable => Refusal::NotRepresentable,

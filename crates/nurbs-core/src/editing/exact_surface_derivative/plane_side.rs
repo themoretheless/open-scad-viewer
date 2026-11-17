@@ -272,3 +272,9 @@ pub use world_strip::{
 
 mod periodic_strip;
 pub use periodic_strip::close_periodic_surface_plane_strip_xyz;
+
+mod store_periodic;
+pub use store_periodic::{
+    StoredPeriodicSurfacePlaneSection, StoredPeriodicSurfacePlaneSectionReport,
+    store_periodic_surface_plane_section,
+};

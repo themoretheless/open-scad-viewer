@@ -8,7 +8,8 @@ use nurbs_core::{
         approximate_surface_plane_strip_xyz, audit_surface_plane_graphs, audit_surface_plane_side,
         close_periodic_surface_plane_strip_xyz, refine_surface_plane_side,
         sample_surface_plane_graph, split_surface_cell_by_plane, stitch_surface_plane_graph_strip,
-        store_surface_plane_section_curve, store_surface_plane_section_pair,
+        store_periodic_surface_plane_section, store_surface_plane_section_curve,
+        store_surface_plane_section_pair,
     },
     surface::Surface,
 };
@@ -926,4 +927,65 @@ fn rejects_a_partial_period_or_an_open_chart_as_a_closed_section() {
     );
     patch.periodic_v = false;
     assert!(close_periodic_surface_plane_strip_xyz(&patch, [0., 0., 1.], 0., options).is_err());
+}
+
+#[test]
+fn stores_closed_periodic_curve_pairs_with_exact_rounded_joins() {
+    let patch = periodic_section_patch();
+    let options = periodic_section_options();
+    let report =
+        store_periodic_surface_plane_section(&patch, [0., 0., 1.], 0., options, 0.05).unwrap();
+    let stored = report.outcome.unwrap();
+    assert_eq!(stored.uv_period, q(4));
+    assert_eq!(stored.pieces.len(), 4);
+    for (i, piece) in stored.pieces.iter().enumerate() {
+        assert_eq!(piece.pcurve.knots, piece.spatial.curve.knots);
+        assert_eq!(piece.pcurve.control_points[0][1], i as f64);
+        assert_eq!(
+            piece.pcurve.control_points.last().unwrap()[1],
+            (i + 1) as f64
+        );
+        assert_eq!(piece.spatial.plane_residual_upper, q(0));
+        assert!(piece.spatial.xyz_error_upper <= Q::from_float(options.max_xyz_error).unwrap());
+        let next = &stored.pieces[(i + 1) % stored.pieces.len()];
+        assert_eq!(
+            piece.spatial.curve.control_points.last(),
+            next.spatial.curve.control_points.first()
+        );
+        if i + 1 < stored.pieces.len() {
+            assert_eq!(
+                piece.pcurve.control_points.last(),
+                next.pcurve.control_points.first()
+            );
+        }
+    }
+    let limited = store_periodic_surface_plane_section(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldStripOptions {
+            strip: SurfacePlaneGraphStripOptions {
+                max_work: report.work_used - 1,
+                ..options.strip
+            },
+            ..options
+        },
+        0.05,
+    )
+    .unwrap();
+    assert!(matches!(limited.outcome, Err(Refusal::ResourceLimit)));
+}
+
+#[test]
+fn refuses_a_periodic_pair_when_the_lifted_curve_has_nonzero_gap_at_zero_tolerance() {
+    let patch = periodic_section_patch();
+    let result = store_periodic_surface_plane_section(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        periodic_section_options(),
+        0.,
+    )
+    .unwrap();
+    assert!(matches!(result.outcome, Err(Refusal::UnprovedIdentity)));
 }

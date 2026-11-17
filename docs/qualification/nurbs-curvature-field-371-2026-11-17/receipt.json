@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0371",
+  "testedBase": "bbe5eafbcaf80a733bcc0af549e9cf674d671173",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_pcurve_gap_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 70,
+  "scope": [
+    "Store a certified periodic section as synchronized spatial and UV curve pairs with exact binary64 seam joins.",
+    "Every cell has a synchronized degree-one pair and continuous lifted gap proof. Stored XYZ endpoints close exactly and the UV wrap retains the original period."
+  ],
+  "logSha256": "7ed959b0db886c6367667116531922157df0bc7849ed862983bac5b37dd0dd38",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "480d56b83ed8c60cf66f931cc127edb4b790a4bfb8ba64db2b6c649f174348c2",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs": "be260d8f3af908f8ae185bf1f67aa4ae0c337744e0771166454dd83359f116f7",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "13c74cc94adafab6a07cfb3b1d442aa6ac3512dd8c4543b60bed425613281275",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "e7ed271777c6cb74d84d2eefe35d8e5681ec872da59a1b6ee1546b211a21c455",
+    "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs": "301cd0999e91b78c1cfaafb5e129782c4efc60243dc72d3eb7841048f9576762",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/periodic_strip.rs": "85fb96a8ee1291e6d6833aff51637b54c6dd49836dedf9534757b5de6598886f",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/store_curve.rs": "6fa09065cfa63066a8204769b28500249cd5349485e5384b8c58ee238d9f47e6",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/store_pair.rs": "d12250463ddaea67484fb3b720b6eada783ec92f8b3c5e5e8d90cc2154369a11",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/store_periodic.rs": "ee5422776b2968234a41d40f11bf10ae3b5b6cff857b4409ff35b8ecf2f1c663",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_gap.rs": "b79f610f0ec292bcf43bc2250213f21f08a2e3f0e7c4b029b898b1ca2e2b1f91"
+  }
+}

@@ -324,6 +324,8 @@ fn apply(source: &Surface, field: Field, max_work: u64) -> Result<Report> {
 
 mod plane_side;
 pub use plane_side::{
+    StoredPeriodicSurfacePlaneSection, StoredPeriodicSurfacePlaneSectionReport,
+    store_periodic_surface_plane_section,
     close_periodic_surface_plane_strip_xyz,
     SurfacePlaneWorldStrip, SurfacePlaneWorldStripOptions, SurfacePlaneWorldStripReport,
     approximate_surface_plane_strip_xyz,

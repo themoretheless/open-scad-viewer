@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 370,
-  "unallocatedCount": 630,
+  "specifiedCount": 371,
+  "unallocatedCount": 629,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9506,6 +9506,33 @@
       "remainingQualification": [
         "Close a full periodic section strip after proving exact equality of the homogeneous seam traces.",
         "Exact homogeneous seam trace equality proves closure across a complete transverse period. The end positions share one XYZ vertex and retain distinct periodic UV coordinates. The wrap displacement is budgeted in the final chord error.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0371",
+      "name": "Хранение замкнутого периодического сечения согласованными XYZ- и UV-кривыми NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::store_periodic_surface_plane_section",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs",
+        "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/periodic_strip.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/store_curve.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/store_pair.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/store_periodic.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_gap.rs",
+        "docs/qualification/nurbs-curvature-field-371-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-371-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Store a certified periodic section as synchronized spatial and UV curve pairs with exact binary64 seam joins.",
+        "Every cell has a synchronized degree-one pair and continuous lifted gap proof. Stored XYZ endpoints close exactly and the UV wrap retains the original period.",
         "WASM and application integration are separate."
       ]
     }
