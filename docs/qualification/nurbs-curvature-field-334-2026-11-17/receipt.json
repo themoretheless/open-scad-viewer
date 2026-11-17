@@ -1,0 +1,31 @@
+{
+  "id": "NURBS-0334",
+  "testedBase": "3756e0928a9194910ca2a2a779bb5d06abd8bb5b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_face_ray_contracts",
+    "--test",
+    "certified_planar_boundary_distance_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 5,
+  "scope": [
+    "Cast an exact rational ray-plane hit and certify whether its projected location lies in filled rational trim winding.",
+    "Exact forward half-ray parameter and closed rational winding contours. Coplanar and boundary-band queries remain distinct outcomes."
+  ],
+  "logSha256": "97c08dd0c297ee66acca668fc5081239a1f3b5aac105b806c19c6828bc634985",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis.rs": "df6e6282c86428b84c62eec0881938f0512f260bd775aba557d55b034a3d84d8",
+    "crates/nurbs-core/src/analysis/planar_face_ray.rs": "be5b6fca6b7d8facc9a473753236f7035e3f2574f866fccace308644838407eb",
+    "crates/nurbs-core/src/trim/trim_domain.rs": "f56223cacef64c33c83f0885ddbc343c9ddff188aeefe47551d41400c0f2222f",
+    "crates/nurbs-core/tests/exact_planar_face_ray_contracts.rs": "38c52434bdf6e0dc3c355d139c49b3dd4b81658e1f65edb0e3b9c379b2abda9f"
+  }
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 333,
-  "unallocatedCount": 667,
+  "specifiedCount": 334,
+  "unallocatedCount": 666,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8634,6 +8634,27 @@
       "remainingQualification": [
         "Certify XYZ distance to the nonzero-winding planar region and its authored boundary using orthogonal projection and boundary subdivision.",
         "Closed rational contours with nonzero winding and boundary traces. Separate winding and boundary budgets preserve valid distance bounds when classification is unresolved.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0334",
+      "name": "Точное пересечение луча с плоской NURBS-гранью с отверстиями",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::analysis::planar_face_ray::cast_projected_face_ray",
+      "evidence": [
+        "crates/nurbs-core/src/analysis.rs",
+        "crates/nurbs-core/src/analysis/planar_face_ray.rs",
+        "crates/nurbs-core/src/trim/trim_domain.rs",
+        "crates/nurbs-core/tests/exact_planar_face_ray_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-334-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-334-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Cast an exact rational ray-plane hit and certify whether its projected location lies in filled rational trim winding.",
+        "Exact forward half-ray parameter and closed rational winding contours. Coplanar and boundary-band queries remain distinct outcomes.",
         "WASM and application integration are separate."
       ]
     }
