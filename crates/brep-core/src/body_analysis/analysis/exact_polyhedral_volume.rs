@@ -77,20 +77,40 @@ pub fn exact_polyhedral_inertia(
     let (six_volume, integration_work) =
         integrate_polyhedral_boundary(solid, max_exact_work, |a, b, c, signed, remaining| {
             spend(remaining, 72)?;
-            let sum: [Q; 3] = std::array::from_fn(|i| &a[i] + &b[i] + &c[i]);
-            for i in 0..3 {
-                first[i] += signed * &sum[i];
-                for j in i..3 {
-                    let paired = &a[i] * &a[j] + &b[i] * &b[j] + &c[i] * &c[j];
-                    second[i][j] += signed * (&sum[i] * &sum[j] + paired);
-                }
-            }
+            accumulate_tetrahedron_moments(&mut first, &mut second, [a, b, c], signed);
             Ok(())
         })?;
     let mut remaining = max_exact_work - integration_work;
     spend(&mut remaining, 48)?;
     let exact_work = max_exact_work - remaining;
 
+    Ok(finish_polyhedral_inertia(
+        first, second, six_volume, exact_work,
+    ))
+}
+
+fn accumulate_tetrahedron_moments(
+    first: &mut [Q; 3],
+    second: &mut [[Q; 3]; 3],
+    [a, b, c]: [&[Q; 3]; 3],
+    signed: &Q,
+) {
+    let sum: [Q; 3] = std::array::from_fn(|i| &a[i] + &b[i] + &c[i]);
+    for i in 0..3 {
+        first[i] += signed * &sum[i];
+        for j in i..3 {
+            let paired = &a[i] * &a[j] + &b[i] * &b[j] + &c[i] * &c[j];
+            second[i][j] += signed * (&sum[i] * &sum[j] + paired);
+        }
+    }
+}
+
+fn finish_polyhedral_inertia(
+    first: [Q; 3],
+    second: [[Q; 3]; 3],
+    six_volume: Q,
+    exact_work: u64,
+) -> ExactPolyhedralInertia {
     let volume_mm3 = &six_volume / Q::from_integer(6.into());
     let first_denominator = six_volume * Q::from_integer(4.into());
     let centroid_mm = first.map(|moment| moment / &first_denominator);
@@ -112,12 +132,12 @@ pub fn exact_polyhedral_inertia(
             }
         })
     });
-    Ok(ExactPolyhedralInertia {
+    ExactPolyhedralInertia {
         volume_mm3,
         centroid_mm,
         inertia_mm5,
         exact_work,
-    })
+    }
 }
 
 fn integrate_polyhedral_boundary(
@@ -953,7 +973,8 @@ pub use spatial_clip::{
     decompose_exact_coplanar_planar_polyline_region_boolean,
     decompose_exact_coplanar_planar_polyline_region_overlap,
     distance_between_exact_spatial_polylines, exact_coplanar_planar_polyline_region_overlap_area,
-    exact_coplanar_planar_polyline_region_overlap_mass, exact_planar_spatial_polyline_area,
+    exact_coplanar_planar_polyline_region_overlap_mass,
+    exact_coplanar_polyline_boolean_extrusion_inertia, exact_planar_spatial_polyline_area,
     exact_planar_spatial_polyline_centroid, exact_planar_spatial_polyline_region_mass,
     exact_planar_spatial_polyline_region_second_moments,
     exact_planar_spatial_polyline_second_moments, exact_polyhedral_ball_clearance,

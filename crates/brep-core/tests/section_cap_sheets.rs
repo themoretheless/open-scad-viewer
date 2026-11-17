@@ -6225,3 +6225,92 @@ fn exact_coplanar_boolean_brep_extrusion_refuses_rounded_vertices() {
     .expect("nonbinary coordinate must be refused");
     assert!(error.message.contains("binary64"));
 }
+
+#[test]
+fn exact_coplanar_boolean_extrusion_inertia_integrates_an_oblique_rational_sweep() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Intersection, exact_coplanar_polyline_boolean_extrusion_inertia,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y| [q(x, 1), q(y, 1), q(0, 1)];
+    let a = [p(0, 0), p(2, 0), p(2, 4), p(0, 4), p(0, 0)];
+    let sweep = [q(1, 3), q(0, 1), q(3, 1)];
+    let report = exact_coplanar_polyline_boolean_extrusion_inertia(
+        &a,
+        &[],
+        &a,
+        &[],
+        Intersection,
+        &sweep,
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(report.volume_mm3, q(24, 1));
+    assert_eq!(report.centroid_mm, [q(7, 6), q(2, 1), q(3, 2)]);
+    assert_eq!(
+        report.inertia_mm5,
+        [
+            [q(50, 1), q(0, 1), q(-2, 1)],
+            [q(0, 1), q(236, 9), q(0, 1)],
+            [q(-2, 1), q(0, 1), q(362, 9)],
+        ]
+    );
+    assert!(
+        exact_coplanar_polyline_boolean_extrusion_inertia(
+            &a,
+            &[],
+            &a,
+            &[],
+            Intersection,
+            &sweep,
+            report.exact_work
+        )
+        .is_ok()
+    );
+    assert!(
+        exact_coplanar_polyline_boolean_extrusion_inertia(
+            &a,
+            &[],
+            &a,
+            &[],
+            Intersection,
+            &sweep,
+            report.exact_work - 1
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn exact_coplanar_boolean_extrusion_inertia_subtracts_a_through_hole() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Difference, exact_coplanar_polyline_boolean_extrusion_inertia,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y| [q(x), q(y), q(0)];
+    let ring = |lo, hi| [p(lo, lo), p(hi, lo), p(hi, hi), p(lo, hi), p(lo, lo)];
+    let a = ring(-2, 2);
+    let b = ring(-1, 1);
+    let report = exact_coplanar_polyline_boolean_extrusion_inertia(
+        &a,
+        &[],
+        &b,
+        &[],
+        Difference,
+        &[q(0), q(0), q(-2)],
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(report.centroid_mm, [q(0), q(0), q(-1)]);
+    assert_eq!(report.volume_mm3, q(24));
+    assert_eq!(
+        report.inertia_mm5,
+        [
+            [q(48), q(0), q(0)],
+            [q(0), q(48), q(0)],
+            [q(0), q(0), q(80)]
+        ]
+    );
+}

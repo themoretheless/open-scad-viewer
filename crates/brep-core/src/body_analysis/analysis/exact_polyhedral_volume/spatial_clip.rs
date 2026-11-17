@@ -3951,3 +3951,49 @@ pub fn extrude_exact_coplanar_polyline_boolean_brep(
         exact_work: max_exact_work - remaining,
     })
 }
+
+/// Compute exact centroidal inertia at unit volumetric density for an
+/// extruded planar Boolean region. Rational mesh coordinates are retained
+/// through signed tetrahedral integration.
+pub fn exact_coplanar_polyline_boolean_extrusion_inertia(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    operation: CoplanarPolylineBoolean,
+    sweep_mm: &[Q; 3],
+    max_exact_work: u64,
+) -> Result<super::ExactPolyhedralInertia> {
+    let extrusion = extrude_exact_coplanar_planar_polyline_region_boolean(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        operation,
+        sweep_mm,
+        max_exact_work,
+    )?;
+    let mut remaining = max_exact_work - extrusion.exact_work;
+    let mut six_volume = Q::zero();
+    let mut first = std::array::from_fn(|_| Q::zero());
+    let mut second = std::array::from_fn(|_| std::array::from_fn(|_| Q::zero()));
+    for indices in extrusion.triangles {
+        spend(&mut remaining, 96)?;
+        let [a, b, c] = indices.map(|i| &extrusion.vertices_mm[i]);
+        let signed = super::determinant(a, b, c);
+        super::accumulate_tetrahedron_moments(&mut first, &mut second, [a, b, c], &signed);
+        six_volume += signed;
+    }
+    spend(&mut remaining, 48)?;
+    if !six_volume.is_positive() || six_volume != extrusion.volume_mm3 * Q::from_integer(6.into()) {
+        return Err(refuse(
+            "Extrusion inertia requires matching positive swept volume",
+        ));
+    }
+    Ok(super::finish_polyhedral_inertia(
+        first,
+        second,
+        six_volume,
+        max_exact_work - remaining,
+    ))
+}
