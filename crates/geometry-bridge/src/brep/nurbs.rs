@@ -573,3 +573,37 @@ pub fn tessellate_exact_periodic_trim_sheet(
         tessellation,
     })
 }
+
+/// Decode a periodic trim sheet request and serialize the exact B-rep or its
+/// refusal stage for the shared native and WASM JSON interface.
+pub fn exact_periodic_trim_sheet_request(request: &value_codec::Value) -> Result<value_codec::Value> {
+    use crate::field;
+    use nurbs_core::editing::exact_periodic_surface::PeriodicTrimEdgeRefusal;
+    use value_codec::json;
+
+    let source: nurbs_core::surface::Surface = field(request, "surface")?;
+    let contours: Vec<Vec<[f64; 2]>> = field(request, "contours")?;
+    let tolerance_mm: f64 = field(request, "toleranceMm")?;
+    let max_work: u64 = field(request, "maxWork")?;
+    if !(1..=1_000_000).contains(&max_work) {
+        return Err(input("Periodic trim sheet maxWork must be 1..=1000000"));
+    }
+
+    let contours = contours.iter().map(Vec::as_slice).collect::<Vec<_>>();
+    let report = brep_core::feature_ops::periodic_trim_sheet::build_exact_periodic_trim_sheet(
+        &source,
+        &contours,
+        tolerance_mm,
+        max_work,
+    )?;
+    let refusal = report.refusal.map(|reason| match reason {
+        PeriodicTrimEdgeRefusal::Patch(_) => "patch",
+        PeriodicTrimEdgeRefusal::Lift(_) => "lift",
+        PeriodicTrimEdgeRefusal::Restrict(_) => "restrict",
+    });
+    Ok(json!({
+        "model": report.model,
+        "workUsed": report.work_used,
+        "refusalStage": refusal,
+    }))
+}

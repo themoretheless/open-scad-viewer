@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0561",
+  "testedBase": "1d08a1e2c813f975a215c171201aa854e26033d8",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "brep-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_periodic_trim_sheet_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 2,
+  "scope": [
+    "Expose exact seam-spanning open sheet authoring through the Rust geometry bridge.",
+    "Retain open shell topology and holes in the Rust bridge and WASM binary ABI. Exhausted work returns a refusal stage without geometry."
+  ],
+  "logSha256": "18d89af6a6dd6cddc06ebdf0cc984e7489e7bd558d32f50ad7a0bab8fafcf7c6",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "d17c789084dd92d5e37db645f64d54c6f551c4067a90b870cb97789076c50f3d",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e0167ef7feed6d88906e526cb2c18823cd6c3a437d210163b99c1a0d0aedf14d",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "f642f665b02462cd14655111d2a1cd4f29287a810fb045f5fb2104134e62f558",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "6dd0a58ba02d24f03cc00708743b8f39427084493599fede88f1d66bbb85fcc1"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

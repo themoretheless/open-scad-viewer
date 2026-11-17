@@ -1,0 +1,74 @@
+// Run with tsx and a freshly built geometry_wasm.wasm.
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { encodeBinary } from '../src/core/valueBinaryCodec'
+import { decodePacked, writeLinear } from '../src/kernel/wasmHost'
+
+interface Kernel extends WebAssembly.Exports {
+  memory: WebAssembly.Memory
+  abi_alloc: (length: number) => number
+  abi_free: (pointer: number, length: number) => void
+  abi_request: (op: number, pointer: number, length: number) => bigint
+}
+
+interface Report {
+  model: {
+    faces: { holes: number[] }[]
+    shells: { closed: boolean }[]
+    bodies: unknown[]
+  } | null
+  workUsed: number
+  refusalStage: string | null
+}
+
+const file = process.argv[2]
+assert.ok(file, 'Pass the path to geometry_wasm.wasm')
+const kernel = new WebAssembly.Instance(new WebAssembly.Module(readFileSync(file))).exports as Kernel
+
+const ring = [[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]
+const request = {
+  op: 'brep_build_exact_periodic_trim_sheet',
+  surface: {
+    degreeU: 1, degreeV: 1,
+    knotsU: [-1, 0, 1, 2, 3, 4, 5], knotsV: [0, 0, 1, 1],
+    controlPoints: ring.map(([x, y]) => [[x, y, 0], [x, y, 2]]),
+    weights: ring.map(() => [1, 1]), periodicU: true, periodicV: false,
+  },
+  contours: [
+    [[3.5, 0.125], [0.5, 0.125], [0.5, 0.875], [3.5, 0.875], [3.5, 0.125]],
+    [[0.125, 0.25], [0.375, 0.25], [0.375, 0.75], [0.125, 0.75], [0.125, 0.25]],
+  ],
+  toleranceMm: 1e-8,
+  maxWork: 1_000_000,
+}
+
+function call(maxWork: number): Report {
+  const bytes = encodeBinary({ ...request, maxWork })
+  const ptr = writeLinear(kernel.memory, kernel.abi_alloc, bytes)
+  assert.ok(ptr)
+  try {
+    const packed = kernel.abi_request(0, ptr, bytes.length)
+    const response = decodePacked<{ ok: true; value: Report } | { ok: false; error: unknown }>(
+      kernel.memory, kernel.abi_free, packed,
+    )
+    assert.ok(response.ok, JSON.stringify(response))
+    return response.value
+  } finally {
+    kernel.abi_free(ptr, bytes.length)
+  }
+}
+
+const result = call(request.maxWork)
+assert.ok(result.model)
+assert.equal(result.refusalStage, null)
+assert.ok(result.workUsed > 0)
+assert.equal(result.model.faces.length, 1)
+assert.deepEqual(result.model.faces[0].holes, [1])
+assert.equal(result.model.shells.length, 1)
+assert.equal(result.model.shells[0].closed, false)
+assert.equal(result.model.bodies.length, 0)
+
+const refusal = call(1)
+assert.equal(refusal.model, null)
+assert.equal(refusal.refusalStage, 'patch')
+console.log('WASM ABI preserved the open periodic trim sheet and hole and refused exhausted work.')
