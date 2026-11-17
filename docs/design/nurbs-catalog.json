@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 398,
-  "unallocatedCount": 602,
+  "specifiedCount": 399,
+  "unallocatedCount": 601,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -10254,6 +10254,39 @@
       "remainingQualification": [
         "Qualify a solid and enclose its positive volume after capping supplied planes with exact expanded supports.",
         "Exact section closure preserves source topology. Solid admission requires an embedded outward boundary, and flux integration encloses the positive stored volume.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0399",
+      "name": "Исправление доказанной внутренней ориентации оболочки после точной сшивки крышек",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::planar_cap::build_outward_section_solid",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets/expanded_support.rs",
+        "crates/brep-core/src/contact/boundary_agreement.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/solid.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets/expanded_support.rs",
+        "crates/brep-core/src/model/closed_solid.rs",
+        "crates/brep-core/src/body_analysis/analysis/certified_freeform_volume.rs",
+        "docs/qualification/nurbs-curvature-field-399-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-399-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Correct a proven inward capped shell and independently requalify the outward material boundary and volume.",
+        "Only a proven inward embedded standalone shell may be reoriented. All face uses reverse together, original edge and vertex geometry is preserved, and the corrected solid is independently certified.",
         "WASM and application integration are separate."
       ]
     }

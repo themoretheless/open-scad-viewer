@@ -447,8 +447,8 @@ pub use attach_sections::{
     discover_and_attach_section_caps_with_support_tolerance,
 };
 pub use attach_sections::{
-    BoundedSectionSolid, InferredSectionSolidAdmission, SectionSolid, SectionSolidOptions, build_bounded_section_solid, build_expanded_inferred_section_solid, build_expanded_section_solid,
-    build_inferred_section_solid, build_section_solid, inspect_inferred_section_solid,
+    BoundedSectionSolid, InferredSectionSolidAdmission, OrientedSectionSolid, SectionSolid, SectionSolidOptions, build_bounded_section_solid, build_expanded_inferred_section_solid, build_expanded_section_solid,
+    build_inferred_section_solid, build_outward_section_solid, build_section_solid, inspect_inferred_section_solid,
 };
 
 pub use attach_sections::{

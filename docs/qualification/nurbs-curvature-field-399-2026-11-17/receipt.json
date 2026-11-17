@@ -1,0 +1,44 @@
+{
+  "id": "NURBS-0399",
+  "testedBase": "73153832c8d76f9f41b0df059bbafa3c13e9567b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 122,
+  "scope": [
+    "Correct a proven inward capped shell and independently requalify the outward material boundary and volume.",
+    "Only a proven inward embedded standalone shell may be reoriented. All face uses reverse together, original edge and vertex geometry is preserved, and the corrected solid is independently certified."
+  ],
+  "logSha256": "775e47ef034c10e67b7e329c7837fd8186639b7652245ee0e394a05a28264409",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "8946d7a457e57729bc03ffe714aeeff4e967905a93191de5f1a57748c1b11954",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "277e71831bdc46a18d9a6ed82283d08e38963687b888ca4d83938671c5e33e00",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "933a2597decac46b84eae67af35d5b5a1892afea719977dfb5709bf9c358952b",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "e6b04d6967199d71c2d384f8edbecbe6d070ace1883fd009253395fca5955bd1",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs": "6da5012ec1d0f258ce8bdbcf2e57778b8c93d2f2abc0310609fd1d37ee17df11",
+    "crates/brep-core/src/profile/planar_cap/section_sheets/expanded_support.rs": "b354b108e78cefd988c066490de00a364e317183d0c93db402bcf0931f84d77f",
+    "crates/brep-core/src/contact/boundary_agreement.rs": "d90d598ed52451d4d6ed02c3880dd1a31c2f78bccafcfb6324b8b2d4d9a3e22a",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/solid.rs": "186cbcf3a0fd1c92d95f1c897de037eb440ce222e127d4cb6b789236fb2c1556",
+    "crates/brep-core/src/model/closed_solid.rs": "a6168b4728676e87d9cd631bab94e07573aabf49c26df8dcf5c1c8b11eb0e67f",
+    "crates/brep-core/src/body_analysis/analysis/certified_freeform_volume.rs": "0d24317b5fb03ed9ac0f267132a90d33ec1e0012a987da0e105d3ca78f2000a1"
+  }
+}

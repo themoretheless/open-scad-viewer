@@ -67,6 +67,56 @@ pub fn build_expanded_section_solid(
     qualify_attachment(source, attachment, options)
 }
 
+pub struct OrientedSectionSolid {
+    pub section: SectionSolid,
+    pub orientation_reversed: bool,
+}
+
+/// Close a standalone shell with expanded exact caps, and correct a proven
+/// inward orientation by reversing all face uses together. Admission limits
+/// apply independently to the initial and, if needed, corrected candidate.
+pub fn build_outward_section_solid(
+    source: &Model,
+    planes: &[SectionPlane],
+    options: SectionSolidOptions,
+) -> Result<OrientedSectionSolid> {
+    require_standalone_shell(source)?;
+    let attachment = close_shell_with_expanded_exact_section_caps(
+        source,
+        0,
+        planes,
+        options.max_exact_work,
+        options.max_verification_cells,
+    )?;
+    let mut admission = admit_model(source, attachment.model, options.admission)?;
+    let evidence = admission.geometry();
+    let orientation_reversed = evidence.boundary.proven
+        && evidence
+            .nesting
+            .as_ref()
+            .is_some_and(|nesting| nesting.roles_consistent == Some(true))
+        && evidence.orientations[0].outward == Some(false);
+    if orientation_reversed {
+        let mut candidate = admission.candidate().clone();
+        for face in &mut candidate.shells[0].faces {
+            face.reversed = !face.reversed;
+        }
+        candidate.inherit_topology_ids(&[source]);
+        admission = qualify(candidate, options.admission)?;
+    }
+    let section = finish_admission(
+        admission,
+        attachment.cap_faces,
+        attachment.exact_work,
+        attachment.verification_cells,
+        options,
+    )?;
+    Ok(OrientedSectionSolid {
+        section,
+        orientation_reversed,
+    })
+}
+
 pub struct BoundedSectionSolid {
     pub section: SectionSolid,
     /// Continuous displacement bounds relative to the requested support

@@ -1432,3 +1432,55 @@ fn rejects_a_closed_but_inward_solid_from_supplied_exact_caps() {
     assert_eq!(error.code, "BREP_CLOSED_SOLID_UNPROVED");
     assert_eq!(source, before);
 }
+
+#[test]
+fn corrects_proven_inward_orientation_after_exact_section_closure() {
+    use brep_core::planar_cap::{SectionPlane, build_outward_section_solid};
+    let mut source = open_prism_with_nonbinary_cap_support();
+    let planes = [SectionPlane {
+        normal: [-1., -1., 3.],
+        offset: 6.,
+    }];
+    let options = section_solid_options();
+    let outward = build_outward_section_solid(&source, &planes, options).unwrap();
+    assert!(!outward.orientation_reversed);
+    for face in &mut source.shells[0].faces {
+        face.reversed = !face.reversed;
+    }
+    let before = source.clone();
+    let corrected = build_outward_section_solid(&source, &planes, options).unwrap();
+    assert!(corrected.orientation_reversed);
+    let solid = corrected.section.solid;
+    assert!(solid.geometry().proven);
+    assert_eq!(solid.geometry().orientations[0].outward, Some(true));
+    assert_eq!(
+        solid.model().shells[0].faces,
+        outward.section.solid.model().shells[0].faces
+    );
+    assert_eq!(solid.model().edges, source.edges);
+    assert_eq!(solid.model().vertices, source.vertices);
+    let volume = corrected.section.volume.volume_mm3;
+    assert!(volume.lower > 0. && volume.lower <= 12. && 12. <= volume.upper);
+    assert_eq!(source, before);
+}
+
+#[test]
+fn outward_capping_refuses_when_orientation_cannot_be_proven() {
+    use brep_core::planar_cap::{SectionPlane, build_outward_section_solid};
+    let mut source = open_prism_with_nonbinary_cap_support();
+    for face in &mut source.shells[0].faces {
+        face.reversed = !face.reversed;
+    }
+    let before = source.clone();
+    let mut options = section_solid_options();
+    options.admission.geometry.orientation_cells = 1;
+    let planes = [SectionPlane {
+        normal: [-1., -1., 3.],
+        offset: 6.,
+    }];
+    let err = build_outward_section_solid(&source, &planes, options)
+        .err()
+        .unwrap();
+    assert_eq!(err.code, "BREP_CLOSED_SOLID_UNPROVED");
+    assert_eq!(source, before);
+}
