@@ -58,7 +58,16 @@ const VOID_TAGS = new Set([
   'wbr',
 ])
 
-function patchStyle(el: HTMLElement | SVGElement, prev: any, next: any): void {
+/** DOM element plus the ad-hoc fields the renderer stores on it and dynamic property access by name. */
+type DomHost = Element &
+  Record<string, unknown> & {
+    _vei?: Record<string, EventInvoker | undefined>
+    _value?: unknown
+    value?: unknown
+  }
+type EventInvoker = ((e: Event) => void) & { value: unknown }
+
+function patchStyle(el: HTMLElement | SVGElement, prev: unknown, next: unknown): void {
   const style = el.style
   if (!style) return
   if (typeof next === 'string') {
@@ -70,21 +79,21 @@ function patchStyle(el: HTMLElement | SVGElement, prev: any, next: any): void {
       for (const key of Object.keys(prev)) {
         if (!(key in next)) {
           if (key.startsWith('--')) style.setProperty(key, '')
-          else (style as any)[key] = ''
+          else (style as unknown as Record<string, unknown>)[key] = ''
         }
       }
     }
     for (const key of Object.keys(next)) {
-      const val = next[key] ?? ''
+      const val = (next as Record<string, unknown>)[key] ?? ''
       if (key.startsWith('--')) style.setProperty(key, String(val))
-      else (style as any)[key] = val
+      else (style as unknown as Record<string, unknown>)[key] = val
     }
   } else {
     el.removeAttribute?.('style')
   }
 }
 
-function patchEvent(el: any, rawName: string, _prevValue: any, nextValue: any): void {
+function patchEvent(el: DomHost, rawName: string, _prevValue: unknown, nextValue: unknown): void {
   const invokers = el._vei || (el._vei = {})
   let name = rawName.slice(2)
   let options: AddEventListenerOptions | undefined
@@ -109,12 +118,13 @@ function patchEvent(el: any, rawName: string, _prevValue: any, nextValue: any): 
       const val = invoker.value
       if (Array.isArray(val)) {
         for (let i = 0; i < val.length; i++) {
-          if (typeof val[i] === 'function') val[i](e)
+          const fn: unknown = val[i]
+          if (typeof fn === 'function') fn(e)
         }
       } else if (typeof val === 'function') {
         val(e)
       }
-    }) as ((e: Event) => void) & { value: any }
+    }) as EventInvoker
     invoker.value = nextValue
     invokers[rawName] = invoker
     el.addEventListener?.(eventName, invoker, options)
@@ -124,7 +134,7 @@ function patchEvent(el: any, rawName: string, _prevValue: any, nextValue: any): 
   }
 }
 
-function shouldSetAsProp(el: any, key: string, _value: any, isSVG: boolean): boolean {
+function shouldSetAsProp(el: Element, key: string, _value: unknown, isSVG: boolean): boolean {
   if (isSVG) {
     if (key === 'innerHTML' || key === 'textContent') return true
     return false
@@ -142,7 +152,7 @@ function shouldSetAsProp(el: any, key: string, _value: any, isSVG: boolean): boo
   return key in el
 }
 
-const domRendererOptions: RendererOptions<any, any> = {
+const domRendererOptions: RendererOptions<Node, Element> = {
   createElement(tag, namespace) {
     if (namespace === 'svg') return document.createElementNS(SVG_NS, tag)
     if (namespace === 'mathml') return document.createElementNS(MATH_NS, tag)
@@ -168,7 +178,7 @@ const domRendererOptions: RendererOptions<any, any> = {
     if (parent) parent.removeChild(child)
   },
   parentNode(node) {
-    return node.parentNode
+    return node.parentNode as Element | null
   },
   nextSibling(node) {
     return node.nextSibling
@@ -189,14 +199,15 @@ const domRendererOptions: RendererOptions<any, any> = {
     }
     return [first, last]
   },
-  patchProp(el, key, prevValue, nextValue, namespace) {
+  patchProp(hostEl, key, prevValue, nextValue, namespace) {
+    const el = hostEl as DomHost
     const isSVG = namespace === 'svg'
     if (key === 'class') {
-      const cls = nextValue || ''
+      const cls = (nextValue || '') as string
       if (isSVG) el.setAttribute('class', cls)
       else el.className = cls
     } else if (key === 'style') {
-      patchStyle(el, prevValue, nextValue)
+      patchStyle(el as unknown as HTMLElement, prevValue, nextValue)
     } else if (/^on[A-Z]/.test(key)) {
       if (!key.startsWith('onUpdate:')) {
         patchEvent(el, key, prevValue, nextValue)
@@ -241,16 +252,16 @@ const domRendererOptions: RendererOptions<any, any> = {
   },
 }
 
-let defaultRenderer: ReturnType<typeof createRenderer> | null = null
+let defaultRenderer: ReturnType<typeof createRenderer<Node, Element>> | null = null
 function ensureRenderer() {
   return defaultRenderer || (defaultRenderer = createRenderer(domRendererOptions))
 }
 
-export function createApp(rootComponent: any, rootProps: Record<string, any> | null = null): SvetApp {
+export function createApp(rootComponent: unknown, rootProps: Record<string, unknown> | null = null): SvetApp {
   return ensureRenderer().createApp(rootComponent, rootProps)
 }
 
-export function createSSRApp(rootComponent: any, rootProps: Record<string, any> | null = null): SvetApp {
+export function createSSRApp(rootComponent: unknown, rootProps: Record<string, unknown> | null = null): SvetApp {
   return createApp(rootComponent, rootProps)
 }
 
@@ -261,10 +272,10 @@ function escapeHtml(str: string): string {
 class SSRNode {
   parent: SSRNode | null = null
   children: SSRNode[] = []
-  props: Record<string, any> = {}
-  style: Record<string, any> = {}
+  props: Record<string, unknown> = {}
+  style: Record<string, unknown> = {}
   text = ''
-  value: any = undefined
+  value: unknown = undefined
   checked: boolean | undefined = undefined
   selected: boolean | undefined = undefined
   scopeIds: string[] = []
@@ -277,7 +288,7 @@ class SSRNode {
   }
   addEventListener() {}
   removeEventListener() {}
-  setAttribute(k: string, v: any) {
+  setAttribute(k: string, v: unknown) {
     this.props[k] = v
   }
   removeAttribute(k: string) {

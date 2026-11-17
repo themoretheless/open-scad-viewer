@@ -35,21 +35,27 @@ import {
   withScopeId,
   type SvetComponentInstance,
   type SvetVNode,
+  type InstanceComponentType,
+  type InstanceRender,
 } from './svet-vnode'
 
-export interface SvetApp<HostElement = any> {
-  readonly _component: any
-  readonly _props: Record<string, any> | null
+/** App plugin: an object with `install`, or a bare install function. */
+export type SvetPlugin =
+  { install(app: SvetApp, ...options: unknown[]): unknown } | ((app: SvetApp, ...options: unknown[]) => unknown)
+
+export interface SvetApp<HostElement = unknown> {
+  readonly _component: unknown
+  readonly _props: Record<string, unknown> | null
   _container: HostElement | null
-  mount(rootContainer: HostElement | string): any
+  mount(rootContainer: HostElement | string): unknown
   unmount(): void
-  use(plugin: any, ...options: any[]): this
-  provide(key: any, value: any): this
-  component(name: string, component?: any): any
-  config: Record<string, any>
+  use(plugin: SvetPlugin | null | undefined, ...options: unknown[]): this
+  provide(key: unknown, value: unknown): this
+  component(name: string, component?: unknown): unknown
+  config: Record<string, unknown>
 }
 
-export interface ComponentRendererCallbacks<HostNode = any, HostElement = any> {
+export interface ComponentRendererCallbacks<HostNode = unknown, HostElement = unknown> {
   patch(n1: SvetVNode | null, n2: SvetVNode, container: HostElement, anchor: HostNode | null, namespace?: string): void
   unmount(vnode: SvetVNode): void
   getFirstHostNode(vnode: SvetVNode | null): HostNode | null
@@ -61,7 +67,7 @@ export interface ComponentRendererCallbacks<HostNode = any, HostElement = any> {
 
 let uidCounter = 0
 
-function emitComponentEvent(instance: SvetComponentInstance, event: string, ...args: any[]): void {
+function emitComponentEvent(instance: SvetComponentInstance, event: string, ...args: unknown[]): void {
   const rawProps = instance.vnode.props || {}
   let handler =
     rawProps[toHandlerKey(event)] || rawProps[toHandlerKey(camelize(event))] || rawProps[toHandlerKey(hyphenate(event))]
@@ -81,7 +87,7 @@ function emitComponentEvent(instance: SvetComponentInstance, event: string, ...a
   }
 }
 
-export function createComponentOperations<HostNode = any, HostElement = HostNode>(
+export function createComponentOperations<HostNode = unknown, HostElement = HostNode>(
   cb: ComponentRendererCallbacks<HostNode, HostElement>,
 ) {
   function mountComponent(
@@ -90,20 +96,18 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
     anchor: HostNode | null,
     namespace?: string,
   ): void {
-    const type = initialVNode.type
-    let instance!: SvetComponentInstance
-
-    const emitFn = (event: string, ...args: any[]) => emitComponentEvent(instance, event, ...args)
+    const type = initialVNode.type as InstanceComponentType
+    const emitFn = (event: string, ...args: unknown[]) => emitComponentEvent(instance, event, ...args)
     const { propsValues, attrsValues } = splitPropsAndAttrs(type, initialVNode.props, emitFn)
 
-    const slots: Record<string, any> =
+    const slots: Record<string, unknown> =
       initialVNode.children && typeof initialVNode.children === 'object' && !Array.isArray(initialVNode.children)
-        ? initialVNode.children
+        ? (initialVNode.children as Record<string, unknown>)
         : initialVNode.children != null
           ? { default: () => (Array.isArray(initialVNode.children) ? initialVNode.children : [initialVNode.children]) }
           : {}
 
-    instance = {
+    const instance: SvetComponentInstance = {
       uid: ++uidCounter,
       vnode: initialVNode,
       type,
@@ -130,7 +134,7 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
     }
     initialVNode.component = instance
 
-    instance.ctx = new Proxy(instance, {
+    const ctxProxy = new Proxy(instance, {
       get(target, key) {
         if (key === '$attrs') return target.attrs
         if (key === '$slots') return target.slots
@@ -153,9 +157,13 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
         return false
       },
     })
+    instance.ctx = ctxProxy as unknown as Record<string, unknown>
 
-    const exposeProxy = (exp?: any) => {
-      instance.exposed = exp && typeof exp === 'object' ? createRefUnwrapProxy(exp) : exp || {}
+    const exposeProxy = (exp?: unknown) => {
+      instance.exposed =
+        exp && typeof exp === 'object'
+          ? (createRefUnwrapProxy(exp) as Record<string, unknown>)
+          : (exp as Record<string, unknown> | null) || {}
     }
 
     const scope = effectScope(true)
@@ -179,9 +187,9 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
             expose: exposeProxy,
           })
           if (typeof setupResult === 'function') {
-            instance.render = setupResult
+            instance.render = setupResult as InstanceRender
           } else if (setupResult && typeof setupResult === 'object') {
-            instance.setupState = createRefUnwrapProxy(setupResult)
+            instance.setupState = createRefUnwrapProxy(setupResult) as Record<PropertyKey, unknown>
           }
         }
         if (!instance.render && type.render) {
@@ -195,7 +203,7 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
       const renderComponentRoot = (): SvetVNode => {
         if (!instance.render) return createCommentVNode('empty')
         const prevRendering = setCurrentRenderingInstance(instance)
-        const compScopeId = (type as any).__scopeId as string | undefined
+        const compScopeId = (type as { __scopeId?: string }).__scopeId
         const invokeRender = () =>
           instance.render!.call(
             instance.ctx,
@@ -206,7 +214,7 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
             instance.ctx,
             instance.ctx,
           )
-        let rawSubTree: any
+        let rawSubTree: unknown
         try {
           rawSubTree = compScopeId ? withScopeId(compScopeId)(invokeRender)() : invokeRender()
         } finally {
@@ -297,7 +305,7 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
       if (syncReactiveRecord(instance.props, propsValues)) changed = true
       if (syncReactiveRecord(instance.attrs, attrsValues)) changed = true
       if (n2.children && typeof n2.children === 'object' && !Array.isArray(n2.children)) {
-        if (syncReactiveRecord(instance.slots, n2.children as Record<string, any>, dynamicSlots)) {
+        if (syncReactiveRecord(instance.slots, n2.children as Record<string, unknown>, dynamicSlots)) {
           changed = true
         }
       }
@@ -335,18 +343,22 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
     }
   }
 
-  function createAppAPI(rootComponent: any, rootProps: Record<string, any> | null = null): SvetApp<HostElement> {
+  function createAppAPI(
+    rootComponent: unknown,
+    rootProps: Record<string, unknown> | null = null,
+  ): SvetApp<HostElement> {
     let isMounted = false
     const app: SvetApp<HostElement> = {
       _component: rootComponent,
       _props: rootProps,
       _container: null,
       config: { globalProperties: {} },
-      use(plugin: any, ...pluginArgs: any[]) {
-        if (plugin && typeof plugin.install === 'function') {
-          plugin.install(app, ...pluginArgs)
+      use(plugin: SvetPlugin | null | undefined, ...pluginArgs: unknown[]) {
+        const installable = plugin as { install?: unknown } | null | undefined
+        if (installable && typeof installable.install === 'function') {
+          ;(plugin as { install(app: SvetApp, ...options: unknown[]): unknown }).install(app as SvetApp, ...pluginArgs)
         } else if (typeof plugin === 'function') {
-          plugin(app, ...pluginArgs)
+          plugin(app as SvetApp, ...pluginArgs)
         }
         return app
       },

@@ -68,8 +68,8 @@ export function createRefUnwrapProxy<T extends object>(target: T): T {
 }
 
 export function syncReactiveRecord(
-  current: Record<string, any>,
-  next: Record<string, any>,
+  current: Record<string, unknown>,
+  next: Record<string, unknown>,
   notifyOnMutate = true,
 ): boolean {
   let changed = false
@@ -96,16 +96,16 @@ export function cloneVNode(vnode: SvetVNode): SvetVNode {
   }
 }
 
-export function normalizeVNode(child: any): SvetVNode {
+export function normalizeVNode(child: unknown): SvetVNode {
   if (child == null || typeof child === 'boolean') return createCommentVNode()
   if (Array.isArray(child)) return createVNode(Fragment, null, child.slice())
   if (isVNode(child)) return child.el === null ? child : cloneVNode(child)
   return createTextVNode(String(child))
 }
 
-export function normalizeChildrenArray(children: any): SvetVNode[] {
+export function normalizeChildrenArray(children: unknown): SvetVNode[] {
   if (children == null) return []
-  const rawList = Array.isArray(children) ? children : [children]
+  const rawList: unknown[] = Array.isArray(children) ? children : [children]
   const out: SvetVNode[] = new Array(rawList.length)
   for (let i = 0; i < rawList.length; i++) out[i] = normalizeVNode(rawList[i])
   return out
@@ -113,13 +113,14 @@ export function normalizeChildrenArray(children: any): SvetVNode[] {
 
 export const isSameVNodeType = (n1: SvetVNode, n2: SvetVNode): boolean => n1.type === n2.type && n1.key === n2.key
 
-export function setTemplateRef(rawRef: any, value: any): void {
+export function setTemplateRef(rawRef: unknown, value: unknown): void {
   if (!rawRef) return
   if (value && typeof value === 'object' && '__svet_asyncInnerRef' in value) {
     value = value.__svet_asyncInnerRef
   }
-  const refTarget = rawRef.ref !== undefined ? rawRef.ref : rawRef
-  const owner = rawRef.owner as SvetComponentInstance | null | undefined
+  const refRecord = rawRef as { ref?: unknown; owner?: SvetComponentInstance | null }
+  const refTarget = refRecord.ref !== undefined ? refRecord.ref : rawRef
+  const owner = refRecord.owner
   if (typeof refTarget === 'function') {
     refTarget(value, owner?.setupState || {})
   } else if (isRef(refTarget)) {
@@ -148,18 +149,18 @@ export function invokeDirectiveHook(
 
 interface NormalizedPropsMeta {
   declaredKeys: Set<string>
-  defaults: Record<string, any>
+  defaults: Record<string, unknown>
   booleanKeys: Set<string>
 }
 const propsOptionsCache = new WeakMap<object, NormalizedPropsMeta>()
 
-export function normalizePropsOptions(rawOptions: any): NormalizedPropsMeta {
+export function normalizePropsOptions(rawOptions: unknown): NormalizedPropsMeta {
   if (rawOptions && typeof rawOptions === 'object') {
     const cached = propsOptionsCache.get(rawOptions)
     if (cached) return cached
   }
   const declaredKeys = new Set<string>()
-  const defaults: Record<string, any> = {}
+  const defaults: Record<string, unknown> = {}
   const booleanKeys = new Set<string>()
 
   if (!rawOptions) return { declaredKeys, defaults, booleanKeys }
@@ -175,10 +176,11 @@ export function normalizePropsOptions(rawOptions: any): NormalizedPropsMeta {
     for (const key of Object.keys(rawOptions)) {
       const camelKey = camelize(key)
       declaredKeys.add(camelKey)
-      const opt = rawOptions[key]
+      const opt: unknown = (rawOptions as Record<string, unknown>)[key]
       if (opt && typeof opt === 'object' && !Array.isArray(opt)) {
         if ('default' in opt) defaults[camelKey] = opt.default
-        const types = Array.isArray(opt.type) ? opt.type : [opt.type]
+        const optType = (opt as { type?: unknown }).type
+        const types: unknown[] = Array.isArray(optType) ? optType : [optType]
         if (types.includes(Boolean)) booleanKeys.add(camelKey)
       } else if (opt === Boolean || (Array.isArray(opt) && opt.includes(Boolean))) {
         booleanKeys.add(camelKey)
@@ -193,7 +195,7 @@ export function normalizePropsOptions(rawOptions: any): NormalizedPropsMeta {
 
 const emitsOptionsCache = new WeakMap<object, Set<string>>()
 
-export function normalizeEmitsOptions(rawEmits: any): Set<string> {
+export function normalizeEmitsOptions(rawEmits: unknown): Set<string> {
   if (rawEmits && typeof rawEmits === 'object') {
     const cached = emitsOptionsCache.get(rawEmits)
     if (cached) return cached
@@ -201,7 +203,7 @@ export function normalizeEmitsOptions(rawEmits: any): Set<string> {
   const declared = new Set<string>()
   if (!rawEmits) return declared
   if (Array.isArray(rawEmits)) {
-    for (const e of rawEmits) declared.add(e)
+    for (const e of rawEmits as string[]) declared.add(e)
   } else if (typeof rawEmits === 'object') {
     for (const e of Object.keys(rawEmits)) declared.add(e)
   }
@@ -212,16 +214,16 @@ export function normalizeEmitsOptions(rawEmits: any): Set<string> {
 }
 
 export function splitPropsAndAttrs(
-  type: any,
-  rawProps: Record<string, any> | null,
-  emitFn: (event: string, ...args: any[]) => void,
-): { propsValues: Record<string, any>; attrsValues: Record<string, any> } {
+  type: { props?: unknown; emits?: unknown },
+  rawProps: Record<string, unknown> | null,
+  emitFn: (event: string, ...args: unknown[]) => void,
+): { propsValues: Record<string, unknown>; attrsValues: Record<string, unknown> } {
   const { declaredKeys, defaults, booleanKeys } = normalizePropsOptions(type.props)
   const declaredEmits = normalizeEmitsOptions(type.emits)
   const hasDeclaredProps = Boolean(type.props)
 
-  const propsValues: Record<string, any> = {}
-  const attrsValues: Record<string, any> = {}
+  const propsValues: Record<string, unknown> = {}
+  const attrsValues: Record<string, unknown> = {}
 
   for (const key of declaredKeys) {
     if (key in defaults) {
@@ -281,9 +283,10 @@ export function splitPropsAndAttrs(
 }
 
 export function resolveTransitionChild(vnode: SvetVNode): SvetVNode {
-  const raw = vnode.children
-  if (raw && typeof raw === 'object' && typeof raw.default === 'function') {
-    const res = raw.default()
+  const raw: unknown = vnode.children
+  const slotDefault = raw && typeof raw === 'object' ? (raw as { default?: unknown }).default : undefined
+  if (typeof slotDefault === 'function') {
+    const res: unknown = (raw as { default: () => unknown }).default()
     if (Array.isArray(res)) {
       return res.length === 1 ? normalizeVNode(res[0]) : createVNode(Fragment, null, res)
     }
@@ -295,8 +298,8 @@ export function resolveTransitionChild(vnode: SvetVNode): SvetVNode {
   return normalizeVNode(raw)
 }
 
-export function resolveTeleportTarget<HostElement = any>(
-  to: any,
+export function resolveTeleportTarget<HostElement = unknown>(
+  to: unknown,
   fallback: HostElement,
   querySelector?: (selector: string) => HostElement | null,
 ): HostElement {
@@ -312,12 +315,12 @@ export function resolveTeleportTarget<HostElement = any>(
   return fallback
 }
 
-export function patchElementProps<HostElement = any>(
+export function patchElementProps<HostElement = unknown>(
   el: HostElement,
   n1: SvetVNode,
   n2: SvetVNode,
   namespace: string | undefined,
-  hostPatchProp: (el: HostElement, key: string, prevValue: any, nextValue: any, namespace?: string) => void,
+  hostPatchProp: (el: HostElement, key: string, prevValue: unknown, nextValue: unknown, namespace?: string) => void,
 ): void {
   const oldProps = n1.props || {}
   const newProps = n2.props || {}
@@ -366,7 +369,7 @@ export function patchElementProps<HostElement = any>(
   }
 }
 
-export function patchKeyedVNodeChildren<HostNode = any, HostElement = HostNode>(
+export function patchKeyedVNodeChildren<HostNode = unknown, HostElement = HostNode>(
   c1: SvetVNode[],
   c2: SvetVNode[],
   container: HostElement,
@@ -412,7 +415,7 @@ export function patchKeyedVNodeChildren<HostNode = any, HostElement = HostNode>(
   } else {
     const s1 = i,
       s2 = i
-    const keyToNewIndexMap = new Map<any, number>()
+    const keyToNewIndexMap = new Map<SvetVNode['key'], number>()
     for (i = s2; i <= e2; i++) {
       if (c2[i]!.key != null) keyToNewIndexMap.set(c2[i]!.key, i)
     }

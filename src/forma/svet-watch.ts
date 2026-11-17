@@ -95,12 +95,12 @@ function traverse(value: unknown, seen = new Set<unknown>()): unknown {
     return value
   }
   if (isReactive(value)) {
-    void (value as any)[DEEP_SIG_SYM]
+    void (value as { [DEEP_SIG_SYM]?: unknown })[DEEP_SIG_SYM]
   }
   if (Array.isArray(value)) {
     for (let i = 0; i < value.length; i++) traverse(value[i], seen)
   } else if (canObserve(value)) {
-    for (const k of Object.keys(value)) traverse((value as any)[k], seen)
+    for (const k of Object.keys(value)) traverse((value as Record<string, unknown>)[k], seen)
   }
   return value
 }
@@ -171,15 +171,34 @@ export function watchEffect(
   return stop
 }
 
+type OnCleanup = (fn: () => void) => void
+type WatchSourceValue<S> = S extends Ref<infer V> ? V : S extends () => infer R ? R : S
+type MultiWatchValues<T extends readonly unknown[]> = { [K in keyof T]: WatchSourceValue<T[K]> }
+
+export function watch<T>(
+  source: Ref<T> | (() => T),
+  cb: (value: T, oldValue: T, onCleanupFn: OnCleanup) => unknown,
+  options?: WatchOptions,
+): WatchStopHandle
+export function watch<const T extends readonly unknown[]>(
+  sources: T,
+  cb: (value: MultiWatchValues<T>, oldValue: MultiWatchValues<T>, onCleanupFn: OnCleanup) => unknown,
+  options?: WatchOptions,
+): WatchStopHandle
+export function watch<T extends object>(
+  source: T,
+  cb: (value: T, oldValue: T, onCleanupFn: OnCleanup) => unknown,
+  options?: WatchOptions,
+): WatchStopHandle
 export function watch(
-  source: any,
-  cb: (value: any, oldValue: any, onCleanupFn: (fn: () => void) => void) => any,
+  source: unknown,
+  cb: (value: never, oldValue: never, onCleanupFn: OnCleanup) => unknown,
   options: WatchOptions = {},
 ): WatchStopHandle {
   const { immediate = false, deep = false, flush = 'pre', once = false } = options
   const isMulti = Array.isArray(source)
 
-  let getter: () => any
+  let getter: () => unknown
   let forceTrigger = deep
   if (isRef(source)) {
     getter = () => source.value
@@ -195,7 +214,7 @@ export function watch(
         return s
       })
   } else if (typeof source === 'function') {
-    getter = source
+    getter = source as () => unknown
   } else {
     getter = () => undefined
   }
@@ -213,7 +232,7 @@ export function watch(
   const onCleanupRegister = (fn: () => void) => {
     cleanup = fn
   }
-  let oldValue: any = isMulti ? [] : undefined
+  let oldValue: unknown = isMulti ? [] : undefined
   let initialized = false
   let stopped = false
 
@@ -226,10 +245,10 @@ export function watch(
     return val
   }
 
-  let latestValue: any
+  let latestValue: unknown
   let hasPendingRun = false
 
-  const executeCallback = (newValue: any, prevValue: any) => {
+  const executeCallback = (newValue: unknown, prevValue: unknown) => {
     if (stopped) return
     if (cleanup) {
       try {
@@ -238,7 +257,7 @@ export function watch(
         cleanup = undefined
       }
     }
-    untrack(() => cb(newValue, prevValue, onCleanupRegister))
+    untrack(() => (cb as (v: unknown, o: unknown, c: OnCleanup) => unknown)(newValue, prevValue, onCleanupRegister))
     if (once) stop()
   }
 
@@ -247,7 +266,7 @@ export function watch(
       const newValue = sampleGetter()
       if (!initialized) {
         initialized = true
-        oldValue = isMulti ? [...newValue] : newValue
+        oldValue = isMulti ? [...(newValue as unknown[])] : newValue
         if (immediate) {
           if (flush === 'post') {
             queuePostFlushCb(() => executeCallback(newValue, isMulti ? [] : undefined))
@@ -259,10 +278,12 @@ export function watch(
       }
       const changed =
         forceTrigger ||
-        (isMulti ? newValue.some((v: any, i: number) => !Object.is(v, oldValue[i])) : !Object.is(newValue, oldValue))
+        (isMulti
+          ? (newValue as unknown[]).some((v, i) => !Object.is(v, (oldValue as unknown[])[i]))
+          : !Object.is(newValue, oldValue))
       if (!changed) return
       const prevValue = oldValue
-      oldValue = isMulti ? [...newValue] : newValue
+      oldValue = isMulti ? [...(newValue as unknown[])] : newValue
       latestValue = newValue
 
       if (flush === 'post') {
@@ -309,15 +330,19 @@ export function useId(): string {
   return `svet-id-${++nextUniqueId}`
 }
 
-export function mergeModels(a: any, b: any): any {
+export function mergeModels<A, B>(a: A, b: B): A | B | (A & B) | unknown[] {
   if (!a || !b) return a || b
   if (Array.isArray(a) && Array.isArray(b)) return Array.from(new Set([...a, ...b]))
-  return { ...a, ...b }
+  return { ...(a as object), ...(b as object) } as A & B
 }
 
-export function useModel<T = any>(props: Record<string, any>, name: string, options?: { defaultValue?: T }): Ref<T> {
+export function useModel<T = unknown>(
+  props: Record<string, unknown>,
+  name: string,
+  options?: { defaultValue?: T },
+): Ref<T> {
   const camelName = camelize(name)
-  const readProp = () => (camelName in props ? props[camelName] : props[name])
+  const readProp = (): T => (camelName in props ? props[camelName] : props[name]) as T
   const localSig = untrack(() => {
     const initial = readProp()
     return signal<T>(initial !== undefined ? initial : (options?.defaultValue as T))
@@ -346,7 +371,7 @@ export function useModel<T = any>(props: Record<string, any>, name: string, opti
     set value(v: T) {
       lastPropValue = v
       localSig.set(v)
-      const emit = props.__svet_emit as ((event: string, ...args: any[]) => void) | undefined
+      const emit = props.__svet_emit as ((event: string, ...args: unknown[]) => void) | undefined
       if (emit) {
         emit(`update:${name}`, v)
       } else {

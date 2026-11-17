@@ -13,8 +13,8 @@ const IS_SHALLOW_SYM = Symbol('svet.shallow')
 const SKIP_SYM = Symbol('svet.skip')
 export const DEEP_SIG_SYM = Symbol('svet.deepSig')
 
-const reactiveMap = new WeakMap<object, any>()
-const shallowReactiveMap = new WeakMap<object, any>()
+const reactiveMap = new WeakMap<object, object>()
+const shallowReactiveMap = new WeakMap<object, object>()
 const propSignalsMap = new WeakMap<object, Map<PropertyKey, Signal<number>>>()
 const deepSignalMap = new WeakMap<object, Signal<number>>()
 const parentTargetMap = new WeakMap<object, Set<object>>()
@@ -74,7 +74,8 @@ function linkParentChild(parent: object, child: unknown): void {
 
 export function canObserve(value: unknown): value is object {
   if (!value || typeof value !== 'object') return false
-  if ((value as any)[SKIP_SYM] || (value as any).__v_skip) return false
+  const flags = value as { [SKIP_SYM]?: unknown; __v_skip?: unknown }
+  if (flags[SKIP_SYM] || flags.__v_skip) return false
   if (Array.isArray(value)) return true
   if (ArrayBuffer.isView(value) || value instanceof ArrayBuffer) return false
   const proto = Object.getPrototypeOf(value)
@@ -82,7 +83,7 @@ export function canObserve(value: unknown): value is object {
 }
 
 export function toRaw<T>(observed: T): T {
-  const raw = observed && (observed as any)[RAW_SYM]
+  const raw = observed && (observed as { [RAW_SYM]?: T })[RAW_SYM]
   return raw ? toRaw(raw) : observed
 }
 
@@ -94,24 +95,25 @@ export function markRaw<T extends object>(value: T): T {
 }
 
 export function isReactive(value: unknown): boolean {
-  return Boolean(value && (value as any)[IS_REACTIVE_SYM])
+  return Boolean(value && (value as { [IS_REACTIVE_SYM]?: unknown })[IS_REACTIVE_SYM])
 }
 
 function createReactiveObject<T extends object>(target: T, shallow: boolean): T {
   if (!canObserve(target)) return target
-  if ((target as any)[IS_REACTIVE_SYM] && Boolean((target as any)[IS_SHALLOW_SYM]) === shallow) {
+  const marks = target as { [IS_REACTIVE_SYM]?: unknown; [IS_SHALLOW_SYM]?: unknown }
+  if (marks[IS_REACTIVE_SYM] && Boolean(marks[IS_SHALLOW_SYM]) === shallow) {
     return target
   }
   const rawTarget = toRaw(target)
   const proxyMap = shallow ? shallowReactiveMap : reactiveMap
   const existing = proxyMap.get(rawTarget)
-  if (existing) return existing
+  if (existing) return existing as T
 
   if (!shallow) {
     if (Array.isArray(rawTarget)) {
       for (let i = 0; i < rawTarget.length; i++) linkParentChild(rawTarget, rawTarget[i])
     } else {
-      for (const k of Object.keys(rawTarget)) linkParentChild(rawTarget, (rawTarget as any)[k])
+      for (const k of Object.keys(rawTarget)) linkParentChild(rawTarget, (rawTarget as Record<string, unknown>)[k])
     }
   }
 
@@ -134,7 +136,7 @@ function createReactiveObject<T extends object>(target: T, shallow: boolean): T 
       return res
     },
     set(obj, key, value, receiver) {
-      const oldValue = (obj as any)[key]
+      const oldValue: unknown = Reflect.get(obj, key)
       const rawValue = shallow ? value : toRaw(value)
       const hadKey = Array.isArray(obj) ? Number(key) < obj.length : Object.prototype.hasOwnProperty.call(obj, key)
       if (!shallow && isRef(oldValue) && !isRef(value)) {
@@ -196,14 +198,14 @@ export function readonly<T extends object>(target: T): Readonly<T> {
   return target
 }
 
-export interface Ref<T = any, S = T> {
+export interface Ref<T = unknown, S = T> {
   get value(): T
   set value(_: S)
   readonly __v_isRef: true
 }
 
-export type ShallowRef<T = any, S = T> = Ref<T, S>
-export type ComputedRef<T = any> = Readonly<Ref<T>>
+export type ShallowRef<T = unknown, S = T> = Ref<T, S>
+export type ComputedRef<T = unknown> = Readonly<Ref<T>>
 export type WritableComputedRef<T, S = T> = Ref<T, S>
 
 export interface WritableComputedOptions<T> {
@@ -211,7 +213,7 @@ export interface WritableComputedOptions<T> {
   set: (v: T) => void
 }
 
-export type PropType<T> = { new (...args: any[]): T & {} } | { (): T }
+export type PropType<T> = { new (...args: never[]): T & object } | { (): T }
 
 class RefImpl<T> implements Ref<T> {
   public readonly __v_isRef = true as const
@@ -247,21 +249,21 @@ class RefImpl<T> implements Ref<T> {
 }
 
 export function ref<T>(value: T): Ref<T>
-export function ref<T = any>(): Ref<T | undefined>
-export function ref(value?: unknown): Ref<any> {
+export function ref<T = unknown>(): Ref<T | undefined>
+export function ref(value?: unknown): Ref<unknown> {
   if (isRef(value)) return value
   return new RefImpl(value, false)
 }
 
 export function shallowRef<T>(value: T): ShallowRef<T>
-export function shallowRef<T = any>(): ShallowRef<T | undefined>
-export function shallowRef(value?: unknown): ShallowRef<any> {
+export function shallowRef<T = unknown>(): ShallowRef<T | undefined>
+export function shallowRef(value?: unknown): ShallowRef<unknown> {
   if (isRef(value)) return value
   return new RefImpl(value, true)
 }
 
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T> {
-  return Boolean(r && (r as any).__v_isRef === true)
+  return Boolean(r && (r as { __v_isRef?: unknown }).__v_isRef === true)
 }
 
 export function unref<T>(r: T | Ref<T>): T {
@@ -271,18 +273,18 @@ export function unref<T>(r: T | Ref<T>): T {
 export function toRef<T extends object, K extends keyof T>(object: T, key: K, defaultValue?: T[K]): Ref<T[K]>
 export function toRef<T>(value: () => T): Readonly<Ref<T>>
 export function toRef<T>(value: T): Ref<T>
-export function toRef(source: any, key?: PropertyKey, defaultValue?: any): Ref<any> {
+export function toRef(source: unknown, key?: PropertyKey, defaultValue?: unknown): Ref<unknown> {
   if (isRef(source)) return source
-  if (typeof source === 'function' && key === undefined) return computed(source)
+  if (typeof source === 'function' && key === undefined) return computed(source as () => unknown)
   if (source && typeof source === 'object' && key !== undefined) {
     return {
       __v_isRef: true,
       get value() {
-        const val = source[key]
+        const val: unknown = Reflect.get(source, key)
         return val === undefined ? defaultValue : val
       },
       set value(v) {
-        source[key] = v
+        Reflect.set(source, key, v)
       },
     }
   }
@@ -291,7 +293,7 @@ export function toRef(source: any, key?: PropertyKey, defaultValue?: any): Ref<a
 
 export function computed<T>(getter: () => T): ComputedRef<T>
 export function computed<T>(options: WritableComputedOptions<T>): WritableComputedRef<T>
-export function computed<T>(getterOrOptions: (() => T) | WritableComputedOptions<T>): any {
+export function computed<T>(getterOrOptions: (() => T) | WritableComputedOptions<T>): WritableComputedRef<T> {
   const isGetter = typeof getterOrOptions === 'function'
   const getter = isGetter ? getterOrOptions : getterOrOptions.get
   const setter = isGetter ? undefined : getterOrOptions.set
@@ -315,6 +317,10 @@ export interface EffectScope {
 
 let activeEffectScope: EffectScopeImpl | null = null
 
+function setActiveEffectScope(scope: EffectScopeImpl | null): void {
+  activeEffectScope = scope
+}
+
 class EffectScopeImpl implements EffectScope {
   active = true
   cleanups: Array<() => void> = []
@@ -329,7 +335,7 @@ class EffectScopeImpl implements EffectScope {
   run<T>(fn: () => T): T | undefined {
     if (!this.active) return undefined
     const prev = activeEffectScope
-    activeEffectScope = this
+    setActiveEffectScope(this)
     try {
       let result: T | undefined
       createRoot(dispose => {

@@ -32,7 +32,7 @@ interface ObserverNode {
   readonly kind: 'computed' | 'effect'
   readonly id: number
   state: number
-  deps: Set<SignalNode<any> | ComputedNode<any>>
+  deps: Set<SignalNode<unknown> | ComputedNode<unknown>>
   cleanups: Array<() => void>
   disposed: boolean
   run(): void
@@ -52,7 +52,7 @@ interface ComputedNode<T> extends ObserverNode {
   initialized: boolean
   computing: boolean
   fn: () => T
-  equals: (a: T, b: T) => boolean
+  equals(a: T, b: T): boolean
   subs: Set<ObserverNode>
 }
 interface EffectNode extends ObserverNode {
@@ -102,7 +102,7 @@ function markSubscribers(subs: Set<ObserverNode>, state: number): void {
     if (sub.disposed || sub === activeObserver) continue
     if (sub.state < state) sub.state = state
     if (sub.kind === 'computed') {
-      markSubscribers((sub as ComputedNode<any>).subs, STATE_CHECK)
+      markSubscribers((sub as ComputedNode<unknown>).subs, STATE_CHECK)
     } else {
       const eff = sub as EffectNode
       if (!eff.queued) {
@@ -113,7 +113,7 @@ function markSubscribers(subs: Set<ObserverNode>, state: number): void {
   }
 }
 
-function ensureComputedUpToDate(node: ComputedNode<any>): void {
+function ensureComputedUpToDate<T>(node: ComputedNode<T>): void {
   if (node.disposed) return
   if (!node.initialized || node.state === STATE_DIRTY) {
     recomputeNode(node)

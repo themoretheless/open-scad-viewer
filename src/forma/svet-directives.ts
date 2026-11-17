@@ -9,7 +9,34 @@ import { hyphenate } from './svet-props'
 import { isRef } from './svet-reactivity'
 import type { Directive, DirectiveBinding, SvetVNode } from './svet-vnode'
 
-const modifierGuards: Record<string, (e: any, modifiers: string[]) => boolean | void> = {
+/** Loosely typed event: guards must tolerate plain objects and partial events in tests and SSR. */
+type GuardEvent = Partial<MouseEvent & KeyboardEvent> & Record<string, unknown>
+
+/** Host element as the model directives see it: a real form control or a test double with the same fields. */
+interface ModelElement {
+  value?: unknown
+  checked?: boolean
+  _value?: unknown
+  _vod?: string
+  _assign?: (raw: unknown) => void
+  props?: Record<string, unknown>
+  options?: ArrayLike<ModelOption>
+  selectedIndex?: number
+  style?: { display?: string }
+  addEventListener?: (type: string, listener: (e: ModelEvent) => void) => void
+}
+interface ModelOption {
+  selected?: boolean
+  _value?: unknown
+  value?: unknown
+  props?: Record<string, unknown> | null
+}
+type ModelEvent = { target?: { composing?: boolean; value?: unknown; checked?: unknown } | null } | null | undefined
+type Handler = (...args: never[]) => unknown
+type EventHandler = (event: unknown, ...args: unknown[]) => unknown
+type ModelUpdater = (value: unknown) => void
+
+const modifierGuards: Record<string, (e: GuardEvent | null | undefined, modifiers: string[]) => unknown> = {
   stop: e => e?.stopPropagation?.(),
   prevent: e => e?.preventDefault?.(),
   self: e => e && e.target !== undefined && e.currentTarget !== undefined && e.target !== e.currentTarget,
@@ -23,17 +50,18 @@ const modifierGuards: Record<string, (e: any, modifiers: string[]) => boolean | 
   exact: (e, modifiers) => ['ctrl', 'shift', 'alt', 'meta'].some(m => e?.[`${m}Key`] && !modifiers.includes(m)),
 }
 
-export function withModifiers(fn: (...args: any[]) => any, modifiers: string[]): (event: any, ...args: any[]) => any {
-  const cache = (fn as any)._withMods || ((fn as any)._withMods = {})
+export function withModifiers(fn: Handler, modifiers: string[]): EventHandler {
+  const cached = fn as Handler & { _withMods?: Record<string, EventHandler> }
+  const cache = cached._withMods || (cached._withMods = {})
   const cacheKey = modifiers.join('.')
   return (
     cache[cacheKey] ||
-    (cache[cacheKey] = (event: any, ...args: any[]) => {
+    (cache[cacheKey] = (event: unknown, ...args: unknown[]) => {
       for (let i = 0; i < modifiers.length; i++) {
         const guard = modifierGuards[modifiers[i]!]
-        if (guard && guard(event, modifiers)) return
+        if (guard && guard(event as GuardEvent | null | undefined, modifiers)) return
       }
-      return fn(event, ...args)
+      return (fn as unknown as EventHandler)(event, ...args)
     })
   )
 }
@@ -49,8 +77,9 @@ const keyAliases: Record<string, string[]> = {
   delete: ['backspace', 'delete', 'del'],
 }
 
-export function withKeys(fn: (...args: any[]) => any, modifiers: string[]): (event: any) => any {
-  return (event: any) => {
+export function withKeys(fn: Handler, modifiers: string[]): (event: unknown) => unknown {
+  return (rawEvent: unknown) => {
+    const event = rawEvent as { key?: unknown } | null | undefined
     if (!event || !('key' in event)) return
     const eventKey = String(event.key || '').toLowerCase()
     const hyphenKey = hyphenate(String(event.key || ''))
@@ -60,13 +89,14 @@ export function withKeys(fn: (...args: any[]) => any, modifiers: string[]): (eve
       const aliases = keyAliases[m]
       return aliases ? aliases.includes(eventKey) || aliases.includes(hyphenKey) : false
     })
-    if (matched) return fn(event)
+    if (matched) return (fn as unknown as EventHandler)(event)
+    return undefined
   }
 }
 
 export function withDirectives(
   vnode: SvetVNode,
-  directives: Array<[Directive, any?, string?, Record<string, boolean>?]>,
+  directives: Array<[Directive, unknown?, string?, Record<string, boolean>?]>,
 ): SvetVNode {
   const bindings: DirectiveBinding[] = vnode.dirs ?? (vnode.dirs = [])
   for (let i = 0; i < directives.length; i++) {
@@ -78,43 +108,46 @@ export function withDirectives(
   return vnode
 }
 
-function toNumber(val: any): any {
-  const n = parseFloat(val)
+function toNumber(val: unknown): unknown {
+  const n = parseFloat(val as string)
   return Number.isNaN(n) ? val : n
 }
 
-function syncModelUpdaterProp(el: any, vnode: SvetVNode, onlyIfMissing = false): void {
+function syncModelUpdaterProp(el: ModelElement, vnode: SvetVNode, onlyIfMissing = false): void {
   const updater = vnode.props?.['onUpdate:modelValue']
   if (updater && el.props && (!onlyIfMissing || !('onUpdate:modelValue' in el.props))) {
     el.props['onUpdate:modelValue'] = updater
   }
 }
 
-function resolveOptionValue(opt: any, vnodeProps?: Record<string, any> | null): any {
+function resolveOptionValue(opt: ModelOption, vnodeProps?: Record<string, unknown> | null): unknown {
   return '_value' in opt ? opt._value : 'value' in opt ? opt.value : (opt.props ?? vnodeProps)?.value
 }
 
 export const vModelText: Directive = {
-  created(el, { modifiers: { lazy, trim, number } }, vnode) {
-    const updater = vnode.props?.['onUpdate:modelValue']
+  created(rawEl, { modifiers: { lazy, trim, number } }, vnode) {
+    const el = rawEl as ModelElement
+    const updater = vnode.props?.['onUpdate:modelValue'] as ModelUpdater | undefined
     if (!updater) return
-    const castValue = (raw: any) => {
+    const castValue = (raw: unknown) => {
       let val = raw
       if (trim && typeof val === 'string') val = val.trim()
       if (number || vnode.props?.type === 'number' || vnode.props?.type === 'range') val = toNumber(val)
       return val
     }
-    el._assign = (raw: any) => updater(castValue(raw))
-    el.addEventListener?.(lazy ? 'change' : 'input', (e: any) => {
+    el._assign = (raw: unknown) => updater(castValue(raw))
+    el.addEventListener?.(lazy ? 'change' : 'input', (e: ModelEvent) => {
       if (e?.target?.composing) return
-      el._assign(e?.target ? e.target.value : el.value)
+      el._assign?.(e?.target ? e.target.value : el.value)
     })
   },
-  mounted(el, { value }, vnode) {
+  mounted(rawEl, { value }, vnode) {
+    const el = rawEl as ModelElement
     syncModelUpdaterProp(el, vnode)
     el.value = value == null ? '' : value
   },
-  beforeUpdate(el, { value, modifiers: { trim, number } }, vnode) {
+  beforeUpdate(rawEl, { value, modifiers: { trim, number } }, vnode) {
+    const el = rawEl as ModelElement
     syncModelUpdaterProp(el, vnode)
     const newVal = value == null ? '' : value
     if (el.value !== newVal) {
@@ -126,53 +159,59 @@ export const vModelText: Directive = {
 }
 
 export const vModelCheckbox: Directive = {
-  created(el, _binding, vnode) {
-    const updater = vnode.props?.['onUpdate:modelValue']
+  created(rawEl, _binding, vnode) {
+    const el = rawEl as ModelElement
+    const updater = vnode.props?.['onUpdate:modelValue'] as ModelUpdater | undefined
     if (!updater) return
-    el.addEventListener?.('change', (e: any) => {
+    el.addEventListener?.('change', (e: ModelEvent) => {
       const checked = e?.target ? Boolean(e.target.checked) : Boolean(el.checked)
       updater(checked)
     })
   },
-  mounted(el, { value }, vnode) {
+  mounted(rawEl, { value }, vnode) {
+    const el = rawEl as ModelElement
     syncModelUpdaterProp(el, vnode)
     el.checked = Boolean(value)
   },
-  beforeUpdate(el, { value }, vnode) {
+  beforeUpdate(rawEl, { value }, vnode) {
+    const el = rawEl as ModelElement
     syncModelUpdaterProp(el, vnode)
     el.checked = Boolean(value)
   },
 }
 
 export const vModelRadio: Directive = {
-  created(el, _binding, vnode) {
-    const updater = vnode.props?.['onUpdate:modelValue']
+  created(rawEl, _binding, vnode) {
+    const el = rawEl as ModelElement
+    const updater = vnode.props?.['onUpdate:modelValue'] as ModelUpdater | undefined
     if (!updater) return
     el.addEventListener?.('change', () => {
       const radioVal = vnode.props && '_value' in el ? el._value : vnode.props?.value
       updater(radioVal)
     })
   },
-  mounted(el, { value }, vnode) {
+  mounted(rawEl, { value }, vnode) {
+    const el = rawEl as ModelElement
     syncModelUpdaterProp(el, vnode)
     const radioVal = '_value' in el ? el._value : vnode.props?.value
     el.checked = Object.is(value, radioVal)
   },
-  beforeUpdate(el, { value }, vnode) {
+  beforeUpdate(rawEl, { value }, vnode) {
+    const el = rawEl as ModelElement
     syncModelUpdaterProp(el, vnode)
     const radioVal = '_value' in el ? el._value : vnode.props?.value
     el.checked = Object.is(value, radioVal)
   },
 }
 
-function setSelected(el: any, value: any, number: boolean): void {
+function setSelected(el: ModelElement, value: unknown, number: boolean): void {
   const options = el.options
   if (!options) {
     el.value = value
     return
   }
   for (let i = 0; i < options.length; i++) {
-    const opt = options[i]
+    const opt = options[i]!
     const rawOptVal = resolveOptionValue(opt)
     const optVal = number ? toNumber(rawOptVal) : rawOptVal
     const isSelected = Object.is(optVal, value) || (optVal != null && value != null && String(optVal) === String(value))
@@ -187,13 +226,14 @@ function setSelected(el: any, value: any, number: boolean): void {
 }
 
 export const vModelSelect: Directive = {
-  created(el, { modifiers: { number } }, vnode) {
-    const updater = vnode.props?.['onUpdate:modelValue']
+  created(rawEl, { modifiers: { number } }, vnode) {
+    const el = rawEl as ModelElement
+    const updater = vnode.props?.['onUpdate:modelValue'] as ModelUpdater | undefined
     if (!updater) return
     el.addEventListener?.('change', () => {
       const options = el.options
       if (options && options.length > 0) {
-        const selectedOpt = Array.from(options as any[]).find((o: any) => o.selected) ?? options[el.selectedIndex]
+        const selectedOpt = Array.from(options).find(o => o.selected) ?? options[el.selectedIndex ?? -1]
         if (selectedOpt) {
           const rawVal = resolveOptionValue(selectedOpt)
           updater(number ? toNumber(rawVal) : rawVal)
@@ -203,25 +243,30 @@ export const vModelSelect: Directive = {
       updater(number ? toNumber(el.value) : el.value)
     })
   },
-  mounted(el, { value, modifiers: { number } }, vnode) {
+  mounted(rawEl, { value, modifiers: { number } }, vnode) {
+    const el = rawEl as ModelElement
     syncModelUpdaterProp(el, vnode, true)
     setSelected(el, value, Boolean(number))
   },
-  beforeUpdate(el, _binding, vnode) {
+  beforeUpdate(rawEl, _binding, vnode) {
+    const el = rawEl as ModelElement
     syncModelUpdaterProp(el, vnode)
   },
-  updated(el, { value, modifiers: { number } }) {
+  updated(rawEl, { value, modifiers: { number } }) {
+    const el = rawEl as ModelElement
     setSelected(el, value, Boolean(number))
   },
 }
 
 export const vShow: Directive = {
-  beforeMount(el, { value }) {
+  beforeMount(rawEl, { value }) {
+    const el = rawEl as ModelElement
     if (!el.style) el.style = {}
     el._vod = el.style.display === 'none' ? '' : (el.style.display ?? '')
     el.style.display = value ? el._vod : 'none'
   },
-  updated(el, { value, oldValue }) {
+  updated(rawEl, { value, oldValue }) {
+    const el = rawEl as ModelElement
     if (!value === !oldValue) return
     if (!el.style) el.style = {}
     el.style.display = value ? (el._vod ?? '') : 'none'

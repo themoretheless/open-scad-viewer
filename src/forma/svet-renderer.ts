@@ -21,8 +21,16 @@ import { Comment, Fragment, Static, Teleport, Text, Transition, isVNode, type Sv
 
 export type { SvetApp }
 
-export interface RendererOptions<HostNode = any, HostElement = any> {
-  createElement(type: string, namespace?: string, isCustomizedBuiltIn?: string, vnodeProps?: any): HostElement
+/** VNode of a `Transition`, which keeps its resolved child between patches. */
+type TransitionVNode = SvetVNode & { _transitionChild?: SvetVNode | null }
+
+export interface RendererOptions<HostNode = unknown, HostElement = unknown> {
+  createElement(
+    type: string,
+    namespace?: string,
+    isCustomizedBuiltIn?: string,
+    vnodeProps?: Record<string, unknown> | null,
+  ): HostElement
   createText(text: string): HostNode
   createComment(text: string): HostNode
   setText(node: HostNode, text: string): void
@@ -34,10 +42,10 @@ export interface RendererOptions<HostNode = any, HostElement = any> {
   patchProp(
     el: HostElement,
     key: string,
-    prevValue: any,
-    nextValue: any,
+    prevValue: unknown,
+    nextValue: unknown,
     namespace?: string,
-    parentComponent?: any,
+    parentComponent?: unknown,
   ): void
   setScopeId?(el: HostElement, id: string): void
   insertStaticContent?(
@@ -49,23 +57,24 @@ export interface RendererOptions<HostNode = any, HostElement = any> {
   querySelector?(selector: string): HostElement | null
 }
 
-export function createRenderer<HostNode = any, HostElement extends HostNode = HostNode>(
+export function createRenderer<HostNode = unknown, HostElement extends HostNode = HostNode>(
   options: RendererOptions<HostNode, HostElement>,
 ) {
   const {
     createElement: hostCreateElement,
     createText: hostCreateText,
     createComment: hostCreateComment,
-    setText: hostSetText,
-    setElementText: hostSetElementText,
-    insert: hostInsert,
-    remove: hostRemove,
-    parentNode: hostParentNode,
-    nextSibling: hostNextSibling,
     patchProp: hostPatchProp,
     setScopeId: hostSetScopeId,
     insertStaticContent: hostInsertStaticContent,
   } = options
+  // VNodes hold host nodes as `unknown`; the renderer only ever passes back nodes it created through these options.
+  const hostSetText = options.setText as (node: unknown, text: string) => void
+  const hostSetElementText = options.setElementText as (node: unknown, text: string) => void
+  const hostInsert = options.insert as (el: unknown, parent: unknown, anchor?: unknown) => void
+  const hostRemove = options.remove as (el: unknown) => void
+  const hostParentNode = options.parentNode
+  const hostNextSibling = options.nextSibling as (node: unknown) => HostNode | null
 
   const { mountComponent, updateComponent, unmountComponent, createAppAPI } = createComponentOperations<
     HostNode,
@@ -184,7 +193,7 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
     namespace?: string,
   ): void {
     const fragmentStartAnchor = (n2.el = n1 ? n1.el : hostCreateText(''))
-    const fragmentEndAnchor = (n2.anchor = n1 ? n1.anchor : hostCreateText(''))
+    const fragmentEndAnchor = (n2.anchor = n1 ? (n1.anchor as HostNode) : hostCreateText(''))
     if (n1 == null) {
       hostInsert(fragmentStartAnchor, container, anchor)
       hostInsert(fragmentEndAnchor, container, anchor)
@@ -214,9 +223,10 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
     } else {
       n2.el = n1.el
       n2.anchor = n1.anchor
-      const target = (n2.target = n1.target || resolveTeleportTarget(n2.props?.to, container, options.querySelector))
+      const target = (n2.target =
+        (n1.target as HostElement | null) || resolveTeleportTarget(n2.props?.to, container, options.querySelector))
       const targetContainer = disabled ? container : target
-      const targetAnchor = disabled ? n2.anchor : null
+      const targetAnchor = disabled ? (n2.anchor as HostNode) : null
       patchChildren(n1, n2, targetContainer, targetAnchor, namespace)
     }
   }
@@ -229,11 +239,11 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
     namespace?: string,
   ): void {
     const child2 = resolveTransitionChild(n2)
-    ;(n2 as any)._transitionChild = child2
+    ;(n2 as TransitionVNode)._transitionChild = child2
     if (n1 == null) {
       patch(null, child2, container, anchor, namespace)
     } else {
-      const child1 = (n1 as any)._transitionChild as SvetVNode | null
+      const child1 = (n1 as TransitionVNode)._transitionChild ?? null
       patch(child1, child2, container, anchor, namespace)
     }
     n2.el = child2.el
@@ -283,7 +293,7 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
   }
 
   function patchElement(n1: SvetVNode, n2: SvetVNode, namespace?: string): void {
-    const el = (n2.el = n1.el!)
+    const el = (n2.el = n1.el as HostElement)
     const patchFlag = n2.patchFlag ?? 0
 
     if (n2.dirs) invokeDirectiveHook(n2, n1, 'beforeUpdate')
@@ -381,7 +391,7 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
       return
     }
     if (type === Transition) {
-      const child = (vnode as any)._transitionChild as SvetVNode | undefined
+      const child = (vnode as TransitionVNode)._transitionChild
       if (child) moveVNode(child, container, anchor)
       return
     }
@@ -397,8 +407,8 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
   function getFirstHostNode(vnode: SvetVNode | null): HostNode | null {
     if (!vnode) return null
     if (vnode.component) return getFirstHostNode(vnode.component.subTree)
-    if (vnode.type === Transition) return getFirstHostNode((vnode as any)._transitionChild)
-    return vnode.el
+    if (vnode.type === Transition) return getFirstHostNode((vnode as TransitionVNode)._transitionChild ?? null)
+    return vnode.el as HostNode | null
   }
 
   function getNextHostNode(vnode: SvetVNode): HostNode | null {
@@ -409,7 +419,7 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
       return vnode.anchor ? hostNextSibling(vnode.anchor) : null
     }
     if (vnode.type === Transition) {
-      const child = (vnode as any)._transitionChild
+      const child = (vnode as TransitionVNode)._transitionChild
       return child ? getNextHostNode(child) : null
     }
     return vnode.el ? hostNextSibling(vnode.el) : null
@@ -433,7 +443,7 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
       return
     }
     if (type === Transition) {
-      const child = (vnode as any)._transitionChild
+      const child = (vnode as TransitionVNode)._transitionChild
       if (child) unmount(child)
       return
     }
@@ -455,7 +465,7 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
   }
 
   function render(vnode: SvetVNode | null, container: HostElement): void {
-    const prevVNode = (container as any)._vnode as SvetVNode | null | undefined
+    const prevVNode = (container as HostElement & { _vnode?: SvetVNode | null })._vnode
     if (vnode == null) {
       if (prevVNode) {
         unmount(prevVNode)
@@ -463,7 +473,7 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
     } else {
       patch(prevVNode || null, vnode, container, null)
     }
-    ;(container as any)._vnode = vnode
+    ;(container as HostElement & { _vnode?: SvetVNode | null })._vnode = vnode
   }
 
   return {

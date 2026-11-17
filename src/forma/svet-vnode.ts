@@ -16,32 +16,32 @@ export const Transition = Symbol.for('svet.transition')
 
 export interface DirectiveBinding {
   dir: Directive
-  value: any
-  oldValue?: any
+  value: unknown
+  oldValue?: unknown
   arg?: string | undefined
   modifiers: Record<string, boolean>
 }
 
 export interface Directive {
-  created?: (el: any, binding: DirectiveBinding, vnode: SvetVNode) => void
-  beforeMount?: (el: any, binding: DirectiveBinding, vnode: SvetVNode) => void
-  mounted?: (el: any, binding: DirectiveBinding, vnode: SvetVNode) => void
-  beforeUpdate?: (el: any, binding: DirectiveBinding, vnode: SvetVNode, prevVNode: SvetVNode) => void
-  updated?: (el: any, binding: DirectiveBinding, vnode: SvetVNode, prevVNode: SvetVNode) => void
-  beforeUnmount?: (el: any, binding: DirectiveBinding, vnode: SvetVNode) => void
-  unmounted?: (el: any, binding: DirectiveBinding, vnode: SvetVNode) => void
+  created?: (el: unknown, binding: DirectiveBinding, vnode: SvetVNode) => void
+  beforeMount?: (el: unknown, binding: DirectiveBinding, vnode: SvetVNode) => void
+  mounted?: (el: unknown, binding: DirectiveBinding, vnode: SvetVNode) => void
+  beforeUpdate?: (el: unknown, binding: DirectiveBinding, vnode: SvetVNode, prevVNode: SvetVNode) => void
+  updated?: (el: unknown, binding: DirectiveBinding, vnode: SvetVNode, prevVNode: SvetVNode) => void
+  beforeUnmount?: (el: unknown, binding: DirectiveBinding, vnode: SvetVNode) => void
+  unmounted?: (el: unknown, binding: DirectiveBinding, vnode: SvetVNode) => void
 }
 
 export interface SvetVNode {
   readonly __v_isVNode: true
-  type: any
-  props: Record<string, any> | null
-  children: any
-  key: any
-  ref: any
-  el: any
-  anchor: any
-  target: any
+  type: unknown
+  props: Record<string, unknown> | null
+  children: unknown
+  key: unknown
+  ref: unknown
+  el: unknown
+  anchor: unknown
+  target: unknown
   component: SvetComponentInstance | null
   dirs: DirectiveBinding[] | null
   scopeId: string | null
@@ -49,18 +49,46 @@ export interface SvetVNode {
   dynamicProps?: string[] | null | undefined
 }
 
+/** Render function stored on a component instance. */
+export type InstanceRender = (ctx: unknown, cache: unknown[], ...args: unknown[]) => unknown
+
+/** Context passed to a component's `setup` or functional render. */
+export interface ComponentSetupContext {
+  attrs: Record<string, unknown>
+  slots: Record<string, unknown>
+  emit: (event: string, ...args: unknown[]) => void
+  expose: (exposed?: unknown) => void
+}
+
+/** Component definition as the runtime sees it once mounted: an options object or a functional component. */
+export type InstanceComponentType =
+  | {
+      props?: unknown
+      emits?: unknown
+      inheritAttrs?: boolean
+      __scopeId?: string
+      setup?: (props: Record<string, unknown>, ctx: ComponentSetupContext) => unknown
+      render?: InstanceRender
+    }
+  | (((props: Record<string, unknown>, ctx: ComponentSetupContext) => unknown) & {
+      props?: unknown
+      emits?: unknown
+      inheritAttrs?: boolean
+      render?: InstanceRender
+    })
+
 export interface SvetComponentInstance {
   uid: number
   vnode: SvetVNode
-  type: any
-  props: Record<string, any>
-  attrs: Record<string, any>
-  slots: Record<string, any>
-  setupState: any
-  exposed: Record<string, any> | null
-  render: ((ctx: any, cache: any[], ...args: any[]) => SvetVNode | null) | null
-  renderCache: any[]
-  ctx: Record<string, any>
+  type: InstanceComponentType
+  props: Record<string, unknown>
+  attrs: Record<string, unknown>
+  slots: Record<string, unknown>
+  setupState: Record<PropertyKey, unknown>
+  exposed: Record<string, unknown> | null
+  render: InstanceRender | null
+  renderCache: unknown[]
+  ctx: Record<string, unknown>
   subTree: SvetVNode | null
   isMounted: boolean
   isUnmounted: boolean
@@ -72,43 +100,50 @@ export interface SvetComponentInstance {
   um: Array<() => void>
   stopEffect: (() => void) | null
   update: (() => void) | null
-  emit: (event: string, ...args: any[]) => void
+  emit: (event: string, ...args: unknown[]) => void
 }
 
 export type VNode = SvetVNode
 export type VNodeChild = SvetVNode | string | number | boolean | null | undefined | VNodeChild[]
-export type Slots = Readonly<Record<string, ((...args: any[]) => VNode[]) | undefined>>
-export type ComponentPublicInstance<P = {}, B = {}> = {
+export type Slots = Readonly<Record<string, ((...args: unknown[]) => VNode[]) | undefined>>
+export type ComponentPublicInstance<P = object, B = object> = {
   $props: P
-  $attrs: Record<string, any>
+  $attrs: Record<string, unknown>
   $slots: Slots
-  $emit: (event: string, ...args: any[]) => void
+  $emit: (event: string, ...args: unknown[]) => void
 } & P &
   B
-export type FunctionalComponent<P = {}, E = any> = {
-  (props: P, ctx: { attrs: any; slots: any; emit: E }): any
-  props?: any
-  emits?: any
+export type FunctionalComponent<P = object, E = unknown> = {
+  (props: P, ctx: { attrs: unknown; slots: unknown; emit: E }): unknown
+  props?: unknown
+  emits?: unknown
   inheritAttrs?: boolean
   displayName?: string
 }
 
-export type Component<P = any> =
+export type Component<P = unknown> =
   | {
       __name?: string
       name?: string
-      props?: any
-      emits?: any
+      props?: unknown
+      emits?: unknown
       inheritAttrs?: boolean
-      setup?: (props: P, ctx: { attrs: any; slots: any; emit: any; expose: (exposed?: any) => void }) => any
-      render?: (ctx: any, cache: any[]) => any
-      ssrRender?: (...args: any[]) => any
-      [key: string]: any
+      setup?: (
+        props: P,
+        ctx: { attrs: unknown; slots: unknown; emit: unknown; expose: (exposed?: unknown) => void },
+      ) => unknown
+      render?: (ctx: unknown, cache: unknown[]) => unknown
+      ssrRender?: (...args: unknown[]) => unknown
+      [key: string]: unknown
     }
-  | ((props: P, ctx: any) => any)
+  | ((props: P, ctx: unknown) => unknown)
 
-export type DefineComponent<PropsOrPropOptions = {}, RawBindings = {}, D = any> = Component<PropsOrPropOptions> & {
-  new (...args: any[]): { $props: PropsOrPropOptions } & RawBindings & D
+export type DefineComponent<
+  PropsOrPropOptions = object,
+  RawBindings = object,
+  D = unknown,
+> = Component<PropsOrPropOptions> & {
+  new (...args: unknown[]): { $props: PropsOrPropOptions } & RawBindings & D
 }
 
 let currentInstance: SvetComponentInstance | null = null
@@ -147,7 +182,7 @@ export function onUnmounted(hook: () => void, target: SvetComponentInstance | nu
 }
 
 export function defineComponent<T extends Component>(options: T): T {
-  const filename = (options as any)?.__file || (options as any)?.__name
+  const filename = (options as { __file?: unknown })?.__file || (options as { __name?: unknown })?.__name
   if (filename && typeof filename === 'string') {
     registerCompiledSfc(filename, options)
   }
@@ -188,7 +223,7 @@ export function defineAsyncComponent<T extends Component = Component>(
         resolvedComp = asyncResolvedCache.get(cacheKey) ?? null
       }
       const loaded = shallowRef<Component | null>(resolvedComp)
-      const innerRef = shallowRef<any>(null)
+      const innerRef = shallowRef<unknown>(null)
       expose({
         __svet_asyncInnerRef: innerRef,
       })
@@ -197,12 +232,12 @@ export function defineAsyncComponent<T extends Component = Component>(
         if (!loadPromise) {
           loadPromise = Promise.resolve(loader())
             .then(mod => {
-              const comp = (mod && (mod as any).default) || (mod as Component)
+              const comp = (mod && (mod as { default?: T }).default) || (mod as Component)
               resolvedComp = comp
               if (comp) asyncResolvedCache.set(cacheKey, comp)
               return comp
             })
-            .catch(() => null as any)
+            .catch(() => null as unknown as Component)
           asyncPromiseCache.set(cacheKey, loadPromise)
         }
         void loadPromise.then(comp => {
@@ -214,16 +249,16 @@ export function defineAsyncComponent<T extends Component = Component>(
       return () => {
         const comp = loaded.value
         if (!comp) return createCommentVNode('async')
-        return createVNode(comp, { ...attrs, ref: innerRef }, slots)
+        return createVNode(comp, { ...(attrs as Record<string, unknown>), ref: innerRef }, slots)
       }
     },
   })
 }
 
 let currentScopeId: string | null = null
-export function withScopeId(id: string): <T extends (...args: any[]) => any>(fn: T) => T {
-  return <T extends (...args: any[]) => any>(fn: T): T => {
-    return ((...args: any[]) => {
+export function withScopeId(id: string): <T extends (...args: unknown[]) => unknown>(fn: T) => T {
+  return <T extends (...args: unknown[]) => unknown>(fn: T): T => {
+    return ((...args: unknown[]) => {
       const prev = currentScopeId
       currentScopeId = id
       try {
@@ -236,7 +271,7 @@ export function withScopeId(id: string): <T extends (...args: any[]) => any>(fn:
 }
 
 export function isVNode(value: unknown): value is SvetVNode {
-  return Boolean(value && (value as any).__v_isVNode === true)
+  return Boolean(value && (value as { __v_isVNode?: unknown }).__v_isVNode === true)
 }
 
 export function openBlock(_disableTracking = false): void {
@@ -244,17 +279,17 @@ export function openBlock(_disableTracking = false): void {
 }
 
 export function createVNode(
-  type: any,
-  props?: Record<string, any> | null,
-  children?: any,
+  type: unknown,
+  props?: Record<string, unknown> | null,
+  children?: unknown,
   patchFlag?: number,
   dynamicProps?: string[] | null,
 ): SvetVNode {
   if (!type) type = Comment
   if (props && isReactive(props)) trackDeep(props)
   const normalizedProps = props ? { ...props } : null
-  let key: any = null
-  let refProp: any = null
+  let key: unknown = null
+  let refProp: unknown = null
   if (normalizedProps) {
     if ('key' in normalizedProps) {
       key = normalizedProps.key
@@ -315,31 +350,36 @@ export function createCommentVNode(text = '', _asBlock?: boolean): SvetVNode {
 
 export function createStaticVNode(content: string, numberOfNodes = 1): SvetVNode {
   const vnode = createVNode(Static, null, content)
-  ;(vnode as any).staticCount = numberOfNodes
+  ;(vnode as SvetVNode & { staticCount?: number }).staticCount = numberOfNodes
   return vnode
 }
 
-export function h(type: any, propsOrChildren?: any, children?: any): SvetVNode {
-  const l = arguments.length
+export function h(type: unknown, ...rest: unknown[]): SvetVNode {
+  const l = rest.length + 1
+  const propsOrChildren = rest[0]
+  let children = rest[1]
   if (l === 2) {
     if (typeof propsOrChildren === 'object' && !Array.isArray(propsOrChildren)) {
       if (isVNode(propsOrChildren)) return createVNode(type, null, [propsOrChildren])
-      return createVNode(type, propsOrChildren)
+      return createVNode(type, propsOrChildren as Record<string, unknown> | null)
     }
     return createVNode(type, null, propsOrChildren)
   }
   if (l > 3) {
-    children = Array.prototype.slice.call(arguments, 2)
+    children = rest.slice(1)
   } else if (l === 3 && isVNode(children)) {
     children = [children]
   }
-  return createVNode(type, propsOrChildren, children)
+  return createVNode(type, propsOrChildren as Record<string, unknown> | null | undefined, children)
 }
 
-export function withCtx(fn: (...args: any[]) => any, ctx = currentRenderingInstance): (...args: any[]) => any {
+export function withCtx(
+  fn: (...args: unknown[]) => unknown,
+  ctx = currentRenderingInstance,
+): (...args: unknown[]) => unknown {
   if (!ctx) return fn
-  const scopeId = (ctx.type as any)?.__scopeId as string | null | undefined
-  return (...args: any[]) => {
+  const scopeId = (ctx.type as { __scopeId?: unknown } | null)?.__scopeId as string | null | undefined
+  return (...args: unknown[]) => {
     const prev = setCurrentRenderingInstance(ctx)
     const prevScope = currentScopeId
     currentScopeId = scopeId ?? null
@@ -352,7 +392,10 @@ export function withCtx(fn: (...args: any[]) => any, ctx = currentRenderingInsta
   }
 }
 
-export function renderList(source: any, renderItem: (value: any, keyOrIndex: any, index?: number) => any): any[] {
+export function renderList(
+  source: unknown,
+  renderItem: (value: unknown, keyOrIndex: unknown, index?: number) => unknown,
+): unknown[] {
   if (Array.isArray(source) || typeof source === 'string') {
     const items = new Array(source.length)
     for (let i = 0, l = source.length; i < l; i++) {
@@ -368,14 +411,14 @@ export function renderList(source: any, renderItem: (value: any, keyOrIndex: any
     return items
   }
   if (source && typeof source === 'object') {
-    if (source[Symbol.iterator as any]) {
-      return Array.from(source as Iterable<any>, (item, i) => renderItem(item, i))
+    if ((source as Partial<Iterable<unknown>>)[Symbol.iterator]) {
+      return Array.from(source as Iterable<unknown>, (item, i) => renderItem(item, i))
     }
     const keys = Object.keys(source)
     const items = new Array(keys.length)
     for (let i = 0, l = keys.length; i < l; i++) {
       const k = keys[i]!
-      items[i] = renderItem(source[k], k, i)
+      items[i] = renderItem((source as Record<string, unknown>)[k], k, i)
     }
     return items
   }
@@ -383,14 +426,14 @@ export function renderList(source: any, renderItem: (value: any, keyOrIndex: any
 }
 
 export function renderSlot(
-  slots: Record<string, any>,
+  slots: Record<string, unknown>,
   name: string,
-  props: Record<string, any> = {},
-  fallback?: () => any[],
+  props: Record<string, unknown> = {},
+  fallback?: () => unknown[],
 ): SvetVNode {
   const slot = slots?.[name]
   if (typeof slot === 'function') {
-    const validProps: Record<string, any> = {}
+    const validProps: Record<string, unknown> = {}
     for (const k of Object.keys(props)) {
       if (k !== 'key') validProps[k] = props[k]
     }
@@ -401,7 +444,7 @@ export function renderSlot(
 
 export function toDisplayString(val: unknown): string {
   if (val == null) return ''
-  if (Array.isArray(val) || (typeof val === 'object' && (val as any).toString === Object.prototype.toString)) {
+  if (Array.isArray(val) || (typeof val === 'object' && (val as object).toString === Object.prototype.toString)) {
     return JSON.stringify(val, null, 2)
   }
   return String(val)
@@ -424,10 +467,10 @@ export function normalizeClass(value: unknown): string {
   return res.trim()
 }
 
-export function normalizeStyle(value: unknown): Record<string, any> | string | undefined {
+export function normalizeStyle(value: unknown): Record<string, unknown> | string | undefined {
   if (!value) return undefined
   if (Array.isArray(value)) {
-    const res: Record<string, any> = {}
+    const res: Record<string, unknown> = {}
     for (let i = 0; i < value.length; i++) {
       const item = value[i]
       const normalized = typeof item === 'string' ? parseStringStyle(item) : normalizeStyle(item)
@@ -435,12 +478,12 @@ export function normalizeStyle(value: unknown): Record<string, any> | string | u
     }
     return res
   }
-  if (typeof value === 'string' || typeof value === 'object') return value as any
+  if (typeof value === 'string' || typeof value === 'object') return value as Record<string, unknown> | string
   return undefined
 }
 
-function parseStringStyle(cssText: string): Record<string, any> {
-  const ret: Record<string, any> = {}
+function parseStringStyle(cssText: string): Record<string, unknown> {
+  const ret: Record<string, unknown> = {}
   for (const item of cssText.split(';')) {
     if (item) {
       const idx = item.indexOf(':')
@@ -452,8 +495,8 @@ function parseStringStyle(cssText: string): Record<string, any> {
   return ret
 }
 
-export function mergeProps(...args: Array<Record<string, any> | null | undefined>): Record<string, any> {
-  const ret: Record<string, any> = {}
+export function mergeProps(...args: Array<Record<string, unknown> | null | undefined>): Record<string, unknown> {
+  const ret: Record<string, unknown> = {}
   for (let i = 0; i < args.length; i++) {
     const toMerge = args[i]
     if (!toMerge) continue
@@ -468,7 +511,7 @@ export function mergeProps(...args: Array<Record<string, any> | null | undefined
         const existing = ret[key]
         const incoming = toMerge[key]
         if (incoming && existing !== incoming && !(Array.isArray(existing) && existing.includes(incoming))) {
-          ret[key] = existing ? [].concat(existing as any, incoming as any) : incoming
+          ret[key] = existing ? ([] as unknown[]).concat(existing, incoming) : incoming
         }
       } else if (key !== '') {
         ret[key] = toMerge[key]
