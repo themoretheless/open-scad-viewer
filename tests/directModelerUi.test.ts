@@ -6056,3 +6056,37 @@ it('C9 profile xor: identical profiles are refused without changing the document
  expect(ui.text(ui.all()[0])).toContain('Empty result')
  await commandKey(ui,'Enter');expect(normalized()).toEqual(before)
 })
+
+it('C7 ellipse: equal radii create an exact circle, unequal radii refuse with a registered code',async()=>{
+ await geometryKernel.warmGeometryKernel();const ui=await mount();await commandKey(ui,'c');const before=ui.doc()
+ const field=(name:string)=>ui.all().find(n=>n.props['aria-label']===name)!
+ field('Point coordinate X').props['onUpdate:modelValue'](4);field('Point coordinate Y').props['onUpdate:modelValue'](2);field('Circle radius').props['onUpdate:modelValue'](6);field('Ellipse second radius').props['onUpdate:modelValue'](3);field('Ellipse rotation').props['onUpdate:modelValue'](30);await nextTick()
+ await ui.click('Create ellipse');expect(ui.doc()).toEqual(before)
+ const refusal=ui.all().find(n=>n.props['aria-label']==='ellipse-refusal')!;expect(ui.text(refusal)).toMatch(/exact ellipse/)
+ field('Ellipse second radius').props['onUpdate:modelValue'](6);await nextTick();await ui.click('Create ellipse')
+ const after=ui.doc();expect(after.sketches.at(-1)!.analytic).toEqual({kind:'circle',center:[4,2],radius:6,start:0,sweep:360})
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('C7 slot: the length dimension moves the second center along the center line',async()=>{
+ const ui=await mount();await ui.click('Slot')
+ const field=(name:string)=>ui.all().find(n=>n.props['aria-label']===name)!
+ field('Origin coordinate X').props['onUpdate:modelValue'](0);field('Origin coordinate Y').props['onUpdate:modelValue'](0);field('End coordinate X').props['onUpdate:modelValue'](10);field('End coordinate Y').props['onUpdate:modelValue'](0);field('Slot width, mm').props['onUpdate:modelValue'](4);await flushClearance()
+ field('Slot length, mm').props['onUpdate:modelValue'](24);await flushClearance()
+ field('Slot length, mm').props['onUpdate:modelValue'](3);await flushClearance()
+ expect(ui.all().some(n=>n.props.role==='alert'&&ui.text(n).includes('Slot length must exceed the width'))).toBe(true)
+ await ui.click('Create slot');const slot=ui.doc().sketches.at(-1)!
+ expect(slot.retainedProfile!.areaMm2).toBeCloseTo(80+4*Math.PI,8)
+ expect(Math.max(...slot.points.map(p=>p[0]))).toBeCloseTo(22,6);expect(Math.min(...slot.points.map(p=>p[0]))).toBeCloseTo(-2,6)
+})
+
+it('C7 tangent arc: continues the selected polyline tangent to its last segment',async()=>{
+ await geometryKernel.warmGeometryKernel();const ui=await mount({initialDocument:{version:1,bodies:[],sketches:[{id:'path',name:'Path',closed:false,points:[[0,0],[10,0]]}]},initialSelection:'path'});await ui.click('Arc')
+ const field=(name:string)=>ui.all().find(n=>n.props['aria-label']===name)!
+ field('Point coordinate X').props['onUpdate:modelValue'](30);field('Point coordinate Y').props['onUpdate:modelValue'](0);await nextTick()
+ expect(ui.button('Create tangent arc').props.disabled).toBe(true)
+ field('Point coordinate X').props['onUpdate:modelValue'](20);field('Point coordinate Y').props['onUpdate:modelValue'](10);await nextTick()
+ await ui.click('Create tangent arc');const arc=ui.doc().sketches.at(-1)!.analytic!
+ expect(arc.kind).toBe('arc');expect(arc.center[0]).toBeCloseTo(10,9);expect(arc.center[1]).toBeCloseTo(10,9);expect(arc.radius).toBeCloseTo(10,9);expect(arc.start).toBeCloseTo(-90,9);expect(arc.sweep).toBeCloseTo(90,9)
+ await ui.click('↶');expect(ui.doc().sketches.map(s=>s.id)).toEqual(['path'])
+})

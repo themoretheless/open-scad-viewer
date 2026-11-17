@@ -32,6 +32,7 @@ import { connectedEdgeChain } from '../app/edgeSelection'
 import CadQuantityInput from '../components/CadQuantityInput.svt'
 import RunoutControls from '../components/RunoutControls.svt'
 import {numericRectangle,numericSlotSources} from '../app/numericSketchAuthoring'
+import {ellipseSketchCurve,resizeSlot,slotDimensions,tangentArc} from '../app/sketchPrimitives'
 import {type SurfaceBoundaryReport,type SurfaceBoundaryOptions} from '../kernel/solidSurfaceDiagnostics'
 import { computed, nextTick, onUnmounted, reactive, ref, shallowRef, watch, watchEffect } from 'svet'
 import {solidVertexCount} from '../kernel/solidMeasurements'
@@ -152,6 +153,13 @@ const undoable = ref(false), redoable = ref(false)
 const selection = ref(props.initialSelection ?? ''), mode = ref<'2d' | '3d'>('2d'), tool = ref<'select' | 'rectangle' | 'circle' | 'arc' | 'polyline' | 'trim' | 'slot'>('select')
 const draftCursor=ref<Point2|null>(null)
 const slotWidth=ref(5), slotWidthValid=ref(true)
+const slotLength=computed({get:()=>slotDimensions({a:draftPoint.value,b:draftEnd.value,width:slotWidth.value})?.length??NaN,set:(length:number)=>{const next=Number.isFinite(length)?resizeSlot({a:draftPoint.value,b:draftEnd.value,width:slotWidth.value},{length}):null;slotLengthValid.value=!!next;if(next){draftEnd.value=next.b;draftEndValid.value=[true,true]}}}),slotLengthValid=ref(true)
+const ellipseRadiusB=ref(10),ellipseRotation=ref(0),ellipseValid=ref([true,true]),ellipseError=ref('')
+function createEllipse(){ellipseError.value='';if(!draftPointValid.value.every(Boolean)||!draftRadiusValid.value||!ellipseValid.value.every(Boolean)){ellipseError.value=presentKernelError(new DirectInputError('DIRECT_SKETCH_ELLIPSE_INPUT','x','ellipse'),props.locale==='ru'?'ru':'en').message;return}
+ let curve;try{curve=ellipseSketchCurve({center:[...draftPoint.value] as Point2,radiusA:draftRadius.value,radiusB:ellipseRadiusB.value,rotation:ellipseRotation.value})}catch(e){ellipseError.value=presentKernelError(e,props.locale==='ru'?'ru':'en').message;return}
+ run(()=>addSketch(sampleCurve(curve),true,curve,undefined,()=>{draft.value=[];draftCursor.value=null;tool.value='select'}))}
+const tangentArcCurve=computed(()=>{const s=selectedSketch.value;return tool.value==='arc'&&s&&!s.closed&&!s.analytic&&!s.retainedProfile&&draftPointValid.value.every(Boolean)?tangentArc(s,'end',[...draftPoint.value] as Point2):null})
+function createTangentArc(){const curve=tangentArcCurve.value;if(!curve)return;run(()=>addSketch(sampleCurve(curve),false,curve,undefined,()=>{draft.value=[];draftCursor.value=null;tool.value='select'}))}
 const draftPoint=ref<Point2>([0,0]),draftPointValid=ref([true,true])
 const draftRadius=ref(10),draftRadiusValid=ref(true),draftArcStart=ref(0),draftArcSweep=ref(180),draftArcValid=ref([true,true])
 const exactRoundCurve=computed(()=>{
@@ -1306,7 +1314,7 @@ function addSketch(points: Point2[], closed: boolean, analytic?: import('../app/
 }
 function beginSketch(value: typeof tool.value) {
   cancelGesture(); operation.value = null; advancedOp.value = null; boxSelect.value = false
-  choosingSketchFace.value=false;draftPoint.value=[0,0];draftPointValid.value=[true,true];draftRadius.value=10;draftRadiusValid.value=true;draftArcStart.value=0;draftArcSweep.value=180;draftArcValid.value=[true,true];draftSize.value=[20,10];draftSizeValid.value=[true,true];draftEnd.value=[20,0];draftEndValid.value=[true,true];tool.value = value; mode.value = workplaneBodyId.value ? '3d' : '2d'; sketchPaneOpen.value = true
+  choosingSketchFace.value=false;ellipseError.value='';slotLengthValid.value=true;draftPoint.value=[0,0];draftPointValid.value=[true,true];draftRadius.value=10;draftRadiusValid.value=true;draftArcStart.value=0;draftArcSweep.value=180;draftArcValid.value=[true,true];draftSize.value=[20,10];draftSizeValid.value=[true,true];draftEnd.value=[20,0];draftEndValid.value=[true,true];tool.value = value; mode.value = workplaneBodyId.value ? '3d' : '2d'; sketchPaneOpen.value = true
 }
 const canExtrudeSketch = computed(() => !!selectedSketch.value?.closed && tool.value === 'select' && !draft.value.length)
 function finish(closed: boolean) { run(() => { if (draft.value.length < (closed ? 3 : 2)) return; addSketch(draft.value, closed, undefined, undefined, () => { draft.value = []; draftCursor.value=null; tool.value = 'select' }) }) }
@@ -3019,6 +3027,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <template v-else>
                 <label v-for="(axis,i) in ['X','Y']" :key="axis">B · {{ axis }}<CadQuantityInput v-model="draftEnd[i]" :locale="locale" :min="-1000000" :max="1000000" :aria-label="label('Конечная координата ','End coordinate ')+axis" @validity="draftEndValid[i]=$event" /></label>
                 <label>{{ label('Ширина паза, мм','Slot width, mm') }}<CadQuantityInput v-model="slotWidth" :locale="locale" :min=".02" :max="1000000" :aria-label="label('Ширина паза, мм','Slot width, mm')" @validity="slotWidthValid=$event" /></label>
+                <label>{{ label('Длина паза, мм','Slot length, mm') }}<CadQuantityInput v-model="slotLength" :locale="locale" :min=".02" :max="2000000" :aria-label="label('Длина паза, мм','Slot length, mm')" /></label>
+                <small v-if="!slotLengthValid" role="alert">{{ label('Длина паза должна быть больше ширины.','Slot length must exceed the width.') }}</small>
 
 
 
@@ -3035,6 +3045,17 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <template v-if="tool==='arc'">
                   <label>{{ label('Начальный угол','Start angle') }}<CadQuantityInput v-model="draftArcStart" kind="angle" :locale="locale" :min="-360000" :max="360000" :aria-label="label('Начальный угол дуги','Arc start angle')" @validity="draftArcValid[0]=$event" /></label>
                   <label>{{ label('Разворот','Sweep') }}<CadQuantityInput v-model="draftArcSweep" kind="angle" :locale="locale" :min="-359.999999" :max="359.999999" :aria-label="label('Разворот дуги','Arc sweep')" @validity="draftArcValid[1]=$event" /></label>
+                </template>
+                <template v-if="tool==='circle'">
+                  <label>{{ label('Второй радиус эллипса, мм','Ellipse second radius, mm') }}<CadQuantityInput v-model="ellipseRadiusB" :locale="locale" :min=".01" :max="1000000" :aria-label="label('Второй радиус эллипса','Ellipse second radius')" @validity="ellipseValid[0]=$event" /></label>
+                  <label>{{ label('Поворот эллипса','Ellipse rotation') }}<CadQuantityInput v-model="ellipseRotation" kind="angle" :locale="locale" :min="-360000" :max="360000" :aria-label="label('Поворот эллипса','Ellipse rotation')" @validity="ellipseValid[1]=$event" /></label>
+                  <button @click="createEllipse">{{ label('Создать эллипс','Create ellipse') }}</button>
+                  <small v-if="ellipseError" role="alert" aria-label="ellipse-refusal">{{ ellipseError }}</small>
+                </template>
+                <template v-if="tool==='arc'&&selectedSketch&&!selectedSketch.closed&&!selectedSketch.analytic">
+                  <small>{{ label('Касательная дуга: продолжает выбранную ломаную от последней точки до точки X/Y.','Tangent arc: continues the selected polyline from its last point to point X/Y.') }}</small>
+                  <button :disabled="!tangentArcCurve" @click="createTangentArc">{{ label('Создать касательную дугу','Create tangent arc') }}</button>
+                  <small v-if="!tangentArcCurve" role="alert">{{ label('Касательная дуга невозможна: точка лежит на продолжении отрезка или радиус вне 0,01–1 000 000 мм.','Tangent arc is impossible: the point lies on the segment line or the radius is outside 0.01–1,000,000 mm.') }}</small>
                 </template>
                 <button :disabled="!exactRoundCurve" @click="createExactRoundCurve">{{ tool==='arc'?label('Создать дугу','Create arc'):label('Создать круг','Create circle') }}</button>
                 <small v-if="!exactRoundCurve" role="alert">{{ tool==='arc'?label('Исправьте центр, радиус и углы. Радиус от 0,01 мм; модуль разворота от 0,1° до 360° без полного оборота.','Correct center, radius and angles. Radius starts at 0.01 mm; absolute sweep starts at 0.1° and must be below 360°.'):label('Исправьте центр и радиус (0,01–1 000 000 мм).','Correct the center and radius (0.01–1,000,000 mm).') }}</small>
