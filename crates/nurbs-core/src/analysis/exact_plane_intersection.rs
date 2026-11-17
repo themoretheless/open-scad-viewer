@@ -254,3 +254,9 @@ pub use segments::{
     ExactPlanarIntersectionSegment, PlanarIntersectionSegmentReport, PlanarIntersectionSegments,
     build_planar_intersection_segments,
 };
+
+mod storage;
+pub use storage::{
+    PlanarSegmentError, PlanarSegmentStorage, PlanarSegmentStorageReport,
+    store_planar_intersection_segment,
+};

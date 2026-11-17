@@ -5,9 +5,10 @@ use nurbs_core::{
             PlanarProjectionOutcome, PlanarSurfaceProjection, project_planar_surface,
         },
         exact_plane_intersection::{
-            PlanarIntersectionSegments, SupportPlaneIntersection, TrimmedPlanarIntersection,
+            ExactPlanarIntersectionSegment, PlanarIntersectionSegments, PlanarSegmentStorage,
+            SupportPlaneIntersection, TrimmedPlanarIntersection,
             build_planar_intersection_segments, intersect_planar_supports,
-            intersect_trimmed_planar_faces,
+            intersect_trimmed_planar_faces, store_planar_intersection_segment,
         },
         planar_coplanar_ray::CoplanarRayPartitionOptions,
         planar_trim_projection::ProjectedTrimmedFace,
@@ -288,4 +289,117 @@ fn unresolved_contacts_do_not_generate_spatial_segments() {
             .iter()
             .any(|band| band[0] <= q(-1, 2) && band[1] >= q(1, 2))
     );
+}
+
+fn exact_segment(
+    xyz: [[Q; 3]; 2],
+    charts: [&PlanarSurfaceProjection; 2],
+) -> ExactPlanarIntersectionSegment {
+    ExactPlanarIntersectionSegment {
+        parameter: xyz.clone().map(|p| p[2].clone()),
+        pcurves: charts.map(|chart| {
+            [&xyz[0], &xyz[1]].map(|p| chart.retained_axes.map(|axis| p[axis].clone()))
+        }),
+        xyz,
+    }
+}
+
+#[test]
+fn stores_dyadic_segments_with_zero_error_and_shared_clock() {
+    let a = plane(|x, _| x);
+    let b = plane(|_, y| y);
+    let charts = [&a, &b];
+    let segment = exact_segment(
+        [[q(0, 1), q(0, 1), q(0, 1)], [q(1, 2), q(1, 2), q(1, 2)]],
+        charts,
+    );
+    let report = store_planar_intersection_segment(&segment, charts, 0., WORK).unwrap();
+    let PlanarSegmentStorage::Stored {
+        spatial,
+        pcurves,
+        squared_error,
+    } = report.outcome
+    else {
+        panic!("{:?}", report.outcome);
+    };
+    assert_eq!(spatial.control_points, vec![vec![0.; 3], vec![0.5; 3]]);
+    for pcurve in pcurves {
+        assert_eq!(pcurve.knots, spatial.knots);
+        assert_eq!(pcurve.control_points, vec![vec![0.; 2], vec![0.5; 2]]);
+    }
+    assert_eq!(squared_error.spatial, q(0, 1));
+    assert_eq!(squared_error.lifted_pcurves, [q(0, 1), q(0, 1)]);
+    assert_eq!(squared_error.correspondence, [q(0, 1), q(0, 1)]);
+}
+
+#[test]
+fn qualifies_nonbinary_storage_against_exact_lifted_separation() {
+    let a = plane(|x, y| x + y);
+    let b = plane(|x, y| 2. * x - y + 1.);
+    let charts = [&a, &b];
+    let segment = exact_segment(
+        [[q(-1, 3), q(1, 3), q(0, 1)], [q(1, 3), q(2, 3), q(1, 1)]],
+        charts,
+    );
+    let exact = store_planar_intersection_segment(&segment, charts, 0., WORK).unwrap();
+    let PlanarSegmentStorage::ToleranceExceeded(expected) = exact.outcome else {
+        panic!("{:?}", exact.outcome);
+    };
+    let report = store_planar_intersection_segment(&segment, charts, 1e-14, WORK).unwrap();
+    let PlanarSegmentStorage::Stored {
+        spatial,
+        pcurves,
+        squared_error,
+    } = report.outcome
+    else {
+        panic!("{:?}", report.outcome);
+    };
+    assert_eq!(squared_error, expected);
+    assert!(squared_error.spatial > q(0, 1));
+    assert!(squared_error.correspondence[1] > q(0, 1));
+    for (i, chart) in charts.into_iter().enumerate() {
+        for end in 0..2 {
+            let xyz = &spatial.control_points[end];
+            let [u, v] = chart.retained_axes.map(|axis| xyz[axis]);
+            assert_eq!(pcurves[i].control_points[end], vec![u, v]);
+            let residual = &chart.offset
+                + &chart.slopes[0] * Q::from_float(u).unwrap()
+                + &chart.slopes[1] * Q::from_float(v).unwrap()
+                - Q::from_float(xyz[chart.omitted_axis]).unwrap();
+            assert!(&residual * &residual <= squared_error.correspondence[i]);
+        }
+    }
+}
+
+#[test]
+fn refuses_inconsistent_or_collapsed_nets_and_bounds_work() {
+    use nurbs_core::editing::exact_derivative::Refusal;
+    let a = plane(|x, _| x);
+    let b = plane(|_, y| y);
+    let charts = [&a, &b];
+    let point = q(1, 1) + q(1, 1 << 54);
+    let mut segment = exact_segment(
+        [
+            [q(1, 1), q(1, 1), q(1, 1)],
+            [point.clone(), point.clone(), point],
+        ],
+        charts,
+    );
+    let collapsed = store_planar_intersection_segment(&segment, charts, 1e-14, WORK).unwrap();
+    assert!(matches!(
+        collapsed.outcome,
+        PlanarSegmentStorage::Refused(Refusal::InvalidOutput)
+    ));
+    segment.pcurves[1][0][0] = q(0, 1);
+    let inconsistent = store_planar_intersection_segment(&segment, charts, 1e-14, WORK).unwrap();
+    assert!(matches!(
+        inconsistent.outcome,
+        PlanarSegmentStorage::Refused(Refusal::UnprovedIdentity)
+    ));
+    let limited = store_planar_intersection_segment(&segment, charts, 1e-14, 1).unwrap();
+    assert!(matches!(
+        limited.outcome,
+        PlanarSegmentStorage::Refused(Refusal::ResourceLimit)
+    ));
+    assert!(limited.work_used <= 1);
 }
