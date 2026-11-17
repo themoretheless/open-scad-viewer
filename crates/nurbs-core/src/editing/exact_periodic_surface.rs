@@ -2566,3 +2566,83 @@ fn classify_polygon_copy(
         Location::Outside
     })
 }
+
+#[derive(Clone, Debug)]
+pub struct PeriodicRegionLocationReport {
+    pub locations: Option<Vec<PeriodicPathLocation>>,
+    pub work_used: u64,
+    pub refused_loop: Option<usize>,
+    pub refused_query: Option<usize>,
+    pub refusal: Option<PeriodicPathAreaRefusal>,
+}
+
+/// Classify native UV queries against a family of closed periodic polygons.
+/// Toggle membership for each projected contour that contains the point,
+/// so nested contours define holes regardless of orientation. A point on
+/// any contour is on the boundary. One budget covers all loops and queries.
+pub fn classify_exact_periodic_surface_region_points(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    queries: &[[f64; 2]],
+    max_work: u64,
+) -> Result<PeriodicRegionLocationReport> {
+    use PeriodicPathLocation as Location;
+
+    crate::check(
+        (1..=256).contains(&contours.len()),
+        "Periodic classification needs 1..=256 contours",
+    )?;
+    crate::check(
+        queries.len() <= 4096,
+        "Periodic classification supports at most 4096 queries",
+    )?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact periodic region work must be in 1..=1000000",
+    )?;
+    let mut locations = vec![Location::Outside; queries.len()];
+    let mut work_used = 0;
+    for (index, contour) in contours.iter().enumerate() {
+        let remaining = max_work - work_used;
+        if remaining == 0 {
+            return Ok(PeriodicRegionLocationReport {
+                locations: None,
+                work_used,
+                refused_loop: Some(index),
+                refused_query: None,
+                refusal: Some(PeriodicPathAreaRefusal::Arithmetic(
+                    ExactRefusal::ResourceLimit,
+                )),
+            });
+        }
+        let report =
+            classify_exact_periodic_surface_path_points(source, contour, queries, remaining)?;
+        work_used += report.work_used;
+        let Some(classified) = report.locations else {
+            return Ok(PeriodicRegionLocationReport {
+                locations: None,
+                work_used,
+                refused_loop: Some(index),
+                refused_query: report.refused_query,
+                refusal: report.refusal,
+            });
+        };
+        for (location, next) in locations.iter_mut().zip(classified) {
+            *location = match (*location, next) {
+                (Location::Boundary, _) | (_, Location::Boundary) => Location::Boundary,
+                (Location::Inside, Location::Inside) => Location::Outside,
+                (Location::Inside, Location::Outside) | (Location::Outside, Location::Inside) => {
+                    Location::Inside
+                }
+                (Location::Outside, Location::Outside) => Location::Outside,
+            };
+        }
+    }
+    Ok(PeriodicRegionLocationReport {
+        locations: Some(locations),
+        work_used,
+        refused_loop: None,
+        refused_query: None,
+        refusal: None,
+    })
+}

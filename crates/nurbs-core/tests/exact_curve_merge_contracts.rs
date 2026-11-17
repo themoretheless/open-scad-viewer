@@ -3475,3 +3475,88 @@ fn periodic_batch_classification_rejects_nonpolygon_inputs() {
         );
     }
 }
+
+#[test]
+fn periodic_region_classification_preserves_a_hole_across_both_seams() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicPathLocation as L, classify_exact_periodic_surface_region_points,
+    };
+    let source = doubly_periodic_tensor();
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let hole = [
+        [3.75, 3.75],
+        [0.25, 3.75],
+        [0.25, 0.25],
+        [3.75, 0.25],
+        [3.75, 3.75],
+    ];
+    let queries = [[0., 0.], [0.5, 0.], [0.25, 0.], [0.75, 0.], [2., 0.]];
+    let report = classify_exact_periodic_surface_region_points(
+        &source,
+        &[&outer, &hole],
+        &queries,
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(
+        report.locations,
+        Some(vec![
+            L::Outside,
+            L::Inside,
+            L::Boundary,
+            L::Boundary,
+            L::Outside
+        ])
+    );
+    let reversed: Vec<_> = hole.into_iter().rev().collect();
+    assert_eq!(
+        classify_exact_periodic_surface_region_points(
+            &source,
+            &[&reversed, &outer],
+            &queries,
+            1_000_000
+        )
+        .unwrap()
+        .locations,
+        report.locations
+    );
+    let short = classify_exact_periodic_surface_region_points(
+        &source,
+        &[&outer, &hole],
+        &queries,
+        report.work_used - 1,
+    )
+    .unwrap();
+    assert_eq!(short.refused_loop, Some(1));
+    assert_eq!(short.refused_query, Some(4));
+    assert!(short.locations.is_none());
+}
+
+#[test]
+fn periodic_region_withholds_results_on_an_unclosed_lift() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicPathAreaRefusal, classify_exact_periodic_surface_region_points,
+    };
+    let source = doubly_periodic_tensor();
+    let valid = [[0., 0.], [1., 0.], [1., 1.], [0., 0.]];
+    let winding = [[0., 0.], [1., 0.], [2., 0.], [3., 0.], [0., 0.]];
+    let report = classify_exact_periodic_surface_region_points(
+        &source,
+        &[&valid, &winding],
+        &[[0., 0.]],
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(
+        report.refusal,
+        Some(PeriodicPathAreaRefusal::NonzeroWinding)
+    );
+    assert_eq!(report.refused_loop, Some(1));
+    assert!(report.locations.is_none());
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 545,
-  "unallocatedCount": 455,
+  "specifiedCount": 546,
+  "unallocatedCount": 454,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13921,6 +13921,27 @@
       "remainingQualification": [
         "Prepare one lifted periodic polygon and classify an ordered batch of native queries with one budget.",
         "Prepare exact vertices, periods and bounds once and classify every query with one arithmetic budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0546",
+      "name": "Точная классификация UV-точек в периодической области с отверстиями",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::classify_exact_periodic_surface_region_points",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-546-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-546-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify native queries by even-odd membership across a family of lifted periodic contours.",
+        "Combine exact contour classifications by parity with boundary precedence and refuse incomplete region classifications.",
         "WASM and application integration are separate."
       ]
     }

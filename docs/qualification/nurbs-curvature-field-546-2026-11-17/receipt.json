@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0546",
+  "testedBase": "6142d07a7d2171b753440b74a828a73a0011c5ba",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 149,
+  "scope": [
+    "Classify native queries by even-odd membership across a family of lifted periodic contours.",
+    "Combine exact contour classifications by parity with boundary precedence and refuse incomplete region classifications."
+  ],
+  "logSha256": "c8dfb3964dabed9513ce57e1819fcd498e133ecaddfd07c1a7d8fc45cf15e09f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "1edad2007ce0e051c71b61ea91aadbe68553f9933d7f87acc804f6a689474d61",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "5c0e858f0b127a78c2c55e2e1833de8bd32fdfad6178f2f804ea660c99ebd0bb"
+  }
+}
