@@ -1,6 +1,7 @@
 //! Attach section caps directly to an open shell's existing boundary edges.
 use super::{
-    SectionSheetOptions, build_section_sheets, build_section_sheets_with_support_tolerance,
+    SectionSheetOptions,
+    section_sheets::{Support, build},
 };
 use crate::{Coedge, Face, FaceUse, Loop, Model};
 use num_rational::BigRational;
@@ -43,7 +44,7 @@ pub fn attach_section_caps(
         offset,
         max_exact_work,
         max_verification_cells,
-        None,
+        Support::Tight,
     )
     .map(|report| report.attachment)
 }
@@ -81,7 +82,7 @@ pub fn attach_section_caps_with_support_tolerance(
         offset,
         options.max_exact_work,
         options.max_verification_cells,
-        Some(options.support_tolerance_mm),
+        Support::Rounded(options.support_tolerance_mm),
     )
 }
 
@@ -93,7 +94,7 @@ fn attach(
     offset: f64,
     max_exact_work: u64,
     max_verification_cells: usize,
-    support_tolerance: Option<f64>,
+    support: Support,
 ) -> Result<BoundedSectionAttachment> {
     source.validate()?;
     let original_shell = source
@@ -177,17 +178,9 @@ fn attach(
         max_exact_work,
         max_verification_cells,
     };
-    let (report, support_error_upper) = if let Some(tolerance) = support_tolerance {
-        let bounded = build_section_sheets_with_support_tolerance(
-            &rings, normal, offset, options, tolerance,
-        )?;
-        (bounded.sheet, bounded.support_error_upper)
-    } else {
-        (
-            build_section_sheets(&rings, normal, offset, options)?,
-            Vec::new(),
-        )
-    };
+    let bounded = build(&rings, normal, offset, options, support)?;
+    let report = bounded.sheet;
+    let support_error_upper = bounded.support_error_upper;
     let mut model = source.clone();
     let mut cap_faces = Vec::new();
     for (face, region) in report.model.faces.iter().zip(report.face_rings) {
@@ -270,8 +263,8 @@ pub use discover::{
 mod solid;
 pub use solid::{
     BoundedSectionSolid, InferredSectionSolidAdmission, SectionSolid, SectionSolidOptions,
-    build_bounded_section_solid, build_inferred_section_solid, build_section_solid,
-    inspect_inferred_section_solid,
+    build_bounded_section_solid, build_expanded_inferred_section_solid,
+    build_inferred_section_solid, build_section_solid, inspect_inferred_section_solid,
 };
 
 pub use discover::{

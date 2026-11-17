@@ -1,7 +1,8 @@
 use super::{
     AttachedSectionCaps, BoundedSectionAttachment, BoundedSectionPlane, SectionAttachmentOptions,
-    SectionPlane, close_shell_with_bounded_inferred_section_caps,
-    close_shell_with_bounded_section_caps, close_shell_with_section_caps, invalid,
+    SectionPlane, Support, attach, close_shell_with_bounded_inferred_section_caps,
+    close_shell_with_bounded_section_caps, close_shell_with_section_caps, discover::close_inferred,
+    invalid,
 };
 use crate::{
     Body, Model,
@@ -99,6 +100,35 @@ pub fn build_inferred_section_solid(
         section,
         support_error_upper: report.support_error_upper,
     })
+}
+
+/// Infer the section planes and qualify the resulting solid with exact caps.
+/// The supports may expand in UV to preserve an exactly planar free rim.
+pub fn build_expanded_inferred_section_solid(
+    source: &Model,
+    options: SectionSolidOptions,
+) -> Result<SectionSolid> {
+    require_standalone_shell(source)?;
+    let attachment = close_inferred(
+        source,
+        0,
+        options.max_exact_work,
+        options.max_verification_cells,
+        |current, rings, normal, offset, work, cells| {
+            attach(
+                current,
+                0,
+                rings,
+                normal,
+                offset,
+                work,
+                cells,
+                Support::ExpandedExact,
+            )
+            .map(|report| report.attachment)
+        },
+    )?;
+    qualify_attachment(source, attachment, options)
 }
 
 pub struct InferredSectionSolidAdmission {

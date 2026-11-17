@@ -148,7 +148,7 @@ pub fn close_shell_with_bounded_inferred_section_caps(
     })
 }
 
-fn close_inferred(
+pub(in crate::profile::planar_cap::attach_sections) fn close_inferred(
     source: &Model,
     shell: usize,
     max_exact_work: u64,

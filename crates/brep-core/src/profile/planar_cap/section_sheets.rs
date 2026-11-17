@@ -58,12 +58,6 @@ pub fn build_section_sheets_with_support_tolerance(
     options: SectionSheetOptions,
     support_tolerance: f64,
 ) -> Result<BoundedSectionSheetReport> {
-    if !support_tolerance.is_finite() || support_tolerance < 0. {
-        return Err(Error::new(
-            "BREP_INVALID_PLANAR_CAP",
-            "Support tolerance must be finite and nonnegative",
-        ));
-    }
     build(
         rings,
         normal,
@@ -86,7 +80,7 @@ pub fn build_section_sheets_with_expanded_exact_support(
     build(rings, normal, offset, options, Support::ExpandedExact).map(|report| report.sheet)
 }
 
-enum Support {
+pub(super) enum Support {
     Tight,
     ExpandedExact,
     Rounded(f64),
@@ -94,13 +88,21 @@ enum Support {
 
 mod expanded_support;
 
-fn build(
+pub(super) fn build(
     rings: &[&[Curve]],
     normal: [f64; 3],
     offset: f64,
     options: SectionSheetOptions,
     support: Support,
 ) -> Result<BoundedSectionSheetReport> {
+    if let Support::Rounded(support_tolerance) = support {
+        if !support_tolerance.is_finite() || support_tolerance < 0. {
+            return Err(Error::new(
+                "BREP_INVALID_PLANAR_CAP",
+                "Support tolerance must be finite and nonnegative",
+            ));
+        }
+    }
     if !(1e-10..=1e-2).contains(&options.tolerance)
         || !(1..=100_000).contains(&options.max_verification_cells)
     {

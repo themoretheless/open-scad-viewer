@@ -1078,3 +1078,33 @@ fn expanded_exact_support_refuses_a_nearby_rim_off_the_requested_plane() {
             .is_err()
     );
 }
+
+#[test]
+fn qualifies_an_inferred_oblique_solid_with_expanded_exact_support() {
+    use brep_core::planar_cap::build_expanded_inferred_section_solid;
+    let source = open_prism_with_nonbinary_cap_support();
+    let report = build_expanded_inferred_section_solid(&source, section_solid_options())
+        .unwrap_or_else(|error| panic!("{error:?}"));
+    assert!(report.solid.geometry().proven);
+    assert!(report.solid.geometry().boundary.agreement.all_equal);
+    assert_eq!(report.cap_faces.len(), 1);
+    let model = report.solid.model();
+    assert_eq!(model.bodies.len(), 1);
+    assert_eq!(model.edges, source.edges);
+    assert_eq!(model.vertices, source.vertices);
+    let volume = report.volume.volume_mm3;
+    assert!(volume.lower > 0. && volume.lower <= 12. && 12. <= volume.upper);
+    assert!(volume.upper - volume.lower < 1e-4);
+}
+
+#[test]
+fn expanded_inferred_solid_refuses_budget_exhaustion_atomically() {
+    use brep_core::planar_cap::build_expanded_inferred_section_solid;
+    let source = open_prism_with_nonbinary_cap_support();
+    let before = source.clone();
+    let mut options = section_solid_options();
+    let success = build_expanded_inferred_section_solid(&source, options).unwrap();
+    options.max_exact_work = success.attachment_exact_work - 1;
+    assert!(build_expanded_inferred_section_solid(&source, options).is_err());
+    assert_eq!(source, before);
+}
