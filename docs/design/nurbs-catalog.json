@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 384,
-  "unallocatedCount": 616,
+  "specifiedCount": 385,
+  "unallocatedCount": 615,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9852,6 +9852,34 @@
       "remainingQualification": [
         "Close a shell with mixed exact and rounded section caps under shared verification budgets.",
         "Each plane has independent selection and support tolerances. The cumulative work and agreement budgets apply across all caps, and results are emitted only for a fully closed selected shell.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0385",
+      "name": "Сертифицированное B-rep-тело из оболочки с крышками по индивидуальным допускам",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::planar_cap::build_bounded_section_solid",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/solid.rs",
+        "crates/brep-core/src/model/closed_solid.rs",
+        "crates/brep-core/src/body_analysis/analysis/certified_freeform_volume.rs",
+        "crates/brep-core/tests/support/closed_solid_policy.rs",
+        "docs/qualification/nurbs-curvature-field-385-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-385-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Qualify a capped solid with per-plane rounding bounds and enclose the positive volume of the stored boundary.",
+        "Per-cap rational support displacement bounds survive the continuous boundary and outward-orientation admission. Positive volume is enclosed for the actual stored solid.",
         "WASM and application integration are separate."
       ]
     }

@@ -1,0 +1,42 @@
+{
+  "id": "NURBS-0385",
+  "testedBase": "9aa6f8ce1398f877928c796f4c95b770c7df9f73",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 95,
+  "scope": [
+    "Qualify a capped solid with per-plane rounding bounds and enclose the positive volume of the stored boundary.",
+    "Per-cap rational support displacement bounds survive the continuous boundary and outward-orientation admission. Positive volume is enclosed for the actual stored solid."
+  ],
+  "logSha256": "9d4add227de57ea9446b144d761beca24d980b78621d1daf99a12eed5f225747",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "4979101dced115b2ab9143464d9a0ed21c11f6b22d638541b4ab150e1b86aa09",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "06d66ad4e5376806ebb7fea5d587ba38298528904a7c624a5797f5a6f1c49ebc",
+    "crates/brep-core/tests/section_cap_sheets.rs": "55e6b48cb31f29ae1113f8f4ac1f63419721435e3c840ae871ebec05a1183c62",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "40ecd63f68384a35a8f0cae263ec88fe736e4cb2a729b77d958b5b49ebdc22c2",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "11c4cf255221f7ff6433efe701cebe75289de3ae4ff2a4f7bd8b2b2a68be5a02",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/solid.rs": "ab52b3c51dcbb90c303784f250ab596a5f5236deac989cb01a61243420b12a12",
+    "crates/brep-core/src/model/closed_solid.rs": "a6168b4728676e87d9cd631bab94e07573aabf49c26df8dcf5c1c8b11eb0e67f",
+    "crates/brep-core/src/body_analysis/analysis/certified_freeform_volume.rs": "0d24317b5fb03ed9ac0f267132a90d33ec1e0012a987da0e105d3ca78f2000a1",
+    "crates/brep-core/tests/support/closed_solid_policy.rs": "b48784952be7e19ab14bba29e675e839fc126d6437bc589d472c8032fa4e0efb"
+  }
+}

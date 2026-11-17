@@ -268,4 +268,7 @@ pub use discover::{
 };
 
 mod solid;
-pub use solid::{SectionSolid, SectionSolidOptions, build_section_solid};
+pub use solid::{
+    BoundedSectionSolid, SectionSolid, SectionSolidOptions, build_bounded_section_solid,
+    build_section_solid,
+};

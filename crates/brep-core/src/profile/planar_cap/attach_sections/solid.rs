@@ -1,9 +1,13 @@
-use super::{SectionPlane, close_shell_with_section_caps, invalid};
+use super::{
+    AttachedSectionCaps, BoundedSectionPlane, SectionPlane, close_shell_with_bounded_section_caps,
+    close_shell_with_section_caps, invalid,
+};
 use crate::{
     Body, Model,
     analysis::{CertifiedFreeformVolume, certified_freeform_volume},
     closed_solid::{AdmissionPolicy, QualifiedClosedSolid, qualify},
 };
+use num_rational::BigRational;
 use nurbs_core::{Error, Result};
 
 #[derive(Clone, Copy)]
@@ -30,9 +34,7 @@ pub fn build_section_solid(
     planes: &[SectionPlane],
     options: SectionSolidOptions,
 ) -> Result<SectionSolid> {
-    if source.shells.len() != 1 || !source.bodies.is_empty() {
-        return Err(invalid("Section solid requires one standalone shell"));
-    }
+    require_standalone_shell(source)?;
     let attachment = close_shell_with_section_caps(
         source,
         0,
@@ -40,6 +42,50 @@ pub fn build_section_solid(
         options.max_exact_work,
         options.max_verification_cells,
     )?;
+    qualify_attachment(source, attachment, options)
+}
+
+pub struct BoundedSectionSolid {
+    pub section: SectionSolid,
+    /// Continuous displacement bounds relative to the requested support
+    /// planes, in the same order as the cap face indices.
+    pub support_error_upper: Vec<BigRational>,
+}
+
+/// Cap a standalone shell using per-plane tolerances and qualify the stored
+/// boundary. The volume enclosure describes that stored solid.
+pub fn build_bounded_section_solid(
+    source: &Model,
+    planes: &[BoundedSectionPlane],
+    options: SectionSolidOptions,
+) -> Result<BoundedSectionSolid> {
+    require_standalone_shell(source)?;
+    let bounded = close_shell_with_bounded_section_caps(
+        source,
+        0,
+        planes,
+        options.max_exact_work,
+        options.max_verification_cells,
+    )?;
+    let section = qualify_attachment(source, bounded.attachment, options)?;
+    Ok(BoundedSectionSolid {
+        section,
+        support_error_upper: bounded.support_error_upper,
+    })
+}
+
+fn require_standalone_shell(source: &Model) -> Result<()> {
+    if source.shells.len() != 1 || !source.bodies.is_empty() {
+        return Err(invalid("Section solid requires one standalone shell"));
+    }
+    Ok(())
+}
+
+fn qualify_attachment(
+    source: &Model,
+    attachment: AttachedSectionCaps,
+    options: SectionSolidOptions,
+) -> Result<SectionSolid> {
     let mut model = attachment.model;
     model.bodies.push(Body {
         outer_shell: 0,

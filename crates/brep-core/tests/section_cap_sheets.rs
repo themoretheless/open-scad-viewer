@@ -683,3 +683,47 @@ fn refuses_a_late_support_failure_without_committing_the_first_cap() {
     assert!(close_shell_with_bounded_section_caps(&source, 0, &planes, 1_000_000, 10_000).is_err());
     assert_eq!(source, before);
 }
+
+#[test]
+fn qualifies_a_mixed_section_solid_and_bounds_its_stored_volume() {
+    use brep_core::planar_cap::build_bounded_section_solid;
+    use num_rational::BigRational as Q;
+    use num_traits::Zero;
+    let (mut source, _) = open_prism(false);
+    remove_prism_cap(&mut source, 0.);
+    scale_prism_to_third_height(&mut source);
+    let planes = mixed_section_planes();
+    let report = build_bounded_section_solid(&source, &planes, section_solid_options())
+        .unwrap_or_else(|error| panic!("{error:?}"));
+    assert!(report.support_error_upper[0].is_zero());
+    assert!(report.support_error_upper[1] > Q::zero());
+    let section = report.section;
+    assert_eq!(section.cap_faces.len(), 2);
+    assert!(section.solid.geometry().proven);
+    let model = section.solid.model();
+    assert_eq!(model.edges, source.edges);
+    assert_eq!(model.vertices, source.vertices);
+    assert_eq!(model.bodies.len(), 1);
+    let expected = 16. * (1. / 3.);
+    let volume = section.volume.volume_mm3;
+    assert!(0. < volume.lower && volume.lower <= expected && expected <= volume.upper);
+    assert!(volume.upper - volume.lower < 1e-4);
+}
+
+#[test]
+fn rejects_a_bounded_section_solid_when_final_material_proof_fails() {
+    use brep_core::planar_cap::build_bounded_section_solid;
+    let (mut source, _) = open_prism(false);
+    remove_prism_cap(&mut source, 0.);
+    scale_prism_to_third_height(&mut source);
+    for face in &mut source.shells[0].faces {
+        face.reversed = !face.reversed;
+    }
+    let before = source.clone();
+    let error =
+        build_bounded_section_solid(&source, &mixed_section_planes(), section_solid_options())
+            .err()
+            .unwrap();
+    assert_eq!(error.code, "BREP_CLOSED_SOLID_UNPROVED");
+    assert_eq!(source, before);
+}

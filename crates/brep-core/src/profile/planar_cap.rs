@@ -443,4 +443,7 @@ pub use attach_sections::{
     close_shell_with_bounded_section_caps, close_shell_with_section_caps, discover_and_attach_section_caps,
     discover_and_attach_section_caps_with_support_tolerance,
 };
-pub use attach_sections::{SectionSolid, SectionSolidOptions, build_section_solid};
+pub use attach_sections::{
+    BoundedSectionSolid, SectionSolid, SectionSolidOptions, build_bounded_section_solid,
+    build_section_solid,
+};
