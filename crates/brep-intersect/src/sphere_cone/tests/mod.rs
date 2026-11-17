@@ -437,6 +437,46 @@ fn off_axis_spheres_crossing_the_apex_plane_are_unsupported_regions() {
 }
 
 #[test]
+fn off_axis_spheres_crossing_the_apex_plane_but_missing_the_other_nappe_are_traced() {
+    // Frustum r 2 -> 4 over 0..6: apex plane at z = -6. The sphere spans
+    // z -6.5..2.5 (crosses the apex plane and the bottom cap) but stays 5
+    // from the apex and farther from the lower nappe, so it only meets the
+    // solid's own nappe.
+    let cone = brep_core::analytic::frustum(2., 4., 6.).unwrap();
+    let (radius, at) = (4.5, [3., 0., -2.]);
+    let sphere = translated(&brep_core::analytic::sphere(radius).unwrap(), at);
+    let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
+    assert!(report.unresolved.is_empty(), "{:?}", report.unresolved);
+    assert!(!report.components.is_empty());
+    for component in &report.components {
+        let SphereConeComponent::Traced { pieces, distance_bound, complete, lift_deviation, .. } = component else {
+            panic!("expected a traced cycle");
+        };
+        assert!(*complete && *distance_bound <= crate::TRACE_TOLERANCE);
+        assert!(*lift_deviation <= crate::LIFT_TOLERANCE);
+        assert_eq!(pieces.last().unwrap().control_points.last(), pieces[0].control_points.first());
+        for piece in pieces {
+            for k in 0..=40 {
+                let p = piece.evaluate(k as f64 / 40.).unwrap().point;
+                assert!(p[2] >= -1e-6, "point below the bottom cap: {p:?}");
+            }
+        }
+    }
+}
+
+#[test]
+fn other_nappe_distance_matches_the_meridian_geometry() {
+    use super::sphere_cone_component::other_nappe_distance;
+    // slope 1/3, point 4 above the apex, 3 off axis: closest is the apex.
+    assert!((other_nappe_distance(4., 3., 1. / 3.) - 5.).abs() < 1e-12);
+    // A point on the other nappe is at distance zero.
+    assert!(other_nappe_distance(-3., 1., 1. / 3.).abs() < 1e-12);
+    // Negative slope mirrors the configuration.
+    assert!(other_nappe_distance(3., 1., -1. / 3.).abs() < 1e-12);
+    assert!((other_nappe_distance(-4., 3., -1. / 3.) - 5.).abs() < 1e-12);
+}
+
+#[test]
 fn off_axis_spheres_between_the_caps_are_traced_and_complete() {
     for (cone, radius, at) in [
         (brep_core::analytic::frustum(2., 4., 6.).unwrap(), 1., [3., 0., 3.]),

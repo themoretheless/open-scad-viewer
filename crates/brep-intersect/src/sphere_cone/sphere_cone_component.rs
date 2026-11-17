@@ -326,9 +326,12 @@ fn off_axis(
             return Ok(report);
         }
         // The other nappe lies beyond the apex: a sphere crossing the apex
-        // plane of a cone (radius 0 there) is not handled.
+        // plane is handled only when it provably misses that nappe (and the
+        // apex point), so every traced loop lies on the solid's own nappe.
         let apex = -cone.r_bottom / cone.slope;
-        if (s0 - r..=s0 + r).contains(&apex) {
+        if (s0 - r - band..=s0 + r + band).contains(&apex)
+            && other_nappe_distance(s0 - apex, d_perp, cone.slope) <= r + band
+        {
             report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
             return Ok(report);
         }
@@ -369,7 +372,14 @@ fn off_axis(
             &c_implicit,
             seed,
             terms + d_perp,
-            r.min(c_lo.max(1e-3)),
+            // Step scale from the wall radius over the part of the sphere's
+            // axial span inside the solid: past an apex plane the linear
+            // profile goes negative and would collapse the step.
+            r.min(
+                radius_at((s0 - r).clamp(0., cone.height))
+                    .min(radius_at((s0 + r).clamp(0., cone.height)))
+                    .max(1e-3),
+            ),
             crate::TRACE_TOLERANCE,
         )
     };
@@ -490,4 +500,20 @@ fn off_axis(
         Err(_) => report.unresolved(domain, UnresolvedReason::UnsupportedSurface),
     }
     Ok(report)
+}
+
+/// Distance from a point in the meridian half-plane (axial offset `z` from
+/// the apex, distance `rho` >= 0 from the axis) to the nappe of the double
+/// cone that does not carry the solid. The solid's nappe satisfies
+/// slope * z >= 0, so the other one is the ray from the apex with direction
+/// (-sign(slope), |slope|) / sqrt(1 + slope^2).
+pub(super) fn other_nappe_distance(z: f64, rho: f64, slope: f64) -> f64 {
+    let norm = slope.hypot(1.);
+    let (ux, uy) = (-slope.signum() / norm, slope.abs() / norm);
+    let along = z * ux + rho * uy;
+    if along <= 0. {
+        z.hypot(rho)
+    } else {
+        (z * uy - rho * ux).abs()
+    }
 }
