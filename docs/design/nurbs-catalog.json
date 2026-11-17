@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 320,
-  "unallocatedCount": 680,
+  "specifiedCount": 321,
+  "unallocatedCount": 679,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8370,6 +8370,27 @@
       "remainingQualification": [
         "Enclose physical signed area for projected rational trim contours using outward integration and the metric of the exact inverse plane chart.",
         "Signed boundary integration, oppositely oriented holes, shared cell budget and physical plane scaling. Material interpretation requires valid simple loops.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0321",
+      "name": "Точная рациональная площадь замкнутых полиномиальных контуров и рациональных отрезков",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_derivative::exact_planar_boundary_area",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/planar_integral.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/extraction.rs",
+        "crates/nurbs-core/tests/exact_planar_boundary_area_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-321-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-321-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Integrate exact signed Green area over polynomial spans and rational line segments without numerical quadrature.",
+        "Exactly closed 2D boundary. Constant homogeneous weights or degree-one rational spans. Curved rational spans with variable weight refuse explicitly.",
         "WASM and application integration are separate."
       ]
     }

@@ -1,0 +1,31 @@
+{
+  "id": "NURBS-0321",
+  "testedBase": "be86864cd18f1664f66d90ce1f8c1f8c8d95d398",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_boundary_area_contracts",
+    "--test",
+    "exact_projected_face_area_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 2,
+  "scope": [
+    "Integrate exact signed Green area over polynomial spans and rational line segments without numerical quadrature.",
+    "Exactly closed 2D boundary. Constant homogeneous weights or degree-one rational spans. Curved rational spans with variable weight refuse explicitly."
+  ],
+  "logSha256": "571a926f118cece17e9160a343f9deb6f31c19e23ce5a6f4ca00b6f59a5568f0",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_derivative.rs": "955a9d902e46e5aa77f1003731c3d2c7207502ee245012e519525cc0d63f812f",
+    "crates/nurbs-core/src/editing/exact_derivative/planar_integral.rs": "17cf3fed50e959c861a215c3ba46695310334c65dce0328874933dfcb46336ef",
+    "crates/nurbs-core/src/editing/exact_derivative/extraction.rs": "5542382d5cef934a1f554ff7e403b8ad3cd95a9c91c7f912e5659b6fd823150e",
+    "crates/nurbs-core/tests/exact_planar_boundary_area_contracts.rs": "c3527bba9464bf1493f978889c2854ffc8d5e0bdba065af054e653bc25f71528"
+  }
+}
