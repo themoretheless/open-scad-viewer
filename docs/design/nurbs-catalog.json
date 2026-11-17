@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 408,
-  "unallocatedCount": 592,
+  "specifiedCount": 409,
+  "unallocatedCount": 591,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -10513,6 +10513,30 @@
       "remainingQualification": [
         "Find the tight coordinate box in a supplied invertible affine frame with exact extremal witnesses.",
         "Exact dual basis covectors project retained linear boundaries along all three frame coordinates in a single traversal. Singular and nonfinite frames refuse.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0409",
+      "name": "Точный направленный зазор между двумя плоскогранными B-rep-телами",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::exact_polyhedral_axis_separation",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/mod.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "docs/qualification/nurbs-curvature-field-409-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-409-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Compare exact directional projections and certify separating-plane clearance with ordered support witnesses.",
+        "Exact support intervals classify axis separation, touching projections and overlap. Positive separation certifies a body-distance lower bound with exact squared plane distance.",
         "WASM and application integration are separate."
       ]
     }

@@ -370,6 +370,59 @@ pub fn exact_polyhedral_projection(
 }
 
 #[derive(Clone, Debug)]
+pub struct ExactPolyhedralAxisSeparation {
+    /// Positive for disjoint intervals, zero for touching intervals, and
+    /// negative for overlapping intervals. Measured in dot-product units.
+    pub signed_gap: Q,
+    /// Squared distance between the separating support planes when disjoint
+    /// or touching along the given axis. This is a lower bound on body distance.
+    pub separating_plane_distance_squared_mm2: Option<Q>,
+    /// The two support points in input body order.
+    pub witnesses_mm: [[Q; 3]; 2],
+    pub exact_work: u64,
+}
+
+/// Compare the exact projections of two qualified polyhedral bodies.
+/// Projection contact or overlap on one axis does not establish 3D contact.
+pub fn exact_polyhedral_axis_separation(
+    first: &QualifiedClosedSolid,
+    second: &QualifiedClosedSolid,
+    direction: [f64; 3],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralAxisSeparation> {
+    validate_work(max_exact_work)?;
+    let mut remaining = max_exact_work;
+    spend(&mut remaining, 24)?;
+    if remaining == 0 {
+        return Err(work_exhausted());
+    }
+    let a = exact_polyhedral_projection(first, direction, remaining)?;
+    spend(&mut remaining, a.exact_work)?;
+    if remaining == 0 {
+        return Err(work_exhausted());
+    }
+    let b = exact_polyhedral_projection(second, direction, remaining)?;
+    spend(&mut remaining, b.exact_work)?;
+    let forward = &b.dot_bounds[0] - &a.dot_bounds[1];
+    let backward = &a.dot_bounds[0] - &b.dot_bounds[1];
+    let (signed_gap, [i, j]) = if forward >= backward {
+        (forward, [1, 0])
+    } else {
+        (backward, [0, 1])
+    };
+    let separating_plane_distance_squared_mm2 = (!signed_gap.is_negative()).then(|| {
+        let norm_squared: Q = lift(&direction).iter().map(|x| x * x).sum();
+        signed_gap.pow(2) / norm_squared
+    });
+    Ok(ExactPolyhedralAxisSeparation {
+        signed_gap,
+        separating_plane_distance_squared_mm2,
+        witnesses_mm: [a.witnesses_mm[i].clone(), b.witnesses_mm[j].clone()],
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+#[derive(Clone, Debug)]
 pub struct ExactPolyhedralFrameBounds {
     /// Min/max coordinates along each basis axis in the supplied frame.
     pub bounds: [[Q; 2]; 3],

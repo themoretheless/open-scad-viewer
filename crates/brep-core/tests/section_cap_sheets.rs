@@ -1852,3 +1852,66 @@ fn exact_frame_projection_rejects_singular_or_nonfinite_frames() {
             .is_err()
     );
 }
+
+fn shifted_oblique_solid(dx: f64) -> brep_core::closed_solid::QualifiedClosedSolid {
+    use brep_core::planar_cap::build_outward_inferred_section_solid;
+    let mut source = open_prism_with_nonbinary_cap_support();
+    for vertex in &mut source.vertices {
+        vertex.point[0] += dx;
+    }
+    for edge in &mut source.edges {
+        for point in &mut edge.curve.control_points {
+            point[0] += dx;
+        }
+    }
+    for face in &mut source.faces {
+        for point in face.surface.control_points.iter_mut().flatten() {
+            point[0] += dx;
+        }
+    }
+    source.rebuild_topology_ids();
+    build_outward_inferred_section_solid(&source, section_solid_options())
+        .unwrap()
+        .section
+        .solid
+}
+
+#[test]
+fn certifies_exact_axis_clearance_and_preserves_witness_input_order() {
+    use brep_core::analysis::exact_polyhedral_axis_separation;
+    use num_rational::BigRational as Q;
+    let a = shifted_oblique_solid(0.);
+    let b = shifted_oblique_solid(5.);
+    let q = |x: i64| Q::from_integer(x.into());
+    let report = exact_polyhedral_axis_separation(&a, &b, [2., 0., 0.], 1_000_000).unwrap();
+    assert_eq!(report.signed_gap, q(4));
+    assert_eq!(report.separating_plane_distance_squared_mm2, Some(q(4)));
+    assert_eq!(
+        report.witnesses_mm.each_ref().map(|p| p[0].clone()),
+        [q(3), q(5)]
+    );
+    let swapped =
+        exact_polyhedral_axis_separation(&b, &a, [-2., 0., 0.], report.exact_work).unwrap();
+    assert_eq!(swapped.signed_gap, q(4));
+    assert_eq!(
+        swapped.witnesses_mm.each_ref().map(|p| p[0].clone()),
+        [q(5), q(3)]
+    );
+    assert!(exact_polyhedral_axis_separation(&a, &b, [2., 0., 0.], report.exact_work - 1).is_err());
+}
+
+#[test]
+fn distinguishes_touching_and_overlapping_projections() {
+    use brep_core::analysis::exact_polyhedral_axis_separation;
+    use num_rational::BigRational as Q;
+    let a = shifted_oblique_solid(0.);
+    for (shift, gap) in [(3., 0), (2., -1)] {
+        let b = shifted_oblique_solid(shift);
+        let report = exact_polyhedral_axis_separation(&a, &b, [1., 0., 0.], 1_000_000).unwrap();
+        assert_eq!(report.signed_gap, Q::from_integer(gap.into()));
+        assert_eq!(
+            report.separating_plane_distance_squared_mm2,
+            (gap == 0).then(|| Q::from_integer(0.into()))
+        );
+    }
+}
