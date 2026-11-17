@@ -5234,3 +5234,68 @@ fn periodic_trim_contour_inversion_retains_proved_bracket_on_cell_limit() {
     assert!(outside.parameter_bounds.is_none());
     assert_eq!(outside.status, Status::Outside);
 }
+
+#[test]
+fn periodic_trim_station_bounds_enclose_seams_and_original_vertices() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    for (distance, expected) in [
+        (0., [0., 0.5, 0.25]),
+        (0.5, [0., 0., 0.25]),
+        (1., [0.5, 0., 0.25]),
+    ] {
+        let report = result
+            .enclose_input_contour_station(0, distance, 1e-10, 1e-6, 1024)
+            .unwrap();
+        for ([lo, hi], value) in report.point_bounds.unwrap().into_iter().zip(expected) {
+            assert!(lo <= value && value <= hi);
+            assert!(hi - lo < 1e-5);
+        }
+    }
+}
+
+#[test]
+fn periodic_trim_station_bounds_cover_coarse_bracket_and_withhold_outside() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicTrimLengthLocationStatus as Status, build_exact_periodic_surface_trim_input_edges,
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    let report = result
+        .enclose_input_contour_station(0, 0.5, 1e-10, 1e-6, 6)
+        .unwrap();
+    assert_eq!(report.location.status, Status::WorkLimit);
+    let [x, y, z] = report.point_bounds.unwrap();
+    assert!(x[0] <= 0. && x[1] >= 0.5 && y[0] <= 0. && y[1] >= 0.5);
+    assert!(z[0] <= 0.25 && z[1] >= 0.25);
+    let outside = result
+        .enclose_input_contour_station(0, 6., 1e-10, 1e-6, 6)
+        .unwrap();
+    assert_eq!(outside.location.status, Status::Outside);
+    assert!(outside.point_bounds.is_none());
+}

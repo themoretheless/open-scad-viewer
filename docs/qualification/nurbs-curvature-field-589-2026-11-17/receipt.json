@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0589",
+  "testedBase": "e84bffb55f33335da96581ddfc43d5fe8065cbd1",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 167,
+  "scope": [
+    "Enclose the world point across every edge spanned by the certified contour station bracket.",
+    "Verify world boxes at the contour origin, a periodic seam and an original vertex, including coarse brackets and unavailable stations."
+  ],
+  "logSha256": "5d831c4f51ebc0b7455d77abb95c9f9d630ac86fbd46d91820ede392a30b1f9e",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "68371bd6736295eabe6ca8fbb5118fb40043bb3922e1be91ce4df16c3054b213",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "5999a2d35dc4602c6da6e3dd750a96077cddde2a9d6c3fe5f5ec56920e7596e5"
+  }
+}

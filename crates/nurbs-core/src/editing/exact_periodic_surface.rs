@@ -5470,3 +5470,87 @@ impl PeriodicTrimInputEdges {
         })
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimStationBounds {
+    pub location: PeriodicTrimLengthLocation,
+    /// One outward-rounded interval per world coordinate.
+    pub point_bounds: Option<[[f64; 2]; 3]>,
+}
+
+impl PeriodicTrimInputEdges {
+    /// Enclose the world-space point at a certified contour station.
+    /// The box covers every curve piece intersecting the proved parameter range.
+    pub fn enclose_input_contour_station(
+        &self,
+        contour: usize,
+        distance: f64,
+        length_tolerance: f64,
+        parameter_tolerance: f64,
+        max_cells: usize,
+    ) -> Result<PeriodicTrimStationBounds> {
+        let location = self.locate_input_contour_at_length(
+            contour,
+            distance,
+            length_tolerance,
+            parameter_tolerance,
+            max_cells,
+        )?;
+        let point_bounds = location
+            .parameter_bounds
+            .map(|parameter| self.enclose_contour_parameter_bounds(contour, parameter))
+            .transpose()?;
+        Ok(PeriodicTrimStationBounds {
+            location,
+            point_bounds,
+        })
+    }
+
+    fn enclose_contour_parameter_bounds(
+        &self,
+        contour: usize,
+        parameter: [f64; 2],
+    ) -> Result<[[f64; 2]; 3]> {
+        let global = parameter.map(|t| BigRational::from_float(t).unwrap());
+        let mut bounds = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
+        for (curve, source) in self.input_contour_pieces(contour)? {
+            let offset = BigRational::from_integer(source.segment.into());
+            let [a, b] = &source.parameters;
+            let [start, end] = [a.min(b) + &offset, a.max(b) + &offset];
+            let lo = (&global[0]).max(&start);
+            let hi = (&global[1]).min(&end);
+            if lo > hi {
+                continue;
+            }
+            let local = [lo - &offset, hi - &offset];
+            let [p, q] = map_trim_input_interval(curve, source, [&local[0], &local[1]])?;
+            let [lo, _] = trim_clock_bracket((&p).min(&q))?;
+            let [_, hi] = trim_clock_bracket((&p).max(&q))?;
+            for span in curve.degree..curve.control_points.len() {
+                let [start, end] = [curve.knots[span], curve.knots[span + 1]];
+                if start == end || hi < start || lo > end {
+                    continue;
+                }
+                let [a, b] = [lo.max(start), hi.min(end)];
+                let jets = if a < b {
+                    crate::curve_jets::enclose(curve, span, [a, b])?
+                } else if a == start {
+                    crate::curve_jets::endpoint(curve, span, [start, end], false)?
+                } else {
+                    crate::curve_jets::endpoint(curve, span, [start, a], true)?
+                };
+                for (bound, axis) in bounds.iter_mut().zip(&jets[0]) {
+                    bound[0] = bound[0].min(axis.lo);
+                    bound[1] = bound[1].max(axis.hi);
+                }
+            }
+        }
+        crate::check(
+            bounds
+                .iter()
+                .all(|[lo, hi]| lo.is_finite() && hi.is_finite() && lo <= hi),
+            "Periodic trim station has no enclosing curve pieces",
+        )?;
+        Ok(bounds)
+    }
+}
