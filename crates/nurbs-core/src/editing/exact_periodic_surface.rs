@@ -1989,7 +1989,7 @@ fn lift_periodic_axis(
     [lo, hi]: [f64; 2],
     work: &mut Work,
 ) -> std::result::Result<(), (usize, PeriodicLiftRefusal)> {
-    use num_traits::{Signed, Zero};
+    use num_traits::Zero;
 
     let mut index = 0;
     let mut lift = || -> std::result::Result<(), PeriodicLiftRefusal> {
@@ -2005,15 +2005,15 @@ fn lift_periodic_axis(
         for (i, uv) in native.iter().enumerate().skip(1) {
             index = i;
             let value = work.lift(uv[axis])?;
-            let step = work.op(&value, &previous, |a, b| a - b)?;
-            match step.abs().cmp(&half) {
-                std::cmp::Ordering::Equal => return Err(PeriodicLiftRefusal::AmbiguousHalfTurn),
-                std::cmp::Ordering::Greater => {
-                    shift = work.op(&shift, &period, |a, b| {
-                        if step.is_positive() { a - b } else { a + b }
-                    })?;
-                }
-                std::cmp::Ordering::Less => {}
+            let change = shortest_step_turn(&value, &previous, &half, work)?;
+            if change != 0 {
+                shift = work.op(
+                    &shift,
+                    &period,
+                    |a, b| {
+                        if change > 0 { a + b } else { a - b }
+                    },
+                )?;
             }
             let lifted = work.op(&value, &shift, |value, shift| value + shift)?;
             out[i][axis] = work.float(&lifted)?;
@@ -2022,4 +2022,108 @@ fn lift_periodic_axis(
         Ok(())
     };
     lift().map_err(|reason| (index, reason))
+}
+
+fn shortest_step_turn(
+    value: &BigRational,
+    previous: &BigRational,
+    half: &BigRational,
+    work: &mut Work,
+) -> std::result::Result<i32, PeriodicLiftRefusal> {
+    use num_traits::Signed;
+    use std::cmp::Ordering;
+    let step = work.op(value, previous, |a, b| a - b)?;
+    match step.abs().cmp(half) {
+        Ordering::Equal => Err(PeriodicLiftRefusal::AmbiguousHalfTurn),
+        Ordering::Greater => Ok(if step.is_positive() { -1 } else { 1 }),
+        Ordering::Less => Ok(0),
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicPathWindingReport {
+    /// Signed winding along U and V. Nonperiodic axes always contribute zero.
+    pub winding: Option<[i32; 2]>,
+    pub work_used: u64,
+    pub refused_coordinate: Option<[usize; 2]>,
+    pub refusal: Option<PeriodicLiftRefusal>,
+}
+
+/// Count exact signed turns in a closed sequence of native UV samples.
+/// Successive samples follow the shortest-step convention on each axis.
+/// The first and last native samples must coincide; half-turns are ambiguous.
+pub fn exact_periodic_surface_path_winding(
+    source: &Surface,
+    native: &[[f64; 2]],
+    max_work: u64,
+) -> Result<PeriodicPathWindingReport> {
+    source.validate()?;
+    crate::check(
+        (2..=4096).contains(&native.len()) && native.first() == native.last(),
+        "Periodic winding needs a closed path of 2..=4096 samples",
+    )?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact periodic winding work must be in 1..=1000000",
+    )?;
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let mut winding = [0; 2];
+    let refused = |coordinate, reason, work_used| PeriodicPathWindingReport {
+        winding: None,
+        work_used,
+        refused_coordinate: coordinate,
+        refusal: Some(reason),
+    };
+    for (i, axis) in [Axis::U, Axis::V].into_iter().enumerate() {
+        let reference = row(source, axis, 0);
+        let [lo, hi] = reference.domain();
+        crate::check(
+            native.iter().all(|uv| {
+                let t = uv[i];
+                lo <= t && (t < hi || !reference.periodic && t == hi)
+            }),
+            "Path parameters must lie inside the native domain (half-open on periodic axes)",
+        )?;
+        if !reference.periodic {
+            continue;
+        }
+        if !crate::analysis::curve_partition_agreement::verify_periodic_source_closure(&reference)?
+        {
+            return Ok(refused(
+                None,
+                PeriodicLiftRefusal::Arithmetic(ExactRefusal::InvalidOutput),
+                work.used,
+            ));
+        }
+        let mut index = 0;
+        let mut count = || -> std::result::Result<i32, PeriodicLiftRefusal> {
+            let lo = work.lift(lo)?;
+            let hi = work.lift(hi)?;
+            let half = work.op(&hi, &lo, |a, b| {
+                (a - b) / BigRational::from_integer(2.into())
+            })?;
+            let mut previous = work.lift(native[0][i])?;
+            let mut turns = 0;
+            for (sample, uv) in native.iter().enumerate().skip(1) {
+                index = sample;
+                let value = work.lift(uv[i])?;
+                turns += shortest_step_turn(&value, &previous, &half, &mut work)?;
+                previous = value;
+            }
+            Ok(turns)
+        };
+        match count() {
+            Ok(turns) => winding[i] = turns,
+            Err(reason) => return Ok(refused(Some([index, i]), reason, work.used)),
+        }
+    }
+    Ok(PeriodicPathWindingReport {
+        winding: Some(winding),
+        work_used: work.used,
+        refused_coordinate: None,
+        refusal: None,
+    })
 }

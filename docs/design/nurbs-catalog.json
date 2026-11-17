@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 539,
-  "unallocatedCount": 461,
+  "specifiedCount": 540,
+  "unallocatedCount": 460,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13795,6 +13795,27 @@
       "remainingQualification": [
         "Lift native UV samples by the unique shortest signed step on each periodic axis.",
         "Accumulate signed exact period shifts along each sampled axis and refuse ambiguous half-turns or unstorable lifted values.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0540",
+      "name": "Точный подсчёт оборотов замкнутой дискретной UV-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_path_winding",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-540-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-540-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Count signed windings using exact shortest steps on a closed sequence of native UV samples.",
+        "Count exact signed seam crossings on both axes without constructing lifted floating-point coordinates.",
         "WASM and application integration are separate."
       ]
     }

@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0540",
+  "testedBase": "73473e619a9ffb07af93c753a2bab960dd26c19c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 137,
+  "scope": [
+    "Count signed windings using exact shortest steps on a closed sequence of native UV samples.",
+    "Count exact signed seam crossings on both axes without constructing lifted floating-point coordinates."
+  ],
+  "logSha256": "446f33e2eea44094f2b2c27fddb496809d9cd6e9878420411b552ea7eba70996",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "b2444afee24f52c45c9de05c20afae7a45f4d40f5f83cac7d59cccd7a8f42c3b",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "0bb41a9eaf5d61f3a0218e15ff8f2f6d1d96784f82222e3df3aab681e171c2c4"
+  }
+}

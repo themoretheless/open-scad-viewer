@@ -3235,3 +3235,43 @@ fn periodic_surface_path_lift_refuses_exact_half_turns() {
     assert_eq!(report.refused_coordinate, Some([2, 1]));
     assert!(report.parameters.is_none());
 }
+
+#[test]
+fn periodic_path_winding_counts_signed_turns_without_storing_lifted_points() {
+    use nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_path_winding;
+    let source = doubly_periodic_tensor();
+    let tiny = 2f64.powi(-54);
+    let native = [[tiny, 0.], [1., 3.], [2., 2.], [3., 1.], [tiny, 0.]];
+    let report = exact_periodic_surface_path_winding(&source, &native, 1_000_000).unwrap();
+    assert_eq!(report.winding, Some([1, -1]));
+    let reversed: Vec<_> = native.into_iter().rev().collect();
+    assert_eq!(
+        exact_periodic_surface_path_winding(&source, &reversed, 1_000_000)
+            .unwrap()
+            .winding,
+        Some([-1, 1])
+    );
+    assert!(
+        exact_periodic_surface_path_winding(&source, &native, report.work_used - 1)
+            .unwrap()
+            .winding
+            .is_none()
+    );
+}
+
+#[test]
+fn periodic_path_winding_rejects_open_and_half_turn_sequences() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicLiftRefusal, exact_periodic_surface_path_winding,
+    };
+    let source = doubly_periodic_tensor();
+    assert!(
+        exact_periodic_surface_path_winding(&source, &[[0., 0.], [1., 0.]], 1_000_000).is_err()
+    );
+    let report =
+        exact_periodic_surface_path_winding(&source, &[[0., 0.], [2., 0.], [0., 0.]], 1_000_000)
+            .unwrap();
+    assert_eq!(report.refusal, Some(PeriodicLiftRefusal::AmbiguousHalfTurn));
+    assert_eq!(report.refused_coordinate, Some([1, 0]));
+    assert!(report.winding.is_none());
+}
