@@ -571,7 +571,7 @@
     "src/parser": 2,
     "src/render": 3,
     "src/workers": 1,
-    "tests": 1022,
+    "tests": 1021,
     "tools/browser-qualification": 19,
     "tools/refactor-audit": 3
   },

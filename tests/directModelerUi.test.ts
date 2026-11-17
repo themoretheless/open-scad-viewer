@@ -1259,6 +1259,25 @@ it('adds a circle tangent constraint in the dimension panel, re-solves it when t
  await ui.click('↶');expect(ui.doc()).toEqual(added)
 })
 
+it('C7 constraint glyphs select a circle constraint on the 2D canvas and Delete removes only that constraint',async()=>{
+ const ui=await mount();await ui.click('Circle');await ui.click('Sketch dimensions')
+ await vi.waitFor(()=>expect(ui.all().some(n=>n.tag==='button'&&ui.text(n)==='Add circle constraint')).toBe(true))
+ const select=(name:string)=>ui.all().find(n=>n.tag==='select'&&n.props['aria-label']===name)!
+ select('Curve constraint kind').props['onUpdate:modelValue']('tangent_line');await nextTick()
+ select('Curve constraint segment').props['onUpdate:modelValue'](1);await nextTick()
+ await ui.click('Add circle constraint');await flushClearance();const added=ui.doc()
+ const glyph=()=>ui.all().find(n=>n.props['data-constraint-glyph']==='tangent')
+ await vi.waitFor(()=>expect(glyph()).toBeDefined())
+ expect(glyph()!.props['aria-pressed']).toBe(false)
+ glyph()!.props.onPointerdown({stopPropagation(){},preventDefault(){}});await nextTick()
+ expect(glyph()!.props['aria-pressed']).toBe(true)
+ await commandKey(ui,'Delete');await flushClearance()
+ const after=ui.doc(),circle=after.sketches.find(s=>s.id==='circle')!
+ expect(circle).toBeDefined();expect(circle.curveConstraints).toBeUndefined();expect(after.sketches).toHaveLength(added.sketches.length)
+ expect(glyph()).toBeUndefined()
+ await ui.click('↶');expect(ui.doc()).toEqual(added)
+})
+
 it('retains geometry and identities through 20 edits, command cancellation, full Undo/Redo and draft reload',async()=>{
  const ui=await mount(),snapshots=[ui.serialized()]
  for(let cycle=0;cycle<5;cycle++)for(const command of ['Box','New empty group','Move selection to group','Duplicate']){

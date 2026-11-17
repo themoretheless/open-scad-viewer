@@ -8,7 +8,15 @@ import {
   sketchCurveConstraintName,
   sketchCurveConstraintResidual,
   validateSketchCurveConstraints,
+  solveDraggedCurveSketch,
+  curveDragRefusedNotice,
+  CURVE_DRAG_REFUSED_MESSAGE,
 } from '../src/app/sketchCurveConstraints'
+import {
+  sketchConstraintGlyphs,
+  removeSketchConstraintRef,
+  isSketchConstraintRef,
+} from '../src/app/sketchConstraintGlyphs'
 import {
   emptyDirectDocument,
   parseDirectDocument,
@@ -192,5 +200,89 @@ describe('sketch curve constraints', () => {
     )
     expect(droppedCurveConstraintsNotice(dropped, 'ru')).toContain('касание отрезка')
     expect(droppedCurveConstraintsNotice([], 'en')).toBe('')
+  })
+})
+
+describe('constrained circle handle drag', () => {
+  it('re-solves the dragged circle own constraints in the point edit', () => {
+    const a = addSketchCurveConstraint(circle('A', [3, 4], 2), { kind: 'concentric', ref: 'R' }, [ref])
+    const doc = { ...emptyDirectDocument(), sketches: [ref, a] }
+    const moved = applySolidPointEdit(doc, { kind: 'analytic-handle', id: 'A', handle: 'center', point: [7, 7] })
+    expect(moved.sketches[1]!.analytic!.center[0]).toBeCloseTo(0, 6)
+    expect(moved.sketches[1]!.analytic!.center[1]).toBeCloseTo(0, 6)
+    const grown = applySolidPointEdit(doc, { kind: 'analytic-handle', id: 'A', handle: 'radius', point: [0, 9] })
+    expect(grown.sketches[1]!.analytic!.radius).toBeCloseTo(9, 6)
+    expect(grown.sketches[0]).toEqual(ref)
+  })
+
+  it('refuses a drag the constraints cannot satisfy and leaves unconstrained circles alone', () => {
+    const stuck: DirectSketch = {
+      ...circle('A', [0, 0], 5),
+      curveConstraints: [
+        { kind: 'concentric', ref: 'R' },
+        { kind: 'equal_radius', ref: 'R' },
+        { kind: 'tangent_line', ref: 'L', a: 0, b: 1 },
+      ],
+    }
+    const doc = { ...emptyDirectDocument(), sketches: [ref, line, stuck] }
+    expect(() =>
+      applySolidPointEdit(doc, { kind: 'analytic-handle', id: 'A', handle: 'radius', point: [0, 9] }),
+    ).toThrow(CURVE_DRAG_REFUSED_MESSAGE)
+    const free = circle('F', [1, 1], 1)
+    expect(solveDraggedCurveSketch(free, [free])).toBe(free)
+    expect(curveDragRefusedNotice('ru')).toContain('Перетаскивание отменено')
+  })
+})
+
+describe('sketch constraint glyphs', () => {
+  const square: DirectSketch = {
+    id: 'S',
+    name: 'S',
+    points: [
+      [0, 0],
+      [10, 0],
+      [10, 10],
+      [0, 10],
+    ],
+    closed: true,
+    constraints: [
+      { kind: 'horizontal', a: 0, b: 1 },
+      { kind: 'perpendicular', a: 0, b: 1, c: 1, d: 2 },
+    ],
+  }
+
+  it('places polyline glyphs beside segment midpoints and stacks them on a shared segment', () => {
+    const glyphs = sketchConstraintGlyphs([square], 1)
+    expect(glyphs.map(g => [g.symbol, g.index, g.at])).toEqual([
+      ['H', 0, [5, 1]],
+      ['⊥', 1, [5, 2]],
+      ['⊥', 1, [9, 5]],
+    ])
+  })
+
+  it('places circle glyphs outside the curve and at the tangent point', () => {
+    const a = addSketchCurveConstraint(circle('A', [10, 6], 3), { kind: 'tangent_line', ref: 'L', a: 0, b: 1 }, [line])
+    const [g] = sketchConstraintGlyphs([line, a], 1)
+    expect(g!.kind).toBe('tangent')
+    expect(g!.symbol).toBe('T')
+    expect(g!.at[0]).toBeCloseTo(a.analytic!.center[0], 6)
+    expect(g!.at[1]).toBeCloseTo(-1, 6)
+    const c = addSketchCurveConstraint(circle('C', [3, 4], 2), { kind: 'concentric', ref: 'R' }, [ref])
+    const [k] = sketchConstraintGlyphs([ref, c], 1)
+    expect(Math.hypot(k!.at[0], k!.at[1])).toBeCloseTo(1, 6)
+  })
+
+  it('removes exactly the referenced constraint', () => {
+    const out = removeSketchConstraintRef(square, { sketchId: 'S', source: 'polyline', index: 0 })!
+    expect(out.constraints).toEqual([{ kind: 'perpendicular', a: 0, b: 1, c: 1, d: 2 }])
+    expect(removeSketchConstraintRef(out, { sketchId: 'S', source: 'polyline', index: 0 })!.constraints).toBeUndefined()
+    expect(removeSketchConstraintRef(square, { sketchId: 'X', source: 'polyline', index: 0 })).toBeNull()
+    expect(removeSketchConstraintRef(square, { sketchId: 'S', source: 'curve', index: 0 })).toBeNull()
+    expect(
+      isSketchConstraintRef(
+        { sketchId: 'S', source: 'polyline', index: 1 },
+        { sketchId: 'S', source: 'polyline', index: 1 },
+      ),
+    ).toBe(true)
   })
 })

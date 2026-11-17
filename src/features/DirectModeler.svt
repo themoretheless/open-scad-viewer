@@ -62,6 +62,7 @@ import type {SolidSketchEditOptions} from '../kernel/solidSketchEdit'
 import { validateSimpleSketch, slotSketch, sampleCurve, bakeSketch, trimSketchConstraints, worldPoint, xyPlane, unit3, cross3, type SketchPlane, type Vec3 } from '../app/directSketchGeometry'
 import { droppedConstraintsNotice } from '../app/sketchConstraints'
 import { pruneSketchCurveConstraints, dropCurveConstraintsTo, droppedCurveConstraintsNotice } from '../app/sketchCurveConstraints'
+import { sketchConstraintGlyphs, removeSketchConstraintRef, isSketchConstraintRef, type SketchConstraintRef } from '../app/sketchConstraintGlyphs'
 import { storageGet, storageSet } from '../core/safeStorage'
 import type {SolidBooleanOptions} from '../kernel/solidBoolean'
 import { defaultDirectCamera, directExtrusionTool, projectDirectPoint, unprojectDirectXY, unprojectDirectPlane } from '../app/directModelingTools'
@@ -470,6 +471,17 @@ watch(() => props.open, async open => {
 }, { immediate: true })
 
 const selectedSketch = computed(() => document.value.sketches.find(s => s.id === selection.value))
+// A constraint glyph on the 2D canvas selects one stored constraint; Delete removes it instead of the sketch.
+const selectedConstraint = ref<SketchConstraintRef|null>(null)
+watch(selection, id => { if (selectedConstraint.value?.sketchId !== id) selectedConstraint.value = null })
+const constraintGlyphs = computed(() => sketchConstraintGlyphs(visibleSketches.value, views.value['2d'] / 40))
+function selectConstraint(ref: SketchConstraintRef) { selection.value = ref.sketchId; extraSelection.value = []; selectedConstraint.value = { sketchId: ref.sketchId, source: ref.source, index: ref.index } }
+function removeSelectedConstraint() {
+  const ref = selectedConstraint.value, sketch = ref && document.value.sketches.find(s => s.id === ref.sketchId)
+  const next = sketch && ref ? removeSketchConstraintRef(sketch, ref) : null
+  selectedConstraint.value = null
+  if (next) updateDimensionSketch(next)
+}
 function changeBodyMaterial(event:Event) {
  const color=(event.target as HTMLInputElement).value
  void commitInWorker(()=>assignSolidMaterial(snapDocument.value,selectedIds.value,{...selectedBody.value?.material,name:'Custom',color}))
@@ -2320,7 +2332,7 @@ function keydown(e: KeyboardEvent) {
     if (k === '?') showHelp.value = !showHelp.value
   }
   if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) { e.preventDefault(); e.stopPropagation(); undo(e.shiftKey || e.key.toLowerCase() === 'y') }
-  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); remove() }
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); if (selectedConstraint.value) removeSelectedConstraint(); else remove() }
   if (e.key === 'Escape' && (gesture || draft.value.length)) { e.preventDefault(); e.stopPropagation(); cancelGesture() }
 }
 
@@ -2752,7 +2764,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <button type="button" role="menuitem" @click="closePickCandidates">{{ label('Закрыть', 'Close') }}</button>
             </div>
             <canvas v-if="pane === '3d'" :ref="mountGpuCanvas" class="gpu-layer" :style="{visibility:gpuActive?'visible':'hidden'}" aria-hidden="true"></canvas>
-            <svg @pointerdown.capture="touchDown($event, pane)" @pointermove.capture="touchMove" @pointerup.capture="touchEnd" :viewBox="viewBox(pane)" tabindex="0" :aria-label="pane === '2d' ? label('Холст эскизов 2D', '2D sketch canvas') : label('Холст тел 3D', '3D body canvas')" @contextmenu.prevent="openPickCandidates($event, pane)" @wheel.prevent="wheelZoom($event, pane)" @pointerdown="downAt($event, pane)" @pointermove="moveAt" @pointerleave="gpuActive && (hovered = '')" @pointerup="up" @pointercancel="cancelInputGesture" @lostpointercapture="touchPointers.has($event.pointerId) ? cancelInputGesture() : !multiTouch && (gesture || manipulatorDrag || heightDrag || orbitDrag || curveDrag || cvDrag || vertexDrag || selectionBox) && cancelGesture()" @dragstart.prevent @selectstart.prevent @mousedown.prevent draggable="false">
+            <svg @pointerdown.capture="touchDown($event, pane)" @pointermove.capture="touchMove" @pointerup.capture="touchEnd" :viewBox="viewBox(pane)" tabindex="0" :aria-label="pane === '2d' ? label('Холст эскизов 2D', '2D sketch canvas') : label('Холст тел 3D', '3D body canvas')" @contextmenu.prevent="openPickCandidates($event, pane)" @wheel.prevent="wheelZoom($event, pane)" @pointerdown="selectedConstraint = null; downAt($event, pane)" @pointermove="moveAt" @pointerleave="gpuActive && (hovered = '')" @pointerup="up" @pointercancel="cancelInputGesture" @lostpointercapture="touchPointers.has($event.pointerId) ? cancelInputGesture() : !multiTouch && (gesture || manipulatorDrag || heightDrag || orbitDrag || curveDrag || cvDrag || vertexDrag || selectionBox) && cancelGesture()" @dragstart.prevent @selectstart.prevent @mousedown.prevent draggable="false">
               <defs><pattern :id="'direct-grid-' + pane" :width="sketchGridStep" :height="sketchGridStep" patternUnits="userSpaceOnUse"><path :d="`M ${sketchGridStep} 0 L 0 0 0 ${sketchGridStep}`" fill="none" stroke="var(--border)" stroke-opacity=".45" stroke-width=".5" vector-effect="non-scaling-stroke" /></pattern></defs>
               <rect v-if="pane === '2d'" x="-2000000" y="-2000000" width="4000000" height="4000000" :fill="'url(#direct-grid-' + pane + ')'" />
               <ModelingFloorGrid v-if="pane === '3d' && floorVisible" :camera="camera" :size="views['3d']" :center="centers['3d']" />
@@ -2765,8 +2777,14 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 </g>
                 <path v-for="(loop,i) in workplaneOutline" :key="'workplane-'+i" :d="'M '+loop.map(p=>project(p,'2d').join(',')).join(' L ')+' Z'" fill="var(--border)" fill-opacity=".2" stroke="var(--text-dim)" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" pointer-events="none" />
                 <g v-for="s in visibleSketches" v-show="!(profileBooleanOperation(advancedOp) && advancedPreview.document && surfaceInputs.includes(s.id))" :key="s.id" :pointer-events="objectSelectable(s.id)?undefined:'none'">
-                  <path :d="sketchPath(s,'2d')" :data-sel-state="invalidSceneIds.includes(s.id)?'invalid':undefined" fill-rule="evenodd" :class="{ selected: selectedIds.includes(s.id), hovered: hovered === s.id }" @pointerenter="hovered = s.id" @pointerleave="hovered = ''" :fill="selectedIds.includes(s.id) && s.closed ? 'var(--accent)' : 'none'" fill-opacity=".08" pointer-events="all" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke" @pointerdown.stop="down($event, pane, s.id)" />
+                  <path :d="sketchPath(s,'2d')" :data-sel-state="invalidSceneIds.includes(s.id)?'invalid':undefined" fill-rule="evenodd" :class="{ selected: selectedIds.includes(s.id), hovered: hovered === s.id }" @pointerenter="hovered = s.id" @pointerleave="hovered = ''" :fill="selectedIds.includes(s.id) && s.closed ? 'var(--accent)' : 'none'" fill-opacity=".08" pointer-events="all" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke" @pointerdown.stop="selectedConstraint = null; down($event, pane, s.id)" />
                   <template v-if="selection === s.id && tool === 'select' && !s.analytic && !s.retainedProfile"><circle v-for="(p, i) in s.points" :key="i" :cx="p[0]" :cy="-p[1]" :r="views['2d'] / 150" fill="var(--accent)" @pointerdown.stop="down($event, pane, s.id, i)" /></template>
+                </g>
+                <g v-if="tool === 'select'" class="constraint-glyphs" :font-size="views['2d']/45" text-anchor="middle" dominant-baseline="central">
+                  <g v-for="g in constraintGlyphs" :key="g.key" role="button" :data-constraint-glyph="g.kind" :aria-pressed="isSketchConstraintRef(selectedConstraint, g)" :aria-label="label('Ограничение ','Constraint ')+g.symbol" style="cursor:pointer" @pointerdown.stop="selectConstraint(g)">
+                    <rect :x="g.at[0]-views['2d']/70" :y="-g.at[1]-views['2d']/70" :width="views['2d']/35" :height="views['2d']/35" rx="2" :fill="isSketchConstraintRef(selectedConstraint, g)?'#ffc977':'var(--surface)'" stroke="#ffc977" vector-effect="non-scaling-stroke" />
+                    <text :x="g.at[0]" :y="-g.at[1]" :fill="isSketchConstraintRef(selectedConstraint, g)?'#2a2114':'#ffc977'" pointer-events="none">{{ g.symbol }}</text>
+                  </g>
                 </g>
                 <line v-if="operation === 'revolve'" :x1="revolveAxis === 'y' ? revolveOffset : -2000000" :x2="revolveAxis === 'y' ? revolveOffset : 2000000" :y1="revolveAxis === 'x' ? -revolveOffset : -2000000" :y2="revolveAxis === 'x' ? -revolveOffset : 2000000" stroke="#77eac5" stroke-dasharray="8 4" vector-effect="non-scaling-stroke" pointer-events="none" />
                 <path v-if="cornerPreview.sketch" :d="'M '+cornerPreview.sketch.points.map(p=>project(p,'2d').join(',')).join(' L ')+' Z'" fill="#77eac5" fill-opacity=".1" stroke="#77eac5" stroke-width="3" vector-effect="non-scaling-stroke" pointer-events="none" />
