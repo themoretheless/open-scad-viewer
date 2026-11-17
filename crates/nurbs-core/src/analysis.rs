@@ -83,3 +83,5 @@ pub mod planar_face_perimeter;
 pub mod planar_boundary_distance;
 
 pub mod planar_face_ray;
+
+pub mod planar_coplanar_ray;

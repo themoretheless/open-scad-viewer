@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0336",
+  "testedBase": "a056bd541cdd4dbc30588886785b9e23d0fd2552",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_coplanar_face_ray_contracts",
+    "--test",
+    "exact_planar_face_ray_contracts",
+    "--test",
+    "exact_pcurve_line_contact_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 6,
+  "scope": [
+    "Find coplanar ray boundary contacts with exact line coefficients and certified ray-parameter enclosures.",
+    "Exact coplanarity and closed rational contours. Contacts retain coincident spans and one-sided endpoint ownership. No material intervals are inferred."
+  ],
+  "logSha256": "12aed33fdae7f2a57f43b0321bfe5a3f64574c0ed51f922ac5a89026cfd5425c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis.rs": "727516efe0e838c084eae81bb4dff4d221331cdac67d91cbe13c11cb18533203",
+    "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs": "66b0723ad11f8d9789226a6d7144c721aaf538f9bc806b14a0392109ce5e0742",
+    "crates/nurbs-core/src/analysis/planar_face_ray.rs": "1f06e8c4f3f9d1a730e7a4211a8d238c4f6fcef749c1f7a53c64219a8d726322",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "70be1fa92a815860f48b032f1b47630221fdb8b1a202ae18bbce7d1c24267faa",
+    "crates/nurbs-core/tests/exact_coplanar_face_ray_contracts.rs": "b4e3cd294df4ee212e2ad8a11fa5a92d5e92b459155f5910c8ae5cdf8eddb416"
+  }
+}

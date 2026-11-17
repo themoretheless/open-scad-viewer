@@ -122,21 +122,7 @@ pub fn isolate_pcurve_line(
             work.lift(coefficients[1])?,
             work.lift(coefficients[2])?,
         ];
-        isolate_equation(
-            source,
-            Some(max_width),
-            &mut work,
-            |span, parameter, work| {
-                let homogeneous = original_span(source, span, parameter, work)?;
-                homogeneous.iter().zip(&coefficients).try_fold(
-                    Poly::new(),
-                    |sum, (component, factor)| {
-                        let term = scale(component, factor, work)?;
-                        add(&sum, &term, false, work)
-                    },
-                )
-            },
-        )
+        isolate_rational_pcurve_line(source, &coefficients, max_width, &mut work)
     })();
     let (spans, refusal) = match result {
         Ok(spans) => (Some(spans), None),
@@ -146,6 +132,24 @@ pub fn isolate_pcurve_line(
         spans,
         refusal,
         work_used: work.used,
+    })
+}
+
+pub(crate) fn isolate_rational_pcurve_line(
+    source: &Curve,
+    coefficients: &[Q; 3],
+    max_width: f64,
+    work: &mut Work,
+) -> PResult<Vec<PcurveSeamIsolatedSpan>> {
+    isolate_equation(source, Some(max_width), work, |span, parameter, work| {
+        let homogeneous = original_span(source, span, parameter, work)?;
+        homogeneous
+            .iter()
+            .zip(coefficients)
+            .try_fold(Poly::new(), |sum, (component, factor)| {
+                let term = scale(component, factor, work)?;
+                add(&sum, &term, false, work)
+            })
     })
 }
 

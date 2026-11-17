@@ -92,14 +92,14 @@ pub fn cast_projected_face_ray(
     })
 }
 
-enum PlaneIntersection {
+pub(super) enum PlaneIntersection {
     Point(ExactPlaneRayPoint),
     Behind(Q),
     Parallel,
     Coplanar,
 }
 
-fn intersect_plane(
+pub(super) fn intersect_plane(
     face: &ProjectedTrimmedFace,
     origin: [f64; 3],
     direction: [f64; 3],
