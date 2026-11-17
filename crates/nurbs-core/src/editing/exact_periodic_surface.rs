@@ -1240,3 +1240,61 @@ pub fn remove_exact_periodic_surface_seam_knot(
     report.work_used += rotated.work_used;
     Ok(report)
 }
+
+#[derive(Clone)]
+pub struct DoublyPeriodicSimplificationReport {
+    pub surface: Option<Surface>,
+    /// Net controls eliminated along U and V, respectively.
+    pub removed: [usize; 2],
+    pub work_used: u64,
+    /// Axis and stage of a failed simplification.
+    pub refusal: Option<(Axis, PeriodicKnotRemovalRefusal)>,
+}
+
+/// Simplify both periodic axes with one work budget. Each pass retains its
+/// original period and parameter domain. A refusal withholds the complete
+/// result, even if the first axis was already reduced.
+pub fn simplify_exact_doubly_periodic_surface(
+    source: &Surface,
+    max_work: u64,
+) -> Result<DoublyPeriodicSimplificationReport> {
+    let refuse = |axis, work_used, reason| DoublyPeriodicSimplificationReport {
+        surface: None,
+        removed: [0, 0],
+        work_used,
+        refusal: Some((axis, reason)),
+    };
+    let fallback =
+        PeriodicKnotRemovalRefusal::Open(GaugeMergeRefusal::Exact(ExactRefusal::InvalidOutput));
+    let first = simplify_exact_periodic_surface_axis(source, Axis::U, max_work)?;
+    let Some(surface) = first.surface else {
+        return Ok(refuse(
+            Axis::U,
+            first.work_used,
+            first.refusal.unwrap_or(fallback),
+        ));
+    };
+    if first.work_used == max_work {
+        return Ok(refuse(
+            Axis::V,
+            first.work_used,
+            PeriodicKnotRemovalRefusal::Open(GaugeMergeRefusal::Exact(ExactRefusal::ResourceLimit)),
+        ));
+    }
+    let second =
+        simplify_exact_periodic_surface_axis(&surface, Axis::V, max_work - first.work_used)?;
+    let work_used = first.work_used + second.work_used;
+    let Some(surface) = second.surface else {
+        return Ok(refuse(
+            Axis::V,
+            work_used,
+            second.refusal.unwrap_or(fallback),
+        ));
+    };
+    Ok(DoublyPeriodicSimplificationReport {
+        surface: Some(surface),
+        removed: [first.removed, second.removed],
+        work_used,
+        refusal: None,
+    })
+}

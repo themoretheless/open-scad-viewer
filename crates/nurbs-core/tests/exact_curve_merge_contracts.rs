@@ -2671,3 +2671,56 @@ fn periodic_surface_seam_removal_keeps_a_geometric_corner() {
         Some(PeriodicKnotRemovalRefusal::Remove(_))
     ));
 }
+
+#[test]
+fn doubly_periodic_simplification_removes_redundancy_on_both_axes() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        assemble_exact_doubly_periodic_surface, partition_exact_doubly_periodic_surface,
+        simplify_exact_doubly_periodic_surface,
+    };
+    let source = doubly_periodic_tensor();
+    let patches = partition_exact_doubly_periodic_surface(
+        &source,
+        [0., 0.],
+        &[0.5, 2.],
+        &[0.5, 2.5],
+        1_000_000,
+    )
+    .unwrap()
+    .patches
+    .unwrap();
+    let refined = assemble_exact_doubly_periodic_surface(&patches, 1_000_000)
+        .unwrap()
+        .surface
+        .unwrap();
+    let report = simplify_exact_doubly_periodic_surface(&refined, 1_000_000).unwrap();
+    assert_eq!(report.removed, [1, 2]);
+    assert_eq!(report.surface, Some(source));
+    assert!(report.refusal.is_none());
+    let short = simplify_exact_doubly_periodic_surface(&refined, report.work_used - 1).unwrap();
+    assert!(matches!(
+        short.refusal,
+        Some((nurbs_core::surface::Axis::V, _))
+    ));
+    assert_eq!(short.removed, [0, 0]);
+    assert!(short.surface.is_none());
+}
+
+#[test]
+fn doubly_periodic_simplification_reports_a_missing_second_period() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::{
+            open_exact_periodic_surface_axis, simplify_exact_doubly_periodic_surface,
+        },
+        surface::Axis,
+    };
+    let source = doubly_periodic_tensor();
+    let strip = open_exact_periodic_surface_axis(&source, Axis::V, 1_000_000)
+        .unwrap()
+        .surface
+        .unwrap();
+    let report = simplify_exact_doubly_periodic_surface(&strip, 1_000_000).unwrap();
+    assert!(matches!(report.refusal, Some((Axis::V, _))));
+    assert_eq!(report.removed, [0, 0]);
+    assert!(report.surface.is_none());
+}

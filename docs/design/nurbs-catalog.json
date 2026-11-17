@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 529,
-  "unallocatedCount": 471,
+  "specifiedCount": 530,
+  "unallocatedCount": 470,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13585,6 +13585,27 @@
       "remainingQualification": [
         "Move a periodic seam to an existing interior anchor and remove an exact redundant copy of the old seam.",
         "Rotate to the exact anchor, remove the lifted old seam inside the new period, and restore the cyclic representation.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0530",
+      "name": "Точное упрощение NURBS-поверхности по двум периодическим осям",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::simplify_exact_doubly_periodic_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-530-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-530-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Reduce redundant knots on both periodic axes and retain both parameter domains atomically.",
+        "Reduce U and V under one budget, report the net control reduction per axis, and publish only after both cyclic passes succeed.",
         "WASM and application integration are separate."
       ]
     }
