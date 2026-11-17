@@ -473,6 +473,28 @@ fn elevated_exact_proposal(
     breaks: &[f64],
     work: &mut Work,
 ) -> PResult<Curve> {
+    let (net, elevated_knots) = elevated_homogeneous(source, degree, breaks, work)?;
+    let channels: Vec<Vec<Q>> = (0..net[0].len())
+        .map(|axis| net.iter().map(|row| row[axis].clone()).collect())
+        .collect();
+    let (control_points, weights) = store(&channels, work)?;
+    let curve = Curve {
+        degree,
+        knots: elevated_knots,
+        control_points,
+        weights,
+        periodic: false,
+    };
+    curve.validate().map_err(|_| Refusal::InvalidOutput)?;
+    Ok(curve)
+}
+
+pub(super) fn elevated_homogeneous(
+    source: &Curve,
+    degree: usize,
+    breaks: &[f64],
+    work: &mut Work,
+) -> PResult<(Vec<Vec<Q>>, Vec<f64>)> {
     let p = source.degree;
     let (mut net, mut knots) = homogeneous(source, breaks[0], 0, work)?;
     for &parameter in &breaks[1..breaks.len() - 1] {
@@ -483,8 +505,7 @@ fn elevated_exact_proposal(
             refine_homogeneous(&mut net, &mut knots, p, parameter, count, work)?;
         }
     }
-    let dim = source.control_points[0].len();
-    let mut channels = vec![Vec::new(); dim + 1];
+    let mut elevated = Vec::new();
     let mut elevated_knots = vec![breaks[0]; degree + 1];
     for (index, &end) in breaks.iter().skip(1).enumerate() {
         let mut poles = net[index * p..=(index + 1) * p].to_vec();
@@ -504,24 +525,11 @@ fn elevated_exact_proposal(
             next.push(poles[order].clone());
             poles = next;
         }
-        for pole in poles.into_iter().skip(usize::from(index != 0)) {
-            for (channel, value) in channels.iter_mut().zip(pole) {
-                channel.push(value);
-            }
-        }
+        elevated.extend(poles.into_iter().skip(usize::from(index != 0)));
         elevated_knots.extend(std::iter::repeat_n(
             end,
             degree + usize::from(index + 2 == breaks.len()),
         ));
     }
-    let (control_points, weights) = store(&channels, work)?;
-    let curve = Curve {
-        degree,
-        knots: elevated_knots,
-        control_points,
-        weights,
-        periodic: false,
-    };
-    curve.validate().map_err(|_| Refusal::InvalidOutput)?;
-    Ok(curve)
+    Ok((elevated, elevated_knots))
 }

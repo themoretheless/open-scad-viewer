@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 524,
-  "unallocatedCount": 476,
+  "specifiedCount": 525,
+  "unallocatedCount": 475,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13480,6 +13480,27 @@
       "remainingQualification": [
         "Refine clamped transverse bases to their exact multiplicity union before periodic strip assembly.",
         "Insert the missing transverse knots under one work budget and assemble the refined strips with exact weight scaling.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0525",
+      "name": "Точное согласование поперечных степеней при сборке периодических NURBS-полос",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::assemble_periodic_surface_axis_with_exact_basis_matching",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-525-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-525-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Elevate clamped transverse axes in exact homogeneous arithmetic and assemble the common knot basis.",
+        "Elevate lower transverse degrees on the homogeneous tensor, store one surface gauge, and refine the knot union before assembly.",
         "WASM and application integration are separate."
       ]
     }

@@ -2364,3 +2364,94 @@ fn periodic_strip_knot_union_rejects_incompatible_transverse_domains() {
         Some(PeriodicAssemblyRefusal::Join { strip: 1, .. })
     ));
 }
+
+fn strips_with_mixed_transverse_degrees() -> (
+    nurbs_core::surface::Surface,
+    Vec<nurbs_core::surface::Surface>,
+) {
+    use nurbs_core::{
+        editing::exact_periodic_surface::partition_exact_periodic_surface_axis,
+        surface::{Axis, extrude},
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = extrude(&profile, [0., 0., 2.]).unwrap();
+    let mut strips = partition_exact_periodic_surface_axis(&source, Axis::U, 0., &[2.], 1_000_000)
+        .unwrap()
+        .strips
+        .unwrap();
+    let quadratic = &mut strips[1];
+    quadratic.degree_v = 2;
+    quadratic.knots_v = vec![0., 0., 0., 1., 1., 1.];
+    for (points, weights) in quadratic
+        .control_points
+        .iter_mut()
+        .zip(&mut quadratic.weights)
+    {
+        let midpoint = vec![points[0][0], points[0][1], 1.];
+        points.insert(1, midpoint);
+        weights.insert(1, weights[0]);
+    }
+    (source, strips)
+}
+
+#[test]
+fn periodic_strip_assembly_elevates_the_transverse_tensor_exactly() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::assemble_periodic_surface_axis_with_exact_basis_matching,
+        surface::Axis,
+    };
+    let (source, strips) = strips_with_mixed_transverse_degrees();
+    let report =
+        assemble_periodic_surface_axis_with_exact_basis_matching(&strips, Axis::U, 1_000_000)
+            .unwrap();
+    assert_eq!(report.refusal, None);
+    let surface = report.surface.unwrap();
+    assert!(surface.periodic_u);
+    assert_eq!(surface.degree_v, 2);
+    for u in [0., 1.5, 2., 3.25, 4.] {
+        for v in [0., 0.25, 0.5, 1.] {
+            assert_eq!(
+                surface.evaluate(u, v).unwrap().point,
+                source.evaluate(u, v).unwrap().point
+            );
+        }
+    }
+    assert!(
+        assemble_periodic_surface_axis_with_exact_basis_matching(
+            &strips,
+            Axis::U,
+            report.work_used - 1
+        )
+        .unwrap()
+        .surface
+        .is_none()
+    );
+}
+
+#[test]
+fn periodic_basis_matching_refuses_inexact_elevated_control_points() {
+    use nurbs_core::{
+        editing::{
+            exact_periodic_surface::{
+                PeriodicAssemblyRefusal, assemble_periodic_surface_axis_with_exact_basis_matching,
+            },
+            rational_factor::Refusal,
+        },
+        surface::Axis,
+    };
+    let (_, mut strips) = strips_with_mixed_transverse_degrees();
+    for weights in &mut strips[0].weights {
+        weights[1] *= 2.;
+    }
+    let result =
+        assemble_periodic_surface_axis_with_exact_basis_matching(&strips, Axis::U, 1_000_000)
+            .unwrap();
+    assert!(result.surface.is_none());
+    assert_eq!(
+        result.refusal,
+        Some(PeriodicAssemblyRefusal::Exact(Refusal::NotRepresentable))
+    );
+}

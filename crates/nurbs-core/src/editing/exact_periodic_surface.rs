@@ -110,9 +110,14 @@ pub fn insert_and_rotate_periodic_surface_seam(
         used: 0,
         limit: max_work,
     };
-    let refined = match rebuild_surface_axis(source, axis, true, &mut work, |row, work| {
-        super::exact_curve_merge::refine_periodic_seam_net(row, parameter, work)
-    }) {
+    let refined = match rebuild_surface_axis(
+        source,
+        axis,
+        reference.degree,
+        true,
+        &mut work,
+        |row, work| super::exact_curve_merge::refine_periodic_seam_net(row, parameter, work),
+    ) {
         Ok(refined) => refined,
         Err(reason) => {
             return Ok(Report {
@@ -200,9 +205,14 @@ pub fn restrict_exact_periodic_surface_axis(
 }
 
 fn clamp_surface_axis(source: &Surface, axis: Axis, interval: [f64; 2], work: &mut Work) -> Report {
-    let opened = rebuild_surface_axis(source, axis, false, work, |row, work| {
-        super::exact_curve_merge::clamp_curve_net(row, interval, work)
-    });
+    let opened = rebuild_surface_axis(
+        source,
+        axis,
+        axis_degree(source, axis),
+        false,
+        work,
+        |row, work| super::exact_curve_merge::clamp_curve_net(row, interval, work),
+    );
     match opened {
         Ok(surface) => Report {
             surface: Some(surface),
@@ -217,9 +227,17 @@ fn clamp_surface_axis(source: &Surface, axis: Axis, interval: [f64; 2], work: &m
     }
 }
 
+fn axis_degree(surface: &Surface, axis: Axis) -> usize {
+    match axis {
+        Axis::U => surface.degree_u,
+        Axis::V => surface.degree_v,
+    }
+}
+
 fn rebuild_surface_axis(
     source: &Surface,
     axis: Axis,
+    degree: usize,
     periodic: bool,
     work: &mut Work,
     transform: impl Fn(
@@ -230,9 +248,9 @@ fn rebuild_surface_axis(
     use super::rational_edit::store;
 
     let [nu, nv] = [source.control_points.len(), source.control_points[0].len()];
-    let (transverse, degree) = match axis {
-        Axis::U => (nv, source.degree_u),
-        Axis::V => (nu, source.degree_v),
+    let transverse = match axis {
+        Axis::U => nv,
+        Axis::V => nu,
     };
     let mut channels: [Vec<BigRational>; 4] = std::array::from_fn(|_| Vec::new());
     let mut knots = Vec::new();
@@ -252,6 +270,7 @@ fn rebuild_surface_axis(
     match axis {
         Axis::U => {
             refined.knots_u = knots;
+            refined.degree_u = degree;
             refined.periodic_u = periodic;
             refined.control_points = (0..count)
                 .map(|i| {
@@ -266,6 +285,7 @@ fn rebuild_surface_axis(
         }
         Axis::V => {
             refined.knots_v = knots;
+            refined.degree_v = degree;
             refined.periodic_v = periodic;
             refined.control_points = (0..nu)
                 .map(|i| {
@@ -881,5 +901,96 @@ pub fn assemble_periodic_surface_axis_with_exact_knot_union(
     }
     let mut report = assemble_surface_axis(&refined, axis, max_work - work_used, true)?;
     report.work_used += work_used;
+    Ok(report)
+}
+
+/// Elevate clamped transverse axes to the highest degree in the input,
+/// refine them to the exact knot union, and assemble a periodic surface.
+pub fn assemble_periodic_surface_axis_with_exact_basis_matching(
+    strips: &[Surface],
+    axis: Axis,
+    max_work: u64,
+) -> Result<PeriodicAssemblyReport> {
+    use PeriodicAssemblyRefusal as Failure;
+
+    crate::check(
+        (2..=256).contains(&strips.len()),
+        "Periodic assembly needs 2..=256 strips",
+    )?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Periodic assembly work must be in 1..=1000000",
+    )?;
+    for strip in strips {
+        strip.validate()?;
+    }
+    let transverse = match axis {
+        Axis::U => Axis::V,
+        Axis::V => Axis::U,
+    };
+    let degree = strips
+        .iter()
+        .map(|s| axis_degree(s, transverse))
+        .max()
+        .unwrap_or(0);
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let mut prepared = Vec::with_capacity(strips.len());
+    let refuse = |reason, work_used| PeriodicAssemblyReport {
+        surface: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    for (index, strip) in strips.iter().enumerate() {
+        let basis = row(strip, transverse, 0);
+        let [lo, hi] = basis.domain();
+        let p = basis.degree;
+        if basis.periodic
+            || !basis.knots[..=p].iter().all(|&k| k == lo)
+            || !basis.knots[basis.control_points.len()..]
+                .iter()
+                .all(|&k| k == hi)
+        {
+            return Ok(refuse(
+                Failure::Join {
+                    strip: index,
+                    reason: super::exact_surface_merge::Refusal::OtherBasisMismatch,
+                },
+                work.used,
+            ));
+        }
+        if p == degree {
+            prepared.push(strip.clone());
+            continue;
+        }
+        let mut breaks = basis.knots;
+        breaks.dedup();
+        if (breaks.len() - 1) * degree + 1 > 256 {
+            return Ok(refuse(
+                Failure::Exact(ExactRefusal::ResourceLimit),
+                work.used,
+            ));
+        }
+        match rebuild_surface_axis(strip, transverse, degree, false, &mut work, |row, work| {
+            super::exact_knot_insertion::elevated_homogeneous(row, degree, &breaks, work)
+        }) {
+            Ok(surface) => prepared.push(surface),
+            Err(reason) => return Ok(refuse(Failure::Exact(reason), work.used)),
+        }
+    }
+    if work.used == max_work {
+        return Ok(refuse(
+            Failure::Exact(ExactRefusal::ResourceLimit),
+            work.used,
+        ));
+    }
+    let mut report = assemble_periodic_surface_axis_with_exact_knot_union(
+        &prepared,
+        axis,
+        max_work - work.used,
+    )?;
+    report.work_used += work.used;
     Ok(report)
 }
