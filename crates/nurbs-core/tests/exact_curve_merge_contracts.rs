@@ -2145,3 +2145,72 @@ fn exact_periodic_grid_assembly_withholds_geometry_after_a_late_row_failure() {
     );
     assert!(report.surface.is_none());
 }
+
+#[test]
+fn periodic_strip_assembly_reconciles_independent_exact_weight_gauges() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::{
+            assemble_periodic_surface_axis_with_exact_weight_scaling,
+            partition_exact_periodic_surface_axis,
+        },
+        surface::Axis,
+    };
+    let source = doubly_periodic_tensor();
+    let mut strips =
+        partition_exact_periodic_surface_axis(&source, Axis::V, 3.5, &[4.5, 6.], 1_000_000)
+            .unwrap()
+            .strips
+            .unwrap();
+    for (strip, scale) in strips.iter_mut().zip([3., 7., 11.]) {
+        for weight in strip.weights.iter_mut().flatten() {
+            *weight *= scale;
+        }
+    }
+    let report =
+        assemble_periodic_surface_axis_with_exact_weight_scaling(&strips, Axis::V, 1_000_000)
+            .unwrap();
+    assert_eq!(report.refusal, None);
+    let result = report.surface.unwrap();
+    assert!(result.periodic_u && result.periodic_v);
+    for t in [3.5, 4.25, 5.5, 7.5] {
+        assert_eq!(
+            result.evaluate(2.25, t).unwrap().point,
+            source.evaluate(2.25, t % 4.).unwrap().point
+        );
+    }
+    assert!(
+        assemble_periodic_surface_axis_with_exact_weight_scaling(
+            &strips,
+            Axis::V,
+            report.work_used - 1
+        )
+        .unwrap()
+        .surface
+        .is_none()
+    );
+}
+
+#[test]
+fn periodic_strip_assembly_refuses_nonproportional_boundary_weights() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::{
+            PeriodicAssemblyRefusal, assemble_periodic_surface_axis_with_exact_weight_scaling,
+            partition_exact_periodic_surface_axis,
+        },
+        surface::Axis,
+    };
+    let source = doubly_periodic_tensor();
+    let mut strips = partition_exact_periodic_surface_axis(&source, Axis::U, 0., &[2.], 1_000_000)
+        .unwrap()
+        .strips
+        .unwrap();
+    strips[1].weights[0][2] = 2.;
+    let report =
+        assemble_periodic_surface_axis_with_exact_weight_scaling(&strips, Axis::U, 1_000_000)
+            .unwrap();
+    assert!(report.surface.is_none());
+    assert!(matches!(
+        report.refusal,
+        Some(PeriodicAssemblyRefusal::Join { strip: 1, .. })
+    ));
+}

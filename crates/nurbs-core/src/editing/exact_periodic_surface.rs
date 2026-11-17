@@ -489,13 +489,29 @@ pub fn assemble_exact_periodic_surface_axis(
         (2..=256).contains(&strips.len()),
         "Periodic assembly needs 2..=256 strips",
     )?;
-    assemble_surface_axis(strips, axis, max_work)
+    assemble_surface_axis(strips, axis, max_work, false)
+}
+
+/// Assemble periodic strips whose shared boundary weights differ by one
+/// positive scale per strip. Exact global gauges preserve the full tensor
+/// law, including the transverse direction.
+pub fn assemble_periodic_surface_axis_with_exact_weight_scaling(
+    strips: &[Surface],
+    axis: Axis,
+    max_work: u64,
+) -> Result<PeriodicAssemblyReport> {
+    crate::check(
+        (2..=256).contains(&strips.len()),
+        "Periodic assembly needs 2..=256 strips",
+    )?;
+    assemble_surface_axis(strips, axis, max_work, true)
 }
 
 fn assemble_surface_axis(
     strips: &[Surface],
     axis: Axis,
     max_work: u64,
+    scale_weights: bool,
 ) -> Result<PeriodicAssemblyReport> {
     use PeriodicAssemblyRefusal as Failure;
 
@@ -524,7 +540,19 @@ fn assemble_surface_axis(
                 work.used,
             ));
         }
-        let joined = super::exact_surface_merge::merge(&surface, next, axis)?;
+        let mut joined = super::exact_surface_merge::merge(&surface, next, axis)?;
+        if scale_weights
+            && matches!(
+                joined.refusal,
+                Some(super::exact_surface_merge::Refusal::SeamMismatch { .. })
+            )
+        {
+            let (left, right) = match align_strip_weights(&surface, next, axis, &mut work) {
+                Ok(pair) => pair,
+                Err(reason) => return Ok(reject(Failure::Exact(reason), work.used)),
+            };
+            joined = super::exact_surface_merge::merge(&left, &right, axis)?;
+        }
         let Some(merged) = joined.surface else {
             let reason = joined
                 .refusal
@@ -656,7 +684,7 @@ pub fn assemble_exact_doubly_periodic_surface(
         if work_used == max_work {
             return Ok(reject(Some(index), work_used, exhausted));
         }
-        let result = assemble_surface_axis(row, Axis::V, max_work - work_used)?;
+        let result = assemble_surface_axis(row, Axis::V, max_work - work_used, false)?;
         work_used += result.work_used;
         let Some(strip) = result.surface else {
             return Ok(reject(Some(index), work_used, result.refusal));
@@ -666,11 +694,48 @@ pub fn assemble_exact_doubly_periodic_surface(
     if work_used == max_work {
         return Ok(reject(None, work_used, exhausted));
     }
-    let result = assemble_surface_axis(&strips, Axis::U, max_work - work_used)?;
+    let result = assemble_surface_axis(&strips, Axis::U, max_work - work_used, false)?;
     Ok(PeriodicGridAssemblyReport {
         surface: result.surface,
         work_used: work_used + result.work_used,
         refused_row: None,
         refusal: result.refusal,
     })
+}
+
+fn align_strip_weights(
+    left: &Surface,
+    right: &Surface,
+    axis: Axis,
+    work: &mut Work,
+) -> std::result::Result<(Surface, Surface), ExactRefusal> {
+    let last_weight = match axis {
+        Axis::U => left.weights[left.weights.len() - 1][0],
+        Axis::V => left.weights[0][left.weights[0].len() - 1],
+    };
+    let a = work.lift(last_weight)?;
+    let b = work.lift(right.weights[0][0])?;
+    let scale = work.op(&a, &b, |a, b| a / b)?;
+    let mut weights = Vec::new();
+    for &weight in left.weights.iter().flatten() {
+        weights.push(work.lift(weight)?);
+    }
+    for &weight in right.weights.iter().flatten() {
+        let weight = work.lift(weight)?;
+        weights.push(work.op(&weight, &scale, |a, b| a * b)?);
+    }
+    let (_, stored) = super::rational_edit::store(&[weights], work)?;
+    let mut stored = stored.into_iter();
+    let mut left = left.clone();
+    let mut right = right.clone();
+    for (weight, replacement) in left
+        .weights
+        .iter_mut()
+        .chain(&mut right.weights)
+        .flatten()
+        .zip(&mut stored)
+    {
+        *weight = replacement;
+    }
+    Ok((left, right))
 }
