@@ -20,8 +20,8 @@ describe('selection history', () => {
     const state = {}
     expect(memory.recall(state, () => true)).toBeUndefined()
     memory.remember(state, { primary: 'a', extra: ['b', 'a', 'c'] })
-    expect(memory.recall(state, id => id !== 'a')).toEqual({ primary: 'b', extra: ['c'] })
-    expect(memory.recall(state, () => false)).toEqual({ primary: '', extra: [] })
+    expect(memory.recall(state, id => id !== 'a')).toMatchObject({ primary: 'b', extra: ['c'] })
+    expect(memory.recall(state, () => false)).toMatchObject({ primary: '', extra: [] })
   })
 
   it('copies the recorded selection', () => {
@@ -30,7 +30,7 @@ describe('selection history', () => {
     const extra = ['b']
     memory.remember(state, { primary: 'a', extra })
     extra.push('x')
-    expect(memory.recall(state, () => true)).toEqual({ primary: 'a', extra: ['b'] })
+    expect(memory.recall(state, () => true)).toMatchObject({ primary: 'a', extra: ['b'] })
   })
 
   it('follows DirectHistory states through Undo and Redo', () => {
@@ -48,14 +48,14 @@ describe('selection history', () => {
     memory.remember(second, { primary: 's2', extra: ['s1'] })
     history.undo()
     expect(history.stateToken).toBe(first)
-    expect(memory.recall(history.stateToken, exists)).toEqual({ primary: 's1', extra: [] })
+    expect(memory.recall(history.stateToken, exists)).toMatchObject({ primary: 's1', extra: [] })
     history.redo()
     expect(history.stateToken).toBe(second)
-    expect(memory.recall(history.stateToken, exists)).toEqual({ primary: 's2', extra: ['s1'] })
+    expect(memory.recall(history.stateToken, exists)).toMatchObject({ primary: 's2', extra: ['s1'] })
     history.undo()
     history.undo()
     expect(history.stateToken).toBe(empty)
-    expect(memory.recall(history.stateToken, exists)).toEqual({ primary: '', extra: [] })
+    expect(memory.recall(history.stateToken, exists)).toMatchObject({ primary: '', extra: [] })
   })
 
   it('keeps the token for an unchanged commit and for asynchronous restore', async () => {

@@ -415,6 +415,44 @@ it('binds face selection, Push/Pull preview, confirm and undo to the document',a
  expect(inspectPolygonMesh(ui.doc().bodies[0].mesh).signedVolumeMm3).toBeCloseTo(1200)
  await ui.click('↶');expect(inspectPolygonMesh(ui.doc().bodies[0].mesh).signedVolumeMm3).toBeCloseTo(1000)
 })
+const c15HighlightedTriangles=(ui:Awaited<ReturnType<typeof mount>>)=>[...new Set(ui.all(ui.svg()).filter(n=>n.tag==='polygon'&&String(n.props.style?.color).startsWith('hsl(40 ')).map(n=>Number(n.props['data-triangle'])))].sort((x,y)=>x-y)
+it('C15 restores the picked face on Undo and drops it on Redo once that face no longer exists',async()=>{
+ const ui=await mount();await ui.click('Cube');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon')!);await flushClearance()
+ const faces=solidTopology(ui.doc().bodies[0].mesh).faces,picked=c15HighlightedTriangles(ui)
+ const face=faces.find(f=>[...f.triangles].sort((x,y)=>x-y).join()===picked.join())!
+ expect(face).toBeDefined()
+ await ui.click('Push / Pull');await ui.click('Apply · Enter');await flushClearance()
+ // The pushed face moved: its old identity is gone, so nothing (and no other face) is selected.
+ expect(c15HighlightedTriangles(ui)).toEqual([])
+ await ui.click('↶');await flushClearance()
+ const restored=solidTopology(ui.doc().bodies[0].mesh).faces.find(f=>[...f.triangles].sort((x,y)=>x-y).join()===c15HighlightedTriangles(ui).join())!
+ expect(restored.center).toEqual(face.center);expect(restored.normal).toEqual(face.normal)
+ await ui.click('↷');await flushClearance()
+ expect(c15HighlightedTriangles(ui)).toEqual([])
+})
+it('C15 keeps a picked B-rep edge by its topology id across an unrelated edit, Undo and Redo',async()=>{
+ const ui=await mount();await ui.click('Box');await ui.click('Properties')
+ const body=ui.doc().bodies.at(-1)!,brep=body.brep!,id=brep.topologyIds!.edges[3]
+ await ui.click('Edges');await flushClearance()
+ const edge=()=>ui.all(ui.svg()).find(n=>n.props['data-topology-edge']===id)!
+ await ui.pointer(edge());await flushClearance();expect(edge().props['aria-pressed']).toBe(true)
+ ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Opacity')!.props.onChange({target:{value:'0.35'}});await flushClearance()
+ expect(ui.doc().bodies.at(-1)!.brep).toBeDefined();expect(edge().props['aria-pressed']).toBe(true)
+ const pressed=()=>ui.all(ui.svg()).filter(n=>n.props['data-topology-edge']&&n.props['aria-pressed']).map(n=>n.props['data-topology-edge'])
+ expect(pressed()).toEqual([id])
+ await ui.click('↶');await flushClearance();expect(pressed()).toEqual([id])
+ await ui.click('↷');await flushClearance();expect(pressed()).toEqual([id])
+})
+it('C15 drops a remembered face selection when Undo restores a state without that body',async()=>{
+ const ui=await mount();await ui.click('Box');const count=ui.doc().bodies.length;await ui.click('Box');await ui.click('Faces')
+ expect(ui.doc().bodies).toHaveLength(count+1)
+ const second=ui.doc().bodies.at(-1)!.id
+ await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon'&&n.props['data-body']===second)!);await flushClearance()
+ expect(c15HighlightedTriangles(ui).length).toBeGreaterThan(0)
+ await ui.click('↶');await flushClearance()
+ expect(ui.doc().bodies.map(b=>b.id)).not.toContain(second)
+ expect(c15HighlightedTriangles(ui)).toEqual([])
+})
 
 it('removes a fully subtracted B-rep body and restores it with Undo',async()=>{
  const brep=createBrepCylinder(3,5),built=tessellateNurbsBrep(brep,4)

@@ -11,6 +11,7 @@ const {
 import {useBooleanOperations} from './directModeler/useBooleanOperations'
 import {prepareDocumentCommit} from './directModeler/prepareDocumentCommit'
 import {createSelectionHistory} from './directModeler/selectionHistory'
+import {useSubshapeSelection} from './directModeler/useSubshapeSelection'
 import {primitiveCreationError} from '../app/primitiveCreationError'
 import RoundSolidOptions from '../components/RoundSolidOptions.svt'
 import {sourceBodyRecordInspectionOptions} from '../kernel/sourceBodyArchive'
@@ -364,13 +365,12 @@ function translationPreviewIds(ids:string[]){return [...new Set([...ids,...docum
 const extraSelection=ref<string[]>([]),pickMode=ref<'body'|'face'|'edge'|'vertex'>('body'),vertexIndexes=ref<number[]>([]),faceIndex=ref(-1),edgeIndex=ref(-1),edgeIndexes=ref<number[]>([]),openingFaces=ref<number[]>([])
 // The object selection of each history state, so Undo/Redo restores what was selected there.
 const selectionHistory=createSelectionHistory()
-watch([selection,extraSelection],([primary,extra])=>selectionHistory.remember(history.stateToken,{primary,extra}),{immediate:true})
 function recallHistorySelection(){
  const ids=new Set([...documentObjects(document.value),...document.value.sourceBodies??[]].map(o=>o.id))
  const saved=selectionHistory.recall(history.stateToken,id=>ids.has(id))
  if(!saved)return
- if(saved.primary!==selection.value){faceIndex.value=edgeIndex.value=-1;edgeIndexes.value=[];openingFaces.value=[]}
  selection.value=saved.primary;extraSelection.value=[...saved.extra]
+ subshapeSelection.restore(saved.subshape??null)
 }
 const workplaneOutline=ref<Point2[][]>([])
 const workplaneBodyId=ref(''), choosingSketchFace=ref(false)
@@ -995,6 +995,12 @@ const {
   label,
 })
 const { advancedPolygons, advancedSurfacePolygons, advancedPreview, pointTrimPreviewPoints, pointTrimCut, patchBudgetCurve, patchGapPoints, applyAdvanced, axisVector, advancedBodyIds, advancedSurfaceIds, advancedSketches, advancedSketchDisplay, authoredEdges, bodyEdgesPending, cancelBodyEdges, refreshBodyEdges } = useAdvancedPreview({ onEdgeFeatureApplied: memory => { edgeFeatureMemory = memory }, activePlane, advanced, advancedOp, bodyEditError, bodyEditPending, bodyEditResult, commitInWorker, curvePoints, document, edgeIndex, edgeIndexes, error, extraSelection, faceIndex, isNurbsMatch, kernelReady: () => kernelReady, loftPreviewId, meshPolygons, openingFaces, pickMode, pickObject, profileLoops, props, resultAdvanced, run, samePlane, sceneBodies: () => sceneBodies, selectedBody, selectedIds, selection, surfaceBuildResult, surfaceConstructionError, surfaceInputs, surfacePolygons, surfaceReversed })
+// Face/edge selections by stable identity, restored with the object selection on Undo/Redo (C15).
+const subshapeSelection=useSubshapeSelection({selection,selectedBody,faceIndex,openingFaces,edgeIndex,edgeIndexes,topology,topologyPending,isTopologyReadyFor,authoredEdges})
+// While Undo/Redo swaps the state, the outgoing selection must not be recorded for the incoming one.
+let historyRestoring=false
+const rememberSelection=()=>selectionHistory.remember(history.stateToken,{primary:selection.value,extra:extraSelection.value,subshape:subshapeSelection.anchor.value})
+watch([selection,extraSelection,subshapeSelection.anchor],()=>{if(!historyRestoring)rememberSelection()},{immediate:true})
 // Undoing a fillet or chamfer brings its body back; reselect the edge chain it consumed (C10).
 watch(document,()=>{
  if(!edgeFeatureMemory)return
@@ -1250,11 +1256,11 @@ async function commitWorkerResult(next:DirectDocument):Promise<boolean>{
  if(!await history.commitAsync(async()=>next,validateLocked))return false
  finishCommit(added,next);return true
 }
-function cancelHistoryRestore(){historyGeneration++;historyWorker.cancel();history.cancelRestore();historyPending.value=false;loadingLatestDraft.value=false}
+function cancelHistoryRestore(){historyRestoring=false;historyGeneration++;historyWorker.cancel();history.cancelRestore();historyPending.value=false;loadingLatestDraft.value=false}
 async function undo(redo = false) {
  cancelCommand();error.value=''
  const generation=++historyGeneration,target=history
- historyMode.value='restore';historyPending.value=true
+ historyMode.value='restore';historyPending.value=true;historyRestoring=true
  // The history button becomes disabled; keep Escape routed to this workspace.
  workspace.value?.focus()
  try{
@@ -1267,7 +1273,7 @@ async function undo(redo = false) {
   historyPending.value=false
   if(applied&&restored){sync(restored);recallHistorySelection()}
  }catch(e){if(generation===historyGeneration)error.value=e instanceof Error?e.message:String(e)}
- finally{if(generation===historyGeneration)historyPending.value=false}
+ finally{if(generation===historyGeneration){historyPending.value=false;historyRestoring=false;rememberSelection()}}
 }
 watch(()=>[props.open,document.value,lockedIds.value.join(','),activeGroup.value],()=>{if(historyPending.value)cancelHistoryRestore()},{flush:'sync'})
 onUnmounted(()=>{cancelHistoryRestore();historyWorker.dispose();commitWorker.dispose()})
