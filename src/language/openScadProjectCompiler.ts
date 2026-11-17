@@ -9,7 +9,7 @@ import {
   type OpenScadParsedStatement,
   type Statement,
 } from './openscadCompiler'
-import { OpenScadProject, resolveOpenScadProjectPath } from './openScadProject'
+import { normalizeOpenScadProjectPath, OpenScadProject, resolveOpenScadProjectPath } from './openScadProject'
 
 export const OPENSCAD_PROJECT_MAX_DEPENDENCY_EXPANSIONS = 512
 export const OPENSCAD_PROJECT_MAX_EXPANDED_STATEMENTS = 50_000
@@ -175,7 +175,27 @@ function countSyntaxNodes(statements: readonly OpenScadParsedStatement[]): numbe
  * Expands one immutable project snapshot into the executable independent-engine
  * AST. Includes retain statement position; uses retain declarations only.
  */
-export function compileOpenScadProject(project: OpenScadProject): readonly Statement[] {
+export interface CompileOpenScadProjectOptions {
+  /**
+   * Project-relative library directories searched, in order, when a dependency is not
+   * found next to its importer (the OpenSCAD `OPENSCADPATH` order). Entries are
+   * normalized project paths; they never reach outside the project VFS.
+   */
+  readonly libraryPaths?: readonly string[]
+}
+
+/** Normalize project library directories; invalid entries throw the VFS path error. */
+export function normalizeOpenScadLibraryPaths(libraryPaths: readonly string[] = []): readonly string[] {
+  const seen = new Set<string>()
+  for (const entry of libraryPaths) seen.add(normalizeOpenScadProjectPath(entry.replace(/\/+$/u, '')))
+  return Object.freeze([...seen])
+}
+
+export function compileOpenScadProject(
+  project: OpenScadProject,
+  options: CompileOpenScadProjectOptions = {},
+): readonly Statement[] {
+  const libraryPaths = normalizeOpenScadLibraryPaths(options.libraryPaths)
   const parsedFiles = new Map<string, readonly OpenScadParsedStatement[]>()
   const parsedFileWeights = new Map<string, number>()
   let dependencyExpansions = 0
@@ -262,8 +282,19 @@ export function compileOpenScadProject(project: OpenScadProject): readonly State
     stack: readonly string[],
     leadingModifiers: readonly PendingViewportModifier[],
   ): ExpandedStatements => {
-    const path = resolveOpenScadProjectPath(importer, directive.path)
-    const dependency = project.read(path)
+    let path = resolveOpenScadProjectPath(importer, directive.path)
+    let dependency = project.read(path)
+    if (dependency === null) {
+      for (const library of libraryPaths) {
+        const candidate = resolveOpenScadProjectPath(`${library}/_`, directive.path)
+        const found = project.read(candidate)
+        if (found !== null) {
+          path = candidate
+          dependency = found
+          break
+        }
+      }
+    }
     if (dependency === null) {
       throw new OpenScadProjectCompileError(
         'E_PROJECT_DEPENDENCY_MISSING',

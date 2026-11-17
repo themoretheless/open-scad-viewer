@@ -300,6 +300,11 @@ export const APP_STRINGS: Record<Language, Record<string, string>> = {
     'languageError.nonManifold': 'Полученная геометрия не замкнута (не manifold). Исправьте исходные данные.',
     'languageError.empty': 'Файл не содержит геометрии. Проверьте файл.',
     'languageError.failed': 'Не удалось вычислить вызов. Проверьте аргументы.',
+    'languageError.dependencyMissing':
+      'Файл из include или use не найден ни рядом с подключающим файлом, ни в путях библиотек. Добавьте файл в проект или исправьте путь.',
+    'languageError.dependencyCycle':
+      'Файлы проекта подключают друг друга по кругу через include или use. Уберите одно из подключений в цепочке.',
+    'languageError.pathEscape': 'Путь в include или use выходит за пределы проекта. Используйте путь внутри проекта.',
     'kernelError.exactSolidLimit': 'Группа точных тел слишком велика ({code}).',
     'kernelError.exactSolidNotBrep': 'Код группы дал сетку, а не точное B-rep тело ({code}).',
     'kernelError.languageContract': 'Версия языкового контракта не поддерживается вычислителем ({code}).',
@@ -638,6 +643,11 @@ export const APP_STRINGS: Record<Language, Record<string, string>> = {
     'languageError.nonManifold': 'The resulting geometry is not closed (not manifold). Fix the source data.',
     'languageError.empty': 'The file contains no geometry. Check the file.',
     'languageError.failed': 'The call could not be evaluated. Check its arguments.',
+    'languageError.dependencyMissing':
+      'The include or use file was found neither next to the including file nor in the library paths. Add the file to the project or fix the path.',
+    'languageError.dependencyCycle':
+      'Project files include or use each other in a cycle. Remove one of the directives in the chain.',
+    'languageError.pathEscape': 'The include or use path leaves the project. Use a path inside the project.',
     'kernelError.exactSolidLimit': 'The exact-solid group is too large ({code}).',
     'kernelError.exactSolidNotBrep': 'The group source produced a mesh, not an exact B-rep body ({code}).',
     'kernelError.languageContract': 'The evaluator does not support this language contract version ({code}).',

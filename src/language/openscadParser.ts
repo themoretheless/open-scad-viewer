@@ -1219,7 +1219,7 @@ export function parseOpenScadProject(
     parseInternal(
       project.readEntrypoint().source,
       { ...options, languageProfile: 'openscad/stable-2021.01' },
-      () => compileOpenScadProject(project),
+      () => compileOpenScadProject(project, { libraryPaths: options.libraryPaths ?? [] }),
       project,
     )
   const result = parseQueue.then(run, run)

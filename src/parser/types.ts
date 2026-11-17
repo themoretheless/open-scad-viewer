@@ -56,7 +56,10 @@ export interface ParseOptions {
   yieldControl?: () => Promise<void>
 }
 
-export type ParseOpenScadProjectOptions = Omit<ParseOptions, 'languageProfile'>
+export type ParseOpenScadProjectOptions = Omit<ParseOptions, 'languageProfile'> & {
+  /** Project-relative library directories searched after the importer's directory. */
+  readonly libraryPaths?: readonly string[] | undefined
+}
 
 /** @deprecated Prefer the kernel-neutral GeometryEvaluationResult contract. */
 export type ParseResult = GeometryEvaluationResult

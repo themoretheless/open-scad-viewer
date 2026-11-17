@@ -359,15 +359,20 @@ export const LANGUAGE_ERROR_REASONS = [
   'nonManifold',
   'empty',
   'failed',
+  'dependencyMissing',
+  'dependencyCycle',
+  'pathEscape',
 ] as const
 export type LanguageErrorReason = (typeof LANGUAGE_ERROR_REASONS)[number]
 
 /**
  * Reason family for an OpenSCAD language diagnostic code (`LanguageDiagnosticCode`,
- * `E_FEATURE_*`, `E_SURFACE_*`, `E_IMPORT_*`, `E_TEXT_*`); `undefined` for other codes.
+ * `E_FEATURE_*`, `E_SURFACE_*`, `E_IMPORT_*`, `E_TEXT_*`, and the project VFS `E_PROJECT_*`
+ * codes); `undefined` for other codes.
  */
 export function languageErrorReason(code: string): LanguageErrorReason | undefined {
   if (/^E_FEATURE_/.test(code)) return 'unsupportedFeature'
+  if (/^E_PROJECT_/.test(code)) return projectErrorReason(code)
   if (!/^E_(SURFACE|IMPORT|TEXT)_/.test(code)) return undefined
   if (/_PROJECT_(REQUIRED|MISMATCH)$|_FILE_REQUIRED$/.test(code)) return 'projectRequired'
   if (/_PATH_INVALID$|_FILE_MISSING$|_FONT_NOT_FOUND$/.test(code)) return 'fileMissing'
@@ -376,6 +381,16 @@ export function languageErrorReason(code: string): LanguageErrorReason | undefin
   if (/_EMPTY$/.test(code)) return 'empty'
   if (/UNSUPPORTED|UNAVAILABLE/.test(code)) return 'unsupported'
   if (/INVALID|ENCODING/.test(code)) return 'invalidData'
+  return 'failed'
+}
+
+function projectErrorReason(code: string): LanguageErrorReason {
+  if (code === 'E_PROJECT_DEPENDENCY_CYCLE') return 'dependencyCycle'
+  if (code === 'E_PROJECT_DEPENDENCY_MISSING') return 'dependencyMissing'
+  if (code === 'E_PROJECT_PATH_ESCAPE') return 'pathEscape'
+  if (/_ENTRYPOINT_MISSING$|_INVALID_PATH$/.test(code)) return 'fileMissing'
+  if (/_LIMIT$/.test(code)) return 'limit'
+  if (/_INVALID_|_NOT_SOURCE$|_DUPLICATE_/.test(code)) return 'invalidData'
   return 'failed'
 }
 
