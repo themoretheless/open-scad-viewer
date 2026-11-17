@@ -4319,7 +4319,7 @@ it.each(['en','ru'])('keeps the complete command registry identified and explain
  for(const selection of [null,'Cube','Profile']){
   if(selection)await ui.click(selection)
   const commands=ui.commands(),current=commands.map(c=>c.id)
-  expect(commands).toHaveLength(98);expect(new Set(current).size).toBe(current.length)
+  expect(commands).toHaveLength(99);expect(new Set(current).size).toBe(current.length)
   if(ids.length)expect(current).toEqual(ids);else ids=current
   for(const command of commands){
    expect(command.label.trim(),command.id).not.toBe('')
