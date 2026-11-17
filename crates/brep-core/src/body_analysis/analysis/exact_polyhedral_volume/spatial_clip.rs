@@ -524,5 +524,7 @@ pub fn exact_polyhedral_ball_clearance(
 mod sweep_clearance;
 pub use sweep_clearance::{
     ExactPolyhedralSweptBallClearance, ExactPolyhedralSweptPathClearance,
+    ExactPolyhedralSweptPathMaterial, PolyhedralSweptPathRelation,
     exact_polyhedral_swept_ball_clearance, exact_polyhedral_swept_path_clearance,
+    exact_polyhedral_swept_path_material,
 };

@@ -1,6 +1,6 @@
 use super::{
-    FaceBoundary, FaceLocation, dot, face_normal, nearest_segment_point, plane_axes, point_in_face,
-    prepare_faces, refuse, spend, validate_point,
+    FaceBoundary, FaceLocation, PolyhedralPointLocation, classify_open_point, dot, face_normal,
+    nearest_segment_point, plane_axes, point_in_face, prepare_faces, refuse, spend, validate_point,
 };
 use crate::{Error, Result, closed_solid::QualifiedClosedSolid};
 use num_rational::BigRational as Q;
@@ -60,21 +60,87 @@ pub fn exact_polyhedral_swept_path_clearance(
     max_exact_work: u64,
 ) -> Result<ExactPolyhedralSweptPathClearance> {
     let radius_squared = squared_radius(radius_mm)?;
+    let mut remaining = max_exact_work;
+    let faces = prepare_faces(solid, &mut remaining)?;
+    let mut report = swept_path(&faces, centers_mm, &radius_squared, &mut remaining)?;
+    report.exact_work = max_exact_work - remaining;
+    Ok(report)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PolyhedralSweptPathRelation {
+    Inside,
+    InsideTangent,
+    CrossesBoundary,
+    ZeroRadiusBoundaryContact,
+    OutsideTangent,
+    Outside,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralSweptPathMaterial {
+    pub relation: PolyhedralSweptPathRelation,
+    /// Global nearest pair with total work, including material classification.
+    pub clearance: ExactPolyhedralSweptPathClearance,
+}
+
+/// Classify the union of closed balls along a polyline relative to solid
+/// material. A clear center path stays on one side of the boundary, so one
+/// exact point query determines its side. A zero-radius boundary hit is
+/// reported as contact without distinguishing crossing from tangency.
+pub fn exact_polyhedral_swept_path_material(
+    solid: &QualifiedClosedSolid,
+    centers_mm: &[[Q; 3]],
+    radius_mm: &Q,
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralSweptPathMaterial> {
+    let radius_squared = squared_radius(radius_mm)?;
+    let mut remaining = max_exact_work;
+    let faces = prepare_faces(solid, &mut remaining)?;
+    let mut clearance = swept_path(&faces, centers_mm, &radius_squared, &mut remaining)?;
+    spend(&mut remaining, 4)?;
+    let relation = match clearance.nearest.clearance {
+        Ordering::Less => PolyhedralSweptPathRelation::CrossesBoundary,
+        Ordering::Equal if radius_squared.is_zero() => {
+            PolyhedralSweptPathRelation::ZeroRadiusBoundaryContact
+        }
+        comparison => {
+            let inside = classify_open_point(&faces, &centers_mm[0], &mut remaining)?
+                == PolyhedralPointLocation::Material;
+            match (inside, comparison == Ordering::Equal) {
+                (true, true) => PolyhedralSweptPathRelation::InsideTangent,
+                (true, false) => PolyhedralSweptPathRelation::Inside,
+                (false, true) => PolyhedralSweptPathRelation::OutsideTangent,
+                (false, false) => PolyhedralSweptPathRelation::Outside,
+            }
+        }
+    };
+    clearance.exact_work = max_exact_work - remaining;
+    Ok(ExactPolyhedralSweptPathMaterial {
+        relation,
+        clearance,
+    })
+}
+
+fn swept_path(
+    faces: &BTreeMap<usize, FaceBoundary>,
+    centers_mm: &[[Q; 3]],
+    radius_squared: &Q,
+    remaining: &mut u64,
+) -> Result<ExactPolyhedralSweptPathClearance> {
     if centers_mm.len() < 2 {
         return Err(Error::new(
             "BREP_INVALID_INPUT",
             "Sweep path requires at least two centers",
         ));
     }
-    let mut remaining = max_exact_work;
-    let faces = prepare_faces(solid, &mut remaining)?;
     for center in centers_mm {
-        spend(&mut remaining, 1)?;
+        spend(remaining, 1)?;
         validate_point(center)?;
     }
     let mut result: Option<ExactPolyhedralSweptPathClearance> = None;
     for (span, pair) in centers_mm.windows(2).enumerate() {
-        let nearest = swept_segment(&faces, &pair[0], &pair[1], &radius_squared, &mut remaining)?;
+        let nearest = swept_segment(faces, &pair[0], &pair[1], radius_squared, remaining)?;
         let reaches_boundary = nearest.distance_squared_mm2.is_zero();
         if result
             .as_ref()
@@ -90,9 +156,7 @@ pub fn exact_polyhedral_swept_path_clearance(
             break;
         }
     }
-    let mut report = result.expect("a sweep path has at least one span");
-    report.exact_work = max_exact_work - remaining;
-    Ok(report)
+    Ok(result.expect("a sweep path has at least one span"))
 }
 
 fn squared_radius(radius_mm: &Q) -> Result<Q> {

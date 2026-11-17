@@ -907,9 +907,11 @@ mod spatial_clip;
 pub use spatial_clip::{
     ExactPolyhedralBallClearance, ExactPolyhedralBoundaryDistance, ExactPolyhedralPointLocation,
     ExactPolyhedralSegmentClip, ExactPolyhedralSignedDistance, ExactPolyhedralSignedDistanceBatch,
-    ExactPolyhedralSweptBallClearance, ExactPolyhedralSweptPathClearance, PolyhedralBallRelation,
-    PolyhedralPointLocation, exact_polyhedral_ball_clearance, exact_polyhedral_boundary_distance,
-    exact_polyhedral_point_location, exact_polyhedral_segment_clip,
-    exact_polyhedral_signed_distance, exact_polyhedral_signed_distance_batch,
-    exact_polyhedral_swept_ball_clearance, exact_polyhedral_swept_path_clearance,
+    ExactPolyhedralSweptBallClearance, ExactPolyhedralSweptPathClearance,
+    ExactPolyhedralSweptPathMaterial, PolyhedralBallRelation, PolyhedralPointLocation,
+    PolyhedralSweptPathRelation, exact_polyhedral_ball_clearance,
+    exact_polyhedral_boundary_distance, exact_polyhedral_point_location,
+    exact_polyhedral_segment_clip, exact_polyhedral_signed_distance,
+    exact_polyhedral_signed_distance_batch, exact_polyhedral_swept_ball_clearance,
+    exact_polyhedral_swept_path_clearance, exact_polyhedral_swept_path_material,
 };

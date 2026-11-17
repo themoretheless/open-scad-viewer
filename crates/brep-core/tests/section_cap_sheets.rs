@@ -3072,3 +3072,62 @@ fn swept_path_reports_interior_contact_and_validates_the_entire_input() {
     path[3][0] = Q::from_integer(num_bigint::BigInt::from(1) << 8192);
     assert!(exact_polyhedral_swept_path_clearance(&solid, &path, &radius, 1_000_000).is_err());
 }
+
+#[test]
+fn swept_material_relation_distinguishes_hole_clearance_and_containment() {
+    use brep_core::{
+        analysis::{PolyhedralSweptPathRelation::*, exact_polyhedral_swept_path_material},
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    for (x, expected) in [
+        (3, [Inside, InsideTangent, CrossesBoundary]),
+        (5, [Outside, OutsideTangent, CrossesBoundary]),
+    ] {
+        let path = [[q(x, 4), q(3, 2), q(1, 2)], [q(x, 4), q(3, 2), q(3, 2)]];
+        for (radius, expected) in [q(1, 8), q(1, 4), q(3, 8)].into_iter().zip(expected) {
+            let report =
+                exact_polyhedral_swept_path_material(solid, &path, &radius, 1_000_000).unwrap();
+            assert_eq!(report.relation, expected);
+            assert_eq!(report.clearance.nearest.distance_squared_mm2, q(1, 16));
+            assert!(
+                exact_polyhedral_swept_path_material(
+                    solid,
+                    &path,
+                    &radius,
+                    report.clearance.exact_work
+                )
+                .is_ok()
+            );
+            assert!(
+                exact_polyhedral_swept_path_material(
+                    solid,
+                    &path,
+                    &radius,
+                    report.clearance.exact_work - 1
+                )
+                .is_err()
+            );
+        }
+    }
+}
+
+#[test]
+fn swept_material_relation_flags_zero_radius_boundary_contact() {
+    use brep_core::analysis::{
+        PolyhedralSweptPathRelation::*, exact_polyhedral_swept_path_material,
+    };
+    use num_rational::BigRational as Q;
+    let solid = shifted_oblique_solid(0.);
+    let q = |n: i64| Q::from_integer(n.into());
+    let path = [[q(1), q(0), q(4)], [q(1), q(0), q(-1)]];
+    for (r, expected) in [(0, ZeroRadiusBoundaryContact), (1, CrossesBoundary)] {
+        let report = exact_polyhedral_swept_path_material(&solid, &path, &q(r), 1_000_000).unwrap();
+        assert_eq!(report.relation, expected);
+        assert_eq!(report.clearance.nearest.distance_squared_mm2, q(0));
+    }
+}
