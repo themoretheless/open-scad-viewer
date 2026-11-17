@@ -290,8 +290,8 @@ export function validateGlb(bytes: Uint8Array): GlbValidation {
       return new Uint32Array(bin.buffer.slice(bin.byteOffset + offset, bin.byteOffset + offset + count * 4))
     return null
   }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- glTF JSON is validated field by field
   accessors.forEach((accessor: Record<string, any>, i: number) => {
-    // eslint-disable-line @typescript-eslint/no-explicit-any -- glTF JSON
     const components = COMPONENTS[accessor.type]
     const componentBytes = COMPONENT_BYTES[accessor.componentType]
     const bv = bufferViews[accessor.bufferView]
