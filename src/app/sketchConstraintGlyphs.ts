@@ -14,7 +14,7 @@ export interface SketchConstraintRef {
 
 export interface SketchConstraintGlyph extends SketchConstraintRef {
   key: string
-  kind: SketchConstraint['kind'] | 'concentric' | 'equal_radius' | 'tangent'
+  kind: SketchConstraint['kind'] | 'concentric' | 'equal_radius' | 'tangent' | 'coincident'
   symbol: string
   at: Point2
 }
@@ -36,6 +36,7 @@ const SYMBOLS: Record<SketchConstraintGlyph['kind'], string> = {
   concentric: '◎',
   equal_radius: 'R=',
   tangent: 'T',
+  coincident: '●',
 }
 
 const sameRef = (a: SketchConstraintRef | null | undefined, b: SketchConstraintRef) =>
@@ -78,8 +79,26 @@ export function sketchConstraintGlyphs(sketches: readonly GlyphSketch[], offset:
       })
     })
     const curve = s.analytic
-    if (!curve) continue
     s.curveConstraints?.forEach((c, index) => {
+      if (c.kind === 'coincident') {
+        // Beside the coincident vertex, diagonally so it does not cover the segments meeting there.
+        const p = s.points[c.point]
+        if (!p) return
+        const level = (stack.get(`v${c.point}`) ?? 0) + 1
+        stack.set(`v${c.point}`, level)
+        const d = (offset * level) / Math.SQRT2
+        out.push({
+          key: `${s.id}:k${index}`,
+          sketchId: s.id,
+          source: 'curve',
+          index,
+          kind: 'coincident',
+          symbol: SYMBOLS.coincident,
+          at: [p[0] + d, p[1] - d],
+        })
+        return
+      }
+      if (!curve) return
       const kind: SketchConstraintGlyph['kind'] =
         c.kind === 'tangent_circle' || c.kind === 'tangent_line' ? 'tangent' : c.kind
       const angle = Math.PI / 4 + (index * Math.PI) / 6

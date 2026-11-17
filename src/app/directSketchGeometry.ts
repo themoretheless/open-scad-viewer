@@ -7,6 +7,7 @@ import {
 } from './sketchConstraints'
 import { dimensionSolverExtras } from './directDimensions'
 import type { DirectSketch, Point2 } from './directModeling'
+import type { SketchCurveConstraint } from './sketchCurveConstraints'
 import { dot3, cross3, unit3, type Vec3 } from '../kernel/geometry/math3d'
 export { dot3, cross3, unit3, type Vec3 }
 export interface SketchPlane {
@@ -289,14 +290,37 @@ export function trimSketchConstraints(
   edge: number,
   at: number,
   boundaries: DirectSketch[],
-): RemappedSketchConstraints<DirectSketch> {
+): RemappedSketchConstraints<DirectSketch> & { droppedCurve: SketchCurveConstraint[] } {
   requirePolylineSketch(s)
   boundaries.forEach(requirePolylineSketch)
   // Trim renumbers points: constraints follow surviving points and the rest are dropped.
-  return remapSketchConstraints(
+  const remapped = remapSketchConstraints(
     s,
     callGeometryRust<DirectSketch[]>('cad_trim_sketch', { sketch: s, edge, at, boundaries }),
   )
+  // Coincident vertices of the trimmed polyline follow the same surviving points.
+  const droppedCurve: SketchCurveConstraint[] = []
+  const carried = remapped.sketches.map(piece => {
+    const next = { ...piece }
+    delete next.curveConstraints
+    return next
+  })
+  for (const c of s.curveConstraints ?? []) {
+    const p = c.kind === 'coincident' ? s.points[c.point] : undefined
+    const hit =
+      c.kind === 'coincident' && p
+        ? carried.flatMap(piece => {
+            const at = piece.points.flatMap((q, j) => (q[0] === p[0] && q[1] === p[1] ? [j] : []))
+            return at.length === 1 ? [{ piece, point: at[0]! }] : []
+          })[0]
+        : undefined
+    if (c.kind !== 'coincident' || !hit) {
+      droppedCurve.push(c)
+      continue
+    }
+    hit.piece.curveConstraints = [...(hit.piece.curveConstraints ?? []), { ...c, point: hit.point }]
+  }
+  return { ...remapped, sketches: carried, droppedCurve }
 }
 
 export function extendSketch(s: DirectSketch, end: 'start' | 'end', boundaries: DirectSketch[]): DirectSketch {

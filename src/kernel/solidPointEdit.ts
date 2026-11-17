@@ -4,7 +4,7 @@ import type {DirectDocument} from '../app/directModeling'
 import {updateSolidNurbsControlPoint} from './solidNurbs'
 import {bridgeNurbsCurves} from '../app/directDimensions'
 import {solveConstrainedPoints} from '../app/sketchConstraints'
-import {resolveDependentCurveSketches,solveDraggedCurveSketch} from '../app/sketchCurveConstraints'
+import {resolveDependentCurveSketches,solveDraggedCurveSketch,carryCoincidentConstraints} from '../app/sketchCurveConstraints'
 export type SolidPointEditOptions=
  | {kind:'cv';id:string;u:number;v:number;point:[number,number,number];weight?:number}
  | {kind:'sketch-vertex';id:string;index:number;point:[number,number]}
@@ -18,9 +18,12 @@ export function applySolidPointEdit(source:DirectDocument,p:SolidPointEditOption
   if(p.kind==='sketch-vertex'){
    requirePolylineSketch(sketch)
    if(!Number.isInteger(p.index)||p.index<0||p.index>=sketch.points.length)throw Error('Sketch vertex is out of range.')
+   const before=structuredClone(sketch)
    delete sketch.analytic;sketch.points[p.index]=[...p.point]
+   // Coincident vertices are pinned to their targets with the dragged vertex held, or the drag is refused.
+   if(sketch.curveConstraints?.some(c=>c.kind==='coincident'))d.sketches[d.sketches.indexOf(sketch)]=carryCoincidentConstraints(before,sketch,d.sketches)
    // Persistent constraints are re-solved with the dragged vertex held at the pointer.
-   if(sketch.constraints?.length)sketch.points=solveConstrainedPoints(sketch.points,sketch.constraints,[{id:'drag',kind:'fix',point:`p${p.index}`,at:[...p.point]}])
+   else if(sketch.constraints?.length)sketch.points=solveConstrainedPoints(sketch.points,sketch.constraints,[{id:'drag',kind:'fix',point:`p${p.index}`,at:[...p.point]}])
   }else{
    const a=sketch.analytic;if(!a)throw Error('Select an analytic circle or arc.')
    if(p.handle==='center')a.center=[...p.point]

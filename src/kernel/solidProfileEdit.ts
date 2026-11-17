@@ -2,6 +2,7 @@ import {parseDirectDocument,type DirectDocument} from '../app/directModeling'
 import {combineSketchProfiles,selectSketchProfileRegions} from '../app/retainedSketchProfile'
 import {offsetSketch,extendSketch,sampleCurve,xyPlane} from '../app/directSketchGeometry'
 import {stringifyMeshJson} from '../exchange/meshJson'
+import {carryCoincidentConstraints} from '../app/sketchCurveConstraints'
 export type SolidProfileEditOperation='profile-union'|'profile-difference'|'profile-intersection'|'profile-xor'|'offset'|'extend'|'curve'
 export interface SolidProfileEditOptions {
  operation:SolidProfileEditOperation;id:string;inputs:string[];distance:number;end:'start'|'end';cx:number;cy:number;radius:number;start:number;sweep:number
@@ -22,10 +23,11 @@ export function applySolidProfileEdit(document:DirectDocument,p:SolidProfileEdit
  }else{
   const index=d.sketches.findIndex(s=>s.id===p.id),sketch=d.sketches[index]
   if(!sketch)throw Error('Select an existing sketch.')
-  if(p.operation==='offset')d.sketches[index]=offsetSketch(sketch,p.distance)
+  if(p.operation==='offset')d.sketches[index]=carryCoincidentConstraints(sketch,offsetSketch(sketch,p.distance),d.sketches)
   else if(p.operation==='extend'){
    const plane=sketch.plane??xyPlane()
-   d.sketches[index]=extendSketch(sketch,p.end,d.sketches.filter(s=>{const other=s.plane??xyPlane();return [plane.origin,plane.u,plane.v].every((a,i)=>a.every((x,j)=>Math.abs(x-[other.origin,other.u,other.v][i]![j]!)<1e-7))}))
+   // Coincident vertices of the extended polyline are pinned to their targets again, or the edit is refused.
+   d.sketches[index]=carryCoincidentConstraints(sketch,extendSketch(sketch,p.end,d.sketches.filter(s=>{const other=s.plane??xyPlane();return [plane.origin,plane.u,plane.v].every((a,i)=>a.every((x,j)=>Math.abs(x-[other.origin,other.u,other.v][i]![j]!)<1e-7))})),d.sketches)
   }else if(p.operation==='curve'){
    if(!sketch.analytic)throw Error('Select an analytic circle or arc.')
    sketch.analytic={...sketch.analytic,center:[p.cx,p.cy],radius:p.radius,start:p.start,sweep:p.sweep}

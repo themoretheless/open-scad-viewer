@@ -1131,7 +1131,7 @@ function trimAt(id:string,p:Point2){void commitInWorker(()=>{
  const d=history.document,s=d.sketches.find(s=>s.id===id);if(!s)return
  let best=Infinity,index=0,t=0
  for(let i=0;i<(s.closed?s.points.length:s.points.length-1);i++){const a=s.points[i],b=s.points[(i+1)%s.points.length],vx=b[0]-a[0],vy=b[1]-a[1],f=Math.max(0,Math.min(1,((p[0]-a[0])*vx+(p[1]-a[1])*vy)/(vx*vx+vy*vy))),dist=Math.hypot(p[0]-a[0]-f*vx,p[1]-a[1]-f*vy);if(dist<best){best=dist;index=i;t=f}}
- const {sketches:pieces,dropped}=trimSketchConstraints(s,index,t,d.sketches.filter(o=>samePlane(o.plane,s.plane)));const curves=dropCurveConstraintsTo(d.sketches,id);if(dropped.length||curves.dropped.length)notice.value=[droppedConstraintsNotice(dropped,props.locale),droppedCurveConstraintsNotice(curves.dropped,props.locale)].filter(Boolean).join(' ');pieces.forEach((p,i)=>{if(i)p.id=crypto.randomUUID()});d.sketches=curves.sketches.filter(o=>o.id!==id);d.sketches.push(...pieces);return d
+ const {sketches:pieces,dropped,droppedCurve}=trimSketchConstraints(s,index,t,d.sketches.filter(o=>samePlane(o.plane,s.plane)));const curves=dropCurveConstraintsTo(d.sketches,id);if(dropped.length||curves.dropped.length||droppedCurve.length)notice.value=[droppedConstraintsNotice(dropped,props.locale),droppedCurveConstraintsNotice([...curves.dropped,...droppedCurve],props.locale)].filter(Boolean).join(' ');pieces.forEach((p,i)=>{if(i)p.id=crypto.randomUUID()});d.sketches=curves.sketches.filter(o=>o.id!==id);d.sketches.push(...pieces);return d
 })}
 
 function run(action: () => void) { error.value = ''; try { action() } catch (e) { error.value = e instanceof Error ? e.message : String(e) } }

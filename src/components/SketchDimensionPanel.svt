@@ -4,7 +4,7 @@ import CadQuantityInput from './CadQuantityInput.svt'
 import type { DirectSketch } from '../app/directModeling'
 import { sketchDimensions, sketchDimensionStatus, editSketchDimension, dimensionSolverExtras, type SketchDimension } from '../app/directDimensions'
 import { addSketchConstraint, sketchConstraintResidual, SKETCH_CONSTRAINT_TOLERANCE_MM, type SketchConstraint } from '../app/sketchConstraints'
-import { addSketchCurveConstraint, solveSketchCurveConstraints, sketchCurveConstraintName, sketchCurveConstraintResidual, type SketchCurveConstraint } from '../app/sketchCurveConstraints'
+import { addSketchCurveConstraint, solveSketchCurveConstraints, sketchCurveConstraintName, sketchConstraintOwnerResidual, type SketchCurveConstraint } from '../app/sketchCurveConstraints'
 const props=defineProps<{sketch:DirectSketch;locale:string;sketches?:readonly DirectSketch[]}>()
 const emit=defineEmits<{change:[sketch:DirectSketch]}>()
 const kind=ref<'length'|'angle'|'horizontal'|'vertical'|'radius'|'diameter'>('length'),a=ref(0),b=ref(1),c=ref(2),error=ref('')
@@ -30,13 +30,19 @@ const curveRefs=computed(()=>(props.sketches??[]).filter(o=>o.id!==props.sketch.
 const curveRefSketch=computed(()=>curveRefs.value.find(o=>o.id===curveRef.value)??curveRefs.value[0])
 const refSegments=computed(()=>{const o=curveRefSketch.value;if(!o)return [];const n=o.points.length;return Array.from({length:o.closed?n:n-1},(_,i)=>[i,(i+1)%n] as [number,number])})
 const refName=(id:string)=>(props.sketches??[]).find(o=>o.id===id)?.name??id
-const curveViolated=(c:SketchCurveConstraint)=>{const r=(props.sketches??[]).find(o=>o.id===c.ref);return !!r&&!!props.sketch.analytic&&sketchCurveConstraintResidual(props.sketch.analytic,c,r)>SKETCH_CONSTRAINT_TOLERANCE_MM*10}
+const curveViolated=(c:SketchCurveConstraint)=>{const r=(props.sketches??[]).find(o=>o.id===c.ref);return !!r&&sketchConstraintOwnerResidual(props.sketch,c,r)>SKETCH_CONSTRAINT_TOLERANCE_MM*10}
 function addCurveConstraint(){apply(()=>{const r=curveRefSketch.value;if(!r)throw Error(label('Выберите опорный эскиз на той же плоскости.','Choose a reference sketch on the same plane.'));const k=curveKind.value;let c:SketchCurveConstraint
  if(k==='tangent_line'){const seg=refSegments.value[curveSegment.value];if(!seg)throw Error(label('Выберите отрезок опорного эскиза.','Choose a segment of the reference sketch.'));c={kind:'tangent_line',ref:r.id,a:seg[0],b:seg[1]}}
  else if(k==='tangent_circle'||k==='tangent_internal')c={kind:'tangent_circle',ref:r.id,internal:k==='tangent_internal'}
  else c={kind:k,ref:r.id}
  return addSketchCurveConstraint(props.sketch,c,props.sketches??[])})}
 function removeCurveConstraint(index:number){apply(()=>{const kept=props.sketch.curveConstraints?.filter((_,i)=>i!==index)??[];const next={...props.sketch};if(kept.length)next.curveConstraints=kept;else delete next.curveConstraints;return next})}
+const isPolyline=(o:DirectSketch)=>!o.analytic&&!o.retainedProfile&&!o.editablePath
+const coincidentOwner=computed(()=>isPolyline(props.sketch)&&props.sketch.points.length>=2)
+const coincidentPoint=ref(0),coincidentRef=ref(''),coincidentTarget=ref(0)
+const coincidentRefs=computed(()=>(props.sketches??[]).filter(o=>o.id!==props.sketch.id&&samePlane(o)&&(!!o.analytic||isPolyline(o))))
+const coincidentRefSketch=computed(()=>coincidentRefs.value.find(o=>o.id===coincidentRef.value)??coincidentRefs.value[0])
+function addCoincident(){apply(()=>{const r=coincidentRefSketch.value;if(!r)throw Error(label('Выберите опорный эскиз на той же плоскости.','Choose a reference sketch on the same plane.'));const c:SketchCurveConstraint={kind:'coincident',ref:r.id,point:coincidentPoint.value,target:r.analytic?'center':coincidentTarget.value};return addSketchCurveConstraint(props.sketch,c,props.sketches??[])})}
 function remove(index:number){apply(()=>({...props.sketch,dimensions:props.sketch.dimensions?.filter((_,i)=>i!==index)}))}
 </script>
 <template>
@@ -68,6 +74,16 @@ function remove(index:number){apply(()=>({...props.sketch,dimensions:props.sketc
       <small v-if="!curveRefs.length">{{ label('Нет подходящего опорного эскиза на этой плоскости.','No suitable reference sketch on this plane.') }}</small>
       <button :disabled="!curveRefs.length" @click="addCurveConstraint">{{ label('Добавить ограничение окружности','Add circle constraint') }}</button>
       <div v-for="(constraint,i) in sketch.curveConstraints??[]" :key="'k'+i" class="dimension-row" :aria-invalid="curveViolated(constraint)">{{ sketchCurveConstraintName(constraint,locale) }} · {{ refName(constraint.ref) }}{{ constraint.kind==='tangent_line' ? ' '+constraint.a+'–'+constraint.b : '' }}<small v-if="curveViolated(constraint)">{{ label('нарушено','violated') }}</small><button :aria-label="label('Удалить ограничение окружности ','Delete circle constraint ')+i" @click="removeCurveConstraint(i)">×</button></div>
+    </template>
+    <template v-if="coincidentOwner && sketches">
+      <strong>{{ label('Совпадение точек','Coincident points') }}</strong>
+      <small>{{ label('Вершина ломаной совпадает с вершиной другого эскиза или с центром окружности той же плоскости; опорный эскиз не двигается.','A polyline vertex coincides with a vertex of another sketch or with a circle centre on the same plane; the reference stays put.') }}</small>
+      <div class="point-inputs"><select v-model.number="coincidentPoint" aria-label="Coincident point"><option v-for="(_,i) in sketch.points" :key="i" :value="i">{{ i }}</option></select>
+        <select :value="coincidentRefSketch?.id??''" aria-label="Coincident reference" @change="coincidentRef=($event.target as HTMLSelectElement).value;coincidentTarget=0"><option v-for="o in coincidentRefs" :key="o.id" :value="o.id">{{ o.name }}</option></select>
+        <select v-if="coincidentRefSketch && !coincidentRefSketch.analytic" v-model.number="coincidentTarget" aria-label="Coincident target"><option v-for="(_,i) in coincidentRefSketch.points" :key="i" :value="i">{{ i }}</option></select><small v-else-if="coincidentRefSketch">{{ label('центр','centre') }}</small></div>
+      <small v-if="!coincidentRefs.length">{{ label('Нет подходящего опорного эскиза на этой плоскости.','No suitable reference sketch on this plane.') }}</small>
+      <button :disabled="!coincidentRefs.length" @click="addCoincident">{{ label('Добавить совпадение','Add coincident') }}</button>
+      <div v-for="(constraint,i) in sketch.curveConstraints??[]" :key="'q'+i" class="dimension-row" :aria-invalid="curveViolated(constraint)">● {{ constraint.kind==='coincident' ? constraint.point : '' }} · {{ refName(constraint.ref) }}{{ constraint.kind==='coincident' ? ' '+(constraint.target==='center'?label('центр','centre'):constraint.target) : '' }}<small v-if="curveViolated(constraint)">{{ label('нарушено','violated') }}</small><button :aria-label="label('Удалить совпадение ','Delete coincident ')+i" @click="removeCurveConstraint(i)">×</button></div>
     </template>
     <p v-if="error" role="alert">{{ error }}</p>
   </section>

@@ -1316,6 +1316,53 @@ it('C7 constraint glyphs select a circle constraint on the 2D canvas and Delete 
  await ui.click('↶');expect(ui.doc()).toEqual(added)
 })
 
+it('C7 coincident adds a polyline vertex on a circle centre in the dimension panel, refuses an unsatisfiable one and its glyph deletes only it',async()=>{
+ const ui=await mount();await ui.click('Profile');await ui.click('Sketch dimensions')
+ await vi.waitFor(()=>expect(ui.all().some(n=>n.tag==='button'&&ui.text(n)==='Add coincident')).toBe(true))
+ const select=(name:string)=>ui.all().find(n=>n.tag==='select'&&n.props['aria-label']===name)!
+ expect(select('Coincident reference').options.map(o=>o.value)).toEqual(['circle','line','boundary'])
+ select('Coincident point').props['onUpdate:modelValue'](1);await nextTick()
+ const start=ui.doc();await ui.click('Add coincident');await flushClearance()
+ const profileOf=(d:typeof start)=>d.sketches.find(s=>s.id==='s')!
+ const added=ui.doc(),profile=profileOf(added)
+ expect(profile.curveConstraints).toEqual([{kind:'coincident',ref:'circle',point:1,target:'center'}])
+ expect(Math.hypot(profile.points[1]![0]-20,profile.points[1]![1]-5)).toBeLessThan(1e-9)
+ expect(profile.points[0]).toEqual([0,0])
+ expect(added.sketches.find(s=>s.id==='circle')).toEqual(start.sketches.find(s=>s.id==='circle'))
+ expect(ui.all().some(n=>n.props['aria-label']==='Delete coincident 0')).toBe(true)
+ // A neighbouring vertex on the same centre would collapse segment 1–2: refused, document unchanged.
+ select('Coincident point').props['onUpdate:modelValue'](2);await nextTick()
+ await ui.click('Add coincident');await flushClearance()
+ expect(ui.all().some(n=>n.props.role==='alert'&&ui.text(n).includes('conflict'))).toBe(true)
+ expect(ui.doc()).toEqual(added)
+ // A polyline vertex target.
+ select('Coincident reference').props.onChange({target:{value:'line'}});await nextTick()
+ select('Coincident point').props['onUpdate:modelValue'](0);await nextTick()
+ select('Coincident target').props['onUpdate:modelValue'](0);await nextTick()
+ await ui.click('Add coincident');await flushClearance()
+ const two=profileOf(ui.doc());expect(two.curveConstraints).toHaveLength(2)
+ expect(Math.hypot(two.points[0]![0],two.points[0]![1]+5)).toBeLessThan(1e-9)
+ const glyphs=()=>ui.all().filter(n=>n.props['data-constraint-glyph']==='coincident')
+ await vi.waitFor(()=>expect(glyphs()).toHaveLength(2))
+ glyphs()[0]!.props.onPointerdown({stopPropagation(){},preventDefault(){}});await nextTick()
+ expect(glyphs()[0]!.props['aria-pressed']).toBe(true);expect(glyphs()[1]!.props['aria-pressed']).toBe(false)
+ const withTwo=ui.doc();await commandKey(ui,'Delete');await flushClearance()
+ expect(profileOf(ui.doc()).curveConstraints).toEqual([{kind:'coincident',ref:'line',point:0,target:0}])
+ expect(ui.doc().sketches).toHaveLength(withTwo.sketches.length)
+ await ui.click('↶');expect(ui.doc()).toEqual(withTwo)
+})
+
+it('C7 coincident is pruned when the referenced circle is deleted',async()=>{
+ const ui=await mount();await ui.click('Profile');await ui.click('Sketch dimensions')
+ await vi.waitFor(()=>expect(ui.all().some(n=>n.tag==='button'&&ui.text(n)==='Add coincident')).toBe(true))
+ ui.all().find(n=>n.tag==='select'&&n.props['aria-label']==='Coincident point')!.props['onUpdate:modelValue'](1);await nextTick()
+ await ui.click('Add coincident');await flushClearance()
+ await commandKey(ui,'Escape');await ui.click('Circle')
+ await commandKey(ui,'Delete');await flushClearance()
+ const d=ui.doc();expect(d.sketches.some(s=>s.id==='circle')).toBe(false)
+ expect(d.sketches.find(s=>s.id==='s')!.curveConstraints).toBeUndefined()
+})
+
 it('retains geometry and identities through 20 edits, command cancellation, full Undo/Redo and draft reload',async()=>{
  const ui=await mount(),snapshots=[ui.serialized()]
  for(let cycle=0;cycle<5;cycle++)for(const command of ['Box','New empty group','Move selection to group','Duplicate']){
