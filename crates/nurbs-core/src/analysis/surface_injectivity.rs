@@ -15,6 +15,7 @@ pub(crate) mod rational_cones;
 pub(crate) mod rational_rails;
 pub(crate) mod rational_rectangle;
 pub(crate) mod rational_quadrilateral;
+pub(crate) mod rational_jordan;
 /// Whole-chart injectivity, allowing exact strictly monotone coordinates with
 /// isolated zero derivatives. Unlike `certify_contraction`, this does NOT prove
 /// immersion/rank. Consumers requiring regularity must prove it independently.
@@ -48,6 +49,20 @@ pub fn certify_chart(s:&Surface,max_work:usize)->Result<Report> {
             report.proven = true;
             report.projection = Some(axes);
             report.reason = "global-rational-convex-quadrilateral-jacobian";
+            return Ok(report);
+        }
+    }
+    if report.spans < max_work && rational_triangular::likely_coupled(s) {
+        if let Some(axes) = rational_jordan::certify(s, &mut report.spans, max_work) {
+            report.proven = true;
+            report.projection = Some(axes);
+            report.reason = if s.control_points.len() > s.degree_u + 1
+                || s.control_points[0].len() > s.degree_v + 1
+            {
+                "global-rational-multispan-jordan-jacobian"
+            } else {
+                "global-rational-jordan-jacobian"
+            };
             return Ok(report);
         }
     }
