@@ -315,3 +315,71 @@ pub fn restrict(source: &Curve, interval: [f64; 2], max_work: u64) -> Result<Res
         refusal: None,
     })
 }
+
+#[derive(Clone, Debug)]
+pub struct PartitionReport {
+    /// Pieces in source parameter order, absent on any refinement refusal.
+    pub pieces: Option<Vec<Curve>>,
+    pub work_used: u64,
+    /// Zero-based index into the requested cuts for a refinement refusal.
+    pub refused_cut: Option<usize>,
+    pub refusal: Option<Refusal>,
+}
+
+/// Partition a nonperiodic curve at strictly increasing interior parameters.
+/// The complete partition shares one exact work budget and is atomic.
+pub fn partition(source: &Curve, parameters: &[f64], max_work: u64) -> Result<PartitionReport> {
+    use std::borrow::Cow;
+
+    source.validate()?;
+    check(
+        !source.periodic,
+        "Exact partition requires nonperiodic storage",
+    )?;
+    check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact partition work must be in 1..=1000000",
+    )?;
+    let [start, end] = source.domain();
+    let mut previous = start;
+    for &parameter in parameters {
+        check(
+            parameter.is_finite() && previous < parameter && parameter < end,
+            "Exact partition cuts must increase strictly inside the original domain",
+        )?;
+        previous = parameter;
+    }
+
+    let mut pieces = Vec::new();
+    let mut tail = Cow::Borrowed(source);
+    let mut work_used = 0;
+    let refused = |cut, work_used, refusal| PartitionReport {
+        pieces: None,
+        work_used,
+        refused_cut: Some(cut),
+        refusal: Some(refusal),
+    };
+    for (index, &parameter) in parameters.iter().enumerate() {
+        if work_used == max_work {
+            return Ok(refused(index, work_used, Refusal::ResourceLimit));
+        }
+        let report = split(&tail, parameter, max_work - work_used)?;
+        work_used += report.work_used;
+        let Some([left, right]) = report.pieces else {
+            return Ok(refused(
+                index,
+                work_used,
+                report.refusal.unwrap_or(Refusal::InvalidOutput),
+            ));
+        };
+        pieces.push(left);
+        tail = Cow::Owned(right);
+    }
+    pieces.push(tail.into_owned());
+    Ok(PartitionReport {
+        pieces: Some(pieces),
+        work_used,
+        refused_cut: None,
+        refusal: None,
+    })
+}

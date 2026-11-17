@@ -242,3 +242,58 @@ fn exact_restriction_returns_full_domain_and_rejects_a_late_unstoreable_cut_atom
     assert!(refused.curve.is_none());
     assert!(restrict(&source, [0.5, 0.5], 1_000_000).is_err());
 }
+
+#[test]
+fn exact_partition_shares_weighted_seams_and_preserves_absolute_domains() {
+    use nurbs_core::editing::{exact_curve_merge::merge_chain, exact_knot_insertion::partition};
+    let source = quadratic();
+    let report = partition(&source, &[0., 2., 4.], 1_000_000).unwrap();
+    let pieces = report.pieces.unwrap();
+    assert_eq!(
+        pieces.iter().map(Curve::domain).collect::<Vec<_>>(),
+        [[-2., 0.], [0., 2.], [2., 4.], [4., 6.]]
+    );
+    for pair in pieces.windows(2) {
+        assert_eq!(
+            pair[0].control_points.last(),
+            pair[1].control_points.first()
+        );
+        assert_eq!(pair[0].weights.last(), pair[1].weights.first());
+    }
+    let merged = merge_chain(&pieces).unwrap().curve.unwrap();
+    for parameter in [-2., -1., 0., 1., 2., 3., 4., 5., 6.] {
+        assert_eq!(
+            merged.evaluate(parameter).unwrap().point,
+            source.evaluate(parameter).unwrap().point
+        );
+    }
+    assert_eq!(
+        partition(&source, &[0., 2., 4.], report.work_used)
+            .unwrap()
+            .pieces,
+        Some(pieces)
+    );
+    assert!(
+        partition(&source, &[0., 2., 4.], report.work_used - 1)
+            .unwrap()
+            .pieces
+            .is_none()
+    );
+}
+
+#[test]
+fn exact_partition_reports_late_refusal_and_rejects_invalid_cut_order() {
+    use nurbs_core::editing::exact_knot_insertion::partition;
+    let source = line(3., vec![1., 2.]);
+    let report = partition(&source, &[0.5, 0.75], 1_000_000).unwrap();
+    assert_eq!(report.refused_cut, Some(1));
+    assert_eq!(report.refusal, Some(Refusal::NotRepresentable));
+    assert!(report.pieces.is_none());
+    for cuts in [[0.5, 0.5], [0.75, 0.5], [0.5, 1.0], [0.5, f64::NAN]] {
+        assert!(partition(&source, &cuts, 1_000_000).is_err());
+    }
+    assert_eq!(
+        partition(&source, &[], 1).unwrap().pieces,
+        Some(vec![source])
+    );
+}

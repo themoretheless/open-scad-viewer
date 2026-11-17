@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 490,
-  "unallocatedCount": 510,
+  "specifiedCount": 491,
+  "unallocatedCount": 509,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12782,6 +12782,26 @@
       "remainingQualification": [
         "Restrict the original NURBS parameter law to a closed interval without rounding the geometry.",
         "Apply two proven seam refinements under a shared budget and publish only the final exact restriction. A late refusal yields no partial curve.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0491",
+      "name": "Атомарное точное разбиение рациональной NURBS-кривой по нескольким параметрам",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_knot_insertion::partition",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_knot_insertion.rs",
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-491-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-491-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Partition the original NURBS curve at several absolute parameters under one exact work budget.",
+        "Apply exact seam restrictions in increasing order. Preserve each source interval and return the failing cut index without publishing a partial partition.",
         "WASM and application integration are separate."
       ]
     }
