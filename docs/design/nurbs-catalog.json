@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 518,
-  "unallocatedCount": 482,
+  "specifiedCount": 519,
+  "unallocatedCount": 481,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13354,6 +13354,27 @@
       "remainingQualification": [
         "Partition one shifted period into exact tensor strips with atomic refusal.",
         "Rotate one seam and clamp ordered strips across the lifted interval, preserving the transverse basis and sharing one budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0519",
+      "name": "Точное разбиение дважды периодической NURBS-поверхности на сетку",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::partition_exact_doubly_periodic_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-519-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-519-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Tile one complete turn on each axis with exact clamped tensor patches.",
+        "Partition one lifted axis into exact strips, then partition the other along each strip under the same work budget. A refusal withholds the grid.",
         "WASM and application integration are separate."
       ]
     }

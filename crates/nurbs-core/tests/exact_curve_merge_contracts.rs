@@ -1961,3 +1961,62 @@ fn periodic_surface_partition_rejects_invalid_cuts() {
         );
     }
 }
+
+#[test]
+fn periodic_grid_tiles_both_lifted_axes_exactly() {
+    use nurbs_core::editing::exact_periodic_surface::partition_exact_doubly_periodic_surface;
+    let source = doubly_periodic_tensor();
+    let report = partition_exact_doubly_periodic_surface(
+        &source,
+        [3.5, 3.75],
+        &[4.5],
+        &[4.25, 6.],
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(report.refusal, None);
+    let grid = report.patches.unwrap();
+    assert_eq!(grid.len(), 2);
+    for (row, u) in grid.iter().zip([[3.5, 4.5], [4.5, 7.5]]) {
+        assert_eq!(row.len(), 3);
+        for (patch, v) in row.iter().zip([[3.75, 4.25], [4.25, 6.], [6., 7.75]]) {
+            assert!(!patch.periodic_u && !patch.periodic_v);
+            assert_eq!(
+                [patch.knots_u[1], patch.knots_u[patch.knots_u.len() - 2]],
+                u
+            );
+            assert_eq!(
+                [patch.knots_v[1], patch.knots_v[patch.knots_v.len() - 2]],
+                v
+            );
+            for a in u {
+                for b in v {
+                    assert_eq!(
+                        patch.evaluate(a, b).unwrap().point,
+                        source.evaluate(a % 4., b % 4.).unwrap().point
+                    );
+                }
+            }
+        }
+    }
+    let limited = partition_exact_doubly_periodic_surface(
+        &source,
+        [3.5, 3.75],
+        &[4.5],
+        &[4.25, 6.],
+        report.work_used - 1,
+    )
+    .unwrap();
+    assert_eq!(limited.refused_intervals, [Some(1), Some(2)]);
+    assert!(limited.patches.is_none());
+}
+
+#[test]
+fn periodic_grid_refuses_oversized_layouts() {
+    use nurbs_core::editing::exact_periodic_surface::partition_exact_doubly_periodic_surface;
+    let source = doubly_periodic_tensor();
+    assert!(
+        partition_exact_doubly_periodic_surface(&source, [0., 0.], &[1.; 16], &[1.; 16], 1_000_000)
+            .is_err()
+    );
+}

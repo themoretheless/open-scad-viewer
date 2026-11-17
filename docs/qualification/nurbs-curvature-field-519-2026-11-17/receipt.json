@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0519",
+  "testedBase": "4e19b524d90bec6f8143fc790954c8341038e804",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 95,
+  "scope": [
+    "Tile one complete turn on each axis with exact clamped tensor patches.",
+    "Partition one lifted axis into exact strips, then partition the other along each strip under the same work budget. A refusal withholds the grid."
+  ],
+  "logSha256": "9229e51b92f0c6f2fa6c1d4197dfdef0ea3f17fc4325262b40b9474f1d269bea",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "64aa3448e34ec2dd69728f85e2a30f1e8043d9d887ece3f0472030a068e7753f",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "f22888176045d838b0fd4269cb74a8ef279573f59ea4054052ca331c3a46caf6",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "fd9b5057e37b171fd2ec3f769566fa9adf3b5c820b91b4302ef4677d0e331964"
+  }
+}

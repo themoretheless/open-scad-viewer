@@ -386,3 +386,74 @@ pub fn partition_exact_periodic_surface_axis(
         refusal: None,
     })
 }
+
+#[derive(Clone, Debug)]
+pub struct PeriodicGridReport {
+    /// Patches indexed first by the U interval and then by the V interval.
+    pub patches: Option<Vec<Vec<Surface>>>,
+    pub work_used: u64,
+    /// Indices of the failed U strip and V patch, when available.
+    pub refused_intervals: [Option<usize>; 2],
+    pub refusal: Option<GaugeMergeRefusal>,
+}
+
+/// Partition one turn on each axis into a grid of exact clamped patches.
+/// All patches use the lifted U and V clocks and share one work budget.
+/// The grid is returned only if every patch succeeds.
+pub fn partition_exact_doubly_periodic_surface(
+    source: &Surface,
+    seams: [f64; 2],
+    u_cuts: &[f64],
+    v_cuts: &[f64],
+    max_work: u64,
+) -> Result<PeriodicGridReport> {
+    crate::check(
+        u_cuts.len() < 256 && v_cuts.len() < 256 && (u_cuts.len() + 1) * (v_cuts.len() + 1) <= 256,
+        "Periodic surface grid supports at most 256 patches",
+    )?;
+    let u = partition_exact_periodic_surface_axis(source, Axis::U, seams[0], u_cuts, max_work)?;
+    let mut work_used = u.work_used;
+    let Some(strips) = u.strips else {
+        return Ok(PeriodicGridReport {
+            patches: None,
+            work_used,
+            refused_intervals: [u.refused_strip, None],
+            refusal: u.refusal,
+        });
+    };
+
+    let mut patches = Vec::with_capacity(strips.len());
+    for (index, strip) in strips.iter().enumerate() {
+        if work_used == max_work {
+            return Ok(PeriodicGridReport {
+                patches: None,
+                work_used,
+                refused_intervals: [Some(index), None],
+                refusal: Some(GaugeMergeRefusal::Exact(ExactRefusal::ResourceLimit)),
+            });
+        }
+        let v = partition_exact_periodic_surface_axis(
+            strip,
+            Axis::V,
+            seams[1],
+            v_cuts,
+            max_work - work_used,
+        )?;
+        work_used += v.work_used;
+        let Some(row) = v.strips else {
+            return Ok(PeriodicGridReport {
+                patches: None,
+                work_used,
+                refused_intervals: [Some(index), v.refused_strip],
+                refusal: v.refusal,
+            });
+        };
+        patches.push(row);
+    }
+    Ok(PeriodicGridReport {
+        patches: Some(patches),
+        work_used,
+        refused_intervals: [None, None],
+        refusal: None,
+    })
+}
