@@ -5371,3 +5371,63 @@ fn periodic_trim_station_batch_preserves_proved_brackets_under_shared_limit() {
         report.stations[2].parameter_bounds
     );
 }
+
+#[test]
+fn periodic_trim_equal_length_division_encloses_rational_stations() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicTrimLengthLocationStatus as Status, build_exact_periodic_surface_trim_input_edges,
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    let report = result
+        .divide_input_contour_by_length(0, 3, 1e-10, 1e-6, 1024)
+        .unwrap();
+    assert_eq!(report.stations.len(), 4);
+    for (station, expected) in report.stations.iter().zip([0., 13. / 9., 17. / 6., 4.]) {
+        let [lo, hi] = station.parameter_bounds.unwrap();
+        assert!(lo <= expected && expected <= hi, "{station:?}");
+        assert!(hi - lo <= 1e-6);
+        assert_eq!(station.status, Status::Tolerance);
+    }
+    assert!(report.cells <= 1024);
+}
+
+#[test]
+fn periodic_trim_equal_length_division_preserves_endpoints_under_cell_limit() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicTrimLengthLocationStatus as Status, build_exact_periodic_surface_trim_input_edges,
+    };
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let result = build_exact_periodic_surface_trim_input_edges(
+        &doubly_periodic_tensor(),
+        &[&outer],
+        1_000_000,
+    )
+    .unwrap();
+    let report = result
+        .divide_input_contour_by_length(0, 2, 1e-8, 1e-6, 8)
+        .unwrap();
+    assert_eq!(report.cells, 8);
+    assert_eq!(report.stations[0].parameter_bounds, Some([0., 0.]));
+    assert_eq!(report.stations[1].status, Status::WorkLimit);
+    assert!(report.stations[1].parameter_bounds.is_some());
+    assert_eq!(report.stations[2].parameter_bounds, Some([4., 4.]));
+}

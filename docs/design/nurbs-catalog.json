@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 591,
-  "unallocatedCount": 409,
+  "specifiedCount": 592,
+  "unallocatedCount": 408,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14837,6 +14837,25 @@
       "remainingQualification": [
         "Reuse one certified contour length table and one cell budget across multiple station queries.",
         "Check ordered station results, duplicate reuse, outside targets and preserved brackets under one shared cell budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0592",
+      "name": "Гарантированное деление замкнутого периодического контура на равные доли 3D-длины",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::divide_input_contour_by_length",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-592-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-592-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose stations of normalized arc length using exact rational fractions and bounded total length.",
+        "Verify exact fraction targets, seam splits, closure endpoint ownership, and certified brackets under one cell limit.",
         "WASM and application integration are separate."
       ]
     }

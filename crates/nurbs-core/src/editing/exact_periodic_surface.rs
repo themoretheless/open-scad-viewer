@@ -5235,7 +5235,7 @@ impl PeriodicTrimInputEdges {
         let zero = BigRational::zero();
         refine_trim_length_location(
             [0., 1.],
-            distance,
+            [distance; 2],
             parameter_tolerance,
             cells,
             max_cells,
@@ -5341,9 +5341,7 @@ impl PeriodicTrimInputEdges {
         cells: usize,
         max_cells: usize,
     ) -> Result<PeriodicTrimLengthLocation> {
-        use crate::distance_bounds::Interval;
         use PeriodicTrimLengthLocationStatus as Status;
-        use num_traits::Zero;
 
         let result = |parameter_bounds, status| PeriodicTrimLengthLocation {
             parameter_bounds,
@@ -5368,14 +5366,117 @@ impl PeriodicTrimInputEdges {
         if distance > total_low {
             return Ok(result(None, Status::LengthUncertainty));
         }
-        let lo = prefixes.partition_point(|bounds| bounds[1] < distance) - 1;
+        self.refine_contour_length_target(
+            contour,
+            prefixes,
+            [distance; 2],
+            length_tolerance,
+            parameter_tolerance,
+            cells,
+            max_cells,
+        )
+    }
+
+    /// Divide a closed contour into equal fractions of its total 3D length.
+    /// Includes the start and the closing endpoint. All stations share the cell budget.
+    pub fn divide_input_contour_by_length(
+        &self,
+        contour: usize,
+        divisions: usize,
+        length_tolerance: f64,
+        parameter_tolerance: f64,
+        max_cells: usize,
+    ) -> Result<PeriodicTrimLengthLocations> {
+        use crate::distance_bounds::Interval;
+        use PeriodicTrimLengthLocationStatus as Status;
+
+        crate::check(
+            (1..=4096).contains(&divisions),
+            "Periodic trim length divisions must be in 1..4096",
+        )?;
+        validate_trim_length_inversion(0., parameter_tolerance)?;
+        let table =
+            self.measure_input_contour_prefix_lengths(contour, length_tolerance, max_cells)?;
+        let Some(prefixes) = table.vertex_prefix_bounds else {
+            let status = if table.minimum_cells == 0 {
+                Status::Unavailable
+            } else {
+                Status::WorkLimit
+            };
+            return Ok(PeriodicTrimLengthLocations {
+                stations: vec![
+                    PeriodicTrimLengthLocation {
+                        parameter_bounds: None,
+                        cells: 0,
+                        status,
+                    };
+                    divisions + 1
+                ],
+                table_cells: table.cells,
+                cells: table.cells,
+            });
+        };
+        let end = (prefixes.len() - 1) as f64;
+        let [lo, hi] = prefixes[prefixes.len() - 1];
+        let total = Interval::new(lo, hi)?;
+        let endpoint = |t| PeriodicTrimLengthLocation {
+            parameter_bounds: Some([t, t]),
+            cells: 0,
+            status: Status::Tolerance,
+        };
+        let mut cells = table.cells;
+        let mut stations = Vec::with_capacity(divisions + 1);
+        stations.push(endpoint(0.));
+        for station in 1..divisions {
+            let fraction = BigRational::new(station.into(), divisions.into());
+            let [lo, hi] = trim_clock_bracket(&fraction)?;
+            let target = total.mul(Interval::new(lo, hi)?)?;
+            let mut result = self.refine_contour_length_target(
+                contour,
+                &prefixes,
+                [target.lo.max(0.), target.hi],
+                length_tolerance,
+                parameter_tolerance,
+                cells,
+                max_cells,
+            )?;
+            let used = result.cells - cells;
+            cells = result.cells;
+            result.cells = used;
+            stations.push(result);
+        }
+        stations.push(endpoint(end));
+        Ok(PeriodicTrimLengthLocations {
+            stations,
+            table_cells: table.cells,
+            cells,
+        })
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn refine_contour_length_target(
+        &self,
+        contour: usize,
+        prefixes: &[[f64; 2]],
+        target: [f64; 2],
+        length_tolerance: f64,
+        parameter_tolerance: f64,
+        cells: usize,
+        max_cells: usize,
+    ) -> Result<PeriodicTrimLengthLocation> {
+        use crate::distance_bounds::Interval;
+        use num_traits::Zero;
+
+        let lo = prefixes
+            .partition_point(|bounds| bounds[1] < target[0])
+            .saturating_sub(1);
         let hi = prefixes
-            .partition_point(|bounds| bounds[0] <= distance)
+            .partition_point(|bounds| bounds[0] <= target[1])
             .min(prefixes.len() - 1);
         let zero = BigRational::zero();
         refine_trim_length_location(
             [lo as f64, hi as f64],
-            distance,
+            target,
             parameter_tolerance,
             cells,
             max_cells,
@@ -5417,7 +5518,7 @@ fn validate_trim_length_inversion(distance: f64, parameter_tolerance: f64) -> Re
 
 fn refine_trim_length_location(
     mut bounds: [f64; 2],
-    distance: f64,
+    target: [f64; 2],
     parameter_tolerance: f64,
     mut cells: usize,
     max_cells: usize,
@@ -5453,9 +5554,9 @@ fn refine_trim_length_location(
                 });
             };
             cells += used;
-            if prefix[1] < distance {
+            if prefix[1] < target[0] {
                 bounds[0] = candidate;
-            } else if prefix[0] > distance {
+            } else if prefix[0] > target[1] {
                 bounds[1] = candidate;
             }
         }
