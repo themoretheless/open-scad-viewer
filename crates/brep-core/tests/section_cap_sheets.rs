@@ -2527,3 +2527,70 @@ fn section_clip_preserves_boundary_overlap_and_isolated_vertex_contact() {
     );
     assert!(exact_polyhedral_section_clip(solid, normal, 2.5, &tangent, 1_000_000).is_err());
 }
+
+#[test]
+fn clips_multiple_polyline_spans_with_one_section_and_exact_local_parameters() {
+    use brep_core::{
+        analysis::{exact_polyhedral_section_clip, exact_polyhedral_section_clip_polyline},
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |a: i64, b: i64| Q::new(a.into(), b.into());
+    let point = |x: i64, y: i64| [q(x, 2), q(y, 2), q(1, 1)];
+    let path = [point(-2, 3), point(10, 3), point(10, 3), point(-2, 3)];
+    let normal = [0., 0., 1.];
+    let report =
+        exact_polyhedral_section_clip_polyline(solid, normal, 1., &path, 1_000_000).unwrap();
+    assert_eq!(
+        report.span_intervals,
+        [
+            vec![[q(1, 6), q(1, 3)], [q(1, 2), q(5, 6)]],
+            vec![],
+            vec![[q(1, 6), q(1, 2)], [q(2, 3), q(5, 6)]],
+        ]
+    );
+    let separate_work: u64 = path
+        .windows(2)
+        .map(|pair| {
+            let endpoints = [pair[0].clone(), pair[1].clone()];
+            exact_polyhedral_section_clip(solid, normal, 1., &endpoints, 1_000_000)
+                .unwrap()
+                .exact_work
+        })
+        .sum();
+    assert!(report.exact_work < separate_work);
+    assert!(
+        exact_polyhedral_section_clip_polyline(solid, normal, 1., &path, report.exact_work).is_ok()
+    );
+    assert!(
+        exact_polyhedral_section_clip_polyline(solid, normal, 1., &path, report.exact_work - 1)
+            .is_err()
+    );
+}
+
+#[test]
+fn polyline_clip_preserves_repeated_inside_vertices_and_rejects_off_plane_tails() {
+    use brep_core::{
+        analysis::exact_polyhedral_section_clip_polyline,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |a: i64| Q::from_integer(a.into());
+    let point = [0, 0, 1].map(q);
+    let mut path = [point.clone(), point.clone(), [4, 0, 1].map(q)];
+    let normal = [0., 0., 1.];
+    let report =
+        exact_polyhedral_section_clip_polyline(solid, normal, 1., &path, 1_000_000).unwrap();
+    assert_eq!(
+        report.span_intervals,
+        [vec![[q(0), q(1)]], vec![[q(0), q(1)]]]
+    );
+    path[2][2] = q(2);
+    assert!(exact_polyhedral_section_clip_polyline(solid, normal, 1., &path, 1_000_000).is_err());
+}

@@ -1,6 +1,6 @@
 use super::{
-    PolyhedralSectionPointLocation, classify_section_loops, exact_polyhedral_section_loops,
-    projected_axes, spend, validate_query_point,
+    PolyhedralSectionLoop, PolyhedralSectionPointLocation, classify_section_loops,
+    exact_polyhedral_section_loops, projected_axes, spend, validate_query_point,
 };
 use crate::{Error, Result, closed_solid::QualifiedClosedSolid};
 use num_rational::BigRational as Q;
@@ -25,33 +25,94 @@ pub fn exact_polyhedral_section_clip(
     endpoints_mm: &[[Q; 3]; 2],
     max_exact_work: u64,
 ) -> Result<ExactPolyhedralSectionClip> {
+    let (section, mut remaining) =
+        prepare_clip(solid, normal, offset, endpoints_mm, max_exact_work)?;
     let [start, end] = endpoints_mm;
-    validate_query_point(start)?;
-    validate_query_point(end)?;
+    let intervals = clip_segment(
+        &section.loops,
+        projected_axes(normal),
+        start,
+        end,
+        &mut remaining,
+    )?;
+    Ok(ExactPolyhedralSectionClip {
+        intervals,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralSectionPolylineClip {
+    /// One interval list per input span, in traversal order.
+    /// Each interval uses the span's local parameter in [0, 1].
+    pub span_intervals: Vec<Vec<[Q; 2]>>,
+    pub exact_work: u64,
+}
+
+/// Clip a coplanar polyline against one shared transverse section.
+/// Repeated vertices retain their zero-length span and local parameter.
+pub fn exact_polyhedral_section_clip_polyline(
+    solid: &QualifiedClosedSolid,
+    normal: [f64; 3],
+    offset: f64,
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralSectionPolylineClip> {
+    let (section, mut remaining) = prepare_clip(solid, normal, offset, points_mm, max_exact_work)?;
+    let axes = projected_axes(normal);
+    let span_intervals = points_mm
+        .windows(2)
+        .map(|pair| clip_segment(&section.loops, axes, &pair[0], &pair[1], &mut remaining))
+        .collect::<Result<_>>()?;
+    Ok(ExactPolyhedralSectionPolylineClip {
+        span_intervals,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn prepare_clip(
+    solid: &QualifiedClosedSolid,
+    normal: [f64; 3],
+    offset: f64,
+    points: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<(super::ExactPolyhedralSectionLoops, u64)> {
+    if points.len() < 2 {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Clip path requires at least two vertices",
+        ));
+    }
     let section = exact_polyhedral_section_loops(solid, normal, offset, max_exact_work)?;
     let mut remaining = max_exact_work - section.exact_work;
-    spend(&mut remaining, 32)?;
     let n = super::super::lift(&normal);
     let offset = Q::from_float(offset).unwrap();
-    for point in endpoints_mm {
+    for point in points {
+        spend(&mut remaining, 16)?;
+        validate_query_point(point)?;
         if n.iter().zip(point).map(|(n, p)| n * p).sum::<Q>() != offset {
             return Err(Error::new(
                 "BREP_INVALID_INPUT",
-                "Clip segment must lie in the section plane",
+                "Clip path must lie in the section plane",
             ));
         }
     }
+    Ok((section, remaining))
+}
 
-    let axes = projected_axes(normal);
+fn clip_segment(
+    loops: &[PolyhedralSectionLoop],
+    axes: [usize; 2],
+    start: &[Q; 3],
+    end: &[Q; 3],
+    remaining: &mut u64,
+) -> Result<Vec<[Q; 2]>> {
     if start == end {
-        let location = classify_section_loops(&section.loops, axes, start, &mut remaining)?;
-        return Ok(ExactPolyhedralSectionClip {
-            intervals: if is_material(location) {
-                vec![[Q::zero(), Q::one()]]
-            } else {
-                Vec::new()
-            },
-            exact_work: max_exact_work - remaining,
+        let location = classify_section_loops(loops, axes, start, remaining)?;
+        return Ok(if is_material(location) {
+            vec![[Q::zero(), Q::one()]]
+        } else {
+            Vec::new()
         });
     }
     let origin = axes.map(|i| start[i].clone());
@@ -60,13 +121,10 @@ pub fn exact_polyhedral_section_clip(
     let zero = Q::zero();
     let one = Q::one();
     let mut boundary = BTreeSet::new();
-    for ring in &section.loops {
+    for ring in loops {
         let points = &ring.points_mm;
         for (a, b) in points.iter().zip(points.iter().cycle().skip(1)) {
-            spend(
-                &mut remaining,
-                32 + 8 * u64::from((boundary.len() + 2).ilog2()),
-            )?;
+            spend(remaining, 32 + 8 * u64::from((boundary.len() + 2).ilog2()))?;
             let relative = axes.map(|i| &a[i] - &start[i]);
             let edge = axes.map(|i| &b[i] - &a[i]);
             let denominator = cross(&direction, &edge);
@@ -94,13 +152,13 @@ pub fn exact_polyhedral_section_clip(
     partitions.insert(one);
     let mut intervals: Vec<[Q; 2]> = Vec::new();
     for (lo, hi) in partitions.iter().zip(partitions.iter().skip(1)) {
-        spend(&mut remaining, 16)?;
+        spend(remaining, 16)?;
         if boundary.contains(lo) {
             append_interval(&mut intervals, lo, lo);
         }
         let t = (lo + hi) / Q::from_integer(2.into());
         let sample = std::array::from_fn(|i| &start[i] + &t * (&end[i] - &start[i]));
-        let location = classify_section_loops(&section.loops, axes, &sample, &mut remaining)?;
+        let location = classify_section_loops(loops, axes, &sample, remaining)?;
         if is_material(location) {
             append_interval(&mut intervals, lo, hi);
         }
@@ -108,10 +166,7 @@ pub fn exact_polyhedral_section_clip(
     if let Some(last) = partitions.last().filter(|t| boundary.contains(*t)) {
         append_interval(&mut intervals, last, last);
     }
-    Ok(ExactPolyhedralSectionClip {
-        intervals,
-        exact_work: max_exact_work - remaining,
-    })
+    Ok(intervals)
 }
 
 fn append_interval(intervals: &mut Vec<[Q; 2]>, lo: &Q, hi: &Q) {
