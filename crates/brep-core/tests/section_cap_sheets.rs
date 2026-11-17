@@ -1666,3 +1666,55 @@ fn exact_oblique_area_retains_irrational_face_areas_as_square_roots() {
         [20, 20, 32, 32, 44, 44].map(|n| Q::from_integer(n.into()))
     );
 }
+
+#[test]
+fn rational_total_area_collapses_to_a_single_value_for_a_hollow_prism() {
+    use brep_core::{
+        analysis::bounded_polyhedral_area, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let report = bounded_polyhedral_area(solid, 1e-10, 1_000_000).unwrap();
+    assert_eq!(
+        report.bounds_mm2,
+        [70, 70].map(|n| Q::from_integer(n.into()))
+    );
+    assert!(bounded_polyhedral_area(solid, 1e-10, report.exact_work).is_ok());
+    assert!(bounded_polyhedral_area(solid, 1e-10, report.exact_work - 1).is_err());
+    assert!(bounded_polyhedral_area(solid, 0., 1_000_000).is_err());
+}
+
+#[test]
+fn bounds_the_sum_of_irrational_areas_at_the_requested_width() {
+    use brep_core::{
+        analysis::bounded_polyhedral_area, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let source = open_prism_with_nonbinary_cap_support();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let coarse = bounded_polyhedral_area(solid, 1e-5, 1_000_000).unwrap();
+    let fine = bounded_polyhedral_area(solid, 1e-12, 1_000_000).unwrap();
+    let [lower, upper] = fine.bounds_mm2;
+    assert!(lower > coarse.bounds_mm2[0] && upper < coarse.bounds_mm2[1]);
+    assert!(&upper - &lower <= Q::from_float(1e-12).unwrap());
+    // An independent interval from exact square tests of decimal endpoints.
+    let denominator = 10_i64.pow(15);
+    let mut check_lower = Q::from_integer(0.into());
+    let mut check_upper = check_lower.clone();
+    for (square, floor) in [
+        (20, 4_472_135_954_999_579_i64),
+        (32, 5_656_854_249_492_380),
+        (44, 6_633_249_580_710_799),
+    ] {
+        let lo = Q::new(floor.into(), denominator.into());
+        let hi = Q::new((floor + 1).into(), denominator.into());
+        let square = Q::from_integer(square.into());
+        assert!(&lo * &lo < square && &hi * &hi > square);
+        check_lower += &lo + &lo;
+        check_upper += &hi + &hi;
+    }
+    assert!(lower <= check_lower && upper >= check_upper);
+}

@@ -198,6 +198,61 @@ pub fn exact_polyhedral_area(
     })
 }
 
+#[derive(Clone, Debug)]
+pub struct BoundedPolyhedralArea {
+    /// Lower and upper rational bounds for the total retained surface area.
+    pub bounds_mm2: [Q; 2],
+    pub exact_work: u64,
+}
+
+/// Bound the sum of exact planar face areas within a requested absolute
+/// width. Perfect rational squares contribute exactly to both endpoints.
+pub fn bounded_polyhedral_area(
+    solid: &QualifiedClosedSolid,
+    max_width_mm2: f64,
+    max_exact_work: u64,
+) -> Result<BoundedPolyhedralArea> {
+    let tolerance = Q::from_float(max_width_mm2)
+        .filter(|value| value.is_positive())
+        .ok_or_else(|| {
+            Error::new(
+                "BREP_INVALID_INPUT",
+                "Area enclosure width must be finite and positive",
+            )
+        })?;
+    let report = exact_polyhedral_area(solid, max_exact_work)?;
+    let mut remaining = max_exact_work - report.exact_work;
+    spend(&mut remaining, 8)?;
+    // A common grid gives each irrational term an interval no wider than
+    // tolerance / face count, so their widths sum to at most tolerance.
+    let count = Q::from_integer(report.face_area_squared_mm4.len().into());
+    let denominator = (count / tolerance).ceil().to_integer();
+    let denominator_squared = &denominator * &denominator;
+    let mut lower = Q::zero();
+    let mut upper = Q::zero();
+    for square in report.face_area_squared_mm4 {
+        spend(&mut remaining, 16)?;
+        let numerator_root = square.numer().sqrt();
+        let denominator_root = square.denom().sqrt();
+        if &numerator_root * &numerator_root == *square.numer()
+            && &denominator_root * &denominator_root == *square.denom()
+        {
+            let area = Q::new(numerator_root, denominator_root);
+            lower += &area;
+            upper += area;
+        } else {
+            let scaled_floor = (square.numer() * &denominator_squared) / square.denom();
+            let grid_floor = scaled_floor.sqrt();
+            lower += Q::new(grid_floor.clone(), denominator.clone());
+            upper += Q::new(grid_floor + 1, denominator.clone());
+        }
+    }
+    Ok(BoundedPolyhedralArea {
+        bounds_mm2: [lower, upper],
+        exact_work: max_exact_work - remaining,
+    })
+}
+
 fn visit_polyhedral_boundary(
     solid: &QualifiedClosedSolid,
     remaining: &mut u64,
