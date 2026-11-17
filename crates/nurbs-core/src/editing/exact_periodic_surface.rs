@@ -1421,3 +1421,98 @@ fn find_repeated_cycle(
     }
     Ok(cycle)
 }
+
+/// Store exactly `turns` copies of the source's active period on one axis.
+/// The original seam and parameter units are preserved. Both the translated
+/// knots and the final periodic basis must be exactly representable.
+pub fn repeat_exact_periodic_surface_period(
+    source: &Surface,
+    axis: Axis,
+    turns: usize,
+    max_work: u64,
+) -> Result<Report> {
+    source.validate()?;
+    crate::check(turns > 0, "Periodic repetition needs at least one turn")?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact period repetition work must be in 1..=1000000",
+    )?;
+    let reference = row(source, axis, 0);
+    let refused = |work_used, reason| Report {
+        surface: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    if !crate::analysis::curve_partition_agreement::verify_periodic_source_closure(&reference)? {
+        return Ok(refused(0, GaugeMergeRefusal::Join(Refusal::InvalidOutput)));
+    }
+    let degree = reference.degree;
+    let cycle = reference.control_points.len() - degree;
+    if turns > (256 - degree) / cycle {
+        return Ok(refused(0, GaugeMergeRefusal::Join(Refusal::ControlLimit)));
+    }
+    let count = cycle * turns + degree;
+    let transverse = axis_control_count(
+        source,
+        match axis {
+            Axis::U => Axis::V,
+            Axis::V => Axis::U,
+        },
+    );
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let mut knots = reference.knots;
+    let mut extend = || -> std::result::Result<(), ExactRefusal> {
+        work.charge((count * transverse) as u64)?;
+        let lo = work.lift(knots[degree])?;
+        let hi = work.lift(knots[cycle + degree])?;
+        let period = work.op(&hi, &lo, |hi, lo| hi - lo)?;
+        while knots.len() < count + degree + 1 {
+            let prior = work.lift(knots[knots.len() - cycle])?;
+            let shifted = work.op(&prior, &period, |a, b| a + b)?;
+            knots.push(work.float(&shifted)?);
+        }
+        Ok(())
+    };
+    if let Err(reason) = extend() {
+        return Ok(refused(work.used, GaugeMergeRefusal::Exact(reason)));
+    }
+    let mut surface = source.clone();
+    match axis {
+        Axis::U => {
+            surface.knots_u = knots;
+            surface.control_points = (0..count)
+                .map(|i| source.control_points[i % cycle].clone())
+                .collect();
+            surface.weights = (0..count)
+                .map(|i| source.weights[i % cycle].clone())
+                .collect();
+        }
+        Axis::V => {
+            surface.knots_v = knots;
+            for (points, original) in surface
+                .control_points
+                .iter_mut()
+                .zip(&source.control_points)
+            {
+                *points = (0..count).map(|i| original[i % cycle].clone()).collect();
+            }
+            for (weights, original) in surface.weights.iter_mut().zip(&source.weights) {
+                *weights = (0..count).map(|i| original[i % cycle]).collect();
+            }
+        }
+    }
+    if surface.validate().is_err() {
+        return Ok(refused(
+            work.used,
+            GaugeMergeRefusal::Join(Refusal::InvalidOutput),
+        ));
+    }
+    Ok(Report {
+        surface: Some(surface),
+        work_used: work.used,
+        refusal: None,
+    })
+}

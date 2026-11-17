@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0532",
+  "testedBase": "dc56759f76dea1d6d985d76cdfb8e63dd589343a",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 121,
+  "scope": [
+    "Extend one surface axis to an exact integer number of turns with unchanged parameter units.",
+    "Repeat the complete weighted tensor cycle and translate each newly exposed knot exactly under the control and work limits."
+  ],
+  "logSha256": "e697bf901e81b0afe37bccb134a2a3ad0ce111c298383c3b4444b448676cb52d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "f6f2050e7bda80e3aaf1caf45c4a146bccdc759749df4e11916b7c5f21e23cfb",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "cf3e7b98b33d5b2f50e2ca75d4c5d03813aec43fceb571371a7708f03d99d7d2"
+  }
+}

@@ -2783,3 +2783,64 @@ fn exact_period_reduction_checks_every_transverse_weight() {
     assert_eq!(result.turns, 1);
     assert_eq!(result.surface, Some(source));
 }
+
+#[test]
+fn exact_period_repetition_round_trips_weighted_surfaces_on_both_axes() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::{
+            reduce_exact_periodic_surface_period, repeat_exact_periodic_surface_period,
+        },
+        surface::Axis,
+    };
+    let mut source = doubly_periodic_tensor();
+    source.weights[2][2] = 2.;
+    for axis in [Axis::U, Axis::V] {
+        let report = repeat_exact_periodic_surface_period(&source, axis, 3, 1_000_000).unwrap();
+        let repeated = report.surface.unwrap();
+        for t in [0., 1.5, 4., 7.25, 11.75, 12.] {
+            let (u, v, old_u, old_v) = match axis {
+                Axis::U => (t, 2.25, t % 4., 2.25),
+                Axis::V => (2.25, t, 2.25, t % 4.),
+            };
+            assert_eq!(
+                repeated.evaluate(u, v).unwrap().point,
+                source.evaluate(old_u, old_v).unwrap().point
+            );
+        }
+        let reduced = reduce_exact_periodic_surface_period(&repeated, axis, 1_000_000).unwrap();
+        assert_eq!(reduced.turns, 3);
+        assert_eq!(reduced.surface, Some(source.clone()));
+        assert!(
+            repeat_exact_periodic_surface_period(&source, axis, 3, report.work_used - 1)
+                .unwrap()
+                .surface
+                .is_none()
+        );
+    }
+}
+
+#[test]
+fn exact_period_repetition_refuses_unstorable_translations_and_oversized_outputs() {
+    use nurbs_core::{
+        editing::{
+            exact_curve_merge::{GaugeMergeRefusal, Refusal},
+            exact_periodic_surface::repeat_exact_periodic_surface_period,
+            rational_factor::Refusal as ExactRefusal,
+        },
+        surface::Axis,
+    };
+    let mut source = doubly_periodic_tensor();
+    assert_eq!(
+        repeat_exact_periodic_surface_period(&source, Axis::U, usize::MAX, 1_000_000)
+            .unwrap()
+            .refusal,
+        Some(GaugeMergeRefusal::Join(Refusal::ControlLimit))
+    );
+    source.knots_u = vec![-0.25, 0., 0.25, 0.5_f64.next_up(), 0.75, 1., 1.25];
+    let report = repeat_exact_periodic_surface_period(&source, Axis::U, 2, 1_000_000).unwrap();
+    assert!(report.surface.is_none());
+    assert_eq!(
+        report.refusal,
+        Some(GaugeMergeRefusal::Exact(ExactRefusal::NotRepresentable))
+    );
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 531,
-  "unallocatedCount": 469,
+  "specifiedCount": 532,
+  "unallocatedCount": 468,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13627,6 +13627,27 @@
       "remainingQualification": [
         "Prove literal cyclic repeat periods in the full weighted tensor and retain the shortest supported cycle.",
         "Require exact rational knot translations and literal repeats of all tensor controls and weights before truncating the repeated turns.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0532",
+      "name": "Точное повторение периода NURBS-поверхности по выбранной оси",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::repeat_exact_periodic_surface_period",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-532-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-532-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Extend one surface axis to an exact integer number of turns with unchanged parameter units.",
+        "Repeat the complete weighted tensor cycle and translate each newly exposed knot exactly under the control and work limits.",
         "WASM and application integration are separate."
       ]
     }
