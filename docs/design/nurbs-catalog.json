@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 318,
-  "unallocatedCount": 682,
+  "specifiedCount": 319,
+  "unallocatedCount": 681,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8329,6 +8329,26 @@
       "remainingQualification": [
         "Compose closed rational trim traces with their surfaces in a common exact Cartesian plane.",
         "Exact common affine plane, closed trim traces, exact knot-cell cuts and binary64 curve storage. Boundary certificate only.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0319",
+      "name": "Точный подъём отредактированных плоских контуров обрезки обратно в 3D",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::analysis::planar_trim_projection::lift_planar_trim_loops",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/planar_trim_projection.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/nurbs-core/tests/exact_planar_trim_projection_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-319-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-319-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Lift closed world-plane rational contours through the exact plane equation, preserving their spline bases.",
+        "Closed 2D input contours and exact binary64 storage of every lifted Cartesian pole. Output curves retain parameters and rational weights.",
         "WASM and application integration are separate."
       ]
     }

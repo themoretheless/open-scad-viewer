@@ -91,3 +91,63 @@ fn refuses_an_open_or_outside_contour_without_partially_returning_faces() {
         PlanarTrimOutcome::TraceRefused { face: 1, .. }
     ));
 }
+
+#[test]
+fn lifts_projected_rational_boundary_traces_back_to_world_coordinates() {
+    use nurbs_core::analysis::planar_trim_projection::{
+        PlanarContourLiftOutcome, lift_planar_trim_loops,
+    };
+    let patches = [face(2.)];
+    let trims = [vec![contour(0., 1.)]];
+    let report = project_coplanar_trim_loops(&patches, &trims, 1_000_000).unwrap();
+    let PlanarTrimOutcome::Projected(chart) = report.outcome else {
+        panic!("{:?}", report.outcome)
+    };
+    let report = lift_planar_trim_loops(&chart[0].projection, &chart[0].loops, 1_000_000).unwrap();
+    let PlanarContourLiftOutcome::Lifted(loops) = report.outcome else {
+        panic!("{:?}", report.outcome)
+    };
+    for (before, after) in chart[0].loops[0].iter().zip(&loops[0]) {
+        assert_eq!(before.knots, after.knots);
+        assert_eq!(before.weights, after.weights);
+        let [a, b] = after.domain();
+        for t in [a, a.midpoint(b), b] {
+            let uv = trims[0][0][0].evaluate(t).unwrap().point;
+            let expected = patches[0].evaluate(uv[0], uv[1]).unwrap().point;
+            let actual = after.evaluate(t).unwrap().point;
+            assert!(
+                expected
+                    .iter()
+                    .zip(actual)
+                    .all(|(x, y)| (x - y).abs() < 1e-13)
+            );
+        }
+    }
+}
+
+#[test]
+fn refuses_a_later_nonbinary_edited_contour_atomically() {
+    use nurbs_core::analysis::{
+        exact_affine_hull::{PlanarLiftRefusal, PlanarProjectionOutcome, project_planar_surface},
+        planar_trim_projection::{PlanarContourLiftOutcome, lift_planar_trim_loops},
+    };
+    let mut patch = face(0.);
+    patch.control_points = vec![
+        vec![vec![0., 0., 0.], vec![0., 3., 1.]],
+        vec![vec![3., 0., 1.], vec![3., 3., 2.]],
+    ];
+    let report = project_planar_surface(&patch, 1_000_000).unwrap();
+    let PlanarProjectionOutcome::Projected(chart) = report.outcome else {
+        panic!()
+    };
+    let report =
+        lift_planar_trim_loops(&chart, &[contour(0., 3.), contour(0., 1.)], 1_000_000).unwrap();
+    assert!(matches!(
+        report.outcome,
+        PlanarContourLiftOutcome::Refused {
+            contour: 1,
+            curve: 0,
+            reason: PlanarLiftRefusal::NotRepresentable,
+        }
+    ));
+}

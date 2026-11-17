@@ -1,10 +1,11 @@
 //! Exact world-plane curves of coplanar trimmed tensor faces.
 use super::exact_affine_hull::{
-    PlanarSurfaceProjection, SharedPlanarProjectionOutcome, SurfaceAffineHull,
-    project_coplanar_surfaces,
+    PlanarLiftRefusal, PlanarSurfaceProjection, SharedPlanarProjectionOutcome, SurfaceAffineHull,
+    lift_plane_point, project_coplanar_surfaces, validate_projection_axes,
 };
 use crate::{
     Result, check,
+    core::bounded_rational::Work,
     curve::Curve,
     editing::exact_projective::{PcurvePullbackRefusal, lift_pcurve_to_surface},
     surface::Surface,
@@ -123,4 +124,96 @@ fn build(
         faces.push(ProjectedTrimmedFace { projection, loops });
     }
     Ok(PlanarTrimOutcome::Projected(faces))
+}
+
+#[derive(Clone, Debug)]
+pub enum PlanarContourLiftOutcome {
+    Lifted(Vec<Vec<Curve>>),
+    OpenLoop {
+        contour: usize,
+    },
+    Refused {
+        contour: usize,
+        curve: usize,
+        reason: PlanarLiftRefusal,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarContourLiftReport {
+    pub outcome: PlanarContourLiftOutcome,
+    pub work_used: u64,
+}
+
+/// Lift exact closed 2D contours in the projection's world-plane coordinates.
+/// The affine inverse acts on the Cartesian poles and retains every knot,
+/// weight and parameter. Output curves are spatial boundary traces. Every
+/// lifted pole must fit binary64 exactly.
+pub fn lift_planar_trim_loops(
+    projection: &PlanarSurfaceProjection,
+    loops: &[Vec<Curve>],
+    max_work: u64,
+) -> Result<PlanarContourLiftReport> {
+    validate_projection_axes(projection)?;
+    check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Planar contour lift needs a valid arithmetic budget",
+    )?;
+    check(
+        (1..=256).contains(&loops.len())
+            && loops.iter().all(|curves| (1..=256).contains(&curves.len())),
+        "Planar contour lift needs nonempty bounded contours",
+    )?;
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let outcome = lift_loops(projection, loops, &mut work)?;
+    Ok(PlanarContourLiftReport {
+        outcome,
+        work_used: work.used,
+    })
+}
+
+fn lift_loops(
+    projection: &PlanarSurfaceProjection,
+    loops: &[Vec<Curve>],
+    work: &mut Work,
+) -> Result<PlanarContourLiftOutcome> {
+    let mut lifted = Vec::with_capacity(loops.len());
+    for (contour, source) in loops.iter().enumerate() {
+        if exact_loop_joins(source)? != Some(true) {
+            return Ok(PlanarContourLiftOutcome::OpenLoop { contour });
+        }
+        let mut output = Vec::with_capacity(source.len());
+        for (curve, input) in source.iter().enumerate() {
+            match lift_contour_curve(projection, input, work) {
+                Ok(curve) => output.push(curve),
+                Err(reason) => {
+                    return Ok(PlanarContourLiftOutcome::Refused {
+                        contour,
+                        curve,
+                        reason,
+                    });
+                }
+            }
+        }
+        lifted.push(output);
+    }
+    Ok(PlanarContourLiftOutcome::Lifted(lifted))
+}
+
+fn lift_contour_curve(
+    projection: &PlanarSurfaceProjection,
+    input: &Curve,
+    work: &mut Work,
+) -> std::result::Result<Curve, PlanarLiftRefusal> {
+    let mut curve = input.clone();
+    for p in &mut curve.control_points {
+        *p = lift_plane_point(projection, [p[0], p[1]], work)?.to_vec();
+    }
+    curve
+        .validate()
+        .map_err(|_| PlanarLiftRefusal::InvalidOutput)?;
+    Ok(curve)
 }

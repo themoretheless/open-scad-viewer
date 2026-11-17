@@ -343,12 +343,7 @@ pub fn lift_planar_surface(
 ) -> Result<PlanarLiftReport> {
     projection.surface.validate()?;
     validate_budget(max_work)?;
-    let [x, y] = projection.retained_axes;
-    let z = projection.omitted_axis;
-    check(
-        x < 3 && y < 3 && z < 3 && x != y && x != z && y != z,
-        "Planar lift needs a permutation of the three Cartesian axes",
-    )?;
+    validate_projection_axes(projection)?;
     check(
         projection
             .surface
@@ -374,26 +369,45 @@ pub fn lift_planar_surface(
     })
 }
 
+pub(super) fn validate_projection_axes(projection: &PlanarSurfaceProjection) -> Result<()> {
+    let [x, y] = projection.retained_axes;
+    let z = projection.omitted_axis;
+    check(
+        x < 3 && y < 3 && z < 3 && x != y && x != z && y != z,
+        "Planar lift needs a permutation of the three Cartesian axes",
+    )
+}
+
 fn lift_control_net(
     projection: &PlanarSurfaceProjection,
     work: &mut Work,
 ) -> std::result::Result<Surface, PlanarLiftRefusal> {
     let mut surface = projection.surface.clone();
-    let [x_axis, y_axis] = projection.retained_axes;
     for p in surface.control_points.iter_mut().flatten() {
-        let [x, y] = [p[0], p[1]];
-        let z = lift_omitted(projection, x, y, work).map_err(|reason| match reason {
-            Error::ResourceLimit => PlanarLiftRefusal::ResourceLimit,
-            Error::NotRepresentable => PlanarLiftRefusal::NotRepresentable,
-        })?;
-        p[x_axis] = x;
-        p[y_axis] = y;
-        p[projection.omitted_axis] = z;
+        let lifted = lift_plane_point(projection, [p[0], p[1]], work)?;
+        p.copy_from_slice(&lifted);
     }
     surface
         .validate()
         .map_err(|_| PlanarLiftRefusal::InvalidOutput)?;
     Ok(surface)
+}
+
+pub(super) fn lift_plane_point(
+    projection: &PlanarSurfaceProjection,
+    [x, y]: [f64; 2],
+    work: &mut Work,
+) -> std::result::Result<[f64; 3], PlanarLiftRefusal> {
+    let z = lift_omitted(projection, x, y, work).map_err(|reason| match reason {
+        Error::ResourceLimit => PlanarLiftRefusal::ResourceLimit,
+        Error::NotRepresentable => PlanarLiftRefusal::NotRepresentable,
+    })?;
+    let [i, j] = projection.retained_axes;
+    let mut p = [0.; 3];
+    p[i] = x;
+    p[j] = y;
+    p[projection.omitted_axis] = z;
+    Ok(p)
 }
 
 fn lift_omitted(

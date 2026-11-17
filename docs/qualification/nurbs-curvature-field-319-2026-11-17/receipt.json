@@ -1,0 +1,30 @@
+{
+  "id": "NURBS-0319",
+  "testedBase": "3c8d51b2e096fc834926cb1ef4aae4c5707cf4f2",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_trim_projection_contracts",
+    "--test",
+    "exact_planar_surface_lift_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 5,
+  "scope": [
+    "Lift closed world-plane rational contours through the exact plane equation, preserving their spline bases.",
+    "Closed 2D input contours and exact binary64 storage of every lifted Cartesian pole. Output curves retain parameters and rational weights."
+  ],
+  "logSha256": "dd6980917b887683e370d4cd9c18e9ed804ce05e352ef382deffc28d675a8b8e",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/planar_trim_projection.rs": "fdc9dd186809cbd4770ca75512992de6312ee09c7699e14640719e23e0e7fe55",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/nurbs-core/tests/exact_planar_trim_projection_contracts.rs": "6811eb70d3ac09329f652ebe0e3e372b3d6961f48bb2c62cb828dce8a0cd082e"
+  }
+}
