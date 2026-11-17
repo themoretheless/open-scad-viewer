@@ -713,7 +713,7 @@ pub fn exact_polyhedral_path_interior_clip(
     })
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PolyhedralPathLocation {
     Interior,
     Boundary,
@@ -925,6 +925,67 @@ pub fn exact_polyhedral_path_exterior_clip(
     }
     Ok(ExactPolyhedralPathExteriorClip {
         span_intervals,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PolyhedralPathBoundaryEvent {
+    /// Closed range of global parameters, measured as span index plus local parameter.
+    /// A single parameter denotes an isolated contact.
+    pub parameters: [Q; 2],
+    /// Interior or exterior immediately before contact. None at path start.
+    pub before: Option<PolyhedralPathLocation>,
+    /// Interior or exterior immediately after contact. None at path end.
+    pub after: Option<PolyhedralPathLocation>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralPathBoundaryEvents {
+    pub events: Vec<PolyhedralPathBoundaryEvent>,
+    pub exact_work: u64,
+}
+
+/// Report connected contacts with the boundary along an ordered polyline.
+/// Boundary ranges meeting at a shared path vertex form a single event.
+pub fn exact_polyhedral_path_boundary_events(
+    solid: &QualifiedClosedSolid,
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralPathBoundaryEvents> {
+    let partition = exact_polyhedral_path_partition(solid, points_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - partition.exact_work;
+    let mut events = Vec::new();
+    let mut previous = None;
+    let mut pending: Option<PolyhedralPathBoundaryEvent> = None;
+    for (span, parts) in partition.spans.into_iter().enumerate() {
+        let origin = Q::from_integer(span.into());
+        for part in parts {
+            spend(&mut remaining, 8)?;
+            if part.location == PolyhedralPathLocation::Boundary {
+                let [lo, hi] = part.parameters;
+                let end = &origin + hi;
+                if let Some(event) = &mut pending {
+                    event.parameters[1] = end;
+                } else {
+                    pending = Some(PolyhedralPathBoundaryEvent {
+                        parameters: [&origin + lo, end],
+                        before: previous,
+                        after: None,
+                    });
+                }
+            } else {
+                previous = Some(part.location);
+                if let Some(mut event) = pending.take() {
+                    event.after = previous;
+                    events.push(event);
+                }
+            }
+        }
+    }
+    events.extend(pending);
+    Ok(ExactPolyhedralPathBoundaryEvents {
+        events,
         exact_work: max_exact_work - remaining,
     })
 }

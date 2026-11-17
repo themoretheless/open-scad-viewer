@@ -3684,3 +3684,92 @@ fn exact_path_partition_coalesces_shared_edge_contacts_and_stationary_boundary()
         ]
     );
 }
+
+#[test]
+fn exact_path_boundary_events_distinguish_entries_exits_and_tangencies() {
+    use brep_core::{
+        analysis::{
+            PolyhedralPathBoundaryEvent, PolyhedralPathLocation::*,
+            exact_polyhedral_path_boundary_events,
+        },
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let path = [[q(-1, 1), q(3, 2), q(1, 1)], [q(5, 1), q(3, 2), q(1, 1)]];
+    let event = |t: Q, before, after| PolyhedralPathBoundaryEvent {
+        parameters: [t.clone(), t],
+        before: Some(before),
+        after: Some(after),
+    };
+    let report = exact_polyhedral_path_boundary_events(solid, &path, 1_000_000).unwrap();
+    assert_eq!(
+        report.events,
+        [
+            event(q(1, 6), Exterior, Interior),
+            event(q(1, 3), Interior, Exterior),
+            event(q(1, 2), Exterior, Interior),
+            event(q(5, 6), Interior, Exterior),
+        ]
+    );
+    assert_eq!(
+        exact_polyhedral_path_boundary_events(solid, &path, report.exact_work).unwrap(),
+        report
+    );
+    assert!(exact_polyhedral_path_boundary_events(solid, &path, report.exact_work - 1).is_err());
+    let tangent = [[q(-1, 1), q(1, 1), q(1, 1)], [q(1, 1), q(-1, 1), q(1, 1)]];
+    assert_eq!(
+        exact_polyhedral_path_boundary_events(solid, &tangent, 1_000_000)
+            .unwrap()
+            .events,
+        [event(q(1, 2), Exterior, Exterior)],
+    );
+}
+
+#[test]
+fn exact_path_boundary_events_join_across_vertices_and_preserve_endpoints() {
+    use brep_core::{
+        analysis::{
+            PolyhedralPathBoundaryEvent, PolyhedralPathLocation::*,
+            exact_polyhedral_path_boundary_events,
+        },
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64| Q::from_integer(n.into());
+    let point = |x, z| [q(x), q(1), q(z)];
+    let a = point(0, 2);
+    let b = [Q::new(1.into(), 2.into()), q(1), q(2)];
+    let c = [b[0].clone(), q(1), q(1)];
+    let path = [point(-1, 2), a, b.clone(), b.clone(), c, b];
+    let report = exact_polyhedral_path_boundary_events(solid, &path, 1_000_000).unwrap();
+    assert_eq!(
+        report.events,
+        [
+            PolyhedralPathBoundaryEvent {
+                parameters: [q(1), q(3)],
+                before: Some(Exterior),
+                after: Some(Interior),
+            },
+            PolyhedralPathBoundaryEvent {
+                parameters: [q(5), q(5)],
+                before: Some(Interior),
+                after: None,
+            },
+        ]
+    );
+    let reversed = path.into_iter().rev().collect::<Vec<_>>();
+    let reverse = exact_polyhedral_path_boundary_events(solid, &reversed, 1_000_000).unwrap();
+    assert_eq!(reverse.events[0].parameters, [q(0), q(0)]);
+    assert_eq!(reverse.events[0].before, None);
+    assert_eq!(reverse.events[0].after, Some(Interior));
+    assert_eq!(reverse.events[1].parameters, [q(2), q(4)]);
+    assert_eq!(reverse.events[1].before, Some(Interior));
+    assert_eq!(reverse.events[1].after, Some(Exterior));
+}
