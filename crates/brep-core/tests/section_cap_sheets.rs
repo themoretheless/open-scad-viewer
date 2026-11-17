@@ -1527,3 +1527,29 @@ fn refuses_inferred_orientation_repair_without_a_boundary_proof() {
     assert_eq!(error.code, "BREP_CLOSED_SOLID_UNPROVED");
     assert_eq!(source, before);
 }
+
+#[test]
+fn measures_exact_volume_of_a_hollow_prism_from_its_oriented_rims() {
+    use brep_core::{
+        analysis::exact_polyhedral_volume, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let report = exact_polyhedral_volume(&result.section.solid, 1_000_000).unwrap();
+    assert_eq!(report.volume_mm3, Q::from_integer(30.into()));
+    assert!(exact_polyhedral_volume(&result.section.solid, report.exact_work).is_ok());
+    assert!(exact_polyhedral_volume(&result.section.solid, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn measures_exact_volume_from_oblique_caps_with_expanded_supports() {
+    use brep_core::{
+        analysis::exact_polyhedral_volume, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let source = open_prism_with_nonbinary_cap_support();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let report = exact_polyhedral_volume(&result.section.solid, 1_000_000).unwrap();
+    assert_eq!(report.volume_mm3, Q::from_integer(12.into()));
+}

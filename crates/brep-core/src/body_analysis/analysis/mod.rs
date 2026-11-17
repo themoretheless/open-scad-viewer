@@ -16,6 +16,8 @@ mod certified_mass_properties;
 mod certified_freeform_volume;
 pub use certified_freeform_volume::*;
 pub mod draft;
+mod exact_polyhedral_volume;
+pub use exact_polyhedral_volume::*;
 mod mass_properties;
 mod mechanics;
 #[cfg(test)]
