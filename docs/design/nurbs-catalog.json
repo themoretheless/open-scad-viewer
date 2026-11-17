@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 381,
-  "unallocatedCount": 619,
+  "specifiedCount": 382,
+  "unallocatedCount": 618,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9778,6 +9778,30 @@
       "remainingQualification": [
         "Close a standalone shell with section caps, qualify embedded material orientation and bound its positive volume.",
         "The existing continuous boundary and material qualification gates body creation. Certified flux integration provides a positive volume enclosure for the admitted chart types.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0382",
+      "name": "Сшивка крышки с исходной оболочкой при ограниченной погрешности плоской опоры",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::planar_cap::attach_section_caps_with_support_tolerance",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/support.rs",
+        "docs/qualification/nurbs-curvature-field-382-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-382-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Sew planar section caps with certified support rounding to unchanged spatial boundary edges.",
+        "Each authored cap carries an exact rational error upper bound for the stored planar support. The original spatial edges are checked against the rounded support at model tolerance before sewing.",
         "WASM and application integration are separate."
       ]
     }

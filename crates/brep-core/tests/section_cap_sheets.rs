@@ -450,3 +450,84 @@ fn refuses_an_inward_capped_boundary_without_mutating_the_source() {
     assert_eq!(error.code, "BREP_CLOSED_SOLID_UNPROVED");
     assert_eq!(source, before);
 }
+
+fn open_third_height_prism() -> (brep_core::Model, Vec<Vec<[usize; 2]>>) {
+    let (mut source, rings) = open_hollow_prism();
+    for vertex in &mut source.vertices {
+        vertex.point[2] /= 6.;
+    }
+    for edge in &mut source.edges {
+        for pole in &mut edge.curve.control_points {
+            pole[2] /= 6.;
+        }
+    }
+    for face in &mut source.faces {
+        for pole in face.surface.control_points.iter_mut().flatten() {
+            pole[2] /= 6.;
+        }
+    }
+    source.rebuild_topology_ids();
+    source.validate().unwrap();
+    (source, rings)
+}
+
+#[test]
+fn attaches_a_rounded_planar_support_to_retained_boundary_edges() {
+    use brep_core::planar_cap::{
+        SectionAttachmentOptions, attach_section_caps_with_support_tolerance,
+    };
+    use num_rational::BigRational as Q;
+    use num_traits::Zero;
+    let (source, rings) = open_third_height_prism();
+    let addresses: Vec<_> = rings.iter().map(Vec::as_slice).collect();
+    let report = attach_section_caps_with_support_tolerance(
+        &source,
+        0,
+        &addresses,
+        [0., 0., 3.],
+        1.,
+        SectionAttachmentOptions {
+            max_exact_work: 1_000_000,
+            max_verification_cells: 10_000,
+            support_tolerance_mm: 1e-14,
+        },
+    )
+    .unwrap();
+    let [error] = report.support_error_upper.as_slice() else {
+        panic!("expected one support bound");
+    };
+    assert!(error > &Q::zero() && error <= &Q::from_float(1e-14).unwrap());
+    let result = report.attachment;
+    assert!(result.model.shells[0].closed);
+    assert_eq!(result.model.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(result.model.edges, source.edges);
+    assert_eq!(result.model.vertices, source.vertices);
+    assert_eq!(result.model.faces[result.cap_faces[0]].holes.len(), 1);
+}
+
+#[test]
+fn refuses_exact_and_too_small_support_budgets_for_the_nonbinary_plane() {
+    use brep_core::planar_cap::{
+        SectionAttachmentOptions, attach_section_caps, attach_section_caps_with_support_tolerance,
+    };
+    let (source, rings) = open_third_height_prism();
+    let before = source.clone();
+    let addresses: Vec<_> = rings.iter().map(Vec::as_slice).collect();
+    assert!(
+        attach_section_caps(&source, 0, &addresses, [0., 0., 3.], 1., 1_000_000, 10_000).is_err()
+    );
+    let result = attach_section_caps_with_support_tolerance(
+        &source,
+        0,
+        &addresses,
+        [0., 0., 3.],
+        1.,
+        SectionAttachmentOptions {
+            max_exact_work: 1_000_000,
+            max_verification_cells: 10_000,
+            support_tolerance_mm: 1e-18,
+        },
+    );
+    assert!(result.is_err());
+    assert_eq!(source, before);
+}

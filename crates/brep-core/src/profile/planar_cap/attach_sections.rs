@@ -1,6 +1,9 @@
 //! Attach section caps directly to an open shell's existing boundary edges.
-use super::{SectionSheetOptions, build_section_sheets};
+use super::{
+    SectionSheetOptions, build_section_sheets, build_section_sheets_with_support_tolerance,
+};
 use crate::{Coedge, Face, FaceUse, Loop, Model};
+use num_rational::BigRational;
 use nurbs_core::{Error, Result, curve::Curve};
 use std::collections::BTreeSet;
 
@@ -32,6 +35,66 @@ pub fn attach_section_caps(
     max_exact_work: u64,
     max_verification_cells: usize,
 ) -> Result<AttachedSectionCaps> {
+    attach(
+        source,
+        shell,
+        rings,
+        normal,
+        offset,
+        max_exact_work,
+        max_verification_cells,
+        None,
+    )
+    .map(|report| report.attachment)
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct SectionAttachmentOptions {
+    pub max_exact_work: u64,
+    pub max_verification_cells: usize,
+    pub support_tolerance_mm: f64,
+}
+
+#[derive(Clone, Debug)]
+pub struct BoundedSectionAttachment {
+    pub attachment: AttachedSectionCaps,
+    /// Continuous support error bounds in cap face order.
+    pub support_error_upper: Vec<BigRational>,
+}
+
+/// Attach explicit section cycles using exactly planar stored supports within
+/// the given support tolerance. Retained spatial edges keep their geometry;
+/// agreement with each rounded face is checked at the source model tolerance.
+pub fn attach_section_caps_with_support_tolerance(
+    source: &Model,
+    shell: usize,
+    rings: &[&[[usize; 2]]],
+    normal: [f64; 3],
+    offset: f64,
+    options: SectionAttachmentOptions,
+) -> Result<BoundedSectionAttachment> {
+    attach(
+        source,
+        shell,
+        rings,
+        normal,
+        offset,
+        options.max_exact_work,
+        options.max_verification_cells,
+        Some(options.support_tolerance_mm),
+    )
+}
+
+fn attach(
+    source: &Model,
+    shell: usize,
+    rings: &[&[[usize; 2]]],
+    normal: [f64; 3],
+    offset: f64,
+    max_exact_work: u64,
+    max_verification_cells: usize,
+    support_tolerance: Option<f64>,
+) -> Result<BoundedSectionAttachment> {
     source.validate()?;
     let original_shell = source
         .shells
@@ -109,16 +172,22 @@ pub fn attach_section_caps(
     }
 
     let rings: Vec<_> = curves.iter().map(Vec::<Curve>::as_slice).collect();
-    let report = build_section_sheets(
-        &rings,
-        normal,
-        offset,
-        SectionSheetOptions {
-            tolerance: source.tolerance_mm,
-            max_exact_work,
-            max_verification_cells,
-        },
-    )?;
+    let options = SectionSheetOptions {
+        tolerance: source.tolerance_mm,
+        max_exact_work,
+        max_verification_cells,
+    };
+    let (report, support_error_upper) = if let Some(tolerance) = support_tolerance {
+        let bounded = build_section_sheets_with_support_tolerance(
+            &rings, normal, offset, options, tolerance,
+        )?;
+        (bounded.sheet, bounded.support_error_upper)
+    } else {
+        (
+            build_section_sheets(&rings, normal, offset, options)?,
+            Vec::new(),
+        )
+    };
     let mut model = source.clone();
     let mut cap_faces = Vec::new();
     for (face, region) in report.model.faces.iter().zip(report.face_rings) {
@@ -176,11 +245,14 @@ pub fn attach_section_caps(
         .all(|use_| incidence[use_.edge] == 2);
     model.inherit_topology_ids(&[source]);
     model.validate()?;
-    Ok(AttachedSectionCaps {
-        model,
-        cap_faces,
-        exact_work: report.exact_work,
-        verification_cells: report.verification_cells,
+    Ok(BoundedSectionAttachment {
+        attachment: AttachedSectionCaps {
+            model,
+            cap_faces,
+            exact_work: report.exact_work,
+            verification_cells: report.verification_cells,
+        },
+        support_error_upper,
     })
 }
 

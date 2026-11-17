@@ -437,7 +437,8 @@ pub use section_sheets::{
 
 mod attach_sections;
 pub use attach_sections::{
-    AttachedSectionCaps, DiscoveredSectionCaps, SectionPlane, attach_section_caps,
+    AttachedSectionCaps, BoundedSectionAttachment, DiscoveredSectionCaps, SectionAttachmentOptions,
+    SectionPlane, attach_section_caps, attach_section_caps_with_support_tolerance,
     close_shell_with_section_caps, discover_and_attach_section_caps,
 };
 pub use attach_sections::{SectionSolid, SectionSolidOptions, build_section_solid};
