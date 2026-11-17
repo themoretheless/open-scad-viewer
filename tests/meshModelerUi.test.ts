@@ -1,6 +1,8 @@
 import { createRenderer, nextTick } from 'svet'
 import { afterEach, expect, it, vi } from 'vitest'
 import MeshModeler from '../src/features/MeshModeler.svt'
+import type { MainSolidRunOptions } from '../src/kernel/mainSolidWorkerClient'
+import type { MainSolidJob } from '../src/kernel/mainSolidProtocol'
 import { createBoxMesh, transformMesh } from '../src/kernel/meshEditing'
 
 const downloadBytes = vi.hoisted(() => vi.fn())
@@ -31,7 +33,7 @@ vi.mock('../src/kernel/solidPreviewWorker', async () => {
       let activeKind = ''
       const control = () => (activeKind === 'meshManifold' ? manifoldControl : repairControl)
       return {
-        run: (job: any, options: any) => {
+        run: (job: MainSolidJob, options?: MainSolidRunOptions) => {
           activeKind = job.kind
           const current = control()
           const emit = (progress: { phase: string; completed: number; total: number }) => {

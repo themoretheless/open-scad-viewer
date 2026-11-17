@@ -42,6 +42,13 @@ it('retains every boundary and common spoke across a five-patch rational fan', (
   expect(() => tessellateNurbsPatches({ patches, faceIds: [0] }, 8)).toThrow(/budget/)
   expect(() => boundaryFillNurbsSurfaces(edges.slice(0, 4), center)).toThrow(/oriented cycle/)
 })
+/** The parts of a patch-set build that the transform test inspects. */
+type BuiltPatches = {
+  report: {
+    definitions: Record<string, { faceIds: number[]; patches: { controlPoints: number[][][]; weights?: unknown }[] }>
+  }
+  mesh: { faceIds: number[] }
+}
 it('transforms every rational patch control and preserves face IDs before tessellation', () => {
   const source = readFileSync('examples/rush/boundary-fill.r', 'utf8')
   const g = compileRushFrontend(source).document
@@ -62,7 +69,7 @@ it('transforms every rational patch control and preserves face IDs before tessel
     root: 'display',
   }
   const built = buildOwnNurbs(transformed, { action: 'build' })
-  const definitions = (built as any).report.definitions
+  const definitions = (built as unknown as BuiltPatches).report.definitions
   const a = definitions[fill.id],
     b = definitions.moved
   expect(b.patches).toHaveLength(5)
@@ -74,8 +81,8 @@ it('transforms every rational patch control and preserves face IDs before tessel
           q = b.patches[i].controlPoints[u][v]
         expect(q).toEqual([2 * p[0] + 7, 3 * p[1] - 2, 4 * p[2] + 3])
       }
-  expect(b.patches.map((p: any) => p.weights)).toEqual(a.patches.map((p: any) => p.weights))
-  expect((built as any).mesh.faceIds).toContain(4)
+  expect(b.patches.map(p => p.weights)).toEqual(a.patches.map(p => p.weights))
+  expect((built as unknown as BuiltPatches).mesh.faceIds).toContain(4)
   expect(b).not.toHaveProperty('sampledMaxDeviationMm')
 })
 it('reports the hull of all patches including distant edges and reflected coordinates', () => {

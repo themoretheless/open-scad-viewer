@@ -35,7 +35,7 @@ it('isolates irrational crossings, non-dyadic multiple contacts and separated fi
     expect(r.events.length).toBe(n)
     for (const e of r.events) for (const p of e) expect(p[1] - p[0]).toBeLessThanOrEqual(1.01e-12)
     const bad = structuredClone(c)
-    bad.factors.find((f: any) => f.roots.length)!.roots.pop()
+    bad.factors.find(f => f.roots.length)!.roots.pop()
     expect(() => verifyBrepAlgebraicIntersections(a, b, bad)).toThrow()
   }
 })

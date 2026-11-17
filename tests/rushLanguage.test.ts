@@ -12,8 +12,8 @@ it('executes Rush through the rebuilt language WASM and existing CAD backend', (
   expect(isRushFrontend(rush)).toBe(true)
   const result = compileRushFrontend(rush)
   const spelling = compileRushFrontend('// @rush/1' + body.replace('return x', 'ret x'))
-  const normalize = (document: any) => {
-    const ids = new Map(document.nodes.map((node: any, index: number) => [node.id, `node${index}`]))
+  const normalize = (document: { nodes: { id: string }[] }) => {
+    const ids = new Map(document.nodes.map((node, index) => [node.id, `node${index}`]))
     return JSON.parse(JSON.stringify(document), (_key, value) =>
       typeof value === 'string' && ids.has(value) ? ids.get(value) : value,
     )

@@ -6,7 +6,7 @@ import {
   createProgressiveMiterBrepProfileBody,
   streamProgressiveMiterBrepProfileBody,
 } from '../src/kernel/geometry/brep'
-import { inspectMiterProfileSmoothness } from '../src/kernel/miterProfileSmoothness'
+import { inspectMiterProfileSmoothness, type MiterProfileSmoothness } from '../src/kernel/miterProfileSmoothness'
 const law = (value: number): NurbsScaleLaw => ({
   degree: 1,
   knots: [0, 0, 1, 1],
@@ -140,7 +140,7 @@ it('certifies every closed joint-mode profile seam within the declared aggregate
   const graph = compileRushFrontend(readFileSync('examples/rush/closed-miter-frame-guide-affine-hollow.r', 'utf8'))
   const built = buildOwnNurbs(graph.document, { action: 'build', display: { segments: 4, subdivisionLevels: 0 } })
   const node = graph.document.nodes.find(n => n.op === 'brep_progressive_miter_sweep')!
-  const report = built.report.construction![node.id] as any
+  const report = built.report.construction![node.id] as { profileSmoothness: MiterProfileSmoothness }
   expect(report.profileSmoothness).toMatchObject({
     maxWork: 2000000,
     profile: { certifiedOrder: 2, exactG1G2Certified: true },

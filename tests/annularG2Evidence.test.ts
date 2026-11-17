@@ -53,21 +53,22 @@ it('presents whole-seam tolerance G2 independently of exact strip G2', () => {
   })
   expect(readAnnularG2Evidence({})).toEqual({})
 })
+type Receipt = ReturnType<typeof receipt>
 it('refuses incomplete scopes, inconsistent budgets and unsupported claims', () => {
   const mutations = [
-    (r: any) => r.geometricCells++,
-    (r: any) => (r.geometricMaxCells = 0),
-    (r: any) => r.capInternalSeams[0].geometricG2.seams.pop(),
-    (r: any) => (r.capInternalSeams[0].geometricG2.solidGeometryCertified = true),
-    (r: any) => (r.capInternalSeams[0].geometricG2.exactIdentityClaim = true),
-    (r: any) => (r.capInternalSeams[0].geometricG2.withinTolerance = false),
-    (r: any) => (r.capInternalSeams[1].extractionComplete = false),
-    (r: any) => (r.capInternalSeams[0].geometricG2.seams[0].inspection.orientation = null),
-    (r: any) => (r.capInternalSeams[0].geometricG2.seams[0].inspection.cells = 0),
-    (r: any) => (r.capInternalSeams[0].geometricG2.seams[0].inspection.branches[0].normalUpper = 1e-4),
-    (r: any) => (r.capInternalSeams[0].geometricG2.seams[0].inspection.branches[0].curvatureUpper = 1e-3),
-    (r: any) => (r.capInternalSeams[0].geometricG2.seams[0].inspection.branches[0].normalLower = 1),
-    (r: any) => (r.capInternalSeams[0].geometricG2.seams[0].faces = [16, 16]),
+    (r: Receipt) => r.geometricCells++,
+    (r: Receipt) => (r.geometricMaxCells = 0),
+    (r: Receipt) => r.capInternalSeams[0].geometricG2.seams.pop(),
+    (r: Receipt) => (r.capInternalSeams[0].geometricG2.solidGeometryCertified = true),
+    (r: Receipt) => (r.capInternalSeams[0].geometricG2.exactIdentityClaim = true),
+    (r: Receipt) => (r.capInternalSeams[0].geometricG2.withinTolerance = false),
+    (r: Receipt) => (r.capInternalSeams[1].extractionComplete = false),
+    (r: Receipt) => (r.capInternalSeams[0].geometricG2.seams[0].inspection.orientation = null),
+    (r: Receipt) => (r.capInternalSeams[0].geometricG2.seams[0].inspection.cells = 0),
+    (r: Receipt) => (r.capInternalSeams[0].geometricG2.seams[0].inspection.branches[0].normalUpper = 1e-4),
+    (r: Receipt) => (r.capInternalSeams[0].geometricG2.seams[0].inspection.branches[0].curvatureUpper = 1e-3),
+    (r: Receipt) => (r.capInternalSeams[0].geometricG2.seams[0].inspection.branches[0].normalLower = 1),
+    (r: Receipt) => (r.capInternalSeams[0].geometricG2.seams[0].faces = [16, 16]),
   ]
   for (const mutate of mutations) {
     const r = receipt()

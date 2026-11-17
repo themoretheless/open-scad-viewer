@@ -4,6 +4,7 @@ import { resolve } from 'node:path'
 import { expect, it } from 'vitest'
 import { inspectNurbsBrep, analyzeNurbsBrep } from '../src/kernel/geometry/brep'
 
+type UiBody = { id: string; brep: Parameters<typeof analyzeNurbsBrep>[0] }
 // Verify real browser exports against independently checked service histories.
 const root = process.env.CAD_MIXED_UI_EVIDENCE
 const fixtures = process.env.CAD_MIXED20_UI_OUTPUT
@@ -13,7 +14,7 @@ it.runIf(!!root && !!fixtures).each((process.env.CAD_MIXED_UI_PARTS ?? 'bracket,
     const expected = JSON.parse(readFileSync(resolve(fixtures!, name, 'expected.json'), 'utf8'))
     for (let step = 0; step <= 20; step++) {
       const document = JSON.parse(readFileSync(resolve(root!, `${name}-${step}.json`), 'utf8'))
-      const body = document.bodies.find((b: any) => b.id === name),
+      const body = document.bodies.find((b: UiBody) => b.id === name),
         oracle = expected[step].bodies[0]
       expect(inspectNurbsBrep(body.brep).topologyValid, `step ${step}`).toBe(true)
       const actual = analyzeNurbsBrep(body.brep),
@@ -24,7 +25,7 @@ it.runIf(!!root && !!fixtures).each((process.env.CAD_MIXED_UI_PARTS ?? 'bracket,
       for (let tool = used; tool < 6; tool++) {
         const initial = JSON.parse(readFileSync(resolve(fixtures!, name, `tool-${tool}.json`), 'utf8'))
         expect(
-          document.bodies.find((b: any) => b.id === initial.id)?.brep,
+          document.bodies.find((b: UiBody) => b.id === initial.id)?.brep,
           `step ${step}: untouched tool ${tool}`,
         ).toEqual(initial.brep)
       }
@@ -34,7 +35,7 @@ it.runIf(!!root && !!fixtures).each((process.env.CAD_MIXED_UI_PARTS ?? 'bracket,
       const { exportSolidStepCurrent } = await import('../src/kernel/solidStepExchange')
       const { importDirectStepV9 } = await import('../src/kernel/cadNurbsStep')
       const final = JSON.parse(readFileSync(resolve(root!, `${name}-20.json`), 'utf8')).bodies.find(
-        (b: any) => b.id === name,
+        (b: UiBody) => b.id === name,
       )
       const first = await exportSolidStepCurrent(final)
       const second = await exportSolidStepCurrent({ ...final, brep: importDirectStepV9(first).model })
@@ -45,10 +46,10 @@ it.runIf(!!root && !!fixtures).each((process.env.CAD_MIXED_UI_PARTS ?? 'bracket,
         : { schema: 'cad-roadmap-step/1', units: 'mm', toleranceMm: 1e-6, relativeVolumeTolerance: 1e-8, parts: [] }
       const oracle = expected[20].bodies[0].brep
       const boundsMm = [Math.min, Math.max].map(fn =>
-        [0, 1, 2].map(a => fn(...oracle.vertices.map((v: any) => v.point[a]))),
+        [0, 1, 2].map(a => fn(...oracle.vertices.map((v: { point: number[] }) => v.point[a]))),
       )
       const volumeMm3 = analyzeNurbsBrep(oracle).signedVolumeMm3
-      manifest.parts = manifest.parts.filter((p: any) => !p.name.startsWith(name + '-ui20-'))
+      manifest.parts = manifest.parts.filter((p: { name: string }) => !p.name.startsWith(name + '-ui20-'))
       for (const [i, text] of [first, second].entries()) {
         const part = name + '-ui20-' + i,
           file = part + '.step'

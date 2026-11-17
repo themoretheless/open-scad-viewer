@@ -7,6 +7,11 @@ import {
 import { decodePhoto, PhotoCollection } from '../src/app/photogrammetry/input'
 import { photoReportJson } from '../src/app/photogrammetry/report'
 
+/** Calibration JSON loosened so tests can write deliberately invalid values. */
+type LooseCalibration = {
+  coordinateSystem: unknown
+  groups: (Record<string, unknown> & { id: unknown; distortion: Record<string, unknown> })[]
+}
 const example = () => parsePhotoCalibration(photoCalibrationExampleJson())
 afterEach(() => vi.unstubAllGlobals())
 
@@ -20,31 +25,31 @@ describe('measured calibration import', () => {
 
   it('rejects ambiguous models, duplicate identities, missing values and non-finite intrinsics', () => {
     const changes = [
-      (d: any) => {
+      (d: LooseCalibration) => {
         d.groups[0].distortion.model = 'opencv-fisheye'
       },
-      (d: any) => {
+      (d: LooseCalibration) => {
         d.groups[1].id = d.groups[0].id
       },
-      (d: any) => {
+      (d: LooseCalibration) => {
         d.groups[0].fx = Infinity
       },
-      (d: any) => {
+      (d: LooseCalibration) => {
         delete d.groups[0].distortion.p2
       },
-      (d: any) => {
+      (d: LooseCalibration) => {
         d.coordinateSystem = 'raw-sensor'
       },
-      (d: any) => {
+      (d: LooseCalibration) => {
         d.groups[0].imageWidth = 3.5
       },
-      (d: any) => {
+      (d: LooseCalibration) => {
         d.groups[0].rational = true
       },
     ]
     for (const change of changes) {
       const document = example()
-      change(document)
+      change(document as unknown as LooseCalibration)
       expect(() => parsePhotoCalibration(JSON.stringify(document))).toThrow()
     }
     expect(() => parsePhotoCalibration(' '.repeat(128 * 1024 + 1))).toThrow('128 KiB')

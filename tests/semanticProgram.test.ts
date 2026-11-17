@@ -31,6 +31,12 @@ import {
   type SemanticCarrierKey,
   type SemanticBackendPayloadLease,
   type SemanticProgramBackend,
+  type SemanticRuntimeValue,
+  type SemanticBackendEvaluation,
+  type SemanticBackendContext,
+  type SemanticBackendCloseOutcome,
+  type SemanticBackendCloseResult,
+  type SemanticBackendSession,
 } from '../src/language/semantic/semanticProgramExecutor'
 import {
   lowerOpenSCADToSemanticProgram,
@@ -38,6 +44,10 @@ import {
 } from '../src/language/semantic/semanticProgramLowerer'
 import { lowerOpenSCADToSemanticProgramUnchecked } from '../src/language/semantic/openscadSemanticLowerer'
 import { OpenSCADParseError } from '../src/language/openscadErrors'
+
+/** Untyped view of a cloned program, so tests can forge deliberately malformed fields. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- forged programs need arbitrary deep writes
+type Forgeable = any
 
 function clone<T>(value: T): T {
   return structuredClone(value)
@@ -77,7 +87,7 @@ function operation(
   }
 }
 
-function finalize(program: Record<string, any>): SemanticProgramV1 {
+function finalize(program: Forgeable): SemanticProgramV1 {
   program.core.capabilityClosure = [...deriveSemanticCapabilityClosure(program.core)]
   return program as SemanticProgramV1
 }
@@ -176,7 +186,7 @@ function brepSphereProgram(): SemanticProgramV1 {
       },
       'sphere',
     ),
-  ) as any
+  ) as Forgeable
   const start = source.indexOf('sphere')
   program.provenance[0].span = { start, end: source.length }
   program.tessellationIntents = [
@@ -192,8 +202,8 @@ function brepSphereProgram(): SemanticProgramV1 {
 }
 
 function addIndependentNode(
-  program: Record<string, any>,
-  node: Record<string, any>,
+  program: Forgeable,
+  node: Record<string, unknown>,
   name: string,
   color: number[] = [1, 1, 1, 1],
 ): number {
@@ -267,16 +277,16 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
     expect(() => normalizeSemanticProgram({ ...legacyBoxProgram(), engine: 'brep' })).toThrow(
       /unknown or missing fields/,
     )
-    const extraNode = clone(legacyBoxProgram()) as any
+    const extraNode = clone(legacyBoxProgram()) as Forgeable
     extraNode.core.nodes[0].provider = 'manifold'
     expect(() => normalizeSemanticProgram(extraNode)).toThrow(/unknown or missing fields/)
 
-    const future = clone(legacyBoxProgram()) as any
+    const future = clone(legacyBoxProgram()) as Forgeable
     future.core.requiredFeatures = ['future.tag']
     expect(() => normalizeSemanticProgram(future)).toThrow(/requires exactly semantic\.execution-v2/)
 
     for (const bad of [NaN, Infinity, -Infinity, -0]) {
-      const invalid = clone(legacyBoxProgram()) as any
+      const invalid = clone(legacyBoxProgram()) as Forgeable
       invalid.core.nodes[0].size[0] = bad
       expect(() => normalizeSemanticProgram(invalid)).toThrow(SemanticProgramValidationError)
     }
@@ -284,11 +294,11 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
   })
 
   it('recomputes operation, occurrence and scene identities from structural data', () => {
-    const program = clone(legacyBoxProgram()) as any
+    const program = clone(legacyBoxProgram()) as Forgeable
     program.core.operations[0].operationId = `opv1:${'0'.repeat(64)}`
     expect(() => normalizeSemanticProgram(program)).toThrow(/operation ID does not match/)
 
-    const occurrence = clone(legacyBoxProgram()) as any
+    const occurrence = clone(legacyBoxProgram()) as Forgeable
     occurrence.core.occurrences[0].dynamicSlots = [
       {
         name: 'i',
@@ -298,13 +308,13 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
     ]
     expect(() => normalizeSemanticProgram(occurrence)).toThrow(/occurrence ID does not match/)
 
-    const entity = clone(legacyBoxProgram()) as any
+    const entity = clone(legacyBoxProgram()) as Forgeable
     entity.core.occurrences[0].sceneEntityId = `entity:v2:${'0'.repeat(64)}`
     expect(() => normalizeSemanticProgram(entity)).toThrow(/scene entity ID does not match/)
   })
 
   it('requires explicit ambiguity evidence for same-name siblings', () => {
-    const program = clone(legacyBoxProgram()) as any
+    const program = clone(legacyBoxProgram()) as Forgeable
     addIndependentNode(program, { ...program.core.nodes[0] }, 'cube')
     expect(() => normalizeSemanticProgram(program)).toThrow(/same-name siblings require explicit/)
 
@@ -317,7 +327,7 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
   })
 
   it('enforces backward typed DAG references, no implicit coercion and canonical postorder', () => {
-    const forward = clone(legacyBoxProgram()) as any
+    const forward = clone(legacyBoxProgram()) as Forgeable
     forward.core.nodes = [
       {
         id: 0,
@@ -330,10 +340,10 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
     ]
     expect(() => normalizeSemanticProgram(forward)).toThrow(/earlier node/)
 
-    const projected = clone(lowerOpenSCADToSemanticProgram('projection() cube(1);').program) as any
+    const projected = clone(lowerOpenSCADToSemanticProgram('projection() cube(1);').program) as Forgeable
     expect(() => normalizeSemanticProgram(projected)).not.toThrow()
 
-    const inputProducer = projected.core.occurrences.findIndex((occurrence: any) => occurrence.node === 0)
+    const inputProducer = projected.core.occurrences.findIndex((occurrence: { node: number }) => occurrence.node === 0)
     projected.core.result.item = {
       node: 0,
       producerOccurrence: inputProducer,
@@ -364,50 +374,50 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
         diagnosticTemplates: [],
       },
       provenance: [],
-    } as any)
+    } as Parameters<typeof normalizeSemanticProgram>[0])
     expect(normalizeSemanticProgram(empty).core.result).toEqual({ tag: 'empty', type: 'never' })
 
-    const duplicated = clone(lowerOpenSCADToSemanticProgram('cube([1,2,3]); cube([1,2,3]);').program) as any
+    const duplicated = clone(lowerOpenSCADToSemanticProgram('cube([1,2,3]); cube([1,2,3]);').program) as Forgeable
     const normalized = normalizeSemanticProgram(duplicated)
     expect(normalized.core.nodes).toHaveLength(2)
     expect(normalized.core.result.tag).toBe('multi')
     expect(semanticProgramHash(normalized)).not.toBe(semanticProgramHash(legacyBoxProgram()))
 
-    const malformed = clone(duplicated) as any
+    const malformed = clone(duplicated) as Forgeable
     malformed.core.result.items = [malformed.core.result.items[0]]
     expect(() => normalizeSemanticProgram(malformed)).toThrow(/multi requires at least two/)
   })
 
   it('makes kernel order and discarded effects complete, topological, and hash-covered', () => {
-    const union = clone(lowerOpenSCADToSemanticProgram('union(){cube(1);sphere(1);}').program) as any
+    const union = clone(lowerOpenSCADToSemanticProgram('union(){cube(1);sphere(1);}').program) as Forgeable
     expect(union.core.execution.evaluationOrder).toEqual([0, 1, 2])
 
-    const missing = clone(union) as any
+    const missing = clone(union) as Forgeable
     missing.core.execution.evaluationOrder.pop()
     expect(() => normalizeSemanticProgram(missing)).toThrow(/every node exactly once/)
 
-    const duplicate = clone(union) as any
+    const duplicate = clone(union) as Forgeable
     duplicate.core.execution.evaluationOrder = [0, 0, 2]
     expect(() => normalizeSemanticProgram(duplicate)).toThrow(/duplicate node/)
 
-    const dependency = clone(union) as any
+    const dependency = clone(union) as Forgeable
     dependency.core.execution.evaluationOrder = [2, 0, 1]
     expect(() => normalizeSemanticProgram(dependency)).toThrow(/before one of its inputs/)
 
     const effect = clone(
       lowerOpenSCADToSemanticProgram('difference(){if(false)cube(1);cube(1);sphere(1);}').program,
-    ) as any
+    ) as Forgeable
     expect(effect.core.execution.discardedEffects).toMatchObject([
       {
         tag: 'legacy-difference-cutters',
         root: 2,
       },
     ])
-    const forgedRoot = clone(effect) as any
+    const forgedRoot = clone(effect) as Forgeable
     forgedRoot.core.execution.discardedEffects[0].root = 0
     expect(() => normalizeSemanticProgram(forgedRoot)).toThrow(/discarded|cutter effect|effect/)
 
-    const brepEffect = clone(brepSphereProgram()) as any
+    const brepEffect = clone(brepSphereProgram()) as Forgeable
     brepEffect.core.execution.discardedEffects = [
       {
         tag: 'legacy-difference-cutters',
@@ -430,11 +440,11 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
       prefixFrontier: [{ root: 0, ownerOccurrence: 0 }],
     })
 
-    const missingRoot = clone(artifact.program) as any
+    const missingRoot = clone(artifact.program) as Forgeable
     missingRoot.core.execution.terminal.prefixFrontier = []
     expect(() => normalizeSemanticProgram(missingRoot)).toThrow(/maximal completed node/)
 
-    const wrongTemplate = clone(artifact.program) as any
+    const wrongTemplate = clone(artifact.program) as Forgeable
     wrongTemplate.core.diagnosticTemplates[0].severity = 'warning'
     expect(() => normalizeSemanticProgram(wrongTemplate)).toThrow(/error diagnostic template/)
 
@@ -483,7 +493,7 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
 
   it('separates analytic B-rep nodes from materialized legacy polygonization', () => {
     expect(() => normalizeSemanticProgram(brepSphereProgram())).not.toThrow()
-    const polygonalBrep = clone(brepSphereProgram()) as any
+    const polygonalBrep = clone(brepSphereProgram()) as Forgeable
     polygonalBrep.core.nodes[0] = {
       id: 0,
       kind: 'sphere-polygonal',
@@ -494,7 +504,7 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
     polygonalBrep.core.capabilityClosure = [...deriveSemanticCapabilityClosure(polygonalBrep.core)]
     expect(() => normalizeSemanticProgram(polygonalBrep)).toThrow(/brep-1 topology requires analytic/)
 
-    const analyticLegacy = clone(legacyBoxProgram()) as any
+    const analyticLegacy = clone(legacyBoxProgram()) as Forgeable
     analyticLegacy.core.nodes[0] = {
       id: 0,
       kind: 'sphere-analytic',
@@ -507,10 +517,10 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
 
   it('fixes matrix layout/composition, preserves legacy singular multmatrix and applies the B-rep nonsingular rule', () => {
     const matrixSource = 'multmatrix(m=[[0,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]) cube(1);'
-    const legacySingular = clone(lowerOpenSCADToSemanticProgram(matrixSource).program) as any
+    const legacySingular = clone(lowerOpenSCADToSemanticProgram(matrixSource).program) as Forgeable
     expect(() => normalizeSemanticProgram(legacySingular)).not.toThrow()
 
-    const singular = clone(legacySingular) as any
+    const singular = clone(legacySingular) as Forgeable
     singular.core.language.contract = 'openscad-viewer/brep-1'
     singular.core.language.semanticsRevision = 'brep-1.0.0'
     singular.core.declaredCapabilities = ['geometry.brep']
@@ -525,7 +535,7 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
 
   it('binds UTF-16 spans to an exact UTF-8 source attestation', () => {
     const source = '/*🙂*/ cube(1);'
-    const program = clone(legacyBoxProgram(source)) as any
+    const program = clone(legacyBoxProgram(source)) as Forgeable
     program.provenance[0].span = { start: 7, end: source.length }
     expect(normalizeSemanticProgram(program, source).source).toEqual({
       sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
@@ -538,7 +548,7 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
   })
 
   it('requires exact authored+inferred capability closure', () => {
-    const program = clone(brepSphereProgram()) as any
+    const program = clone(brepSphereProgram()) as Forgeable
     expect(program.core.capabilityClosure).toContain('construct.sphere.analytic')
     expect(program.core.capabilityClosure).toContain('geometry.brep')
     program.core.capabilityClosure.pop()
@@ -577,8 +587,8 @@ describe('SemanticProgram canonical codec and hash domains', () => {
   })
 
   it('keeps source/provenance and tessellation policy outside SPC1 programHash', () => {
-    const first = clone(brepSphereProgram()) as any
-    const second = clone(first) as any
+    const first = clone(brepSphereProgram()) as Forgeable
+    const second = clone(first) as Forgeable
     const source = '// @language openscad-viewer/brep-1\n// @requires geometry.brep\n          sphere(2);'
     second.source = semanticSourceDescriptor(source)
     second.provenance[0].span = { start: source.indexOf('sphere'), end: source.length }
@@ -661,7 +671,7 @@ describe('SemanticProgram canonical codec and hash domains', () => {
     shared.set(encoded)
     expect(() => decodeSemanticProgram(shared)).toThrow(/shared binary buffers are forbidden/)
 
-    const forged = clone(legacyBoxProgram()) as any
+    const forged = clone(legacyBoxProgram()) as Forgeable
     let hash = forged.source.sha256
     Object.defineProperty(forged.source, 'sha256', {
       enumerable: true,
@@ -746,14 +756,14 @@ describe('OpenSCAD exact-source semantic lowerer', () => {
       'boolean',
       'linear-extrude',
     ])
-    expect((extruded.program.core.nodes[3] as any).operation).toBe('union')
+    expect((extruded.program.core.nodes[3] as { operation?: unknown }).operation).toBe('union')
 
     const difference = lowerOpenSCADToSemanticProgram(
       'difference(){ union(){ cube(1); translate([2,0,0]) cube(1); } sphere(1); translate([3,0,0]) sphere(1); }',
     )
     const root = difference.program.core.nodes.at(-1)
     expect(root).toMatchObject({ kind: 'boolean', operation: 'difference' })
-    expect((root as any).inputs).toHaveLength(2)
+    expect((root as { inputs?: unknown }).inputs).toHaveLength(2)
 
     const partitioned = lowerOpenSCADToSemanticProgram(
       'difference(){ group(){ cube(); sphere(1); } group(){ translate([1,0,0]) cube(); sphere(0.5); } }',
@@ -768,15 +778,18 @@ describe('OpenSCAD exact-source semantic lowerer', () => {
 
 describe('SemanticProgram executable backend seam', () => {
   type StringPayloadFamily = { readonly [K in SemanticCarrierKey]: string }
+  type StringValue = SemanticRuntimeValue<StringPayloadFamily>
+  type StringEvaluation = SemanticBackendEvaluation<StringPayloadFamily>
+  type ExecutableArtifact = Parameters<typeof executeSemanticProgram>[0]
 
   function sessionBackend(implementation: {
     validatePayload(carrierKey: SemanticCarrierKey, payload: unknown): boolean
-    evaluate(node: SemanticNode, inputs: readonly any[], context: any): any
+    evaluate(node: SemanticNode, inputs: readonly StringValue[], context: SemanticBackendContext): unknown
   }): SemanticProgramBackend<StringPayloadFamily> {
     return {
       begin() {
         const leases = new Map<SemanticBackendPayloadLease, unknown>()
-        let closePromise: Promise<any> | undefined
+        let closePromise: Promise<unknown> | undefined
         return {
           validatePayload(carrierKey, payload, lease) {
             return (
@@ -799,10 +812,10 @@ describe('SemanticProgram executable backend seam', () => {
               ) {
                 const lease = Object.freeze({}) as SemanticBackendPayloadLease
                 leases.set(lease, payload.value)
-                return { ...returned, lease }
+                return { ...(returned as object), lease } as StringEvaluation
               }
             }
-            return returned
+            return returned as StringEvaluation
           },
           async releasePayload(lease) {
             leases.delete(lease)
@@ -844,16 +857,16 @@ describe('SemanticProgram executable backend seam', () => {
     allocated: number
     released: number
     live: Set<SemanticBackendPayloadLease>
-    outcomes: any[]
+    outcomes: SemanticBackendCloseOutcome[]
   }
 
   function countedBackend(
     implementation: (
       node: SemanticNode,
-      inputs: readonly any[],
-      context: any,
-      allocate: (node: SemanticNode, payload: string) => any,
-    ) => any,
+      inputs: readonly StringValue[],
+      context: SemanticBackendContext,
+      allocate: (node: SemanticNode, payload: string) => StringEvaluation,
+    ) => unknown,
     options: { closeReject?: boolean; disposeReject?: boolean } = {},
   ): { backend: SemanticProgramBackend<StringPayloadFamily>; state: CountedBackendState } {
     const state: CountedBackendState = {
@@ -870,8 +883,8 @@ describe('SemanticProgram executable backend seam', () => {
         state.beginCalls++
         const entries = new Map<SemanticBackendPayloadLease, string>()
         const releasePromises = new Map<SemanticBackendPayloadLease, Promise<void>>()
-        const inFlight = new Set<Promise<any>>()
-        let closePromise: Promise<any> | undefined
+        const inFlight = new Set<Promise<unknown>>()
+        let closePromise: Promise<unknown> | undefined
         const release = (lease: SemanticBackendPayloadLease): Promise<void> => {
           const existing = releasePromises.get(lease)
           if (existing) return existing
@@ -908,7 +921,7 @@ describe('SemanticProgram executable backend seam', () => {
               () => inFlight.delete(pending),
               () => inFlight.delete(pending),
             )
-            return pending
+            return pending as Promise<StringEvaluation>
           },
           releasePayload: release,
           close(outcome) {
@@ -959,7 +972,7 @@ describe('SemanticProgram executable backend seam', () => {
         valueType: node.valueType,
         evidence: { tag: 'representation-preserving' },
         payload: `${node.kind}(${inputs.map(input => (input.tag === 'value' ? input.payload : 'empty')).join(',')})`,
-      } as any
+      }
     },
   })
 
@@ -1042,13 +1055,12 @@ describe('SemanticProgram executable backend seam', () => {
         artifact,
         sessionBackend({
           validatePayload: () => true,
-          evaluate: node =>
-            ({
-              tag: 'value',
-              valueType: { ...node.valueType, smuggled: undefined },
-              evidence: { tag: 'representation-preserving' },
-              payload: 'box',
-            }) as any,
+          evaluate: node => ({
+            tag: 'value',
+            valueType: { ...node.valueType, smuggled: undefined },
+            evidence: { tag: 'representation-preserving' },
+            payload: 'box',
+          }),
         }),
       ),
     ).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_TYPE' })
@@ -1072,7 +1084,7 @@ describe('SemanticProgram executable backend seam', () => {
                 return 'value'
               },
             })
-            return value as any
+            return value
           },
         }),
       ),
@@ -1084,13 +1096,12 @@ describe('SemanticProgram executable backend seam', () => {
         artifact,
         sessionBackend({
           validatePayload: () => true,
-          evaluate: node =>
-            ({
-              tag: 'value',
-              valueType: node.valueType,
-              evidence: { tag: 'representation-preserving' },
-              payload: null,
-            }) as any,
+          evaluate: node => ({
+            tag: 'value',
+            valueType: node.valueType,
+            evidence: { tag: 'representation-preserving' },
+            payload: null,
+          }),
         }),
       ),
     ).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_TYPE' })
@@ -1357,7 +1368,7 @@ describe('SemanticProgram executable backend seam', () => {
               evidence: PRESERVING,
               payload: `value-${calls}`,
               lease,
-            } as any
+            } as StringEvaluation
           },
           async releasePayload(candidate) {
             if (live.delete(candidate)) released++
@@ -1442,7 +1453,9 @@ describe('SemanticProgram executable backend seam', () => {
     await expect(executeSemanticProgram(artifact, counted.backend, { shouldAbort: () => true })).rejects.toMatchObject({
       code: 'E_SEMANTIC_ABORTED',
     })
-    await expect(executeSemanticProgram({ ...artifact } as any, counted.backend)).rejects.toThrow(/artifact minted/)
+    await expect(executeSemanticProgram({ ...artifact } as ExecutableArtifact, counted.backend)).rejects.toThrow(
+      /artifact minted/,
+    )
     expect(counted.state.beginCalls).toBe(0)
     expect(counted.state.closeCalls).toBe(0)
   })
@@ -1481,7 +1494,7 @@ describe('SemanticProgram executable backend seam', () => {
               throw new Error('invalid evaluate accessor')
             },
           })
-          return session as any
+          return session as unknown as SemanticBackendSession<StringPayloadFamily>
         },
       }),
     ).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_FAILURE', node: null })
@@ -1533,7 +1546,7 @@ describe('SemanticProgram executable backend seam', () => {
               evidence: PRESERVING,
               payload: 'box',
               lease,
-            } as any
+            } as StringEvaluation
           },
           async releasePayload() {},
           async close(outcome) {
@@ -1551,7 +1564,7 @@ describe('SemanticProgram executable backend seam', () => {
                 },
               },
               unexpected: true,
-            } as any
+            } as SemanticBackendCloseResult
           },
         }
       },
@@ -1579,13 +1592,17 @@ describe('SemanticProgram executable backend seam', () => {
   })
 
   it('rejects structurally valid but untrusted SPE1 envelopes at the execution boundary', async () => {
-    await expect(executeSemanticProgram(legacyBoxProgram() as any, tracingBackend)).rejects.toThrow(/artifact minted/)
+    await expect(executeSemanticProgram(legacyBoxProgram() as ExecutableArtifact, tracingBackend)).rejects.toThrow(
+      /artifact minted/,
+    )
     const artifact = lowerOpenSCADToSemanticProgram('cube([1, 2, 3]);')
     expect(Object.isFrozen(artifact.program.core.nodes[0])).toBe(true)
-    await expect(executeSemanticProgram({ ...artifact } as any, tracingBackend)).rejects.toThrow(/artifact minted/)
+    await expect(executeSemanticProgram({ ...artifact } as ExecutableArtifact, tracingBackend)).rejects.toThrow(
+      /artifact minted/,
+    )
     const other = lowerOpenSCADToSemanticProgram('sphere(1);')
     await expect(
-      executeSemanticProgram({ ...artifact, program: other.program } as any, tracingBackend),
+      executeSemanticProgram({ ...artifact, program: other.program } as ExecutableArtifact, tracingBackend),
     ).rejects.toThrow(/artifact minted/)
 
     const unchecked = lowerOpenSCADToSemanticProgramUnchecked('cube(1);')
@@ -1598,6 +1615,7 @@ describe('SemanticProgram executable backend seam', () => {
     let capturedRegistry: WeakSet<object> | null = null
     try {
       WeakSet.prototype.add = function (value: object) {
+        // eslint-disable-next-line @typescript-eslint/no-this-alias -- the test captures the receiver to prove the registry stays private
         capturedRegistry = this
         return originalAdd.call(this, value)
       }

@@ -1,7 +1,7 @@
 import { expect } from 'vitest'
 /** Keep historical fixtures immutable while accepting strictly tighter native
  * enclosures. All remaining fields retain the caller's exact comparison. */
-export function normalizeRefinedNativeEvidence(actual: any, reference: any, key = ''): any {
+export function normalizeRefinedNativeEvidence(actual: unknown, reference: unknown, key = ''): unknown {
   if (key === 'contractionUpper' && typeof reference === 'number' && typeof actual === 'number') {
     expect(Number.isFinite(actual)).toBe(true)
     expect(actual).toBeGreaterThanOrEqual(0)
@@ -27,7 +27,7 @@ export function normalizeRefinedNativeEvidence(actual: any, reference: any, key 
     return Object.fromEntries(
       Object.entries(actual).map(([name, value]) => [
         name,
-        normalizeRefinedNativeEvidence(value, reference[name], name),
+        normalizeRefinedNativeEvidence(value, (reference as Record<string, unknown>)[name], name),
       ]),
     )
   return actual

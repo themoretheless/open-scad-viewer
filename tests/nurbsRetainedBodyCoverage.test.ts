@@ -23,8 +23,8 @@ it('transports native retained face ownership without claiming embedding', () =>
   const open = structuredClone(model)
   open.shells[1]!.closed = false
   expect(audit(open)).toMatchObject({ faceCoverageCertified: false })
-  const invalid = structuredClone(model) as any
-  invalid.shells[0].faces[0].reversed = 1
+  const invalid = structuredClone(model)
+  ;(invalid.shells[0]!.faces[0]! as { reversed: unknown }).reversed = 1
   expect(() => audit(invalid)).toThrow()
   for (const face of [-1, 0.5, 2]) {
     const wrong = structuredClone(model)

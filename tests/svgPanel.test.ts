@@ -1,6 +1,7 @@
 import { createRenderer, h, nextTick, reactive } from 'svet'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import SvgPanel from '../src/features/SvgPanel.svt'
+import type { SvgJob } from '../src/exchange/svgWorkerProtocol'
 
 const geometry = vi.hoisted(() => ({
   preview: vi.fn(),
@@ -18,7 +19,7 @@ vi.mock('../src/exchange/svgWorkerClient', () => ({
   createSvgWorkerClient: () => ({
     cancel: geometry.cancel,
     dispose: geometry.dispose,
-    run: async (job: any, control: any) => {
+    run: async (job: SvgJob, control: { signal: AbortSignal }) => {
       geometry.run(job, control)
       if (control.signal.aborted) throw new DOMException('Cancelled', 'AbortError')
       if (job.kind === 'preview') return geometry.preview(job.svg, job.options)
@@ -39,12 +40,13 @@ vi.mock('../src/exchange/svgWorkerClient', () => ({
   }),
 }))
 
+type Handler = (event: unknown) => unknown
 class Node {
   parent: Node | null = null
   children: Node[] = []
-  props: Record<string, any> = {}
+  props: Record<string, unknown> = {}
   text = ''
-  value: any = ''
+  value: unknown = ''
   selected = false
   constructor(public tag: string) {}
   get tagName() {
@@ -84,7 +86,8 @@ const renderer = createRenderer<Node, Node>({
     if (node.parent) node.parent.children = node.parent.children.filter(child => child !== node)
     node.parent = parent
     const index = anchor ? parent.children.indexOf(anchor) : -1
-    index < 0 ? parent.children.push(node) : parent.children.splice(index, 0, node)
+    if (index < 0) parent.children.push(node)
+    else parent.children.splice(index, 0, node)
   },
   remove: node => {
     if (node.parent) node.parent.children = node.parent.children.filter(child => child !== node)
@@ -154,7 +157,7 @@ afterEach(() => {
 async function mount(props: Record<string, unknown> = {}) {
   const root = new Node('root'),
     state = reactive({ meshes: [], hit: null, available: false, locale: 'en', ...props })
-  const app = renderer.createApp({ render: () => h(SvgPanel, state as any) })
+  const app = renderer.createApp({ render: () => h(SvgPanel, state as Record<string, unknown>) })
   app.mount(root)
   unmounts.push(() => app.unmount())
   await nextTick()
@@ -171,19 +174,19 @@ async function mount(props: Record<string, unknown> = {}) {
     return node!
   }
   const edit = async (label: string, value: unknown) => {
-    input(label).props['onUpdate:modelValue'](value)
+    ;(input(label).props['onUpdate:modelValue'] as Handler)(value)
     await nextTick()
   }
   const click = async (name: string) => {
     const node = button(name)
     expect(node.props.disabled).toBeFalsy()
-    await node.props.onClick({})
+    await (node.props.onClick as Handler)({})
     await Promise.resolve()
     await nextTick()
   }
   const upload = async (label: string, files: unknown[]) => {
     const node = input(label)
-    await node.props.onChange({ target: { files, value: 'selected' } })
+    await (node.props.onChange as Handler)({ target: { files, value: 'selected' } })
     await nextTick()
   }
   return {
@@ -259,7 +262,7 @@ it('passes physical scale, curve quality, silhouette settings and extrusion heig
 it.each(['Preview', 'Download artwork SVG', 'Download contours SVG', 'Add extrusion to model'])(
   'discards a stale %s result after markup is edited',
   async action => {
-    let resolve!: (value: any) => void
+    let resolve!: (value: unknown) => void
     const pending = new Promise(resolveResult => {
       resolve = resolveResult
     })
@@ -561,7 +564,7 @@ it('reports durable save failures instead of implying the SVG survived a reload'
 })
 
 it.each(['Height, mm', 'Projection axis'])('cancels work if the active %s setting changes', async label => {
-  let resolve!: (value: any) => void
+  let resolve!: (value: unknown) => void
   const wait = new Promise(done => {
     resolve = done
   })

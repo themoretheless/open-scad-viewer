@@ -14,10 +14,10 @@ const SOURCE = 'difference(){cube(3);translate([2,0,0]) cube(1);}'
 const lower = (text: string) => lowerOpenSCADToSemanticProgram(text)
 /** Rebuilds a trusted lowering with the program and/or source text tampered. */
 const forge = (
-  mutate: (draft: { program: Record<string, any>; sourceText: string }) => void,
+  mutate: (draft: { program: SemanticLoweringSuccess['program']; sourceText: string }) => void,
 ): SemanticLoweringSuccess => {
   const base = lower(HEADER + SOURCE)
-  const draft = { program: structuredClone(base.program) as Record<string, any>, sourceText: base.sourceText }
+  const draft = { program: structuredClone(base.program), sourceText: base.sourceText }
   mutate(draft)
   return { ...base, program: draft.program as SemanticLoweringSuccess['program'], sourceText: draft.sourceText }
 }
@@ -70,7 +70,7 @@ it('refuses a provenance span endpoint inside a surrogate pair', async () => {
   expect(emoji).toBeGreaterThan(0)
   const base = lower(text)
   expect(base.program.source.utf16CodeUnitLength).toBe(text.length)
-  const draft = { program: structuredClone(base.program) as Record<string, any>, sourceText: base.sourceText }
+  const draft = { program: structuredClone(base.program), sourceText: base.sourceText }
   // The emoji occupies UTF-16 offsets emoji (high) and emoji+1 (low):
   // a boundary at emoji+1 splits the pair.
   draft.program.provenance[0] = { ...draft.program.provenance[0], span: { start: emoji + 1, end: emoji + 2 } }
@@ -84,7 +84,7 @@ it('admits span endpoints at surrogate pair edges', async () => {
   const text = HEADER + '// 😀\n' + SOURCE
   const emoji = text.indexOf('😀')
   const base = lower(text)
-  const draft = { program: structuredClone(base.program) as Record<string, any>, sourceText: base.sourceText }
+  const draft = { program: structuredClone(base.program), sourceText: base.sourceText }
   draft.program.provenance[0] = { ...draft.program.provenance[0], span: { start: emoji, end: emoji + 2 } }
   const result = await executeBrepNativeProgram({
     ...base,
