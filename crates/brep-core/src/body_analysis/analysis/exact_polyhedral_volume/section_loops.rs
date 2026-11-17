@@ -530,27 +530,12 @@ fn nearest_contour(
     point_mm: &[Q; 3],
     remaining: &mut u64,
 ) -> Result<Option<PolyhedralSectionNearestPoint>> {
-    use num_traits::{One, Zero};
-
     let mut nearest: Option<PolyhedralSectionNearestPoint> = None;
     for (ring, contour) in loops.iter().enumerate() {
         let points = &contour.points_mm;
         for (segment, (a, b)) in points.iter().zip(points.iter().cycle().skip(1)).enumerate() {
             spend(remaining, 40)?;
-            let delta: [Q; 3] = std::array::from_fn(|i| &b[i] - &a[i]);
-            let length_squared: Q = delta.iter().map(|d| d * d).sum();
-            let projection: Q = delta
-                .iter()
-                .enumerate()
-                .map(|(i, d)| d * (&point_mm[i] - &a[i]))
-                .sum();
-            let t = (projection / length_squared).clamp(Q::zero(), Q::one());
-            let closest: [Q; 3] = std::array::from_fn(|i| &a[i] + &t * &delta[i]);
-            let distance_squared_mm2: Q = point_mm
-                .iter()
-                .zip(&closest)
-                .map(|(p, c)| (p - c).pow(2))
-                .sum();
+            let (closest, distance_squared_mm2) = super::nearest_segment_point(point_mm, a, b);
             if nearest
                 .as_ref()
                 .is_none_or(|candidate| distance_squared_mm2 < candidate.distance_squared_mm2)

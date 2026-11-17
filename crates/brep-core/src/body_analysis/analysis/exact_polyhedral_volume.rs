@@ -850,6 +850,29 @@ fn require_linear_span(knots: &[f64], i: usize) -> Result<()> {
     Ok(())
 }
 
+fn nearest_segment_point(point: &[Q; 3], a: &[Q; 3], b: &[Q; 3]) -> ([Q; 3], Q) {
+    use num_traits::One;
+    let delta: [Q; 3] = std::array::from_fn(|i| &b[i] - &a[i]);
+    let length_squared: Q = delta.iter().map(|d| d * d).sum();
+    let closest = if length_squared.is_zero() {
+        a.clone()
+    } else {
+        let projection: Q = delta
+            .iter()
+            .enumerate()
+            .map(|(i, d)| d * (&point[i] - &a[i]))
+            .sum();
+        let t = (projection / length_squared).clamp(Q::zero(), Q::one());
+        std::array::from_fn(|i| &a[i] + &t * &delta[i])
+    };
+    let distance_squared = point
+        .iter()
+        .zip(&closest)
+        .map(|(p, c)| (p - c).pow(2))
+        .sum();
+    (closest, distance_squared)
+}
+
 fn lift(p: &[f64]) -> [Q; 3] {
     std::array::from_fn(|i| Q::from_float(p[i]).unwrap())
 }
@@ -882,6 +905,7 @@ pub use section_loops::*;
 
 mod spatial_clip;
 pub use spatial_clip::{
-    ExactPolyhedralPointLocation, ExactPolyhedralSegmentClip, PolyhedralPointLocation,
-    exact_polyhedral_point_location, exact_polyhedral_segment_clip,
+    ExactPolyhedralBoundaryDistance, ExactPolyhedralPointLocation, ExactPolyhedralSegmentClip,
+    PolyhedralPointLocation, exact_polyhedral_boundary_distance, exact_polyhedral_point_location,
+    exact_polyhedral_segment_clip,
 };

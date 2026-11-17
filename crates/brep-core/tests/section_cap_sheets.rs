@@ -2773,3 +2773,41 @@ fn exact_spatial_classification_admits_rational_coordinates_on_an_oblique_solid(
         Material
     );
 }
+
+#[test]
+fn exact_boundary_distance_respects_the_hole_in_a_cap() {
+    use brep_core::{
+        analysis::exact_polyhedral_boundary_distance,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |a: i64, b: i64| Q::new(a.into(), b.into());
+    let query = [q(5, 4), q(3, 2), q(3, 1)];
+    let report = exact_polyhedral_boundary_distance(solid, &query, 1_000_000).unwrap();
+    assert_eq!(report.point_mm, [q(1, 1), q(3, 2), q(2, 1)]);
+    assert_eq!(report.distance_squared_mm2, q(17, 16));
+    assert!(report.face < solid.model().faces.len());
+    assert!(exact_polyhedral_boundary_distance(solid, &query, report.exact_work).is_ok());
+    assert!(exact_polyhedral_boundary_distance(solid, &query, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_boundary_distance_projects_orthogonally_onto_an_oblique_cap() {
+    use brep_core::analysis::exact_polyhedral_boundary_distance;
+    use num_rational::BigRational as Q;
+    let solid = shifted_oblique_solid(0.);
+    let q = |a: i64, b: i64| Q::new(a.into(), b.into());
+    let query = [q(23, 16), q(-1, 16), q(43, 16)];
+    let report = exact_polyhedral_boundary_distance(&solid, &query, 1_000_000).unwrap();
+    assert_eq!(report.point_mm, [q(3, 2), q(0, 1), q(5, 2)]);
+    assert_eq!(report.distance_squared_mm2, q(11, 256));
+    assert_eq!(
+        exact_polyhedral_boundary_distance(&solid, &report.point_mm, 1_000_000)
+            .unwrap()
+            .distance_squared_mm2,
+        q(0, 1)
+    );
+}

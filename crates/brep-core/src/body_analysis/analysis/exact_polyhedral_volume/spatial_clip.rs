@@ -1,4 +1,4 @@
-use super::{refuse, spend, visit_polyhedral_boundary};
+use super::{nearest_segment_point, refuse, spend, visit_polyhedral_boundary};
 use crate::{Error, Result, closed_solid::QualifiedClosedSolid};
 use num_rational::BigRational as Q;
 use num_traits::{One, Signed, Zero};
@@ -146,6 +146,84 @@ pub fn exact_polyhedral_point_location(
         }
     }
     unreachable!("bounded ray search cannot exhaust the integer range")
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralBoundaryDistance {
+    pub distance_squared_mm2: Q,
+    pub point_mm: [Q; 3],
+    /// Source face containing the closest point.
+    pub face: usize,
+    pub exact_work: u64,
+}
+
+/// Find a nearest point on the retained boundary of a qualified polyhedral
+/// solid. Orthogonal face projections are checked against holes and trims;
+/// a missed projection is resolved over all boundary segments of the face.
+pub fn exact_polyhedral_boundary_distance(
+    solid: &QualifiedClosedSolid,
+    point_mm: &[Q; 3],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralBoundaryDistance> {
+    if point_mm
+        .iter()
+        .any(|q| q.numer().bits().max(q.denom().bits()) > 8192)
+    {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Point coordinates exceed the exact bit limit",
+        ));
+    }
+    let mut remaining = max_exact_work;
+    let faces = prepare_faces(solid, &mut remaining)?;
+    let mut nearest = None::<ExactPolyhedralBoundaryDistance>;
+    for (face, boundary) in faces {
+        spend(&mut remaining, 32)?;
+        let normal = face_normal(&boundary)?;
+        let delta = std::array::from_fn(|i| &point_mm[i] - &boundary.origin[i]);
+        let residual = dot(normal, &delta);
+        let scale = &residual / dot(normal, normal);
+        let plane_distance = &residual * &scale;
+        if nearest
+            .as_ref()
+            .is_some_and(|candidate| candidate.distance_squared_mm2 <= plane_distance)
+        {
+            continue;
+        }
+        let projected = std::array::from_fn(|i| &point_mm[i] - &scale * &normal[i]);
+        let mut consider = |point_mm, distance_squared_mm2| {
+            if nearest
+                .as_ref()
+                .is_none_or(|candidate| distance_squared_mm2 < candidate.distance_squared_mm2)
+            {
+                nearest = Some(ExactPolyhedralBoundaryDistance {
+                    distance_squared_mm2,
+                    point_mm,
+                    face,
+                    exact_work: 0,
+                });
+            }
+        };
+        if point_in_face(
+            &boundary.segments,
+            &projected,
+            plane_axes(normal),
+            &mut remaining,
+        )? != FaceLocation::Outside
+        {
+            consider(projected, plane_distance);
+        } else {
+            for [a, b] in boundary.segments {
+                spend(&mut remaining, 40)?;
+                let (closest, squared) = nearest_segment_point(point_mm, &a, &b);
+                consider(closest, squared);
+            }
+        }
+    }
+    let mut result =
+        nearest.ok_or_else(|| refuse("Boundary distance requires at least one face"))?;
+    result.exact_work = max_exact_work - remaining;
+    Ok(result)
 }
 
 fn prepare_faces(
