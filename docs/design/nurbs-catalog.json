@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 383,
-  "unallocatedCount": 617,
+  "specifiedCount": 384,
+  "unallocatedCount": 616,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9828,6 +9828,30 @@
       "remainingQualification": [
         "Discover complete free edge cycles inside a certified plane slab and attach independently bounded planar caps.",
         "Exact squared rational residuals certify perpendicular control-point distances independently of plane scaling. Slab selection, support displacement and coedge agreement retain independent limits.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0384",
+      "name": "Атомарное закрытие оболочки в нескольких плоскостях с индивидуальными допусками",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::planar_cap::close_shell_with_bounded_section_caps",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
+        "docs/qualification/nurbs-curvature-field-384-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-384-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Close a shell with mixed exact and rounded section caps under shared verification budgets.",
+        "Each plane has independent selection and support tolerances. The cumulative work and agreement budgets apply across all caps, and results are emitted only for a fully closed selected shell.",
         "WASM and application integration are separate."
       ]
     }

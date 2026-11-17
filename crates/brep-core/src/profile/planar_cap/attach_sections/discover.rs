@@ -232,6 +232,80 @@ pub fn close_shell_with_section_caps(
     max_exact_work: u64,
     max_verification_cells: usize,
 ) -> Result<AttachedSectionCaps> {
+    close_shell(
+        source,
+        shell,
+        planes,
+        max_exact_work,
+        max_verification_cells,
+        |current, plane, work, cells| {
+            let report = discover_and_attach_section_caps(
+                current,
+                shell,
+                plane.normal,
+                plane.offset,
+                work,
+                cells,
+            )?;
+            Ok((report.attachment, report.discovery_work))
+        },
+    )
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct BoundedSectionPlane {
+    pub plane: SectionPlane,
+    pub selection_tolerance_mm: f64,
+    pub support_tolerance_mm: f64,
+}
+
+/// Close a shell with independently bounded section planes.
+/// A zero tolerance requires exact selection or exact support, respectively.
+/// The report lists the certified support errors in the same order as cap faces.
+pub fn close_shell_with_bounded_section_caps(
+    source: &Model,
+    shell: usize,
+    planes: &[BoundedSectionPlane],
+    max_exact_work: u64,
+    max_verification_cells: usize,
+) -> Result<BoundedSectionAttachment> {
+    let mut support_error_upper = Vec::new();
+    let attachment = close_shell(
+        source,
+        shell,
+        planes,
+        max_exact_work,
+        max_verification_cells,
+        |current, plane, work, cells| {
+            let report = discover_and_attach_section_caps_with_support_tolerance(
+                current,
+                shell,
+                plane.plane,
+                plane.selection_tolerance_mm,
+                SectionAttachmentOptions {
+                    max_exact_work: work,
+                    max_verification_cells: cells,
+                    support_tolerance_mm: plane.support_tolerance_mm,
+                },
+            )?;
+            support_error_upper.extend(report.bounded.support_error_upper);
+            Ok((report.bounded.attachment, report.discovery_work))
+        },
+    )?;
+    Ok(BoundedSectionAttachment {
+        attachment,
+        support_error_upper,
+    })
+}
+
+fn close_shell<P>(
+    source: &Model,
+    shell: usize,
+    planes: &[P],
+    max_exact_work: u64,
+    max_verification_cells: usize,
+    mut stage: impl FnMut(&Model, &P, u64, usize) -> Result<(AttachedSectionCaps, u64)>,
+) -> Result<AttachedSectionCaps> {
     if !(1..=256).contains(&planes.len()) {
         return Err(invalid("Shell closure requires 1..256 section planes"));
     }
@@ -248,16 +322,13 @@ pub fn close_shell_with_section_caps(
                 "Shell closure exhausted the shared section budget",
             ));
         }
-        let report = discover_and_attach_section_caps(
+        let (attachment, discovery_work) = stage(
             current,
-            shell,
-            plane.normal,
-            plane.offset,
+            plane,
             max_exact_work - exact_work,
             max_verification_cells - verification_cells,
         )?;
-        let attachment = report.attachment;
-        exact_work += report.discovery_work + attachment.exact_work;
+        exact_work += discovery_work + attachment.exact_work;
         verification_cells += attachment.verification_cells;
         cap_faces.extend(attachment.cap_faces);
         current = staged.insert(attachment.model);

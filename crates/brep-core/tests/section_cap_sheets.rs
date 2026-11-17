@@ -453,6 +453,11 @@ fn refuses_an_inward_capped_boundary_without_mutating_the_source() {
 
 fn open_third_height_prism() -> (brep_core::Model, Vec<Vec<[usize; 2]>>) {
     let (mut source, rings) = open_hollow_prism();
+    scale_prism_to_third_height(&mut source);
+    (source, rings)
+}
+
+fn scale_prism_to_third_height(source: &mut brep_core::Model) {
     for vertex in &mut source.vertices {
         vertex.point[2] /= 6.;
     }
@@ -468,7 +473,6 @@ fn open_third_height_prism() -> (brep_core::Model, Vec<Vec<[usize; 2]>>) {
     }
     source.rebuild_topology_ids();
     source.validate().unwrap();
-    (source, rings)
 }
 
 #[test]
@@ -592,5 +596,90 @@ fn rounded_cycle_selection_cannot_override_the_support_error_limit() {
         discover_and_attach_section_caps_with_support_tolerance(&source, 0, plane, 2e-17, options,)
             .is_err()
     );
+    assert_eq!(source, before);
+}
+
+fn mixed_section_planes() -> [brep_core::planar_cap::BoundedSectionPlane; 2] {
+    use brep_core::planar_cap::{BoundedSectionPlane, SectionPlane};
+    [
+        BoundedSectionPlane {
+            plane: SectionPlane {
+                normal: [0., 0., 1.],
+                offset: 0.,
+            },
+            selection_tolerance_mm: 0.,
+            support_tolerance_mm: 0.,
+        },
+        BoundedSectionPlane {
+            plane: SectionPlane {
+                normal: [0., 0., 3.],
+                offset: 1.,
+            },
+            selection_tolerance_mm: 2e-17,
+            support_tolerance_mm: 1e-14,
+        },
+    ]
+}
+
+#[test]
+fn closes_mixed_exact_and_rounded_sections_under_shared_budgets() {
+    use brep_core::planar_cap::close_shell_with_bounded_section_caps;
+    use num_traits::Zero;
+    let (mut source, _) = open_prism(false);
+    remove_prism_cap(&mut source, 0.);
+    scale_prism_to_third_height(&mut source);
+    let planes = mixed_section_planes();
+    let report =
+        close_shell_with_bounded_section_caps(&source, 0, &planes, 1_000_000, 10_000).unwrap();
+    let result = &report.attachment;
+    assert!(result.model.shells[0].closed);
+    assert_eq!(result.model.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(result.model.edges, source.edges);
+    assert_eq!(result.model.vertices, source.vertices);
+    assert_eq!(result.cap_faces.len(), 2);
+    assert!(report.support_error_upper[0].is_zero());
+    assert!(!report.support_error_upper[1].is_zero());
+    assert!(
+        close_shell_with_bounded_section_caps(
+            &source,
+            0,
+            &planes,
+            result.exact_work,
+            result.verification_cells
+        )
+        .is_ok()
+    );
+    assert!(
+        close_shell_with_bounded_section_caps(
+            &source,
+            0,
+            &planes,
+            result.exact_work - 1,
+            result.verification_cells
+        )
+        .is_err()
+    );
+    assert!(
+        close_shell_with_bounded_section_caps(
+            &source,
+            0,
+            &planes,
+            result.exact_work,
+            result.verification_cells - 1
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn refuses_a_late_support_failure_without_committing_the_first_cap() {
+    use brep_core::planar_cap::close_shell_with_bounded_section_caps;
+    let (mut source, _) = open_prism(false);
+    remove_prism_cap(&mut source, 0.);
+    scale_prism_to_third_height(&mut source);
+    let before = source.clone();
+    let mut planes = mixed_section_planes();
+    planes[1].support_tolerance_mm = 0.;
+    assert!(close_shell_with_bounded_section_caps(&source, 0, &planes, 1_000_000, 10_000).is_err());
     assert_eq!(source, before);
 }
