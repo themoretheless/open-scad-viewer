@@ -3608,3 +3608,79 @@ fn exact_path_interior_clip_splits_at_inner_wall_tangency_and_keeps_interior_end
         ]
     );
 }
+
+#[test]
+fn exact_path_partition_orders_transverse_contacts_and_classifies_each_gap() {
+    use brep_core::{
+        analysis::{
+            PolyhedralPathLocation::*, PolyhedralPathPart, exact_polyhedral_path_partition,
+        },
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |x| [q(x, 1), q(3, 2), q(1, 1)];
+    let path = [point(-1), point(5)];
+    let report = exact_polyhedral_path_partition(solid, &path, 1_000_000).unwrap();
+    let part = |location, lo, hi, endpoints_included| PolyhedralPathPart {
+        location,
+        parameters: [lo, hi],
+        endpoints_included,
+    };
+    let contact = |t: Q| part(Boundary, t.clone(), t, [true, true]);
+    assert_eq!(
+        report.spans,
+        [vec![
+            part(Exterior, q(0, 1), q(1, 6), [true, false]),
+            contact(q(1, 6)),
+            part(Interior, q(1, 6), q(1, 3), [false, false]),
+            contact(q(1, 3)),
+            part(Exterior, q(1, 3), q(1, 2), [false, false]),
+            contact(q(1, 2)),
+            part(Interior, q(1, 2), q(5, 6), [false, false]),
+            contact(q(5, 6)),
+            part(Exterior, q(5, 6), q(1, 1), [false, true]),
+        ]]
+    );
+    assert_eq!(
+        exact_polyhedral_path_partition(solid, &path, report.exact_work).unwrap(),
+        report
+    );
+    assert!(exact_polyhedral_path_partition(solid, &path, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_path_partition_coalesces_shared_edge_contacts_and_stationary_boundary() {
+    use brep_core::{
+        analysis::{
+            PolyhedralPathLocation::*, PolyhedralPathPart, exact_polyhedral_path_partition,
+        },
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |x| [q(x, 1), q(0, 1), q(2, 1)];
+    let path = [point(-1), point(2), point(2)];
+    let report = exact_polyhedral_path_partition(solid, &path, 1_000_000).unwrap();
+    let part = |location, lo, hi, endpoints_included| PolyhedralPathPart {
+        location,
+        parameters: [lo, hi],
+        endpoints_included,
+    };
+    assert_eq!(
+        report.spans,
+        [
+            vec![
+                part(Exterior, q(0, 1), q(1, 3), [true, false]),
+                part(Boundary, q(1, 3), q(1, 1), [true, true]),
+            ],
+            vec![part(Boundary, q(0, 1), q(1, 1), [true, true])],
+        ]
+    );
+}

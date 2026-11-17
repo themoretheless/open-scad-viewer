@@ -665,14 +665,12 @@ pub fn exact_polyhedral_path_material_clip(
     points_mm: &[[Q; 3]],
     max_exact_work: u64,
 ) -> Result<ExactPolyhedralPathMaterialClip> {
-    let (span_intervals, exact_work) = clip_path_material(
-        solid,
-        points_mm,
-        max_exact_work,
-        |intervals, interval, _| {
-            append_closed_interval(intervals, interval);
-        },
-    )?;
+    let (span_intervals, exact_work) =
+        partition_path(solid, points_mm, max_exact_work, |intervals, part| {
+            if part.location != PolyhedralPathLocation::Exterior {
+                append_closed_interval(intervals, part.parameters);
+            }
+        })?;
     Ok(ExactPolyhedralPathMaterialClip {
         span_intervals,
         exact_work,
@@ -700,32 +698,59 @@ pub fn exact_polyhedral_path_interior_clip(
     points_mm: &[[Q; 3]],
     max_exact_work: u64,
 ) -> Result<ExactPolyhedralPathInteriorClip> {
-    let (span_intervals, exact_work) = clip_path_material(
-        solid,
-        points_mm,
-        max_exact_work,
-        |intervals, parameters, inclusion| {
-            if let Some(endpoints_included) = inclusion {
+    let (span_intervals, exact_work) =
+        partition_path(solid, points_mm, max_exact_work, |intervals, part| {
+            if part.location == PolyhedralPathLocation::Interior {
                 intervals.push(PolyhedralInteriorInterval {
-                    parameters,
-                    endpoints_included,
+                    parameters: part.parameters,
+                    endpoints_included: part.endpoints_included,
                 });
             }
-        },
-    )?;
+        })?;
     Ok(ExactPolyhedralPathInteriorClip {
         span_intervals,
         exact_work,
     })
 }
 
-/// Enumerate material intervals in scan order. Strict interior intervals
-/// carry endpoint inclusion flags, and boundary contacts carry none.
-fn clip_path_material<T>(
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PolyhedralPathLocation {
+    Interior,
+    Boundary,
+    Exterior,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PolyhedralPathPart {
+    pub location: PolyhedralPathLocation,
+    pub parameters: [Q; 2],
+    /// Whether the start and end parameters, respectively, belong to this part.
+    pub endpoints_included: [bool; 2],
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralPathPartition {
+    /// Disjoint parts covering [0, 1] in order for each local span.
+    pub spans: Vec<Vec<PolyhedralPathPart>>,
+    pub exact_work: u64,
+}
+
+/// Partition each polyline span into strict interior, boundary and exterior
+/// parts. Isolated contacts remain distinct zero-width boundary parts.
+pub fn exact_polyhedral_path_partition(
     solid: &QualifiedClosedSolid,
     points_mm: &[[Q; 3]],
     max_exact_work: u64,
-    mut visit: impl FnMut(&mut Vec<T>, [Q; 2], Option<[bool; 2]>),
+) -> Result<ExactPolyhedralPathPartition> {
+    let (spans, exact_work) = partition_path(solid, points_mm, max_exact_work, Vec::push)?;
+    Ok(ExactPolyhedralPathPartition { spans, exact_work })
+}
+
+fn partition_path<T>(
+    solid: &QualifiedClosedSolid,
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+    mut visit: impl FnMut(&mut Vec<T>, PolyhedralPathPart),
 ) -> Result<(Vec<Vec<T>>, u64)> {
     let mut remaining = max_exact_work;
     let faces = prepare_path_faces(solid, points_mm, &mut remaining)?;
@@ -742,13 +767,18 @@ fn clip_path_material<T>(
             count.saturating_mul(8 * (u64::from(count.checked_ilog2().unwrap_or(0)) + 1)),
         )?;
         contacts.sort_unstable();
+        spend(&mut remaining, count.saturating_mul(4))?;
+        let mut boundary = Vec::new();
+        for contact in contacts {
+            append_closed_interval(&mut boundary, contact);
+        }
 
         let mut intervals = Vec::new();
         let mut cursor = Q::zero();
         let mut start_included = true;
         let direction: [Q; 3] = std::array::from_fn(|i| &end[i] - &start[i]);
         let two = Q::from_integer(2.into());
-        for contact in contacts.into_iter().map(Some).chain([None]) {
+        for contact in boundary.into_iter().map(Some).chain([None]) {
             let end_included = contact.is_none();
             let lo = contact
                 .as_ref()
@@ -757,20 +787,33 @@ fn clip_path_material<T>(
                 spend(&mut remaining, 8)?;
                 let t = (&cursor + &lo) / &two;
                 let point = std::array::from_fn(|i| &start[i] + &t * &direction[i]);
-                if classify_open_point(&faces, &point, &mut remaining)?
-                    == PolyhedralPointLocation::Material
-                {
-                    visit(
-                        &mut intervals,
-                        [cursor.clone(), lo],
-                        Some([start_included, end_included]),
-                    );
-                }
+                let location = match classify_open_point(&faces, &point, &mut remaining)? {
+                    PolyhedralPointLocation::Material => PolyhedralPathLocation::Interior,
+                    PolyhedralPointLocation::Exterior => PolyhedralPathLocation::Exterior,
+                    PolyhedralPointLocation::Boundary { .. } => {
+                        return Err(refuse("Path gap intersects boundary"));
+                    }
+                };
+                visit(
+                    &mut intervals,
+                    PolyhedralPathPart {
+                        location,
+                        parameters: [cursor.clone(), lo],
+                        endpoints_included: [start_included, end_included],
+                    },
+                );
             }
             if let Some([lo, hi]) = contact {
-                cursor = cursor.max(hi.clone());
+                cursor = hi.clone();
                 start_included = false;
-                visit(&mut intervals, [lo, hi], None);
+                visit(
+                    &mut intervals,
+                    PolyhedralPathPart {
+                        location: PolyhedralPathLocation::Boundary,
+                        parameters: [lo, hi],
+                        endpoints_included: [true, true],
+                    },
+                );
             }
         }
         span_intervals.push(intervals);

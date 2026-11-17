@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 439,
-  "unallocatedCount": 561,
+  "specifiedCount": 440,
+  "unallocatedCount": 560,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -11314,6 +11314,35 @@
       "remainingQualification": [
         "Clip to the strict interior with exact endpoint inclusion, excluding boundary runs and tangencies.",
         "Enumerate strict interior gaps between exact boundary contacts. Preserve endpoint inclusion and split the result at inner-wall tangencies.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0440",
+      "name": "Точное разбиение пространственной ломаной на внутренние, граничные и внешние участки",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::exact_polyhedral_path_partition",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "docs/qualification/nurbs-curvature-field-440-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-440-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Partition each span into disjoint interior, boundary and exterior parameter intervals.",
+        "Merge the exact per-face boundary overlaps, then classify every complementary gap. Span parts are ordered, disjoint with explicit endpoint inclusion, and cover the full parameter domain.",
         "WASM and application integration are separate."
       ]
     }
