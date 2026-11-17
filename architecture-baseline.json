@@ -584,7 +584,7 @@
     "examples/skadis-box": 10,
     "scripts": 453,
     "src": 2,
-    "src/app": 72,
+    "src/app": 44,
     "src/components": 4,
     "src/composables": 14,
     "src/core": 31,
