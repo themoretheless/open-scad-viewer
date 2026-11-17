@@ -2646,3 +2646,206 @@ pub fn classify_exact_periodic_surface_region_points(
         refusal: None,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PeriodicPathContact {
+    /// Edge indices in the original sample order.
+    pub edges: [usize; 2],
+    /// Translation of the second edge in periods of U and V.
+    pub turns: [i64; 2],
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicPathSimplicityReport {
+    /// True if all cyclic edge pairs pass the exact contact check.
+    pub simple: Option<bool>,
+    pub contact: Option<PeriodicPathContact>,
+    pub work_used: u64,
+    pub refusal: Option<PeriodicPathAreaRefusal>,
+}
+
+/// Check whether a closed shortest-step polygon is simple on the periodic
+/// chart. Detect crossings, touches and overlaps with its translated copies.
+/// Adjacent edges in the original lift may share their single common vertex.
+pub fn certify_exact_periodic_surface_path_simplicity(
+    source: &Surface,
+    native: &[[f64; 2]],
+    max_work: u64,
+) -> Result<PeriodicPathSimplicityReport> {
+    use PeriodicPathAreaRefusal as Failure;
+
+    crate::check(
+        native.len() >= 4 && native.first() == native.last(),
+        "Periodic simplicity needs a closed polygon",
+    )?;
+    let lift = lift_exact_periodic_surface_path(source, native, max_work)?;
+    let refused = |reason, work_used| PeriodicPathSimplicityReport {
+        simple: None,
+        contact: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    let Some(points) = lift.parameters else {
+        let reason = lift
+            .refusal
+            .unwrap_or(PeriodicLiftRefusal::Arithmetic(ExactRefusal::InvalidOutput));
+        return Ok(refused(Failure::Lift(reason), lift.work_used));
+    };
+    if points.first() != points.last() {
+        return Ok(refused(Failure::NonzeroWinding, lift.work_used));
+    }
+    let domains = [Axis::U, Axis::V].map(|axis| {
+        let axis = row(source, axis, 0);
+        axis.periodic.then(|| axis.domain())
+    });
+    let mut work = Work {
+        used: lift.work_used,
+        limit: max_work,
+    };
+    let outcome = prepare_lifted_polygon(&points, domains, &mut work)
+        .and_then(|polygon| find_cyclic_polygon_contact(&polygon, &mut work));
+    Ok(match outcome {
+        Ok(contact) => PeriodicPathSimplicityReport {
+            simple: Some(contact.is_none()),
+            contact,
+            work_used: work.used,
+            refusal: None,
+        },
+        Err(reason) => refused(Failure::Arithmetic(reason), work.used),
+    })
+}
+
+fn find_cyclic_polygon_contact(
+    polygon: &LiftedPolygon,
+    work: &mut Work,
+) -> std::result::Result<Option<PeriodicPathContact>, ExactRefusal> {
+    use num_traits::ToPrimitive;
+    let p = &polygon.points;
+    let count = p.len() - 1;
+    for (i, edge) in p.windows(2).enumerate() {
+        work.charge(1)?;
+        if edge[0] == edge[1] {
+            return Ok(Some(PeriodicPathContact {
+                edges: [i, i],
+                turns: [0, 0],
+            }));
+        }
+    }
+    let mut limit = [0; 2];
+    for (i, period) in polygon.periods.iter().enumerate() {
+        if let Some(period) = period {
+            let [lo, hi] = &polygon.bounds[i];
+            let width = work.op(hi, lo, |a, b| a - b)?;
+            limit[i] = work
+                .op(&width, period, |a, b| (a / b).floor())?
+                .to_integer()
+                .to_i64()
+                .ok_or(ExactRefusal::ResourceLimit)?;
+        }
+    }
+    for u in 0..=limit[0] {
+        let first_v = if u == 0 { 0 } else { -limit[1] };
+        for v in first_v..=limit[1] {
+            let turns = [u, v];
+            let mut shift = [BigRational::default(), BigRational::default()];
+            for axis in 0..2 {
+                if let Some(period) = &polygon.periods[axis] {
+                    shift[axis] = work.op(
+                        period,
+                        &BigRational::from_integer(turns[axis].into()),
+                        |a, b| a * b,
+                    )?;
+                }
+            }
+            for i in 0..count {
+                let first_j = if turns == [0, 0] { i + 1 } else { 0 };
+                for j in first_j..count {
+                    let a = &p[i];
+                    let b = &p[i + 1];
+                    let c = translate_polygon_vertex(&p[j], &shift, work)?;
+                    let d = translate_polygon_vertex(&p[j + 1], &shift, work)?;
+                    let hit = if turns == [0, 0] && j == i + 1 {
+                        on_polygon_segment(a, &c, &d, work)? || on_polygon_segment(&d, a, b, work)?
+                    } else if turns == [0, 0] && i == 0 && j + 1 == count {
+                        on_polygon_segment(b, &c, &d, work)? || on_polygon_segment(&c, a, b, work)?
+                    } else {
+                        polygon_edges_contact(a, b, &c, &d, work)?
+                    };
+                    if hit {
+                        return Ok(Some(PeriodicPathContact {
+                            edges: [i, j],
+                            turns,
+                        }));
+                    }
+                }
+            }
+        }
+    }
+    Ok(None)
+}
+
+fn translate_polygon_vertex(
+    p: &[BigRational; 2],
+    shift: &[BigRational; 2],
+    work: &mut Work,
+) -> std::result::Result<[BigRational; 2], ExactRefusal> {
+    Ok([
+        work.op(&p[0], &shift[0], |a, b| a + b)?,
+        work.op(&p[1], &shift[1], |a, b| a + b)?,
+    ])
+}
+
+fn polygon_orientation(
+    a: &[BigRational; 2],
+    b: &[BigRational; 2],
+    p: &[BigRational; 2],
+    work: &mut Work,
+) -> std::result::Result<std::cmp::Ordering, ExactRefusal> {
+    let dx = work.op(&b[0], &a[0], |a, b| a - b)?;
+    let dy = work.op(&b[1], &a[1], |a, b| a - b)?;
+    let x = work.op(&p[0], &a[0], |a, b| a - b)?;
+    let y = work.op(&p[1], &a[1], |a, b| a - b)?;
+    let left = work.op(&dx, &y, |a, b| a * b)?;
+    let right = work.op(&dy, &x, |a, b| a * b)?;
+    Ok(left.cmp(&right))
+}
+
+fn in_polygon_edge_bounds(
+    p: &[BigRational; 2],
+    a: &[BigRational; 2],
+    b: &[BigRational; 2],
+) -> bool {
+    (0..2).all(|i| (&a[i]).min(&b[i]) <= &p[i] && &p[i] <= (&a[i]).max(&b[i]))
+}
+
+fn on_polygon_segment(
+    p: &[BigRational; 2],
+    a: &[BigRational; 2],
+    b: &[BigRational; 2],
+    work: &mut Work,
+) -> std::result::Result<bool, ExactRefusal> {
+    Ok(in_polygon_edge_bounds(p, a, b) && polygon_orientation(a, b, p, work)?.is_eq())
+}
+
+fn polygon_edges_contact(
+    a: &[BigRational; 2],
+    b: &[BigRational; 2],
+    c: &[BigRational; 2],
+    d: &[BigRational; 2],
+    work: &mut Work,
+) -> std::result::Result<bool, ExactRefusal> {
+    if (0..2)
+        .any(|i| (&a[i]).max(&b[i]) < (&c[i]).min(&d[i]) || (&c[i]).max(&d[i]) < (&a[i]).min(&b[i]))
+    {
+        return Ok(false);
+    }
+    let abc = polygon_orientation(a, b, c, work)?;
+    let abd = polygon_orientation(a, b, d, work)?;
+    let cda = polygon_orientation(c, d, a, work)?;
+    let cdb = polygon_orientation(c, d, b, work)?;
+    Ok((abc.is_eq() && in_polygon_edge_bounds(c, a, b))
+        || (abd.is_eq() && in_polygon_edge_bounds(d, a, b))
+        || (cda.is_eq() && in_polygon_edge_bounds(a, c, d))
+        || (cdb.is_eq() && in_polygon_edge_bounds(b, c, d))
+        || ([abc, abd, cda, cdb].iter().all(|o| !o.is_eq()) && abc != abd && cda != cdb))
+}

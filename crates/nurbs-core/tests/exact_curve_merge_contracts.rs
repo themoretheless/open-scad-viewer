@@ -3560,3 +3560,46 @@ fn periodic_region_withholds_results_on_an_unclosed_lift() {
     assert_eq!(report.refused_loop, Some(1));
     assert!(report.locations.is_none());
 }
+
+#[test]
+fn periodic_path_simplicity_distinguishes_a_valid_wrap_from_a_crossing() {
+    use nurbs_core::editing::exact_periodic_surface::certify_exact_periodic_surface_path_simplicity;
+    let source = doubly_periodic_tensor();
+    let rectangle = [[3.5, 3.5], [0.5, 3.5], [0.5, 0.5], [3.5, 0.5], [3.5, 3.5]];
+    let report =
+        certify_exact_periodic_surface_path_simplicity(&source, &rectangle, 1_000_000).unwrap();
+    assert_eq!(report.simple, Some(true));
+    assert!(
+        certify_exact_periodic_surface_path_simplicity(&source, &rectangle, report.work_used - 1)
+            .unwrap()
+            .simple
+            .is_none()
+    );
+    let crossed = [[3.5, 3.5], [0.5, 0.5], [3.5, 0.5], [0.5, 3.5], [3.5, 3.5]];
+    let crossed =
+        certify_exact_periodic_surface_path_simplicity(&source, &crossed, 1_000_000).unwrap();
+    assert_eq!(crossed.simple, Some(false));
+    assert_eq!(crossed.contact.unwrap().edges, [0, 2]);
+}
+
+#[test]
+fn periodic_path_simplicity_detects_overlap_with_a_translated_copy() {
+    use nurbs_core::editing::exact_periodic_surface::certify_exact_periodic_surface_path_simplicity;
+    let source = doubly_periodic_tensor();
+    let path = [
+        [0., 0.],
+        [1.5, 0.],
+        [3., 0.],
+        [0.5, 0.],
+        [1., 0.],
+        [1., 1.],
+        [0.5, 1.],
+        [3., 1.],
+        [1.5, 1.],
+        [0., 1.],
+        [0., 0.],
+    ];
+    let report = certify_exact_periodic_surface_path_simplicity(&source, &path, 1_000_000).unwrap();
+    assert_eq!(report.simple, Some(false));
+    assert_eq!(report.contact.unwrap().turns, [1, 0]);
+}
