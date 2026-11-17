@@ -1283,3 +1283,116 @@ pub fn exact_polyhedral_path_material_difference(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PolyhedralPathCoveragePart {
+    pub parameters: [Q; 2],
+    pub endpoints_included: [bool; 2],
+    /// Sorted indices into the input solid list, possibly empty.
+    pub solids: Vec<usize>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralPathCoverage {
+    /// Ordered, disjoint parts covering the full parameter domain of each span.
+    pub spans: Vec<Vec<PolyhedralPathCoveragePart>>,
+    pub exact_work: u64,
+}
+
+/// Partition a path by which solids contain each point in their closed
+/// material. Shared boundary points can have a different membership from
+/// both adjacent open intervals.
+pub fn exact_polyhedral_path_coverage(
+    solids: &[&QualifiedClosedSolid],
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralPathCoverage> {
+    use std::collections::BTreeSet;
+
+    if solids.is_empty() {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Path coverage requires at least one solid",
+        ));
+    }
+    let mut remaining = max_exact_work;
+    let mut spans = Vec::new();
+    for (index, solid) in solids.iter().enumerate() {
+        if remaining == 0 {
+            return Err(super::work_exhausted());
+        }
+        let clip = exact_polyhedral_path_material_clip(solid, points_mm, remaining)?;
+        remaining -= clip.exact_work;
+        spans.resize_with(
+            clip.span_intervals.len(),
+            BTreeMap::<Q, [Vec<usize>; 2]>::new,
+        );
+        for (events, intervals) in spans.iter_mut().zip(clip.span_intervals) {
+            spend(&mut remaining, 1)?;
+            for [lo, hi] in intervals {
+                let depth = u64::from((events.len() + 2).ilog2()) + 1;
+                spend(&mut remaining, 16 * depth)?;
+                events.entry(lo).or_default()[0].push(index);
+                events.entry(hi).or_default()[1].push(index);
+            }
+        }
+    }
+
+    let mut coverage = Vec::with_capacity(spans.len());
+    for mut events in spans {
+        let depth = u64::from((events.len() + 2).ilog2()) + 1;
+        spend(&mut remaining, 16 * depth)?;
+        events.entry(Q::zero()).or_default();
+        events.entry(Q::one()).or_default();
+        let mut active = BTreeSet::new();
+        let mut parts = Vec::new();
+        let mut previous = None;
+        let active_depth = u64::from(solids.len().ilog2()) + 1;
+        for (at, [starts, ends]) in events {
+            if let Some(lo) = previous {
+                spend(&mut remaining, 4 + active.len() as u64)?;
+                append_coverage_part(&mut parts, [lo, at.clone()], [false, false], &active);
+            }
+            spend(
+                &mut remaining,
+                active_depth.saturating_mul((starts.len() + ends.len()) as u64),
+            )?;
+            active.extend(starts);
+            spend(&mut remaining, 4 + active.len() as u64)?;
+            append_coverage_part(&mut parts, [at.clone(), at.clone()], [true, true], &active);
+            for index in ends {
+                active.remove(&index);
+            }
+            previous = Some(at);
+        }
+        coverage.push(parts);
+    }
+    Ok(ExactPolyhedralPathCoverage {
+        spans: coverage,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn append_coverage_part(
+    parts: &mut Vec<PolyhedralPathCoveragePart>,
+    parameters: [Q; 2],
+    endpoints_included: [bool; 2],
+    active: &std::collections::BTreeSet<usize>,
+) {
+    if let Some(last) = parts.last_mut()
+        && last.solids.iter().eq(active)
+    {
+        if parameters[1] > last.parameters[1] {
+            last.endpoints_included[1] = endpoints_included[1];
+            last.parameters[1] = parameters[1].clone();
+        } else {
+            last.endpoints_included[1] |= endpoints_included[1];
+        }
+    } else {
+        parts.push(PolyhedralPathCoveragePart {
+            parameters,
+            endpoints_included,
+            solids: active.iter().copied().collect(),
+        });
+    }
+}

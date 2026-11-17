@@ -4077,3 +4077,63 @@ fn exact_path_material_difference_removes_a_single_point_inside_stock() {
         [vec![interval(q(0, 1), q(1, 1), [true, true])]],
     );
 }
+
+#[test]
+fn exact_path_coverage_preserves_point_membership_at_shared_boundaries() {
+    use brep_core::analysis::{PolyhedralPathCoveragePart, exact_polyhedral_path_coverage};
+    use num_rational::BigRational as Q;
+    let a = shifted_oblique_solid(0.);
+    let b = shifted_oblique_solid(3.);
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |x| [q(x, 1), q(0, 1), q(1, 1)];
+    let path = [point(-1), point(7)];
+    let solids = [&b, &a];
+    let report = exact_polyhedral_path_coverage(&solids, &path, 1_000_000).unwrap();
+    let part = |lo, hi, endpoints_included, solids: &[usize]| PolyhedralPathCoveragePart {
+        parameters: [lo, hi],
+        endpoints_included,
+        solids: solids.to_vec(),
+    };
+    assert_eq!(
+        report.spans,
+        [vec![
+            part(q(0, 1), q(1, 8), [true, false], &[]),
+            part(q(1, 8), q(1, 2), [true, false], &[1]),
+            part(q(1, 2), q(1, 2), [true, true], &[0, 1]),
+            part(q(1, 2), q(7, 8), [false, true], &[0]),
+            part(q(7, 8), q(1, 1), [false, true], &[]),
+        ]],
+    );
+    assert_eq!(
+        exact_polyhedral_path_coverage(&solids, &path, report.exact_work).unwrap(),
+        report
+    );
+    assert!(exact_polyhedral_path_coverage(&solids, &path, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_path_coverage_handles_overlapping_spans_and_duplicate_solids() {
+    use brep_core::analysis::{PolyhedralPathCoveragePart, exact_polyhedral_path_coverage};
+    use num_rational::BigRational as Q;
+    let a = shifted_oblique_solid(0.);
+    let b = shifted_oblique_solid(1.);
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |x| [q(x, 1), q(0, 1), q(1, 1)];
+    let path = [point(0), point(2), point(2)];
+    let report = exact_polyhedral_path_coverage(&[&a, &b, &a], &path, 1_000_000).unwrap();
+    let part = |lo, hi, endpoints_included, solids: &[usize]| PolyhedralPathCoveragePart {
+        parameters: [lo, hi],
+        endpoints_included,
+        solids: solids.to_vec(),
+    };
+    assert_eq!(
+        report.spans,
+        [
+            vec![
+                part(q(0, 1), q(1, 2), [true, false], &[0, 2]),
+                part(q(1, 2), q(1, 1), [true, true], &[0, 1, 2]),
+            ],
+            vec![part(q(0, 1), q(1, 1), [true, true], &[0, 1, 2])],
+        ]
+    );
+}
