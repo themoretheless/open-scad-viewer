@@ -2283,3 +2283,84 @@ fn periodic_grid_gauge_assembly_rejects_nonproportional_final_join() {
         Some(PeriodicAssemblyRefusal::Join { strip: 1, .. })
     ));
 }
+
+#[test]
+fn periodic_strip_assembly_refines_different_transverse_knot_sets() {
+    use nurbs_core::{
+        editing::{
+            exact_periodic_surface::{
+                assemble_periodic_surface_axis_with_exact_knot_union,
+                partition_exact_periodic_surface_axis,
+            },
+            exact_surface_knot_insertion,
+        },
+        surface::{Axis, extrude},
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = extrude(&profile, [0., 0., 2.]).unwrap();
+    let mut strips = partition_exact_periodic_surface_axis(&source, Axis::U, 0., &[2.], 1_000_000)
+        .unwrap()
+        .strips
+        .unwrap();
+    for (strip, knot) in strips.iter_mut().zip([0.25, 0.75]) {
+        let report =
+            exact_surface_knot_insertion::insert(strip, Axis::V, knot, 1, 1_000_000).unwrap();
+        assert_eq!(report.inserted, 1);
+        *strip = report.surface;
+    }
+    let report =
+        assemble_periodic_surface_axis_with_exact_knot_union(&strips, Axis::U, 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let surface = report.surface.unwrap();
+    assert_eq!(surface.knots_v, vec![0., 0., 0.25, 0.75, 1., 1.]);
+    assert!(surface.periodic_u);
+    for u in [0., 0.5, 2., 3.25, 4.] {
+        for v in [0., 0.125, 0.5, 0.75, 1.] {
+            assert_eq!(
+                surface.evaluate(u, v).unwrap().point,
+                source.evaluate(u, v).unwrap().point
+            );
+        }
+    }
+    assert!(
+        assemble_periodic_surface_axis_with_exact_knot_union(
+            &strips,
+            Axis::U,
+            report.work_used - 1
+        )
+        .unwrap()
+        .surface
+        .is_none()
+    );
+}
+
+#[test]
+fn periodic_strip_knot_union_rejects_incompatible_transverse_domains() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::{
+            PeriodicAssemblyRefusal, assemble_periodic_surface_axis_with_exact_knot_union,
+            partition_exact_periodic_surface_axis,
+        },
+        surface::{Axis, extrude},
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = extrude(&profile, [0., 0., 2.]).unwrap();
+    let mut strips = partition_exact_periodic_surface_axis(&source, Axis::U, 0., &[2.], 1_000_000)
+        .unwrap()
+        .strips
+        .unwrap();
+    strips[1].knots_v = vec![0., 0., 2., 2.];
+    let result =
+        assemble_periodic_surface_axis_with_exact_knot_union(&strips, Axis::U, 1_000_000).unwrap();
+    assert!(result.surface.is_none());
+    assert!(matches!(
+        result.refusal,
+        Some(PeriodicAssemblyRefusal::Join { strip: 1, .. })
+    ));
+}

@@ -757,3 +757,129 @@ fn align_strip_weights(
     }
     Ok((left, right))
 }
+
+/// Refine compatible clamped transverse bases to their exact knot union,
+/// then assemble the strips with proportional boundary weights.
+pub fn assemble_periodic_surface_axis_with_exact_knot_union(
+    strips: &[Surface],
+    axis: Axis,
+    max_work: u64,
+) -> Result<PeriodicAssemblyReport> {
+    use super::exact_surface_knot_insertion::{self as insertion, Refusal as InsertRefusal};
+    use PeriodicAssemblyRefusal as Failure;
+
+    crate::check(
+        (2..=256).contains(&strips.len()),
+        "Periodic assembly needs 2..=256 strips",
+    )?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Periodic assembly work must be in 1..=1000000",
+    )?;
+    for strip in strips {
+        strip.validate()?;
+    }
+    let transverse = match axis {
+        Axis::U => Axis::V,
+        Axis::V => Axis::U,
+    };
+    let reference = row(&strips[0], transverse, 0);
+    let [a, b] = reference.domain();
+    let mut bases = Vec::with_capacity(strips.len());
+    let mut interior = Vec::new();
+    let mut work_used = 0;
+    let refused = |reason, work_used| PeriodicAssemblyReport {
+        surface: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    let exhausted = Failure::Exact(ExactRefusal::ResourceLimit);
+    for (index, strip) in strips.iter().enumerate() {
+        let basis = row(strip, transverse, 0);
+        let p = basis.degree;
+        if basis.periodic
+            || p != reference.degree
+            || basis.domain() != [a, b]
+            || basis.knots[..=p].iter().any(|&k| k != a)
+            || basis.knots[basis.control_points.len()..]
+                .iter()
+                .any(|&k| k != b)
+        {
+            return Ok(refused(
+                Failure::Join {
+                    strip: index,
+                    reason: super::exact_surface_merge::Refusal::OtherBasisMismatch,
+                },
+                work_used,
+            ));
+        }
+        let knots = basis.knots;
+        let charge = knots.len() as u64;
+        if charge > max_work - work_used {
+            return Ok(refused(exhausted, work_used));
+        }
+        work_used += charge;
+        interior.extend(knots.iter().copied().filter(|&k| a < k && k < b));
+        bases.push(knots);
+    }
+    interior.sort_by(f64::total_cmp);
+    interior.dedup_by(|a, b| *a == *b);
+    let comparisons = (interior.len() * bases.len()) as u64;
+    if interior.len() > 256 || comparisons > max_work - work_used {
+        return Ok(refused(exhausted, work_used));
+    }
+    work_used += comparisons;
+    let multiplicity = |knots: &[f64], knot| {
+        knots.partition_point(|&k| k <= knot) - knots.partition_point(|&k| k < knot)
+    };
+    let union: Vec<_> = interior
+        .into_iter()
+        .map(|knot| {
+            let count = bases
+                .iter()
+                .map(|knots| multiplicity(knots, knot))
+                .max()
+                .unwrap_or(0);
+            (knot, count)
+        })
+        .collect();
+    if reference.degree + 1 + union.iter().map(|&(_, count)| count).sum::<usize>() > 256 {
+        return Ok(refused(exhausted, work_used));
+    }
+    let mut refined = Vec::with_capacity(strips.len());
+    for (strip, knots) in strips.iter().zip(&bases) {
+        let mut surface = strip.clone();
+        for &(knot, count) in &union {
+            let missing = count - multiplicity(knots, knot);
+            if missing == 0 {
+                continue;
+            }
+            if work_used == max_work {
+                return Ok(refused(exhausted, work_used));
+            }
+            let result =
+                insertion::insert(&surface, transverse, knot, missing, max_work - work_used)?;
+            work_used += result.work_used;
+            if let Some(reason) = result.refusal {
+                let reason = match reason {
+                    InsertRefusal::Arithmetic(reason) => reason,
+                    InsertRefusal::Curve {
+                        decision: cad_predicates::BezierIdentity::Indeterminate(reason),
+                        ..
+                    } => ExactRefusal::PredicateIndeterminate(reason),
+                    InsertRefusal::InvalidOutput => ExactRefusal::InvalidOutput,
+                    _ => ExactRefusal::DifferentDefinition,
+                };
+                return Ok(refused(Failure::Exact(reason), work_used));
+            }
+            surface = result.surface;
+        }
+        refined.push(surface);
+    }
+    if work_used == max_work {
+        return Ok(refused(exhausted, work_used));
+    }
+    let mut report = assemble_surface_axis(&refined, axis, max_work - work_used, true)?;
+    report.work_used += work_used;
+    Ok(report)
+}
