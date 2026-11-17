@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 540,
-  "unallocatedCount": 460,
+  "specifiedCount": 541,
+  "unallocatedCount": 459,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13816,6 +13816,27 @@
       "remainingQualification": [
         "Count signed windings using exact shortest steps on a closed sequence of native UV samples.",
         "Count exact signed seam crossings on both axes without constructing lifted floating-point coordinates.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0541",
+      "name": "Точная знаковая площадь замкнутой дискретной UV-траектории через периодические швы",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_path_signed_area",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-541-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-541-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Integrate the algebraic UV area of a representable closed shortest-step lift.",
+        "Lift the closed sample loop, require equality of its lifted endpoints, and accumulate the signed rational shoelace area.",
         "WASM and application integration are separate."
       ]
     }

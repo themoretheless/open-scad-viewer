@@ -2127,3 +2127,85 @@ pub fn exact_periodic_surface_path_winding(
         refusal: None,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PeriodicPathAreaRefusal {
+    Lift(PeriodicLiftRefusal),
+    NonzeroWinding,
+    Arithmetic(ExactRefusal),
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicPathAreaReport {
+    /// Algebraic area of the lifted UV polygon, in squared parameter units.
+    pub signed_area: Option<BigRational>,
+    pub work_used: u64,
+    pub refused_coordinate: Option<[usize; 2]>,
+    pub refusal: Option<PeriodicPathAreaRefusal>,
+}
+
+/// Compute exact algebraic area for a closed native UV sample sequence
+/// whose shortest-step lift is representable and closes in the plane.
+/// Self-intersecting polygons contribute signed area with multiplicity.
+pub fn exact_periodic_surface_path_signed_area(
+    source: &Surface,
+    native: &[[f64; 2]],
+    max_work: u64,
+) -> Result<PeriodicPathAreaReport> {
+    use PeriodicPathAreaRefusal as Failure;
+    crate::check(
+        native.len() >= 4 && native.first() == native.last(),
+        "Periodic path area needs a closed polygon with at least three edges",
+    )?;
+    let lift = lift_exact_periodic_surface_path(source, native, max_work)?;
+    let refused = |reason, work_used, refused_coordinate| PeriodicPathAreaReport {
+        signed_area: None,
+        work_used,
+        refused_coordinate,
+        refusal: Some(reason),
+    };
+    let Some(points) = lift.parameters else {
+        let reason = lift
+            .refusal
+            .unwrap_or(PeriodicLiftRefusal::Arithmetic(ExactRefusal::InvalidOutput));
+        return Ok(refused(
+            Failure::Lift(reason),
+            lift.work_used,
+            lift.refused_coordinate,
+        ));
+    };
+    if points.first() != points.last() {
+        return Ok(refused(Failure::NonzeroWinding, lift.work_used, None));
+    }
+    let mut work = Work {
+        used: lift.work_used,
+        limit: max_work,
+    };
+    let mut integrate = || -> std::result::Result<BigRational, ExactRefusal> {
+        let mut twice_area = BigRational::from_integer(0.into());
+        let [x, y] = points[0];
+        let mut previous = [work.lift(x)?, work.lift(y)?];
+        for &[x, y] in &points[1..] {
+            let current = [work.lift(x)?, work.lift(y)?];
+            let forward = work.op(&previous[0], &current[1], |a, b| a * b)?;
+            let backward = work.op(&previous[1], &current[0], |a, b| a * b)?;
+            let cross = work.op(&forward, &backward, |a, b| a - b)?;
+            twice_area = work.op(&twice_area, &cross, |a, b| a + b)?;
+            previous = current;
+        }
+        Ok(
+            work.op(&twice_area, &BigRational::from_integer(2.into()), |a, b| {
+                a / b
+            })?,
+        )
+    };
+    Ok(match integrate() {
+        Ok(area) => PeriodicPathAreaReport {
+            signed_area: Some(area),
+            work_used: work.used,
+            refused_coordinate: None,
+            refusal: None,
+        },
+        Err(reason) => refused(Failure::Arithmetic(reason), work.used, None),
+    })
+}

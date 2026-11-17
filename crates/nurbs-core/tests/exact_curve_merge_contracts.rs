@@ -3275,3 +3275,48 @@ fn periodic_path_winding_rejects_open_and_half_turn_sequences() {
     assert_eq!(report.refused_coordinate, Some([1, 0]));
     assert!(report.winding.is_none());
 }
+
+#[test]
+fn periodic_path_area_keeps_orientation_across_both_seams() {
+    use num_rational::BigRational;
+    use nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_path_signed_area;
+    let source = doubly_periodic_tensor();
+    let path = [[3.5, 3.5], [0.5, 3.5], [0.5, 0.5], [3.5, 0.5], [3.5, 3.5]];
+    let report = exact_periodic_surface_path_signed_area(&source, &path, 1_000_000).unwrap();
+    assert_eq!(
+        report.signed_area,
+        Some(BigRational::from_integer(1.into()))
+    );
+    let reverse: Vec<_> = path.into_iter().rev().collect();
+    assert_eq!(
+        exact_periodic_surface_path_signed_area(&source, &reverse, 1_000_000)
+            .unwrap()
+            .signed_area,
+        Some(BigRational::from_integer((-1).into()))
+    );
+    assert!(
+        exact_periodic_surface_path_signed_area(&source, &path, report.work_used - 1)
+            .unwrap()
+            .signed_area
+            .is_none()
+    );
+}
+
+#[test]
+fn periodic_path_area_refuses_a_loop_with_nonzero_winding() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicPathAreaRefusal, exact_periodic_surface_path_signed_area,
+    };
+    let source = doubly_periodic_tensor();
+    let report = exact_periodic_surface_path_signed_area(
+        &source,
+        &[[0., 0.], [1., 0.], [2., 0.], [3., 0.], [0., 0.]],
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(
+        report.refusal,
+        Some(PeriodicPathAreaRefusal::NonzeroWinding)
+    );
+    assert!(report.signed_area.is_none());
+}
