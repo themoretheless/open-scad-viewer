@@ -2,8 +2,9 @@ use num_rational::BigRational as Q;
 use nurbs_core::{
     editing::exact_surface_derivative::{
         PlaneGraphPosition, Refusal, SurfacePlaneGraphSampleOptions, SurfacePlaneGraphStatus,
-        SurfacePlaneSide, audit_surface_plane_graphs, audit_surface_plane_side,
-        refine_surface_plane_side, sample_surface_plane_graph,
+        SurfacePlanePolylineOptions, SurfacePlaneSide, approximate_surface_plane_graph,
+        audit_surface_plane_graphs, audit_surface_plane_side, refine_surface_plane_side,
+        sample_surface_plane_graph,
     },
     surface::Surface,
 };
@@ -279,4 +280,69 @@ fn retains_exact_edge_samples_and_requires_a_unique_full_graph() {
     )
     .unwrap();
     assert_eq!(report.outcome, Err(Refusal::UnprovedIdentity));
+}
+
+#[test]
+fn certifies_continuous_chord_error_for_a_parabolic_branch() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let surface = Surface {
+        degree_u: 1,
+        degree_v: 2,
+        knots_u: vec![0., 0., 1., 1.],
+        knots_v: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![
+            vec![vec![0., 0., 0.], vec![0., 0.5, 0.], vec![0., 1., -1.]],
+            vec![vec![1., 0., 1.], vec![1., 0.5, 1.], vec![1., 1., 0.]],
+        ],
+        weights: vec![vec![1.; 3]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let options = SurfacePlanePolylineOptions {
+        span: [1, 2],
+        solve_axis: UvAxis::U,
+        max_normalized_error: 1. / 64.,
+        max_segments: 16,
+        max_work: WORK,
+    };
+    let report = approximate_surface_plane_graph(&surface, [0., 0., 1.], 0., options).unwrap();
+    let result = report.outcome.unwrap();
+    assert_eq!(result.uv.len(), 9);
+    assert_eq!(result.normalized_error_upper, Q::new(1.into(), 256.into()));
+    for edge in result.uv.windows(2) {
+        let mid_u = (&edge[0][0] + &edge[1][0]) / q(2);
+        let mid_v = (&edge[0][1] + &edge[1][1]) / q(2);
+        assert_eq!(mid_u - mid_v.pow(2), result.normalized_error_upper);
+    }
+    let limited = approximate_surface_plane_graph(
+        &surface,
+        [0., 0., 1.],
+        0.,
+        SurfacePlanePolylineOptions {
+            max_segments: 2,
+            ..options
+        },
+    )
+    .unwrap();
+    assert_eq!(limited.outcome, Err(Refusal::ResourceLimit));
+}
+
+#[test]
+fn represents_a_straight_graph_exactly_with_one_segment() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let mut diagonal = surface(1, vec![0., 0., 1., 1.], &[0., -1.]);
+    diagonal.weights = vec![vec![1.; 2]; 2];
+    diagonal.control_points[0][1][2] = 1.;
+    diagonal.control_points[1][1][2] = 0.;
+    let options = SurfacePlanePolylineOptions {
+        span: [1, 1],
+        solve_axis: UvAxis::V,
+        max_normalized_error: 1e-20,
+        max_segments: 1,
+        max_work: WORK,
+    };
+    let report = approximate_surface_plane_graph(&diagonal, [0., 0., 1.], 0., options).unwrap();
+    let result = report.outcome.unwrap();
+    assert_eq!(result.uv, [[q(0), q(0)], [q(1), q(1)]]);
+    assert_eq!(result.normalized_error_upper, q(0));
 }

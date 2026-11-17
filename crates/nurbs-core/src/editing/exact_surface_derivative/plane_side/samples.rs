@@ -47,14 +47,7 @@ pub fn sample_surface_plane_graph(
     options: SurfacePlaneGraphSampleOptions,
 ) -> Result<SurfacePlaneGraphSampleReport> {
     validate(surface, normal, offset, options.max_work)?;
-    let [u, v] = options.span;
-    check(
-        (surface.degree_u..surface.control_points.len()).contains(&u)
-            && (surface.degree_v..surface.control_points[0].len()).contains(&v)
-            && surface.knots_u[u] < surface.knots_u[u + 1]
-            && surface.knots_v[v] < surface.knots_v[v + 1],
-        "Graph sampling requires a nonempty original knot cell",
-    )?;
+    let domain = cell_domain(surface, options.span)?;
     check(
         !transverse.is_empty()
             && transverse.len() <= 1024
@@ -66,24 +59,20 @@ pub fn sample_surface_plane_graph(
             && options.max_normalized_width <= 1.,
         "Graph sampling needs 1..1024 normalized coordinates and a width in (0, 1]",
     )?;
-    let domain = [
-        [surface.knots_u[u], surface.knots_u[u + 1]],
-        [surface.knots_v[v], surface.knots_v[v + 1]],
-    ];
     let mut work = Work {
         used: 0,
         limit: options.max_work,
     };
     let outcome = (|| {
-        let [x, y, z] = normal;
-        let plane = [
-            work.lift(x)?,
-            work.lift(y)?,
-            work.lift(z)?,
-            -work.lift(offset)?,
-        ];
-        let net = extract_net(surface, options.span, domain, &plane, &mut work)?;
-        let graph = graph(&net, options.solve_axis, &mut work)?.ok_or(Refusal::UnprovedIdentity)?;
+        let (net, graph) = graph_cell(
+            surface,
+            normal,
+            offset,
+            options.span,
+            domain,
+            options.solve_axis,
+            &mut work,
+        )?;
         let width = work.lift(options.max_normalized_width)?;
         let samples = transverse
             .iter()
@@ -113,7 +102,42 @@ pub fn sample_surface_plane_graph(
     })
 }
 
-fn slice(net: &PlaneNet, axis: UvAxis, t: &Q, work: &mut Work) -> PResult<Vec<Q>> {
+pub(super) fn cell_domain(surface: &Surface, span: [usize; 2]) -> Result<[[f64; 2]; 2]> {
+    let [u, v] = span;
+    check(
+        (surface.degree_u..surface.control_points.len()).contains(&u)
+            && (surface.degree_v..surface.control_points[0].len()).contains(&v)
+            && surface.knots_u[u] < surface.knots_u[u + 1]
+            && surface.knots_v[v] < surface.knots_v[v + 1],
+        "Graph sampling requires a nonempty original knot cell",
+    )?;
+    Ok([
+        [surface.knots_u[u], surface.knots_u[u + 1]],
+        [surface.knots_v[v], surface.knots_v[v + 1]],
+    ])
+}
+
+pub(super) fn graph_cell(
+    surface: &Surface,
+    [x, y, z]: [f64; 3],
+    offset: f64,
+    span: [usize; 2],
+    domain: [[f64; 2]; 2],
+    solve_axis: UvAxis,
+    work: &mut Work,
+) -> PResult<(PlaneNet, SurfacePlaneGraph)> {
+    let plane = [
+        work.lift(x)?,
+        work.lift(y)?,
+        work.lift(z)?,
+        -work.lift(offset)?,
+    ];
+    let net = extract_net(surface, span, domain, &plane, work)?;
+    let graph = graph(&net, solve_axis, work)?.ok_or(Refusal::UnprovedIdentity)?;
+    Ok((net, graph))
+}
+
+pub(super) fn slice(net: &PlaneNet, axis: UvAxis, t: &Q, work: &mut Work) -> PResult<Vec<Q>> {
     let [nu, nv] = net.size;
     let (count, transverse_count) = match axis {
         UvAxis::U => (nu, nv),
@@ -150,7 +174,12 @@ fn evaluate(coefficients: &[Q], t: &Q, work: &mut Work) -> PResult<Q> {
     Ok(terms.remove(0))
 }
 
-fn isolate(coefficients: &[Q], width: &Q, increasing: bool, work: &mut Work) -> PResult<[Q; 2]> {
+pub(super) fn isolate(
+    coefficients: &[Q],
+    width: &Q,
+    increasing: bool,
+    work: &mut Work,
+) -> PResult<[Q; 2]> {
     let zero = Q::zero();
     let one = Q::one();
     if coefficients[0].is_zero() {

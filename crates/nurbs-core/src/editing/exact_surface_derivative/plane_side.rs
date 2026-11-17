@@ -211,3 +211,9 @@ pub use samples::{
     SurfacePlaneGraphSample, SurfacePlaneGraphSampleOptions, SurfacePlaneGraphSampleReport,
     SurfacePlaneGraphSamples, sample_surface_plane_graph,
 };
+
+mod polyline;
+pub use polyline::{
+    SurfacePlanePolyline, SurfacePlanePolylineOptions, SurfacePlanePolylineReport,
+    approximate_surface_plane_graph,
+};

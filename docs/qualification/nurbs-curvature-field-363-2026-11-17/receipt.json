@@ -1,0 +1,37 @@
+{
+  "id": "NURBS-0363",
+  "testedBase": "5fdc22926c1b79867ef7015305e97c85f2c6a599",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "gaussian_curvature_field_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 57,
+  "scope": [
+    "Construct a rational UV polyline with a continuous error bound on the certified surface-plane graph.",
+    "Exact implicit second derivative bounds control the difference from each chord at equal transverse parameter. Rational root brackets add a certified vertex error."
+  ],
+  "logSha256": "bd5866c2896ab0d3023a39bb5a576820f3c242c8501926612048330a8d10147b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "c514c4c0d91a0efdaf1d4a49e0896e66b09ab650ab6a8595467c13de798aa0d1",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs": "3358b49496b7da9f6f1e4c455621113266e424f5bd03d3cc20ab2ef42f15f53c",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "13c74cc94adafab6a07cfb3b1d442aa6ac3512dd8c4543b60bed425613281275",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "e7ed271777c6cb74d84d2eefe35d8e5681ec872da59a1b6ee1546b211a21c455",
+    "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs": "107695b23321105b8e4a98f0030f5971991686fbbe53d2ee0e2827117dac6061",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/graph.rs": "d31eed5df1ea6aa68a23402a74e2040d73f6b48ab13d89196ce73ba7b938a312",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/samples.rs": "d0f755bfcd224302b2585a3b910ca1599a837b098789f1e8c52b5cc7017221d2",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/polyline.rs": "622d7e0d75daf3e1f770f82bcc56bd3a2d92784fd3779018ec11355ab8054bfc"
+  }
+}
