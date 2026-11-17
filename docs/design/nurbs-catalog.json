@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 551,
-  "unallocatedCount": 449,
+  "specifiedCount": 552,
+  "unallocatedCount": 448,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14047,6 +14047,27 @@
       "remainingQualification": [
         "Measure UV area by exact contour nesting parity and rational polygon integration.",
         "Prove the contour containment forest and sum exact area magnitudes by depth parity under a shared budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0552",
+      "name": "Точные центроиды компонент периодической UV-области с отверстиями",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_region_component_centroids",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-552-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-552-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Compute each filled periodic component centroid after aligning its holes to the same lift.",
+        "Resolve exact hole translations in each outer lift, then subtract their rational first moments and report individual component centroids.",
         "WASM and application integration are separate."
       ]
     }

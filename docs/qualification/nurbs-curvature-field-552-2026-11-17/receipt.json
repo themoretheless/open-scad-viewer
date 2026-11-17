@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0552",
+  "testedBase": "c9662e572f3a59a5e1722f357af3f270f4bd5145",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 161,
+  "scope": [
+    "Compute each filled periodic component centroid after aligning its holes to the same lift.",
+    "Resolve exact hole translations in each outer lift, then subtract their rational first moments and report individual component centroids."
+  ],
+  "logSha256": "1ebfcaf83a172354485506ae3f7daa7e6de8bc603560c8c999629c338a861681",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "872991fc768641148ee1720553e2f850e5cc0b39fa3ac7cc8edec9a3f86ee367",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "fcbad0fcda462e31d04c35c2bcea6f35f72468600f421ef8deaf3a8db0e98f25"
+  }
+}

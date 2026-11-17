@@ -3869,3 +3869,70 @@ fn periodic_region_area_refuses_tangent_boundaries() {
         })
     ));
 }
+
+#[test]
+fn periodic_region_centroid_aligns_holes_to_the_outer_lift() {
+    use num_rational::BigRational as Q;
+    use nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_region_component_centroids;
+    let source = doubly_periodic_tensor();
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let hole = [
+        [0.125, 0.125],
+        [0.625, 0.125],
+        [0.625, 0.625],
+        [0.125, 0.625],
+        [0.125, 0.125],
+    ];
+    let island = [
+        [0.25, 0.25],
+        [0.5, 0.25],
+        [0.5, 0.5],
+        [0.25, 0.5],
+        [0.25, 0.25],
+    ];
+    let contours = [&hole[..], &outer[..], &island[..]];
+    let report =
+        exact_periodic_surface_region_component_centroids(&source, &contours, 1_000_000).unwrap();
+    let components = report.components.unwrap();
+    assert_eq!(components.len(), 2);
+    assert_eq!(components[0].outer_contour, 1);
+    assert_eq!(components[0].area, Q::from_integer(2.into()));
+    assert_eq!(
+        components[0].centroid,
+        [Q::new(253.into(), 64.into()), Q::new(253.into(), 64.into())]
+    );
+    assert_eq!(components[1].outer_contour, 2);
+    assert_eq!(
+        components[1].centroid,
+        [Q::new(3.into(), 8.into()), Q::new(3.into(), 8.into())]
+    );
+    assert!(
+        exact_periodic_surface_region_component_centroids(&source, &contours, report.work_used - 1)
+            .unwrap()
+            .components
+            .is_none()
+    );
+}
+
+#[test]
+fn periodic_region_centroid_rejects_touching_components() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicContourForestRefusal, exact_periodic_surface_region_component_centroids,
+    };
+    let source = doubly_periodic_tensor();
+    let a = [[0., 0.], [1., 0.], [1., 1.], [0., 1.], [0., 0.]];
+    let b = [[1., 0.], [2., 0.], [2., 1.], [1., 1.], [1., 0.]];
+    let report =
+        exact_periodic_surface_region_component_centroids(&source, &[&a, &b], 1_000_000).unwrap();
+    assert!(report.components.is_none());
+    assert!(matches!(
+        report.refusal,
+        Some(PeriodicContourForestRefusal::Contact { .. })
+    ));
+}

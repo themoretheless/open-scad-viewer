@@ -2482,6 +2482,14 @@ fn classify_lifted_polygon(
     query: [f64; 2],
     work: &mut Work,
 ) -> std::result::Result<PeriodicPathLocation, ExactRefusal> {
+    Ok(classify_lifted_polygon_with_shift(polygon, query, work)?.0)
+}
+
+fn classify_lifted_polygon_with_shift(
+    polygon: &LiftedPolygon,
+    query: [f64; 2],
+    work: &mut Work,
+) -> std::result::Result<(PeriodicPathLocation, [i64; 2]), ExactRefusal> {
     use PeriodicPathLocation as Location;
     use num_traits::ToPrimitive;
 
@@ -2502,10 +2510,10 @@ fn classify_lifted_polygon(
                     .ok_or(ExactRefusal::ResourceLimit)?,
             );
         } else if &query[i] < min || &query[i] > max {
-            return Ok(Location::Outside);
+            return Ok((Location::Outside, [0; 2]));
         }
     }
-    let mut location = Location::Outside;
+    let mut location = (Location::Outside, [0; 2]);
     for u in ranges[0].0..=ranges[0].1 {
         for v in ranges[1].0..=ranges[1].1 {
             let shift = |i: usize, turns: i64, work: &mut Work| {
@@ -2519,8 +2527,8 @@ fn classify_lifted_polygon(
             };
             let p = [shift(0, u, work)?, shift(1, v, work)?];
             match classify_polygon_copy(&polygon.points, &p, work)? {
-                Location::Boundary => return Ok(Location::Boundary),
-                Location::Inside => location = Location::Inside,
+                Location::Boundary => return Ok((Location::Boundary, [u, v])),
+                Location::Inside => location = (Location::Inside, [u, v]),
                 Location::Outside => {}
             }
         }
@@ -3311,5 +3319,171 @@ pub fn exact_periodic_surface_region_area(
         area: Some(area),
         work_used,
         refusal: None,
+    })
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PeriodicRegionComponentCentroid {
+    pub outer_contour: usize,
+    pub area: BigRational,
+    /// Exact UV centroid in the lift anchored at the outer contour's start.
+    pub centroid: [BigRational; 2],
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicRegionCentroidReport {
+    /// One centroid per filled component, in outer-contour input order.
+    pub components: Option<Vec<PeriodicRegionComponentCentroid>>,
+    pub work_used: u64,
+    pub refusal: Option<PeriodicContourForestRefusal>,
+}
+
+/// Compute exact UV centroids of the filled components of a simple
+/// periodic contour forest. Move each direct hole into its outer contour's
+/// lift before subtracting its area and moments. Islands get their own
+/// centroids, since separate components have independent lifts.
+pub fn exact_periodic_surface_region_component_centroids(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    max_work: u64,
+) -> Result<PeriodicRegionCentroidReport> {
+    use PeriodicContourForestRefusal as Failure;
+
+    let forest = exact_periodic_surface_contour_forest(source, contours, max_work)?;
+    let refused = |reason, work_used| PeriodicRegionCentroidReport {
+        components: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    let invalid = Failure::Arithmetic(ExactRefusal::InvalidOutput);
+    let exhausted = Failure::Arithmetic(ExactRefusal::ResourceLimit);
+    let Some(nodes) = forest.nodes else {
+        return Ok(refused(forest.refusal.unwrap_or(invalid), forest.work_used));
+    };
+    let mut work = Work {
+        used: forest.work_used,
+        limit: max_work,
+    };
+    let mut moments = Vec::with_capacity(contours.len());
+    for (contour, path) in contours.iter().enumerate() {
+        if work.used == max_work {
+            return Ok(refused(exhausted, work.used));
+        }
+        let report = exact_periodic_surface_path_centroid(source, path, max_work - work.used)?;
+        work.used += report.work_used;
+        if let Some(reason) = report.refusal {
+            return Ok(refused(Failure::Path { contour, reason }, work.used));
+        }
+        let (Some(area), Some(center)) = (report.signed_area, report.centroid) else {
+            return Ok(refused(invalid, work.used));
+        };
+        moments.push((num_traits::Signed::abs(&area), center));
+    }
+    let domains = [Axis::U, Axis::V].map(|axis| {
+        let reference = row(source, axis, 0);
+        reference.periodic.then(|| reference.domain())
+    });
+    let mut components = Vec::new();
+    for (outer_contour, _) in nodes
+        .iter()
+        .enumerate()
+        .filter(|(_, node)| node.depth % 2 == 0)
+    {
+        if work.used == max_work {
+            return Ok(refused(exhausted, work.used));
+        }
+        let lift = lift_exact_periodic_surface_path(
+            source,
+            contours[outer_contour],
+            max_work - work.used,
+        )?;
+        work.used += lift.work_used;
+        let Some(points) = lift.parameters else {
+            let reason = PeriodicPathAreaRefusal::Lift(
+                lift.refusal
+                    .unwrap_or(PeriodicLiftRefusal::Arithmetic(ExactRefusal::InvalidOutput)),
+            );
+            return Ok(refused(
+                Failure::Path {
+                    contour: outer_contour,
+                    reason,
+                },
+                work.used,
+            ));
+        };
+        let result = prepare_lifted_polygon(&points, domains, &mut work).and_then(|polygon| {
+            measure_periodic_component(
+                &polygon,
+                outer_contour,
+                &nodes,
+                contours,
+                &moments,
+                &mut work,
+            )
+        });
+        match result {
+            Ok(component) => components.push(component),
+            Err(reason) => return Ok(refused(Failure::Arithmetic(reason), work.used)),
+        }
+    }
+    Ok(PeriodicRegionCentroidReport {
+        components: Some(components),
+        work_used: work.used,
+        refusal: None,
+    })
+}
+
+fn measure_periodic_component(
+    polygon: &LiftedPolygon,
+    outer: usize,
+    nodes: &[PeriodicContourNode],
+    contours: &[&[[f64; 2]]],
+    moments: &[(BigRational, [BigRational; 2])],
+    work: &mut Work,
+) -> std::result::Result<PeriodicRegionComponentCentroid, ExactRefusal> {
+    use num_traits::Signed;
+
+    let (mut area, center) = moments[outer].clone();
+    let mut weighted = [
+        work.op(&area, &center[0], |a, b| a * b)?,
+        work.op(&area, &center[1], |a, b| a * b)?,
+    ];
+    for (hole, _) in nodes
+        .iter()
+        .enumerate()
+        .filter(|(_, node)| node.parent == Some(outer))
+    {
+        let (location, turns) =
+            classify_lifted_polygon_with_shift(polygon, contours[hole][0], work)?;
+        if location != PeriodicPathLocation::Inside {
+            return Err(ExactRefusal::InvalidOutput);
+        }
+        let (hole_area, center) = &moments[hole];
+        area = work.op(&area, hole_area, |a, b| a - b)?;
+        for i in 0..2 {
+            let mut coordinate = center[i].clone();
+            if let Some(period) = &polygon.periods[i] {
+                let offset = work.op(
+                    period,
+                    &BigRational::from_integer(turns[i].into()),
+                    |a, b| a * b,
+                )?;
+                coordinate = work.op(&coordinate, &offset, |a, b| a + b)?;
+            }
+            let term = work.op(hole_area, &coordinate, |a, b| a * b)?;
+            weighted[i] = work.op(&weighted[i], &term, |a, b| a - b)?;
+        }
+    }
+    if !area.is_positive() {
+        return Err(ExactRefusal::InvalidOutput);
+    }
+    let centroid = [
+        work.op(&weighted[0], &area, |a, b| a / b)?,
+        work.op(&weighted[1], &area, |a, b| a / b)?,
+    ];
+    Ok(PeriodicRegionComponentCentroid {
+        outer_contour: outer,
+        area,
+        centroid,
     })
 }
