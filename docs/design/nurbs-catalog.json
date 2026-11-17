@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 331,
-  "unallocatedCount": 669,
+  "specifiedCount": 332,
+  "unallocatedCount": 668,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8593,6 +8593,27 @@
       "remainingQualification": [
         "Enclose XYZ perimeter of rational planar trim loops through certified affine-mapped jets without storing lifted poles.",
         "Closed rational 2D trims and exact rational plane coefficients. Every contour contributes positive length, independent of winding.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0332",
+      "name": "Сертифицированное расстояние от точки в 3D до плоской NURBS-границы",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::analysis::planar_boundary_distance::distance_to_projected_face_boundary",
+      "evidence": [
+        "crates/nurbs-core/src/analysis.rs",
+        "crates/nurbs-core/src/analysis/planar_boundary_distance.rs",
+        "crates/nurbs-foundation/src/distance/subdivision.rs",
+        "crates/nurbs-core/tests/certified_planar_boundary_distance_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-332-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-332-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose point-to-trim distance over every projected rational boundary including holes, with a certified witness.",
+        "Closed rational world-plane contours, including holes. The witness proves an upper bound; ties may return any suitable sampled witness.",
         "WASM and application integration are separate."
       ]
     }
