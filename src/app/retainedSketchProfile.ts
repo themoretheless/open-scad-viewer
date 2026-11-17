@@ -50,7 +50,7 @@ export function sketchProfile(sketch: DirectSketch): BrepProfile {
 }
 export function withRetainedProfile(sketch: DirectSketch, profile: BrepProfile): DirectSketch {
   if (!profile.loops.length) throw Error('The profile contains no material.')
-  const next = { ...sketch, retainedProfile: profile, points: retainedProfileDisplay(profile)[0], closed: true }
+  const next = { ...sketch, retainedProfile: profile, points: retainedProfileDisplay(profile)[0]!, closed: true }
   delete next.analytic
   delete next.dimensions
   delete next.constraints
@@ -61,7 +61,7 @@ export function combineSketchProfiles(sketches: DirectSketch[], operation: BrepP
   if (!['union', 'difference', 'intersection', 'xor'].includes(operation))
     throw Error('Unsupported sketch profile operation.')
   if (sketches.length < 2) throw Error('Select at least two closed profiles.')
-  const plane = sketches[0].plane ?? { origin: [0, 0, 0], u: [1, 0, 0], v: [0, 1, 0] }
+  const plane = sketches[0]!.plane ?? { origin: [0, 0, 0], u: [1, 0, 0], v: [0, 1, 0] }
   const po = plane.origin,
     pu = plane.u,
     pv = plane.v
@@ -85,10 +85,10 @@ export function combineSketchProfiles(sketches: DirectSketch[], operation: BrepP
     })
   )
     throw Error('Exact profile operations require a common sketch plane.')
-  let profile = sketchProfile(sketches[0])
+  let profile = sketchProfile(sketches[0]!)
   for (let i = 1; i < sketches.length; i++)
-    profile = booleanBrepProfiles(profile, sketchProfile(sketches[i]), operation)
-  return withRetainedProfile(sketches[0], profile)
+    profile = booleanBrepProfiles(profile, sketchProfile(sketches[i]!), operation)
+  return withRetainedProfile(sketches[0]!, profile)
 }
 export interface SketchProfileRegion {
   loops: number[]
@@ -97,8 +97,8 @@ export interface SketchProfileRegion {
 const insidePolygon = (point: Point2, polygon: Point2[]) => {
   let inside = false
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const [xi, yi] = polygon[i],
-      [xj, yj] = polygon[j]
+    const [xi, yi] = polygon[i]!,
+      [xj, yj] = polygon[j]!
     if (yi > point[1] !== yj > point[1] && point[0] < ((xj - xi) * (point[1] - yi)) / (yj - yi) + xi) inside = !inside
   }
   return inside
@@ -111,8 +111,8 @@ export function sketchProfileRegions(profile: BrepProfile): SketchProfileRegion[
   areas.forEach((area, i) => {
     if (area > 0) return
     const probe = display[i]?.[0],
-      owners = probe ? regions.filter(r => insidePolygon(probe, display[r.loops[0]] ?? [])) : []
-    const owner = owners.sort((a, b) => areas[a.loops[0]] - areas[b.loops[0]])[0]
+      owners = probe ? regions.filter(r => insidePolygon(probe, display[r.loops[0]!] ?? [])) : []
+    const owner = owners.sort((a, b) => areas[a.loops[0]!]! - areas[b.loops[0]!]!)[0]
     if (!owner) throw Error('A profile hole has no enclosing region.')
     owner.loops.push(i)
     owner.areaMm2 += area
@@ -145,7 +145,7 @@ export function selectSketchProfileRegions(sketch: DirectSketch, excluded: reado
       kept
         .flatMap(r => r.loops)
         .sort((a, b) => a - b)
-        .map(i => profile.loops[i]),
+        .map(i => profile.loops[i]!),
       'material-left',
       profile.toleranceMm,
     ),
