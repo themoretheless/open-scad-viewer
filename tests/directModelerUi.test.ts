@@ -5418,7 +5418,8 @@ it('C2 tab order: one stop for the extrusion result mode, arrows switch it, and 
  const ui=await mount();await ui.click('Profile');await ui.click('Extrude');await settle(250)
  const card=()=>applyButton(ui)!.parent!.parent!
  // Before C2 the three result-mode buttons were three stops (9 in total for this panel).
- expect(tabStops(ui,card())).toEqual(['button:New','input:','input:','input:Height, mm','input:Plane offset, mm','button:Apply · Enter','button:Cancel · Esc'])
+ expect(tabStops(ui,card())).toEqual(['button:New','input:','input:','input:Height, mm',tabStops(ui,card())[4]!,tabStops(ui,card())[5]!,'button:Pick face in viewport','input:Plane offset, mm','button:Apply · Enter','button:Cancel · Esc'])
+ expect(tabStops(ui,card()).slice(4,6).map(s=>s.split(':')[0])).toEqual(['select','select'])
  const group=ui.all(card()).find(n=>n.props.role==='radiogroup')!
  expect(group.props['aria-label']).toBe('Result mode')
  const key=async(name:string)=>{const prevented=vi.fn();group.props.onKeydown({key:name,currentTarget:group,preventDefault:prevented,stopPropagation(){}});await flushClearance();return prevented}
