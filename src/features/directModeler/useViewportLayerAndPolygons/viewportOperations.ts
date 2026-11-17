@@ -10,6 +10,7 @@ import { solidMaterialRgb } from '../../../kernel/solidMaterial'
 import type { SolidNurbsSurface } from '../../../kernel/solidNurbs'
 import { prepareVrPolygons } from '../../../render/vrScene'
 import { COARSE_DISPLAY } from '.././helpers'
+import { currentRenderSeam } from '../../../dev/testSeam'
 import type {ViewportOperationsContext} from './viewportOperationsContext'
 export function createViewportOperations(context: ViewportOperationsContext) {
 function hasDragNodes(): boolean { return context.dragNodes.length > 0 }
@@ -160,6 +161,8 @@ function retryGpuLayer() {
   }
 function mountGpuCanvas(el: Element | ComponentPublicInstance | null) {
     if (typeof HTMLCanvasElement === 'undefined' || !(el instanceof HTMLCanvasElement) || context.gpuInitStarted || !isSolidGpuSupported()) return
+    // The recording render seam promises no WebGPU adapter or device, so the Solid view stays on its CPU/SVG path.
+    if (currentRenderSeam() === 'recording') return
     context.gpuInitStarted = true
     context.gpuCanvas = el
     retryGpuLayer()

@@ -772,7 +772,8 @@ watch(()=>[props.open,bodyEditRevision.value,advancedOp.value,document.value,sel
  const generation=bodyEditGeneration
  const operation=advancedOp.value
  const screenPick=pointTrimPick.value
- const options={...advanced.value,operation,id:selection.value,inputs:[...surfaceInputs.value],face:faceIndex.value,edges:edgeIndexes.value.length?[...edgeIndexes.value]:[edgeIndex.value],openings:openingFaces.value.length?[...openingFaces.value]:[faceIndex.value],segments:filletSegments.value}
+ // Reactive arrays inside `advanced` are proxies that postMessage cannot clone: copy them.
+ const options={...advanced.value,sweepExtraTargets:[...advanced.value.sweepExtraTargets],profileExcludedRegions:[...advanced.value.profileExcludedRegions],operation,id:selection.value,inputs:[...surfaceInputs.value],face:faceIndex.value,edges:edgeIndexes.value.length?[...edgeIndexes.value]:[edgeIndex.value],openings:openingFaces.value.length?[...openingFaces.value]:[faceIndex.value],segments:filletSegments.value}
  bodyEditPending.value=true
  // Coalesce synchronous command setup; invalidate immediately before rendering.
  queueMicrotask(async()=>{

@@ -98,6 +98,8 @@
   position: absolute; z-index: 6; left: 50%; bottom: 44px; transform: translateX(-50%); max-width: calc(100% - 24px);
   border: 1px solid var(--accent); border-radius: 10px; background: color-mix(in srgb, var(--surface) 98%, transparent); box-shadow: 0 8px 28px rgba(0,0,0,.4);
 }
+/* The floating guidance sits over the bottom of the command card: keep Apply/Cancel scrollable above it. */
+.direct-workspace .canvas-wrap > .operation-card { padding-bottom: 96px; scroll-padding-bottom: 96px; }
 .direct-workspace .command-guidance.failed { border-color: var(--danger); }
 .direct-workspace .ws-count { color: var(--text-dim); font-size: 11px; white-space: nowrap; }
 @media (max-width: 750px) { .direct-workspace .workspace-bar > .file-menu > div { left: auto; right: 0; } }
