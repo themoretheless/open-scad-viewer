@@ -148,3 +148,41 @@ fn input_binding_operation_withholds_sources_when_work_is_exhausted() {
     assert_eq!(response["value"]["edgeBindings"], json!([]));
     assert_eq!(response["value"]["refusalStage"], "patch");
 }
+
+#[test]
+fn contour_audit_returns_ordered_exact_split_parameters() {
+    let mut request = request();
+    request["op"] = json!("brep_audit_exact_periodic_trim_contour");
+    request["contour"] = json!(0);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    assert!(report["refusalStage"].is_null());
+    let joins = report["joins"].as_array().unwrap();
+    assert_eq!(joins.len(), 6);
+    assert_eq!(
+        joins[1],
+        json!({
+            "segment": 0, "parameter": {"numerator": "1", "denominator": "2"}, "kind": "corner",
+        })
+    );
+    assert_eq!(joins[4]["segment"], 2);
+
+    request["contour"] = json!(2);
+    assert_eq!(run(&request)["ok"], false);
+}
+
+#[test]
+fn contour_audit_withholds_partial_joins_with_only_build_budget() {
+    let mut request = request();
+    let model = run(&request);
+    let build_work = model["value"]["workUsed"].as_u64().unwrap();
+    request["op"] = json!("brep_audit_exact_periodic_trim_contour");
+    request["contour"] = json!(0);
+    request["maxWork"] = json!(build_work + 1);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    assert!(response["value"]["joins"].is_null());
+    assert_eq!(response["value"]["refusalStage"], "audit");
+    assert!(response["value"]["workUsed"].as_u64().unwrap() <= build_work + 1);
+}

@@ -5,6 +5,7 @@ mod closed_ss;
 
 const OPS: &[&str] = &[
     "brep_partition_closed_ss", "brep_partition_all_closed_ss",
+    "brep_audit_exact_periodic_trim_contour",
     "brep_build_exact_periodic_trim_sheet",
     "brep_build_exact_periodic_trim_sheet_with_bindings",
     "brep_build_exact_periodic_trim_sheet_with_input_bindings",
@@ -87,6 +88,7 @@ pub(crate) fn route(v: Value) -> Routed {
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
         "brep_partition_closed_ss" => closed_ss::partition(v),
+        "brep_audit_exact_periodic_trim_contour" => brep::exact_periodic_trim_contour_audit_request(&v),
         "brep_build_exact_periodic_trim_sheet" => brep::exact_periodic_trim_sheet_request(&v),
         "brep_build_exact_periodic_trim_sheet_with_input_bindings" => brep::exact_periodic_trim_sheet_input_bindings_request(&v),
         "brep_build_exact_periodic_trim_sheet_with_bindings" => brep::exact_periodic_trim_sheet_bindings_request(&v),

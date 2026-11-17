@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0579",
+  "testedBase": "ee0c02d6b03886f13e6621bf9a4c2d096f0d1ed6",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 159,
+  "scope": [
+    "Expose complete exact joins and rational split parameters through the binary ABI.",
+    "Verify rational split parameters, contour order, and atomic refusal under one shared build and audit budget."
+  ],
+  "logSha256": "7b1d079a2d22e3e558a3c3b20d7fc08a2ec8bda6e5bdac16a4496d350012a80b",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "e9554bd2649b00939a3662bf77482dde60b2e18ff059f064d02010a62b0824d7",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "324ab80a92037267c799e26da05f407c7d54c8bcc4be18cb2cddbd87e206ce05",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "3fb3f46db3ca52eaba9871a2d241b43c9724655cbdea6484c098e5cbd4084f68",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "db6c8bfe967e1677484021886c51a1eb7962a5ec0600ff5aa705d0bfc3d1ebe9"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

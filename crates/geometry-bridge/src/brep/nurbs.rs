@@ -689,3 +689,61 @@ fn periodic_trim_sheet_response(
     }
     Ok(response)
 }
+
+/// Audit the joins of one original contour using a shared build and audit budget.
+pub fn exact_periodic_trim_contour_audit_request(
+    request: &value_codec::Value,
+) -> Result<value_codec::Value> {
+    use crate::field;
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicTrimTangentJoin, build_exact_periodic_surface_trim_input_edges,
+    };
+    use value_codec::json;
+
+    let source: nurbs_core::surface::Surface = field(request, "surface")?;
+    let contours: Vec<Vec<[f64; 2]>> = field(request, "contours")?;
+    let contour: usize = field(request, "contour")?;
+    let max_work: u64 = field(request, "maxWork")?;
+    if contour >= contours.len() {
+        return Err(input("Periodic trim audit contour index is out of range"));
+    }
+    let contours = contours.iter().map(Vec::as_slice).collect::<Vec<_>>();
+    let edges = build_exact_periodic_surface_trim_input_edges(&source, &contours, max_work)?;
+    let build_work = edges.geometry.work_used;
+    if edges.geometry.patches.is_none() {
+        return Ok(json!({"joins": null, "workUsed": build_work, "refusalStage": "build"}));
+    }
+    if build_work == max_work {
+        return Ok(json!({"joins": null, "workUsed": build_work, "refusalStage": "audit"}));
+    }
+    let audit = edges.audit_input_contour_joins(contour, max_work - build_work)?;
+    let joins = audit.joins.map(|joins| {
+        joins
+            .into_iter()
+            .map(|join| {
+                let kind = match join.join {
+                    PeriodicTrimTangentJoin::OneSided => "oneSided",
+                    PeriodicTrimTangentJoin::Stationary => "stationary",
+                    PeriodicTrimTangentJoin::C1 => "c1",
+                    PeriodicTrimTangentJoin::G1 => "g1",
+                    PeriodicTrimTangentJoin::Reversal => "reversal",
+                    PeriodicTrimTangentJoin::Corner => "corner",
+                };
+                json!({
+                    "segment": join.segment,
+                    "parameter": {
+                        "numerator": join.parameter.numer().to_string(),
+                        "denominator": join.parameter.denom().to_string(),
+                    },
+                    "kind": kind,
+                })
+            })
+            .collect::<Vec<_>>()
+    });
+    let refusal_stage = joins.is_none().then_some("audit");
+    Ok(json!({
+        "joins": joins,
+        "workUsed": build_work + audit.work_used,
+        "refusalStage": refusal_stage,
+    }))
+}
