@@ -8,6 +8,12 @@ use num_rational::BigRational as Q;
 use num_traits::{ToPrimitive, Zero};
 use std::cmp::Ordering;
 
+mod ordered;
+pub use ordered::{
+    StoredPlanarIntersection, StoredPlanarIntersectionEdge, StoredPlanarIntersectionReport,
+    store_trimmed_planar_intersection,
+};
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PlanarSegmentError {
     /// Squared Euclidean error bound between the stored XYZ curve and the exact segment.
@@ -108,8 +114,20 @@ fn store(
     } else {
         [&first[0], &last[0]]
     };
-    let coordinates = [start.coordinates, end.coordinates];
-    let errors = PlanarSegmentError {
+    let errors = segment_error(start, end);
+    if errors.worst() > &limit {
+        return Ok(PlanarSegmentStorage::ToleranceExceeded(errors));
+    }
+    let (spatial, pcurves) = curves([start.coordinates, end.coordinates], projections)?;
+    Ok(PlanarSegmentStorage::Stored {
+        spatial,
+        pcurves,
+        squared_error: errors,
+    })
+}
+
+fn segment_error(start: &Candidate, end: &Candidate) -> PlanarSegmentError {
+    PlanarSegmentError {
         spatial: start.error.spatial.clone().max(end.error.spatial.clone()),
         lifted_pcurves: std::array::from_fn(|i| {
             start.error.lifted_pcurves[i]
@@ -121,18 +139,17 @@ fn store(
                 .clone()
                 .max(end.error.correspondence[i].clone())
         }),
-    };
-    if errors.worst() > &limit {
-        return Ok(PlanarSegmentStorage::ToleranceExceeded(errors));
     }
+}
+
+fn curves(
+    coordinates: [[f64; 3]; 2],
+    projections: [&PlanarSurfaceProjection; 2],
+) -> Checked<(Curve, [Curve; 2])> {
     let spatial = curve(coordinates)?;
     let [left, right] = projections
         .map(|chart| curve(coordinates.map(|p| chart.retained_axes.map(|axis| p[axis]))));
-    Ok(PlanarSegmentStorage::Stored {
-        spatial,
-        pcurves: [left?, right?],
-        squared_error: errors,
-    })
+    Ok((spatial, [left?, right?]))
 }
 
 fn curve<const D: usize>(points: [[f64; D]; 2]) -> Checked<Curve> {
@@ -276,21 +293,7 @@ fn best_pair<'a>(
     for start in first {
         for end in last {
             work.charge(1)?;
-            let direction = std::array::from_fn::<_, 3, _>(|i| {
-                start.coordinates[i]
-                    .partial_cmp(&end.coordinates[i])
-                    .expect("finite coordinates")
-            });
-            if direction
-                .iter()
-                .zip(ordering)
-                .any(|(&actual, expected)| actual != Ordering::Equal && actual != expected)
-                || projections.iter().any(|p| {
-                    p.retained_axes
-                        .iter()
-                        .all(|&i| direction[i] == Ordering::Equal)
-                })
-            {
+            if !preserves_order(start, end, ordering, projections, None) {
                 continue;
             }
             let score = start.error.worst().max(end.error.worst());
@@ -300,4 +303,28 @@ fn best_pair<'a>(
         }
     }
     best.map(|(pair, _)| pair).ok_or(Refusal::InvalidOutput)
+}
+
+fn preserves_order(
+    start: &Candidate,
+    end: &Candidate,
+    ordering: [Ordering; 3],
+    projections: [&PlanarSurfaceProjection; 2],
+    strict_axis: Option<usize>,
+) -> bool {
+    let direction: [_; 3] = std::array::from_fn(|i| {
+        start.coordinates[i]
+            .partial_cmp(&end.coordinates[i])
+            .expect("finite coordinates")
+    });
+    !direction
+        .iter()
+        .zip(ordering)
+        .any(|(&actual, expected)| actual != Ordering::Equal && actual != expected)
+        && projections.iter().all(|p| {
+            p.retained_axes
+                .iter()
+                .any(|&i| direction[i] != Ordering::Equal)
+        })
+        && strict_axis.is_none_or(|i| direction[i] == Ordering::Less)
 }

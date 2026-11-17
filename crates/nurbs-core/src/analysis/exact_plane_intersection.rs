@@ -257,6 +257,8 @@ pub use segments::{
 
 mod storage;
 pub use storage::{
-    PlanarSegmentError, PlanarSegmentStorage, PlanarSegmentStorageReport,
+    PlanarSegmentError, PlanarSegmentStorage, PlanarSegmentStorageReport, StoredPlanarIntersection,
+    StoredPlanarIntersectionEdge, StoredPlanarIntersectionReport,
     optimize_planar_intersection_segment_storage, store_planar_intersection_segment,
+    store_trimmed_planar_intersection,
 };

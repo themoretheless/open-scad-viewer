@@ -6,10 +6,10 @@ use nurbs_core::{
         },
         exact_plane_intersection::{
             ExactPlanarIntersectionSegment, PlanarIntersectionSegments, PlanarSegmentStorage,
-            SupportPlaneIntersection, TrimmedPlanarIntersection,
+            StoredPlanarIntersection, SupportPlaneIntersection, TrimmedPlanarIntersection,
             build_planar_intersection_segments, intersect_planar_supports,
             intersect_trimmed_planar_faces, optimize_planar_intersection_segment_storage,
-            store_planar_intersection_segment,
+            store_planar_intersection_segment, store_trimmed_planar_intersection,
         },
         planar_coplanar_ray::CoplanarRayPartitionOptions,
         planar_trim_projection::ProjectedTrimmedFace,
@@ -498,4 +498,73 @@ fn adjacent_search_preserves_nonzero_segments_and_respects_budget() {
         PlanarSegmentStorage::Refused(Refusal::ResourceLimit)
     ));
     assert!(limited.work_used < optimized.work_used);
+}
+
+#[test]
+fn stores_all_split_intersection_edges_with_strict_chart_gaps() {
+    let a = ProjectedTrimmedFace {
+        projection: plane(|x, y| x + y),
+        loops: vec![
+            rectangle([-2., 2.], [-2., 2.], false),
+            rectangle([-0.5, 0.5], [-0.5, 0.5], true),
+        ],
+    };
+    let b = ProjectedTrimmedFace {
+        projection: plane(|x, y| 2. * x - y + 1.),
+        loops: vec![rectangle([-1.5, 1.5], [-1.5, 1.5], false)],
+    };
+    let opts = options(10_000);
+    let exact = build_planar_intersection_segments(&a, &b, opts).unwrap();
+    let stored = store_trimmed_planar_intersection(&a, &b, opts, 1e-14).unwrap();
+    let StoredPlanarIntersection::Transverse {
+        line,
+        edges,
+        possible,
+    } = stored.outcome
+    else {
+        panic!("{:?}", stored.outcome);
+    };
+    let PlanarIntersectionSegments::Transverse {
+        segments,
+        possible: expected,
+        ..
+    } = exact.outcome
+    else {
+        panic!("{:?}", exact.outcome);
+    };
+    assert_eq!(possible, expected);
+    assert_eq!(edges.len(), 2);
+    for (edge, segment) in edges.iter().zip(&segments) {
+        assert_eq!(edge.parameter, segment.parameter);
+        assert_eq!(edge.spatial.degree, 1);
+    }
+    assert!(
+        edges[0].spatial.control_points[1][line.clock_axis]
+            < edges[1].spatial.control_points[0][line.clock_axis]
+    );
+    // This fixture's canonical direction has all three positive components.
+    for i in 0..2 {
+        assert!(
+            edges[0].pcurves[i].control_points[1]
+                .iter()
+                .zip(&edges[1].pcurves[i].control_points[0])
+                .any(|(a, b)| a < b)
+        );
+    }
+    let mut limited_options = opts;
+    limited_options.max_work = exact.work_used;
+    let limited = store_trimmed_planar_intersection(&a, &b, limited_options, 1e-14).unwrap();
+    assert!(matches!(
+        limited.outcome,
+        StoredPlanarIntersection::Refused(
+            nurbs_core::editing::exact_derivative::Refusal::ResourceLimit
+        )
+    ));
+    assert!(limited.work_used <= exact.work_used);
+
+    let no_approximation = store_trimmed_planar_intersection(&a, &b, opts, 0.).unwrap();
+    assert!(matches!(
+        no_approximation.outcome,
+        StoredPlanarIntersection::NoAdmissibleStorage
+    ));
 }
