@@ -1100,10 +1100,33 @@ fn periodic_trim_patch_area_response(
 pub fn exact_periodic_trim_surface_area_request(
     request: &value_codec::Value,
 ) -> Result<value_codec::Value> {
+    periodic_trim_surface_measure_response(request, None)
+}
+
+/// Measure area, centroid and central inertia on one certified trim partition.
+pub fn exact_periodic_trim_surface_mass_properties_request(
+    request: &value_codec::Value,
+) -> Result<value_codec::Value> {
+    let tolerance: f64 = crate::field(request, "momentToleranceMm4")?;
+    if !tolerance.is_finite() || tolerance <= 0. {
+        return Err(input(
+            "Principal moment tolerance must be positive and finite",
+        ));
+    }
+    periodic_trim_surface_measure_response(request, Some(tolerance))
+}
+
+fn periodic_trim_surface_measure_response(
+    request: &value_codec::Value,
+    moment_tolerance: Option<f64>,
+) -> Result<value_codec::Value> {
     use crate::field;
     use nurbs_core::{
-        analysis::surface_measure::{StopReason, periodic_trim_patch_area},
+        analysis::surface_measure::{
+            StopReason, periodic_trim_patch_area, trimmed_surface_central_inertia,
+        },
         editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
+        trim_domain::TrimDomain,
     };
     use value_codec::json;
 
@@ -1137,6 +1160,16 @@ pub fn exact_periodic_trim_surface_area_request(
         "workUsed": build.work_used,
         "status": "buildRefused",
     });
+    if moment_tolerance.is_some() {
+        for key in [
+            "centroidBoundsMm",
+            "centralInertiaBoundsMm4",
+            "principalMomentBoundsMm4",
+        ] {
+            response[key] = value_codec::Value::Null;
+        }
+        response["withinMomentTolerance"] = json!(false);
+    }
     let Some(patches) = build.patches else {
         return Ok(response);
     };
@@ -1147,7 +1180,24 @@ pub fn exact_periodic_trim_surface_area_request(
         response["status"] = json!("unavailable");
         return Ok(response);
     };
-    let measure = periodic_trim_patch_area(patch, tolerance, tolerance_uv, max_surface, max_trim)?;
+    let measure = if let Some(moment_tolerance) = moment_tolerance {
+        let trim = TrimDomain::new(&patch.trim.loops, tolerance_uv)?;
+        let report = trimmed_surface_central_inertia(
+            &patch.surface,
+            &trim,
+            tolerance,
+            max_surface,
+            max_trim,
+        )?
+        .bound_principal_moments(moment_tolerance)?;
+        response["centroidBoundsMm"] = json!(report.central.centroid.centroid_bounds);
+        response["centralInertiaBoundsMm4"] = json!(report.central.central_inertia_bounds);
+        response["principalMomentBoundsMm4"] = json!(report.principal_bounds);
+        response["withinMomentTolerance"] = json!(report.within_moment_tolerance);
+        report.central.centroid.measure
+    } else {
+        periodic_trim_patch_area(patch, tolerance, tolerance_uv, max_surface, max_trim)?
+    };
     response["minimumSurfaceCells"] = json!(measure.minimum_surface_cells);
     response["trimCells"] = json!(measure.trim_cells);
     let Some(area) = measure.area else {

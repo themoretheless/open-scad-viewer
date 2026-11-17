@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0612",
+  "testedBase": "a0475bdad76e94f83d2c68359d7c5e6799a7355f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 224,
+  "scope": [
+    "Expose certified retained area, centroid, central inertia and ordered principal moments through one bridge operation.",
+    "Verify shared area cell counters, analytic centroid, tensor symmetry and absent mass-derived properties without a positive area proof through WASM."
+  ],
+  "logSha256": "1b73915bda481fff8d52476495141ca74b5b50c0c4a1a3dac18cece313e598fb",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "eb90a4cfb0373ee935ae898d1fbd64883f4c3887c7678733996998bc6b15a637",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "7eed074932c3c3c5ebdaaac698c6a61f35ac338bf3c6d897b897b8f985ea1d5a",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "11a53942e67c0d5c277d606ef3c04cb42038ea58f228c4b78977e2d043d276a6",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "e538424e0fc684d5e883fb1604e373aaef4e9f8004e6f39b3ed21896cc3749ce"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

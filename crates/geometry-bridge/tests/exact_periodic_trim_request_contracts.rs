@@ -460,3 +460,46 @@ fn surface_area_operation_distinguishes_incomplete_coverage_and_coarse_bounds() 
     request["outerContour"] = json!(1);
     assert_eq!(run(&request)["value"]["status"], "unavailable");
 }
+
+#[test]
+fn trimmed_surface_mass_properties_operation_reports_shared_area_and_centroid() {
+    let mut request = surface_area_request(10_000, 1_000_000);
+    request["toleranceMm2"] = json!(0.005);
+    let area_only = run(&request);
+    request["op"] = json!("brep_measure_exact_periodic_trim_surface_mass_properties");
+    request["momentToleranceMm4"] = json!(1e-8);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    for key in ["surfaceCells", "trimCells", "boundsMm2"] {
+        assert_eq!(report[key], area_only["value"][key]);
+    }
+    let centroid = report["centroidBoundsMm"].as_array().unwrap();
+    assert_eq!(centroid.len(), 3);
+    for (interval, expected) in centroid.iter().zip([0.1, 0.15, 1.]) {
+        assert!(
+            interval[0].as_f64().unwrap() <= expected && expected <= interval[1].as_f64().unwrap()
+        );
+    }
+    let tensor = &report["centralInertiaBoundsMm4"];
+    assert_eq!(tensor[0][1], tensor[1][0]);
+    assert_eq!(
+        report["principalMomentBoundsMm4"].as_array().unwrap().len(),
+        3
+    );
+}
+
+#[test]
+fn trimmed_surface_mass_properties_operation_withholds_unproved_center() {
+    let mut request = surface_area_request(2, 1);
+    request["op"] = json!("brep_measure_exact_periodic_trim_surface_mass_properties");
+    request["momentToleranceMm4"] = json!(1e-8);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    assert!(report["boundsMm2"].as_array().is_some());
+    assert!(report["centroidBoundsMm"].is_null());
+    assert!(report["centralInertiaBoundsMm4"].is_null());
+    assert!(report["principalMomentBoundsMm4"].is_null());
+    assert_eq!(report["withinMomentTolerance"], false);
+}

@@ -21,6 +21,9 @@ interface Report {
     topologyIds: { edges: string[] }
   } | null
   edgeBindings?: { edgeId: string; contour: number; segment: number; interval?: [number, number]; parameters?: [Rational, Rational] }[]
+  centroidBoundsMm?: [number, number][] | null
+  centralInertiaBoundsMm4?: [number, number][][] | null
+  principalMomentBoundsMm4?: [number, number][] | null
   boundsMm2?: [number, number] | [number, number][] | null
   stations?: { parameterBounds: [number, number] | null; pointBoundsMm: [number, number][] | null; status: string }[] | null
   pointBoundsMm?: [number, number][] | null
@@ -227,3 +230,21 @@ const incompleteArea = call(request.maxWork, surfaceAreaOp, {
 assert.equal(incompleteArea.status, 'workLimit')
 assert.equal(incompleteArea.boundsMm2, null)
 console.log('WASM ABI enclosed true trimmed surface area and refused incomplete coverage.')
+
+const massOp = 'brep_measure_exact_periodic_trim_surface_mass_properties'
+const massOptions = { ...surfaceAreaOptions, toleranceMm2: 0.005, momentToleranceMm4: 1e-8 }
+const mass = call(request.maxWork, massOp, {
+  ...massOptions, maxSurfaceCells: 10_000, maxTrimCells: 1_000_000,
+})
+assert.ok(mass.centroidBoundsMm)
+assert.equal(mass.centroidBoundsMm.length, 3)
+for (const [axis, [lo, hi]] of mass.centroidBoundsMm.entries()) {
+  const value = [0.1, 0.15, 1][axis]
+  assert.ok(lo <= value && value <= hi)
+}
+assert.deepEqual(mass.centralInertiaBoundsMm4?.[0][1], mass.centralInertiaBoundsMm4?.[1][0])
+assert.equal(mass.principalMomentBoundsMm4?.length, 3)
+const coarseMass = call(request.maxWork, massOp, { ...massOptions, maxSurfaceCells: 2, maxTrimCells: 1 })
+assert.equal(coarseMass.centroidBoundsMm, null)
+assert.equal(coarseMass.principalMomentBoundsMm4, null)
+console.log('WASM ABI returned trimmed area centroid, central inertia and principal moment bounds.')

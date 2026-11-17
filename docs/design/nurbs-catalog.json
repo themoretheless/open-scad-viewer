@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 611,
-  "unallocatedCount": 389,
+  "specifiedCount": 612,
+  "unallocatedCount": 388,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15233,6 +15233,27 @@
         "Bound sorted principal inertia moments using interval LDL congruence and conservative bracketing.",
         "Verify rotated tensors with repeated eigenvalues and retain conservative intervals when entry uncertainty prevents a spectral proof.",
         "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0612",
+      "name": "Гарантированные центр площади, центральный тензор и главные моменты обрезанной грани через WASM",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "geometry_bridge::brep::exact_periodic_trim_surface_mass_properties_request",
+      "evidence": [
+        "crates/geometry-bridge/src/brep/nurbs.rs",
+        "crates/geometry-bridge/src/dispatch/brep.rs",
+        "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
+        "scripts/check-exact-periodic-trim-sheet-abi.mts",
+        "docs/qualification/nurbs-curvature-field-612-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-612-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Expose certified retained area, centroid, central inertia and ordered principal moments through one bridge operation.",
+        "Verify shared area cell counters, analytic centroid, tensor symmetry and absent mass-derived properties without a positive area proof through WASM.",
+        "Editor and production delivery qualification remain."
       ]
     }
   ],
