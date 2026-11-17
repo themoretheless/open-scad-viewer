@@ -1396,3 +1396,68 @@ fn append_coverage_part(
         });
     }
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PolyhedralPathCoverageLength {
+    pub solid_count: usize,
+    /// Inclusive bounds in millimeters for the distance with this count.
+    pub length_bounds_mm: [Q; 2],
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BoundedPolyhedralPathCoverageLengths {
+    /// Counts with positive traveled length in ascending order. Zero counts
+    /// describe free travel. Isolated contacts contribute no distance.
+    pub lengths: Vec<PolyhedralPathCoverageLength>,
+    pub exact_work: u64,
+}
+
+/// Enclose traveled length by the number of solids containing each path
+/// point in their closed material. The tolerance applies to each count.
+pub fn bounded_polyhedral_path_coverage_lengths(
+    solids: &[&QualifiedClosedSolid],
+    points_mm: &[[Q; 3]],
+    tolerance_mm: f64,
+    max_exact_work: u64,
+) -> Result<BoundedPolyhedralPathCoverageLengths> {
+    let tolerance = enclosure_width(tolerance_mm)?;
+    let coverage = exact_polyhedral_path_coverage(solids, points_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - coverage.exact_work;
+    let map_cost = 8 * (u64::from(solids.len().ilog2()) + 1);
+    let mut squares: BTreeMap<usize, Vec<Q>> = BTreeMap::new();
+    for (pair, parts) in points_mm.windows(2).zip(coverage.spans) {
+        spend(&mut remaining, 12)?;
+        let direction = std::array::from_fn(|i| &pair[1][i] - &pair[0][i]);
+        let length_squared = dot(&direction, &direction);
+        if length_squared.is_zero() {
+            continue;
+        }
+        let mut fractions = BTreeMap::<usize, Q>::new();
+        for part in parts {
+            spend(&mut remaining, 4)?;
+            let [lo, hi] = part.parameters;
+            if lo < hi {
+                spend(&mut remaining, map_cost)?;
+                *fractions.entry(part.solids.len()).or_default() += hi - lo;
+            }
+        }
+        for (solid_count, fraction) in fractions {
+            spend(&mut remaining, map_cost)?;
+            squares
+                .entry(solid_count)
+                .or_default()
+                .push(fraction.pow(2) * &length_squared);
+        }
+    }
+    let mut lengths = Vec::with_capacity(squares.len());
+    for (solid_count, terms) in squares {
+        lengths.push(PolyhedralPathCoverageLength {
+            solid_count,
+            length_bounds_mm: bound_root_sum(terms, tolerance.clone(), &mut remaining)?,
+        });
+    }
+    Ok(BoundedPolyhedralPathCoverageLengths {
+        lengths,
+        exact_work: max_exact_work - remaining,
+    })
+}

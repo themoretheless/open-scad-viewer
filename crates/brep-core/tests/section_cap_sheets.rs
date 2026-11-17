@@ -4137,3 +4137,54 @@ fn exact_path_coverage_handles_overlapping_spans_and_duplicate_solids() {
         ]
     );
 }
+
+#[test]
+fn bounded_path_coverage_lengths_omit_point_contacts_and_stationary_distance() {
+    use brep_core::analysis::{
+        PolyhedralPathCoverageLength, bounded_polyhedral_path_coverage_lengths,
+    };
+    use num_rational::BigRational as Q;
+    let a = shifted_oblique_solid(0.);
+    let b = shifted_oblique_solid(3.);
+    let q = |n: i64| Q::from_integer(n.into());
+    let point = |x| [q(x), q(0), q(1)];
+    let path = [point(-1), point(3), point(3), point(7), point(-1)];
+    let solids = [&a, &b];
+    let report = bounded_polyhedral_path_coverage_lengths(&solids, &path, 1e-6, 1_000_000).unwrap();
+    assert_eq!(
+        report.lengths,
+        [(0, 4), (1, 12)].map(|(solid_count, length)| PolyhedralPathCoverageLength {
+            solid_count,
+            length_bounds_mm: [q(length), q(length)],
+        }),
+    );
+    assert_eq!(
+        bounded_polyhedral_path_coverage_lengths(&solids, &path, 1e-6, report.exact_work).unwrap(),
+        report
+    );
+    assert!(
+        bounded_polyhedral_path_coverage_lengths(&solids, &path, 1e-6, report.exact_work - 1)
+            .is_err()
+    );
+}
+
+#[test]
+fn bounded_path_coverage_lengths_enclose_irrational_distance_at_every_count() {
+    use brep_core::analysis::bounded_polyhedral_path_coverage_lengths;
+    use num_rational::BigRational as Q;
+    let a = shifted_oblique_solid(0.);
+    let b = shifted_oblique_solid(2.);
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let path = [[q(-1, 1), q(0, 1), q(1, 1)], [q(7, 1), q(0, 1), q(3, 2)]];
+    let tol = 1e-9;
+    let report =
+        bounded_polyhedral_path_coverage_lengths(&[&a, &b], &path, tol, 1_000_000).unwrap();
+    assert_eq!(report.lengths.len(), 3);
+    for (count, (entry, width)) in report.lengths.into_iter().zip([3, 4, 1]).enumerate() {
+        assert_eq!(entry.solid_count, count);
+        let expected_squared = q(257 * width * width, 256);
+        let [lo, hi] = entry.length_bounds_mm;
+        assert!(lo >= q(0, 1) && lo.pow(2) < expected_squared && hi.pow(2) > expected_squared);
+        assert!(hi - lo <= Q::from_float(tol).unwrap());
+    }
+}
