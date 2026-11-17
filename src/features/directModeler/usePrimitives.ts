@@ -26,6 +26,7 @@ export interface PrimitivesOptions {
     | 'instance-transform'
     | 'instance-place'
     | 'instance-array'
+    | 'live-pattern'
     | 'nurbs-loft'
     | 'nurbs-sweep'
     | 'nurbs-patch'

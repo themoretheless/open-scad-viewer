@@ -164,6 +164,7 @@ export interface CommandPaletteOptions {
     | 'instance-transform'
     | 'instance-place'
     | 'instance-array'
+    | 'live-pattern'
     | 'nurbs-loft'
     | 'nurbs-sweep'
     | 'nurbs-patch'
@@ -900,6 +901,15 @@ export function useCommandPalette(options: CommandPaletteOptions) {
           disabledReason: label('Выберите независимое тело-источник', 'Select an independent source body'),
         },
       ),
+      cmd('live-pattern', 'Живой массив', 'Live array', () => beginAdvanced('live-pattern'), {
+        // A generated member edits its source: the parameters live on the source body.
+        detail:
+          body?.livePattern || body?.instance?.pattern
+            ? label('Изменить сетку, круг или зеркало', 'Edit grid, radial or mirror')
+            : label('Сетка, круг или зеркало', 'Grid, radial or mirror'),
+        enabled: !!body && (!body.instance || !!body.instance.pattern),
+        disabledReason: label('Выберите независимое тело-источник', 'Select an independent source body'),
+      }),
       cmd(
         'instance-transform',
         'Преобразовать экземпляр',

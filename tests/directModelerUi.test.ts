@@ -9785,6 +9785,69 @@ it('discards a late rational crossing diagnostic after Escape', async () => {
   expect(ui.doc()).toEqual(before)
 })
 
+for (const locale of ['en', 'ru'])
+  it('C3 live array: palette command, panel, undo/redo, later edit and patternCount mark in ' + locale, async () => {
+    await geometryKernel.warmGeometryKernel()
+    const ru = locale === 'ru'
+    const ui = await mount({ locale })
+    await ui.click(ru ? 'Куб' : 'Box')
+    const source = ui.doc().bodies.at(-1)!
+    const members = () => ui.doc().bodies.filter(b => b.instance?.pattern && b.instance.sourceId === source.id)
+    const command = () => ui.commands().find(c => c.id === 'live-pattern')!
+    const open = () => ui.click(ru ? 'Живой массив' : 'Live array')
+    const kind = () => ui.all().find(n => n.tag === 'select' && n.props['data-field'] === 'patternKind')!
+    expect(command().enabled).not.toBe(false)
+    await open()
+    quantityField(ui, ru ? 'Строки' : 'Rows').props['onUpdate:modelValue']('2')
+    quantityField(ui, ru ? 'Столбцы' : 'Columns').props['onUpdate:modelValue']('3')
+    await flushClearance()
+    await commandKey(ui, 'Enter')
+    await flushClearance()
+    expect(ui.doc().bodies.find(b => b.id === source.id)!.livePattern).toMatchObject({
+      kind: 'grid',
+      rows: 2,
+      columns: 3,
+    })
+    expect(members()).toHaveLength(5)
+    await ui.click('↶')
+    expect(members()).toHaveLength(0)
+    expect(ui.doc().bodies.find(b => b.id === source.id)!.livePattern).toBeUndefined()
+    await ui.click('↷')
+    expect(members()).toHaveLength(5)
+    // A generated member reopens the panel with the stored parameters and edits the source.
+    await ui.click(members()[0]!.name)
+    expect(command().enabled).not.toBe(false)
+    await open()
+    expect(kind().options.some(o => o.props.value === 'none')).toBe(true)
+    kind().props['onUpdate:modelValue']('radial')
+    await nextTick()
+    quantityField(ui, ru ? 'Количество' : 'Count').props['onUpdate:modelValue']('4')
+    await flushClearance()
+    await commandKey(ui, 'Enter')
+    await flushClearance()
+    expect(ui.doc().bodies.find(b => b.id === source.id)!.livePattern).toMatchObject({ kind: 'radial', count: 4 })
+    expect(members()).toHaveLength(3)
+    await ui.click('↶')
+    expect(members()).toHaveLength(5)
+    await ui.click('↷')
+    expect(members()).toHaveLength(3)
+    // A refused grid size marks the count fields (C4 `patternCount`) and leaves the document unchanged.
+    const before = ui.doc()
+    await ui.click(source.name)
+    await open()
+    kind().props['onUpdate:modelValue']('grid')
+    await nextTick()
+    quantityField(ui, ru ? 'Строки' : 'Rows').props['onUpdate:modelValue']('1')
+    quantityField(ui, ru ? 'Столбцы' : 'Columns').props['onUpdate:modelValue']('1')
+    await flushClearance()
+    const marked = ui.all().filter(n => n.props['data-field'] === 'patternCount')
+    expect(marked).toHaveLength(2)
+    for (const field of marked) expect(field.props['aria-invalid']).toBe(true)
+    expect(ui.button((ru ? 'Готово' : 'Apply') + ' · Enter').props.disabled).toBe(true)
+    await commandKey(ui, 'Escape')
+    expect(ui.doc()).toEqual(before)
+  })
+
 it.each(['en', 'ru'])(
   'keeps the complete command registry identified and explains disabled actions in %s',
   async locale => {
@@ -9794,7 +9857,7 @@ it.each(['en', 'ru'])(
       if (selection) await ui.click(selection)
       const commands = ui.commands(),
         current = commands.map(c => c.id)
-      expect(commands).toHaveLength(101)
+      expect(commands).toHaveLength(102)
       expect(new Set(current).size).toBe(current.length)
       if (ids.length) expect(current).toEqual(ids)
       else ids = current

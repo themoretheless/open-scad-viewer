@@ -17,6 +17,7 @@ import {
 import { worldPoints } from '../app/directSketchGeometry'
 import { sampleCurveArrayPath } from './solidInstanceArrayCurvePath'
 import { createRuledSketchLoft } from './geometry/brep'
+import { setLiveBodyPattern, type LiveBodyPattern } from '../app/liveBodyPattern'
 import { stringifyMeshJson } from '../exchange/meshJson'
 export type SolidSceneEditOperation =
   | 'duplicate'
@@ -27,6 +28,7 @@ export type SolidSceneEditOperation =
   | 'instance-place'
   | 'instance-detach'
   | 'instance-array'
+  | 'live-pattern'
   | 'group-create'
   | 'group-move'
   | 'loft'
@@ -44,6 +46,8 @@ export interface SolidSceneEditOptions {
   group?: string
   copyIds?: string[]
   array?: SolidSceneInstanceArray
+  /** `live-pattern`: parameters stored on the source body `id`; `null` removes the live array. */
+  livePattern?: LiveBodyPattern | null
 }
 /** Linked-instance array of `id`: `step`/`extent` run along `axis` with `distance` as the spacing or the total span; `path` follows the sketch or NURBS curve `pathId` (a curve is sampled within `toleranceMm`, default 0.01 mm). Copies get ids `${createdId}:n`. */
 export interface SolidSceneInstanceArray {
@@ -64,6 +68,7 @@ export function isSolidSceneEdit(operation: unknown): operation is SolidSceneEdi
     'instance-place',
     'instance-detach',
     'instance-array',
+    'live-pattern',
     'group-create',
     'group-move',
     'loft',
@@ -115,6 +120,9 @@ export function applySolidSceneEdit(
       }
     return resolveSolidInstances(next, instanceCache)
   }
+  // A live array keeps its parameters on the source, so a later edit re-runs this same operation.
+  if (p.operation === 'live-pattern')
+    return resolveSolidInstances(setLiveBodyPattern(document, p.id, p.livePattern ?? null), instanceCache)
   if (p.operation === 'instance-detach') return detachSolidInstances(document, p.ids, instanceCache)
   // A frame axis (CPlane/Local) arrives as a vector; world axes keep their letter.
   const axis = Array.isArray(p.axis)
