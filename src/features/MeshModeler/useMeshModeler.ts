@@ -360,7 +360,8 @@ function onWorkspaceKey(event: KeyboardEvent) {
   if ((event.target as HTMLElement).matches('input,textarea,select')) return
   if (event.key === '\\' && !event.ctrlKey && !event.metaKey && !event.altKey) { event.preventDefault(); dockOpen.value = !dockOpen.value; return }
   const modes: Record<string, MeshSelectMode> = { '1': 'object', '2': 'vertex', '3': 'edge', '4': 'face' }
-  if (modes[event.key]) { selectMode.value = modes[event.key]; return }
+  const mode = modes[event.key]
+  if (mode) { selectMode.value = mode; return }
   if (event.key.toLowerCase() === 'f') resetView()
 }
 

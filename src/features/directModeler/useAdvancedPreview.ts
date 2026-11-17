@@ -90,10 +90,10 @@ const patchGapPoints=computed(()=>{
  const match=advancedPreview.value.rawError.match(/Coons corner ([1-4]) does not coincide/)
  if(!match)return []
  const pairs=[[[0,0],[2,0]],[[0,1],[3,0]],[[1,0],[2,1]],[[1,1],[3,1]]]
- try{return pairs[Number(match[1])-1].map(([role,end])=>{
-  const curve=document.value.curves!.find(c=>c.id===surfaceInputs.value[role])!.curve
-  const last=surfaceReversed.value[role]?!end:!!end
-  return evaluateNurbsCurve(curve,curve.knots[last?curve.controlPoints.length:curve.degree]).point as Vec3
+ try{return pairs[Number(match[1])-1]!.map(([role,end])=>{
+  const curve=document.value.curves!.find(c=>c.id===surfaceInputs.value[role!])!.curve
+  const last=surfaceReversed.value[role!]?!end:!!end
+  return evaluateNurbsCurve(curve,curve.knots[last?curve.controlPoints.length:curve.degree]!).point as Vec3
  })}catch{return []}
 })
 /** Returns the worker commit when one was queued, so the caller can record the command once it landed. */

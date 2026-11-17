@@ -22,7 +22,7 @@ function fpsTick(now: number) {
     if (elapsed >= 500 && context.fpsIntervals.length) {
       context.fps.value = Math.round((context.fpsIntervals.length * 1000) / elapsed)
       const sorted = [...context.fpsIntervals].sort((a, b) => a - b)
-      context.frameMs.value = Math.round(sorted[sorted.length >> 1] * 10) / 10
+      context.frameMs.value = Math.round(sorted[sorted.length >> 1]! * 10) / 10
       context.drawMs.value = Math.round((context.gpuLayer?.drawMs ?? 0) * 10) / 10
       context.fpsIntervals = []
       context.fpsSince = now
@@ -66,18 +66,18 @@ function triangleNormals(mesh: PolygonMesh) {
     const count = indices.length / 3
     const normals = new Array<number[]>(count)
     for (let t = 0, o = 0; t < count; t++, o += 3) {
-      const i0 = indices[o] * 3
-      const i1 = indices[o + 1] * 3
-      const i2 = indices[o + 2] * 3
-      const ax = pos[i0]
-      const ay = pos[i0 + 1]
-      const az = pos[i0 + 2]
-      const ux = pos[i1] - ax
-      const uy = pos[i1 + 1] - ay
-      const uz = pos[i1 + 2] - az
-      const wx = pos[i2] - ax
-      const wy = pos[i2 + 1] - ay
-      const wz = pos[i2 + 2] - az
+      const i0 = indices[o]! * 3
+      const i1 = indices[o + 1]! * 3
+      const i2 = indices[o + 2]! * 3
+      const ax = pos[i0]!
+      const ay = pos[i0 + 1]!
+      const az = pos[i0 + 2]!
+      const ux = pos[i1]! - ax
+      const uy = pos[i1 + 1]! - ay
+      const uz = pos[i1 + 2]! - az
+      const wx = pos[i2]! - ax
+      const wy = pos[i2 + 1]! - ay
+      const wz = pos[i2 + 2]! - az
       const nx = uy * wz - uz * wy
       const ny = uz * wx - ux * wz
       const nz = ux * wy - uy * wx
@@ -104,7 +104,7 @@ function displayMeshFor(b: ReturnType<typeof directExtrusionTool>): DisplayMesh 
     return { mesh: b.mesh, map: null, normals: triangleNormals(b.mesh) }
   }
 function shadeFromNormal(n: number[], projectPoint?: (p: number[]) => [number, number, number]): number {
-    const light = projectPoint ? projectPoint(n) : projectDirectPoint([n[0], n[1], n[2]], context.options.camera.value)
+    const light = projectPoint ? projectPoint(n) : projectDirectPoint([n[0]!, n[1]!, n[2]!], context.options.camera.value)
     return Math.max(24, Math.min(78, 48 + 20 * light[2] - 15 * light[1] + 8 * light[0]))
   }
 function stopGpuLayer() {
@@ -217,7 +217,7 @@ function meshPolygons(
     const pos = mesh.positions
     const vertCount = pos.length / 3
     const points = new Array<[number, number, number]>(vertCount)
-    for (let v = 0, o = 0; v < vertCount; v++, o += 3) points[v] = projectPoint([pos[o], pos[o + 1], pos[o + 2]])
+    for (let v = 0, o = 0; v < vertCount; v++, o += 3) points[v] = projectPoint([pos[o]!, pos[o + 1]!, pos[o + 2]!])
     const indices = mesh.indices
     const triCount = indices.length / 3
     const out: Array<{
@@ -236,17 +236,17 @@ function meshPolygons(
     }> = []
     const checkBackface = !world && !preview && (b.material?.opacity ?? 1) === 1
     for (let i = 0, o = 0; i < triCount; i++, o += 3) {
-      const p0 = points[indices[o]]
-      const p1 = points[indices[o + 1]]
-      const p2 = points[indices[o + 2]]
+      const p0 = points[indices[o]!]!
+      const p1 = points[indices[o + 1]!]!
+      const p2 = points[indices[o + 2]!]!
       const isClosed = closed?.[i] ?? allClosed
       if (checkBackface && isClosed && (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0]) <= 0) continue
-      const triangle = display.map ? display.map[i] : i
+      const triangle = display.map ? display.map[i]! : i
       const face = [p0, p1, p2]
       out.push({
         preview,
         surface: false,
-        normal: display.normals[i],
+        normal: display.normals[i]!,
         closed: isClosed,
         vertices: face,
         id: b.id,
@@ -257,7 +257,7 @@ function meshPolygons(
         shade: world
           ? 0
           : display.map
-            ? shadeFromNormal(display.normals[i], projectPoint)
+            ? shadeFromNormal(display.normals[i]!, projectPoint)
             : directFaceShade(mesh, i, context.options.camera.value, projectPoint),
         depth: p0[2] + p1[2] + p2[2],
       })

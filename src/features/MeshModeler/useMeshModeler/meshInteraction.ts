@@ -56,12 +56,12 @@ function startElementDrag(event: PointerEvent, objectId: string, kind: 'vertex' 
   const mesh = object.mesh
   const vertexIds = kind === 'vertex' ? [...context.selectedVerts.value]
     : kind === 'edge' ? [...new Set(context.selectedEdges.value.flatMap(edge => getEdgeList(mesh)[edge] ?? []))]
-      : [...new Set(context.selectedFaces.value.flatMap(face => [mesh.indices[face * 3], mesh.indices[face * 3 + 1], mesh.indices[face * 3 + 2]]))]
+      : [...new Set(context.selectedFaces.value.flatMap(face => [mesh.indices[face * 3]!, mesh.indices[face * 3 + 1]!, mesh.indices[face * 3 + 2]!]))]
   const target = event.currentTarget as SVGGraphicsElement
   const svg = target.ownerSVGElement ?? (target as unknown as SVGSVGElement)
   // Meshes may carry per-face duplicates of a corner; move every index that shares the position.
   const byPosition = new Map<string, number[]>()
-  const keyOf = (i: number) => `${mesh.positions[i * 3].toFixed(5)},${mesh.positions[i * 3 + 1].toFixed(5)},${mesh.positions[i * 3 + 2].toFixed(5)}`
+  const keyOf = (i: number) => `${mesh.positions[i * 3]!.toFixed(5)},${mesh.positions[i * 3 + 1]!.toFixed(5)},${mesh.positions[i * 3 + 2]!.toFixed(5)}`
   for (let i = 0; i < mesh.positions.length / 3; i++) { const key = keyOf(i); const list = byPosition.get(key); if (list) list.push(i); else byPosition.set(key, [i]) }
   const expanded = [...new Set(vertexIds.flatMap(i => byPosition.get(keyOf(i)) ?? [i]))]
   context.elementDrag = { objectId, vertexIds: expanded, base: { positions: mesh.positions.slice(), indices: mesh.indices.slice() }, x: event.clientX, y: event.clientY, moved: false, svg }

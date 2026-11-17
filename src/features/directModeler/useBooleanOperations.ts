@@ -47,7 +47,7 @@ async function applyMinkowski(){
  const generation=booleanGeneration
  error.value='';state.setNotice('');booleanPending.value=true
  try{
-  const result=await booleanWorker.run({kind:'minkowski3d',document:document.value,options:{ids:[ids[0],ids[1]],createdId:crypto.randomUUID(),ru:ru.value,maximumSourceDeviationMm:minkowskiDeviation.value}},{documentDelta:true})
+  const result=await booleanWorker.run({kind:'minkowski3d',document:document.value,options:{ids:[ids[0]!,ids[1]!],createdId:crypto.randomUUID(),ru:ru.value,maximumSourceDeviationMm:minkowskiDeviation.value}},{documentDelta:true})
   if(generation!==booleanGeneration)return
   booleanPending.value=false
   if(!await commit(result.document)||generation!==booleanGeneration)return
@@ -62,7 +62,7 @@ function applyBrepBoolean(operation:BrepBooleanOperation){run(()=>{
  cancelCommand()
  const ids=selectedIds.value.filter(id=>document.value.bodies.some(b=>b.id===id))
  if(ids.length!==2)throw new DirectInputError('DIRECT_BOOLEAN_OPERANDS',label('Выберите ровно два тела: первое выбранное — A.','Select exactly two bodies; the first selected body is A.'),undefined,ids)
- void runBoolean({operation,a:[ids[0]],b:[ids[1]],segments:brepSegments.value,ru:ru.value})
+ void runBoolean({operation,a:[ids[0]!],b:[ids[1]!],segments:brepSegments.value,ru:ru.value})
 })}
 
 /**

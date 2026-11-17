@@ -12,6 +12,7 @@ export const CLEAN_PATHS = Object.freeze([
   'src/data/',
   'src/dev/',
   'src/fabrication/',
+  'src/features/',
   'src/main.ts',
   'src/parser/',
 ])

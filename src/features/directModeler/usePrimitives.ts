@@ -104,7 +104,7 @@ function addBridgeCurve(){
  if(bridgeTensionInvalid.value||nativeNurbsPending.value)return
  bridgeError.value=''
  const pair=selectedCurvePair.value;if(!pair)return
- void runNativeNurbs({kind:'bridge',id:pair[0],otherId:pair[1],endA:bridgeEndA.value,endB:bridgeEndB.value,tension:bridgeTension.value,createdId:crypto.randomUUID()})
+ void runNativeNurbs({kind:'bridge',id:pair[0]!,otherId:pair[1]!,endA:bridgeEndA.value,endB:bridgeEndB.value,tension:bridgeTension.value,createdId:crypto.randomUUID()})
 }
 function updateDimensionSketch(sketch:import('../../app/directModeling').DirectSketch){run(()=>{
   if(!history.document.sketches.some(s=>s.id===sketch.id))return
@@ -119,7 +119,7 @@ function updateDimensionSketch(sketch:import('../../app/directModeling').DirectS
 })}
 const dimensionLabels=computed(()=>visibleSketches.value.flatMap(s=>{
   if(!s.dimensions?.length)return []
-  return sketchDimensions(s).measurements.map((m,i)=>({key:s.id+'-'+i,point:m.label,lines:m.lines,text:(m.value===null?'—':m.value.toFixed(2))+(s.dimensions![i].kind==='angle'?'°':' mm')}))
+  return sketchDimensions(s).measurements.map((m,i)=>({key:s.id+'-'+i,point:m.label,lines:m.lines,text:(m.value===null?'—':m.value.toFixed(2))+(s.dimensions![i]!.kind==='angle'?'°':' mm')}))
 }))
 function addNurbs(kind: 'curve'|'surface') { run(() => {
   const item = kind === 'curve' ? createSolidNurbsCurve() : createSolidNurbsSurface()

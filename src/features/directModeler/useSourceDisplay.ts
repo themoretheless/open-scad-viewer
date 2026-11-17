@@ -70,13 +70,13 @@ const sourceDisplayFaces=computed(()=>Object.entries(sourceDisplayResults.value)
 const sourceUnresolvedCount=computed(()=>Object.entries(sourceDisplayResults.value).filter(([id])=>objectInView(id)).reduce((sum,[,result])=>sum+(result.displayFaces??[]).reduce((n,face)=>n+face.unresolved.length,0),0))
 const sourceUnresolvedBoxes=computed(()=>Object.entries(sourceDisplayResults.value).filter(([id])=>objectInView(id)).flatMap(([id,result])=>
  (result.displayFaces??[]).flatMap(face=>face.unresolvedBoxes.map((box,i)=>{
- const points=Array.from({length:8},(_,k)=>project([box[0][k&1],box[1][(k>>1)&1],box[2][(k>>2)&1]],'3d'))
+ const points=Array.from({length:8},(_,k)=>project([box[0][k&1]!,box[1][(k>>1)&1]!,box[2][(k>>2)&1]!],'3d'))
  const x=Math.min(...points.map(p=>p[0])),y=Math.min(...points.map(p=>p[1]))
  return {key:id+':'+face.index+':'+i,body:id,face:face.index,uv:face.unresolved[i],x,y,width:Math.max(...points.map(p=>p[0]))-x,height:Math.max(...points.map(p=>p[1]))-y}
  }))))
 const sourceDisplayEndpointBoxes=computed(()=>Object.entries(sourceDisplayResults.value).flatMap(([id,result])=>
  result.edges.filter(edge=>id+':'+edge.index===sourceEdgeSelection.value&&objectInView(id)).flatMap(edge=>edge.endpointBoxes.map((box,end)=>{
-  const corners=Array.from({length:8},(_,i)=>project([box[0][i&1],box[1][(i>>1)&1],box[2][(i>>2)&1]],'3d'))
+  const corners=Array.from({length:8},(_,i)=>project([box[0][i&1]!,box[1][(i>>1)&1]!,box[2][(i>>2)&1]!],'3d'))
   const x=Math.min(...corners.map(p=>p[0])),y=Math.min(...corners.map(p=>p[1]))
   return {key:id+':'+edge.index+':'+end,x,y,width:Math.max(...corners.map(p=>p[0]))-x,height:Math.max(...corners.map(p=>p[1]))-y,
    bounds:box.map(b=>'['+b.join(', ')+']').join(' ')}

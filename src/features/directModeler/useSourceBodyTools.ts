@@ -111,7 +111,7 @@ const sourceWallMeasurement=computed(()=>{
  if(!sourceWallOpen.value||!record||!objectInView(record.id)||(!scan&&!r?.qualified)||!w)return null
  const endpoints=w.endpoints.map(e=>{
   const center=project(e.worldMm.map(q=>q[0]/2+q[1]/2),'3d')
-  const corners=Array.from({length:8},(_,k)=>project(e.worldMm.map((q,i)=>q[(k>>i)&1]),'3d'))
+  const corners=Array.from({length:8},(_,k)=>project(e.worldMm.map((q,i)=>q[(k>>i)&1]!),'3d'))
   const x=Math.min(...corners.map(p=>p[0])),y=Math.min(...corners.map(p=>p[1]))
   return {face:e.face,center,x,y,width:Math.max(...corners.map(p=>p[0]))-x,height:Math.max(...corners.map(p=>p[1]))-y,bounds:e.worldMm}
  })

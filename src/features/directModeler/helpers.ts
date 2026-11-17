@@ -58,9 +58,10 @@ export function resizeSplit(e: PointerEvent) {
 export function triangleNormals(mesh: PolygonMesh) {
   const count = mesh.indices.length / 3, normals: number[][] = []
   for (let t = 0; t < count; t++) {
-    const [a, b, c] = [0, 1, 2].map(k => { const i = mesh.indices[t * 3 + k]; return mesh.positions.slice(i * 3, i * 3 + 3) })
-    const u = b.map((v, k) => v - a[k]), w = c.map((v, k) => v - a[k])
-    const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]], len = Math.hypot(...n) || 1
+    const [a, b, c] = [0, 1, 2].map(k => { const i = mesh.indices[t * 3 + k]!; return mesh.positions.slice(i * 3, i * 3 + 3) }) as [Float64Array, Float64Array, Float64Array]
+    const [ux, uy, uz] = b.map((v, k) => v - a[k]!) as unknown as [number, number, number]
+    const [wx, wy, wz] = c.map((v, k) => v - a[k]!) as unknown as [number, number, number]
+    const n = [uy * wz - uz * wy, uz * wx - ux * wz, ux * wy - uy * wx], len = Math.hypot(...n) || 1
     normals.push(n.map(v => v / len))
   }
   return normals

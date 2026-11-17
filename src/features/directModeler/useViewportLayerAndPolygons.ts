@@ -259,7 +259,7 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
       const faceHighlight = options.selectedBody.value?.id === b.id && options.pickMode.value === 'face'
       const hues = new Float32Array(count)
       for (let i = 0; i < count; i++) {
-        const working = display.map ? display.map[i] : i
+        const working = display.map ? display.map[i]! : i
         hues[i] = preview ? -1 : faceHighlight && options.selectedFaceTriangles.value.has(working) ? 40 : bodyHue
       }
       return [
@@ -340,7 +340,7 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
    * than a frame and changes nothing anyone can see, so they are held still until the
    * camera settles, then rebuilt once for picking.
    */
-  const worldPointProjection = (p: number[]): [number, number, number] => [p[0], p[1], p[2] ?? 0]
+  const worldPointProjection = (p: number[]): [number, number, number] => [p[0]!, p[1]!, p[2] ?? 0]
   const cpuTransparency = computed(() => {
     if (gpuActive.value) return null
     const adv = options.getAdvancedPreview()
@@ -411,9 +411,9 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
         restingPolygons = (fragments ?? transparent.items.map(p => ({ owner: p.key, triangle: p.vertices }))).flatMap((fragment, i) => {
           const original = source.get(fragment.owner)!
           const vertices = fragment.triangle.map(p => projectPoint([...p]))
-          const a = vertices[0]
-          const b = vertices[1]
-          const c = vertices[2]
+          const a = vertices[0]!
+          const b = vertices[1]!
+          const c = vertices[2]!
           if (
             original.closed &&
             !original.preview &&

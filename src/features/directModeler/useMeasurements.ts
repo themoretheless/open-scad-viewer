@@ -46,7 +46,7 @@ watchEffect(onCleanup=>{
  clearancePending.value=true
  const valid=()=>current&&props.open&&document.value===snapshot&&selection.value===sourceId&&measureTarget.value===targetId&&measurementOpen.value&&clearanceOpen.value
  void clearanceWorker.run({kind:'inspect',bodies:[source,target].map(({id,name,mesh})=>({id,name,mesh}))}).then(reports=>{
-  if(valid())clearanceMeasurement.value={value:reports[0],error:''}
+  if(valid())clearanceMeasurement.value={value:reports[0]??null,error:''}
  }).catch(()=>{if(valid()){clearanceRetryVisible.value=true;clearanceMeasurement.value={value:null,error:label('Не удалось вычислить зазор по сетке. Повторите расчёт; при повторном отказе проверьте сетки выбранных тел.','Could not compute mesh clearance. Retry; if it fails again, inspect the selected body meshes.')}}})
  .finally(()=>{if(valid())clearancePending.value=false})
 })

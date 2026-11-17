@@ -78,7 +78,7 @@ const curveMatchGuides=computed(()=>{
   const curve=(result?.report.accepted?result.document:document.value).curves?.find(c=>c.id===id)?.curve
   if(!curve)return []
   const end=i===0?advanced.value.curveEndA:advanced.value.curveEndB,n=curve.controlPoints.length,k=end==='start'?0:n-1,j=end==='start'?1:n-2
-  const point=(index:number)=>{const p=curve.controlPoints[index];return project([p[0],p[1],p[2]??0],'3d')}
+  const point=(index:number)=>{const p=curve.controlPoints[index]!;return project([p[0]!,p[1]!,p[2]??0],'3d')}
   const joint=point(k),handle=point(j)
   return [{id:i,x:joint[0],y:joint[1],points:[joint,handle].map(p=>p.join(',')).join(' '),color:curveMatch.value?.error||result&&!result.report.accepted?'#ff647c':i===0?'#89baff':'#ffc977'}]
  })
@@ -96,9 +96,9 @@ const surfaceMatchLines=computed(()=>{
   const surface=i===1&&result?.report.accepted?result.candidate:source
   if(!surface)return []
   const boundary=i===0?p.matchBoundaryA:p.matchBoundaryB,crossU=boundary[0]==='u',atMax=boundary.endsWith('Max')
-  const ku=surface.knotsU,kv=surface.knotsV,nu=surface.controlPoints.length,nv=surface.controlPoints[0].length
-  const start=crossU?kv[surface.degreeV]:ku[surface.degreeU],end=crossU?kv[nv]:ku[nu]
-  const cross=crossU?ku[atMax?nu:surface.degreeU]:kv[atMax?nv:surface.degreeV]
+  const ku=surface.knotsU,kv=surface.knotsV,nu=surface.controlPoints.length,nv=surface.controlPoints[0]!.length
+  const start=crossU?kv[surface.degreeV]!:ku[surface.degreeU]!,end=crossU?kv[nv]!:ku[nu]!
+  const cross=crossU?ku[atMax?nu:surface.degreeU]!:kv[atMax?nv:surface.degreeV]!
   const line=(lo:number,hi:number)=>Array.from({length:33},(_,j)=>{const t=lo+(hi-lo)*j/32;return project(evaluateNurbsSurface(surface,crossU?cross:t,crossU?t:cross).point,'3d').join(',')}).join(' ')
   try{
    const regularity=i===0?result?.report.referenceRegularity:result?.report.editedRegularity

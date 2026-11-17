@@ -126,7 +126,7 @@ export function useSvgExchange(options: SvgExchangeOptions) {
           subtract.value = null
           activePlane.value = xyPlane()
           workplaneOutline.value = []
-          selection.value = ids[0]
+          selection.value = ids[0]!
           extraSelection.value = ids.slice(1)
           mode.value = '2d'
           sketchPaneOpen.value = true

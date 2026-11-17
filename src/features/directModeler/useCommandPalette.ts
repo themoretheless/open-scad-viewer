@@ -261,7 +261,8 @@ function repeatCommand() {
   const saved = lastCommand.value
   const restoredInputs=[...repeatProfileInputs.value]
   cancelCommand()
-  if(restoredInputs.length){selection.value=restoredInputs[0];extraSelection.value=restoredInputs.slice(1)}
+  const [firstRestored]=restoredInputs
+  if(firstRestored!==undefined){selection.value=firstRestored;extraSelection.value=restoredInputs.slice(1)}
   repeatEntry.value.run()
   if((isProfileCommand(saved.id))&&saved.surfaceInputs.every(id=>document.value.sketches.some(s=>s.id===id)||saved.id==='profile-prepare'&&isProfilePreparationInput(document.value,id))&&saved.inputSelection.every(id=>selectedIds.value.includes(id)))surfaceInputs.value=[...saved.surfaceInputs]
   if(saved.id==='nurbs-curve-match'&&saved.surfaceInputs.every(id=>document.value.curves?.some(c=>c.id===id))&&saved.inputSelection.every(id=>selectedIds.value.includes(id)))surfaceInputs.value=[...saved.surfaceInputs]
@@ -269,7 +270,7 @@ function repeatCommand() {
   if(['nurbs-loft','nurbs-sweep','nurbs-patch'].includes(saved.id)) {
     const order=saved.surfaceInputs.map(id=>saved.inputSelection.indexOf(id))
     if(saved.inputSelection.length===selectedIds.value.length&&saved.inputSelection.every((id,i)=>id===selectedIds.value[i])&&saved.surfaceInputs.every(id=>document.value.curves?.some(c=>c.id===id)))surfaceInputs.value=[...saved.surfaceInputs]
-    else if(order.length===surfaceInputs.value.length&&order.every(i=>i>=0&&i<surfaceInputs.value.length))surfaceInputs.value=order.map(i=>surfaceInputs.value[i])
+    else if(order.length===surfaceInputs.value.length&&order.every(i=>i>=0&&i<surfaceInputs.value.length))surfaceInputs.value=order.map(i=>surfaceInputs.value[i]!)
   }
   surfaceReversed.value=surfaceInputs.value.map((_,i)=>saved.surfaceReversed[i]??false)
   advanced.value = { ...saved.advanced }; height.value = saved.height; baseZ.value = saved.baseZ
