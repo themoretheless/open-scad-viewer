@@ -428,3 +428,6 @@ fn build_sheet_general_impl(
         orientation_reversed: report.orientation_reversed,
     })
 }
+
+mod section_sheets;
+pub use section_sheets::{SectionSheetOptions, SectionSheetReport, build_section_sheets};

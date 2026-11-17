@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 375,
-  "unallocatedCount": 625,
+  "specifiedCount": 376,
+  "unallocatedCount": 624,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9633,6 +9633,28 @@
       "remainingQualification": [
         "Arrange disjoint and nested section rings into oriented planar cap regions under exact even-odd membership.",
         "Exact pairwise crossing and containment tests define an immediate-parent tree independent of input order or winding. Even-depth rings define material caps, with odd-depth children as holes.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0376",
+      "name": "Построение B-rep-граней крышек с сохранением исходных кромок NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::planar_cap::build_section_sheets",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "docs/qualification/nurbs-curvature-field-376-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-376-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Author validated B-rep section sheets with original spatial edges, oriented coedges and certified cap trims.",
+        "Original edge control nets and knots are preserved. Oriented coedges carry verified pcurves, and the result is validated as B-rep sheets. The affine support must lift exactly to binary64.",
         "WASM and application integration are separate."
       ]
     }

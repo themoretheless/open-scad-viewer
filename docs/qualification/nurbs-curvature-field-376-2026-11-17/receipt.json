@@ -1,0 +1,36 @@
+{
+  "id": "NURBS-0376",
+  "testedBase": "d203bad08f89a489326e226036c7478985ade528",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 77,
+  "scope": [
+    "Author validated B-rep section sheets with original spatial edges, oriented coedges and certified cap trims.",
+    "Original edge control nets and knots are preserved. Oriented coedges carry verified pcurves, and the result is validated as B-rep sheets. The affine support must lift exactly to binary64."
+  ],
+  "logSha256": "7b388c4a37bd5e8bbefd1abf6c7b9a239562ab774c80a216ea62eec5f8b37023",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "b5571059d1d8cf9b76d11c4f5a102fe6057fe9ef669cf3e1443672845d724e5b",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "ab390192b41c6e0a833784de5129b4166b1637b4b6f439f6fa2c3e5e47b1bdb5",
+    "crates/brep-core/tests/section_cap_sheets.rs": "9cf1592160e1b06b285851027a781ddd237ab59110cabe2a755d12e5a4663eb7",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472"
+  }
+}
