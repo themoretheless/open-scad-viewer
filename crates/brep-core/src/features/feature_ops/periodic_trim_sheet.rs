@@ -1,5 +1,7 @@
 //! Open B-rep faces from exact periodic UV component charts.
-use crate::{Coedge, Edge, Error, Face, FaceUse, Loop, Model, Result, Shell, TopologyIds, Vertex};
+use crate::{
+    Coedge, Edge, Error, Face, FaceUse, Loop, Model, Result, Shell, TopoId, TopologyIds, Vertex,
+};
 use nurbs_core::{
     editing::exact_periodic_surface::{
         PeriodicTrimEdge, PeriodicTrimEdgeRefusal, build_exact_periodic_surface_trim_edges,
@@ -7,11 +9,26 @@ use nurbs_core::{
     surface::Surface,
 };
 
+/// Persistent identities of the face and wire produced by an input contour.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PeriodicTrimContourBinding {
+    pub face_id: TopoId,
+    pub loop_id: TopoId,
+    pub is_hole: bool,
+}
+
 #[derive(Clone, Debug)]
 pub struct PeriodicTrimSheetReport {
     pub model: Option<Model>,
     pub work_used: u64,
     pub refusal: Option<PeriodicTrimEdgeRefusal>,
+}
+
+#[derive(Clone, Debug)]
+pub struct BoundPeriodicTrimSheet {
+    pub sheet: PeriodicTrimSheetReport,
+    /// Bindings in input contour order. Empty when construction is refused.
+    pub contour_bindings: Vec<PeriodicTrimContourBinding>,
 }
 
 /// Author one open shell per filled component, retaining exact world edges,
@@ -22,16 +39,32 @@ pub fn build_exact_periodic_trim_sheet(
     tolerance_mm: f64,
     max_work: u64,
 ) -> Result<PeriodicTrimSheetReport> {
+    Ok(
+        build_exact_periodic_trim_sheet_with_bindings(source, contours, tolerance_mm, max_work)?
+            .sheet,
+    )
+}
+
+/// Build an exact open sheet and retain its input contour to B-rep wire mapping.
+pub fn build_exact_periodic_trim_sheet_with_bindings(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    tolerance_mm: f64,
+    max_work: u64,
+) -> Result<BoundPeriodicTrimSheet> {
     let error = |message| Error::new("BREP_PERIODIC_TRIM_SHEET", message);
     if !tolerance_mm.is_finite() || tolerance_mm <= 0. {
         return Err(error("Periodic trim sheet needs positive finite tolerance"));
     }
     let report = build_exact_periodic_surface_trim_edges(source, contours, max_work)?;
     let Some(patches) = report.patches else {
-        return Ok(PeriodicTrimSheetReport {
-            model: None,
-            work_used: report.work_used,
-            refusal: report.refusal,
+        return Ok(BoundPeriodicTrimSheet {
+            sheet: PeriodicTrimSheetReport {
+                model: None,
+                work_used: report.work_used,
+                refusal: report.refusal,
+            },
+            contour_bindings: Vec::new(),
         });
     };
     let mut topology = brep_topology::Model {
@@ -43,7 +76,9 @@ pub fn build_exact_periodic_trim_sheet(
         bodies: Vec::new(),
         tolerance_mm,
     };
+    let mut wire_owners = vec![None; contours.len()];
     for patch in patches {
+        let face = topology.faces.len();
         let outer = topology.loops.len();
         for path in patch.loops {
             if path.is_empty() {
@@ -86,7 +121,18 @@ pub fn build_exact_periodic_trim_sheet(
             }
             topology.loops.push(Loop { coedges });
         }
-        let face = topology.faces.len();
+        let loop_count = topology.loops.len() - outer;
+        if patch.patch.trim.contours.len() != loop_count {
+            return Err(error("Periodic trim contour and loop counts differ"));
+        }
+        for (offset, contour) in patch.patch.trim.contours.into_iter().enumerate() {
+            let owner = wire_owners
+                .get_mut(contour)
+                .ok_or_else(|| error("Periodic trim contour index is out of range"))?;
+            if owner.replace((face, outer + offset, offset != 0)).is_some() {
+                return Err(error("Periodic trim contour has multiple wire owners"));
+            }
+        }
         topology.faces.push(Face {
             surface: patch.patch.surface,
             outer,
@@ -103,10 +149,25 @@ pub fn build_exact_periodic_trim_sheet(
     let mut model = Model(topology, TopologyIds::default());
     model.rebuild_topology_ids();
     model.validate()?;
-    Ok(PeriodicTrimSheetReport {
-        model: Some(model),
-        work_used: report.work_used,
-        refusal: None,
+    let contour_bindings = wire_owners
+        .into_iter()
+        .map(|owner| {
+            let (face, wire, is_hole) =
+                owner.ok_or_else(|| error("Periodic trim contour has no wire owner"))?;
+            Ok(PeriodicTrimContourBinding {
+                face_id: model.1.faces[face].clone(),
+                loop_id: model.1.loops[wire].clone(),
+                is_hole,
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    Ok(BoundPeriodicTrimSheet {
+        sheet: PeriodicTrimSheetReport {
+            model: Some(model),
+            work_used: report.work_used,
+            refusal: None,
+        },
+        contour_bindings,
     })
 }
 

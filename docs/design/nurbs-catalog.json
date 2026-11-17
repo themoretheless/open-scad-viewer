@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 561,
-  "unallocatedCount": 439,
+  "specifiedCount": 562,
+  "unallocatedCount": 438,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14255,6 +14255,25 @@
         "Expose exact seam-spanning open sheet authoring through the Rust geometry bridge.",
         "Retain open shell topology and holes in the Rust bridge and WASM binary ABI. Exhausted work returns a refusal stage without geometry.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0562",
+      "name": "Привязка исходных контуров периодической обрезки к идентификаторам граней и петель B-rep",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "brep_core::feature_ops::periodic_trim_sheet::build_exact_periodic_trim_sheet_with_bindings",
+      "evidence": [
+        "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs",
+        "crates/brep-core/tests/exact_periodic_trim_binding_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-562-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-562-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Retain original contour identities across trim chart extraction, hole nesting, and edge subdivision.",
+        "Each input contour resolves to a persistent face and wire ID and an outer/hole role after a validated build.",
+        "WASM and application integration are separate."
       ]
     }
   ],
