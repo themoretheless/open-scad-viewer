@@ -1,8 +1,34 @@
-import { ByteReader, ByteWriter, CORE_MAGIC, CanonicalBodyComparator, ENVELOPE_MAGIC, PROGRAM_HASH_DOMAIN, SEMANTIC_PROGRAM_BINARY_FORMAT, SEMANTIC_PROGRAM_BINARY_MAX_BYTES, SEMANTIC_PROGRAM_BINARY_MAX_STRING_BYTES, TESSELLATION_HASH_DOMAIN, TESSELLATION_MAGIC, Tag, addCodecDecodedGraph, hasCodecDecodedGraph } from '../semanticProgramCodec'
-import type { BinaryWriter, EncodingBudget, SemanticProgramAttestation, SemanticTessellationPolicyV1 } from '../semanticProgramCodec'
+import {
+  ByteReader,
+  ByteWriter,
+  CORE_MAGIC,
+  CanonicalBodyComparator,
+  ENVELOPE_MAGIC,
+  PROGRAM_HASH_DOMAIN,
+  SEMANTIC_PROGRAM_BINARY_FORMAT,
+  SEMANTIC_PROGRAM_BINARY_MAX_BYTES,
+  SEMANTIC_PROGRAM_BINARY_MAX_STRING_BYTES,
+  TESSELLATION_HASH_DOMAIN,
+  TESSELLATION_MAGIC,
+  Tag,
+  addCodecDecodedGraph,
+  hasCodecDecodedGraph,
+} from '../semanticProgramCodec'
+import type {
+  BinaryWriter,
+  EncodingBudget,
+  SemanticProgramAttestation,
+  SemanticTessellationPolicyV1,
+} from '../semanticProgramCodec'
 import { SEMANTIC_PROGRAM_CONTRACT, SEMANTIC_PROGRAM_LIMITS } from '../../../core/semanticProgram'
 import type { SemanticProgramCoreV1, SemanticProgramV1 } from '../../../core/semanticProgram'
-import { SemanticProgramValidationError, normalizeDecodedSemanticProgram, normalizeDecodedSemanticProgramCore, normalizeSemanticProgram, normalizeSemanticProgramCoreInput } from '../semanticProgramValidator'
+import {
+  SemanticProgramValidationError,
+  normalizeDecodedSemanticProgram,
+  normalizeDecodedSemanticProgramCore,
+  normalizeSemanticProgram,
+  normalizeSemanticProgramCoreInput,
+} from '../semanticProgramValidator'
 import { sha256Hex } from '../../../core/sha256'
 
 /** @internal Read-only half of the codec-owned graph capability. */
@@ -17,9 +43,15 @@ export function compareBytes(left: Uint8Array, right: Uint8Array): number {
 }
 
 export function addEncodedStringBytes(length: number, budget: EncodingBudget, path: string): void {
-  if (length > SEMANTIC_PROGRAM_LIMITS.stringCodeUnits * 4) throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', path, 'individual string exceeds its UTF-8 byte limit')
+  if (length > SEMANTIC_PROGRAM_LIMITS.stringCodeUnits * 4)
+    throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', path, 'individual string exceeds its UTF-8 byte limit')
   budget.stringBytes += length
-  if (budget.stringBytes > SEMANTIC_PROGRAM_BINARY_MAX_STRING_BYTES) throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', path, 'aggregate string bytes exceed the encode budget')
+  if (budget.stringBytes > SEMANTIC_PROGRAM_BINARY_MAX_STRING_BYTES)
+    throw new SemanticProgramValidationError(
+      'E_SEMANTIC_LIMIT',
+      path,
+      'aggregate string bytes exceed the encode budget',
+    )
 }
 
 const UTF8 = new TextEncoder()
@@ -37,7 +69,10 @@ function keyBytes(key: string): Uint8Array {
   let bytes = getKeyBytes(key)
   if (bytes === undefined) {
     bytes = UTF8.encode(key)
-    if (key.length <= 64 && keyBytesCount < KEY_BYTES_LIMIT) { setKeyBytes(key, bytes); keyBytesCount++ }
+    if (key.length <= 64 && keyBytesCount < KEY_BYTES_LIMIT) {
+      setKeyBytes(key, bytes)
+      keyBytesCount++
+    }
   }
   return bytes
 }
@@ -50,11 +85,25 @@ export function encodeStringBody(value: string, writer: BinaryWriter, budget: En
 }
 
 export function encodeValue(value: unknown, writer: BinaryWriter, budget: EncodingBudget, path = '$'): void {
-  if (value === null) { writer.byte(Tag.Null); return }
-  if (value === false) { writer.byte(Tag.False); return }
-  if (value === true) { writer.byte(Tag.True); return }
+  if (value === null) {
+    writer.byte(Tag.Null)
+    return
+  }
+  if (value === false) {
+    writer.byte(Tag.False)
+    return
+  }
+  if (value === true) {
+    writer.byte(Tag.True)
+    return
+  }
   if (typeof value === 'number') {
-    if (!Number.isFinite(value) || Object.is(value, -0)) throw new SemanticProgramValidationError('E_SEMANTIC_NUMBER', '$binary', 'only finite canonical binary64 values are encodable')
+    if (!Number.isFinite(value) || Object.is(value, -0))
+      throw new SemanticProgramValidationError(
+        'E_SEMANTIC_NUMBER',
+        '$binary',
+        'only finite canonical binary64 values are encodable',
+      )
     writer.byte(Tag.Number)
     writer.f64(value)
     return
@@ -162,7 +211,10 @@ export function encodeSemanticTessellationPolicy(input: unknown): Uint8Array {
 export function semanticTessellationPolicyHash(input: unknown): string {
   const program = normalizeSemanticProgram(input)
   const coreBytes = frame(CORE_MAGIC, program.core)
-  const policy = frame(TESSELLATION_MAGIC, tessellationPolicy(program, semanticProgramHashFromCore(program.core, coreBytes)))
+  const policy = frame(
+    TESSELLATION_MAGIC,
+    tessellationPolicy(program, semanticProgramHashFromCore(program.core, coreBytes)),
+  )
   return sha256Hex(lengthPrefixedPreimage(TESSELLATION_HASH_DOMAIN, policy))
 }
 
@@ -188,15 +240,23 @@ export function equalBytes(left: Uint8Array, right: Uint8Array): boolean {
   return left.length === right.length && left.every((byte, index) => byte === right[index])
 }
 
-export function decodeFramedValue(input: Uint8Array, magic: Uint8Array, label: string): {
+export function decodeFramedValue(
+  input: Uint8Array,
+  magic: Uint8Array,
+  label: string,
+): {
   readonly canonicalInput: Uint8Array
   readonly decoded: unknown
 } {
-  if (!(input instanceof Uint8Array)) throw new SemanticProgramValidationError('E_SEMANTIC_BYTES', '$binary', 'expected Uint8Array')
-  if (!(input.buffer instanceof ArrayBuffer)) throw new SemanticProgramValidationError('E_SEMANTIC_BYTES', '$binary', 'shared binary buffers are forbidden')
-  if (input.length > SEMANTIC_PROGRAM_BINARY_MAX_BYTES) throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', '$binary', 'binary exceeds its byte limit')
+  if (!(input instanceof Uint8Array))
+    throw new SemanticProgramValidationError('E_SEMANTIC_BYTES', '$binary', 'expected Uint8Array')
+  if (!(input.buffer instanceof ArrayBuffer))
+    throw new SemanticProgramValidationError('E_SEMANTIC_BYTES', '$binary', 'shared binary buffers are forbidden')
+  if (input.length > SEMANTIC_PROGRAM_BINARY_MAX_BYTES)
+    throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', '$binary', 'binary exceeds its byte limit')
   // Reject an invalid fixed header before allocating a full adversarial copy.
-  if (input.length < 12) throw new SemanticProgramValidationError('E_SEMANTIC_BYTES', '$binary', 'truncated binary frame')
+  if (input.length < 12)
+    throw new SemanticProgramValidationError('E_SEMANTIC_BYTES', '$binary', 'truncated binary frame')
   if (!magic.every((byte, index) => input[index] === byte)) {
     throw new SemanticProgramValidationError('E_SEMANTIC_VERSION', '$binary.magic', `expected ${label}`)
   }
@@ -212,24 +272,44 @@ export function decodeFramedValue(input: Uint8Array, magic: Uint8Array, label: s
     )
   }
   if (headerMajor !== 1 || headerMinor !== expectedMinor) {
-    throw new SemanticProgramValidationError('E_SEMANTIC_VERSION', '$binary.version', 'unsupported binary schema version')
+    throw new SemanticProgramValidationError(
+      'E_SEMANTIC_VERSION',
+      '$binary.version',
+      'unsupported binary schema version',
+    )
   }
   if (header.getUint32(8, false) !== input.length - 12) {
-    throw new SemanticProgramValidationError('E_SEMANTIC_BYTES', '$binary.length', 'framed length does not match exact bytes')
+    throw new SemanticProgramValidationError(
+      'E_SEMANTIC_BYTES',
+      '$binary.length',
+      'framed length does not match exact bytes',
+    )
   }
   // Decoding is synchronous and invokes no caller callbacks, so a non-shared
   // ArrayBuffer can be borrowed safely. Avoiding an eager full-frame copy keeps
   // malformed valid-header inputs at O(1) additional binary memory.
   const reader = new ByteReader(input)
   const actualMagic = reader.raw(4, '$binary.magic')
-  if (!equalBytes(actualMagic, magic)) throw new SemanticProgramValidationError('E_SEMANTIC_VERSION', '$binary.magic', `expected ${label}`)
+  if (!equalBytes(actualMagic, magic))
+    throw new SemanticProgramValidationError('E_SEMANTIC_VERSION', '$binary.magic', `expected ${label}`)
   const bodyMajor = reader.u16('$binary.major')
   const bodyMinor = reader.u16('$binary.minor')
-  if (bodyMajor !== 1 || bodyMinor !== expectedMinor) throw new SemanticProgramValidationError('E_SEMANTIC_VERSION', '$binary.version', 'unsupported binary schema version')
+  if (bodyMajor !== 1 || bodyMinor !== expectedMinor)
+    throw new SemanticProgramValidationError(
+      'E_SEMANTIC_VERSION',
+      '$binary.version',
+      'unsupported binary schema version',
+    )
   const bodyLength = reader.u32('$binary.length')
-  if (bodyLength !== reader.remaining) throw new SemanticProgramValidationError('E_SEMANTIC_BYTES', '$binary.length', 'framed length does not match exact bytes')
+  if (bodyLength !== reader.remaining)
+    throw new SemanticProgramValidationError(
+      'E_SEMANTIC_BYTES',
+      '$binary.length',
+      'framed length does not match exact bytes',
+    )
   const decoded = reader.value()
-  if (reader.remaining !== 0) throw new SemanticProgramValidationError('E_SEMANTIC_BYTES', '$binary', 'trailing bytes are forbidden')
+  if (reader.remaining !== 0)
+    throw new SemanticProgramValidationError('E_SEMANTIC_BYTES', '$binary', 'trailing bytes are forbidden')
   if (decoded !== null && typeof decoded === 'object') addCodecDecodedGraph(decoded)
   return { canonicalInput: input, decoded }
 }
@@ -243,19 +323,26 @@ export function canonicalBodyEquals(input: Uint8Array, value: unknown): boolean 
 export function decodeSemanticProgram(input: Uint8Array): SemanticProgramV1 {
   const { canonicalInput, decoded } = decodeFramedValue(input, ENVELOPE_MAGIC, 'SPE1')
   const program = normalizeDecodedSemanticProgram(decoded)
-  if (!canonicalBodyEquals(canonicalInput, program)) throw new SemanticProgramValidationError('E_SEMANTIC_ORDER', '$binary', 'payload is not canonical')
+  if (!canonicalBodyEquals(canonicalInput, program))
+    throw new SemanticProgramValidationError('E_SEMANTIC_ORDER', '$binary', 'payload is not canonical')
   return program
 }
 
 export function decodeSemanticProgramCore(input: Uint8Array): SemanticProgramCoreV1 {
   const { canonicalInput, decoded } = decodeFramedValue(input, CORE_MAGIC, 'SPC1')
   const core = normalizeDecodedSemanticProgramCore(decoded)
-  if (!canonicalBodyEquals(canonicalInput, core)) throw new SemanticProgramValidationError('E_SEMANTIC_ORDER', '$binary', 'payload is not canonical')
+  if (!canonicalBodyEquals(canonicalInput, core))
+    throw new SemanticProgramValidationError('E_SEMANTIC_ORDER', '$binary', 'payload is not canonical')
   return core
 }
 
-export function exactPolicyKeys(value: unknown, expected: readonly string[], path: string): asserts value is Record<string, unknown> {
-  if (value === null || Array.isArray(value) || typeof value !== 'object') throw new SemanticProgramValidationError('E_SEMANTIC_SCHEMA', path, 'expected an object')
+export function exactPolicyKeys(
+  value: unknown,
+  expected: readonly string[],
+  path: string,
+): asserts value is Record<string, unknown> {
+  if (value === null || Array.isArray(value) || typeof value !== 'object')
+    throw new SemanticProgramValidationError('E_SEMANTIC_SCHEMA', path, 'expected an object')
   const actual = Object.keys(value).sort()
   const wanted = [...expected].sort()
   if (actual.length !== wanted.length || actual.some((key, index) => key !== wanted[index])) {
@@ -285,23 +372,54 @@ export function freezePolicy<T>(value: T): T {
 
 export function normalizeDecodedPolicy(value: unknown): SemanticTessellationPolicyV1 {
   exactPolicyKeys(value, ['schema', 'schemaVersion', 'programHash', 'intents'], '$policy')
-  if (value.schema !== 'semantic-tessellation-policy') throw new SemanticProgramValidationError('E_SEMANTIC_SCHEMA', '$policy.schema', 'expected semantic-tessellation-policy')
+  if (value.schema !== 'semantic-tessellation-policy')
+    throw new SemanticProgramValidationError(
+      'E_SEMANTIC_SCHEMA',
+      '$policy.schema',
+      'expected semantic-tessellation-policy',
+    )
   exactPolicyKeys(value.schemaVersion, ['major', 'minor'], '$policy.schemaVersion')
-  if (value.schemaVersion.major !== 1 || value.schemaVersion.minor !== 0) throw new SemanticProgramValidationError('E_SEMANTIC_VERSION', '$policy.schemaVersion', 'only schema version 1.0 is supported')
-  if (typeof value.programHash !== 'string' || !/^[a-f0-9]{64}$/.test(value.programHash)) throw new SemanticProgramValidationError('E_SEMANTIC_FIELD', '$policy.programHash', 'expected lowercase SHA-256')
-  if (!Array.isArray(value.intents) || value.intents.length > SEMANTIC_PROGRAM_LIMITS.tessellationIntents) throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', '$policy.intents', 'invalid tessellation intent count')
+  if (value.schemaVersion.major !== 1 || value.schemaVersion.minor !== 0)
+    throw new SemanticProgramValidationError(
+      'E_SEMANTIC_VERSION',
+      '$policy.schemaVersion',
+      'only schema version 1.0 is supported',
+    )
+  if (typeof value.programHash !== 'string' || !/^[a-f0-9]{64}$/.test(value.programHash))
+    throw new SemanticProgramValidationError('E_SEMANTIC_FIELD', '$policy.programHash', 'expected lowercase SHA-256')
+  if (!Array.isArray(value.intents) || value.intents.length > SEMANTIC_PROGRAM_LIMITS.tessellationIntents)
+    throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', '$policy.intents', 'invalid tessellation intent count')
   let priorOccurrence = -1
   value.intents.forEach((intent, index) => {
     const path = `$.policy.intents[${index}]`
-    exactPolicyKeys(intent, ['occurrence', 'chordTolerance', 'angularToleranceDegrees', 'minSegments', 'maxSegments'], path)
-    if (!Number.isSafeInteger(intent.occurrence) || (intent.occurrence as number) < 0 || (intent.occurrence as number) >= SEMANTIC_PROGRAM_LIMITS.occurrences) throw new SemanticProgramValidationError('E_SEMANTIC_REFERENCE', `${path}.occurrence`, 'invalid occurrence index')
-    if ((intent.occurrence as number) <= priorOccurrence) throw new SemanticProgramValidationError('E_SEMANTIC_ORDER', `${path}.occurrence`, 'intents must be unique and ordered')
+    exactPolicyKeys(
+      intent,
+      ['occurrence', 'chordTolerance', 'angularToleranceDegrees', 'minSegments', 'maxSegments'],
+      path,
+    )
+    if (
+      !Number.isSafeInteger(intent.occurrence) ||
+      (intent.occurrence as number) < 0 ||
+      (intent.occurrence as number) >= SEMANTIC_PROGRAM_LIMITS.occurrences
+    )
+      throw new SemanticProgramValidationError('E_SEMANTIC_REFERENCE', `${path}.occurrence`, 'invalid occurrence index')
+    if ((intent.occurrence as number) <= priorOccurrence)
+      throw new SemanticProgramValidationError(
+        'E_SEMANTIC_ORDER',
+        `${path}.occurrence`,
+        'intents must be unique and ordered',
+      )
     priorOccurrence = intent.occurrence as number
     if (intent.chordTolerance !== null) positivePolicyNumber(intent.chordTolerance, `${path}.chordTolerance`)
-    if (intent.angularToleranceDegrees !== null) positivePolicyNumber(intent.angularToleranceDegrees, `${path}.angularToleranceDegrees`)
+    if (intent.angularToleranceDegrees !== null)
+      positivePolicyNumber(intent.angularToleranceDegrees, `${path}.angularToleranceDegrees`)
     if (intent.minSegments !== null) policySegment(intent.minSegments, `${path}.minSegments`)
     if (intent.maxSegments !== null) policySegment(intent.maxSegments, `${path}.maxSegments`)
-    if (intent.minSegments !== null && intent.maxSegments !== null && (intent.maxSegments as number) < (intent.minSegments as number)) {
+    if (
+      intent.minSegments !== null &&
+      intent.maxSegments !== null &&
+      (intent.maxSegments as number) < (intent.minSegments as number)
+    ) {
       throw new SemanticProgramValidationError('E_SEMANTIC_NUMBER', path, 'maxSegments cannot be below minSegments')
     }
   })
@@ -314,28 +432,53 @@ export function decodeSemanticTessellationPolicy(
 ): SemanticTessellationPolicyV1 {
   const { canonicalInput, decoded } = decodeFramedValue(input, TESSELLATION_MAGIC, 'TSP1')
   const policy = normalizeDecodedPolicy(decoded)
-  if (!canonicalBodyEquals(canonicalInput, policy)) throw new SemanticProgramValidationError('E_SEMANTIC_ORDER', '$binary', 'payload is not canonical')
+  if (!canonicalBodyEquals(canonicalInput, policy))
+    throw new SemanticProgramValidationError('E_SEMANTIC_ORDER', '$binary', 'payload is not canonical')
   if (expectedProgram !== undefined) {
     const program = normalizeSemanticProgram(expectedProgram)
     const expectedHash = semanticProgramHashFromCore(program.core)
-    if (policy.programHash !== expectedHash) throw new SemanticProgramValidationError('E_SEMANTIC_IDENTITY', '$policy.programHash', 'tessellation policy is bound to a different program')
+    if (policy.programHash !== expectedHash)
+      throw new SemanticProgramValidationError(
+        'E_SEMANTIC_IDENTITY',
+        '$policy.programHash',
+        'tessellation policy is bound to a different program',
+      )
     if (program.core.language.contract === 'legacy/current' && policy.intents.length !== 0) {
-      throw new SemanticProgramValidationError('E_SEMANTIC_TYPE', '$policy.intents', 'legacy/current cannot carry tessellation intents')
+      throw new SemanticProgramValidationError(
+        'E_SEMANTIC_TYPE',
+        '$policy.intents',
+        'legacy/current cannot carry tessellation intents',
+      )
     }
-    if (policy.intents.length !== program.tessellationIntents.length
-      || policy.intents.some((intent, index) => {
+    if (
+      policy.intents.length !== program.tessellationIntents.length ||
+      policy.intents.some((intent, index) => {
         const expected = program.tessellationIntents[index]!
-        return intent.occurrence !== expected.occurrence
-          || intent.chordTolerance !== expected.chordTolerance
-          || intent.angularToleranceDegrees !== expected.angularToleranceDegrees
-          || intent.minSegments !== expected.minSegments
-          || intent.maxSegments !== expected.maxSegments
-      })) {
-      throw new SemanticProgramValidationError('E_SEMANTIC_IDENTITY', '$policy.intents', 'tessellation policy does not exactly match the source-bound program envelope')
+        return (
+          intent.occurrence !== expected.occurrence ||
+          intent.chordTolerance !== expected.chordTolerance ||
+          intent.angularToleranceDegrees !== expected.angularToleranceDegrees ||
+          intent.minSegments !== expected.minSegments ||
+          intent.maxSegments !== expected.maxSegments
+        )
+      })
+    ) {
+      throw new SemanticProgramValidationError(
+        'E_SEMANTIC_IDENTITY',
+        '$policy.intents',
+        'tessellation policy does not exactly match the source-bound program envelope',
+      )
     }
     policy.intents.forEach((intent, index) => {
-      if (intent.occurrence >= program.core.occurrences.length || program.core.occurrences[intent.occurrence]!.node === null) {
-        throw new SemanticProgramValidationError('E_SEMANTIC_REFERENCE', `$.policy.intents[${index}].occurrence`, 'policy references a non-producing occurrence')
+      if (
+        intent.occurrence >= program.core.occurrences.length ||
+        program.core.occurrences[intent.occurrence]!.node === null
+      ) {
+        throw new SemanticProgramValidationError(
+          'E_SEMANTIC_REFERENCE',
+          `$.policy.intents[${index}].occurrence`,
+          'policy references a non-producing occurrence',
+        )
       }
     })
   }

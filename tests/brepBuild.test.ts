@@ -107,9 +107,7 @@ describe('exact solid build', () => {
 
   it('refuses an inexact root by naming the operation responsible', () => {
     const graph = createBrepGraphBuilder()
-    expect(() => buildExactSolidBodies(graph.nodes, [{ name: 'Blob', inexact: 'hull' }]))
-      .toThrow(InexactSolidError)
-    expect(() => buildExactSolidBodies(graph.nodes, [{ name: 'Blob', inexact: 'hull' }]))
-      .toThrow(/hull/)
+    expect(() => buildExactSolidBodies(graph.nodes, [{ name: 'Blob', inexact: 'hull' }])).toThrow(InexactSolidError)
+    expect(() => buildExactSolidBodies(graph.nodes, [{ name: 'Blob', inexact: 'hull' }])).toThrow(/hull/)
   })
 })

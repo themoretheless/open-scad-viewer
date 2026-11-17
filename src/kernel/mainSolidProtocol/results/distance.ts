@@ -60,13 +60,7 @@ export function validShellDistanceResult(
   }
   const [lo, hi] = v.distanceIntervalMm
   if (hi === null) {
-    if (
-      v.faces !== null ||
-      v.parameters !== null ||
-      v.points !== null ||
-      v.pointEnclosures !== null ||
-      v.converged
-    ) {
+    if (v.faces !== null || v.parameters !== null || v.points !== null || v.pointEnclosures !== null || v.converged) {
       return false
     }
   } else if (
@@ -76,10 +70,7 @@ export function validShellDistanceResult(
     !v.faces!.every((f, i) => !!job.domains[i]![f]) ||
     !arrayOf(v.parameters, 2, uv => arrayOf(uv, 2, finite)) ||
     !v.parameters!.every((uv, i) =>
-      uv.every(
-        (t, k) =>
-          t >= job.domains[i]![v.faces![i]!]![k]![0] && t <= job.domains[i]![v.faces![i]!]![k]![1],
-      ),
+      uv.every((t, k) => t >= job.domains[i]![v.faces![i]!]![k]![0] && t <= job.domains[i]![v.faces![i]!]![k]![1]),
     ) ||
     !arrayOf(v.points, 2, vector) ||
     !arrayOf(v.pointEnclosures, 2, p => arrayOf(p, 3, isOrderedInterval)) ||
@@ -125,12 +116,7 @@ export function validFaceDistanceResult(
   }
   const [lo, hi] = v.distanceIntervalMm
   if (hi === null) {
-    if (
-      v.parameters !== null ||
-      v.points !== null ||
-      v.pointEnclosures !== null ||
-      v.converged
-    ) {
+    if (v.parameters !== null || v.points !== null || v.pointEnclosures !== null || v.converged) {
       return false
     }
   } else if (
@@ -138,10 +124,7 @@ export function validFaceDistanceResult(
     hi < lo ||
     !arrayOf(v.parameters, 2, uv => arrayOf(uv, 2, finite)) ||
     !v.parameters!.every((uv, i) =>
-      uv.every(
-        (t, k) =>
-          !!job.domains[i]![k] && t >= job.domains[i]![k][0] && t <= job.domains[i]![k][1],
-      ),
+      uv.every((t, k) => !!job.domains[i]![k] && t >= job.domains[i]![k][0] && t <= job.domains[i]![k][1]),
     ) ||
     !arrayOf(v.points, 2, vector) ||
     !arrayOf(v.pointEnclosures, 2, p => arrayOf(p, 3, isOrderedInterval)) ||
@@ -173,26 +156,15 @@ export function validSurfaceDistanceResult(
     isOrderedInterval(v.distanceIntervalMm) &&
     v.distanceIntervalMm[0] >= 0 &&
     arrayOf(v.parameters, 2, uv => arrayOf(uv, 2, finite)) &&
-    v.parameters.every((uv, i) =>
-      uv.every((t, k) => t >= job.domains[i]![k]![0] && t <= job.domains[i]![k]![1]),
-    ) &&
+    v.parameters.every((uv, i) => uv.every((t, k) => t >= job.domains[i]![k]![0] && t <= job.domains[i]![k]![1])) &&
     arrayOf(v.points, 2, vector) &&
     arrayOf(v.pointEnclosures, 2, p => arrayOf(p, 3, isOrderedInterval)) &&
-    distanceWitnessConsistent(
-      v.points,
-      v.pointEnclosures,
-      v.distanceIntervalMm[0],
-      v.distanceIntervalMm[1],
-    ) &&
+    distanceWitnessConsistent(v.points, v.pointEnclosures, v.distanceIntervalMm[0], v.distanceIntervalMm[1]) &&
     typeof v.converged === 'boolean' &&
-    validBoundedConvergence(
-      v.converged,
-      v.reason,
-      v.distanceIntervalMm[0],
-      v.distanceIntervalMm[1],
-      job.toleranceMm,
-      ['work-limit', 'precision-limit'],
-    )
+    validBoundedConvergence(v.converged, v.reason, v.distanceIntervalMm[0], v.distanceIntervalMm[1], job.toleranceMm, [
+      'work-limit',
+      'precision-limit',
+    ])
   )
 }
 
@@ -216,14 +188,10 @@ export function validCurveDistanceResult(
     arrayOf(v.points, 2, p => arrayOf(p, job.dimension, finite)) &&
     arrayOf(v.pointEnclosures, 2, p => arrayOf(p, job.dimension, isOrderedInterval)) &&
     typeof v.converged === 'boolean' &&
-    validBoundedConvergence(
-      v.converged,
-      v.reason,
-      v.distanceIntervalMm[0],
-      v.distanceIntervalMm[1],
-      job.toleranceMm,
-      ['work-limit', 'precision-limit'],
-    )
+    validBoundedConvergence(v.converged, v.reason, v.distanceIntervalMm[0], v.distanceIntervalMm[1], job.toleranceMm, [
+      'work-limit',
+      'precision-limit',
+    ])
   )
 }
 

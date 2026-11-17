@@ -9,10 +9,7 @@ import {
 
 export { canonicalJson, computeGeometryManifestDigest }
 
-export function engineManifestUri(
-  engineClass: GeometryEngineClass,
-  manifestVersion: string,
-): string {
+export function engineManifestUri(engineClass: GeometryEngineClass, manifestVersion: string): string {
   return `openscad://engines/${encodeURIComponent(engineClass)}/capabilities/${encodeURIComponent(manifestVersion)}`
 }
 
@@ -31,21 +28,14 @@ export function assertGeometryManifestDigest(engine: GeometryEngineStaticManifes
   }
 }
 
-export function archivedGeometryManifest(
-  manifestVersion: string,
-): GeometryEngineStaticManifest | null {
-  const archived = GEOMETRY_MANIFEST_ARCHIVE[
-    manifestVersion as keyof typeof GEOMETRY_MANIFEST_ARCHIVE
-  ]
+export function archivedGeometryManifest(manifestVersion: string): GeometryEngineStaticManifest | null {
+  const archived = GEOMETRY_MANIFEST_ARCHIVE[manifestVersion as keyof typeof GEOMETRY_MANIFEST_ARCHIVE]
   if (!archived) return null
   assertGeometryManifestDigest(archived)
   return archived
 }
 
-export function immutableEngineManifestToWire(
-  engineClass: GeometryEngineClass,
-  manifestVersion: string,
-) {
+export function immutableEngineManifestToWire(engineClass: GeometryEngineClass, manifestVersion: string) {
   const archived = archivedGeometryManifest(manifestVersion)
   if (!archived || archived.engineClass !== engineClass) return null
   return staticEngineManifestToWire(archived)

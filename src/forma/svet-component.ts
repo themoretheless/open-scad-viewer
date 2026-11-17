@@ -50,13 +50,7 @@ export interface SvetApp<HostElement = any> {
 }
 
 export interface ComponentRendererCallbacks<HostNode = any, HostElement = any> {
-  patch(
-    n1: SvetVNode | null,
-    n2: SvetVNode,
-    container: HostElement,
-    anchor: HostNode | null,
-    namespace?: string,
-  ): void
+  patch(n1: SvetVNode | null, n2: SvetVNode, container: HostElement, anchor: HostNode | null, namespace?: string): void
   unmount(vnode: SvetVNode): void
   getFirstHostNode(vnode: SvetVNode | null): HostNode | null
   getNextHostNode(vnode: SvetVNode): HostNode | null
@@ -70,9 +64,7 @@ let uidCounter = 0
 function emitComponentEvent(instance: SvetComponentInstance, event: string, ...args: any[]): void {
   const rawProps = instance.vnode.props || {}
   let handler =
-    rawProps[toHandlerKey(event)] ||
-    rawProps[toHandlerKey(camelize(event))] ||
-    rawProps[toHandlerKey(hyphenate(event))]
+    rawProps[toHandlerKey(event)] || rawProps[toHandlerKey(camelize(event))] || rawProps[toHandlerKey(hyphenate(event))]
   if (!handler && event.startsWith('update:')) {
     const propName = event.slice(7)
     handler =
@@ -163,7 +155,7 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
     })
 
     const exposeProxy = (exp?: any) => {
-      instance.exposed = exp && typeof exp === 'object' ? createRefUnwrapProxy(exp) : (exp || {})
+      instance.exposed = exp && typeof exp === 'object' ? createRefUnwrapProxy(exp) : exp || {}
     }
 
     const scope = effectScope(true)
@@ -172,12 +164,13 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
       enterComponentSetup()
       try {
         if (typeof type === 'function') {
-          instance.render = () => type(instance.props, {
-            attrs: instance.attrs,
-            slots: instance.slots,
-            emit: instance.emit,
-            expose: exposeProxy,
-          })
+          instance.render = () =>
+            type(instance.props, {
+              attrs: instance.attrs,
+              slots: instance.slots,
+              emit: instance.emit,
+              expose: exposeProxy,
+            })
         } else if (type.setup) {
           const setupResult = type.setup(instance.props, {
             attrs: instance.attrs,
@@ -241,44 +234,47 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
         updateQueued = false
         if (!instance.isUnmounted) handle.run()
       }
-      const handle = effect(() => {
-        updateQueued = false
-        if (instance.isUnmounted) return
-        if (!instance.isMounted) {
-          for (const fn of instance.bm) fn()
-          const subTree = (instance.subTree = renderComponentRoot())
-          untrack(() => cb.patch(null, subTree, container, anchor, namespace))
-          initialVNode.el = subTree.el
-          initialVNode.anchor = subTree.anchor
-          instance.isMounted = true
-          for (const fn of instance.m) {
-            queuePostFlushCb(fn)
+      const handle = effect(
+        () => {
+          updateQueued = false
+          if (instance.isUnmounted) return
+          if (!instance.isMounted) {
+            for (const fn of instance.bm) fn()
+            const subTree = (instance.subTree = renderComponentRoot())
+            untrack(() => cb.patch(null, subTree, container, anchor, namespace))
+            initialVNode.el = subTree.el
+            initialVNode.anchor = subTree.anchor
+            instance.isMounted = true
+            for (const fn of instance.m) {
+              queuePostFlushCb(fn)
+            }
+          } else {
+            for (const fn of instance.bu) fn()
+            const prevTree = instance.subTree!
+            const nextTree = (instance.subTree = renderComponentRoot())
+            const firstHost = cb.getFirstHostNode(prevTree)
+            const currentContainer = (firstHost ? cb.hostParentNode(firstHost) : null) ?? container
+            const currentAnchor = cb.getNextHostNode(prevTree) ?? anchor
+            untrack(() => cb.patch(prevTree, nextTree, currentContainer, currentAnchor, namespace))
+            instance.vnode.el = nextTree.el
+            instance.vnode.anchor = nextTree.anchor
+            if (instance.vnode.ref != null) {
+              setTemplateRef(instance.vnode.ref, instance.exposed ?? instance.ctx)
+            }
+            for (const fn of instance.u) {
+              queuePostFlushCb(fn)
+            }
           }
-        } else {
-          for (const fn of instance.bu) fn()
-          const prevTree = instance.subTree!
-          const nextTree = (instance.subTree = renderComponentRoot())
-          const firstHost = cb.getFirstHostNode(prevTree)
-          const currentContainer = (firstHost ? cb.hostParentNode(firstHost) : null) ?? container
-          const currentAnchor = cb.getNextHostNode(prevTree) ?? anchor
-          untrack(() => cb.patch(prevTree, nextTree, currentContainer, currentAnchor, namespace))
-          instance.vnode.el = nextTree.el
-          instance.vnode.anchor = nextTree.anchor
-          if (instance.vnode.ref != null) {
-            setTemplateRef(instance.vnode.ref, instance.exposed ?? instance.ctx)
-          }
-          for (const fn of instance.u) {
-            queuePostFlushCb(fn)
-          }
-        }
-      }, {
-        sync: false,
-        scheduler: () => {
-          if (instance.isUnmounted || updateQueued) return
-          updateQueued = true
-          queuePostFlushCb(runComponentUpdate)
         },
-      })
+        {
+          sync: false,
+          scheduler: () => {
+            if (instance.isUnmounted || updateQueued) return
+            updateQueued = true
+            queuePostFlushCb(runComponentUpdate)
+          },
+        },
+      )
       instance.update = () => handle.run()
 
       instance.stopEffect = () => {
@@ -316,7 +312,11 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
   function unmountComponent(instance: SvetComponentInstance): void {
     if (instance.isUnmounted) return
     for (const fn of instance.bum) {
-      try { fn() } catch { /* ignore */ }
+      try {
+        fn()
+      } catch {
+        /* ignore */
+      }
     }
     if (instance.stopEffect) {
       instance.stopEffect()
@@ -327,7 +327,11 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
     }
     instance.isUnmounted = true
     for (const fn of instance.um) {
-      try { fn() } catch { /* ignore */ }
+      try {
+        fn()
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -356,9 +360,11 @@ export function createComponentOperations<HostNode = any, HostElement = HostNode
         if (isMounted) return
         const container =
           typeof rootContainer === 'string'
-            ? (cb.querySelector
-                ? cb.querySelector(rootContainer)
-                : (typeof document !== 'undefined' ? (document.querySelector(rootContainer) as unknown as HostElement) : null))
+            ? cb.querySelector
+              ? cb.querySelector(rootContainer)
+              : typeof document !== 'undefined'
+                ? (document.querySelector(rootContainer) as unknown as HostElement)
+                : null
             : rootContainer
         if (!container) return
         const vnode = createVNode(rootComponent, rootProps)

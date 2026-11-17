@@ -1,6 +1,6 @@
-import {callGeometryRust} from './geometry/kernel'
-import type {FrameMember, FrameRestraint, FrameSupport, FrameVector} from './frameAnalysis'
-import type {TrussMember, TrussVector} from './trussAnalysis'
+import { callGeometryRust } from './geometry/kernel'
+import type { FrameMember, FrameRestraint, FrameSupport, FrameVector } from './frameAnalysis'
+import type { TrussMember, TrussVector } from './trussAnalysis'
 
 /** Why one degree of freedom is implicated in a singular stiffness matrix. */
 export type DofIssue = 'unrestrained' | 'mechanism'

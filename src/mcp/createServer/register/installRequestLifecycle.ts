@@ -15,9 +15,11 @@ export function installRequestLifecycle(ctx: McpServerContext): void {
       const handler = protocolServer._requestHandlers.get(method)
       if (!handler || wrappedHandlers.has(handler)) return
       const wrapped: DispatchHandler = async (...args: unknown[]) => {
-        const context = args.at(-1) as {
-          mcpReq?: { id?: RequestId; signal?: AbortSignal }
-        } | undefined
+        const context = args.at(-1) as
+          | {
+              mcpReq?: { id?: RequestId; signal?: AbortSignal }
+            }
+          | undefined
         const requestId = context?.mcpReq?.id
         const signal = context?.mcpReq?.signal
         if (requestId !== undefined && signal) {

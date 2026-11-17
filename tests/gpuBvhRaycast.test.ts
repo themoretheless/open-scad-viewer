@@ -65,7 +65,6 @@ describe('WebGPU Compute Batched BVH Raycaster', () => {
     disposeSceneAabbIndex(cpuIndex)
   })
 
-
   it('breaks ties deterministically by lexicographical item id', () => {
     const items: AabbItem[] = [
       { id: 'zeta', min: [0, 0, 5], max: [2, 2, 7] },
@@ -73,9 +72,7 @@ describe('WebGPU Compute Batched BVH Raycaster', () => {
       { id: 'beta', min: [0, 0, 5], max: [2, 2, 7] },
     ]
     const flatBvh = buildFlatBvh(items)
-    const hits = referenceBatchedBvhRaycast(flatBvh, [
-      { origin: [1, 1, 0], direction: [0, 0, 1] },
-    ])
+    const hits = referenceBatchedBvhRaycast(flatBvh, [{ origin: [1, 1, 0], direction: [0, 0, 1] }])
     expect(hits[0]).toEqual({ id: 'alpha', tNear: 5 })
   })
 
@@ -86,22 +83,13 @@ describe('WebGPU Compute Batched BVH Raycaster', () => {
       { id: 'right', min: [1, -1, 4], max: [3, 1, 6] },
     ]
     const bvh = buildFlatBvh(items)
-    const marqueeRays = buildMarqueeRayBatch(
-      [0, 0, 0],
-      [0, 0, 1],
-      [1, 0, 0],
-      [0, 1, 0],
-      5,
-      5,
-      0.6,
-      0.3
-    )
+    const marqueeRays = buildMarqueeRayBatch([0, 0, 0], [0, 0, 1], [1, 0, 0], [0, 1, 0], 5, 5, 0.6, 0.3)
 
     expect(marqueeRays.length).toBe(25)
     const hits = await runGpuBatchedBvhRaycast(bvh, marqueeRays)
     expect(hits.length).toBe(25)
 
-    const pickedIds = new Set(hits.filter((h): h is NonNullable<typeof h> => h !== null).map((h) => h.id))
+    const pickedIds = new Set(hits.filter((h): h is NonNullable<typeof h> => h !== null).map(h => h.id))
     expect(pickedIds.has('left')).toBe(true)
     expect(pickedIds.has('center')).toBe(true)
     expect(pickedIds.has('right')).toBe(true)

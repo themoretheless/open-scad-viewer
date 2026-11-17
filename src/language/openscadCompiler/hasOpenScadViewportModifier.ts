@@ -1,5 +1,13 @@
 import { Parser, TT } from '../openscadCompiler'
-import type { CallNode, CompileOpenScadOptions, DirectiveNode, OpenScadParsedStatement, OpenScadViewportModifierKind, Statement, Token } from '../openscadCompiler'
+import type {
+  CallNode,
+  CompileOpenScadOptions,
+  DirectiveNode,
+  OpenScadParsedStatement,
+  OpenScadViewportModifierKind,
+  Statement,
+  Token,
+} from '../openscadCompiler'
 import { OpenSCADParseError } from '../openscadErrors'
 import { deepFreeze } from '../../core/objects'
 
@@ -9,7 +17,10 @@ export function tokenize(source: string): Token[] {
   let pendingDirective = false
   while (i < source.length) {
     const ch = source[i]!
-    if (ch <= ' ') { i++; continue }
+    if (ch <= ' ') {
+      i++
+      continue
+    }
     if (ch === '/' && source[i + 1] === '/') {
       while (i < source.length && source[i] !== '\n') i++
       continue
@@ -41,7 +52,11 @@ export function tokenize(source: string): Token[] {
       let value = ''
       let closed = false
       while (i < source.length) {
-        if (source[i] === '"') { i++; closed = true; break }
+        if (source[i] === '"') {
+          i++
+          closed = true
+          break
+        }
         if (source[i] === '\\') {
           i++
           const escaped = source[i]
@@ -84,8 +99,12 @@ export function tokenize(source: string): Token[] {
 
     const two = source.slice(i, i + 2)
     const doubles: Record<string, TT> = {
-      '<=': TT.LtEq, '>=': TT.GtEq, '==': TT.EqEq, '!=': TT.NotEq,
-      '&&': TT.And, '||': TT.Or,
+      '<=': TT.LtEq,
+      '>=': TT.GtEq,
+      '==': TT.EqEq,
+      '!=': TT.NotEq,
+      '&&': TT.And,
+      '||': TT.Or,
     }
     if (doubles[two] !== undefined) {
       out.push({ t: doubles[two], v: two, p, end: i + 2 })
@@ -94,11 +113,28 @@ export function tokenize(source: string): Token[] {
     }
 
     const singles: Record<string, TT> = {
-      '(': TT.LParen, ')': TT.RParen, '{': TT.LBrace, '}': TT.RBrace,
-      '[': TT.LBracket, ']': TT.RBracket, ',': TT.Comma, ';': TT.Semi,
-      '=': TT.Eq, '+': TT.Plus, '-': TT.Minus, '*': TT.Star, '/': TT.Slash,
-      '%': TT.Percent, '^': TT.Caret, '#': TT.Hash, '$': TT.Dollar,
-      '.': TT.Dot, ':': TT.Colon, '?': TT.Question, '<': TT.Lt, '>': TT.Gt,
+      '(': TT.LParen,
+      ')': TT.RParen,
+      '{': TT.LBrace,
+      '}': TT.RBrace,
+      '[': TT.LBracket,
+      ']': TT.RBracket,
+      ',': TT.Comma,
+      ';': TT.Semi,
+      '=': TT.Eq,
+      '+': TT.Plus,
+      '-': TT.Minus,
+      '*': TT.Star,
+      '/': TT.Slash,
+      '%': TT.Percent,
+      '^': TT.Caret,
+      '#': TT.Hash,
+      $: TT.Dollar,
+      '.': TT.Dot,
+      ':': TT.Colon,
+      '?': TT.Question,
+      '<': TT.Lt,
+      '>': TT.Gt,
       '!': TT.Not,
     }
     const tokenType = singles[ch]
@@ -110,13 +146,17 @@ export function tokenize(source: string): Token[] {
   return out
 }
 
-export function isDigit(ch: string | undefined) { return ch !== undefined && ch >= '0' && ch <= '9' }
+export function isDigit(ch: string | undefined) {
+  return ch !== undefined && ch >= '0' && ch <= '9'
+}
 
 export function isIdentStart(ch: string | undefined) {
   return ch !== undefined && ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch === '_' || ch === '$')
 }
 
-export function isIdentPart(ch: string | undefined) { return isIdentStart(ch) || isDigit(ch) }
+export function isIdentPart(ch: string | undefined) {
+  return isIdentStart(ch) || isDigit(ch)
+}
 
 export function hasOpenScadViewportModifier(
   node: Pick<CallNode, 'viewportModifiers'>,
@@ -172,19 +212,12 @@ export function finalizeOpenScadProgram(statements: Statement[]): readonly State
 
 /** Parse one full-profile project source while deliberately retaining file directives. */
 export function parseOpenScadProjectSource(source: string): readonly OpenScadParsedStatement[] {
-  const statements = new Parser(
-    tokenize(source),
-    source,
-    'openscad/stable-2021.01',
-  ).parseAll()
+  const statements = new Parser(tokenize(source), source, 'openscad/stable-2021.01').parseAll()
   return finalizeOpenScadProgram(statements) as readonly OpenScadParsedStatement[]
 }
 
 /** Pure compiler front-end: source text to a typed operation IR. */
-export function compileOpenSCAD(
-  source: string,
-  options: CompileOpenScadOptions = {},
-): readonly Statement[] {
+export function compileOpenSCAD(source: string, options: CompileOpenScadOptions = {}): readonly Statement[] {
   const statements = new Parser(
     tokenize(source),
     source,

@@ -64,7 +64,10 @@ export function withKeys(fn: (...args: any[]) => any, modifiers: string[]): (eve
   }
 }
 
-export function withDirectives(vnode: SvetVNode, directives: Array<[Directive, any?, string?, Record<string, boolean>?]>): SvetVNode {
+export function withDirectives(
+  vnode: SvetVNode,
+  directives: Array<[Directive, any?, string?, Record<string, boolean>?]>,
+): SvetVNode {
   const bindings: DirectiveBinding[] = vnode.dirs ?? (vnode.dirs = [])
   for (let i = 0; i < directives.length; i++) {
     const [dir, value, arg, modifiers = {}] = directives[i]!
@@ -88,7 +91,7 @@ function syncModelUpdaterProp(el: any, vnode: SvetVNode, onlyIfMissing = false):
 }
 
 function resolveOptionValue(opt: any, vnodeProps?: Record<string, any> | null): any {
-  return '_value' in opt ? opt._value : ('value' in opt ? opt.value : (opt.props ?? vnodeProps)?.value)
+  return '_value' in opt ? opt._value : 'value' in opt ? opt.value : (opt.props ?? vnodeProps)?.value
 }
 
 export const vModelText: Directive = {

@@ -1,7 +1,4 @@
-import {
-  lowerOpenSCADToSemanticProgramUnchecked,
-  type SemanticLoweringOptions,
-} from './openscadSemanticLowerer'
+import { lowerOpenSCADToSemanticProgramUnchecked, type SemanticLoweringOptions } from './openscadSemanticLowerer'
 import type { SemanticLoweringSuccess } from './semanticProgramTrust'
 
 // The minting capability is deliberately lexical: no importable function can
@@ -26,10 +23,5 @@ export function requireTrustedSemanticLowering(value: unknown): SemanticLowering
   return value as SemanticLoweringSuccess
 }
 
-export type {
-  SemanticLoweringOptions,
-} from './openscadSemanticLowerer'
-export type {
-  SemanticLoweringReport,
-  SemanticLoweringSuccess,
-} from './semanticProgramTrust'
+export type { SemanticLoweringOptions } from './openscadSemanticLowerer'
+export type { SemanticLoweringReport, SemanticLoweringSuccess } from './semanticProgramTrust'

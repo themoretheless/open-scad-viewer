@@ -27,17 +27,21 @@ describe('OpenSCAD bind phase', () => {
     const program = compileOpenSCAD(source)
     const bound = bindOpenScad(program, { source, languageProfile: 'openscad-viewer-subset@1' })
     expect(bound.modules.has('row')).toBe(true)
-    expect(new Map(bound.calls.map(call => [call.name, call.kind]))).toEqual(new Map([
-      ['translate', 'builtin-module'],
-      ['row', 'user-module'],
-      ['cube', 'builtin-module'],
-      ['missing', 'unresolved'],
-    ]))
+    expect(new Map(bound.calls.map(call => [call.name, call.kind]))).toEqual(
+      new Map([
+        ['translate', 'builtin-module'],
+        ['row', 'user-module'],
+        ['cube', 'builtin-module'],
+        ['missing', 'unresolved'],
+      ]),
+    )
     expect(bound.diagnostics.some(item => item.message.includes('missing()'))).toBe(true)
-    expect(structuredClone({
-      calls: bound.calls,
-      diagnostics: bound.diagnostics,
-    })).toEqual({
+    expect(
+      structuredClone({
+        calls: bound.calls,
+        diagnostics: bound.diagnostics,
+      }),
+    ).toEqual({
       calls: bound.calls,
       diagnostics: bound.diagnostics,
     })
@@ -64,7 +68,10 @@ describe('OpenSCAD bind phase', () => {
   it('measures compile and bind separately and reports a cache hit as zero work', () => {
     resetCompileBindCache()
     let clock = 0
-    const now = () => { clock += 1; return clock }
+    const now = () => {
+      clock += 1
+      return clock
+    }
     const first = prepareOpenScadFrontEnd('cube(2);', { now })
     const second = prepareOpenScadFrontEnd('cube(2);', { now })
     expect(first.cacheHit).toBe(false)

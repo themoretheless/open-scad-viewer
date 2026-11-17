@@ -20,9 +20,13 @@ export class BrepInspectionCache {
     this.maxCharacters = limits.maxCharacters
   }
 
-  get size() { return this.keys.size }
+  get size() {
+    return this.keys.size
+  }
   /** UTF-16 code units retained as keys, not a measurement of JavaScript heap bytes. */
-  get retainedCharacters() { return this.characters }
+  get retainedCharacters() {
+    return this.characters
+  }
 
   inspect(model: NurbsBrep): void {
     const key = JSON.stringify(model)

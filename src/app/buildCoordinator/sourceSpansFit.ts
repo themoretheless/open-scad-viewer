@@ -3,25 +3,27 @@ import type { GeometryBuildInput } from '../buildCoordinator'
 import type { GeometryQuality } from '../../core/build'
 
 export function sourceSpansFit(source: string, event: GeometryWorkerEvent): boolean {
-  const isBoundary = (offset: number) => offset === 0
-    || offset === source.length
-    || !(source.charCodeAt(offset - 1) >= 0xd800
-      && source.charCodeAt(offset - 1) <= 0xdbff
-      && source.charCodeAt(offset) >= 0xdc00
-      && source.charCodeAt(offset) <= 0xdfff)
-  const spanFits = (start: number, end: number) => start <= end
-    && end <= source.length
-    && isBoundary(start)
-    && isBoundary(end)
+  const isBoundary = (offset: number) =>
+    offset === 0 ||
+    offset === source.length ||
+    !(
+      source.charCodeAt(offset - 1) >= 0xd800 &&
+      source.charCodeAt(offset - 1) <= 0xdbff &&
+      source.charCodeAt(offset) >= 0xdc00 &&
+      source.charCodeAt(offset) <= 0xdfff
+    )
+  const spanFits = (start: number, end: number) =>
+    start <= end && end <= source.length && isBoundary(start) && isBoundary(end)
   if (event.status === 'failed') {
     const { start, end } = event.error
-    return (start === undefined && end === undefined)
-      || (start !== undefined && end !== undefined && spanFits(start, end))
+    return (
+      (start === undefined && end === undefined) || (start !== undefined && end !== undefined && spanFits(start, end))
+    )
   }
   if (event.status !== 'succeeded') return true
-  return event.meshes.every(mesh => mesh.provenance.every(run => (
-    run.source === null || spanFits(run.source.start, run.source.end)
-  )))
+  return event.meshes.every(mesh =>
+    mesh.provenance.every(run => run.source === null || spanFits(run.source.start, run.source.end)),
+  )
 }
 
 export function deepFreezeWorkerSnapshot(value: unknown, seen = new WeakSet<object>()): void {
@@ -38,7 +40,11 @@ export function deepFreezeWorkerSnapshot(value: unknown, seen = new WeakSet<obje
   Object.freeze(value)
 }
 
-export function collectWorkerEventBuffers(value: unknown, buffers: Set<ArrayBuffer>, seen = new WeakSet<object>()): void {
+export function collectWorkerEventBuffers(
+  value: unknown,
+  buffers: Set<ArrayBuffer>,
+  seen = new WeakSet<object>(),
+): void {
   if (value === null || typeof value !== 'object' || seen.has(value)) return
   seen.add(value)
   if (ArrayBuffer.isView(value)) {

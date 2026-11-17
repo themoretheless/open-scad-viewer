@@ -37,7 +37,11 @@ function getSharedMemoryCapabilities() {
   const currentSabCtor = typeof SharedArrayBuffer !== 'undefined' ? SharedArrayBuffer : undefined
   const crossOriginIsolated =
     typeof globalThis !== 'undefined' && (globalThis as { crossOriginIsolated?: boolean }).crossOriginIsolated === true
-  if (cachedSharedMemCaps && cachedSharedMemCaps.sabCtor === currentSabCtor && cachedSharedMemCaps.crossOriginIsolated === crossOriginIsolated) {
+  if (
+    cachedSharedMemCaps &&
+    cachedSharedMemCaps.sabCtor === currentSabCtor &&
+    cachedSharedMemCaps.crossOriginIsolated === crossOriginIsolated
+  ) {
     return cachedSharedMemCaps
   }
 
@@ -52,9 +56,7 @@ function getSharedMemoryCapabilities() {
   }
 
   const atomicsSupported =
-    typeof Atomics !== 'undefined' &&
-    typeof Atomics.add === 'function' &&
-    typeof Atomics.load === 'function'
+    typeof Atomics !== 'undefined' && typeof Atomics.add === 'function' && typeof Atomics.load === 'function'
 
   let wasmSharedMemorySupported = false
   if (sharedArrayBufferSupported && typeof WebAssembly !== 'undefined' && typeof WebAssembly.Memory === 'function') {
@@ -106,7 +108,7 @@ export function detectHardwareConcurrency(maxWorkers = 16): HardwareConcurrencyC
 export function createKernelWasmMemory(
   initialPages = 256, // 16 MiB
   maximumPages = 16384, // 1 GiB
-  preferShared = true
+  preferShared = true,
 ): { memory: WebAssembly.Memory; isShared: boolean } {
   if (preferShared) {
     try {
@@ -266,7 +268,7 @@ export class GeometryWorkerPool<TInput, TOutput> {
               reject(new Error('Task aborted'))
             }
           },
-          { once: true }
+          { once: true },
         )
       }
 
@@ -397,7 +399,7 @@ export class GeometryWorkerPool<TInput, TOutput> {
               task.reject(err)
             }
             this.pump()
-          }
+          },
         )
     }
   }

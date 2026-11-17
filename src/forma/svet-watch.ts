@@ -4,20 +4,9 @@
  * Pure Svet implementation of `watch`, `watchEffect`, `nextTick`, `useModel`,
  * `mergeModels`, `useId`, and component pre/post flush queues.
  */
-import {
-  signal,
-  effect as svetEffect,
-  untrack,
-} from './svet'
+import { signal, effect as svetEffect, untrack } from './svet'
 import { camelize } from './svet-props'
-import {
-  DEEP_SIG_SYM,
-  canObserve,
-  isReactive,
-  isRef,
-  registerScopeCleanup,
-  type Ref,
-} from './svet-reactivity'
+import { DEEP_SIG_SYM, canObserve, isReactive, isRef, registerScopeCleanup, type Ref } from './svet-reactivity'
 
 const preFlushQueue: Array<() => void> = []
 const postFlushQueue: Array<() => void> = []
@@ -65,7 +54,11 @@ export function flushPreQueue(): void {
   while (preFlushQueue.length > 0 && safety++ < 1000) {
     const queue = preFlushQueue.splice(0)
     for (const cb of queue) {
-      try { cb() } catch { /* ignore */ }
+      try {
+        cb()
+      } catch {
+        /* ignore */
+      }
     }
   }
 }
@@ -78,7 +71,11 @@ export function flushPostQueue(): void {
     flushPreQueue()
     const queue = postFlushQueue.splice(0)
     for (const cb of queue) {
-      try { cb() } catch { /* ignore */ }
+      try {
+        cb()
+      } catch {
+        /* ignore */
+      }
     }
   }
 }
@@ -125,32 +122,48 @@ export function watchEffect(
   let cleanup: (() => void) | undefined
   let stopped = false
   let pending = false
-  const registerCleanup = (cb: () => void) => { cleanup = cb }
+  const registerCleanup = (cb: () => void) => {
+    cleanup = cb
+  }
 
-  const handle = svetEffect(() => {
-    if (stopped) return
-    if (cleanup) {
-      try { cleanup() } finally { cleanup = undefined }
-    }
-    effectFn(registerCleanup)
-  }, {
-    sync: flush === 'sync',
-    scheduler: flush === 'sync' ? undefined : () => {
-      if (stopped || pending) return
-      pending = true
-      const queueFn = flush === 'post' ? queuePostFlushCb : queuePreFlushCb
-      queueFn(() => {
-        pending = false
-        if (!stopped) handle.run()
-      })
+  const handle = svetEffect(
+    () => {
+      if (stopped) return
+      if (cleanup) {
+        try {
+          cleanup()
+        } finally {
+          cleanup = undefined
+        }
+      }
+      effectFn(registerCleanup)
     },
-  })
+    {
+      sync: flush === 'sync',
+      scheduler:
+        flush === 'sync'
+          ? undefined
+          : () => {
+              if (stopped || pending) return
+              pending = true
+              const queueFn = flush === 'post' ? queuePostFlushCb : queuePreFlushCb
+              queueFn(() => {
+                pending = false
+                if (!stopped) handle.run()
+              })
+            },
+    },
+  )
 
   const stop = () => {
     if (stopped) return
     stopped = true
     if (cleanup) {
-      try { cleanup() } finally { cleanup = undefined }
+      try {
+        cleanup()
+      } finally {
+        cleanup = undefined
+      }
     }
     handle.dispose()
   }
@@ -174,12 +187,13 @@ export function watch(
     getter = () => source
     forceTrigger = true
   } else if (Array.isArray(source)) {
-    getter = () => source.map(s => {
-      if (isRef(s)) return s.value
-      if (isReactive(s)) return traverse(s)
-      if (typeof s === 'function') return s()
-      return s
-    })
+    getter = () =>
+      source.map(s => {
+        if (isRef(s)) return s.value
+        if (isReactive(s)) return traverse(s)
+        if (typeof s === 'function') return s()
+        return s
+      })
   } else if (typeof source === 'function') {
     getter = source
   } else {
@@ -196,7 +210,9 @@ export function watch(
   }
 
   let cleanup: (() => void) | undefined
-  const onCleanupRegister = (fn: () => void) => { cleanup = fn }
+  const onCleanupRegister = (fn: () => void) => {
+    cleanup = fn
+  }
   let oldValue: any = isMulti ? [] : undefined
   let initialized = false
   let stopped = false
@@ -216,60 +232,71 @@ export function watch(
   const executeCallback = (newValue: any, prevValue: any) => {
     if (stopped) return
     if (cleanup) {
-      try { cleanup() } finally { cleanup = undefined }
+      try {
+        cleanup()
+      } finally {
+        cleanup = undefined
+      }
     }
     untrack(() => cb(newValue, prevValue, onCleanupRegister))
     if (once) stop()
   }
 
-  const handle = svetEffect(() => {
-    const newValue = sampleGetter()
-    if (!initialized) {
-      initialized = true
-      oldValue = isMulti ? [...newValue] : newValue
-      if (immediate) {
-        if (flush === 'post') {
-          queuePostFlushCb(() => executeCallback(newValue, isMulti ? [] : undefined))
-        } else {
-          executeCallback(newValue, isMulti ? [] : undefined)
+  const handle = svetEffect(
+    () => {
+      const newValue = sampleGetter()
+      if (!initialized) {
+        initialized = true
+        oldValue = isMulti ? [...newValue] : newValue
+        if (immediate) {
+          if (flush === 'post') {
+            queuePostFlushCb(() => executeCallback(newValue, isMulti ? [] : undefined))
+          } else {
+            executeCallback(newValue, isMulti ? [] : undefined)
+          }
         }
+        return
       }
-      return
-    }
-    const changed = forceTrigger || (isMulti
-      ? newValue.some((v: any, i: number) => !Object.is(v, oldValue[i]))
-      : !Object.is(newValue, oldValue))
-    if (!changed) return
-    const prevValue = oldValue
-    oldValue = isMulti ? [...newValue] : newValue
-    latestValue = newValue
+      const changed =
+        forceTrigger ||
+        (isMulti ? newValue.some((v: any, i: number) => !Object.is(v, oldValue[i])) : !Object.is(newValue, oldValue))
+      if (!changed) return
+      const prevValue = oldValue
+      oldValue = isMulti ? [...newValue] : newValue
+      latestValue = newValue
 
-    if (flush === 'post') {
-      if (!hasPendingRun) {
-        hasPendingRun = true
-        queuePostFlushCb(() => {
-          hasPendingRun = false
-          executeCallback(latestValue, prevValue)
-        })
+      if (flush === 'post') {
+        if (!hasPendingRun) {
+          hasPendingRun = true
+          queuePostFlushCb(() => {
+            hasPendingRun = false
+            executeCallback(latestValue, prevValue)
+          })
+        }
+      } else if (flush === 'pre' && setupDepth > 0) {
+        if (!hasPendingRun) {
+          hasPendingRun = true
+          queuePreFlushCb(() => {
+            hasPendingRun = false
+            executeCallback(latestValue, prevValue)
+          })
+        }
+      } else {
+        executeCallback(newValue, prevValue)
       }
-    } else if (flush === 'pre' && setupDepth > 0) {
-      if (!hasPendingRun) {
-        hasPendingRun = true
-        queuePreFlushCb(() => {
-          hasPendingRun = false
-          executeCallback(latestValue, prevValue)
-        })
-      }
-    } else {
-      executeCallback(newValue, prevValue)
-    }
-  }, { sync: flush === 'sync' || flush === 'pre' })
+    },
+    { sync: flush === 'sync' || flush === 'pre' },
+  )
 
   const stop = () => {
     if (stopped) return
     stopped = true
     if (cleanup) {
-      try { cleanup() } finally { cleanup = undefined }
+      try {
+        cleanup()
+      } finally {
+        cleanup = undefined
+      }
     }
     handle.dispose()
   }

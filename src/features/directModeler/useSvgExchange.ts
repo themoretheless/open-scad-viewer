@@ -4,7 +4,8 @@ import { xyPlane } from '../../app/directSketchGeometry'
 import { download } from './helpers'
 import type { UseFileExchangeOptions } from './useFileExchange'
 
-type SvgExchangeOptions = Pick<UseFileExchangeOptions,
+type SvgExchangeOptions = Pick<
+  UseFileExchangeOptions,
   | 'props'
   | 'label'
   | 'document'

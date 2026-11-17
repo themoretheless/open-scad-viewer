@@ -10,7 +10,8 @@ export interface McpServerContext {
   readonly options: CreateOpenScadMcpServerOptions
   readonly store: CreateOpenScadMcpServerOptions['store']
   readonly geometry: NonNullable<CreateOpenScadMcpServerOptions['geometry']> | HeadlessGeometryService
-  readonly officialRuntime: NonNullable<CreateOpenScadMcpServerOptions['officialRuntime']> | OfficialOpenScadRuntimeSupervisor
+  readonly officialRuntime:
+    NonNullable<CreateOpenScadMcpServerOptions['officialRuntime']> | OfficialOpenScadRuntimeSupervisor
   readonly officialArtifacts: OfficialArtifactCache
   readonly independentArtifacts: IndependentArtifactCache
   readonly server: McpServer

@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  createOpenScadStableRuntimeVariables,
-  OPENSCAD_2021_DEFAULT_VIEW,
-} from '../src/language/openScadStableRuntime'
+import { createOpenScadStableRuntimeVariables, OPENSCAD_2021_DEFAULT_VIEW } from '../src/language/openScadStableRuntime'
 
 describe('OpenSCAD 2021.01 host runtime variables', () => {
   it('uses the pinned 2021 camera, tessellation, animation and render defaults', () => {
@@ -33,8 +30,7 @@ describe('OpenSCAD 2021.01 host runtime variables', () => {
     expect(preview.get('$t')).toBe(0.375)
     expect(preview.get('$preview')).toBe(true)
     for (const animationTime of [-0.001, 1.001, Infinity, Number.NaN]) {
-      expect(() => createOpenScadStableRuntimeVariables({ quality: 'full', animationTime }))
-        .toThrow(RangeError)
+      expect(() => createOpenScadStableRuntimeVariables({ quality: 'full', animationTime })).toThrow(RangeError)
     }
   })
 

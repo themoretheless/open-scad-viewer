@@ -37,7 +37,6 @@ export interface GcodeSegmentFilterResult {
 import GCODE_SEGMENTS_WGSL from '../../crates/compute-core/shaders/gcode_segments.wgsl?raw'
 export { GCODE_SEGMENTS_WGSL }
 
-
 function unpackGcodeSegments(raw: Float32Array, count: number): GcodeToolpathSegment[] {
   const segments: GcodeToolpathSegment[] = []
   for (let i = 0; i < count; i++) {
@@ -57,7 +56,7 @@ function unpackGcodeSegments(raw: Float32Array, count: number): GcodeToolpathSeg
  */
 export function referenceFilterGcodeSegments(
   moveRows: Float64Array | Float32Array,
-  opts: GcodeFilterOptions = {}
+  opts: GcodeFilterOptions = {},
 ): GcodeSegmentFilterResult {
   const numMoves = Math.floor(moveRows.length / GCODE_MOVE_ROW_WIDTH)
   const minLayer = opts.minLayer ?? 0
@@ -82,9 +81,15 @@ export function referenceFilterGcodeSegments(
     if (isExtrusion && !includeExtrusion) continue
     if (!isExtrusion && !includeTravel) continue
 
-    const x0 = moveRows[prev + 0]!, y0 = moveRows[prev + 1]!, z0 = moveRows[prev + 2]!
-    const x1 = moveRows[cur + 0]!, y1 = moveRows[cur + 1]!, z1 = moveRows[cur + 2]!
-    const dx = x1 - x0, dy = y1 - y0, dz = z1 - z0
+    const x0 = moveRows[prev + 0]!,
+      y0 = moveRows[prev + 1]!,
+      z0 = moveRows[prev + 2]!
+    const x1 = moveRows[cur + 0]!,
+      y1 = moveRows[cur + 1]!,
+      z1 = moveRows[cur + 2]!
+    const dx = x1 - x0,
+      dy = y1 - y0,
+      dz = z1 - z0
     if (dx * dx + dy * dy + dz * dz <= 1e-12) continue
 
     const feed = moveRows[cur + 4]!
@@ -114,7 +119,7 @@ export function referenceFilterGcodeSegments(
  */
 export async function referenceFilterGcodeSegmentsAsync(
   moveRows: Float64Array | Float32Array,
-  opts: GcodeFilterOptions = {}
+  opts: GcodeFilterOptions = {},
 ): Promise<GcodeSegmentFilterResult> {
   const numMoves = Math.floor(moveRows.length / GCODE_MOVE_ROW_WIDTH)
   if (numMoves <= 1) return referenceFilterGcodeSegments(moveRows, opts)
@@ -144,9 +149,15 @@ export async function referenceFilterGcodeSegmentsAsync(
       if (isExtrusion && !includeExtrusion) return
       if (!isExtrusion && !includeTravel) return
 
-      const x0 = moveRows[prev + 0]!, y0 = moveRows[prev + 1]!, z0 = moveRows[prev + 2]!
-      const x1 = moveRows[cur + 0]!, y1 = moveRows[cur + 1]!, z1 = moveRows[cur + 2]!
-      const dx = x1 - x0, dy = y1 - y0, dz = z1 - z0
+      const x0 = moveRows[prev + 0]!,
+        y0 = moveRows[prev + 1]!,
+        z0 = moveRows[prev + 2]!
+      const x1 = moveRows[cur + 0]!,
+        y1 = moveRows[cur + 1]!,
+        z1 = moveRows[cur + 2]!
+      const dx = x1 - x0,
+        dy = y1 - y0,
+        dz = z1 - z0
       if (dx * dx + dy * dy + dz * dz <= 1e-12) return
 
       const feed = moveRows[cur + 4]!
@@ -163,7 +174,7 @@ export async function referenceFilterGcodeSegmentsAsync(
         })
       }
     },
-    opts
+    opts,
   )
 
   return {
@@ -179,7 +190,7 @@ export async function referenceFilterGcodeSegmentsAsync(
  */
 export async function runGpuFilterGcodeSegments(
   moveRows: Float64Array | Float32Array,
-  opts: GcodeFilterOptions = {}
+  opts: GcodeFilterOptions = {},
 ): Promise<GcodeSegmentFilterResult> {
   const numMoves = Math.floor(moveRows.length / GCODE_MOVE_ROW_WIDTH)
   if (numMoves <= 1 || typeof navigator === 'undefined' || !navigator.gpu) {

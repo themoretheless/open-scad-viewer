@@ -1,5 +1,5 @@
-import {matchSolidCurve} from './solidCurveMatching'
-import {matchSolidSurface} from './solidSurfaceMatching'
+import { matchSolidCurve } from './solidCurveMatching'
+import { matchSolidSurface } from './solidSurfaceMatching'
 import type { DirectDocument, DirectSketch, Point2 } from '../app/directModeling'
 import type { NurbsCurve } from './nurbsCurve'
 import { sampleNurbsCurve, validateNurbsCurve } from './nurbsCurve'
@@ -46,13 +46,22 @@ export function validateSolidNurbs(document: DirectDocument): void {
   const d = ensureSolidNurbs(document)
   if (d.curves.length + d.surfaces.length > 128) throw new Error('Solid NURBS object limit exceeded.')
   for (const item of d.curves) {
-    if (!item || typeof item.id !== 'string' || typeof item.name !== 'string') throw new Error('Invalid NURBS curve identity.')
+    if (!item || typeof item.id !== 'string' || typeof item.name !== 'string')
+      throw new Error('Invalid NURBS curve identity.')
     validateNurbsCurve(item.curve)
   }
   for (const item of d.surfaces) {
-    if (!item || typeof item.id !== 'string' || typeof item.name !== 'string') throw new Error('Invalid NURBS surface identity.')
-    if (!Number.isInteger(item.segmentsU) || item.segmentsU < 2 || item.segmentsU > 64 ||
-        !Number.isInteger(item.segmentsV) || item.segmentsV < 2 || item.segmentsV > 64) throw new Error('Invalid NURBS display tessellation.')
+    if (!item || typeof item.id !== 'string' || typeof item.name !== 'string')
+      throw new Error('Invalid NURBS surface identity.')
+    if (
+      !Number.isInteger(item.segmentsU) ||
+      item.segmentsU < 2 ||
+      item.segmentsU > 64 ||
+      !Number.isInteger(item.segmentsV) ||
+      item.segmentsV < 2 ||
+      item.segmentsV > 64
+    )
+      throw new Error('Invalid NURBS display tessellation.')
     validateNurbsSurface(item.surface)
   }
 }
@@ -84,7 +93,12 @@ export function createSolidNurbsCurve(id = crypto.randomUUID()): SolidNurbsCurve
     curve: {
       degree: 3,
       knots: [0, 0, 0, 0, 1, 1, 1, 1],
-      controlPoints: [[-20, 0, 0], [-8, 18, 0], [8, -18, 0], [20, 0, 0]],
+      controlPoints: [
+        [-20, 0, 0],
+        [-8, 18, 0],
+        [8, -18, 0],
+        [20, 0, 0],
+      ],
       weights: [1, 1, 1, 1],
     },
   }
@@ -117,9 +131,15 @@ export function updateSolidNurbsControlPoint(
   point: number[],
   weight?: number,
 ): DirectDocument {
-  if (!Number.isInteger(u) || u < 0 || !Number.isInteger(v) || v < 0 ||
-      point.length !== 3 || !point.every(value => Number.isFinite(value) && Math.abs(value) <= 1e6) ||
-      (weight !== undefined && (!Number.isFinite(weight) || weight <= 0 || weight > 1e6))) {
+  if (
+    !Number.isInteger(u) ||
+    u < 0 ||
+    !Number.isInteger(v) ||
+    v < 0 ||
+    point.length !== 3 ||
+    !point.every(value => Number.isFinite(value) && Math.abs(value) <= 1e6) ||
+    (weight !== undefined && (!Number.isFinite(weight) || weight <= 0 || weight > 1e6))
+  ) {
     throw new Error('Invalid NURBS control point edit.')
   }
   const next = structuredClone(document)
@@ -144,21 +164,34 @@ export function updateSolidNurbsControlPoint(
 }
 
 /** Native endpoint contact and certified angular tolerance. */
-export function matchSolidNurbsCurvesG1(document:DirectDocument,referenceId:string,editedId:string,referenceEnd:NurbsCurveEnd='end',editedEnd:NurbsCurveEnd='start'):DirectDocument {
- const result=matchSolidCurve(document,referenceId,editedId,referenceEnd,editedEnd)
- if(!result.report.accepted)throw Error(`Curve G1 matching was not confirmed: ${result.report.reason}`)
- return result.document
+export function matchSolidNurbsCurvesG1(
+  document: DirectDocument,
+  referenceId: string,
+  editedId: string,
+  referenceEnd: NurbsCurveEnd = 'end',
+  editedEnd: NurbsCurveEnd = 'start',
+): DirectDocument {
+  const result = matchSolidCurve(document, referenceId, editedId, referenceEnd, editedEnd)
+  if (!result.report.accepted) throw Error(`Curve G1 matching was not confirmed: ${result.report.reason}`)
+  return result.document
 }
 
 /** Compatible rational boundaries; native whole-seam acceptance uses a 1e-6 mm derivative budget. */
 export function matchSolidNurbsSurfacesG1(
- document:DirectDocument,
- referenceId:string,
- editedId:string,
- referenceBoundary:NurbsSurfaceBoundary='uMax',
- editedBoundary:NurbsSurfaceBoundary='uMin',
-):DirectDocument {
- const result=matchSolidSurface(document,referenceId,editedId,{referenceBoundary,editedBoundary,order:1,scale:1,reverse:false,maxError:1e-6})
- if(!result.report.accepted)throw Error(`Surface G1 matching was not confirmed: ${result.report.reason}`)
- return result.document
+  document: DirectDocument,
+  referenceId: string,
+  editedId: string,
+  referenceBoundary: NurbsSurfaceBoundary = 'uMax',
+  editedBoundary: NurbsSurfaceBoundary = 'uMin',
+): DirectDocument {
+  const result = matchSolidSurface(document, referenceId, editedId, {
+    referenceBoundary,
+    editedBoundary,
+    order: 1,
+    scale: 1,
+    reverse: false,
+    maxError: 1e-6,
+  })
+  if (!result.report.accepted) throw Error(`Surface G1 matching was not confirmed: ${result.report.reason}`)
+  return result.document
 }

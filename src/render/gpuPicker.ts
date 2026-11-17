@@ -50,10 +50,9 @@ export function createPickMatrix(
   return m
 }
 
-
 /* ── WebGPU Picking WGSL Shader ───────────────────────── */
 
-export const GPU_PICKING_WGSL = /* wgsl */`
+export const GPU_PICKING_WGSL = /* wgsl */ `
 struct PickScene {
   vp: mat4x4f,
   section: vec4f, // xyz: normal, w: offset
@@ -96,7 +95,7 @@ struct V {
  * instance. Shares the scene group and object-group layout with the
  * per-entity shader.
  */
-export const GPU_INSTANCE_PICKING_WGSL = /* wgsl */`
+export const GPU_INSTANCE_PICKING_WGSL = /* wgsl */ `
 struct PickScene {
   vp: mat4x4f,
   section: vec4f,
@@ -240,7 +239,13 @@ export class GpuPicker {
     this.destroy()
     this.dev = dev
     this.deviceLost = false
-    dev.lost?.then(() => { this.deviceLost = true }).catch(() => { this.deviceLost = true })
+    dev.lost
+      ?.then(() => {
+        this.deviceLost = true
+      })
+      .catch(() => {
+        this.deviceLost = true
+      })
 
     // 1x1 Color attachment for R32Uint ID readback
     this.colorTexture = dev.createTexture({
@@ -287,10 +292,12 @@ export class GpuPicker {
       vertex: {
         module,
         entryPoint: 'vs',
-        buffers: [{
-          arrayStride: 24, // Stride 24 matching standard mesh vertex layout
-          attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
-        }],
+        buffers: [
+          {
+            arrayStride: 24, // Stride 24 matching standard mesh vertex layout
+            attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
+          },
+        ],
       },
       fragment: {
         module,
@@ -387,7 +394,14 @@ export class GpuPicker {
     let drawnMeshes = 0
 
     // Compute 1x1 pick projection: VP_pick = M_pick * VP_camera
-    const pickMat = createPickMatrix(sceneParams.viewportWidth, sceneParams.viewportHeight, pixelX, pixelY, 1, this.scratchPickMat)
+    const pickMat = createPickMatrix(
+      sceneParams.viewportWidth,
+      sceneParams.viewportHeight,
+      pixelX,
+      pixelY,
+      1,
+      this.scratchPickMat,
+    )
     const pickVP = multiplyMat4(pickMat, sceneParams.cameraViewProjection, this.scratchPickVP)
 
     // Upload Scene uniforms
@@ -410,12 +424,14 @@ export class GpuPicker {
     const depthView = this.depthView ?? (this.depthView = this.depthTexture!.createView())
 
     const pass = encoder.beginRenderPass({
-      colorAttachments: [{
-        view: colorView,
-        clearValue: { r: 0, g: 0, b: 0, a: 0 },
-        loadOp: 'clear',
-        storeOp: 'store',
-      }],
+      colorAttachments: [
+        {
+          view: colorView,
+          clearValue: { r: 0, g: 0, b: 0, a: 0 },
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      ],
       depthStencilAttachment: {
         view: depthView,
         depthClearValue: 1.0,

@@ -2,21 +2,72 @@ import { evalProjection } from './evalProjection'
 import { evalFullRoundExact } from './evalFullRoundExact'
 import { hasOpenScadViewportModifier } from '../../openscadCompiler'
 import type { CallNode, Value } from '../../openscadCompiler'
-import { MAX_EXTRUDE_SLICES, MAX_SHAPES, StableViewportRootSelection, enterStableStatementScope, evaluateSequentialBindings, resolveStableExpressionArguments, stableIterable } from '../openscadSemanticLowerer'
+import {
+  MAX_EXTRUDE_SLICES,
+  MAX_SHAPES,
+  StableViewportRootSelection,
+  enterStableStatementScope,
+  evaluateSequentialBindings,
+  resolveStableExpressionArguments,
+  stableIterable,
+} from '../openscadSemanticLowerer'
 import type { EvalContext, RGBA, SemanticShape } from '../openscadSemanticLowerer'
-import { MAX_EVAL_DEPTH, MAX_EVAL_OPS, compactDiagnosticText, evaluationError, isStableProfile, stableOverlayContext } from '../../openScadStableExpressionEval'
+import {
+  MAX_EVAL_DEPTH,
+  MAX_EVAL_OPS,
+  compactDiagnosticText,
+  evaluationError,
+  isStableProfile,
+  stableOverlayContext,
+} from '../../openScadStableExpressionEval'
 import type { SemanticDynamicSlot, SemanticValueType } from '../../../core/semanticProgram'
-import { arg, bindAssertArguments, callExpressionArguments, evalExpression, evalNodes, semanticProjectAssetRequired, stableCompatibilityDeprecation, viewportRootActivates, viewportSemanticSlots } from './evalExpression'
-import { axisAngleMatrix, axisAngleMatrixUnchecked, combineShapes, eulerMatrix, evalPreparedNodes, frameChildren, frameContext, invoke, matrixValue, mirrorMatrix, nodeValueType, parseColor, primitiveColor, scaleMatrix, semanticSegments, semanticSlot, transformShapes, translationMatrix, unionReduceInternal } from './evalPreparedNodes'
+import {
+  arg,
+  bindAssertArguments,
+  callExpressionArguments,
+  evalExpression,
+  evalNodes,
+  semanticProjectAssetRequired,
+  stableCompatibilityDeprecation,
+  viewportRootActivates,
+  viewportSemanticSlots,
+} from './evalExpression'
+import {
+  axisAngleMatrix,
+  axisAngleMatrixUnchecked,
+  combineShapes,
+  eulerMatrix,
+  evalPreparedNodes,
+  frameChildren,
+  frameContext,
+  invoke,
+  matrixValue,
+  mirrorMatrix,
+  nodeValueType,
+  parseColor,
+  primitiveColor,
+  scaleMatrix,
+  semanticSegments,
+  semanticSlot,
+  transformShapes,
+  translationMatrix,
+  unionReduceInternal,
+} from './evalPreparedNodes'
 import { clamp01 } from '../../../kernel/geometry/math3d'
-import { evalDxfLinearExtrude, evalDxfRotateExtrude, evalPassedCallChildren, makeCylinder, makePolygon, makePolyhedron } from './makeCylinder'
+import {
+  evalDxfLinearExtrude,
+  evalDxfRotateExtrude,
+  evalPassedCallChildren,
+  makeCylinder,
+  makePolygon,
+  makePolyhedron,
+} from './makeCylinder'
 import { evalUserModule } from './evalUserModule'
 import { finiteNumber, semanticValueType, stableWarning, truthy, valueToString, vectorValue } from './semanticValueType'
 import { formatOpenScadValue, openScadTruthy } from '../openScadValueSemantics'
 
 export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
-  if (isStableProfile(parent) && !parent.viewportRootLocked
-    && hasOpenScadViewportModifier(node, 'root')) {
+  if (isStableProfile(parent) && !parent.viewportRootLocked && hasOpenScadViewportModifier(node, 'root')) {
     // Selection is runtime-first and value-producing, not syntax-first: an
     // unvisited false branch, unused module, or empty call cannot suppress
     // later geometry. Probe the candidate with nested roots locked, then replay
@@ -32,7 +83,8 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
     }
     return shapes
   }
-  if (parent.depth >= MAX_EVAL_DEPTH) evaluationError(parent, node.p, `Evaluation exceeds ${MAX_EVAL_DEPTH} nested calls`)
+  if (parent.depth >= MAX_EVAL_DEPTH)
+    evaluationError(parent, node.p, `Evaluation exceeds ${MAX_EVAL_DEPTH} nested calls`)
   const ctx: EvalContext = { ...parent, depth: parent.depth + 1 }
 
   switch (node.name) {
@@ -73,7 +125,10 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
         const messageArgument = resolved.get('message')
         const condition = conditionArgument === undefined ? undefined : evalExpression(conditionArgument.value, ctx)
         const message = messageArgument === undefined ? undefined : evalExpression(messageArgument.value, ctx)
-        const conditionText = conditionArgument === undefined ? 'undef' : compactDiagnosticText(ctx.source.slice(conditionArgument.p, conditionArgument.end))
+        const conditionText =
+          conditionArgument === undefined
+            ? 'undef'
+            : compactDiagnosticText(ctx.source.slice(conditionArgument.p, conditionArgument.end))
         const occurrence = invoke(node, ctx, [semanticSlot('condition', condition), semanticSlot('message', message)])
         if (!openScadTruthy(condition)) {
           const detail = messageArgument === undefined ? '' : `: ${compactDiagnosticText(formatOpenScadValue(message))}`
@@ -93,71 +148,112 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
     }
     case 'cube': {
       const raw = arg(node, 'size', 0, 1, ctx)
-      const size = Array.isArray(raw) ? vectorValue(raw, ctx, node.p, 'cube size') : [finiteNumber(raw, ctx, node.p, 'cube size')]
+      const size = Array.isArray(raw)
+        ? vectorValue(raw, ctx, node.p, 'cube size')
+        : [finiteNumber(raw, ctx, node.p, 'cube size')]
       const dimensions = [size[0] ?? 1, size[1] ?? size[0] ?? 1, size[2] ?? size[0] ?? 1] as const
       if (dimensions.some(value => value <= 0)) evaluationError(ctx, node.p, 'Cube dimensions must be positive')
       const occurrence = invoke(node, ctx)
-      return [ctx.builder.produce(occurrence, {
-        kind: 'box',
-        valueType: semanticValueType(ctx.builder.languageContract, ctx.builder.languageContract === 'legacy/current' ? 'solid-set' : 'solid', 'd3'),
-        size: dimensions,
-        center: arg(node, 'center', 1, false, ctx) === true,
-      }, primitiveColor(ctx))]
+      return [
+        ctx.builder.produce(
+          occurrence,
+          {
+            kind: 'box',
+            valueType: semanticValueType(
+              ctx.builder.languageContract,
+              ctx.builder.languageContract === 'legacy/current' ? 'solid-set' : 'solid',
+              'd3',
+            ),
+            size: dimensions,
+            center: arg(node, 'center', 1, false, ctx) === true,
+          },
+          primitiveColor(ctx),
+        ),
+      ]
     }
     case 'sphere': {
       let radius = arg(node, 'r', 0, undefined, ctx)
       const diameter = arg(node, 'd', -1, undefined, ctx)
-      if (radius === undefined) radius = diameter === undefined ? 1 : finiteNumber(diameter, ctx, node.p, 'sphere diameter') / 2
+      if (radius === undefined)
+        radius = diameter === undefined ? 1 : finiteNumber(diameter, ctx, node.p, 'sphere diameter') / 2
       const parsedRadius = finiteNumber(radius, ctx, node.p, 'sphere radius')
       if (parsedRadius <= 0) evaluationError(ctx, node.p, 'Sphere radius must be positive')
       const occurrence = invoke(node, ctx)
       const segments = semanticSegments(node, ctx, occurrence, 32, 4)
-      return [ctx.builder.produce(occurrence, segments === null ? {
-        kind: 'sphere-analytic',
-        valueType: semanticValueType(ctx.builder.languageContract, 'solid', 'd3'),
-        radius: parsedRadius,
-      } : {
-        kind: 'sphere-polygonal',
-        valueType: semanticValueType(ctx.builder.languageContract, 'solid-set', 'd3'),
-        radius: parsedRadius,
-        radialSegments: segments,
-      }, primitiveColor(ctx))]
+      return [
+        ctx.builder.produce(
+          occurrence,
+          segments === null
+            ? {
+                kind: 'sphere-analytic',
+                valueType: semanticValueType(ctx.builder.languageContract, 'solid', 'd3'),
+                radius: parsedRadius,
+              }
+            : {
+                kind: 'sphere-polygonal',
+                valueType: semanticValueType(ctx.builder.languageContract, 'solid-set', 'd3'),
+                radius: parsedRadius,
+                radialSegments: segments,
+              },
+          primitiveColor(ctx),
+        ),
+      ]
     }
-    case 'cylinder': return makeCylinder(node, ctx)
-    case 'polyhedron': return makePolyhedron(node, ctx)
+    case 'cylinder':
+      return makeCylinder(node, ctx)
+    case 'polyhedron':
+      return makePolyhedron(node, ctx)
     case 'square': {
       const raw = arg(node, 'size', 0, 1, ctx)
-      const size = Array.isArray(raw) ? vectorValue(raw, ctx, node.p, 'square size') : [finiteNumber(raw, ctx, node.p, 'square size')]
+      const size = Array.isArray(raw)
+        ? vectorValue(raw, ctx, node.p, 'square size')
+        : [finiteNumber(raw, ctx, node.p, 'square size')]
       const dimensions = [size[0] ?? 1, size[1] ?? size[0] ?? 1] as const
       if (dimensions.some(value => value <= 0)) evaluationError(ctx, node.p, 'Square dimensions must be positive')
       const occurrence = invoke(node, ctx)
-      return [ctx.builder.produce(occurrence, {
-        kind: 'rectangle',
-        valueType: semanticValueType(ctx.builder.languageContract, 'region', 'd2'),
-        size: dimensions,
-        center: arg(node, 'center', 1, false, ctx) === true,
-      }, primitiveColor(ctx))]
+      return [
+        ctx.builder.produce(
+          occurrence,
+          {
+            kind: 'rectangle',
+            valueType: semanticValueType(ctx.builder.languageContract, 'region', 'd2'),
+            size: dimensions,
+            center: arg(node, 'center', 1, false, ctx) === true,
+          },
+          primitiveColor(ctx),
+        ),
+      ]
     }
     case 'circle': {
       let radius = arg(node, 'r', 0, undefined, ctx)
       const diameter = arg(node, 'd', -1, undefined, ctx)
-      if (radius === undefined) radius = diameter === undefined ? 1 : finiteNumber(diameter, ctx, node.p, 'circle diameter') / 2
+      if (radius === undefined)
+        radius = diameter === undefined ? 1 : finiteNumber(diameter, ctx, node.p, 'circle diameter') / 2
       const parsedRadius = finiteNumber(radius, ctx, node.p, 'circle radius')
       if (parsedRadius <= 0) evaluationError(ctx, node.p, 'Circle radius must be positive')
       const occurrence = invoke(node, ctx)
       const segments = semanticSegments(node, ctx, occurrence, 48, 3)
-      return [ctx.builder.produce(occurrence, segments === null ? {
-        kind: 'circle-analytic',
-        valueType: semanticValueType(ctx.builder.languageContract, 'region', 'd2'),
-        radius: parsedRadius,
-      } : {
-        kind: 'circle-polygonal',
-        valueType: semanticValueType(ctx.builder.languageContract, 'region', 'd2'),
-        radius: parsedRadius,
-        radialSegments: segments,
-      }, primitiveColor(ctx))]
+      return [
+        ctx.builder.produce(
+          occurrence,
+          segments === null
+            ? {
+                kind: 'circle-analytic',
+                valueType: semanticValueType(ctx.builder.languageContract, 'region', 'd2'),
+                radius: parsedRadius,
+              }
+            : {
+                kind: 'circle-polygonal',
+                valueType: semanticValueType(ctx.builder.languageContract, 'region', 'd2'),
+                radius: parsedRadius,
+                radialSegments: segments,
+              },
+          primitiveColor(ctx),
+        ),
+      ]
     }
-    case 'polygon': return makePolygon(node, ctx)
+    case 'polygon':
+      return makePolygon(node, ctx)
     case 'translate': {
       const vector = vectorValue(arg(node, 'v', 0, [0, 0, 0], ctx), ctx, node.p, 'translate vector')
       const occurrence = invoke(node, ctx)
@@ -170,27 +266,36 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       const axis = arg(node, 'v', 1, undefined, ctx)
       const occurrence = invoke(node, ctx)
       const shapes = frameChildren(node, node.children, occurrence, ctx)
-      return transformShapes(occurrence, shapes, shape => {
-        if (shape.dimension === 'region2') {
-          const degrees = Array.isArray(angle)
-            ? vectorValue(angle, ctx, node.p, 'rotation')[2] ?? 0
-            : finiteNumber(angle, ctx, node.p, 'rotation')
-          return axisAngleMatrixUnchecked([0, 0, 1], degrees)
-        }
-        if (Array.isArray(angle)) {
-          const vector = vectorValue(angle, ctx, node.p, 'rotation')
-          return eulerMatrix(vector[0] ?? 0, vector[1] ?? 0, vector[2] ?? 0)
-        }
-        const degrees = finiteNumber(angle, ctx, node.p, 'rotation')
-        return axis === undefined
-          ? axisAngleMatrixUnchecked([0, 0, 1], degrees)
-          : axisAngleMatrix(vectorValue(axis, ctx, node.p, 'rotation axis'), degrees, ctx, node.p)
-      }, ctx)
+      return transformShapes(
+        occurrence,
+        shapes,
+        shape => {
+          if (shape.dimension === 'region2') {
+            const degrees = Array.isArray(angle)
+              ? (vectorValue(angle, ctx, node.p, 'rotation')[2] ?? 0)
+              : finiteNumber(angle, ctx, node.p, 'rotation')
+            return axisAngleMatrixUnchecked([0, 0, 1], degrees)
+          }
+          if (Array.isArray(angle)) {
+            const vector = vectorValue(angle, ctx, node.p, 'rotation')
+            return eulerMatrix(vector[0] ?? 0, vector[1] ?? 0, vector[2] ?? 0)
+          }
+          const degrees = finiteNumber(angle, ctx, node.p, 'rotation')
+          return axis === undefined
+            ? axisAngleMatrixUnchecked([0, 0, 1], degrees)
+            : axisAngleMatrix(vectorValue(axis, ctx, node.p, 'rotation axis'), degrees, ctx, node.p)
+        },
+        ctx,
+      )
     }
     case 'scale': {
       const raw = arg(node, 'v', 0, [1, 1, 1], ctx)
-      const values = Array.isArray(raw) ? vectorValue(raw, ctx, node.p, 'scale vector') : [finiteNumber(raw, ctx, node.p, 'scale')]
-      const x = values[0] ?? 1, y = values[1] ?? x, z = values[2] ?? x
+      const values = Array.isArray(raw)
+        ? vectorValue(raw, ctx, node.p, 'scale vector')
+        : [finiteNumber(raw, ctx, node.p, 'scale')]
+      const x = values[0] ?? 1,
+        y = values[1] ?? x,
+        z = values[2] ?? x
       if ([x, y, z].some(value => value === 0)) evaluationError(ctx, node.p, 'Scale values cannot be zero')
       const occurrence = invoke(node, ctx)
       const shapes = frameChildren(node, node.children, occurrence, ctx)
@@ -229,7 +334,10 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       const alpha = arg(node, 'alpha', 1, undefined, ctx)
       if (alpha !== undefined) color[3] = clamp01(finiteNumber(alpha, ctx, node.p, 'color alpha'))
       const occurrence = invoke(node, ctx)
-      const shapes = frameChildren(node, node.children, occurrence, ctx).map(shape => ({ ...shape, color: [...color] as RGBA }))
+      const shapes = frameChildren(node, node.children, occurrence, ctx).map(shape => ({
+        ...shape,
+        color: [...color] as RGBA,
+      }))
       return ctx.builder.alias(occurrence, shapes, false)
     }
     case 'union':
@@ -245,20 +353,21 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       // implicit union) before it starts evaluating any cutter statement.
       // Keep those two scoped evalNodes calls separate: kernel failure in the
       // base must win over a later cutter-language diagnostic.
-      const childContext = framed !== null && isStableProfile(ctx)
-        ? enterStableStatementScope(node.children, framed)
-        : null
-      const baseShapes = framed === null || node.children.length === 0
-        ? []
-        : childContext === null
-          ? evalNodes(node.children.slice(0, 1), framed)
-          : evalPreparedNodes(node.children.slice(0, 1), childContext)
+      const childContext =
+        framed !== null && isStableProfile(ctx) ? enterStableStatementScope(node.children, framed) : null
+      const baseShapes =
+        framed === null || node.children.length === 0
+          ? []
+          : childContext === null
+            ? evalNodes(node.children.slice(0, 1), framed)
+            : evalPreparedNodes(node.children.slice(0, 1), childContext)
       const base = unionReduceInternal(baseShapes, ctx, node.p)
-      const cutterShapes = framed === null
-        ? []
-        : childContext === null
-          ? evalNodes(node.children.slice(1), framed)
-          : evalPreparedNodes(node.children.slice(1), childContext)
+      const cutterShapes =
+        framed === null
+          ? []
+          : childContext === null
+            ? evalNodes(node.children.slice(1), framed)
+            : evalPreparedNodes(node.children.slice(1), childContext)
       const cutters = unionReduceInternal(cutterShapes, ctx, node.p)
       if (base === null) {
         if (cutters !== null) {
@@ -274,15 +383,22 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
         if (base.identityOccurrence !== null && baseShapes.length === 1) {
           return ctx.builder.alias(occurrence, baseShapes, false)
         }
-        return ctx.builder.alias(occurrence, [{
-          node: base.node,
-          dimension: base.dimension,
-          producerOccurrence: occurrence,
-          identityOccurrence: occurrence,
-          color: base.color,
-        }], true)
+        return ctx.builder.alias(
+          occurrence,
+          [
+            {
+              node: base.node,
+              dimension: base.dimension,
+              producerOccurrence: occurrence,
+              identityOccurrence: occurrence,
+              color: base.color,
+            },
+          ],
+          true,
+        )
       }
-      if (base.dimension !== cutters.dimension) evaluationError(ctx, node.p, 'difference() cannot mix 2D and 3D children')
+      if (base.dimension !== cutters.dimension)
+        evaluationError(ctx, node.p, 'difference() cannot mix 2D and 3D children')
       const inputType = ctx.builder.nodes[base.node]!.valueType
       // Cutting a single solid can split it into multiple disconnected solids.
       // The Boolean carrier is therefore SolidSet even when its base is Solid.
@@ -290,19 +406,32 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
         ...inputType,
         geometryKind: inputType.space === 'd2' ? 'region' : 'solid-set',
       }
-      return [ctx.builder.produce(occurrence, {
-        kind: 'boolean', operation: 'difference', valueType,
-        inputs: [base.node, cutters.node],
-      }, base.color)]
+      return [
+        ctx.builder.produce(
+          occurrence,
+          {
+            kind: 'boolean',
+            operation: 'difference',
+            valueType,
+            inputs: [base.node, cutters.node],
+          },
+          base.color,
+        ),
+      ]
     }
     case 'linear_extrude': {
       const height = finiteNumber(arg(node, 'height', 0, 1, ctx), ctx, node.p, 'extrusion height')
       if (height <= 0) evaluationError(ctx, node.p, 'linear_extrude() height must be positive')
       const twistDegrees = finiteNumber(arg(node, 'twist', -1, 0, ctx), ctx, node.p, 'extrusion twist')
-      const rawSlices = Math.max(0, Math.trunc(finiteNumber(arg(node, 'slices', -1, 0, ctx), ctx, node.p, 'extrusion slices')))
+      const rawSlices = Math.max(
+        0,
+        Math.trunc(finiteNumber(arg(node, 'slices', -1, 0, ctx), ctx, node.p, 'extrusion slices')),
+      )
       const slices = Math.min(MAX_EXTRUDE_SLICES, rawSlices)
       const rawScale = arg(node, 'scale', -1, [1, 1], ctx)
-      const scaleValues = Array.isArray(rawScale) ? vectorValue(rawScale, ctx, node.p, 'extrusion scale') : [finiteNumber(rawScale, ctx, node.p, 'extrusion scale')]
+      const scaleValues = Array.isArray(rawScale)
+        ? vectorValue(rawScale, ctx, node.p, 'extrusion scale')
+        : [finiteNumber(rawScale, ctx, node.p, 'extrusion scale')]
       const scale = [scaleValues[0] ?? 1, scaleValues[1] ?? scaleValues[0] ?? 1] as const
       if (ctx.builder.languageContract === 'openscad-viewer/brep-1' && scale.some(value => value === 0)) {
         evaluationError(ctx, node.p, 'brep-1 extrusion scale cannot contain zero')
@@ -311,15 +440,26 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       const occurrence = invoke(node, ctx)
       const shapes = frameChildren(node, node.children, occurrence, ctx)
       if (shapes.length === 0) return []
-      if (shapes.some(shape => shape.dimension !== 'region2')) evaluationError(ctx, node.p, 'linear_extrude() requires 2D children')
+      if (shapes.some(shape => shape.dimension !== 'region2'))
+        evaluationError(ctx, node.p, 'linear_extrude() requires 2D children')
       const profile = unionReduceInternal(shapes, ctx, node.p)!
       const inputType = ctx.builder.nodes[profile.node]!.valueType
-      return [ctx.builder.produce(occurrence, {
-        kind: 'linear-extrude',
-        valueType: { ...inputType, geometryKind: 'solid-set', space: 'd3' },
-        input: profile.node,
-        height, twistDegrees, slices, scale, center,
-      }, profile.color)]
+      return [
+        ctx.builder.produce(
+          occurrence,
+          {
+            kind: 'linear-extrude',
+            valueType: { ...inputType, geometryKind: 'solid-set', space: 'd3' },
+            input: profile.node,
+            height,
+            twistDegrees,
+            slices,
+            scale,
+            center,
+          },
+          profile.color,
+        ),
+      ]
     }
     case 'rotate_extrude': {
       const angleDegrees = finiteNumber(arg(node, 'angle', -1, 360, ctx), ctx, node.p, 'revolve angle')
@@ -329,27 +469,61 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       const occurrence = invoke(node, ctx)
       const shapes = frameChildren(node, node.children, occurrence, ctx)
       if (shapes.length === 0) return []
-      if (shapes.some(shape => shape.dimension !== 'region2')) evaluationError(ctx, node.p, 'rotate_extrude() requires 2D children')
+      if (shapes.some(shape => shape.dimension !== 'region2'))
+        evaluationError(ctx, node.p, 'rotate_extrude() requires 2D children')
       const profile = unionReduceInternal(shapes, ctx, node.p)!
       const segments = semanticSegments(node, ctx, occurrence, 48, 3)
-      const valueType = { ...ctx.builder.nodes[profile.node]!.valueType, geometryKind: 'solid-set' as const, space: 'd3' as const }
-      return [ctx.builder.produce(occurrence, segments === null ? {
-        kind: 'rotate-extrude-analytic', valueType, input: profile.node, angleDegrees,
-      } : {
-        kind: 'rotate-extrude-polygonal', valueType, input: profile.node, angleDegrees, radialSegments: segments,
-      }, profile.color)]
+      const valueType = {
+        ...ctx.builder.nodes[profile.node]!.valueType,
+        geometryKind: 'solid-set' as const,
+        space: 'd3' as const,
+      }
+      return [
+        ctx.builder.produce(
+          occurrence,
+          segments === null
+            ? {
+                kind: 'rotate-extrude-analytic',
+                valueType,
+                input: profile.node,
+                angleDegrees,
+              }
+            : {
+                kind: 'rotate-extrude-polygonal',
+                valueType,
+                input: profile.node,
+                angleDegrees,
+                radialSegments: segments,
+              },
+          profile.color,
+        ),
+      ]
     }
-    case 'full_round_exact': return evalFullRoundExact(node, ctx)
-    case 'projection': return evalProjection(node, ctx)
+    case 'full_round_exact':
+      return evalFullRoundExact(node, ctx)
+    case 'projection':
+      return evalProjection(node, ctx)
     case 'offset': {
-      const distance = finiteNumber(arg(node, 'r', 0, arg(node, 'delta', 0, 1, ctx), ctx), ctx, node.p, 'offset distance')
+      const distance = finiteNumber(
+        arg(node, 'r', 0, arg(node, 'delta', 0, 1, ctx), ctx),
+        ctx,
+        node.p,
+        'offset distance',
+      )
       const occurrence = invoke(node, ctx)
       const shapes = frameChildren(node, node.children, occurrence, ctx)
       return shapes.map(shape => {
         if (shape.dimension !== 'region2') evaluationError(ctx, node.p, 'offset() requires 2D children')
-        return ctx.builder.produce(occurrence, {
-          kind: 'offset', valueType: nodeValueType(shape, ctx), input: shape.node, distance,
-        }, shape.color)
+        return ctx.builder.produce(
+          occurrence,
+          {
+            kind: 'offset',
+            valueType: nodeValueType(shape, ctx),
+            input: shape.node,
+            distance,
+          },
+          shape.color,
+        )
       })
     }
     case 'group':
@@ -366,7 +540,10 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       const message = `ECHO:${values.length ? ` ${values.join(', ')}` : ''}`
       ctx.builder.warn(null, 'W_OPENSCAD_ECHO', [], message, { start: node.p, end: node.end }, false)
       const viewportSlots = viewportSemanticSlots(node, ctx)
-      return evalNodes(node.children, viewportSlots.length === 0 ? ctx : { ...ctx, pendingSlots: [...ctx.pendingSlots, ...viewportSlots] })
+      return evalNodes(
+        node.children,
+        viewportSlots.length === 0 ? ctx : { ...ctx, pendingSlots: [...ctx.pendingSlots, ...viewportSlots] },
+      )
     }
     case 'if': {
       const condition = arg(node, '_0', 0, false, ctx)
@@ -403,11 +580,16 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       if (isStableProfile(ctx)) {
         const bindings = callExpressionArguments(node)
         const output: SemanticShape[] = []
-        const visit = (bindingIndex: number, iterationContext: EvalContext, slots: readonly SemanticDynamicSlot[]): void => {
+        const visit = (
+          bindingIndex: number,
+          iterationContext: EvalContext,
+          slots: readonly SemanticDynamicSlot[],
+        ): void => {
           if (bindingIndex >= bindings.length) {
             const occurrence = invoke(node, ctx, slots)
             output.push(...frameChildren(node, node.children, occurrence, iterationContext))
-            if (output.length > MAX_SHAPES) evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString('en-US')} object limit`)
+            if (output.length > MAX_SHAPES)
+              evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString('en-US')} object limit`)
             return
           }
           const binding = bindings[bindingIndex]!
@@ -417,10 +599,18 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
             return
           }
           for (const value of values) {
-            if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString('en-US')} evaluation step limit`)
+            if (++ctx.budget.ops > MAX_EVAL_OPS)
+              evaluationError(
+                ctx,
+                node.p,
+                `Model exceeds the ${MAX_EVAL_OPS.toLocaleString('en-US')} evaluation step limit`,
+              )
             const env = new Map(iterationContext.env)
             env.set(binding.name, value)
-            visit(bindingIndex + 1, stableOverlayContext(iterationContext, env), [...slots, semanticSlot(binding.name, value)])
+            visit(bindingIndex + 1, stableOverlayContext(iterationContext, env), [
+              ...slots,
+              semanticSlot(binding.name, value),
+            ])
           }
         }
         visit(0, ctx, [])
@@ -433,12 +623,18 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       if (!Array.isArray(values)) evaluationError(ctx, node.p, 'for() iterator must be a vector or range')
       const output: SemanticShape[] = []
       for (const value of values) {
-        if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString('en-US')} evaluation step limit`)
+        if (++ctx.budget.ops > MAX_EVAL_OPS)
+          evaluationError(
+            ctx,
+            node.p,
+            `Model exceeds the ${MAX_EVAL_OPS.toLocaleString('en-US')} evaluation step limit`,
+          )
         const env = new Map(ctx.env)
         env.set(name, value)
         const occurrence = invoke(node, ctx, [semanticSlot(name, value)])
         output.push(...frameChildren(node, node.children, occurrence, { ...ctx, env }))
-        if (output.length > MAX_SHAPES) evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString('en-US')} object limit`)
+        if (output.length > MAX_SHAPES)
+          evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString('en-US')} object limit`)
       }
       return output
     }
@@ -457,16 +653,21 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       if (!passed) return []
       const statement = passed.statements[childIndex]
       if (statement === undefined) {
-        stableWarning(ctx, node.p, `Child index (${childIndex}) out of bounds (${passed.statements.length} children)`, 'W_OPENSCAD_CHILD', false)
+        stableWarning(
+          ctx,
+          node.p,
+          `Child index (${childIndex}) out of bounds (${passed.statements.length} children)`,
+          'W_OPENSCAD_CHILD',
+          false,
+        )
         return []
       }
       return evalPassedCallChildren(node, ctx, occurrence, indexValue, passed, [statement])
     }
     case 'children': {
       const indexValue = arg(node, '_0', 0, undefined, ctx)
-      const childIndex = indexValue === undefined
-        ? null
-        : Math.trunc(finiteNumber(indexValue, ctx, node.p, 'children index'))
+      const childIndex =
+        indexValue === undefined ? null : Math.trunc(finiteNumber(indexValue, ctx, node.p, 'children index'))
       const occurrence = invoke(node, ctx, [semanticSlot('$index', indexValue)])
       const passed = ctx.callChildren
       if (!passed) return []

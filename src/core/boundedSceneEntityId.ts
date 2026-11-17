@@ -1,5 +1,5 @@
-import {sha256Hex} from './sha256'
-import type {SceneEntityId} from './mesh'
+import { sha256Hex } from './sha256'
+import type { SceneEntityId } from './mesh'
 
 // Preserve existing short identities; deep operation paths still fit protocol v6.
 export function boundedSceneEntityId(path: string): SceneEntityId {

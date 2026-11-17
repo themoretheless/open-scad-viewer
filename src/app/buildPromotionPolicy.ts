@@ -24,11 +24,7 @@ export interface CurrentGeometryTarget {
 }
 
 export type LastKnownGoodDisplayState =
-  | 'missing'
-  | 'building'
-  | 'last-known-good-stale'
-  | 'preview-only'
-  | 'current-exportable'
+  'missing' | 'building' | 'last-known-good-stale' | 'preview-only' | 'current-exportable'
 
 export interface GeometryExportCandidate {
   meshCount: number
@@ -46,9 +42,7 @@ export interface GeometryExportEligibility {
 }
 
 /** A retained prior mesh is always read-only after failure or source drift. */
-export function geometryExportEligibility(
-  candidate: GeometryExportCandidate,
-): GeometryExportEligibility {
+export function geometryExportEligibility(candidate: GeometryExportCandidate): GeometryExportEligibility {
   if (candidate.meshCount === 0 || candidate.renderedSource === '') {
     return { allowed: false, state: 'missing', interaction: 'read-only' }
   }

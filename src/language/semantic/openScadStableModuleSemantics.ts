@@ -201,9 +201,7 @@ function expandCssHex(value: string): string | null {
   const match = /^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/iu.exec(value)
   if (!match) return null
   const digits = match[1]!
-  return digits.length <= 4
-    ? [...digits].map(digit => `${digit}${digit}`).join('')
-    : digits
+  return digits.length <= 4 ? [...digits].map(digit => `${digit}${digit}`).join('') : digits
 }
 
 export interface OpenScadColorResolution {
@@ -215,24 +213,23 @@ export interface OpenScadColorResolution {
 
 const INVALID_COLOR = Object.freeze([-1, -1, -1, -1]) as OpenScadRgba
 
-function warnColorRanges(
-  rgba: OpenScadRgba,
-  context: OpenScadStableModuleSemanticsContext,
-): void {
+function warnColorRanges(rgba: OpenScadRgba, context: OpenScadStableModuleSemanticsContext): void {
   for (let index = 0; index < 3; index++) {
     const value = rgba[index]!
-    if (value < 0 || value > 1) context.warn({
-      code: 'OPENSCAD_COLOR_CHANNEL_RANGE',
-      message: `Color channel ${index} is outside the inclusive 0..1 range`,
-      value,
-    })
+    if (value < 0 || value > 1)
+      context.warn({
+        code: 'OPENSCAD_COLOR_CHANNEL_RANGE',
+        message: `Color channel ${index} is outside the inclusive 0..1 range`,
+        value,
+      })
   }
   const alpha = rgba[3]
-  if (alpha < 0 || alpha > 1) context.warn({
-    code: 'OPENSCAD_COLOR_ALPHA_RANGE',
-    message: 'The color vector alpha channel is outside the inclusive 0..1 range',
-    value: alpha,
-  })
+  if (alpha < 0 || alpha > 1)
+    context.warn({
+      code: 'OPENSCAD_COLOR_ALPHA_RANGE',
+      message: 'The color vector alpha channel is outside the inclusive 0..1 range',
+      value: alpha,
+    })
 }
 
 /**
@@ -251,10 +248,12 @@ export function resolveOpenScadColor(
   let source: OpenScadColorResolution['source']
 
   if (Array.isArray(value)) {
-    rgba = Object.freeze([0, 1, 2, 3].map(index => {
-      if (index >= value.length) return 1
-      return typeof value[index] === 'number' ? value[index] : 0
-    })) as unknown as OpenScadRgba
+    rgba = Object.freeze(
+      [0, 1, 2, 3].map(index => {
+        if (index >= value.length) return 1
+        return typeof value[index] === 'number' ? value[index] : 0
+      }),
+    ) as unknown as OpenScadRgba
     source = 'vector'
   } else if (typeof value === 'string') {
     const expanded = expandCssHex(value)
@@ -320,50 +319,120 @@ function numericOrZero(value: unknown): number {
   return typeof value === 'number' ? value : 0
 }
 
-function stableSpecial(
-  input: OpenScadFragmentResolutionInput,
-  name: 'fn' | 'fa' | 'fs',
-  fallback: number,
-): number {
+function stableSpecial(input: OpenScadFragmentResolutionInput, name: 'fn' | 'fa' | 'fs', fallback: number): number {
   return Object.prototype.hasOwnProperty.call(input, name) ? numericOrZero(input[name]) : fallback
 }
 
 type NativeNumber = number | 'NaN' | 'Infinity' | '-Infinity'
-const wireNumber = (value:number):NativeNumber => Number.isFinite(value) ? value : String(value) as NativeNumber
-const hostNumber = (value:NativeNumber):number => typeof value === 'number' ? value : Number(value)
-function nativeFragments(input:OpenScadFragmentResolutionInput,context:OpenScadStableModuleSemanticsContext,sweepDegrees?:number):OpenScadFragmentResolution & Partial<OpenScadSweepFragmentResolution> {
-  const maximum=input.maximum??(input.quality==='preview'?OPENSCAD_PREVIEW_MAX_FRAGMENTS:OPENSCAD_FULL_MAX_FRAGMENTS)
-  if(!Number.isSafeInteger(maximum)||maximum<3)throw new RangeError('OpenSCAD fragment maximum must be a safe integer of at least 3')
-  type NativeResolution=Omit<OpenScadFragmentResolution,'effectiveFn'|'effectiveFa'|'effectiveFs'> & {
-    effectiveFn:NativeNumber;effectiveFa:NativeNumber;effectiveFs:NativeNumber
-    warnings:{kind:string;value:NativeNumber}[];sweepDegrees?:number;sweepFragments?:number
+const wireNumber = (value: number): NativeNumber => (Number.isFinite(value) ? value : (String(value) as NativeNumber))
+const hostNumber = (value: NativeNumber): number => (typeof value === 'number' ? value : Number(value))
+function nativeFragments(
+  input: OpenScadFragmentResolutionInput,
+  context: OpenScadStableModuleSemanticsContext,
+  sweepDegrees?: number,
+): OpenScadFragmentResolution & Partial<OpenScadSweepFragmentResolution> {
+  const maximum =
+    input.maximum ?? (input.quality === 'preview' ? OPENSCAD_PREVIEW_MAX_FRAGMENTS : OPENSCAD_FULL_MAX_FRAGMENTS)
+  if (!Number.isSafeInteger(maximum) || maximum < 3)
+    throw new RangeError('OpenSCAD fragment maximum must be a safe integer of at least 3')
+  type NativeResolution = Omit<OpenScadFragmentResolution, 'effectiveFn' | 'effectiveFa' | 'effectiveFs'> & {
+    effectiveFn: NativeNumber
+    effectiveFa: NativeNumber
+    effectiveFs: NativeNumber
+    warnings: { kind: string; value: NativeNumber }[]
+    sweepDegrees?: number
+    sweepFragments?: number
   }
-  const response=languageRequest(14,{
-    radius:wireNumber(input.radius),fn:wireNumber(stableSpecial(input,'fn',OPENSCAD_DEFAULT_FN)),
-    fa:wireNumber(stableSpecial(input,'fa',OPENSCAD_DEFAULT_FA)),fs:wireNumber(stableSpecial(input,'fs',OPENSCAD_DEFAULT_FS)),maximum,
-    ...(sweepDegrees===undefined?{}:{sweepDegrees:wireNumber(sweepDegrees)}),
-  }) as {ok:boolean;value:NativeResolution;error?:{message:string}}
-  if(!response.ok)throw new Error(response.error?.message??'Native OpenSCAD fragment resolution failed')
-  const {warnings,...result}=response.value
-  for(const warning of warnings){
-    const value=hostNumber(warning.value)
-    switch(warning.kind){
-      case 'fn-nonfinite':context.warn({code:'OPENSCAD_FRAGMENT_NON_FINITE',message:'Non-finite $fn selected the minimum fragment count',value});break
-      case 'fn-negative':context.warn({code:'OPENSCAD_FN_NEGATIVE',message:'Negative $fn was replaced with the automatic fragment mode',value});break
-      case 'fa-nan':context.warn({code:'OPENSCAD_FRAGMENT_NON_FINITE',message:'Non-finite $fa was replaced with its default',value});break
-      case 'fs-nan':context.warn({code:'OPENSCAD_FRAGMENT_NON_FINITE',message:'Non-finite $fs was replaced with its default',value});break
-      case 'fa-small':context.warn({code:'OPENSCAD_FA_TOO_SMALL',message:`$fa was raised to the OpenSCAD minimum ${OPENSCAD_MIN_FA}`,value,limit:OPENSCAD_MIN_FA});break
-      case 'fs-small':context.warn({code:'OPENSCAD_FS_TOO_SMALL',message:`$fs was raised to the OpenSCAD minimum ${OPENSCAD_MIN_FS}`,value,limit:OPENSCAD_MIN_FS});break
-      case 'resolution-nonfinite':context.warn({code:'OPENSCAD_FRAGMENT_NON_FINITE',message:'Non-finite fragment resolution was bounded by the engine safety limit',value,limit:maximum});break
-      case 'clamped':context.warn({code:'OPENSCAD_FRAGMENTS_CLAMPED',message:`Fragment count was clamped to the engine safety limit ${maximum}`,value,limit:maximum});break
-      default:throw new Error('Unknown native fragment warning')
+  const response = languageRequest(14, {
+    radius: wireNumber(input.radius),
+    fn: wireNumber(stableSpecial(input, 'fn', OPENSCAD_DEFAULT_FN)),
+    fa: wireNumber(stableSpecial(input, 'fa', OPENSCAD_DEFAULT_FA)),
+    fs: wireNumber(stableSpecial(input, 'fs', OPENSCAD_DEFAULT_FS)),
+    maximum,
+    ...(sweepDegrees === undefined ? {} : { sweepDegrees: wireNumber(sweepDegrees) }),
+  }) as { ok: boolean; value: NativeResolution; error?: { message: string } }
+  if (!response.ok) throw new Error(response.error?.message ?? 'Native OpenSCAD fragment resolution failed')
+  const { warnings, ...result } = response.value
+  for (const warning of warnings) {
+    const value = hostNumber(warning.value)
+    switch (warning.kind) {
+      case 'fn-nonfinite':
+        context.warn({
+          code: 'OPENSCAD_FRAGMENT_NON_FINITE',
+          message: 'Non-finite $fn selected the minimum fragment count',
+          value,
+        })
+        break
+      case 'fn-negative':
+        context.warn({
+          code: 'OPENSCAD_FN_NEGATIVE',
+          message: 'Negative $fn was replaced with the automatic fragment mode',
+          value,
+        })
+        break
+      case 'fa-nan':
+        context.warn({
+          code: 'OPENSCAD_FRAGMENT_NON_FINITE',
+          message: 'Non-finite $fa was replaced with its default',
+          value,
+        })
+        break
+      case 'fs-nan':
+        context.warn({
+          code: 'OPENSCAD_FRAGMENT_NON_FINITE',
+          message: 'Non-finite $fs was replaced with its default',
+          value,
+        })
+        break
+      case 'fa-small':
+        context.warn({
+          code: 'OPENSCAD_FA_TOO_SMALL',
+          message: `$fa was raised to the OpenSCAD minimum ${OPENSCAD_MIN_FA}`,
+          value,
+          limit: OPENSCAD_MIN_FA,
+        })
+        break
+      case 'fs-small':
+        context.warn({
+          code: 'OPENSCAD_FS_TOO_SMALL',
+          message: `$fs was raised to the OpenSCAD minimum ${OPENSCAD_MIN_FS}`,
+          value,
+          limit: OPENSCAD_MIN_FS,
+        })
+        break
+      case 'resolution-nonfinite':
+        context.warn({
+          code: 'OPENSCAD_FRAGMENT_NON_FINITE',
+          message: 'Non-finite fragment resolution was bounded by the engine safety limit',
+          value,
+          limit: maximum,
+        })
+        break
+      case 'clamped':
+        context.warn({
+          code: 'OPENSCAD_FRAGMENTS_CLAMPED',
+          message: `Fragment count was clamped to the engine safety limit ${maximum}`,
+          value,
+          limit: maximum,
+        })
+        break
+      default:
+        throw new Error('Unknown native fragment warning')
     }
   }
-  return Object.freeze({...result,effectiveFn:hostNumber(result.effectiveFn),effectiveFa:hostNumber(result.effectiveFa),effectiveFs:hostNumber(result.effectiveFs)})
+  return Object.freeze({
+    ...result,
+    effectiveFn: hostNumber(result.effectiveFn),
+    effectiveFa: hostNumber(result.effectiveFa),
+    effectiveFs: hostNumber(result.effectiveFs),
+  })
 }
 /** OpenSCAD's full-circle fragment formula with explicit host safety bounds. */
-export function resolveOpenScadFragments(input:OpenScadFragmentResolutionInput,context:OpenScadStableModuleSemanticsContext=SILENT_CONTEXT):OpenScadFragmentResolution {
-  return nativeFragments(input,context)
+export function resolveOpenScadFragments(
+  input: OpenScadFragmentResolutionInput,
+  context: OpenScadStableModuleSemanticsContext = SILENT_CONTEXT,
+): OpenScadFragmentResolution {
+  return nativeFragments(input, context)
 }
 
 export interface OpenScadSweepFragmentResolution extends OpenScadFragmentResolution {
@@ -376,7 +445,11 @@ export function resolveOpenScadSweepFragments(
   input: OpenScadFragmentResolutionInput & { readonly sweepDegrees: number },
   context: OpenScadStableModuleSemanticsContext = SILENT_CONTEXT,
 ): OpenScadSweepFragmentResolution {
-  return nativeFragments(input,context,input.sweepDegrees===undefined?NaN:input.sweepDegrees) as OpenScadSweepFragmentResolution
+  return nativeFragments(
+    input,
+    context,
+    input.sweepDegrees === undefined ? NaN : input.sweepDegrees,
+  ) as OpenScadSweepFragmentResolution
 }
 
 export interface OpenScadOffsetResolutionInput {
@@ -397,11 +470,16 @@ export function resolveOpenScadOffset(
   input: OpenScadOffsetResolutionInput,
   _context: OpenScadStableModuleSemanticsContext = SILENT_CONTEXT,
 ): OpenScadOffsetResolution {
-  const numeric = (value: unknown) => typeof value === 'number'
-    ? Number.isFinite(value) ? value : String(value)
-    : null
-  const response = languageRequest(33, { r: numeric(input.r), delta: numeric(input.delta), chamfer: input.chamfer === true }) as {
-    ok: boolean; value: Omit<OpenScadOffsetResolution, 'distance'> & { distance: number | string }; error?: { message: string }
+  const numeric = (value: unknown) =>
+    typeof value === 'number' ? (Number.isFinite(value) ? value : String(value)) : null
+  const response = languageRequest(33, {
+    r: numeric(input.r),
+    delta: numeric(input.delta),
+    chamfer: input.chamfer === true,
+  }) as {
+    ok: boolean
+    value: Omit<OpenScadOffsetResolution, 'distance'> & { distance: number | string }
+    error?: { message: string }
   }
   if (!response.ok) throw new Error(response.error?.message ?? 'Native offset parameter normalization failed')
   return Object.freeze({ ...response.value, distance: Number(response.value.distance) })

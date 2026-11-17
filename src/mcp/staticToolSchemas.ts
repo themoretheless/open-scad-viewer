@@ -46,18 +46,27 @@ export function createStaticToolRegistration() {
     }
     return result
   }
-  return (server: McpServer): McpServer => new Proxy(server, {
-    get(target, property) {
-      if (property === 'registerTool') {
-        return (name: string, config: {inputSchema?: StandardSchemaWithJSON; outputSchema?: StandardSchemaWithJSON}, handler: unknown) =>
-          Reflect.apply(target.registerTool, target, [name, {
-            ...config,
-            inputSchema: stable(inputs, name, config.inputSchema),
-            outputSchema: stable(outputs, name, config.outputSchema),
-          }, handler])
-      }
-      const value = Reflect.get(target, property, target)
-      return typeof value === 'function' ? value.bind(target) : value
-    },
-  })
+  return (server: McpServer): McpServer =>
+    new Proxy(server, {
+      get(target, property) {
+        if (property === 'registerTool') {
+          return (
+            name: string,
+            config: { inputSchema?: StandardSchemaWithJSON; outputSchema?: StandardSchemaWithJSON },
+            handler: unknown,
+          ) =>
+            Reflect.apply(target.registerTool, target, [
+              name,
+              {
+                ...config,
+                inputSchema: stable(inputs, name, config.inputSchema),
+                outputSchema: stable(outputs, name, config.outputSchema),
+              },
+              handler,
+            ])
+        }
+        const value = Reflect.get(target, property, target)
+        return typeof value === 'function' ? value.bind(target) : value
+      },
+    })
 }

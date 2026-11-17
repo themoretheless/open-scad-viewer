@@ -8,22 +8,23 @@
  */
 
 import { runGpuCompute } from './webgpuCompute'
-import { generateQuadIndices, referenceNurbsTessellate, referenceNurbsTessellateAsync, type GpuNurbsSurface, type GpuNurbsTessellationResult } from './gpuNurbsReference'
+import {
+  generateQuadIndices,
+  referenceNurbsTessellate,
+  referenceNurbsTessellateAsync,
+  type GpuNurbsSurface,
+  type GpuNurbsTessellationResult,
+} from './gpuNurbsReference'
 import type { CooperativeAsyncOptions } from '../core/cooperativeAsync'
 export * from './gpuNurbsReference'
 
 import NURBS_TESSELLATE_WGSL from '../../crates/compute-core/shaders/nurbs_tessellate.wgsl?raw'
 export { NURBS_TESSELLATE_WGSL }
 
-
 const nurbsUniformBuffer = new ArrayBuffer(64)
 const nurbsUniformView = new DataView(nurbsUniformBuffer)
 
-function buildNurbsUniform(
-  surface: GpuNurbsSurface,
-  samplesU: number,
-  samplesV: number
-): ArrayBuffer {
+function buildNurbsUniform(surface: GpuNurbsSurface, samplesU: number, samplesV: number): ArrayBuffer {
   const ku = surface.knotsU
   const kv = surface.knotsV
   const uMin = surface.domainU?.[0] ?? ku[surface.degreeU] ?? 0
@@ -67,7 +68,9 @@ function packControlPoints(surface: GpuNurbsSurface): Float32Array {
   const weights = surface.weights
 
   for (let i = 0; i < count; i++) {
-    let x = 0, y = 0, z = 0
+    let x = 0,
+      y = 0,
+      z = 0
     if (isFlat) {
       x = cp[i * 3 + 0] ?? 0
       y = cp[i * 3 + 1] ?? 0
@@ -97,7 +100,7 @@ export async function runGpuNurbsTessellate(
   surface: GpuNurbsSurface,
   samplesU = 32,
   samplesV = 32,
-  options: CooperativeAsyncOptions = {}
+  options: CooperativeAsyncOptions = {},
 ): Promise<GpuNurbsTessellationResult> {
   const totalVertices = samplesU * samplesV
   const totalQuads = (samplesU - 1) * (samplesV - 1)
@@ -168,7 +171,7 @@ export function createBilinearNurbsPatch(
   p00: [number, number, number],
   p10: [number, number, number],
   p01: [number, number, number],
-  p11: [number, number, number]
+  p11: [number, number, number],
 ): GpuNurbsSurface {
   return {
     degreeU: 1,
@@ -205,9 +208,6 @@ export function createCylinderQuarterNurbsPatch(radius = 1.0, height = 2.0): Gpu
       [radius, radius, height],
       [0, radius, height],
     ],
-    weights: [
-      1.0, w1, 1.0,
-      1.0, w1, 1.0,
-    ],
+    weights: [1.0, w1, 1.0, 1.0, w1, 1.0],
   }
 }

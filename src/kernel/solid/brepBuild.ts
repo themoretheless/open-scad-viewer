@@ -26,12 +26,13 @@ const TRIANGLE_BUDGET = 64000
 /** The NURBS document contract caps a graph at 128 nodes. */
 const MAX_NODES = 128
 
-export type ExactSolidRoot =
-  | { name: string; id: string }
-  | { name: string; inexact: string }
+export type ExactSolidRoot = { name: string; id: string } | { name: string; inexact: string }
 
 export class InexactSolidError extends Error {
-  constructor(readonly bodyName: string, readonly operation: string) {
+  constructor(
+    readonly bodyName: string,
+    readonly operation: string,
+  ) {
     super(`"${bodyName}" uses ${operation}, which has no exact solid form. Open this model in Mesh instead.`)
     this.name = 'InexactSolidError'
   }
@@ -41,10 +42,7 @@ export class InexactSolidError extends Error {
  * Builds one body per root. Roots are built separately so the Solid workspace keeps
  * them as distinct bodies, which is also what the source expressed.
  */
-export function buildExactSolidBodies(
-  nodes: readonly BrepNode[],
-  roots: readonly ExactSolidRoot[],
-): DirectBody[] {
+export function buildExactSolidBodies(nodes: readonly BrepNode[], roots: readonly ExactSolidRoot[]): DirectBody[] {
   const bodies: DirectBody[] = []
   for (const root of roots) {
     if ('inexact' in root) throw new InexactSolidError(root.name, root.inexact)
@@ -53,11 +51,7 @@ export function buildExactSolidBodies(
   return bodies
 }
 
-function buildExactSolidBody(
-  nodes: readonly BrepNode[],
-  root: string,
-  name: string,
-): DirectBody {
+function buildExactSolidBody(nodes: readonly BrepNode[], root: string, name: string): DirectBody {
   const reachable = reachableFrom(nodes, root)
   if (reachable.length > MAX_NODES) {
     throw new Error(

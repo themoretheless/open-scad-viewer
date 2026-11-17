@@ -58,7 +58,10 @@ export function createRefUnwrapProxy<T extends object>(target: T): T {
     },
     set(obj, key, value, receiver) {
       const cur = Reflect.get(obj, key, receiver)
-      if (isRef(cur) && !isRef(value)) { cur.value = value; return true }
+      if (isRef(cur) && !isRef(value)) {
+        cur.value = value
+        return true
+      }
       return Reflect.set(obj, key, value, receiver)
     },
   })
@@ -77,7 +80,10 @@ export function syncReactiveRecord(
     }
   }
   for (const k of Object.keys(current)) {
-    if (!(k in next)) { delete current[k]; changed = true }
+    if (!(k in next)) {
+      delete current[k]
+      changed = true
+    }
   }
   return changed
 }
@@ -105,8 +111,7 @@ export function normalizeChildrenArray(children: any): SvetVNode[] {
   return out
 }
 
-export const isSameVNodeType = (n1: SvetVNode, n2: SvetVNode): boolean =>
-  n1.type === n2.type && n1.key === n2.key
+export const isSameVNodeType = (n1: SvetVNode, n2: SvetVNode): boolean => n1.type === n2.type && n1.key === n2.key
 
 export function setTemplateRef(rawRef: any, value: any): void {
   if (!rawRef) return
@@ -245,9 +250,7 @@ export function splitPropsAndAttrs(
             propsValues[camelKey] = val
           }
         } else {
-          const isUpdateListener =
-            rawKey.startsWith('onUpdate:') &&
-            declaredKeys.has(camelize(rawKey.slice(9)))
+          const isUpdateListener = rawKey.startsWith('onUpdate:') && declaredKeys.has(camelize(rawKey.slice(9)))
           if (isUpdateListener) {
             propsValues[rawKey] = val
             const camelUpdate = `onUpdate:${camelize(rawKey.slice(9))}`
@@ -369,7 +372,13 @@ export function patchKeyedVNodeChildren<HostNode = any, HostElement = HostNode>(
   container: HostElement,
   parentAnchor: HostNode | null,
   namespace: string | undefined,
-  patch: (n1: SvetVNode | null, n2: SvetVNode, container: HostElement, anchor: HostNode | null, namespace?: string) => void,
+  patch: (
+    n1: SvetVNode | null,
+    n2: SvetVNode,
+    container: HostElement,
+    anchor: HostNode | null,
+    namespace?: string,
+  ) => void,
   unmount: (vnode: SvetVNode) => void,
   moveVNode: (vnode: SvetVNode, container: HostElement, anchor: HostNode | null) => void,
   getFirstHostNode: (vnode: SvetVNode | null) => HostNode | null,
@@ -401,19 +410,25 @@ export function patchKeyedVNodeChildren<HostNode = any, HostElement = HostNode>(
   } else if (i > e2) {
     while (i <= e1) unmount(c1[i++]!)
   } else {
-    const s1 = i, s2 = i
+    const s1 = i,
+      s2 = i
     const keyToNewIndexMap = new Map<any, number>()
     for (i = s2; i <= e2; i++) {
       if (c2[i]!.key != null) keyToNewIndexMap.set(c2[i]!.key, i)
     }
 
-    let patched = 0, moved = false, maxNewIndexSoFar = 0
+    let patched = 0,
+      moved = false,
+      maxNewIndexSoFar = 0
     const toBePatched = e2 - s2 + 1
     const newIndexToOldIndexMap = new Int32Array(toBePatched)
 
     for (i = s1; i <= e1; i++) {
       const prevChild = c1[i]!
-      if (patched >= toBePatched) { unmount(prevChild); continue }
+      if (patched >= toBePatched) {
+        unmount(prevChild)
+        continue
+      }
       let newIndex: number | undefined
       if (prevChild.key != null) {
         newIndex = keyToNewIndexMap.get(prevChild.key)

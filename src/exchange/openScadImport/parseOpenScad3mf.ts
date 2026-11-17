@@ -1,11 +1,43 @@
-import { OPENSCAD_IMPORT_DEFAULT_CURVE_SEGMENTS, OPENSCAD_IMPORT_MAX_2D_POINTS, OPENSCAD_IMPORT_MAX_CONTOURS, OPENSCAD_IMPORT_MAX_TRIANGLES, OPENSCAD_IMPORT_MAX_VERTICES, OPENSCAD_IMPORT_MAX_XML_DEPTH, OPENSCAD_IMPORT_MAX_XML_ELEMENTS, OpenScadImportDataError, THREE_MF_CORE_NAMESPACE, UTF8_FATAL } from '../openScadImport'
-import type { DxfEntity, DxfPair, DxfSegment, Matrix2, Matrix4, OpenScadImportGeometry2D, OpenScadImportGeometry3D, OpenScadImportPoint2, OpenScadImportPreparationBudget, OpenScadImportRegion2D, ThreeMfObject, XmlElement } from '../openScadImport'
+import {
+  OPENSCAD_IMPORT_DEFAULT_CURVE_SEGMENTS,
+  OPENSCAD_IMPORT_MAX_2D_POINTS,
+  OPENSCAD_IMPORT_MAX_CONTOURS,
+  OPENSCAD_IMPORT_MAX_TRIANGLES,
+  OPENSCAD_IMPORT_MAX_VERTICES,
+  OPENSCAD_IMPORT_MAX_XML_DEPTH,
+  OPENSCAD_IMPORT_MAX_XML_ELEMENTS,
+  OpenScadImportDataError,
+  THREE_MF_CORE_NAMESPACE,
+  UTF8_FATAL,
+} from '../openScadImport'
+import type {
+  DxfEntity,
+  DxfPair,
+  DxfSegment,
+  Matrix2,
+  Matrix4,
+  OpenScadImportGeometry2D,
+  OpenScadImportGeometry3D,
+  OpenScadImportPoint2,
+  OpenScadImportPreparationBudget,
+  OpenScadImportRegion2D,
+  ThreeMfObject,
+  XmlElement,
+} from '../openScadImport'
 import type { OpenScadProjectFile } from '../../language/openScadProject'
 import { readSvgDocument } from '../svgDocument'
 import type { SvgOptions } from '../svgDocument'
 import { appendRawMesh, attributeNs, childElementNs, childElementsNs, multiply4, parseXml, unitScale } from './parseXml'
 import { boundedCount, bytesOf, dataError, finiteNumber, geometry3D, textOf } from './parseOpenScadStl'
-import { modelPathFromPackage, parse3mfTransform, threeMfNumberAttribute, threeMfResourceId, threeMfResourceIdAttribute, threeMfResourceIndexAttribute, unzip3mf } from './unzip3mf'
+import {
+  modelPathFromPackage,
+  parse3mfTransform,
+  threeMfNumberAttribute,
+  threeMfResourceId,
+  threeMfResourceIdAttribute,
+  threeMfResourceIndexAttribute,
+  unzip3mf,
+} from './unzip3mf'
 
 /** Parse a bounded core 3MF package, including build items and component graphs. */
 export async function parseOpenScad3mfWithBudget(
@@ -27,7 +59,11 @@ export async function parseOpenScad3mfWithBudget(
   }
   const requiredExtensions = attributeNs(root, 'requiredextensions', null)?.trim()
   if (requiredExtensions) {
-    return dataError('E_IMPORT_UNSUPPORTED_FEATURE', `3MF requires unsupported extensions: ${requiredExtensions}.`, '3mf')
+    return dataError(
+      'E_IMPORT_UNSUPPORTED_FEATURE',
+      `3MF requires unsupported extensions: ${requiredExtensions}.`,
+      '3mf',
+    )
   }
   const scale = unitScale(attributeNs(root, 'unit', null), '3mf')
   const resourceElements = childElementsNs(root, 'resources', THREE_MF_CORE_NAMESPACE)
@@ -35,7 +71,8 @@ export async function parseOpenScad3mfWithBudget(
   if (resourceElements.length !== 1 || buildElements.length !== 1) {
     return dataError('E_IMPORT_INVALID_DATA', '3MF model requires exactly one core resources and build element.', '3mf')
   }
-  const resources = resourceElements[0]!, build = buildElements[0]!
+  const resources = resourceElements[0]!,
+    build = buildElements[0]!
   const objects = new Map<string, ThreeMfObject>()
   const resourceIds = new Set<string>()
   for (const resource of resources.children.filter(child => child.namespaceUri === THREE_MF_CORE_NAMESPACE)) {
@@ -50,7 +87,11 @@ export async function parseOpenScad3mfWithBudget(
     const meshElement = childElementNs(object, 'mesh', THREE_MF_CORE_NAMESPACE)
     const componentsElement = childElementNs(object, 'components', THREE_MF_CORE_NAMESPACE)
     if ((meshElement === null) === (componentsElement === null)) {
-      return dataError('E_IMPORT_INVALID_DATA', `3MF object ${id} must contain exactly one mesh or components element.`, '3mf')
+      return dataError(
+        'E_IMPORT_INVALID_DATA',
+        `3MF object ${id} must contain exactly one mesh or components element.`,
+        '3mf',
+      )
     }
     if (meshElement !== null) {
       const verticesElement = childElementNs(meshElement, 'vertices', THREE_MF_CORE_NAMESPACE)
@@ -96,17 +137,30 @@ export async function parseOpenScad3mfWithBudget(
   const expand = (id: string, matrix: Matrix4, stack: readonly string[]): void => {
     const object = objects.get(id)
     if (!object) return dataError('E_IMPORT_INVALID_DATA', `3MF refers to missing object ${id}.`, '3mf')
-    if (stack.includes(id)) return dataError('E_IMPORT_INVALID_DATA', `3MF component cycle includes object ${id}.`, '3mf')
+    if (stack.includes(id))
+      return dataError('E_IMPORT_INVALID_DATA', `3MF component cycle includes object ${id}.`, '3mf')
     expansions++
     if (expansions > OPENSCAD_IMPORT_MAX_XML_ELEMENTS) {
-      return dataError('E_IMPORT_LIMIT', '3MF component expansion limit exceeded.', '3mf', OPENSCAD_IMPORT_MAX_XML_ELEMENTS, expansions)
+      return dataError(
+        'E_IMPORT_LIMIT',
+        '3MF component expansion limit exceeded.',
+        '3mf',
+        OPENSCAD_IMPORT_MAX_XML_ELEMENTS,
+        expansions,
+      )
     }
     if (object.kind === 'mesh') {
       appendRawMesh(vertices, triangles, object.mesh, matrix, '3mf')
       return
     }
     if (stack.length >= OPENSCAD_IMPORT_MAX_XML_DEPTH) {
-      return dataError('E_IMPORT_LIMIT', '3MF component nesting limit exceeded.', '3mf', OPENSCAD_IMPORT_MAX_XML_DEPTH, stack.length + 1)
+      return dataError(
+        'E_IMPORT_LIMIT',
+        '3MF component nesting limit exceeded.',
+        '3mf',
+        OPENSCAD_IMPORT_MAX_XML_DEPTH,
+        stack.length + 1,
+      )
     }
     for (const component of object.components) {
       expand(component.objectId, multiply4(matrix, component.transform), [...stack, id])
@@ -155,7 +209,8 @@ export function geometry2D(
       if (contour.length < 3) continue
       let area = 0
       for (let index = 0; index < contour.length; index++) {
-        const a = contour[index]!, b = contour[(index + 1) % contour.length]!
+        const a = contour[index]!,
+          b = contour[(index + 1) % contour.length]!
         area += a[0] * b[1] - b[0] * a[1]
       }
       if (area === 0) continue
@@ -165,13 +220,17 @@ export function geometry2D(
       boundedCount(contourCount, OPENSCAD_IMPORT_MAX_CONTOURS, `${format.toUpperCase()} contour count`, format)
       contours.push(contour)
     }
-    if (contours.length) regions.push(Object.freeze({
-      contours: Object.freeze(contours.map(contour => Object.freeze(contour))),
-      fillRule: region.fillRule,
-      ...(region.layer === undefined ? {} : { layer: region.layer }),
-    }))
+    if (contours.length)
+      regions.push(
+        Object.freeze({
+          contours: Object.freeze(contours.map(contour => Object.freeze(contour))),
+          fillRule: region.fillRule,
+          ...(region.layer === undefined ? {} : { layer: region.layer }),
+        }),
+      )
   }
-  if (regions.length === 0) return dataError('E_IMPORT_EMPTY', `${format.toUpperCase()} contains no filled 2D geometry.`, format)
+  if (regions.length === 0)
+    return dataError('E_IMPORT_EMPTY', `${format.toUpperCase()} contains no filled 2D geometry.`, format)
   return Object.freeze({ dimension: 2 as const, format, regions: Object.freeze(regions), pointCount })
 }
 
@@ -194,7 +253,11 @@ export function transform2(matrix: Matrix2, point: OpenScadImportPoint2): OpenSc
 }
 
 /** SVG geometry in the captured OpenSCAD millimeter/DPI coordinate convention. */
-export function parseOpenScadSvg(file: OpenScadProjectFile, dpi = 72, options: SvgOptions = {}): OpenScadImportGeometry2D {
+export function parseOpenScadSvg(
+  file: OpenScadProjectFile,
+  dpi = 72,
+  options: SvgOptions = {},
+): OpenScadImportGeometry2D {
   try {
     const parsed = readSvgDocument(textOf(file, 'svg'), { ...options, dpi }, 'parse', true)
     return geometry2D('svg', parsed.regions)
@@ -203,21 +266,36 @@ export function parseOpenScadSvg(file: OpenScadProjectFile, dpi = 72, options: S
     const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : ''
     const message = error instanceof Error ? error.message : 'SVG conversion failed.'
     return dataError(
-      ['E_IMPORT_FORMAT_UNSUPPORTED', 'E_IMPORT_ENCODING', 'E_IMPORT_INVALID_DATA', 'E_IMPORT_UNSUPPORTED_FEATURE', 'E_IMPORT_LIMIT', 'E_IMPORT_EMPTY'].includes(code)
-        ? code as OpenScadImportDataError['code']
-        : /limit|exceeds/i.test(message) ? 'E_IMPORT_LIMIT' : 'E_IMPORT_INVALID_DATA',
-      message, 'svg',
+      [
+        'E_IMPORT_FORMAT_UNSUPPORTED',
+        'E_IMPORT_ENCODING',
+        'E_IMPORT_INVALID_DATA',
+        'E_IMPORT_UNSUPPORTED_FEATURE',
+        'E_IMPORT_LIMIT',
+        'E_IMPORT_EMPTY',
+      ].includes(code)
+        ? (code as OpenScadImportDataError['code'])
+        : /limit|exceeds/i.test(message)
+          ? 'E_IMPORT_LIMIT'
+          : 'E_IMPORT_INVALID_DATA',
+      message,
+      'svg',
     )
   }
 }
 
 export function dxfPairs(text: string): DxfPair[] {
   if (text.replace(/^\uFEFF/u, '').startsWith('AutoCAD Binary DXF')) {
-    return dataError('E_IMPORT_UNSUPPORTED_FEATURE', 'Binary DXF is unsupported by the OpenSCAD 2021.01 importer.', 'dxf')
+    return dataError(
+      'E_IMPORT_UNSUPPORTED_FEATURE',
+      'Binary DXF is unsupported by the OpenSCAD 2021.01 importer.',
+      'dxf',
+    )
   }
   const lines = text.replace(/^\uFEFF/u, '').split(/\r\n|\n|\r/u)
   while (lines.length && lines.at(-1)!.trim() === '') lines.pop()
-  if (lines.length % 2 !== 0) return dataError('E_IMPORT_INVALID_DATA', 'DXF must contain group-code/value line pairs.', 'dxf')
+  if (lines.length % 2 !== 0)
+    return dataError('E_IMPORT_INVALID_DATA', 'DXF must contain group-code/value line pairs.', 'dxf')
   const pairs: DxfPair[] = []
   for (let line = 0; line < lines.length; line += 2) {
     const code = Number(lines[line]!.trim())
@@ -280,7 +358,8 @@ export function dxfValues(entity: DxfEntity, code: number): string[] {
 
 export function dxfValue(entity: DxfEntity, code: number, fallback?: string): string {
   const value = entity.pairs.find(pair => pair.code === code)?.value ?? fallback
-  if (value === undefined) return dataError('E_IMPORT_INVALID_DATA', `DXF ${entity.type} is missing group ${code}.`, 'dxf')
+  if (value === undefined)
+    return dataError('E_IMPORT_INVALID_DATA', `DXF ${entity.type} is missing group ${code}.`, 'dxf')
   return value
 }
 
@@ -293,12 +372,13 @@ export function dxfNumber(entity: DxfEntity, code: number, fallback?: number): n
 
 export function dxfInteger(entity: DxfEntity, code: number, fallback = 0): number {
   const value = dxfNumber(entity, code, fallback)
-  if (!Number.isSafeInteger(value)) return dataError('E_IMPORT_INVALID_DATA', `DXF ${entity.type} group ${code} must be an integer.`, 'dxf')
+  if (!Number.isSafeInteger(value))
+    return dataError('E_IMPORT_INVALID_DATA', `DXF ${entity.type} group ${code} must be an integer.`, 'dxf')
   return value
 }
 
 export function curveSteps(sweep: number, segments = OPENSCAD_IMPORT_DEFAULT_CURVE_SEGMENTS): number {
-  return Math.max(2, Math.min(512, Math.ceil(Math.abs(sweep) / (Math.PI * 2) * segments)))
+  return Math.max(2, Math.min(512, Math.ceil((Math.abs(sweep) / (Math.PI * 2)) * segments)))
 }
 
 export function arcPoints(
@@ -311,11 +391,13 @@ export function arcPoints(
 ): OpenScadImportPoint2[] {
   if (!(radiusX > 0) || !(radiusY > 0)) return []
   const steps = curveSteps(sweep)
-  const cosine = Math.cos(axisAngle), sine = Math.sin(axisAngle)
+  const cosine = Math.cos(axisAngle),
+    sine = Math.sin(axisAngle)
   const points: OpenScadImportPoint2[] = []
   for (let index = 0; index <= steps; index++) {
-    const angle = start + sweep * index / steps
-    const x = radiusX * Math.cos(angle), y = radiusY * Math.sin(angle)
+    const angle = start + (sweep * index) / steps
+    const x = radiusX * Math.cos(angle),
+      y = radiusY * Math.sin(angle)
     points.push([center[0] + cosine * x - sine * y, center[1] + sine * x + cosine * y])
   }
   return points
@@ -327,21 +409,24 @@ export function bulgePoints(
   bulge: number,
 ): OpenScadImportPoint2[] {
   if (bulge === 0) return [start, end]
-  const dx = end[0] - start[0], dy = end[1] - start[1]
+  const dx = end[0] - start[0],
+    dy = end[1] - start[1]
   const chord = Math.hypot(dx, dy)
   if (!(chord > 0)) return [start]
   const sweep = 4 * Math.atan(bulge)
   const radius = chord / (2 * Math.sin(Math.abs(sweep) / 2))
   const midpoint: OpenScadImportPoint2 = [(start[0] + end[0]) / 2, (start[1] + end[1]) / 2]
   const distance = chord / (2 * Math.tan(sweep / 2))
-  const center: OpenScadImportPoint2 = [midpoint[0] - dy / chord * distance, midpoint[1] + dx / chord * distance]
+  const center: OpenScadImportPoint2 = [midpoint[0] - (dy / chord) * distance, midpoint[1] + (dx / chord) * distance]
   const startAngle = Math.atan2(start[1] - center[1], start[0] - center[0])
   return arcPoints(center, radius, radius, startAngle, sweep)
 }
 
 export function pointNear(left: OpenScadImportPoint2, right: OpenScadImportPoint2): boolean {
-  return Math.round(left[0] * 1024) === Math.round(right[0] * 1024)
-    && Math.round(left[1] * 1024) === Math.round(right[1] * 1024)
+  return (
+    Math.round(left[0] * 1024) === Math.round(right[0] * 1024) &&
+    Math.round(left[1] * 1024) === Math.round(right[1] * 1024)
+  )
 }
 
 export function stitchDxfSegments(segments: readonly DxfSegment[]): OpenScadImportRegion2D[] {
@@ -354,7 +439,8 @@ export function stitchDxfSegments(segments: readonly DxfSegment[]): OpenScadImpo
   }
   for (const [layer, source] of layers) {
     const degree = new Map<string, number>()
-    const endpointKey = (point: OpenScadImportPoint2): string => `${Math.round(point[0] * 1024)},${Math.round(point[1] * 1024)}`
+    const endpointKey = (point: OpenScadImportPoint2): string =>
+      `${Math.round(point[0] * 1024)},${Math.round(point[1] * 1024)}`
     for (const segment of source) {
       for (const endpoint of [segment.points[0]!, segment.points.at(-1)!]) {
         const key = endpointKey(endpoint)
@@ -365,10 +451,10 @@ export function stitchDxfSegments(segments: readonly DxfSegment[]): OpenScadImpo
     }
     const pending = [...source]
     while (pending.length) {
-      const openIndex = pending.findIndex(segment => (
-        degree.get(endpointKey(segment.points[0]!)) === 1
-        || degree.get(endpointKey(segment.points.at(-1)!)) === 1
-      ))
+      const openIndex = pending.findIndex(
+        segment =>
+          degree.get(endpointKey(segment.points[0]!)) === 1 || degree.get(endpointKey(segment.points.at(-1)!)) === 1,
+      )
       const first = pending.splice(openIndex < 0 ? pending.length - 1 : openIndex, 1)[0]!
       const path = [...first.points]
       let changed = true
@@ -376,7 +462,8 @@ export function stitchDxfSegments(segments: readonly DxfSegment[]): OpenScadImpo
         changed = false
         for (let index = 0; index < pending.length; index++) {
           const candidate = pending[index]!
-          const start = candidate.points[0]!, end = candidate.points.at(-1)!
+          const start = candidate.points[0]!,
+            end = candidate.points.at(-1)!
           if (pointNear(path.at(-1)!, start)) path.push(...candidate.points.slice(1))
           else if (pointNear(path.at(-1)!, end)) path.push(...[...candidate.points].reverse().slice(1))
           else if (pointNear(path[0]!, end)) path.unshift(...candidate.points.slice(0, -1))
@@ -396,9 +483,6 @@ export function stitchDxfSegments(segments: readonly DxfSegment[]): OpenScadImpo
   return regions
 }
 
-export function dxfPolyline(
-  points: readonly OpenScadImportPoint2[],
-  closed: boolean,
-): OpenScadImportPoint2[] {
+export function dxfPolyline(points: readonly OpenScadImportPoint2[], closed: boolean): OpenScadImportPoint2[] {
   return closed ? [...points, points[0]!] : [...points]
 }

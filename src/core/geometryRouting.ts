@@ -1,10 +1,7 @@
 import { isWellFormedUnicode } from './unicode'
-export const GEOMETRY_LANGUAGE_CONTRACTS = Object.freeze([
-  'legacy/current',
-  'openscad-viewer/brep-1',
-] as const)
+export const GEOMETRY_LANGUAGE_CONTRACTS = Object.freeze(['legacy/current', 'openscad-viewer/brep-1'] as const)
 
-export type GeometryLanguageContract = typeof GEOMETRY_LANGUAGE_CONTRACTS[number]
+export type GeometryLanguageContract = (typeof GEOMETRY_LANGUAGE_CONTRACTS)[number]
 
 export const MAX_GEOMETRY_SOURCE_CHARACTERS = 250_000
 const MAX_REQUIRED_CAPABILITIES = 32
@@ -77,11 +74,7 @@ function sourceOutsideBlockComments(
 /** Parses only the bounded source header; it deliberately has no engine-manifest dependency. */
 export function parseGeometrySourceRoutingHeader(source: string): GeometrySourceRoutingHeader {
   if (!isWellFormedUnicode(source)) {
-    throw new GeometryLanguageContractError(
-      'Geometry source must contain well-formed Unicode.',
-      null,
-      null,
-    )
+    throw new GeometryLanguageContractError('Geometry source must contain well-formed Unicode.', null, null)
   }
   if (source.length > MAX_GEOMETRY_SOURCE_CHARACTERS) {
     throw new GeometryLanguageContractError(
@@ -108,8 +101,7 @@ export function parseGeometrySourceRoutingHeader(source: string): GeometrySource
     escaped = visible.escaped
     const lineCommentStart = line.indexOf('//')
     const directiveLine = lineCommentStart >= 0 ? line.slice(lineCommentStart) : line
-    const codeBeforeDirective = lineCommentStart > 0
-      && line.slice(0, lineCommentStart).trim() !== ''
+    const codeBeforeDirective = lineCommentStart > 0 && line.slice(0, lineCommentStart).trim() !== ''
     const languageMatch = /^\s*\/\/\s*@language\s+(\S+)\s*$/.exec(directiveLine)
     const requiresMatch = /^\s*\/\/\s*@requires\s+(.+?)\s*$/.exec(directiveLine)
     const engineMatch = /^\s*\/\/\s*@engine(?:\s+.*)?$/.exec(directiveLine)

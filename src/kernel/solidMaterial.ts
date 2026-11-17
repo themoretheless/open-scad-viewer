@@ -1,4 +1,4 @@
-import type {DirectDocument,DirectMaterial} from '../app/directModeling'
+import type { DirectDocument, DirectMaterial } from '../app/directModeling'
 
 export interface EngineeringMaterialSpec {
   id: string
@@ -113,25 +113,41 @@ export function estimateSolidMassGrams(volumeMm3: number, materialId: string): n
   if (!Number.isFinite(volumeMm3) || volumeMm3 < 0) {
     throw new RangeError('Solid volume must be a non-negative finite number in mm^3.')
   }
-  const normalized = materialId.trim().toLowerCase().replace(/[\s-]+/g, '_')
+  const normalized = materialId
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_')
   const direct = SOLID_ENGINEERING_MATERIALS[materialId] ?? SOLID_ENGINEERING_MATERIALS[normalized]
-  const spec = direct ?? Object.values(SOLID_ENGINEERING_MATERIALS).find(
-    m => m.name.toLowerCase() === materialId.trim().toLowerCase(),
-  )
+  const spec =
+    direct ??
+    Object.values(SOLID_ENGINEERING_MATERIALS).find(m => m.name.toLowerCase() === materialId.trim().toLowerCase())
   if (!spec) {
     throw new Error(`Unknown engineering material: ${materialId}`)
   }
   return (volumeMm3 / 1000) * spec.densityGPerCm3
 }
 
-export const solidMaterialRgb=(color:string):[number,number,number]=>[1,3,5].map(i=>parseInt(color.slice(i,i+2),16)/255) as [number,number,number]
-export function assignSolidMaterial(document:DirectDocument,ids:readonly string[],material?:DirectMaterial):DirectDocument {
- if(material&&(!material.name.trim()||material.name.length>100||!/^#[0-9a-f]{6}$/i.test(material.color)))throw Error('Invalid body material.')
- if(material&&[material.metallic,material.roughness,material.opacity].some(v=>v!==undefined&&(!Number.isFinite(v)||v<0||v>1)))throw Error('Invalid body material.')
- const next=structuredClone(document)
- for(const body of next.bodies)if(ids.includes(body.id)){
-  if(material)body.material=structuredClone(material)
-  else delete body.material
- }
- return next
+export const solidMaterialRgb = (color: string): [number, number, number] =>
+  [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16) / 255) as [number, number, number]
+export function assignSolidMaterial(
+  document: DirectDocument,
+  ids: readonly string[],
+  material?: DirectMaterial,
+): DirectDocument {
+  if (material && (!material.name.trim() || material.name.length > 100 || !/^#[0-9a-f]{6}$/i.test(material.color)))
+    throw Error('Invalid body material.')
+  if (
+    material &&
+    [material.metallic, material.roughness, material.opacity].some(
+      v => v !== undefined && (!Number.isFinite(v) || v < 0 || v > 1),
+    )
+  )
+    throw Error('Invalid body material.')
+  const next = structuredClone(document)
+  for (const body of next.bodies)
+    if (ids.includes(body.id)) {
+      if (material) body.material = structuredClone(material)
+      else delete body.material
+    }
+  return next
 }

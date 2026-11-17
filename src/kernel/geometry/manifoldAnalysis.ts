@@ -1,5 +1,5 @@
-import {decodeNurbsResult,GeometryKernelError,kernelRuntime,kernelVertexFormat} from './kernel'
-import {copyBuffer} from './bufferTransport'
+import { decodeNurbsResult, GeometryKernelError, kernelRuntime, kernelVertexFormat } from './kernel'
+import { copyBuffer } from './bufferTransport'
 import manifoldReportSchema from './manifoldReportSchema.json'
 
 /**
@@ -13,10 +13,16 @@ export const MANIFOLD_ABI_VERSION: number = manifoldReportSchema.abiVersion
 
 /** The loaded geometry kernel exports a different Manifold ABI than this TypeScript expects. */
 export class ManifoldAbiMismatchError extends GeometryKernelError {
-  constructor(public readonly expected: number, public readonly actual: number | null) {
-    super('GEOMETRY_ABI_MISMATCH', actual === null
-      ? `Geometry kernel has no Manifold ABI version export (expected v${expected}); rebuild the WASM kernel`
-      : `Geometry kernel Manifold ABI v${actual} does not match TypeScript v${expected}; rebuild the WASM kernel or reload the app`)
+  constructor(
+    public readonly expected: number,
+    public readonly actual: number | null,
+  ) {
+    super(
+      'GEOMETRY_ABI_MISMATCH',
+      actual === null
+        ? `Geometry kernel has no Manifold ABI version export (expected v${expected}); rebuild the WASM kernel`
+        : `Geometry kernel Manifold ABI v${actual} does not match TypeScript v${expected}; rebuild the WASM kernel or reload the app`,
+    )
     this.name = 'ManifoldAbiMismatchError'
   }
 }
@@ -29,9 +35,10 @@ const verifiedManifoldExports = new WeakSet<object>()
  * with newer TS (or the reverse) fails with a typed error instead of reading
  * misaligned result slots.
  */
-export function assertManifoldAbi(exports: {abi_manifold_abi_version?: () => number}): void {
+export function assertManifoldAbi(exports: { abi_manifold_abi_version?: () => number }): void {
   if (verifiedManifoldExports.has(exports)) return
-  const actual = typeof exports.abi_manifold_abi_version === 'function' ? exports.abi_manifold_abi_version() >>> 0 : null
+  const actual =
+    typeof exports.abi_manifold_abi_version === 'function' ? exports.abi_manifold_abi_version() >>> 0 : null
   if (actual !== MANIFOLD_ABI_VERSION) throw new ManifoldAbiMismatchError(MANIFOLD_ABI_VERSION, actual)
   verifiedManifoldExports.add(exports)
 }
@@ -95,7 +102,7 @@ export function checkManifoldInKernel(
   indices: Uint32Array,
   sliverArea = 0,
 ): KernelManifoldReport {
-  const {exports: wasm, memory, takeResponse} = manifoldRuntime()
+  const { exports: wasm, memory, takeResponse } = manifoldRuntime()
   let vp = 0
   let ip = 0
   let handle = 0
@@ -103,12 +110,16 @@ export function checkManifoldInKernel(
     vp = copyBuffer(wasm, new Uint8Array(vertices.buffer, vertices.byteOffset, vertices.byteLength))
     ip = copyBuffer(wasm, new Uint8Array(indices.buffer, indices.byteOffset, indices.byteLength))
     handle = decodeNurbsResult<number>(
-      takeResponse(wasm.abi_manifold_check(vp, vertices.length, ip, indices.length, kernelVertexFormat(vertices), sliverArea)),
+      takeResponse(
+        wasm.abi_manifold_check(vp, vertices.length, ip, indices.length, kernelVertexFormat(vertices), sliverArea),
+      ),
     )
     // Allocation above may grow memory. Never cache memory.buffer between calls.
     const buffer = memory.buffer
     const u32 = (slot: number) =>
-      new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, slot), wasm.abi_array_field(handle, slot + 1)))
+      new Uint32Array(
+        new Uint32Array(buffer, wasm.abi_array_field(handle, slot), wasm.abi_array_field(handle, slot + 1)),
+      )
     const flags = wasm.abi_array_field(handle, 19)
     return {
       boundaryEdges: u32(0),
@@ -144,7 +155,7 @@ export function repairManifoldInKernel(
   full = false,
   removeIsolated = false,
 ): KernelManifoldRepair {
-  const {exports: wasm, memory, takeResponse} = manifoldRuntime()
+  const { exports: wasm, memory, takeResponse } = manifoldRuntime()
   let vp = 0
   let ip = 0
   let handle = 0
@@ -152,13 +163,28 @@ export function repairManifoldInKernel(
     vp = copyBuffer(wasm, new Uint8Array(vertices.buffer, vertices.byteOffset, vertices.byteLength))
     ip = copyBuffer(wasm, new Uint8Array(indices.buffer, indices.byteOffset, indices.byteLength))
     handle = decodeNurbsResult<number>(
-      takeResponse(wasm.abi_manifold_repair(vp, vertices.length, ip, indices.length, kernelVertexFormat(vertices), epsilon, full ? 1 : 0, removeIsolated ? 1 : 0)),
+      takeResponse(
+        wasm.abi_manifold_repair(
+          vp,
+          vertices.length,
+          ip,
+          indices.length,
+          kernelVertexFormat(vertices),
+          epsilon,
+          full ? 1 : 0,
+          removeIsolated ? 1 : 0,
+        ),
+      ),
     )
     const buffer = memory.buffer
     const flags = wasm.abi_array_field(handle, 9)
     return {
-      positions: new Float64Array(new Float64Array(buffer, wasm.abi_array_field(handle, 0), wasm.abi_array_field(handle, 1))),
-      indices: new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, 2), wasm.abi_array_field(handle, 3))),
+      positions: new Float64Array(
+        new Float64Array(buffer, wasm.abi_array_field(handle, 0), wasm.abi_array_field(handle, 1)),
+      ),
+      indices: new Uint32Array(
+        new Uint32Array(buffer, wasm.abi_array_field(handle, 2), wasm.abi_array_field(handle, 3)),
+      ),
       vertexRemap: removeIsolated
         ? new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, 4), wasm.abi_array_field(handle, 5)))
         : null,
@@ -211,7 +237,7 @@ export function metricsManifoldInKernel(
   vertices: Float32Array | Float64Array,
   indices: Uint32Array,
 ): KernelManifoldMetrics {
-  const {exports: wasm, memory, takeResponse} = manifoldRuntime()
+  const { exports: wasm, memory, takeResponse } = manifoldRuntime()
   let vp = 0
   let ip = 0
   let handle = 0
@@ -222,9 +248,15 @@ export function metricsManifoldInKernel(
       takeResponse(wasm.abi_manifold_metrics(vp, vertices.length, ip, indices.length, kernelVertexFormat(vertices))),
     )
     const buffer = memory.buffer
-    const stats = new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, 0), wasm.abi_array_field(handle, 1)))
-    const componentFloats = new Float64Array(new Float64Array(buffer, wasm.abi_array_field(handle, 2), wasm.abi_array_field(handle, 3)))
-    const floats = new Float64Array(new Float64Array(buffer, wasm.abi_array_field(handle, 4), wasm.abi_array_field(handle, 5)))
+    const stats = new Uint32Array(
+      new Uint32Array(buffer, wasm.abi_array_field(handle, 0), wasm.abi_array_field(handle, 1)),
+    )
+    const componentFloats = new Float64Array(
+      new Float64Array(buffer, wasm.abi_array_field(handle, 2), wasm.abi_array_field(handle, 3)),
+    )
+    const floats = new Float64Array(
+      new Float64Array(buffer, wasm.abi_array_field(handle, 4), wasm.abi_array_field(handle, 5)),
+    )
     const components: KernelManifoldComponentMetrics[] = []
     for (let c = 0; c < stats.length / 6; c++) {
       const genus = stats[c * 6 + 5]!
@@ -260,7 +292,7 @@ export function metricsManifoldInKernel(
 /** Boolean operation kinds for the manifold-ops kernel (abi_manifold_boolean). */
 export type ManifoldBooleanOp = 'union' | 'intersection' | 'difference' | 'xor'
 
-const MANIFOLD_BOOLEAN_OP_TAG: Record<ManifoldBooleanOp, number> = {union: 0, intersection: 1, difference: 2, xor: 3}
+const MANIFOLD_BOOLEAN_OP_TAG: Record<ManifoldBooleanOp, number> = { union: 0, intersection: 1, difference: 2, xor: 3 }
 
 export interface ManifoldBooleanOptions {
   /** Absolute mm epsilon for necessary pre/post repair; zero keeps exact welding. */
@@ -312,7 +344,7 @@ export function booleanManifoldInKernel(
   if (!Number.isInteger(maxWork) || maxWork < 1 || maxWork > 64_000_000) {
     throw new RangeError('maxWork must be an integer within 1..=64000000')
   }
-  const {exports: wasm, memory, takeResponse} = manifoldRuntime()
+  const { exports: wasm, memory, takeResponse } = manifoldRuntime()
   let avp = 0
   let aip = 0
   let bvp = 0
@@ -324,17 +356,36 @@ export function booleanManifoldInKernel(
     bvp = copyBuffer(wasm, new Uint8Array(bVertices.buffer, bVertices.byteOffset, bVertices.byteLength))
     bip = copyBuffer(wasm, new Uint8Array(bIndices.buffer, bIndices.byteOffset, bIndices.byteLength))
     handle = decodeNurbsResult<number>(
-      takeResponse(wasm.abi_manifold_boolean(
-        avp, aVertices.length, aip, aIndices.length, kernelVertexFormat(aVertices),
-        bvp, bVertices.length, bip, bIndices.length, kernelVertexFormat(bVertices),
-        MANIFOLD_BOOLEAN_OP_TAG[op], weldEpsilonMm, relativeTolerance, maxWork,
-      )),
+      takeResponse(
+        wasm.abi_manifold_boolean(
+          avp,
+          aVertices.length,
+          aip,
+          aIndices.length,
+          kernelVertexFormat(aVertices),
+          bvp,
+          bVertices.length,
+          bip,
+          bIndices.length,
+          kernelVertexFormat(bVertices),
+          MANIFOLD_BOOLEAN_OP_TAG[op],
+          weldEpsilonMm,
+          relativeTolerance,
+          maxWork,
+        ),
+      ),
     )
     const buffer = memory.buffer
-    const floats = new Float64Array(new Float64Array(buffer, wasm.abi_array_field(handle, 4), wasm.abi_array_field(handle, 5)))
+    const floats = new Float64Array(
+      new Float64Array(buffer, wasm.abi_array_field(handle, 4), wasm.abi_array_field(handle, 5)),
+    )
     return {
-      positions: new Float64Array(new Float64Array(buffer, wasm.abi_array_field(handle, 0), wasm.abi_array_field(handle, 1))),
-      indices: new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, 2), wasm.abi_array_field(handle, 3))),
+      positions: new Float64Array(
+        new Float64Array(buffer, wasm.abi_array_field(handle, 0), wasm.abi_array_field(handle, 1)),
+      ),
+      indices: new Uint32Array(
+        new Uint32Array(buffer, wasm.abi_array_field(handle, 2), wasm.abi_array_field(handle, 3)),
+      ),
       operandRepaired: [wasm.abi_array_field(handle, 7) !== 0, wasm.abi_array_field(handle, 8) !== 0],
       kernel: {
         toleranceMm: floats[0]!,
@@ -426,11 +477,11 @@ export function diagnoseManifoldInKernel(
   indices: Uint32Array,
   options: ManifoldDiagnosticsOptions = {},
 ): KernelManifoldDiagnostics {
-  const o = {...MANIFOLD_DIAGNOSTICS_DEFAULT_OPTIONS, ...options}
+  const o = { ...MANIFOLD_DIAGNOSTICS_DEFAULT_OPTIONS, ...options }
   if (!Number.isInteger(o.maxWork) || o.maxWork < 1 || o.maxWork > 64_000_000) {
     throw new RangeError('maxWork must be an integer within 1..=64000000')
   }
-  const {exports: wasm, memory, takeResponse} = manifoldRuntime()
+  const { exports: wasm, memory, takeResponse } = manifoldRuntime()
   let vp = 0
   let ip = 0
   let handle = 0
@@ -438,16 +489,29 @@ export function diagnoseManifoldInKernel(
     vp = copyBuffer(wasm, new Uint8Array(vertices.buffer, vertices.byteOffset, vertices.byteLength))
     ip = copyBuffer(wasm, new Uint8Array(indices.buffer, indices.byteOffset, indices.byteLength))
     handle = decodeNurbsResult<number>(
-      takeResponse(wasm.abi_manifold_diagnostics(
-        vp, vertices.length, ip, indices.length, kernelVertexFormat(vertices),
-        o.density, o.minThickness, o.clearanceThreshold, o.maxWork,
-      )),
+      takeResponse(
+        wasm.abi_manifold_diagnostics(
+          vp,
+          vertices.length,
+          ip,
+          indices.length,
+          kernelVertexFormat(vertices),
+          o.density,
+          o.minThickness,
+          o.clearanceThreshold,
+          o.maxWork,
+        ),
+      ),
     )
     const buffer = memory.buffer
     const u32 = (slot: number) =>
-      new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, slot), wasm.abi_array_field(handle, slot + 1)))
+      new Uint32Array(
+        new Uint32Array(buffer, wasm.abi_array_field(handle, slot), wasm.abi_array_field(handle, slot + 1)),
+      )
     const clearance = u32(4)
-    const floats = new Float64Array(new Float64Array(buffer, wasm.abi_array_field(handle, 6), wasm.abi_array_field(handle, 7)))
+    const floats = new Float64Array(
+      new Float64Array(buffer, wasm.abi_array_field(handle, 6), wasm.abi_array_field(handle, 7)),
+    )
     const flags = wasm.abi_array_field(handle, 9)
     const minTriangle = wasm.abi_array_field(handle, 13)
     const gapTriangle = wasm.abi_array_field(handle, 14)
@@ -475,12 +539,15 @@ export function diagnoseManifoldInKernel(
       minGapTriangle: gapTriangle === 0 ? null : gapTriangle - 1,
       componentCount: wasm.abi_array_field(handle, 12),
       clearancePairs,
-      mass: (flags & 2) === 0 ? null : {
-        volume: floats[3]!,
-        mass: floats[4]!,
-        centerOfMass: [floats[5]!, floats[6]!, floats[7]!],
-        inertia: Array.from(floats.subarray(8, 17)),
-      },
+      mass:
+        (flags & 2) === 0
+          ? null
+          : {
+              volume: floats[3]!,
+              mass: floats[4]!,
+              centerOfMass: [floats[5]!, floats[6]!, floats[7]!],
+              inertia: Array.from(floats.subarray(8, 17)),
+            },
     }
   } finally {
     if (handle) wasm.abi_array_free(handle)

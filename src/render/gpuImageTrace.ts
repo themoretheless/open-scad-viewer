@@ -35,7 +35,6 @@ export interface GpuImageContourResult {
 import IMAGE_CONTOUR_WGSL from '../../crates/compute-core/shaders/image_contour.wgsl?raw'
 export { IMAGE_CONTOUR_WGSL }
 
-
 const IS_LITTLE_ENDIAN = new Uint8Array(new Uint32Array([0x01020304]).buffer)[0] === 0x04
 const imageContourUniformBuffer = new ArrayBuffer(32)
 const imageContourUniformView = new DataView(imageContourUniformBuffer)
@@ -49,9 +48,7 @@ function quantKey(p: [number, number]): number {
 /**
  * Stitches directed 2D Marching Squares segments into closed or open polyline contours.
  */
-export function stitchSegmentsToContours(
-  segments: readonly ImageContourSegment2D[]
-): [number, number][][] {
+export function stitchSegmentsToContours(segments: readonly ImageContourSegment2D[]): [number, number][][] {
   const n = segments.length
   if (n === 0) return []
 
@@ -139,10 +136,10 @@ function packRgbaPixels(pixels: Uint8Array | Uint8ClampedArray | Uint32Array): U
   for (let i = 0; i < numPixels; i++) {
     const b = i * 4
     out[i] =
-      (pixels[b + 0]! & 0xFF) |
-      ((pixels[b + 1]! & 0xFF) << 8) |
-      ((pixels[b + 2]! & 0xFF) << 16) |
-      ((pixels[b + 3]! & 0xFF) << 24)
+      (pixels[b + 0]! & 0xff) |
+      ((pixels[b + 1]! & 0xff) << 8) |
+      ((pixels[b + 2]! & 0xff) << 16) |
+      ((pixels[b + 3]! & 0xff) << 24)
   }
   return out
 }
@@ -152,7 +149,7 @@ function packRgbaPixels(pixels: Uint8Array | Uint8ClampedArray | Uint32Array): U
  */
 export function referenceImageContourTrace(
   rgbaPixels: Uint8Array | Uint8ClampedArray | Uint32Array,
-  opts: GpuImageContourOptions
+  opts: GpuImageContourOptions,
 ): GpuImageContourResult {
   const gridW = Math.max(2, Math.floor(opts.widthPx))
   const gridH = Math.max(2, Math.floor(opts.heightPx))
@@ -170,11 +167,11 @@ export function referenceImageContourTrace(
     const cx = Math.min(ix, gridW - 1)
     const cy = Math.min(iy, gridH - 1)
     const rgba = packed[cy * gridW + cx] ?? 0
-    const a = ((rgba >>> 24) & 0xFF) * inv255
+    const a = ((rgba >>> 24) & 0xff) * inv255
     if (isAlpha) return a
-    const r = (rgba & 0xFF) * inv255
-    const g = ((rgba >>> 8) & 0xFF) * inv255
-    const b = ((rgba >>> 16) & 0xFF) * inv255
+    const r = (rgba & 0xff) * inv255
+    const g = ((rgba >>> 8) & 0xff) * inv255
+    const b = ((rgba >>> 16) & 0xff) * inv255
     const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b
     return (1 - luma) * a
   }
@@ -295,7 +292,7 @@ export function referenceImageContourTrace(
  */
 export async function referenceImageContourTraceAsync(
   rgbaPixels: Uint8Array | Uint8ClampedArray | Uint32Array,
-  opts: GpuImageContourOptions
+  opts: GpuImageContourOptions,
 ): Promise<GpuImageContourResult> {
   const gridW = Math.max(2, Math.floor(opts.widthPx))
   const gridH = Math.max(2, Math.floor(opts.heightPx))
@@ -313,11 +310,11 @@ export async function referenceImageContourTraceAsync(
     const cx = Math.min(ix, gridW - 1)
     const cy = Math.min(iy, gridH - 1)
     const rgba = packed[cy * gridW + cx] ?? 0
-    const a = ((rgba >>> 24) & 0xFF) * inv255
+    const a = ((rgba >>> 24) & 0xff) * inv255
     if (isAlpha) return a
-    const r = (rgba & 0xFF) * inv255
-    const g = ((rgba >>> 8) & 0xFF) * inv255
-    const b = ((rgba >>> 16) & 0xFF) * inv255
+    const r = (rgba & 0xff) * inv255
+    const g = ((rgba >>> 8) & 0xff) * inv255
+    const b = ((rgba >>> 16) & 0xff) * inv255
     const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b
     return (1 - luma) * a
   }
@@ -365,34 +362,68 @@ export async function referenceImageContourTraceAsync(
         const eLeft = toMm(cx, cy + interpFrac(v0, v3))
 
         switch (mask) {
-          case 1: emitSeg(eLeft, eTop); break
-          case 2: emitSeg(eTop, eRight); break
-          case 3: emitSeg(eLeft, eRight); break
-          case 4: emitSeg(eRight, eBottom); break
+          case 1:
+            emitSeg(eLeft, eTop)
+            break
+          case 2:
+            emitSeg(eTop, eRight)
+            break
+          case 3:
+            emitSeg(eLeft, eRight)
+            break
+          case 4:
+            emitSeg(eRight, eBottom)
+            break
           case 5: {
             const center = 0.25 * (v0 + v1 + v2 + v3)
-            if (center >= iso) { emitSeg(eLeft, eBottom); emitSeg(eRight, eTop) }
-            else { emitSeg(eLeft, eTop); emitSeg(eRight, eBottom) }
+            if (center >= iso) {
+              emitSeg(eLeft, eBottom)
+              emitSeg(eRight, eTop)
+            } else {
+              emitSeg(eLeft, eTop)
+              emitSeg(eRight, eBottom)
+            }
             break
           }
-          case 6: emitSeg(eTop, eBottom); break
-          case 7: emitSeg(eLeft, eBottom); break
-          case 8: emitSeg(eBottom, eLeft); break
-          case 9: emitSeg(eBottom, eTop); break
+          case 6:
+            emitSeg(eTop, eBottom)
+            break
+          case 7:
+            emitSeg(eLeft, eBottom)
+            break
+          case 8:
+            emitSeg(eBottom, eLeft)
+            break
+          case 9:
+            emitSeg(eBottom, eTop)
+            break
           case 10: {
             const center = 0.25 * (v0 + v1 + v2 + v3)
-            if (center >= iso) { emitSeg(eTop, eLeft); emitSeg(eBottom, eRight) }
-            else { emitSeg(eTop, eRight); emitSeg(eBottom, eLeft) }
+            if (center >= iso) {
+              emitSeg(eTop, eLeft)
+              emitSeg(eBottom, eRight)
+            } else {
+              emitSeg(eTop, eRight)
+              emitSeg(eBottom, eLeft)
+            }
             break
           }
-          case 11: emitSeg(eBottom, eRight); break
-          case 12: emitSeg(eRight, eLeft); break
-          case 13: emitSeg(eRight, eTop); break
-          case 14: emitSeg(eTop, eLeft); break
+          case 11:
+            emitSeg(eBottom, eRight)
+            break
+          case 12:
+            emitSeg(eRight, eLeft)
+            break
+          case 13:
+            emitSeg(eRight, eTop)
+            break
+          case 14:
+            emitSeg(eTop, eLeft)
+            break
         }
       }
     },
-    { ...opts, checkStride: Math.max(1, Math.floor(2048 / Math.max(1, gridW - 1))) }
+    { ...opts, checkStride: Math.max(1, Math.floor(2048 / Math.max(1, gridW - 1))) },
   )
 
   return {
@@ -409,7 +440,7 @@ export async function referenceImageContourTraceAsync(
  */
 export async function runGpuImageContourTrace(
   rgbaPixels: Uint8Array | Uint8ClampedArray | Uint32Array,
-  opts: GpuImageContourOptions
+  opts: GpuImageContourOptions,
 ): Promise<GpuImageContourResult> {
   const totalCells = Math.max(1, (Math.floor(opts.widthPx) - 1) * (Math.floor(opts.heightPx) - 1))
   if (typeof navigator === 'undefined' || !navigator.gpu) {

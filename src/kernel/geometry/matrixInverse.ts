@@ -10,10 +10,7 @@
 const AUG = new Float64Array(32)
 const ROW_BASE = new Int32Array(4)
 
-export function invertMatrixF64(
-  m: ArrayLike<number>,
-  out?: number[] | Float64Array,
-): number[] | Float64Array | null {
+export function invertMatrixF64(m: ArrayLike<number>, out?: number[] | Float64Array): number[] | Float64Array | null {
   for (let i = 0; i < 16; i++) if (!Number.isFinite(m[i])) return null
   AUG.fill(0)
   for (let r = 0; r < 4; r++) {

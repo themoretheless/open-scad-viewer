@@ -9,12 +9,7 @@ import { languageRequest } from '../languages/kernel'
  * report that OpenSCAD removes their child geometry during evaluation.
  */
 
-export type OpenScadStableTransformName =
-  | 'translate'
-  | 'scale'
-  | 'mirror'
-  | 'rotate'
-  | 'multmatrix'
+export type OpenScadStableTransformName = 'translate' | 'scale' | 'mirror' | 'rotate' | 'multmatrix'
 
 export type OpenScadStableTransformWarningCode =
   | 'OPENSCAD_TRANSFORM_PARAMETER_DEFAULTED'
@@ -40,17 +35,25 @@ export interface OpenScadStableTransformContext {
 const SILENT_CONTEXT: OpenScadStableTransformContext = Object.freeze({ warn() {} })
 
 export type OpenScadMatrix4 = readonly [
-  number, number, number, number,
-  number, number, number, number,
-  number, number, number, number,
-  number, number, number, number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
 ]
 
-export type OpenScadMatrix3 = readonly [
-  number, number, number,
-  number, number, number,
-  number, number, number,
-]
+export type OpenScadMatrix3 = readonly [number, number, number, number, number, number, number, number, number]
 
 export interface OpenScadStableTransformPlan {
   readonly kind: OpenScadStableTransformName
@@ -74,10 +77,7 @@ export interface OpenScadRotateInput {
   readonly v?: unknown
 }
 
-function warn(
-  context: OpenScadStableTransformContext,
-  warning: OpenScadStableTransformWarning,
-): void {
+function warn(context: OpenScadStableTransformContext, warning: OpenScadStableTransformWarning): void {
   context.warn(Object.freeze(warning))
 }
 
@@ -96,30 +96,50 @@ function freezeMatrix3(values: readonly number[]): OpenScadMatrix3 {
   return Object.freeze(values.map(canonical)) as unknown as OpenScadMatrix3
 }
 
-
-
 /** Extract OpenSCAD's complete XY/homogeneous transform from a 4x4 matrix. */
-type NativeMatrixAnalysis = Pick<OpenScadStableTransformPlan,'matrix2d'|'dropsChildren'|'matrix3dSingular'|'matrix2dSingular'|'affine3d'|'affine2d'>
+type NativeMatrixAnalysis = Pick<
+  OpenScadStableTransformPlan,
+  'matrix2d' | 'dropsChildren' | 'matrix3dSingular' | 'matrix2dSingular' | 'affine3d' | 'affine2d'
+>
 function analyzeMatrix(matrix: OpenScadMatrix4): NativeMatrixAnalysis {
-  const response = languageRequest(19,{matrix:matrix.map(value=>Number.isFinite(value)?value:String(value))}) as {
-    ok:boolean;value:Omit<NativeMatrixAnalysis,'matrix2d'> & {matrix2d:(number|string)[]};error?:{message:string}
+  const response = languageRequest(19, {
+    matrix: matrix.map(value => (Number.isFinite(value) ? value : String(value))),
+  }) as {
+    ok: boolean
+    value: Omit<NativeMatrixAnalysis, 'matrix2d'> & { matrix2d: (number | string)[] }
+    error?: { message: string }
   }
   if (!response.ok) throw new Error(response.error?.message ?? 'Native transform analysis failed')
-  return {...response.value,matrix2d:freezeMatrix3(response.value.matrix2d.map(value=>typeof value==='number'?value:Number(value)))}
+  return {
+    ...response.value,
+    matrix2d: freezeMatrix3(response.value.matrix2d.map(value => (typeof value === 'number' ? value : Number(value)))),
+  }
 }
 export function openScadTransform2dSubmatrix(matrix: OpenScadMatrix4): OpenScadMatrix3 {
   return analyzeMatrix(matrix).matrix2d
 }
 
-interface NativeMatrixPlan {matrix:OpenScadMatrix4;analysis:NativeMatrixAnalysis}
-interface NativeMatrixWire {matrix:(number|string)[];analysis:Omit<NativeMatrixAnalysis,'matrix2d'> & {matrix2d:(number|string)[]}}
-function decodeMatrixPlan(value:NativeMatrixWire):NativeMatrixPlan {
-  const number=(value:number|string)=>typeof value==='number'?value:Number(value)
-  return {matrix:freezeMatrix4(value.matrix.map(number)),analysis:{...value.analysis,matrix2d:freezeMatrix3(value.analysis.matrix2d.map(number))}}
+interface NativeMatrixPlan {
+  matrix: OpenScadMatrix4
+  analysis: NativeMatrixAnalysis
+}
+interface NativeMatrixWire {
+  matrix: (number | string)[]
+  analysis: Omit<NativeMatrixAnalysis, 'matrix2d'> & { matrix2d: (number | string)[] }
+}
+function decodeMatrixPlan(value: NativeMatrixWire): NativeMatrixPlan {
+  const number = (value: number | string) => (typeof value === 'number' ? value : Number(value))
+  return {
+    matrix: freezeMatrix4(value.matrix.map(number)),
+    analysis: { ...value.analysis, matrix2d: freezeMatrix3(value.analysis.matrix2d.map(number)) },
+  }
 }
 export function resolveOpenScadViewerAxisAngle(axis: readonly number[], degrees: number): OpenScadMatrix4 | null {
-  const encode = (value: number) => Number.isFinite(value) ? value : String(value)
-  const response = languageRequest(22, { viewer: true, parameters: [degrees, axis[0] ?? 0, axis[1] ?? 0, axis[2] ?? 0].map(encode) }) as { ok: boolean; value: NativeMatrixWire | null; error?: { message: string } }
+  const encode = (value: number) => (Number.isFinite(value) ? value : String(value))
+  const response = languageRequest(22, {
+    viewer: true,
+    parameters: [degrees, axis[0] ?? 0, axis[1] ?? 0, axis[2] ?? 0].map(encode),
+  }) as { ok: boolean; value: NativeMatrixWire | null; error?: { message: string } }
   if (!response.ok) throw new Error(response.error?.message ?? 'Native viewer rotation failed')
   return response.value === null ? null : decodeMatrixPlan(response.value).matrix
 }
@@ -130,12 +150,13 @@ function finish(
   parameterValid: boolean,
   context: OpenScadStableTransformContext,
 ): OpenScadStableTransformPlan {
-  const {matrix,analysis} = input
-  if (analysis.dropsChildren) warn(context, {
-    code: 'OPENSCAD_TRANSFORM_NONFINITE_EMPTY',
-    message: `${kind} produced a non-finite matrix, so its child geometry is removed`,
-    transform: kind,
-  })
+  const { matrix, analysis } = input
+  if (analysis.dropsChildren)
+    warn(context, {
+      code: 'OPENSCAD_TRANSFORM_NONFINITE_EMPTY',
+      message: `${kind} produced a non-finite matrix, so its child geometry is removed`,
+      transform: kind,
+    })
   return Object.freeze({
     kind,
     matrix,
@@ -146,35 +167,46 @@ function finish(
   })
 }
 
-function vectorTransform(kind:'translate'|'scale'|'mirror',value:unknown):{plan:NativeMatrixPlan;valid:boolean;rangeWarning:boolean} {
-  const encode=(value:number)=>Number.isFinite(value)?value:String(value)
-  const vector=Array.isArray(value)&&value.length<=3?Array.from(value,item=>typeof item==='number'?encode(item):null):null
-  const scalar=typeof value==='number'?encode(value):null
-  const response=languageRequest(26,{kind,vector,scalar}) as {ok:boolean;value:{plan:NativeMatrixWire;valid:boolean;rangeWarning:boolean};error?:{message:string}}
-  if(!response.ok)throw new Error(response.error?.message??'Native vector transform failed')
-  return {...response.value,plan:decodeMatrixPlan(response.value.plan)}
+function vectorTransform(
+  kind: 'translate' | 'scale' | 'mirror',
+  value: unknown,
+): { plan: NativeMatrixPlan; valid: boolean; rangeWarning: boolean } {
+  const encode = (value: number) => (Number.isFinite(value) ? value : String(value))
+  const vector =
+    Array.isArray(value) && value.length <= 3
+      ? Array.from(value, item => (typeof item === 'number' ? encode(item) : null))
+      : null
+  const scalar = typeof value === 'number' ? encode(value) : null
+  const response = languageRequest(26, { kind, vector, scalar }) as {
+    ok: boolean
+    value: { plan: NativeMatrixWire; valid: boolean; rangeWarning: boolean }
+    error?: { message: string }
+  }
+  if (!response.ok) throw new Error(response.error?.message ?? 'Native vector transform failed')
+  return { ...response.value, plan: decodeMatrixPlan(response.value.plan) }
 }
 
 export function resolveOpenScadTranslate(
   value: unknown,
   context: OpenScadStableTransformContext = SILENT_CONTEXT,
 ): OpenScadStableTransformPlan {
-  const {plan,valid} = vectorTransform('translate',value)
-  if (!valid) warn(context, {
-    code: 'OPENSCAD_TRANSFORM_PARAMETER_DEFAULTED',
-    message: 'translate uses identity because v is not a finite exact vec2 or vec3',
-    transform: 'translate',
-    field: 'v',
-    value,
-  })
-  return finish('translate',plan,valid,context)
+  const { plan, valid } = vectorTransform('translate', value)
+  if (!valid)
+    warn(context, {
+      code: 'OPENSCAD_TRANSFORM_PARAMETER_DEFAULTED',
+      message: 'translate uses identity because v is not a finite exact vec2 or vec3',
+      transform: 'translate',
+      field: 'v',
+      value,
+    })
+  return finish('translate', plan, valid, context)
 }
 
 export function resolveOpenScadScale(
   value: unknown,
   context: OpenScadStableTransformContext = SILENT_CONTEXT,
 ): OpenScadStableTransformPlan {
-  const {plan,valid,rangeWarning} = vectorTransform('scale',value)
+  const { plan, valid, rangeWarning } = vectorTransform('scale', value)
   if (!valid) {
     warn(context, {
       code: 'OPENSCAD_TRANSFORM_PARAMETER_DEFAULTED',
@@ -193,35 +225,39 @@ export function resolveOpenScadScale(
       value,
     })
   }
-  return finish('scale',plan,valid,context)
+  return finish('scale', plan, valid, context)
 }
-
 
 export function resolveOpenScadMirror(
   value: unknown,
   context: OpenScadStableTransformContext = SILENT_CONTEXT,
 ): OpenScadStableTransformPlan {
-  const {plan,valid} = vectorTransform('mirror',value)
-  if (!valid) warn(context, {
-    code: 'OPENSCAD_TRANSFORM_PARAMETER_DEFAULTED',
-    message: 'mirror uses its x-normal default because v is not an exact vec2 or vec3',
-    transform: 'mirror',
-    field: 'v',
-    value,
-  })
-  return finish('mirror',plan,valid,context)
+  const { plan, valid } = vectorTransform('mirror', value)
+  if (!valid)
+    warn(context, {
+      code: 'OPENSCAD_TRANSFORM_PARAMETER_DEFAULTED',
+      message: 'mirror uses its x-normal default because v is not an exact vec2 or vec3',
+      transform: 'mirror',
+      field: 'v',
+      value,
+    })
+  return finish('mirror', plan, valid, context)
 }
-
-
 
 function vectorEulerAngles(value: readonly unknown[]): {
   readonly matrix: NativeMatrixPlan
   readonly valid: boolean
 } {
-  const components = Array.from(value.slice(0,3),item=>typeof item==='number'?Number.isFinite(item)?item:String(item):null)
-  const response = languageRequest(24,{components,length:value.length}) as {ok:boolean;value:{plan:NativeMatrixWire;valid:boolean};error?:{message:string}}
+  const components = Array.from(value.slice(0, 3), item =>
+    typeof item === 'number' ? (Number.isFinite(item) ? item : String(item)) : null,
+  )
+  const response = languageRequest(24, { components, length: value.length }) as {
+    ok: boolean
+    value: { plan: NativeMatrixWire; valid: boolean }
+    error?: { message: string }
+  }
   if (!response.ok) throw new Error(response.error?.message ?? 'Native Euler argument conversion failed')
-  return Object.freeze({matrix:decodeMatrixPlan(response.value.plan),valid:response.value.valid})
+  return Object.freeze({ matrix: decodeMatrixPlan(response.value.plan), valid: response.value.valid })
 }
 
 export function resolveOpenScadRotate(
@@ -230,46 +266,71 @@ export function resolveOpenScadRotate(
 ): OpenScadStableTransformPlan {
   if (Array.isArray(input.a)) {
     const angles = vectorEulerAngles(input.a)
-    if (angles.valid && input.v !== undefined) warn(context, {
-      code: 'OPENSCAD_ROTATE_AXIS_IGNORED',
-      message: 'rotate ignores v when a is a vector',
-      transform: 'rotate',
-      field: 'v',
-      value: input.v,
-    })
-    if (!angles.valid) warn(context, {
-      code: 'OPENSCAD_ROTATE_PARTIAL_VECTOR',
-      message: 'rotate retained its component-wise fallback matrix after a vector conversion problem',
-      transform: 'rotate',
-      field: 'a',
-      value: input.a,
-    })
+    if (angles.valid && input.v !== undefined)
+      warn(context, {
+        code: 'OPENSCAD_ROTATE_AXIS_IGNORED',
+        message: 'rotate ignores v when a is a vector',
+        transform: 'rotate',
+        field: 'v',
+        value: input.v,
+      })
+    if (!angles.valid)
+      warn(context, {
+        code: 'OPENSCAD_ROTATE_PARTIAL_VECTOR',
+        message: 'rotate retained its component-wise fallback matrix after a vector conversion problem',
+        transform: 'rotate',
+        field: 'a',
+        value: input.a,
+      })
     return finish('rotate', angles.matrix, angles.valid, context)
   }
 
-  const encode=(value:number)=>Number.isFinite(value)?value:String(value)
-  const axis=Array.isArray(input.v)&&input.v.length<=3?Array.from(input.v,value=>typeof value==='number'?encode(value):null):null
-  const response=languageRequest(27,{angle:typeof input.a==='number'?encode(input.a):null,axis,axisProvided:input.v!==undefined}) as {ok:boolean;value:{plan:NativeMatrixWire;valid:boolean;angleValid:boolean};error?:{message:string}}
-  if(!response.ok)throw new Error(response.error?.message??'Native scalar rotation failed')
-  const {valid,angleValid}=response.value
-  if (!valid) warn(context, {
-    code: 'OPENSCAD_TRANSFORM_PARAMETER_DEFAULTED',
-    message: 'rotate replaced an invalid scalar angle or axis with its neutral/default value',
-    transform: 'rotate',
-    field: !angleValid ? 'a' : 'v',
-    value: !angleValid ? input.a : input.v,
-  })
-  return finish('rotate',decodeMatrixPlan(response.value.plan),valid,context)
+  const encode = (value: number) => (Number.isFinite(value) ? value : String(value))
+  const axis =
+    Array.isArray(input.v) && input.v.length <= 3
+      ? Array.from(input.v, value => (typeof value === 'number' ? encode(value) : null))
+      : null
+  const response = languageRequest(27, {
+    angle: typeof input.a === 'number' ? encode(input.a) : null,
+    axis,
+    axisProvided: input.v !== undefined,
+  }) as {
+    ok: boolean
+    value: { plan: NativeMatrixWire; valid: boolean; angleValid: boolean }
+    error?: { message: string }
+  }
+  if (!response.ok) throw new Error(response.error?.message ?? 'Native scalar rotation failed')
+  const { valid, angleValid } = response.value
+  if (!valid)
+    warn(context, {
+      code: 'OPENSCAD_TRANSFORM_PARAMETER_DEFAULTED',
+      message: 'rotate replaced an invalid scalar angle or axis with its neutral/default value',
+      transform: 'rotate',
+      field: !angleValid ? 'a' : 'v',
+      value: !angleValid ? input.a : input.v,
+    })
+  return finish('rotate', decodeMatrixPlan(response.value.plan), valid, context)
 }
 
 export function resolveOpenScadMultmatrix(
   value: unknown,
   context: OpenScadStableTransformContext = SILENT_CONTEXT,
 ): OpenScadStableTransformPlan {
-  const rows = Array.isArray(value) ? Array.from(value.slice(0,4),row=>Array.isArray(row)
-    ? Array.from(row.slice(0,4),cell=>typeof cell==='number'?Number.isFinite(cell)?cell:String(cell):null) : []) : null
-  const response = languageRequest(25,{rows}) as {ok:boolean;value:{plan:NativeMatrixWire;valid:boolean};error?:{message:string}}
+  const rows = Array.isArray(value)
+    ? Array.from(value.slice(0, 4), row =>
+        Array.isArray(row)
+          ? Array.from(row.slice(0, 4), cell =>
+              typeof cell === 'number' ? (Number.isFinite(cell) ? cell : String(cell)) : null,
+            )
+          : [],
+      )
+    : null
+  const response = languageRequest(25, { rows }) as {
+    ok: boolean
+    value: { plan: NativeMatrixWire; valid: boolean }
+    error?: { message: string }
+  }
   if (!response.ok) throw new Error(response.error?.message ?? 'Native authored matrix failed')
   const matrix = decodeMatrixPlan(response.value.plan)
-  return finish('multmatrix',matrix,response.value.valid,context)
+  return finish('multmatrix', matrix, response.value.valid, context)
 }

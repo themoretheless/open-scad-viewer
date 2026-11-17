@@ -110,9 +110,8 @@ function attachBoundedOutputDrain(stream: Worker['stdout']): () => void {
   stream.unpipe()
   let countedBytes = 0
   const onData = (chunk: unknown) => {
-    const byteLength = typeof chunk === 'string'
-      ? Buffer.byteLength(chunk)
-      : ArrayBuffer.isView(chunk) ? chunk.byteLength : 0
+    const byteLength =
+      typeof chunk === 'string' ? Buffer.byteLength(chunk) : ArrayBuffer.isView(chunk) ? chunk.byteLength : 0
     countedBytes = Math.min(MAX_COUNTED_CHILD_OUTPUT_BYTES, countedBytes + byteLength)
   }
   stream.on('data', onData)
@@ -148,11 +147,7 @@ export class McpManifoldPlanQualificationSupervisor {
       'startupTimeoutMs',
       MAX_STARTUP_TIMEOUT_MS,
     )
-    this.defaultDeadlineMs = boundedDuration(
-      options.deadlineMs ?? DEFAULT_DEADLINE_MS,
-      'deadlineMs',
-      MAX_DEADLINE_MS,
-    )
+    this.defaultDeadlineMs = boundedDuration(options.deadlineMs ?? DEFAULT_DEADLINE_MS, 'deadlineMs', MAX_DEADLINE_MS)
     this.cancellationGraceMs = boundedDuration(
       options.cancellationGraceMs ?? DEFAULT_CANCELLATION_GRACE_MS,
       'cancellationGraceMs',
@@ -200,11 +195,7 @@ export class McpManifoldPlanQualificationSupervisor {
       'startupTimeoutMs',
       MAX_STARTUP_TIMEOUT_MS,
     )
-    const deadlineMs = boundedDuration(
-      options.deadlineMs ?? this.defaultDeadlineMs,
-      'deadlineMs',
-      MAX_DEADLINE_MS,
-    )
+    const deadlineMs = boundedDuration(options.deadlineMs ?? this.defaultDeadlineMs, 'deadlineMs', MAX_DEADLINE_MS)
     const workerEpoch = this.nextEpoch++
     const jobId = this.nextJobId++
     const request: McpManifoldPlanQualificationRequest = Object.freeze({
@@ -307,23 +298,29 @@ export class McpManifoldPlanQualificationSupervisor {
         }
         if (stopReason !== null) {
           if (stopReason === 'cancelled') {
-            reject(new McpManifoldPlanSupervisorError(
-              'E_MCP_MANIFOLD_PLAN_CANCELLED',
-              'MCP Manifold qualification evaluation was cancelled',
-              workerEpoch,
-            ))
+            reject(
+              new McpManifoldPlanSupervisorError(
+                'E_MCP_MANIFOLD_PLAN_CANCELLED',
+                'MCP Manifold qualification evaluation was cancelled',
+                workerEpoch,
+              ),
+            )
           } else if (stopReason === 'startup') {
-            reject(new McpManifoldPlanSupervisorError(
-              'E_MCP_MANIFOLD_PLAN_STARTUP',
-              'MCP Manifold qualification child did not complete its started handshake',
-              workerEpoch,
-            ))
+            reject(
+              new McpManifoldPlanSupervisorError(
+                'E_MCP_MANIFOLD_PLAN_STARTUP',
+                'MCP Manifold qualification child did not complete its started handshake',
+                workerEpoch,
+              ),
+            )
           } else {
-            reject(new McpManifoldPlanSupervisorError(
-              'E_MCP_MANIFOLD_PLAN_DEADLINE',
-              'MCP Manifold qualification evaluation exceeded its deadline',
-              workerEpoch,
-            ))
+            reject(
+              new McpManifoldPlanSupervisorError(
+                'E_MCP_MANIFOLD_PLAN_DEADLINE',
+                'MCP Manifold qualification evaluation exceeded its deadline',
+                workerEpoch,
+              ),
+            )
           }
           return
         }
@@ -339,11 +336,13 @@ export class McpManifoldPlanQualificationSupervisor {
           resolve(terminal.result)
           return
         }
-        reject(new McpManifoldPlanSupervisorError(
-          'E_MCP_MANIFOLD_PLAN_PROTOCOL',
-          'MCP Manifold qualification child settled without a terminal',
-          workerEpoch,
-        ))
+        reject(
+          new McpManifoldPlanSupervisorError(
+            'E_MCP_MANIFOLD_PLAN_PROTOCOL',
+            'MCP Manifold qualification child settled without a terminal',
+            workerEpoch,
+          ),
+        )
       }
 
       const finishStop = () => {
@@ -381,11 +380,14 @@ export class McpManifoldPlanQualificationSupervisor {
         }
         if (!started) {
           if (!isMcpManifoldPlanQualificationStarted(value, request)) {
-            void settle(null, new McpManifoldPlanSupervisorError(
-              'E_MCP_MANIFOLD_PLAN_PROTOCOL',
-              'MCP Manifold qualification child did not provide the exact started handshake',
-              workerEpoch,
-            ))
+            void settle(
+              null,
+              new McpManifoldPlanSupervisorError(
+                'E_MCP_MANIFOLD_PLAN_PROTOCOL',
+                'MCP Manifold qualification child did not provide the exact started handshake',
+                workerEpoch,
+              ),
+            )
             return
           }
           started = true
@@ -397,31 +399,40 @@ export class McpManifoldPlanQualificationSupervisor {
           return
         }
         if (isMcpManifoldPlanQualificationStarted(value, request)) {
-          void settle(null, new McpManifoldPlanSupervisorError(
-            'E_MCP_MANIFOLD_PLAN_PROTOCOL',
-            'MCP Manifold qualification child repeated its started handshake',
-            workerEpoch,
-          ))
+          void settle(
+            null,
+            new McpManifoldPlanSupervisorError(
+              'E_MCP_MANIFOLD_PLAN_PROTOCOL',
+              'MCP Manifold qualification child repeated its started handshake',
+              workerEpoch,
+            ),
+          )
           return
         }
         if (!isMcpManifoldPlanQualificationNodeTerminal(value, request)) {
-          void settle(null, new McpManifoldPlanSupervisorError(
-            'E_MCP_MANIFOLD_PLAN_PROTOCOL',
-            'MCP Manifold qualification child returned an invalid or uncorrelated terminal',
-            workerEpoch,
-          ))
+          void settle(
+            null,
+            new McpManifoldPlanSupervisorError(
+              'E_MCP_MANIFOLD_PLAN_PROTOCOL',
+              'MCP Manifold qualification child returned an invalid or uncorrelated terminal',
+              workerEpoch,
+            ),
+          )
           return
         }
         void settle(value, null)
       }
       const onMessageError = (error: Error) => {
         if (settling) return
-        void settle(null, new McpManifoldPlanSupervisorError(
-          'E_MCP_MANIFOLD_PLAN_PROTOCOL',
-          'MCP Manifold qualification child message could not be deserialized',
-          workerEpoch,
-          { cause: error },
-        ))
+        void settle(
+          null,
+          new McpManifoldPlanSupervisorError(
+            'E_MCP_MANIFOLD_PLAN_PROTOCOL',
+            'MCP Manifold qualification child message could not be deserialized',
+            workerEpoch,
+            { cause: error },
+          ),
+        )
       }
       const onError = (error: Error) => {
         if (settling) return
@@ -429,12 +440,15 @@ export class McpManifoldPlanQualificationSupervisor {
           finishStop()
           return
         }
-        void settle(null, new McpManifoldPlanSupervisorError(
-          'E_MCP_MANIFOLD_PLAN_CHILD_CRASH',
-          'MCP Manifold qualification child crashed before a valid terminal',
-          workerEpoch,
-          { cause: error },
-        ))
+        void settle(
+          null,
+          new McpManifoldPlanSupervisorError(
+            'E_MCP_MANIFOLD_PLAN_CHILD_CRASH',
+            'MCP Manifold qualification child crashed before a valid terminal',
+            workerEpoch,
+            { cause: error },
+          ),
+        )
       }
       const onExit = (code: number) => {
         if (settling) return
@@ -442,11 +456,14 @@ export class McpManifoldPlanQualificationSupervisor {
           finishStop()
           return
         }
-        void settle(null, new McpManifoldPlanSupervisorError(
-          'E_MCP_MANIFOLD_PLAN_CHILD_CRASH',
-          `MCP Manifold qualification child exited with code ${code} before a valid terminal`,
-          workerEpoch,
-        ))
+        void settle(
+          null,
+          new McpManifoldPlanSupervisorError(
+            'E_MCP_MANIFOLD_PLAN_CHILD_CRASH',
+            `MCP Manifold qualification child exited with code ${code} before a valid terminal`,
+            workerEpoch,
+          ),
+        )
       }
       const detachWorkerListeners = () => {
         worker.off('message', onMessage)
@@ -469,12 +486,15 @@ export class McpManifoldPlanQualificationSupervisor {
       try {
         worker.postMessage(request)
       } catch (error) {
-        void settle(null, new McpManifoldPlanSupervisorError(
-          'E_MCP_MANIFOLD_PLAN_PROTOCOL',
-          'MCP Manifold qualification request could not be posted to its child',
-          workerEpoch,
-          { cause: error },
-        ))
+        void settle(
+          null,
+          new McpManifoldPlanSupervisorError(
+            'E_MCP_MANIFOLD_PLAN_PROTOCOL',
+            'MCP Manifold qualification request could not be posted to its child',
+            workerEpoch,
+            { cause: error },
+          ),
+        )
         return
       }
       if (settling) return

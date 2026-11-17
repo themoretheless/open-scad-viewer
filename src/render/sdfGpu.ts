@@ -46,15 +46,13 @@ export interface SdfGpuBatchPayload {
 const SDF_LINEAR_INDEX_SIGNATURE = 'fn main(@builtin(global_invocation_id) id: vec3<u32>)'
 
 export function sdfWgslVariants(wgsl: string): WgslVariant[] {
-  const linear = wgsl.includes(SDF_LINEAR_INDEX_SIGNATURE) && !/\bid\.(y|z)\b/.test(wgsl)
-    ? `requires linear_indexing;\n${wgsl
-      .replace(SDF_LINEAR_INDEX_SIGNATURE, 'fn main(@builtin(global_invocation_index) index: u32)')
-      .replace(/\bid\.x\b/g, 'index')}`
-    : null
-  return [
-    ...(linear ? [{ label: 'sdf-linear-indexing', wgsl: linear }] : []),
-    { label: 'sdf-baseline', wgsl },
-  ]
+  const linear =
+    wgsl.includes(SDF_LINEAR_INDEX_SIGNATURE) && !/\bid\.(y|z)\b/.test(wgsl)
+      ? `requires linear_indexing;\n${wgsl
+          .replace(SDF_LINEAR_INDEX_SIGNATURE, 'fn main(@builtin(global_invocation_index) index: u32)')
+          .replace(/\bid\.x\b/g, 'index')}`
+      : null
+  return [...(linear ? [{ label: 'sdf-linear-indexing', wgsl: linear }] : []), { label: 'sdf-baseline', wgsl }]
 }
 
 /** 64-byte params uniform shared by every SDF grid dispatch. */
@@ -95,10 +93,7 @@ export async function runSdfSweep(payload: SdfGpuPayload): Promise<Float32Array>
   const { dispatch } = buildSdfDispatch(payload)
   const [values] = await runGpuCompute({
     wgsl: payload.wgsl,
-    wgslVariants: [
-      ...(payload.wgslVariants ?? []),
-      ...sdfWgslVariants(payload.wgsl),
-    ],
+    wgslVariants: [...(payload.wgslVariants ?? []), ...sdfWgslVariants(payload.wgsl)],
     entryPoint: 'main',
     dispatches: [dispatch],
   })
@@ -122,10 +117,7 @@ export async function runSdfSweepBatch(payload: SdfGpuBatchPayload): Promise<(Fl
   if (!dispatches.length) return results
   const parts = await runGpuCompute({
     wgsl: payload.wgsl,
-    wgslVariants: [
-      ...(payload.wgslVariants ?? []),
-      ...sdfWgslVariants(payload.wgsl),
-    ],
+    wgslVariants: [...(payload.wgslVariants ?? []), ...sdfWgslVariants(payload.wgsl)],
     entryPoint: 'main',
     dispatches,
   })

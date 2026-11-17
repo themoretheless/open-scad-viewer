@@ -1,10 +1,16 @@
-import {describe, expect, it, vi} from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 const calls = vi.hoisted(() => ({ rust: vi.fn(), gpu: vi.fn() }))
 vi.mock('../src/kernel/geometry/kernel', () => ({ callGeometryRust: calls.rust }))
 vi.mock('../src/render/webgpuCompute', () => ({ runGpuCompute: calls.gpu }))
 
-import { prepareSdfGpuBatch, primeSdfGpuBatch, tessellateSdfGpuAware, type SdfField, type SdfGrid } from '../src/kernel/geometry/sdf'
+import {
+  prepareSdfGpuBatch,
+  primeSdfGpuBatch,
+  tessellateSdfGpuAware,
+  type SdfField,
+  type SdfGrid,
+} from '../src/kernel/geometry/sdf'
 import { runSdfSweepBatch, type SdfGpuBatchPayload } from '../src/render/sdfGpu'
 
 const field: SdfField = { kind: 'sphere', center: [0, 0, 0], radius: 10 }
@@ -29,7 +35,20 @@ describe('batch SDF GPU dispatch', () => {
     })
     const batch = prepareSdfGpuBatch([
       { field, grid },
-      { field: { kind: 'extrude', profile: { outer: [[0, 0], [1, 0], [1, 1]] }, half_height: 1 }, grid },
+      {
+        field: {
+          kind: 'extrude',
+          profile: {
+            outer: [
+              [0, 0],
+              [1, 0],
+              [1, 1],
+            ],
+          },
+          half_height: 1,
+        },
+        grid,
+      },
       { field, grid },
     ])
     expect(calls.rust).toHaveBeenCalledWith('sdf_prepare_batch', { jobs: expect.any(Array) })
@@ -57,16 +76,18 @@ describe('batch SDF GPU dispatch', () => {
     }
     const values = await runSdfSweepBatch(payload)
     expect(calls.gpu).toHaveBeenCalledTimes(1)
-    expect(values.map(part => part ? Array.from(part) : null)).toEqual([[1, 2], null, [3, 4]])
+    expect(values.map(part => (part ? Array.from(part) : null))).toEqual([[1, 2], null, [3, 4]])
   })
 
   it('encodes the params uniform per job (n_nodes is the kinds length)', async () => {
     let seen: DataView | undefined
-    calls.gpu.mockImplementation(async (job: { dispatches: { buffers: { binding: number, data: ArrayBuffer, uniform?: boolean }[] }[] }) => {
-      const uniform = job.dispatches[0]!.buffers.find(buffer => buffer.uniform)!
-      seen = new DataView(uniform.data)
-      return [new Float32Array(0)]
-    })
+    calls.gpu.mockImplementation(
+      async (job: { dispatches: { buffers: { binding: number; data: ArrayBuffer; uniform?: boolean }[] }[] }) => {
+        const uniform = job.dispatches[0]!.buffers.find(buffer => buffer.uniform)!
+        seen = new DataView(uniform.data)
+        return [new Float32Array(0)]
+      },
+    )
     await runSdfSweepBatch({ jobs: [jobPayload(7)], wgsl: '@compute' })
     expect(seen?.getUint32(0, true)).toBe(8)
     expect(seen?.getUint32(12, true)).toBe(2)

@@ -43,9 +43,7 @@ export interface UseCodeEditorViewportReturn {
   syncHighlightScroll: () => void
 }
 
-export function useCodeEditorViewport(
-  options: UseCodeEditorViewportOptions,
-): UseCodeEditorViewportReturn {
+export function useCodeEditorViewport(options: UseCodeEditorViewportOptions): UseCodeEditorViewportReturn {
   const { code, selectedEditorName, editor, highlightRef } = options
 
   const blocks = computed(() => editorBlocks(code.value))

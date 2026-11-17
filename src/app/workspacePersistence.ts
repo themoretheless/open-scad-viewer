@@ -22,7 +22,12 @@ import {
   type WorkspaceRepositoryLoadResult,
   type WorkspaceSnapshotRepository,
 } from './workspaceIndexedDb'
-import { distinctRecoveries, fallbackWriterId, newestRecovery, recoveryCanReplay } from './workspacePersistence/recoveryCanReplay'
+import {
+  distinctRecoveries,
+  fallbackWriterId,
+  newestRecovery,
+  recoveryCanReplay,
+} from './workspacePersistence/recoveryCanReplay'
 
 export interface RemovableWorkspaceStorage extends WorkspaceStorage {
   removeItem(key: string): void
@@ -86,11 +91,16 @@ export class BrowserWorkspacePersistence {
     private readonly legacyStorage: RemovableWorkspaceStorage,
   ) {}
 
-  get backend(): WorkspacePersistenceBackend { return this.backendValue }
-  get hasConflict(): boolean { return this.unresolvedConflict }
+  get backend(): WorkspacePersistenceBackend {
+    return this.backendValue
+  }
+  get hasConflict(): boolean {
+    return this.unresolvedConflict
+  }
   get failureReason(): string {
-    if(this.unresolvedConflict) return 'The saved draft differs from this tab. Save in browser to keep the current editor draft.'
-    if(this.indexedDbState === 'invalid') return 'IndexedDB contains an unsupported or invalid workspace row.'
+    if (this.unresolvedConflict)
+      return 'The saved draft differs from this tab. Save in browser to keep the current editor draft.'
+    if (this.indexedDbState === 'invalid') return 'IndexedDB contains an unsupported or invalid workspace row.'
     return this.indexedDbError
   }
 
@@ -103,11 +113,12 @@ export class BrowserWorkspacePersistence {
     const recovery = recoveryRecord?.snapshot ?? null
     this.recoveryBase = recoveryRecord?.base ?? { status: 'unknown' }
     const rawLegacy = loadLegacyWorkspaceDocument(this.legacyStorage)
-    const importedCandidate = options.importedSource === null || options.importedSource === undefined
-      ? null
-      : createWorkspaceDocument(options.importedSource, {
-          fileName: options.importedFileName ?? 'shared-model.scad',
-        })
+    const importedCandidate =
+      options.importedSource === null || options.importedSource === undefined
+        ? null
+        : createWorkspaceDocument(options.importedSource, {
+            fileName: options.importedFileName ?? 'shared-model.scad',
+          })
     const imported = importedCandidate ? parseWorkspaceDocumentValue(importedCandidate) : null
 
     let loadResult: WorkspaceRepositoryLoadResult | null = null
@@ -125,32 +136,37 @@ export class BrowserWorkspacePersistence {
     this.durableHead = indexed
     // Raw `scad-code` has no identity or ordering metadata. It can seed an
     // empty/unavailable workspace, but can never overwrite a known IDB head.
-    const nonMatchingRecoveries = recoveryEntries.filter(entry =>
-      !workspaceDocumentsEqual(indexed, entry.record.snapshot)
-      // A journal equal to its durable base contains no pending edits. An old
-      // tab's pagehide checkpoint must not displace a newer IndexedDB head.
-      && !(indexed && entry.record.base.status === 'found'
-        && workspaceDocumentsEqual(entry.record.snapshot, entry.record.base.snapshot)))
-    const replayableRecoveries = this.indexedDbState === 'ready'
-      ? nonMatchingRecoveries.filter(entry => recoveryCanReplay(indexed, entry.record))
-      : []
+    const nonMatchingRecoveries = recoveryEntries.filter(
+      entry =>
+        !workspaceDocumentsEqual(indexed, entry.record.snapshot) &&
+        // A journal equal to its durable base contains no pending edits. An old
+        // tab's pagehide checkpoint must not displace a newer IndexedDB head.
+        !(
+          indexed &&
+          entry.record.base.status === 'found' &&
+          workspaceDocumentsEqual(entry.record.snapshot, entry.record.base.snapshot)
+        ),
+    )
+    const replayableRecoveries =
+      this.indexedDbState === 'ready'
+        ? nonMatchingRecoveries.filter(entry => recoveryCanReplay(indexed, entry.record))
+        : []
     const localCandidate = newestRecovery(nonMatchingRecoveries)?.record.snapshot ?? recovery
     const existingLocalDocument = indexed ?? localCandidate ?? rawLegacy
-    const importConflict = imported !== null
-      && existingLocalDocument !== null
-      && !workspaceDocumentsEqual(imported, existingLocalDocument)
-    const recoveryConflict = importConflict || (imported === null && (
-      nonMatchingRecoveries.length > 1
-      || (this.indexedDbState === 'ready'
-        && nonMatchingRecoveries.length === 1
-        && replayableRecoveries.length !== 1)
-    ))
+    const importConflict =
+      imported !== null && existingLocalDocument !== null && !workspaceDocumentsEqual(imported, existingLocalDocument)
+    const recoveryConflict =
+      importConflict ||
+      (imported === null &&
+        (nonMatchingRecoveries.length > 1 ||
+          (this.indexedDbState === 'ready' && nonMatchingRecoveries.length === 1 && replayableRecoveries.length !== 1)))
     const migration = localCandidate ?? (indexed ? null : rawLegacy)
-    const document = imported
-      ?? (recoveryConflict ? localCandidate : replayableRecoveries[0]?.record.snapshot)
-      ?? indexed
-      ?? migration
-      ?? createWorkspaceDocument(options.fallbackSource)
+    const document =
+      imported ??
+      (recoveryConflict ? localCandidate : replayableRecoveries[0]?.record.snapshot) ??
+      indexed ??
+      migration ??
+      createWorkspaceDocument(options.fallbackSource)
     const initialDocumentAuthoritative = imported !== null || migration !== null || indexed !== null
     this.initialDocument = document
     this.initialDocumentAuthoritative = initialDocumentAuthoritative
@@ -159,9 +175,7 @@ export class BrowserWorkspacePersistence {
     this.conflictingRecovery = recoveryConflict ? document : null
 
     if (this.indexedDbState === 'ready') {
-      const journalSaved = recoveryConflict
-        ? true
-        : this.stageRecovery(document)
+      const journalSaved = recoveryConflict ? true : this.stageRecovery(document)
       const needsCommit = imported !== null || !workspaceDocumentsEqual(indexed, document)
       try {
         let committed = !needsCommit
@@ -192,9 +206,10 @@ export class BrowserWorkspacePersistence {
         return {
           document,
           backend: 'localstorage',
-          durable: error instanceof WorkspaceIndexedDbConflictError
-            ? false
-            : journalSaved || (indexed !== null && workspaceDocumentsEqual(indexed, document)),
+          durable:
+            error instanceof WorkspaceIndexedDbConflictError
+              ? false
+              : journalSaved || (indexed !== null && workspaceDocumentsEqual(indexed, document)),
           imported: imported !== null,
         }
       }
@@ -204,9 +219,10 @@ export class BrowserWorkspacePersistence {
     // Do not turn a generated example into an authoritative, newer recovery
     // after an uncertain/invalid IDB read. That exact sequence could overwrite
     // a real IDB document on the next healthy launch.
-    const durable = !this.unresolvedConflict && initialDocumentAuthoritative
-      ? (workspaceDocumentsEqual(recovery, document) || this.stageRecovery(document))
-      : false
+    const durable =
+      !this.unresolvedConflict && initialDocumentAuthoritative
+        ? workspaceDocumentsEqual(recovery, document) || this.stageRecovery(document)
+        : false
     return { document, backend: 'localstorage', durable, imported: imported !== null }
   }
 
@@ -216,17 +232,11 @@ export class BrowserWorkspacePersistence {
     // erase another tab's draft. Conflicts remain frozen until explicit choice.
     if (this.unresolvedConflict) return false
     const base = this.durableHeadKnown
-      ? (this.durableHead
-          ? { status: 'found', snapshot: this.durableHead } as const
-          : { status: 'empty' } as const)
+      ? this.durableHead
+        ? ({ status: 'found', snapshot: this.durableHead } as const)
+        : ({ status: 'empty' } as const)
       : this.recoveryBase
-    const saved = saveWorkspaceRecovery(
-      this.legacyStorage,
-      document,
-      base,
-      this.writerId,
-      this.recoveryKey,
-    )
+    const saved = saveWorkspaceRecovery(this.legacyStorage, document, base, this.writerId, this.recoveryKey)
     if (saved) this.recoveryBase = base
     return saved
   }
@@ -261,15 +271,21 @@ export class BrowserWorkspacePersistence {
     if (!snapshot) return Promise.resolve({ saved: false })
     return this.enqueue(async () => {
       const result = await this.resolveConflictDirect(true, snapshot)
-      if (result.saved && this.backendValue === 'indexeddb'
-        && (!this.latestSaveRequest || !workspaceDocumentAdvances(snapshot, this.latestSaveRequest))) {
+      if (
+        result.saved &&
+        this.backendValue === 'indexeddb' &&
+        (!this.latestSaveRequest || !workspaceDocumentAdvances(snapshot, this.latestSaveRequest))
+      ) {
         this.latestSaveRequest = snapshot
       }
       return result
     })
   }
 
-  resolveConflict(preferCurrentDraft: boolean, currentDocument: WorkspaceDocumentSnapshot): Promise<WorkspaceRetryResult> {
+  resolveConflict(
+    preferCurrentDraft: boolean,
+    currentDocument: WorkspaceDocumentSnapshot,
+  ): Promise<WorkspaceRetryResult> {
     if (!this.initialized) return Promise.reject(new Error('Workspace persistence is not initialized'))
     if (!this.unresolvedConflict) return Promise.resolve({ saved: false })
     const snapshot = parseWorkspaceDocumentValue(currentDocument)
@@ -284,7 +300,10 @@ export class BrowserWorkspacePersistence {
 
   private enqueue<T>(operation: () => Promise<T>): Promise<T> {
     const result = this.writeTail.then(operation, operation)
-    this.writeTail = result.then(() => undefined, () => undefined)
+    this.writeTail = result.then(
+      () => undefined,
+      () => undefined,
+    )
     return result
   }
 
@@ -315,8 +334,8 @@ export class BrowserWorkspacePersistence {
 
   private async retryDirect(document: WorkspaceDocumentSnapshot): Promise<WorkspaceRetryResult> {
     if (this.unresolvedConflict) return { saved: false }
-    const userDocumentIsAuthoritative = this.initialDocumentAuthoritative
-      || !workspaceDocumentsEqual(document, this.initialDocument)
+    const userDocumentIsAuthoritative =
+      this.initialDocumentAuthoritative || !workspaceDocumentsEqual(document, this.initialDocument)
     const recoverySaved = userDocumentIsAuthoritative ? this.stageRecovery(document) : false
 
     let loadResult: WorkspaceRepositoryLoadResult
@@ -356,8 +375,8 @@ export class BrowserWorkspacePersistence {
     }
 
     if (indexed && !this.importedAuthoritative) {
-      const basedOnCurrentHead = this.recoveryBase.status === 'found'
-        && workspaceDocumentsEqual(indexed, this.recoveryBase.snapshot)
+      const basedOnCurrentHead =
+        this.recoveryBase.status === 'found' && workspaceDocumentsEqual(indexed, this.recoveryBase.snapshot)
       if (!basedOnCurrentHead) {
         this.unresolvedConflict = true
         this.conflictingRecovery = document
@@ -449,7 +468,11 @@ export class BrowserWorkspacePersistence {
   }
 
   private retireRawLegacy(): void {
-    try { this.legacyStorage.removeItem(WORKSPACE_LEGACY_SOURCE_KEY) } catch { /* Recovery snapshot is already durable. */ }
+    try {
+      this.legacyStorage.removeItem(WORKSPACE_LEGACY_SOURCE_KEY)
+    } catch {
+      /* Recovery snapshot is already durable. */
+    }
     try {
       const tabs = this.legacyStorage.getItem(WORKSPACE_LEGACY_TABS_KEY)
       if (!tabs) return
@@ -460,12 +483,18 @@ export class BrowserWorkspacePersistence {
       // addressable. Preserve the original keys even after backing them up;
       // the authoritative IndexedDB head makes this import one-shot without
       // pretending the remaining tabs were migrated.
-    } catch { /* Keep donor keys unless their complete backup is confirmed. */ }
+    } catch {
+      /* Keep donor keys unless their complete backup is confirmed. */
+    }
   }
 
   private loadRecoveryEntries(): StoredRecovery[] {
     let keys: string[] = []
-    try { keys = this.legacyStorage.keys() } catch { /* Storage enumeration is optional recovery input. */ }
+    try {
+      keys = this.legacyStorage.keys()
+    } catch {
+      /* Storage enumeration is optional recovery input. */
+    }
     const recoveryKeys = new Set([
       WORKSPACE_STORAGE_KEY,
       ...keys.filter(key => key.startsWith(WORKSPACE_RECOVERY_KEY_PREFIX)),
@@ -482,8 +511,11 @@ export class BrowserWorkspacePersistence {
     for (const entry of this.loadRecoveryEntries()) {
       if (entry.key === this.recoveryKey) continue
       if (!resolved.some(document => workspaceDocumentsEqual(entry.record.snapshot, document))) continue
-      try { this.legacyStorage.removeItem(entry.key) } catch { /* The active IDB head is already durable. */ }
+      try {
+        this.legacyStorage.removeItem(entry.key)
+      } catch {
+        /* The active IDB head is already durable. */
+      }
     }
   }
-
 }

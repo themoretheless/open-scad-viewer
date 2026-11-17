@@ -1,5 +1,27 @@
-import { OPENSCAD_2021_GRID_FINE, OPENSCAD_TEXT_MAX_ABS_SIZE, OPENSCAD_TEXT_MAX_CODE_POINTS, OPENSCAD_TEXT_MAX_CURVE_SEGMENTS, OPENSCAD_TEXT_MAX_FACES_PER_COLLECTION, OPENSCAD_TEXT_MAX_FONTS, OPENSCAD_TEXT_MAX_NAME_RECORDS, OPENSCAD_TEXT_MAX_NAME_TABLE_BYTES, OpenScadTextError, loadHarfBuzz, preparedRuntimes } from '../openScadText'
-import type { HarfBuzzApi, HarfBuzzFace, OpenScadTextErrorCode, OpenScadTextErrorDetails, OpenScadTextFont, ParsedFontQuery, PreparedOpenScadTextAssets, RejectedOpenScadTextFont, SfntFace } from '../openScadText'
+import {
+  OPENSCAD_2021_GRID_FINE,
+  OPENSCAD_TEXT_MAX_ABS_SIZE,
+  OPENSCAD_TEXT_MAX_CODE_POINTS,
+  OPENSCAD_TEXT_MAX_CURVE_SEGMENTS,
+  OPENSCAD_TEXT_MAX_FACES_PER_COLLECTION,
+  OPENSCAD_TEXT_MAX_FONTS,
+  OPENSCAD_TEXT_MAX_NAME_RECORDS,
+  OPENSCAD_TEXT_MAX_NAME_TABLE_BYTES,
+  OpenScadTextError,
+  loadHarfBuzz,
+  preparedRuntimes,
+} from '../openScadText'
+import type {
+  HarfBuzzApi,
+  HarfBuzzFace,
+  OpenScadTextErrorCode,
+  OpenScadTextErrorDetails,
+  OpenScadTextFont,
+  ParsedFontQuery,
+  PreparedOpenScadTextAssets,
+  RejectedOpenScadTextFont,
+  SfntFace,
+} from '../openScadText'
 import { OpenScadProject, resolveOpenScadProjectPath } from '../openScadProject'
 import type { OpenScadProjectBlobFile } from '../openScadProject'
 import { u32 } from '../../core/bytes'
@@ -109,11 +131,11 @@ export function validateFont(bytes: Uint8Array, path: string): readonly SfntFace
   }
   const count = u32(bytes, 8)
   if (count === 0 || count > OPENSCAD_TEXT_MAX_FACES_PER_COLLECTION) {
-    textError(
-      'E_TEXT_FONT_LIMIT',
-      `Font collection ${path} exceeds ${OPENSCAD_TEXT_MAX_FACES_PER_COLLECTION} faces.`,
-      { fontPath: path, limit: OPENSCAD_TEXT_MAX_FACES_PER_COLLECTION, actual: count },
-    )
+    textError('E_TEXT_FONT_LIMIT', `Font collection ${path} exceeds ${OPENSCAD_TEXT_MAX_FACES_PER_COLLECTION} faces.`, {
+      fontPath: path,
+      limit: OPENSCAD_TEXT_MAX_FACES_PER_COLLECTION,
+      actual: count,
+    })
   }
   const directoryEnd = 12 + count * 4
   if (!Number.isSafeInteger(directoryEnd) || directoryEnd > bytes.byteLength) {
@@ -146,7 +168,10 @@ export function safeFontName(
   const matches = entries.filter(entry => entry.nameId === nameId)
   const selected = matches.find(entry => /^en(?:-|$)/iu.test(entry.language)) ?? matches[0]
   if (!selected) return undefined
-  const value = face.getName(nameId, selected.language).replace(/\u0000/gu, '').trim()
+  const value = face
+    .getName(nameId, selected.language)
+    .replace(/\u0000/gu, '')
+    .trim()
   if (value.length > 1_024) throw new Error(`name ID ${nameId} exceeds 1024 characters`)
   return value || undefined
 }
@@ -164,16 +189,12 @@ export function describeFace(
     if (face.upem !== validated.unitsPerEm) throw new Error('HarfBuzz reported inconsistent units-per-em')
     const entries = face.listNames()
     if (entries.length > OPENSCAD_TEXT_MAX_NAME_RECORDS) {
-      textError(
-        'E_TEXT_FONT_LIMIT',
-        `Font ${file.path} exceeds ${OPENSCAD_TEXT_MAX_NAME_RECORDS} name records.`,
-        {
-          fontPath: file.path,
-          faceIndex,
-          limit: OPENSCAD_TEXT_MAX_NAME_RECORDS,
-          actual: entries.length,
-        },
-      )
+      textError('E_TEXT_FONT_LIMIT', `Font ${file.path} exceeds ${OPENSCAD_TEXT_MAX_NAME_RECORDS} name records.`, {
+        fontPath: file.path,
+        faceIndex,
+        limit: OPENSCAD_TEXT_MAX_NAME_RECORDS,
+        actual: entries.length,
+      })
     }
     const filename = file.path.slice(file.path.lastIndexOf('/') + 1).replace(/\.[^.]+$/u, '')
     const family = safeFontName(face, entries, 16) ?? safeFontName(face, entries, 1) ?? filename
@@ -195,21 +216,19 @@ export function describeFace(
 }
 
 /** Validate and index every bounded VFS font before the synchronous evaluator. */
-export async function prepareOpenScadTextAssets(
-  project: OpenScadProject,
-): Promise<PreparedOpenScadTextAssets> {
+export async function prepareOpenScadTextAssets(project: OpenScadProject): Promise<PreparedOpenScadTextAssets> {
   if (!(project instanceof OpenScadProject)) {
     return textError('E_TEXT_PROJECT_REQUIRED', 'text() requires an immutable OpenScadProject VFS.')
   }
-  const fontPaths = project.list()
+  const fontPaths = project
+    .list()
     .filter(file => file.kind === 'blob' && fontExtension(file.path))
     .map(file => file.path)
   if (fontPaths.length > OPENSCAD_TEXT_MAX_FONTS) {
-    return textError(
-      'E_TEXT_FONT_LIMIT',
-      `OpenSCAD project exceeds ${OPENSCAD_TEXT_MAX_FONTS} font files.`,
-      { limit: OPENSCAD_TEXT_MAX_FONTS, actual: fontPaths.length },
-    )
+    return textError('E_TEXT_FONT_LIMIT', `OpenSCAD project exceeds ${OPENSCAD_TEXT_MAX_FONTS} font files.`, {
+      limit: OPENSCAD_TEXT_MAX_FONTS,
+      actual: fontPaths.length,
+    })
   }
 
   const fonts: OpenScadTextFont[] = []
@@ -224,19 +243,22 @@ export async function prepareOpenScadTextAssets(
         fonts.push(describeFace(hb!, file, faceIndex, faces[faceIndex]!))
       }
     } catch (error) {
-      const typed = error instanceof OpenScadTextError
-        ? error
-        : new OpenScadTextError(
-          'E_TEXT_FONT_INVALID',
-          `Font ${path} could not be read safely: ${error instanceof Error ? error.message : String(error)}`,
-          { fontPath: path },
-          { cause: error },
-        )
-      rejected.push(Object.freeze({
-        path,
-        code: typed.code === 'E_TEXT_FONT_UNSUPPORTED' ? typed.code : 'E_TEXT_FONT_INVALID',
-        message: typed.message,
-      }))
+      const typed =
+        error instanceof OpenScadTextError
+          ? error
+          : new OpenScadTextError(
+              'E_TEXT_FONT_INVALID',
+              `Font ${path} could not be read safely: ${error instanceof Error ? error.message : String(error)}`,
+              { fontPath: path },
+              { cause: error },
+            )
+      rejected.push(
+        Object.freeze({
+          path,
+          code: typed.code === 'E_TEXT_FONT_UNSUPPORTED' ? typed.code : 'E_TEXT_FONT_INVALID',
+          message: typed.message,
+        }),
+      )
     }
   }
   fonts.sort((left, right) => left.path.localeCompare(right.path) || left.faceIndex - right.faceIndex)
@@ -301,22 +323,35 @@ export function resolveFont(
   } else {
     const family = canonicalName(query.family)
     const style = query.style === undefined ? undefined : canonicalName(query.style)
-    const scored = prepared.fonts.flatMap(font => {
-      const filename = font.path.slice(font.path.lastIndexOf('/') + 1).replace(/\.[^.]+$/u, '')
-      const names = [font.family, font.fullName, font.postscriptName, filename].map(canonicalName)
-      const familyScore = names[0] === family ? 4
-        : names[1] === family || names[2] === family ? 3
-          : names[3] === family ? 2
-            : names.some(name => name.startsWith(`${family} `) || name.startsWith(`${family}-`)) ? 1 : 0
-      if (familyScore === 0) return []
-      const styleMatches = style === undefined || canonicalName(font.style) === style
-        || canonicalName(font.fullName).endsWith(` ${style}`)
-      if (!styleMatches) return []
-      const regularBonus = style === undefined && /^(?:regular|normal|book)$/iu.test(font.style) ? 1 : 0
-      return [{ font, score: familyScore * 2 + regularBonus }]
-    }).sort((left, right) => right.score - left.score
-      || left.font.path.localeCompare(right.font.path)
-      || left.font.faceIndex - right.font.faceIndex)
+    const scored = prepared.fonts
+      .flatMap(font => {
+        const filename = font.path.slice(font.path.lastIndexOf('/') + 1).replace(/\.[^.]+$/u, '')
+        const names = [font.family, font.fullName, font.postscriptName, filename].map(canonicalName)
+        const familyScore =
+          names[0] === family
+            ? 4
+            : names[1] === family || names[2] === family
+              ? 3
+              : names[3] === family
+                ? 2
+                : names.some(name => name.startsWith(`${family} `) || name.startsWith(`${family}-`))
+                  ? 1
+                  : 0
+        if (familyScore === 0) return []
+        const styleMatches =
+          style === undefined ||
+          canonicalName(font.style) === style ||
+          canonicalName(font.fullName).endsWith(` ${style}`)
+        if (!styleMatches) return []
+        const regularBonus = style === undefined && /^(?:regular|normal|book)$/iu.test(font.style) ? 1 : 0
+        return [{ font, score: familyScore * 2 + regularBonus }]
+      })
+      .sort(
+        (left, right) =>
+          right.score - left.score ||
+          left.font.path.localeCompare(right.font.path) ||
+          left.font.faceIndex - right.font.faceIndex,
+      )
     if (scored[0]) return scored[0].font
   }
 
@@ -361,12 +396,7 @@ export function boundedParameter(value: number, name: string, limit: number): nu
 }
 
 /** OpenSCAD 2021.01 text curve subdivision derived from $fn/$fa/$fs. */
-export function calculateOpenScadTextSegments(
-  size: number,
-  fn = 0,
-  fs = 2,
-  fa = 12,
-): number {
+export function calculateOpenScadTextSegments(size: number, fn = 0, fs = 2, fa = 12): number {
   boundedParameter(size, 'size', OPENSCAD_TEXT_MAX_ABS_SIZE)
   finiteParameter(fn, '$fn')
   finiteParameter(fs, '$fs')
@@ -378,7 +408,7 @@ export function calculateOpenScadTextSegments(
     if (fs <= 0 || fa <= 0) {
       return textError('E_TEXT_PARAMETER_INVALID', 'text() $fa and $fs must be positive when $fn is zero.')
     }
-    fragments = Math.ceil(Math.max(Math.min(360 / fa, size * 2 * Math.PI / fs), 5))
+    fragments = Math.ceil(Math.max(Math.min(360 / fa, (size * 2 * Math.PI) / fs), 5))
   }
   const segments = Math.max(Math.floor(fragments / 8) + 1, 2)
   if (segments > OPENSCAD_TEXT_MAX_CURVE_SEGMENTS) {

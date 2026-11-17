@@ -91,33 +91,49 @@ export class PipelineFactory {
   build(dev: GPUDevice, fmt: GPUTextureFormat) {
     this.fmt = fmt
     this.immediateObjectStyle = supportsImmediateAddressSpace()
-    this.sceneBGL = dev.createBindGroupLayout({ entries: [
-      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
-    ] })
-    this.objBGL = dev.createBindGroupLayout({ entries: [
-      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
-    ] })
-    this.instanceBGL = dev.createBindGroupLayout({ entries: [
-      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'read-only-storage' } },
-    ] })
-    this.matcapBGL = dev.createBindGroupLayout({ entries: [
-      { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: {} },
-      { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
-      // Shadow map shares the group: bindings 2/3 (see mesh_matcap.wgsl).
-      { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
-      { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'comparison' } },
-    ] })
-    this.envBGL = dev.createBindGroupLayout({ entries: [
-      { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: {} },
-      { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
-      // Shadow map shares the group: bindings 2/3 (see mesh_pbr.wgsl).
-      { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
-      { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'comparison' } },
-    ] })
-    this.shadowBGL = dev.createBindGroupLayout({ entries: [
-      { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
-      { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'comparison' } },
-    ] })
+    this.sceneBGL = dev.createBindGroupLayout({
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+      ],
+    })
+    this.objBGL = dev.createBindGroupLayout({
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+      ],
+    })
+    this.instanceBGL = dev.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: { type: 'read-only-storage' },
+        },
+      ],
+    })
+    this.matcapBGL = dev.createBindGroupLayout({
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: {} },
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+        // Shadow map shares the group: bindings 2/3 (see mesh_matcap.wgsl).
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
+        { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'comparison' } },
+      ],
+    })
+    this.envBGL = dev.createBindGroupLayout({
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: {} },
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+        // Shadow map shares the group: bindings 2/3 (see mesh_pbr.wgsl).
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
+        { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'comparison' } },
+      ],
+    })
+    this.shadowBGL = dev.createBindGroupLayout({
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'comparison' } },
+      ],
+    })
     // Every layout group must be bound before each draw. Only the grid samples
     // the shadow map among scene-kind shaders; line and overlay pipelines are
     // drawn after object groups occupy group(1), so they get a scene-only layout.
@@ -125,12 +141,16 @@ export class PipelineFactory {
     this.sceneOnlyLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL] })
     this.objectLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL, this.shadowBGL] })
     this.shadowObjectLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL] })
-    this.matcapObjectLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL, this.matcapBGL] })
+    this.matcapObjectLayout = dev.createPipelineLayout({
+      bindGroupLayouts: [this.sceneBGL, this.objBGL, this.matcapBGL],
+    })
     this.envObjectLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL, this.envBGL] })
     this.immediateObjectLayout = this.immediateObjectStyle
       ? dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL, this.shadowBGL], immediateSize: 16 })
       : null
-    this.instanceLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.instanceBGL, this.shadowBGL] })
+    this.instanceLayout = dev.createPipelineLayout({
+      bindGroupLayouts: [this.sceneBGL, this.instanceBGL, this.shadowBGL],
+    })
     this.instanceStepLayout = this.sceneLayout
 
     const meshVBL: GPUVertexBufferLayout = {
@@ -161,10 +181,12 @@ export class PipelineFactory {
         { arrayStride: MORPH_VERTEX_STRIDE, attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x3' }] },
       ],
       line: [lineVBL],
-      grid: [{
-        arrayStride: 8,
-        attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
-      }],
+      grid: [
+        {
+          arrayStride: 8,
+          attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
+        },
+      ],
     }
     this.shaderModuleCache.clear()
     this.pipelineCache.clear()
@@ -176,11 +198,14 @@ export class PipelineFactory {
     let module = this.shaderModuleCache.get(key)
     if (!module) {
       const spec = getShader(id)
-      const source = variant === 'immediate' ? immediateObjectShader(spec.source)
-        : variant === 'instanceStep' ? instanceStepObjectShader(spec.source)
-        : variant === 'instanced'
-          ? instancedObjectShader(spec.source, spec.vertexLayout === 'edge' ? 'EdgeV' : 'V')
-          : spec.source
+      const source =
+        variant === 'immediate'
+          ? immediateObjectShader(spec.source)
+          : variant === 'instanceStep'
+            ? instanceStepObjectShader(spec.source)
+            : variant === 'instanced'
+              ? instancedObjectShader(spec.source, spec.vertexLayout === 'edge' ? 'EdgeV' : 'V')
+              : spec.source
       module = dev.createShaderModule({ code: source })
       this.shaderModuleCache.set(key, module)
     }
@@ -214,32 +239,61 @@ export class PipelineFactory {
     const cached = this.pipelineCache.get(key)
     if (cached) return cached
     const module = this.shaderModule(dev, id, variant)
-    const layout = spec.kind === 'object'
-      ? depthOnly ? this.shadowObjectLayout
-        : spec.usesMatcapBinding && variant === 'uniform' ? this.matcapObjectLayout
-        : spec.usesEnvBinding && variant === 'uniform' ? this.envObjectLayout
-        : variant === 'instanced' ? this.instanceLayout
-        : variant === 'instanceStep' ? this.instanceStepLayout
-        : variant === 'immediate' ? this.immediateObjectLayout!
-        : this.objectLayout
-      : spec.usesShadowBinding ? this.sceneLayout : this.sceneOnlyLayout
-    const pipeline = dev.createRenderPipeline(depthOnly ? {
-      // Depth-only shadow-map pass: no color targets, no fragment stage;
-      // renders mesh depth from the key light into a depth32float texture.
-      layout,
-      vertex: { module, entryPoint: 'vs', buffers: this.vertexLayouts[spec.vertexLayout] },
-      primitive: { topology, cullMode: spec.cullMode },
-      depthStencil: { format: 'depth32float', depthWriteEnabled: true, depthCompare: depth.compare, ...SHADOW_CASTER_DEPTH_BIAS },
-    } : {
-      layout,
-      vertex: { module, entryPoint: 'vs', buffers: variant === 'instanceStep' ? this.instanceStepVertexLayouts : this.vertexLayouts[spec.vertexLayout] },
-      fragment: { module, entryPoint: 'fs', targets: [{
-        format: this.fmt,
-        ...(blend === 'alpha' ? { blend: ALPHA_BLEND } : {}),
-      }] },
-      primitive: { topology, cullMode: spec.cullMode },
-      depthStencil: { format: 'depth24plus', depthWriteEnabled: depth.writeEnabled, depthCompare: depth.compare },
-    })
+    const layout =
+      spec.kind === 'object'
+        ? depthOnly
+          ? this.shadowObjectLayout
+          : spec.usesMatcapBinding && variant === 'uniform'
+            ? this.matcapObjectLayout
+            : spec.usesEnvBinding && variant === 'uniform'
+              ? this.envObjectLayout
+              : variant === 'instanced'
+                ? this.instanceLayout
+                : variant === 'instanceStep'
+                  ? this.instanceStepLayout
+                  : variant === 'immediate'
+                    ? this.immediateObjectLayout!
+                    : this.objectLayout
+        : spec.usesShadowBinding
+          ? this.sceneLayout
+          : this.sceneOnlyLayout
+    const pipeline = dev.createRenderPipeline(
+      depthOnly
+        ? {
+            // Depth-only shadow-map pass: no color targets, no fragment stage;
+            // renders mesh depth from the key light into a depth32float texture.
+            layout,
+            vertex: { module, entryPoint: 'vs', buffers: this.vertexLayouts[spec.vertexLayout] },
+            primitive: { topology, cullMode: spec.cullMode },
+            depthStencil: {
+              format: 'depth32float',
+              depthWriteEnabled: true,
+              depthCompare: depth.compare,
+              ...SHADOW_CASTER_DEPTH_BIAS,
+            },
+          }
+        : {
+            layout,
+            vertex: {
+              module,
+              entryPoint: 'vs',
+              buffers:
+                variant === 'instanceStep' ? this.instanceStepVertexLayouts : this.vertexLayouts[spec.vertexLayout],
+            },
+            fragment: {
+              module,
+              entryPoint: 'fs',
+              targets: [
+                {
+                  format: this.fmt,
+                  ...(blend === 'alpha' ? { blend: ALPHA_BLEND } : {}),
+                },
+              ],
+            },
+            primitive: { topology, cullMode: spec.cullMode },
+            depthStencil: { format: 'depth24plus', depthWriteEnabled: depth.writeEnabled, depthCompare: depth.compare },
+          },
+    )
     this.pipelineCache.set(key, pipeline)
     return pipeline
   }
@@ -258,7 +312,7 @@ export class PipelineFactory {
     if (spec.usesEnvBinding) return groups.envBG ?? undefined
     // mesh/meshToon sample the shadow map at group(2); for other object
     // shaders the inert shadow group simply satisfies the pipeline layout.
-    return spec.kind === 'object' ? groups.shadowBG ?? undefined : undefined
+    return spec.kind === 'object' ? (groups.shadowBG ?? undefined) : undefined
   }
 
   /**

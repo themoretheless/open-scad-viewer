@@ -1,4 +1,8 @@
-import type { OpenScadBuiltinFunctionContract, OpenScadBuiltinModuleContract, OpenScadSmokeCase } from '../openScad2021Contract'
+import type {
+  OpenScadBuiltinFunctionContract,
+  OpenScadBuiltinModuleContract,
+  OpenScadSmokeCase,
+} from '../openScad2021Contract'
 
 export function valueSmoke(call: string, source?: string, fixtureIds: readonly string[] = []): OpenScadSmokeCase {
   return Object.freeze({

@@ -1,10 +1,12 @@
 import type { GeometryPhaseTimings, GeometryQuality } from '../core/build'
-import {
-  type GeometryExecutionDescriptor,
-} from '../core/geometryExecution'
+import { type GeometryExecutionDescriptor } from '../core/geometryExecution'
 import type { MeshData } from '../core/mesh'
 import type { GeometryScene } from '../core/scene'
-export { isGeometryEvaluationResultPayload, isGeometryWorkerRequest, isGeometryWorkerEvent } from './geometryWorkerProtocol/isGeometryEvaluationResultPayload'
+export {
+  isGeometryEvaluationResultPayload,
+  isGeometryWorkerRequest,
+  isGeometryWorkerEvent,
+} from './geometryWorkerProtocol/isGeometryEvaluationResultPayload'
 export { materializeGeometryWorkerEvent } from './geometryWorkerProtocol/geometrySceneWire'
 
 /**
@@ -53,9 +55,9 @@ export interface GeometryCancelRequest extends Omit<GeometryJobEnvelope, 'qualit
 }
 
 export interface GeometrySweepPreviewAcknowledgement extends GeometryJobEnvelope {
- type:'sweep-preview-ack'
- nodeId:string
- sections:number
+  type: 'sweep-preview-ack'
+  nodeId: string
+  sections: number
 }
 export type GeometryWorkerRequest = GeometryBuildRequest | GeometryCancelRequest | GeometrySweepPreviewAcknowledgement
 
@@ -88,25 +90,25 @@ export interface GeometryBuildProgress extends GeometryJobEnvelope {
 
 /** Display-only per-node sweep geometry, never an authoritative publication. */
 export interface GeometrySweepPreview extends GeometryJobEnvelope {
- status:'sweep-preview'
- phase:'compiling'
- nodeId:string
- sections:number
- accepted:boolean
- continuousErrorUpper?:number
- /** Native whole-union proof status; previews may conservatively refuse. */
- continuousBound?:boolean
- /** Maximum for the certified subset of profiles, not the full boundary. */
- knownProfileErrorUpper?:number
- profileRegularityCertified?:boolean
- wallRegularityCertified?:boolean|null
- certifiedErrorUpper?:number|null
- endpointContourErrorUpper?:[number,number]|null
- frameTransportCertified?:boolean
- phaseResolved?:boolean
- sampledControlDeviation:number
- budget:number
- meshes:MeshData[]
+  status: 'sweep-preview'
+  phase: 'compiling'
+  nodeId: string
+  sections: number
+  accepted: boolean
+  continuousErrorUpper?: number
+  /** Native whole-union proof status; previews may conservatively refuse. */
+  continuousBound?: boolean
+  /** Maximum for the certified subset of profiles, not the full boundary. */
+  knownProfileErrorUpper?: number
+  profileRegularityCertified?: boolean
+  wallRegularityCertified?: boolean | null
+  certifiedErrorUpper?: number | null
+  endpointContourErrorUpper?: [number, number] | null
+  frameTransportCertified?: boolean
+  phaseResolved?: boolean
+  sampledControlDeviation: number
+  budget: number
+  meshes: MeshData[]
 }
 
 export interface GeometryBuildSuccess extends GeometryJobEnvelope {
@@ -166,22 +168,13 @@ export interface GeometryBuildStale extends GeometryJobEnvelope {
 }
 
 export type GeometryBuildTerminal =
-  | GeometryBuildSuccess
-  | GeometryBuildFailure
-  | GeometryBuildCancelled
-  | GeometryBuildStale
+  GeometryBuildSuccess | GeometryBuildFailure | GeometryBuildCancelled | GeometryBuildStale
 
 export type GeometryWorkerEvent =
-  | GeometryBuildAccepted
-  | GeometryBuildStarted
-  | GeometryBuildProgress
-  | GeometrySweepPreview
-  | GeometryBuildTerminal
+  GeometryBuildAccepted | GeometryBuildStarted | GeometryBuildProgress | GeometrySweepPreview | GeometryBuildTerminal
 
 /** Events as posted by the Worker; only the success payload differs from the host view. */
-export type GeometryWorkerWireEvent =
-  | Exclude<GeometryWorkerEvent, GeometryBuildSuccess>
-  | GeometryBuildSuccessWire
+export type GeometryWorkerWireEvent = Exclude<GeometryWorkerEvent, GeometryBuildSuccess> | GeometryBuildSuccessWire
 
 export const QUALITIES = new Set<GeometryQuality>(['preview', 'full'])
 export const PHASES = new Set<GeometryBuildPhase>(['queued', 'initializing', 'compiling', 'serializing', 'complete'])

@@ -30,10 +30,7 @@ describe('Hardware Multithreading & Shared Memory Worker Pool', () => {
     const f2 = new Float32Array(8)
 
     const payload = {
-      meshes: [
-        { vertices: f1, indices: u1 },
-        { vertices: f2 },
-      ],
+      meshes: [{ vertices: f1, indices: u1 }, { vertices: f2 }],
     }
 
     const transferables = collectTransferableBuffers(payload)
@@ -44,13 +41,10 @@ describe('Hardware Multithreading & Shared Memory Worker Pool', () => {
   })
 
   it('distributes batch tasks evenly across all worker slots', async () => {
-    const pool = new GeometryWorkerPool<number, number>(
-      async (x, workerIdx) => {
-        await new Promise(r => setTimeout(r, 5))
-        return x * 2 + workerIdx * 0 // pure value
-      },
-      4
-    )
+    const pool = new GeometryWorkerPool<number, number>(async (x, workerIdx) => {
+      await new Promise(r => setTimeout(r, 5))
+      return x * 2 + workerIdx * 0 // pure value
+    }, 4)
 
     const inputs = [1, 2, 3, 4, 5, 6, 7, 8]
     const results = await pool.evaluateBatch(inputs)
@@ -84,7 +78,7 @@ describe('Hardware Multithreading & Shared Memory Worker Pool', () => {
     // Tasks 2, 3, 4 wait in queue with different priorities
     const p2 = pool.submit(2, { priority: 1 })
     const p3 = pool.submit(3, { priority: 10 }) // Highest priority in queue
-    const p4 = pool.submit(4, { priority: 5 })  // Medium priority in queue
+    const p4 = pool.submit(4, { priority: 5 }) // Medium priority in queue
 
     await Promise.all([p1, p2, p3, p4])
 

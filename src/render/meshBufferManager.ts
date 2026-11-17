@@ -3,27 +3,15 @@ import { invert, type Aabb3, type Mat4 } from '../kernel/geometry/math3d'
 import type { NativePickingCache } from './nativePickingCache'
 import type { MeshData } from '../core/mesh'
 import type { GeometryAssetId } from '../core/scene'
-import type {
-  DisplayMode,
-  SceneUploadMetrics,
-  ShadingModel,
-} from './rendererContracts'
+import type { DisplayMode, SceneUploadMetrics, ShadingModel } from './rendererContracts'
 import { buildSceneAabbIndex, type SceneAabbIndex } from './sceneAabbIndex'
 import { createMeshLodState, releaseMeshLod } from './meshLod'
 import { effectiveDisplayAlpha } from './backendQuality'
 import { OBJECT_UNIFORM_LAYOUT } from './shaders'
 import { fillObjectUniform } from './uniformFill'
 import type { GpuGeometryCache } from './gpuGeometryCache'
-import {
-  MAX_EDGE_BUFFER_BYTES,
-  type Bounds,
-  type GMesh,
-} from './types'
-import {
-  blendMorphPositions,
-  extractPositions,
-  sameTypedArray,
-} from './drawSorting'
+import { MAX_EDGE_BUFFER_BYTES, type Bounds, type GMesh } from './types'
+import { blendMorphPositions, extractPositions, sameTypedArray } from './drawSorting'
 
 export interface StageSceneMeshesContext {
   readonly dev: GPUDevice
@@ -58,10 +46,7 @@ export interface StagedSceneMeshesResult {
   readonly metrics: SceneUploadMetrics
 }
 
-export function stageSceneMeshes(
-  meshes: readonly MeshData[],
-  ctx: StageSceneMeshesContext,
-): StagedSceneMeshesResult {
+export function stageSceneMeshes(meshes: readonly MeshData[], ctx: StageSceneMeshesContext): StagedSceneMeshesResult {
   const { dev, previous, animate } = ctx
   const metrics: SceneUploadMetrics = { geometryUploadBytes: 0, geometryBuffersCreated: 0, reusedEntities: 0 }
   const previousSet = new Set(previous)
@@ -94,9 +79,20 @@ export function stageSceneMeshes(
       const { matrix, morphFrom, retainedMorph } = planEntityMorph(m, old, transform, animate, started)
       // Animated geometry must own its buffer: instances may have different start shapes.
       const reusable = animate ? undefined : findReusableMesh(m, reusableByAsset)
-      const cached = animate || reusable || !m.geometryAssetId ? null : ctx.geometryCache?.lookup(m.geometryAssetId, m.vertices, m.indices) ?? null
+      const cached =
+        animate || reusable || !m.geometryAssetId
+          ? null
+          : (ctx.geometryCache?.lookup(m.geometryAssetId, m.vertices, m.indices) ?? null)
       // A persisting entity with unchanged geometry keeps its uniform buffer and bind group.
-      const keptUniform = old && !animate && !old.morph && old.assetId && old.assetId === m.geometryAssetId && !claimedUniforms.has(old.ub) ? old : null
+      const keptUniform =
+        old &&
+        !animate &&
+        !old.morph &&
+        old.assetId &&
+        old.assetId === m.geometryAssetId &&
+        !claimedUniforms.has(old.ub)
+          ? old
+          : null
       let vb: GPUBuffer | null = reusable?.vb ?? cached?.vb ?? null
       let ib: GPUBuffer | null = reusable?.ib ?? cached?.ib ?? null
       let ub: GPUBuffer | null = keptUniform?.ub ?? null
@@ -106,10 +102,16 @@ export function stageSceneMeshes(
       let morphVBCapacity = old?.morphVBCapacity ?? 0
       const ownsGeometryBuffers = !reusable && !cached
       try {
-        if (!vb) vb = dev.createBuffer({ size: m.vertices.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
-        if (!ib) ib = dev.createBuffer({ size: m.indices.byteLength, usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST })
-        if (!ub) ub = dev.createBuffer({ size: OBJECT_UNIFORM_LAYOUT.bytes, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
-        const materialAlpha = m.material ? m.material.alpha ?? 1 : ctx.defaultMaterial.alpha
+        if (!vb)
+          vb = dev.createBuffer({ size: m.vertices.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
+        if (!ib)
+          ib = dev.createBuffer({ size: m.indices.byteLength, usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST })
+        if (!ub)
+          ub = dev.createBuffer({
+            size: OBJECT_UNIFORM_LAYOUT.bytes,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+          })
+        const materialAlpha = m.material ? (m.material.alpha ?? 1) : ctx.defaultMaterial.alpha
         const initialAlpha = effectiveDisplayAlpha(m.color[3] * materialAlpha, ctx.displayMode)
         const initialEdge = ctx.displayMode === 'edges' ? 0.7 : 0
         if (ownsGeometryBuffers) {
@@ -122,7 +124,10 @@ export function stageSceneMeshes(
         }
         if (!retainedMorph && morphFrom) {
           if (!morphVB || morphVBCapacity < morphFrom.byteLength) {
-            morphVB = dev.createBuffer({ size: morphFrom.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
+            morphVB = dev.createBuffer({
+              size: morphFrom.byteLength,
+              usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+            })
             morphVBCapacity = morphFrom.byteLength
           }
           dev.queue.writeBuffer(morphVB, 0, morphFrom)
@@ -130,29 +135,54 @@ export function stageSceneMeshes(
         // One contiguous upload per entity. writeBuffer snapshots the data,
         // so the same bounded scratch storage can serve the next entity.
         const uniform = ctx.objectUniformScratch
-        fillObjectUniform(uniform, transform, inverseTransform, m.color, initialAlpha, initialEdge, m.material, ctx.defaultMaterial)
+        fillObjectUniform(
+          uniform,
+          transform,
+          inverseTransform,
+          m.color,
+          initialAlpha,
+          initialEdge,
+          m.material,
+          ctx.defaultMaterial,
+        )
         dev.queue.writeBuffer(ub, 0, uniform)
-        const bg = keptUniform?.bg ?? dev.createBindGroup({
-          layout: ctx.objBGL,
-          entries: [{ binding: 0, resource: { buffer: ub } }],
-        })
+        const bg =
+          keptUniform?.bg ??
+          dev.createBindGroup({
+            layout: ctx.objBGL,
+            entries: [{ binding: 0, resource: { buffer: ub } }],
+          })
         if (reusable || cached) metrics.reusedEntities++
         const reuseEdges = reusable && sameTypedArray(reusable.edgeIndices, m.edgeIndices)
-        const morph = retainedMorph ?? (morphFrom ? { from: morphFrom, target: m.vertices, started, matrix: matrix ?? undefined, currentMatrix: matrix?.(0) } : undefined)
+        const morph =
+          retainedMorph ??
+          (morphFrom
+            ? { from: morphFrom, target: m.vertices, started, matrix: matrix ?? undefined, currentMatrix: matrix?.(0) }
+            : undefined)
         next.push({
           entityId: m.entityId,
           morph,
-          morphVB, morphVBCapacity,
+          morphVB,
+          morphVBCapacity,
           morphSlot: morph ? morphVB : ctx.morphDummyVB,
           assetId: animate ? undefined : m.geometryAssetId,
-          nativeGeometry: m.nativeGeometry, faceIdsAuthoritative: m.faceIdsAuthoritative,
-          vb, ib, ic: m.indices.length, ub, bg,
+          nativeGeometry: m.nativeGeometry,
+          faceIdsAuthoritative: m.faceIdsAuthoritative,
+          vb,
+          ib,
+          ic: m.indices.length,
+          ub,
+          bg,
           edgeIB: reuseEdges ? reusable.edgeIB : null,
           edgeIC: reuseEdges ? reusable.edgeIC : 0,
-          vertices: m.vertices, indices: m.indices,
-          edgeIndices: m.edgeIndices, faceIds: m.faceIds, bvh: m.bvh,
+          vertices: m.vertices,
+          indices: m.indices,
+          edgeIndices: m.edgeIndices,
+          faceIds: m.faceIds,
+          bvh: m.bvh,
           provenance: m.provenance,
-          transform, inverseTransform,
+          transform,
+          inverseTransform,
           color: [...m.color],
           alpha: initialAlpha,
           localBounds: measured.local,
@@ -167,7 +197,10 @@ export function stageSceneMeshes(
         })
         const added = next[next.length - 1]!
         added.lod = createMeshLodState(added, m.lods)
-        if (keptUniform) { claimedUniforms.set(keptUniform.ub, keptUniform); retainedGeometryBuffers.add(keptUniform.ub) }
+        if (keptUniform) {
+          claimedUniforms.set(keptUniform.ub, keptUniform)
+          retainedGeometryBuffers.add(keptUniform.ub)
+        }
         if (added.assetId) {
           ctx.geometryCache?.adopt(added.assetId, m.vertices, m.indices, vb, ib)
           const candidates = reusableByAsset.get(added.assetId) ?? []
@@ -184,7 +217,10 @@ export function stageSceneMeshes(
           retainedGeometryBuffers.add(old.morphVB)
         }
       } catch (error) {
-        if (ownsGeometryBuffers) { vb?.destroy(); ib?.destroy() }
+        if (ownsGeometryBuffers) {
+          vb?.destroy()
+          ib?.destroy()
+        }
         // A morph buffer created for the failed staged mesh must not leak;
         // an inherited one still belongs to the live previous mesh.
         if (morphVB && morphVB !== old?.morphVB) morphVB.destroy()
@@ -192,9 +228,12 @@ export function stageSceneMeshes(
         throw error
       }
     }
-    nextSceneIndex = buildSceneAabbIndex(next.map((mesh, id) => ({
-      id, bounds: { min: mesh.worldBounds.min, max: mesh.worldBounds.max },
-    })))
+    nextSceneIndex = buildSceneAabbIndex(
+      next.map((mesh, id) => ({
+        id,
+        bounds: { min: mesh.worldBounds.min, max: mesh.worldBounds.max },
+      })),
+    )
   } catch (error) {
     // Kept uniforms belong to the live scene again: restore their contents.
     for (const old of claimedUniforms.values()) restoreObjectUniform(dev, old, ctx)
@@ -215,13 +254,27 @@ interface MorphPlan {
  * Equal index counts do not establish vertex correspondence after CSG.
  * Animate only rigid transforms of unchanged geometry, per entity.
  */
-function planEntityMorph(m: MeshData, old: GMesh | undefined, transform: Float32Array, animate: boolean, started: number): MorphPlan {
-  const matrix = animate && old && sameTypedArray(old.vertices, m.vertices)
-    && sameTypedArray(old.indices, m.indices) ? geometryTransformTransition(old.morph?.currentMatrix ?? old.transform, transform) : null
-  const morphFrom = animate && old && matrix
-    && (!sameTypedArray(old.morph?.target ?? old.vertices, m.vertices) || !sameTypedArray(old.morph?.currentMatrix ?? old.transform, transform))
-    ? (old.morph ? blendMorphPositions(old.morph, started) : extractPositions(old.vertices))
-    : null
+function planEntityMorph(
+  m: MeshData,
+  old: GMesh | undefined,
+  transform: Float32Array,
+  animate: boolean,
+  started: number,
+): MorphPlan {
+  const matrix =
+    animate && old && sameTypedArray(old.vertices, m.vertices) && sameTypedArray(old.indices, m.indices)
+      ? geometryTransformTransition(old.morph?.currentMatrix ?? old.transform, transform)
+      : null
+  const morphFrom =
+    animate &&
+    old &&
+    matrix &&
+    (!sameTypedArray(old.morph?.target ?? old.vertices, m.vertices) ||
+      !sameTypedArray(old.morph?.currentMatrix ?? old.transform, transform))
+      ? old.morph
+        ? blendMorphPositions(old.morph, started)
+        : extractPositions(old.vertices)
+      : null
   const retainedMorph = matrix && old?.morph && sameTypedArray(old.transform, transform) ? old.morph : null
   return { matrix, morphFrom, retainedMorph }
 }
@@ -232,13 +285,26 @@ function planEntityMorph(m: MeshData, old: GMesh | undefined, transform: Float32
  */
 function findReusableMesh(m: MeshData, reusableByAsset: ReadonlyMap<GeometryAssetId, GMesh[]>): GMesh | undefined {
   const candidates = m.geometryAssetId ? reusableByAsset.get(m.geometryAssetId) : undefined
-  return candidates?.find(candidate => candidate.vertices === m.vertices && candidate.indices === m.indices)
-    ?? candidates?.find(candidate => sameTypedArray(candidate.vertices, m.vertices) && sameTypedArray(candidate.indices, m.indices))
+  return (
+    candidates?.find(candidate => candidate.vertices === m.vertices && candidate.indices === m.indices) ??
+    candidates?.find(
+      candidate => sameTypedArray(candidate.vertices, m.vertices) && sameTypedArray(candidate.indices, m.indices),
+    )
+  )
 }
 
 function restoreObjectUniform(dev: GPUDevice, mesh: GMesh, ctx: StageSceneMeshesContext) {
   const uniform = ctx.objectUniformScratch
-  fillObjectUniform(uniform, mesh.transform, mesh.inverseTransform, mesh.color, mesh.styleAlpha, mesh.styleEdge, mesh.material, ctx.defaultMaterial)
+  fillObjectUniform(
+    uniform,
+    mesh.transform,
+    mesh.inverseTransform,
+    mesh.color,
+    mesh.styleAlpha,
+    mesh.styleEdge,
+    mesh.material,
+    ctx.defaultMaterial,
+  )
   uniform[37] = mesh.styleSelected
   uniform[39] = mesh.styleHovered
   dev.queue.writeBuffer(mesh.ub, 0, uniform)
@@ -275,8 +341,9 @@ export function ensureMeshEdgeBuffer(
   if (byteLength > MAX_EDGE_BUFFER_BYTES || byteLength > dev.limits.maxBufferSize) return
 
   const candidates = edgeBuffersByVertexBuffer.get(mesh.vb)
-  const shared = candidates?.find(candidate => candidate.ib === mesh.ib
-    && sameTypedArray(candidate.edgeIndices, mesh.edgeIndices))
+  const shared = candidates?.find(
+    candidate => candidate.ib === mesh.ib && sameTypedArray(candidate.edgeIndices, mesh.edgeIndices),
+  )
   if (shared?.edgeIB) {
     mesh.edgeIB = shared.edgeIB
     mesh.edgeIC = shared.edgeIC
@@ -313,12 +380,17 @@ export function reconcileMeshStyles(
     const mesh = meshes[index]!
     const selected = usesObjectSelectionStyle(index) ? 1 : 0
     const hovered = usesObjectHoverStyle(index) && !selected ? 1 : 0
-    const materialAlpha = mesh.material ? mesh.material.alpha ?? 1 : defaultMaterialAlpha
+    const materialAlpha = mesh.material ? (mesh.material.alpha ?? 1) : defaultMaterialAlpha
     const alpha = effectiveDisplayAlpha(mesh.color[3]! * materialAlpha, displayMode) * ease
     const edgeOpacity = (selected || hovered ? 1 : displayMode === 'edges' ? 0.7 : 0) * ease
     mesh.alpha = alpha
-    if (mesh.styleAlpha === alpha && mesh.styleSelected === selected
-      && mesh.styleEdge === edgeOpacity && mesh.styleHovered === hovered) continue
+    if (
+      mesh.styleAlpha === alpha &&
+      mesh.styleSelected === selected &&
+      mesh.styleEdge === edgeOpacity &&
+      mesh.styleHovered === hovered
+    )
+      continue
     mesh.styleAlpha = alpha
     mesh.styleSelected = selected
     mesh.styleEdge = edgeOpacity
@@ -347,6 +419,9 @@ export function destroySceneMeshes(
     releaseMeshLod(g, nativePicking)
     if (!preserved.has(g.vb)) nativePicking.release(g.vb)
     destroy(g.edgeIB)
-    destroy(g.vb); destroy(g.ib); destroy(g.ub); destroy(g.morphVB)
+    destroy(g.vb)
+    destroy(g.ib)
+    destroy(g.ub)
+    destroy(g.morphVB)
   }
 }

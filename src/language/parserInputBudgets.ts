@@ -20,11 +20,7 @@ export const DEFAULT_PARSER_INPUT_BUDGETS: ParserInputBudgets = Object.freeze({
 export type ParserFormat = 'step' | 'iges' | 'stl'
 export type ParserBudget = keyof ParserInputBudgets
 export type ParserInputErrorCode =
-  | 'input-too-large'
-  | 'entity-limit'
-  | 'depth-limit'
-  | 'face-limit'
-  | 'control-point-limit'
+  'input-too-large' | 'entity-limit' | 'depth-limit' | 'face-limit' | 'control-point-limit'
 
 const ERROR_CODE: Readonly<Record<ParserBudget, ParserInputErrorCode>> = Object.freeze({
   bytes: 'input-too-large',
@@ -45,7 +41,9 @@ export class ParserInputError extends Error {
     this.name = 'ParserInputError'
   }
 
-  get code(): ParserInputErrorCode { return ERROR_CODE[this.budget] }
+  get code(): ParserInputErrorCode {
+    return ERROR_CODE[this.budget]
+  }
 }
 
 export interface ParserPreflightStats {
@@ -57,12 +55,7 @@ export interface ParserPreflightStats {
   readonly controlPoints: number
 }
 
-function charge(
-  format: ParserFormat,
-  budgets: ParserInputBudgets,
-  budget: ParserBudget,
-  observed: number,
-): void {
+function charge(format: ParserFormat, budgets: ParserInputBudgets, budget: ParserBudget, observed: number): void {
   if (observed > budgets[budget]) {
     throw new ParserInputError(format, budget, observed, budgets[budget])
   }
@@ -79,9 +72,13 @@ function stepDepth(text: string): number {
   let quote = false
   let comment = false
   for (let i = 0; i < text.length; i++) {
-    const c = text[i], next = text[i + 1]
+    const c = text[i],
+      next = text[i + 1]
     if (comment) {
-      if (c === '*' && next === '/') { comment = false; i++ }
+      if (c === '*' && next === '/') {
+        comment = false
+        i++
+      }
       continue
     }
     if (quote) {
@@ -89,10 +86,19 @@ function stepDepth(text: string): number {
       else if (c === "'") quote = false
       continue
     }
-    if (c === '/' && next === '*') { comment = true; i++; continue }
-    if (c === "'") { quote = true; continue }
-    if (c === '(') { depth++; maximum = Math.max(maximum, depth) }
-    else if (c === ')') depth = Math.max(0, depth - 1)
+    if (c === '/' && next === '*') {
+      comment = true
+      i++
+      continue
+    }
+    if (c === "'") {
+      quote = true
+      continue
+    }
+    if (c === '(') {
+      depth++
+      maximum = Math.max(maximum, depth)
+    } else if (c === ')') depth = Math.max(0, depth - 1)
   }
   return maximum
 }
@@ -114,7 +120,14 @@ export function preflightStepInput(
   charge('step', budgets, 'entities', entities.length)
   const depth = stepDepth(text)
   charge('step', budgets, 'depth', depth)
-  const faces = entities.reduce((count, entity) => count + (/^(?:ADVANCED_FACE|FACE_SURFACE|FACE|TRIANGULATED_FACE_SET|COMPLEX_TRIANGULATED_FACE_SET)$/.test(entity.type) ? 1 : 0), 0)
+  const faces = entities.reduce(
+    (count, entity) =>
+      count +
+      (/^(?:ADVANCED_FACE|FACE_SURFACE|FACE|TRIANGULATED_FACE_SET|COMPLEX_TRIANGULATED_FACE_SET)$/.test(entity.type)
+        ? 1
+        : 0),
+    0,
+  )
   charge('step', budgets, 'faces', faces)
   // Conservative lexical admission: B-spline reference lists are charged before
   // native semantic expansion. The native parser applies its exact pole/net checks.
@@ -134,7 +147,9 @@ export function preflightIgesInput(
   const bytes = UTF8.encode(text).byteLength
   charge('iges', budgets, 'bytes', bytes)
   const lines = text.split(/\r?\n/)
-  let entities = 0, faces = 0, controlPoints = 0
+  let entities = 0,
+    faces = 0,
+    controlPoints = 0
   for (const line of lines) {
     if (line.length < 73 || line[72] !== 'D') continue
     const type = Number.parseInt(line.slice(0, 8).trim(), 10)
@@ -180,5 +195,11 @@ export function preflightStlInput(
   }
   charge('stl', budgets, 'entities', entities)
   charge('stl', budgets, 'faces', entities)
-  return stats('stl', { bytes: bytes.byteLength, entities, depth: entities === 0 ? 0 : 1, faces: entities, controlPoints: 0 })
+  return stats('stl', {
+    bytes: bytes.byteLength,
+    entities,
+    depth: entities === 0 ? 0 : 1,
+    faces: entities,
+    controlPoints: 0,
+  })
 }

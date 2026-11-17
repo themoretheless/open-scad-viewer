@@ -1,11 +1,6 @@
 import { computed, nextTick, ref, watch, type Ref } from 'svet'
 import type { EditorAdapter } from '../editor/EditorAdapter'
-import {
-  findLiteralMatches,
-  replaceAllLiteral,
-  replaceExpectedMatch,
-  wrappedMatchIndex,
-} from '../app/textSearch'
+import { findLiteralMatches, replaceAllLiteral, replaceExpectedMatch, wrappedMatchIndex } from '../app/textSearch'
 
 export interface EditorFindOptions {
   /** The edited source; replacements write back to it. */
@@ -27,9 +22,11 @@ export function useEditorFind(options: EditorFindOptions) {
   const findReplacement = ref('')
   const findCaseSensitive = ref(false)
   const activeFindIndex = ref(-1)
-  const findResult = computed(() => findLiteralMatches(code.value, findQuery.value, {
-    caseSensitive: findCaseSensitive.value,
-  }))
+  const findResult = computed(() =>
+    findLiteralMatches(code.value, findQuery.value, {
+      caseSensitive: findCaseSensitive.value,
+    }),
+  )
   const findStatus = computed(() => {
     if (findResult.value.truncated) return t('tooManyMatches')
     const count = findResult.value.matches.length
@@ -49,11 +46,13 @@ export function useEditorFind(options: EditorFindOptions) {
     activeFindIndex.value = findResult.value.matches.length ? 0 : -1
     // The command palette restores its opener after closing. A second render
     // turn makes the explicit Find target win that documented focus handoff.
-    void nextTick(() => nextTick(() => {
-      findInputRef.value?.focus()
-      findInputRef.value?.select()
-      revealFindMatch()
-    }))
+    void nextTick(() =>
+      nextTick(() => {
+        findInputRef.value?.focus()
+        findInputRef.value?.select()
+        revealFindMatch()
+      }),
+    )
   }
 
   function closeEditorFind() {
@@ -69,11 +68,7 @@ export function useEditorFind(options: EditorFindOptions) {
   }
 
   function navigateFind(direction: 1 | -1) {
-    activeFindIndex.value = wrappedMatchIndex(
-      activeFindIndex.value,
-      findResult.value.matches.length,
-      direction,
-    )
+    activeFindIndex.value = wrappedMatchIndex(activeFindIndex.value, findResult.value.matches.length, direction)
     revealFindMatch()
   }
 
@@ -123,8 +118,20 @@ export function useEditorFind(options: EditorFindOptions) {
   }
 
   return {
-    findOpen, replaceOpen, findQuery, findReplacement, findCaseSensitive, activeFindIndex, findResult, findStatus,
-    openEditorFind, closeEditorFind, revealFindMatch, navigateFind, handleFindKeydown,
-    replaceCurrentFindMatch, replaceAllFindMatches,
+    findOpen,
+    replaceOpen,
+    findQuery,
+    findReplacement,
+    findCaseSensitive,
+    activeFindIndex,
+    findResult,
+    findStatus,
+    openEditorFind,
+    closeEditorFind,
+    revealFindMatch,
+    navigateFind,
+    handleFindKeydown,
+    replaceCurrentFindMatch,
+    replaceAllFindMatches,
   }
 }

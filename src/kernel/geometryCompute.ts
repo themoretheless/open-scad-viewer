@@ -1,5 +1,5 @@
 import type { MeshData } from '../core/mesh'
-import {callGeometryRust} from './geometry/kernel'
+import { callGeometryRust } from './geometry/kernel'
 
 export type SurfaceInput = Pick<MeshData, 'vertices' | 'indices' | 'transform'>
 export interface GeometryComputeResult {
@@ -16,17 +16,30 @@ export interface GeometryComputeBackend {
   surfaceArea(input: SurfaceInput, signal: AbortSignal): Promise<number>
 }
 
-function checkAbort(signal: AbortSignal) { signal.throwIfAborted() }
+function checkAbort(signal: AbortSignal) {
+  signal.throwIfAborted()
+}
 
 /** Affine world-space area; translation cancels before arithmetic, on both backends. */
 export async function cpuSurfaceArea(input: SurfaceInput, signal: AbortSignal): Promise<number> {
   const { vertices: v, indices: indices, transform: m } = input
-  if (!v.length || v.length % 6 || !indices.length || indices.length % 3
-    || indices.length > 3_000_000 || v.byteLength > 64 * 1024 * 1024
-    || m.length !== 16 || !Array.from(m).every(Number.isFinite)
-    || m[12] !== 0 || m[13] !== 0 || m[14] !== 0 || m[15] !== 1) throw new Error('invalid-compute-input')
+  if (
+    !v.length ||
+    v.length % 6 ||
+    !indices.length ||
+    indices.length % 3 ||
+    indices.length > 3_000_000 ||
+    v.byteLength > 64 * 1024 * 1024 ||
+    m.length !== 16 ||
+    !Array.from(m).every(Number.isFinite) ||
+    m[12] !== 0 ||
+    m[13] !== 0 ||
+    m[14] !== 0 ||
+    m[15] !== 1
+  )
+    throw new Error('invalid-compute-input')
   let state: [number, number] = [0, 0]
-  const matrix = Array.from({length: 4}, (_, i) => Array.from(m.slice(i * 4, i * 4 + 4)))
+  const matrix = Array.from({ length: 4 }, (_, i) => Array.from(m.slice(i * 4, i * 4 + 4)))
   for (let start = 0; start < indices.length; start += 6144) {
     checkAbort(signal)
     if (start) await new Promise<void>(resolve => setTimeout(resolve, 0))
@@ -40,14 +53,16 @@ export async function cpuSurfaceArea(input: SurfaceInput, signal: AbortSignal): 
       points.set(v.subarray(offset, offset + 3), (i - start) * 3)
     }
     try {
-      state = callGeometryRust<[number, number]>('mesh_world_area', {points, matrix, state})
-    } catch { throw new Error('invalid-compute-input') }
+      state = callGeometryRust<[number, number]>('mesh_world_area', { points, matrix, state })
+    } catch {
+      throw new Error('invalid-compute-input')
+    }
   }
   checkAbort(signal)
   return state[0]
 }
 
-export const SURFACE_AREA_WGSL = /* wgsl */`
+export const SURFACE_AREA_WGSL = /* wgsl */ `
 struct Params { r0: vec4f, r1: vec4f, r2: vec4f, info: vec4u }
 @group(0) @binding(0) var<storage, read> vertices: array<f32>;
 @group(0) @binding(1) var<storage, read> indices: array<u32>;
@@ -95,13 +110,22 @@ export async function webgpuSurfaceArea(input: SurfaceInput, signal: AbortSignal
     for (const buffer of buffers) buffer.destroy()
     device?.destroy()
   }
-  const check = () => { checkAbort(signal); if (stopped) throw new Error('gpu-failed') }
+  const check = () => {
+    checkAbort(signal)
+    if (stopped) throw new Error('gpu-failed')
+  }
   let timer: ReturnType<typeof setTimeout> | undefined
   let abort: () => void = () => {}
   const interrupted = new Promise<never>((_, reject) => {
-    abort = () => { cleanup(); reject(signal.reason ?? new Error('cancelled')) }
+    abort = () => {
+      cleanup()
+      reject(signal.reason ?? new Error('cancelled'))
+    }
     signal.addEventListener('abort', abort, { once: true })
-    timer = setTimeout(() => { cleanup(); reject(new Error('gpu-failed')) }, 5000)
+    timer = setTimeout(() => {
+      cleanup()
+      reject(new Error('gpu-failed'))
+    }, 5000)
   })
   const work = async () => {
     try {
@@ -109,12 +133,19 @@ export async function webgpuSurfaceArea(input: SurfaceInput, signal: AbortSignal
       check()
       if (!adapter) throw new Error('unavailable')
       const created = await adapter.requestDevice()
-      if (stopped || signal.aborted) { created.destroy(); check() }
+      if (stopped || signal.aborted) {
+        created.destroy()
+        check()
+      }
       device = created
       check()
       const groups = Math.ceil(input.indices.length / 3 / 128)
-      if (groups > device.limits.maxComputeWorkgroupsPerDimension
-        || Math.max(input.vertices.byteLength, input.indices.byteLength) > Math.min(device.limits.maxStorageBufferBindingSize, device.limits.maxBufferSize)) throw new Error('gpu-failed')
+      if (
+        groups > device.limits.maxComputeWorkgroupsPerDimension ||
+        Math.max(input.vertices.byteLength, input.indices.byteLength) >
+          Math.min(device.limits.maxStorageBufferBindingSize, device.limits.maxBufferSize)
+      )
+        throw new Error('gpu-failed')
       device.pushErrorScope('validation')
       device.pushErrorScope('out-of-memory')
       const make = (size: number, usage: number) => {
@@ -133,9 +164,18 @@ export async function webgpuSurfaceArea(input: SurfaceInput, signal: AbortSignal
       new Float32Array(uniforms).set(input.transform.subarray(0, 12))
       new Uint32Array(uniforms)[12] = input.indices.length / 3
       device.queue.writeBuffer(parameters, 0, uniforms)
-      const pipeline = await device.createComputePipelineAsync({ layout: 'auto', compute: { module: device.createShaderModule({ code: SURFACE_AREA_WGSL }), entryPoint: 'main' } })
+      const pipeline = await device.createComputePipelineAsync({
+        layout: 'auto',
+        compute: { module: device.createShaderModule({ code: SURFACE_AREA_WGSL }), entryPoint: 'main' },
+      })
       check()
-      const bindGroup = device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries: [vertexBuffer, indexBuffer, parameters, output].map((buffer, binding) => ({ binding, resource: { buffer } })) })
+      const bindGroup = device.createBindGroup({
+        layout: pipeline.getBindGroupLayout(0),
+        entries: [vertexBuffer, indexBuffer, parameters, output].map((buffer, binding) => ({
+          binding,
+          resource: { buffer },
+        })),
+      })
       const encoder = device.createCommandEncoder()
       const pass = encoder.beginComputePass()
       pass.setPipeline(pipeline)
@@ -158,17 +198,28 @@ export async function webgpuSurfaceArea(input: SurfaceInput, signal: AbortSignal
       check()
       if (memoryError || validationError || !Number.isFinite(sum)) throw new Error('gpu-failed')
       return sum
-    } finally { cleanup() }
+    } finally {
+      cleanup()
+    }
   }
-  try { return await Promise.race([work(), interrupted]) }
-  finally { clearTimeout(timer); signal.removeEventListener('abort', abort); cleanup() }
+  try {
+    return await Promise.race([work(), interrupted])
+  } finally {
+    clearTimeout(timer)
+    signal.removeEventListener('abort', abort)
+    cleanup()
+  }
 }
 
 export const CPU_COMPUTE_BACKEND: GeometryComputeBackend = { id: 'cpu', surfaceArea: cpuSurfaceArea }
 export const WEBGPU_COMPUTE_BACKEND: GeometryComputeBackend = { id: 'webgpu-compute', surfaceArea: webgpuSurfaceArea }
 
 /** Qualification pilot: GPU result is published only after a full CPU comparison. */
-export async function analyzeSurfaceArea(input: SurfaceInput, signal: AbortSignal, backend: GeometryComputeBackend = WEBGPU_COMPUTE_BACKEND): Promise<GeometryComputeResult> {
+export async function analyzeSurfaceArea(
+  input: SurfaceInput,
+  signal: AbortSignal,
+  backend: GeometryComputeBackend = WEBGPU_COMPUTE_BACKEND,
+): Promise<GeometryComputeResult> {
   const cpuStart = performance.now()
   const reference = await cpuSurfaceArea(input, signal)
   const cpuMs = performance.now() - cpuStart
@@ -178,9 +229,25 @@ export async function analyzeSurfaceArea(input: SurfaceInput, signal: AbortSigna
     checkAbort(signal)
     const relativeError = Math.abs(area - reference) / Math.max(Math.abs(reference), 1e-12)
     const verified = Math.abs(area - reference) <= 1e-8 + 5e-4 * Math.abs(reference)
-    return { operation: 'world-surface-area', backend: verified ? backend.id : 'cpu', area: verified ? area : reference, cpuMs, gpuMs: performance.now() - start, relativeError, fallback: verified ? null : 'verification-failed' }
+    return {
+      operation: 'world-surface-area',
+      backend: verified ? backend.id : 'cpu',
+      area: verified ? area : reference,
+      cpuMs,
+      gpuMs: performance.now() - start,
+      relativeError,
+      fallback: verified ? null : 'verification-failed',
+    }
   } catch (error) {
     checkAbort(signal)
-    return { operation: 'world-surface-area', backend: 'cpu', area: reference, cpuMs, gpuMs: null, relativeError: null, fallback: error instanceof Error && error.message === 'unavailable' ? 'unavailable' : 'gpu-failed' }
+    return {
+      operation: 'world-surface-area',
+      backend: 'cpu',
+      area: reference,
+      cpuMs,
+      gpuMs: null,
+      relativeError: null,
+      fallback: error instanceof Error && error.message === 'unavailable' ? 'unavailable' : 'gpu-failed',
+    }
   }
 }

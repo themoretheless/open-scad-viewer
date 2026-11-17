@@ -5,7 +5,7 @@ import { auditWasmPackage } from '../scripts/audit-wasm-package.mjs'
 import { verifyUniquePackedWasm, verifyRawWasm } from '../scripts/verify-packed-wasm.mjs'
 
 test('binds streaming bytes exactly, rejecting equal-size drift and truncation', () => {
-  const wasm = Buffer.from([0,97,115,109,1,0,0,0])
+  const wasm = Buffer.from([0, 97, 115, 109, 1, 0, 0, 0])
   expectMatching(wasm, wasm)
   const changed = Buffer.from(wasm)
   changed[4] = 2
@@ -20,13 +20,23 @@ test('binds streaming bytes exactly, rejecting equal-size drift and truncation',
 })
 
 test('rejects packed payload copies across chunks and within one chunk', () => {
-  const asset = (path, source) => ({path, source})
-  assert.equal(verifyUniquePackedWasm([asset('a.js', 'const a="b85:first";'), asset('b.js', "const b='b85:second';")]), 2)
-  assert.throws(() => verifyUniquePackedWasm([
-    asset('shared.js', 'export default "b85:first";'),
-    asset('worker.js', 'compile(unpack(`b85:first`));'),
-  ]), /Duplicate packed WASM literal: shared.js and worker.js/)
-  assert.throws(() => verifyUniquePackedWasm([asset('a.js', 'f("b85:first");g("b85:first");')]), /Duplicate packed WASM/)
+  const asset = (path, source) => ({ path, source })
+  assert.equal(
+    verifyUniquePackedWasm([asset('a.js', 'const a="b85:first";'), asset('b.js', "const b='b85:second';")]),
+    2,
+  )
+  assert.throws(
+    () =>
+      verifyUniquePackedWasm([
+        asset('shared.js', 'export default "b85:first";'),
+        asset('worker.js', 'compile(unpack(`b85:first`));'),
+      ]),
+    /Duplicate packed WASM literal: shared.js and worker.js/,
+  )
+  assert.throws(
+    () => verifyUniquePackedWasm([asset('a.js', 'f("b85:first");g("b85:first");')]),
+    /Duplicate packed WASM/,
+  )
   assert.equal(verifyUniquePackedWasm([asset('a.js', 'import value from "./shared.js";')]), 0)
 })
 
@@ -50,6 +60,6 @@ test('rejects malformed modules and oversized raw input', () => {
 
 test('rejects modules with external imports', () => {
   // One function import m.f of type () -> (), with no definitions or exports.
-  const wasm = Buffer.from([0,97,115,109,1,0,0,0,1,4,1,96,0,0,2,7,1,1,109,1,102,0,0])
+  const wasm = Buffer.from([0, 97, 115, 109, 1, 0, 0, 0, 1, 4, 1, 96, 0, 0, 2, 7, 1, 1, 109, 1, 102, 0, 0])
   assert.throws(() => auditWasmPackage(wasm), /must not import/)
 })

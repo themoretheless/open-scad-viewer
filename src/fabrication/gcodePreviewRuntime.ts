@@ -1,7 +1,12 @@
 import { emitPolygonMeshGcode, emitPolygonMeshGcodeJob, inspectGcode } from '../kernel/geometry/polygon'
 import { flattenGroupGeometry } from '../kernel/meshFlatten'
 import { warmGeometryKernel } from '../kernel/geometry/kernel'
-import { checkGcodePreviewJob, type GcodePreviewJob, type GcodePreviewRequest, type GcodePreviewResponse } from './gcodePreviewProtocol'
+import {
+  checkGcodePreviewJob,
+  type GcodePreviewJob,
+  type GcodePreviewRequest,
+  type GcodePreviewResponse,
+} from './gcodePreviewProtocol'
 import { assertPrintReady, PrintReadinessError } from './printReadiness'
 
 function requestId(request: GcodePreviewRequest): number {
@@ -9,8 +14,10 @@ function requestId(request: GcodePreviewRequest): number {
 }
 
 function checkedJob(request: GcodePreviewRequest): GcodePreviewJob {
-  if (!request || request.version !== 1 || !Number.isSafeInteger(request.id) || request.id < 1) throw new Error('Invalid G-code worker request.')
-  if (request.responseFormat !== undefined && request.responseFormat !== 'f64-moves-v1') throw new Error('Invalid G-code response format.')
+  if (!request || request.version !== 1 || !Number.isSafeInteger(request.id) || request.id < 1)
+    throw new Error('Invalid G-code worker request.')
+  if (request.responseFormat !== undefined && request.responseFormat !== 'f64-moves-v1')
+    throw new Error('Invalid G-code response format.')
   return checkGcodePreviewJob(request.job)
 }
 

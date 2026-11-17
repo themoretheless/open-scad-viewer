@@ -77,8 +77,7 @@ describe('WebGPU Compute Truss / Space-Frame Jacobi-PCG Solver', () => {
     expect(res.displacementsMm[3]![1]).toBeCloseTo(0, 7)
     expect(res.displacementsMm[3]![2]).toBeLessThan(0)
 
-    const sumRz =
-      res.reactionsN[0]![2] + res.reactionsN[1]![2] + res.reactionsN[2]![2]
+    const sumRz = res.reactionsN[0]![2] + res.reactionsN[1]![2] + res.reactionsN[2]![2]
     expect(sumRz).toBeCloseTo(30_000, 5)
 
     // Each bar carries -10,000 * sqrt(2) N in compression

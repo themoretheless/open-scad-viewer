@@ -183,8 +183,12 @@ show sphere(1)`
   })
 
   it('supports nested matches and scopes names independently', () => {
-    expectValue('[3,4]', `  [x, y] => match {x:y, y:x}
-    {x, y} => x * 10 + y`, 43)
+    expectValue(
+      '[3,4]',
+      `  [x, y] => match {x:y, y:x}
+    {x, y} => x * 10 + y`,
+      43,
+    )
   })
 
   it('evaluates branch-local assignments followed by ret', () => {
@@ -203,18 +207,26 @@ show sphere(result)`
   })
 
   it('returns a nested match from a branch block', () => {
-    expectValue('[3,4]', `  [x, y] =>
+    expectValue(
+      '[3,4]',
+      `  [x, y] =>
     total = x + y
     ret match total
       n @ 1..10 => n * 2
-      _ => 0`, 14)
+      _ => 0`,
+      14,
+    )
   })
 
   it('does not execute an unselected branch block', () => {
-    expectValue('2', `  1 =>
+    expectValue(
+      '2',
+      `  1 =>
     impossible = 1/0
     ret impossible
-  2 => 7`, 7)
+  2 => 7`,
+      7,
+    )
   })
 
   it('uses match in function returns, foreach bodies and LINQ projections', () => {
@@ -276,7 +288,9 @@ show parts`
   })
 
   it.each([
-    ['str', `fn label input: str -> str
+    [
+      'str',
+      `fn label input: str -> str
   ret match input
     "hook" => "selected"
     other => other
@@ -284,8 +298,11 @@ input = match 1
   1 => "hook"
   _ => "box"
 result = label(input)
-validate (result == "selected").equalTo(1)`],
-    ['Vec<int>', `fn keep input: Vec<int> -> Vec<int>
+validate (result == "selected").equalTo(1)`,
+    ],
+    [
+      'Vec<int>',
+      `fn keep input: Vec<int> -> Vec<int>
   ret match input
     [] => [0]
     list(values) => values
@@ -293,16 +310,22 @@ input = match 1
   1 => [2,3,4]
   _ => [0]
 result = keep(input)
-validate result.sum().equalTo(9)`],
-    ['int', `fn twice input: int -> int
+validate result.sum().equalTo(9)`,
+    ],
+    [
+      'int',
+      `fn twice input: int -> int
   ret match input
     int(n) => n * 2
 input = match 1
   1 => 4
   _ => 0
 result = twice(input)
-validate result.equalTo(8)`],
-    ['nominal record', `struct Pair {x: int, y: int}
+validate result.equalTo(8)`,
+    ],
+    [
+      'nominal record',
+      `struct Pair {x: int, y: int}
 fn swap input: Pair -> Pair
   ret match input
     {x, y} => Pair {x:y, y:x}
@@ -311,7 +334,8 @@ input = match 1
   _ => Pair {x:0, y:0}
 result = swap(input)
 validate result.x.equalTo(3)
-validate result.y.equalTo(2)`],
+validate result.y.equalTo(2)`,
+    ],
   ])('preserves typed %s function arguments and returns through match', (_type, source) => {
     expect(compile(source + '\nshow sphere(1)').constraint_report.every(report => report.passed)).toBe(true)
   })
@@ -328,37 +352,52 @@ show box(v)`
   })
 
   it.each([
-    ['unused argument with text result', `fn accept input: str -> str
+    [
+      'unused argument with text result',
+      `fn accept input: str -> str
   ret "ok"
 input = match 1
   1 => 4
   _ => "text"
 result = accept(input)
 validate (result == "ok").equalTo(1)
-show sphere(1)`],
-    ['str argument', `fn accept input: str -> int
+show sphere(1)`,
+    ],
+    [
+      'str argument',
+      `fn accept input: str -> int
   ret 1
 input = match 1
   1 => 4
   _ => "text"
-show sphere(accept(input))`],
-    ['Vec<int> element', `fn accept input: Vec<int> -> int
+show sphere(accept(input))`,
+    ],
+    [
+      'Vec<int> element',
+      `fn accept input: Vec<int> -> int
   ret input.count()
 input = match 1
   1 => [2,3.5]
   _ => [2,3]
-show sphere(accept(input))`],
-    ['int return', `fn choose input: int -> int
+show sphere(accept(input))`,
+    ],
+    [
+      'int return',
+      `fn choose input: int -> int
   ret match input
     1 => 2.5
     _ => 2
-show sphere(choose(1))`],
-    ['record field', `struct Pair {x: int, y: int}
+show sphere(choose(1))`,
+    ],
+    [
+      'record field',
+      `struct Pair {x: int, y: int}
 fn choose input: int -> Pair
   ret match input
     1 => Pair {x:2, y:3.5}
     _ => Pair {x:2, y:3}
-show sphere(choose(1).x)`],
+show sphere(choose(1).x)`,
+    ],
   ])('enforces the selected match value at a typed %s boundary', (_type, source) => {
     expect(() => compile(source)).toThrow()
   })
@@ -366,8 +405,20 @@ show sphere(choose(1).x)`],
   it.each([
     ['box', '[2,3,4]', '[5,6,7]', 'box(vector)', 'box([2,3,4])'],
     ['rectangle', '[2,3]', '[5,6]', 'rectangle(vector).extrude(1)', 'rectangle([2,3]).extrude(1)'],
-    ['translate', '[2mm,3mm,4mm]', '[5mm,6mm,7mm]', 'box([1,1,1]).translate(vector)', 'box([1,1,1]).translate([2mm,3mm,4mm])'],
-    ['rotate', '[90deg,0deg,45deg]', '[0deg,45deg,90deg]', 'box([1,2,3]).rotate(vector)', 'box([1,2,3]).rotate([90deg,0deg,45deg])'],
+    [
+      'translate',
+      '[2mm,3mm,4mm]',
+      '[5mm,6mm,7mm]',
+      'box([1,1,1]).translate(vector)',
+      'box([1,1,1]).translate([2mm,3mm,4mm])',
+    ],
+    [
+      'rotate',
+      '[90deg,0deg,45deg]',
+      '[0deg,45deg,90deg]',
+      'box([1,2,3]).rotate(vector)',
+      'box([1,2,3]).rotate([90deg,0deg,45deg])',
+    ],
     ['scale', '[2,3,4]', '[5,6,7]', 'box([1,2,3]).scale(vector)', 'box([1,2,3]).scale([2,3,4])'],
   ])('passes dynamically selected vectors to %s', (_operation, selected, other, call, explicit) => {
     const source = `param choice = 1 range 0..1
@@ -425,7 +476,10 @@ show sphere(values)`
     ['unknown type pattern', 'result = match 1\n  unknown(n) => n\nshow sphere(result)'],
     ['extra type arguments', 'result = match 1\n  int(a,b) => a\nshow sphere(result)'],
     ['binding escaping its match', 'result = match 1\n  hidden => hidden\nshow sphere(hidden)'],
-    ['branch local escaping its match', 'result = match 1\n  _ =>\n    hidden = 2\n    ret hidden\nshow sphere(hidden)'],
+    [
+      'branch local escaping its match',
+      'result = match 1\n  _ =>\n    hidden = 2\n    ret hidden\nshow sphere(hidden)',
+    ],
     ['bad arm indentation', 'result = match 1\n  1 => 1\n   _ => 2\nshow sphere(result)'],
   ])('rejects %s', (_label, source) => {
     expect(() => compile(source)).toThrow()

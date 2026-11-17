@@ -1,8 +1,18 @@
 import { AbortedError, OpenSCADParseError } from '../../language/openscadErrors'
-import { ArtifactSizeError, CustomizerValueError, GeometryBusyError, GeometryDeadlineExceededError, InvalidGeometryError } from '../geometryService'
+import {
+  ArtifactSizeError,
+  CustomizerValueError,
+  GeometryBusyError,
+  GeometryDeadlineExceededError,
+  InvalidGeometryError,
+} from '../geometryService'
 import { MAX_STORED_DIAGNOSTIC_MESSAGE_LENGTH, MAX_STORED_DIAGNOSTIC_NAME_LENGTH } from '../modelStore'
 import type { BuildDiagnostic } from '../modelStore'
-import { GeometryCapabilityUnavailableError, GeometryEngineUnavailableError, GeometryLanguageContractError } from '../../kernel/geometryBuildEngine'
+import {
+  GeometryCapabilityUnavailableError,
+  GeometryEngineUnavailableError,
+  GeometryLanguageContractError,
+} from '../../kernel/geometryBuildEngine'
 import { publicToolError } from './publicToolError'
 import { truncateWellFormed } from '../../core/unicode'
 
@@ -11,9 +21,11 @@ export function parseErrorMessage(error: OpenSCADParseError): string {
 }
 
 export function isAbortError(error: unknown): boolean {
-  return error instanceof AbortedError
-    || (error instanceof DOMException && error.name === 'AbortError')
-    || (error instanceof Error && error.name === 'AbortError')
+  return (
+    error instanceof AbortedError ||
+    (error instanceof DOMException && error.name === 'AbortError') ||
+    (error instanceof Error && error.name === 'AbortError')
+  )
 }
 
 export function isQuarantinedGeometryHostError(
@@ -35,21 +47,27 @@ export function buildDiagnostic(error: unknown): BuildDiagnostic {
     }
   } else if (isAbortError(error)) {
     diagnostic = { name: 'AbortError', message: 'OpenSCAD evaluation was cancelled.' }
-  } else if (error instanceof ArtifactSizeError || error instanceof CustomizerValueError
-    || error instanceof GeometryBusyError || error instanceof GeometryDeadlineExceededError
-    || error instanceof InvalidGeometryError
-    || error instanceof GeometryCapabilityUnavailableError
-    || error instanceof GeometryEngineUnavailableError
-    || error instanceof GeometryLanguageContractError
-    || isQuarantinedGeometryHostError(error)) {
+  } else if (
+    error instanceof ArtifactSizeError ||
+    error instanceof CustomizerValueError ||
+    error instanceof GeometryBusyError ||
+    error instanceof GeometryDeadlineExceededError ||
+    error instanceof InvalidGeometryError ||
+    error instanceof GeometryCapabilityUnavailableError ||
+    error instanceof GeometryEngineUnavailableError ||
+    error instanceof GeometryLanguageContractError ||
+    isQuarantinedGeometryHostError(error)
+  ) {
     const positioned = error as Error & { line?: unknown; column?: unknown }
     diagnostic = {
       name: truncateWellFormed(error.name || 'Error', MAX_STORED_DIAGNOSTIC_NAME_LENGTH),
       message: truncateWellFormed(error.message, MAX_STORED_DIAGNOSTIC_MESSAGE_LENGTH),
-      ...(typeof positioned.line === 'number' && Number.isSafeInteger(positioned.line)
-        && positioned.line > 0 ? { line: positioned.line } : {}),
-      ...(typeof positioned.column === 'number' && Number.isSafeInteger(positioned.column)
-        && positioned.column > 0 ? { column: positioned.column } : {}),
+      ...(typeof positioned.line === 'number' && Number.isSafeInteger(positioned.line) && positioned.line > 0
+        ? { line: positioned.line }
+        : {}),
+      ...(typeof positioned.column === 'number' && Number.isSafeInteger(positioned.column) && positioned.column > 0
+        ? { column: positioned.column }
+        : {}),
     }
   } else {
     diagnostic = {

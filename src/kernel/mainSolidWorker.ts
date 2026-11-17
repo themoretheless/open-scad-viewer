@@ -1,114 +1,192 @@
-import type {IsolatedSsContactRequest} from './isolatedSsContact'
-import type {PeriodicBandRequest,PeriodicStockIntersectionRequest} from './periodicBand'
-import type {ClosedSsBooleanRequest} from './closedSsBoolean'
-import {parseBondedSolidInput} from './bondedSolidProtocol'
-import type {CadOptions} from './cadWorkbench'
-import type {MeshData} from '../core/mesh'
-import type {PickHit} from '../render/rendererContracts'
-import type {DirectDocument} from '../app/directModeling'
-import type {MainOperation,MainParameters} from '../app/mainModeling'
-import type {TrussInput,TrussModel,TrussResponse,TrussTopologyLoadCase,TrussTopologyOptions} from './trussAnalysis'
-import type {AxialLimits,PrintStrengthProfile,ThermalStrengthRequest} from './trussScreening'
-import {resolveTrussScenario, type TrussScenario} from './trussScenario'
-import {checkLatticeGraphInput, checkLatticeGraphMeshInput, type LatticeGraphMesh} from '../fabrication/latticeGraphProtocol'
-import type {LighteningOptions} from './solidLightening'
-import {MainSolidWorkerClient,type MainSolidRunOptions} from './mainSolidWorkerClient'
+import type { IsolatedSsContactRequest } from './isolatedSsContact'
+import type { PeriodicBandRequest, PeriodicStockIntersectionRequest } from './periodicBand'
+import type { ClosedSsBooleanRequest } from './closedSsBoolean'
+import { parseBondedSolidInput } from './bondedSolidProtocol'
+import type { CadOptions } from './cadWorkbench'
+import type { MeshData } from '../core/mesh'
+import type { PickHit } from '../render/rendererContracts'
+import type { DirectDocument } from '../app/directModeling'
+import type { MainOperation, MainParameters } from '../app/mainModeling'
+import type {
+  TrussInput,
+  TrussModel,
+  TrussResponse,
+  TrussTopologyLoadCase,
+  TrussTopologyOptions,
+} from './trussAnalysis'
+import type { AxialLimits, PrintStrengthProfile, ThermalStrengthRequest } from './trussScreening'
+import { resolveTrussScenario, type TrussScenario } from './trussScenario'
+import {
+  checkLatticeGraphInput,
+  checkLatticeGraphMeshInput,
+  type LatticeGraphMesh,
+} from '../fabrication/latticeGraphProtocol'
+import type { LighteningOptions } from './solidLightening'
+import { MainSolidWorkerClient, type MainSolidRunOptions } from './mainSolidWorkerClient'
 
 // One warm worker serves all main-solid/CAD operations; the geometry kernel is
 // initialized once instead of every call paying the WASM inflate+compile.
 // A running computation cannot be interrupted in place, so cancellation (or a
 // superseding call) terminates the worker and the next operation recreates it.
-const shared=new MainSolidWorkerClient(()=>new Worker(new URL('../workers/mainSolid.worker.ts',import.meta.url),{type:'module'}))
-export function cancelMainSolid(){shared.cancel()}
-
-export function computeIsolatedSsContact(request:IsolatedSsContactRequest,options:MainSolidRunOptions={}){
- return shared.run({kind:'isolatedSsContact',request},options)
+const shared = new MainSolidWorkerClient(
+  () => new Worker(new URL('../workers/mainSolid.worker.ts', import.meta.url), { type: 'module' }),
+)
+export function cancelMainSolid() {
+  shared.cancel()
 }
 
-export function computePeriodicBand(request:PeriodicBandRequest,options:MainSolidRunOptions={}){
- return shared.run({kind:'periodicBand',request},options)
+export function computeIsolatedSsContact(request: IsolatedSsContactRequest, options: MainSolidRunOptions = {}) {
+  return shared.run({ kind: 'isolatedSsContact', request }, options)
 }
 
-export function computePeriodicStockIntersection(request:PeriodicStockIntersectionRequest,options:MainSolidRunOptions={}){
- return shared.run({kind:'periodicStockIntersection',request},options)
+export function computePeriodicBand(request: PeriodicBandRequest, options: MainSolidRunOptions = {}) {
+  return shared.run({ kind: 'periodicBand', request }, options)
 }
 
-export function computeClosedSsNetworkBoolean(request:ClosedSsBooleanRequest,options:MainSolidRunOptions={}){
- return shared.run({kind:'closedSsNetworkBoolean',request},options)
+export function computePeriodicStockIntersection(
+  request: PeriodicStockIntersectionRequest,
+  options: MainSolidRunOptions = {},
+) {
+  return shared.run({ kind: 'periodicStockIntersection', request }, options)
 }
 
-export function computeMainSolid(meshes:MeshData[],selected:number,hit:PickHit|null,operation:MainOperation,parameters:MainParameters):Promise<DirectDocument>{
- return shared.run({kind:'main',meshes,selected,hit,operation,parameters})
+export function computeClosedSsNetworkBoolean(request: ClosedSsBooleanRequest, options: MainSolidRunOptions = {}) {
+  return shared.run({ kind: 'closedSsNetworkBoolean', request }, options)
 }
 
-export function computeCadOperation(document:DirectDocument,options:CadOptions):Promise<DirectDocument>{
- return shared.run({kind:'cad',document,options})
+export function computeMainSolid(
+  meshes: MeshData[],
+  selected: number,
+  hit: PickHit | null,
+  operation: MainOperation,
+  parameters: MainParameters,
+): Promise<DirectDocument> {
+  return shared.run({ kind: 'main', meshes, selected, hit, operation, parameters })
 }
 
-export function computeCadInspection(bodies:import('../app/directModeling').DirectBody[]):Promise<import('./cadInspection').CadPairReport[]>{
- return shared.run({kind:'inspect',bodies})
+export function computeCadOperation(document: DirectDocument, options: CadOptions): Promise<DirectDocument> {
+  return shared.run({ kind: 'cad', document, options })
 }
 
-export function computeTrussAnalysis(model:TrussInput,options:MainSolidRunOptions={}){
- return shared.run({kind:'truss',model},{...options,timeoutMs:options.timeoutMs??30000})
+export function computeCadInspection(
+  bodies: import('../app/directModeling').DirectBody[],
+): Promise<import('./cadInspection').CadPairReport[]> {
+  return shared.run({ kind: 'inspect', bodies })
 }
 
-export function computeTrussField(model:TrussInput,result:TrussResponse,markerMm:number,options:MainSolidRunOptions={}){
- return shared.run({kind:'trussField',model,result,markerMm},{...options,timeoutMs:options.timeoutMs??30000})
+export function computeTrussAnalysis(model: TrussInput, options: MainSolidRunOptions = {}) {
+  return shared.run({ kind: 'truss', model }, { ...options, timeoutMs: options.timeoutMs ?? 30000 })
 }
 
-export function computeTrussScreening(model:TrussInput,responses:TrussResponse[],limits:AxialLimits,options:MainSolidRunOptions={}){
- return shared.run({kind:'trussScreening',model,responses,limits},{...options,timeoutMs:options.timeoutMs??30000})
+export function computeTrussField(
+  model: TrussInput,
+  result: TrussResponse,
+  markerMm: number,
+  options: MainSolidRunOptions = {},
+) {
+  return shared.run(
+    { kind: 'trussField', model, result, markerMm },
+    { ...options, timeoutMs: options.timeoutMs ?? 30000 },
+  )
 }
 
-export function computePrintStrengthProfile(profile:PrintStrengthProfile,options:MainSolidRunOptions={}){
- return shared.run({kind:'printStrengthProfile',profile},{...options,timeoutMs:options.timeoutMs??30000})
+export function computeTrussScreening(
+  model: TrussInput,
+  responses: TrussResponse[],
+  limits: AxialLimits,
+  options: MainSolidRunOptions = {},
+) {
+  return shared.run(
+    { kind: 'trussScreening', model, responses, limits },
+    { ...options, timeoutMs: options.timeoutMs ?? 30000 },
+  )
 }
 
-export function computeThermalStrength(request:ThermalStrengthRequest,options:MainSolidRunOptions={}){
- return shared.run({kind:'thermalStrength',request},{...options,timeoutMs:options.timeoutMs??30000})
+export function computePrintStrengthProfile(profile: PrintStrengthProfile, options: MainSolidRunOptions = {}) {
+  return shared.run({ kind: 'printStrengthProfile', profile }, { ...options, timeoutMs: options.timeoutMs ?? 30000 })
 }
 
-export function computeTrussTopology(model:Omit<TrussModel,'forcesN'>,cases:TrussTopologyLoadCase[],options:TrussTopologyOptions={},runOptions:MainSolidRunOptions={}){
- return shared.run({kind:'trussTopology',model,cases,options},runOptions)
+export function computeThermalStrength(request: ThermalStrengthRequest, options: MainSolidRunOptions = {}) {
+  return shared.run({ kind: 'thermalStrength', request }, { ...options, timeoutMs: options.timeoutMs ?? 30000 })
 }
 
-export function computeStructuralProfileCatalog(options:MainSolidRunOptions={}){
- return shared.run({kind:'structuralProfiles'},{...options,timeoutMs:options.timeoutMs??30000})
+export function computeTrussTopology(
+  model: Omit<TrussModel, 'forcesN'>,
+  cases: TrussTopologyLoadCase[],
+  options: TrussTopologyOptions = {},
+  runOptions: MainSolidRunOptions = {},
+) {
+  return shared.run({ kind: 'trussTopology', model, cases, options }, runOptions)
 }
 
-export async function computeTrussScenario(scenario:TrussScenario,options:MainSolidRunOptions={}){
- const resolved=resolveTrussScenario(scenario)
- const result=await computeTrussAnalysis(resolved.model,options)
- return {...resolved,result}
+export function computeStructuralProfileCatalog(options: MainSolidRunOptions = {}) {
+  return shared.run({ kind: 'structuralProfiles' }, { ...options, timeoutMs: options.timeoutMs ?? 30000 })
 }
 
-export async function computeNominalLatticeGraph(mesh:LatticeGraphMesh,options:LighteningOptions,runOptions:MainSolidRunOptions={}){
- checkLatticeGraphInput(mesh,options)
- return shared.run({kind:'latticeGraph',mesh:{vertices:mesh.vertices,indices:mesh.indices,transform:mesh.transform},options:{...options}},
-  {...runOptions,timeoutMs:runOptions.timeoutMs??30000})
+export async function computeTrussScenario(scenario: TrussScenario, options: MainSolidRunOptions = {}) {
+  const resolved = resolveTrussScenario(scenario)
+  const result = await computeTrussAnalysis(resolved.model, options)
+  return { ...resolved, result }
 }
 
-export function computeStructuralSections(mesh:LatticeGraphMesh,axis:'x'|'y'|'z',stations:number[],options:MainSolidRunOptions={}){
- checkLatticeGraphMeshInput(mesh)
- if(!Array.isArray(stations)||!stations.length||stations.length>64)throw new Error('Provide 1-64 section positions.')
- return shared.run({kind:'structuralSections',mesh:{vertices:mesh.vertices,indices:mesh.indices,transform:mesh.transform},axis,stations:[...stations]},
-  {...options,timeoutMs:options.timeoutMs??30000})
+export async function computeNominalLatticeGraph(
+  mesh: LatticeGraphMesh,
+  options: LighteningOptions,
+  runOptions: MainSolidRunOptions = {},
+) {
+  checkLatticeGraphInput(mesh, options)
+  return shared.run(
+    {
+      kind: 'latticeGraph',
+      mesh: { vertices: mesh.vertices, indices: mesh.indices, transform: mesh.transform },
+      options: { ...options },
+    },
+    { ...runOptions, timeoutMs: runOptions.timeoutMs ?? 30000 },
+  )
 }
 
-export function computeBondedSolid(inputJson:string,options:MainSolidRunOptions={}){
- parseBondedSolidInput(inputJson)
- return shared.run({kind:'bondedSolid',inputJson},{...options,timeoutMs:options.timeoutMs??30000})
+export function computeStructuralSections(
+  mesh: LatticeGraphMesh,
+  axis: 'x' | 'y' | 'z',
+  stations: number[],
+  options: MainSolidRunOptions = {},
+) {
+  checkLatticeGraphMeshInput(mesh)
+  if (!Array.isArray(stations) || !stations.length || stations.length > 64)
+    throw new Error('Provide 1-64 section positions.')
+  return shared.run(
+    {
+      kind: 'structuralSections',
+      mesh: { vertices: mesh.vertices, indices: mesh.indices, transform: mesh.transform },
+      axis,
+      stations: [...stations],
+    },
+    { ...options, timeoutMs: options.timeoutMs ?? 30000 },
+  )
 }
 
-export function computeSourceBodyRestoration(options:import('./sourceBody').SourceBodyOptions,runOptions:MainSolidRunOptions={}) {
- return shared.run({kind:'sourceBodyRestore',options},runOptions)
+export function computeBondedSolid(inputJson: string, options: MainSolidRunOptions = {}) {
+  parseBondedSolidInput(inputJson)
+  return shared.run({ kind: 'bondedSolid', inputJson }, { ...options, timeoutMs: options.timeoutMs ?? 30000 })
 }
 
-export function computeExpressionShellRestoration(options:import('./expressionShell').ExpressionShellOptions,runOptions:MainSolidRunOptions={}) {
- return shared.run({kind:'expressionShellRestore',options},runOptions)
+export function computeSourceBodyRestoration(
+  options: import('./sourceBody').SourceBodyOptions,
+  runOptions: MainSolidRunOptions = {},
+) {
+  return shared.run({ kind: 'sourceBodyRestore', options }, runOptions)
 }
 
-export function computeExpressionShellInspection(options:import('./expressionShellInspection').ExpressionInspectionOptions,runOptions:MainSolidRunOptions={}) {
- return shared.run({kind:'expressionShellInspect',options},runOptions)
+export function computeExpressionShellRestoration(
+  options: import('./expressionShell').ExpressionShellOptions,
+  runOptions: MainSolidRunOptions = {},
+) {
+  return shared.run({ kind: 'expressionShellRestore', options }, runOptions)
+}
+
+export function computeExpressionShellInspection(
+  options: import('./expressionShellInspection').ExpressionInspectionOptions,
+  runOptions: MainSolidRunOptions = {},
+) {
+  return shared.run({ kind: 'expressionShellInspect', options }, runOptions)
 }

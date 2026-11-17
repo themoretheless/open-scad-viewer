@@ -119,10 +119,7 @@ function recordEdge(
  * when the id space is so sparse that the offsets table would dwarf the mesh;
  * callers fall back to the direct scan in that case.
  */
-export function buildFaceTriangleIndex(
-  faceIds: Uint32Array,
-  triangleCount: number,
-): FaceTriangleIndex | null {
+export function buildFaceTriangleIndex(faceIds: Uint32Array, triangleCount: number): FaceTriangleIndex | null {
   const count = Number.isInteger(triangleCount) ? triangleCount : 0
   if (count < 1 || faceIds.length < count) return null
 
@@ -244,8 +241,10 @@ export function buildFaceOverlayGeometry(
   }
 
   return {
-    triangles: writtenPositions === trianglePositions.length ? trianglePositions : trianglePositions.slice(0, writtenPositions),
-    boundaryLines: boundaryOffset === boundaryPositions.length ? boundaryPositions : boundaryPositions.slice(0, boundaryOffset),
+    triangles:
+      writtenPositions === trianglePositions.length ? trianglePositions : trianglePositions.slice(0, writtenPositions),
+    boundaryLines:
+      boundaryOffset === boundaryPositions.length ? boundaryPositions : boundaryPositions.slice(0, boundaryOffset),
   }
 }
 
@@ -356,12 +355,10 @@ export function buildSourceOverlayGeometry(
   }
 
   return {
-    triangles: writtenTriangles === allocationTriangles
-      ? trianglePositions
-      : trianglePositions.slice(0, writtenTriangles * 9),
-    boundaryLines: boundaryOffset === boundaryPositions.length
-      ? boundaryPositions
-      : boundaryPositions.slice(0, boundaryOffset),
+    triangles:
+      writtenTriangles === allocationTriangles ? trianglePositions : trianglePositions.slice(0, writtenTriangles * 9),
+    boundaryLines:
+      boundaryOffset === boundaryPositions.length ? boundaryPositions : boundaryPositions.slice(0, boundaryOffset),
     triangleCount: writtenTriangles,
     truncated: matchingTriangles > triangleLimit,
   }

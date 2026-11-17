@@ -18,7 +18,7 @@ export function valueWeight(value: Value, ctx: StableExpressionEvalContext): num
 }
 
 export function valueDepth(value: Value, ctx: StableExpressionEvalContext): number {
-  return Array.isArray(value) ? ctx.valueDepths.get(value) ?? 1 : 0
+  return Array.isArray(value) ? (ctx.valueDepths.get(value) ?? 1) : 0
 }
 
 export function registerArrayValue<T extends Value[]>(
@@ -41,7 +41,11 @@ export function registerArrayValue<T extends Value[]>(
   }
   ctx.valueBudget.used += weight
   if (ctx.valueBudget.used > MAX_EVALUATED_VALUE_UNITS) {
-    evaluationError(ctx, p, `${limitLabel} exceeds the ${MAX_EVALUATED_VALUE_UNITS.toLocaleString('en-US')} value-allocation budget`)
+    evaluationError(
+      ctx,
+      p,
+      `${limitLabel} exceeds the ${MAX_EVALUATED_VALUE_UNITS.toLocaleString('en-US')} value-allocation budget`,
+    )
   }
   ctx.valueWeights.set(value, weight)
   ctx.valueDepths.set(value, depth)
@@ -67,16 +71,17 @@ export function overlayDynamicVariables(target: Map<string, Value>, source: Read
 }
 
 export function isListComprehensionExpression(expr: Expr): expr is ListComprehensionExpression {
-  return expr.kind === 'lc-for'
-    || expr.kind === 'lc-for-c'
-    || expr.kind === 'lc-if'
-    || expr.kind === 'lc-let'
-    || expr.kind === 'lc-each'
+  return (
+    expr.kind === 'lc-for' ||
+    expr.kind === 'lc-for-c' ||
+    expr.kind === 'lc-if' ||
+    expr.kind === 'lc-let' ||
+    expr.kind === 'lc-each'
+  )
 }
 
 export function isFunctionValue(value: Value): value is FunctionValue {
-  return !Array.isArray(value) && typeof value === 'object' && value !== null
-    && value.kind === 'function-value'
+  return !Array.isArray(value) && typeof value === 'object' && value !== null && value.kind === 'function-value'
 }
 
 export function compactDiagnosticText(value: string, limit = 240): string {
@@ -97,8 +102,9 @@ export function appendComprehensionValues(
 }
 
 export function truthy(value: Value): boolean {
-  return value !== false && value !== undefined && value !== 0 && value !== ''
-    && (!Array.isArray(value) || value.length > 0)
+  return (
+    value !== false && value !== undefined && value !== 0 && value !== '' && (!Array.isArray(value) || value.length > 0)
+  )
 }
 
 export function deepEqual(left: Value, right: Value): boolean {

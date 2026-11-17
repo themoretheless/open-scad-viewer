@@ -22,11 +22,7 @@ export function dot3(a: ArrayLike<number>, b: ArrayLike<number>): number {
 }
 
 export function cross3(a: ArrayLike<number>, b: ArrayLike<number>): Vec3 {
-  return [
-    a[1]! * b[2]! - a[2]! * b[1]!,
-    a[2]! * b[0]! - a[0]! * b[2]!,
-    a[0]! * b[1]! - a[1]! * b[0]!,
-  ]
+  return [a[1]! * b[2]! - a[2]! * b[1]!, a[2]! * b[0]! - a[0]! * b[2]!, a[0]! * b[1]! - a[1]! * b[0]!]
 }
 
 export function unit3(a: ArrayLike<number>): Vec3 {
@@ -89,7 +85,10 @@ export function multiply(a: Mat4, b: Mat4): Mat4 {
   const out = new Float32Array(16)
   for (let r = 0; r < 4; r++) {
     const r4 = r * 4
-    const a0 = a[r4]!, a1 = a[r4 + 1]!, a2 = a[r4 + 2]!, a3 = a[r4 + 3]!
+    const a0 = a[r4]!,
+      a1 = a[r4 + 1]!,
+      a2 = a[r4 + 2]!,
+      a3 = a[r4 + 3]!
     for (let c = 0; c < 4; c++) {
       const v = Math.fround(a0 * b[c]! + a1 * b[4 + c]! + a2 * b[8 + c]! + a3 * b[12 + c]!)
       if (!Number.isFinite(v)) throw new Error('Matrix result exceeds finite GPU storage')
@@ -101,42 +100,64 @@ export function multiply(a: Mat4, b: Mat4): Mat4 {
 
 export function translate(m: Mat4, v: Vec3): Mat4 {
   const t = resetScratchIdentity()
-  t[3] = v[0]; t[7] = v[1]; t[11] = v[2]
+  t[3] = v[0]
+  t[7] = v[1]
+  t[11] = v[2]
   return multiply(t, m)
 }
 
 export function rotateX(m: Mat4, rad: number): Mat4 {
-  const c = Math.cos(rad), s = Math.sin(rad), r = resetScratchIdentity()
-  r[5] = c; r[6] = -s; r[9] = s; r[10] = c
+  const c = Math.cos(rad),
+    s = Math.sin(rad),
+    r = resetScratchIdentity()
+  r[5] = c
+  r[6] = -s
+  r[9] = s
+  r[10] = c
   return multiply(r, m)
 }
 
 export function rotateY(m: Mat4, rad: number): Mat4 {
-  const c = Math.cos(rad), s = Math.sin(rad), r = resetScratchIdentity()
-  r[0] = c; r[2] = s; r[8] = -s; r[10] = c
+  const c = Math.cos(rad),
+    s = Math.sin(rad),
+    r = resetScratchIdentity()
+  r[0] = c
+  r[2] = s
+  r[8] = -s
+  r[10] = c
   return multiply(r, m)
 }
 
 export function rotateZ(m: Mat4, rad: number): Mat4 {
-  const c = Math.cos(rad), s = Math.sin(rad), r = resetScratchIdentity()
-  r[0] = c; r[1] = -s; r[4] = s; r[5] = c
+  const c = Math.cos(rad),
+    s = Math.sin(rad),
+    r = resetScratchIdentity()
+  r[0] = c
+  r[1] = -s
+  r[4] = s
+  r[5] = c
   return multiply(r, m)
 }
 
 export function scale(m: Mat4, v: Vec3): Mat4 {
   const s = resetScratchIdentity()
-  s[0] = v[0]; s[5] = v[1]; s[10] = v[2]
+  s[0] = v[0]
+  s[5] = v[1]
+  s[10] = v[2]
   return multiply(s, m)
 }
 
 export function perspective(fov: number, aspect: number, near: number, far: number): Mat4 {
-  const f = 1 / Math.tan(fov / 2), nf = 1 / (near - far)
+  const f = 1 / Math.tan(fov / 2),
+    nf = 1 / (near - far)
   const m = new Float32Array(16)
-  m[0] = f / aspect; m[5] = f
+  m[0] = f / aspect
+  m[5] = f
   // WebGPU's normalized device coordinate depth range is [0, 1].
   // The matrices in this module are row-major and use a right-handed camera
   // looking down -Z, hence z=-near maps to 0 and z=-far maps to 1.
-  m[10] = far * nf; m[11] = far * near * nf
+  m[10] = far * nf
+  m[11] = far * near * nf
   m[14] = -1
   return m
 }
@@ -165,10 +186,19 @@ export function orthographic(
 }
 
 export function lookAt(eye: Vec3, center: Vec3, up: Vec3): Mat4 {
-  let zx = eye[0] - center[0], zy = eye[1] - center[1], zz = eye[2] - center[2]
+  let zx = eye[0] - center[0],
+    zy = eye[1] - center[1],
+    zz = eye[2] - center[2]
   let len = Math.hypot(zx, zy, zz)
-  if (len < 1e-10) { zx = 0; zy = 0; zz = 1; len = 1 }
-  const fz0 = zx / len, fz1 = zy / len, fz2 = zz / len
+  if (len < 1e-10) {
+    zx = 0
+    zy = 0
+    zz = 1
+    len = 1
+  }
+  const fz0 = zx / len,
+    fz1 = zy / len,
+    fz2 = zz / len
 
   let xx = up[1] * fz2 - up[2] * fz1
   let xy = up[2] * fz0 - up[0] * fz2
@@ -178,21 +208,37 @@ export function lookAt(eye: Vec3, center: Vec3, up: Vec3): Mat4 {
   // Pick a stable secondary up axis instead of producing NaNs.
   if (len < 1e-10) {
     const highZ = Math.abs(fz2) > 0.9
-    const ax = 0, ay = highZ ? 1 : 0, az = highZ ? 0 : 1
+    const ax = 0,
+      ay = highZ ? 1 : 0,
+      az = highZ ? 0 : 1
     xx = ay * fz2 - az * fz1
     xy = az * fz0 - ax * fz2
     xz = ax * fz1 - ay * fz0
     len = Math.hypot(xx, xy, xz)
   }
-  const fx0 = xx / len, fx1 = xy / len, fx2 = xz / len
+  const fx0 = xx / len,
+    fx1 = xy / len,
+    fx2 = xz / len
   const fy0 = fz1 * fx2 - fz2 * fx1
   const fy1 = fz2 * fx0 - fz0 * fx2
   const fy2 = fz0 * fx1 - fz1 * fx0
   const m = new Float32Array(16)
-  m[0] = fx0; m[1] = fx1; m[2] = fx2; m[3] = -(fx0*eye[0]+fx1*eye[1]+fx2*eye[2])
-  m[4] = fy0; m[5] = fy1; m[6] = fy2; m[7] = -(fy0*eye[0]+fy1*eye[1]+fy2*eye[2])
-  m[8] = fz0; m[9] = fz1; m[10] = fz2; m[11] = -(fz0*eye[0]+fz1*eye[1]+fz2*eye[2])
-  m[12] = 0; m[13] = 0; m[14] = 0; m[15] = 1
+  m[0] = fx0
+  m[1] = fx1
+  m[2] = fx2
+  m[3] = -(fx0 * eye[0] + fx1 * eye[1] + fx2 * eye[2])
+  m[4] = fy0
+  m[5] = fy1
+  m[6] = fy2
+  m[7] = -(fy0 * eye[0] + fy1 * eye[1] + fy2 * eye[2])
+  m[8] = fz0
+  m[9] = fz1
+  m[10] = fz2
+  m[11] = -(fz0 * eye[0] + fz1 * eye[1] + fz2 * eye[2])
+  m[12] = 0
+  m[13] = 0
+  m[14] = 0
+  m[15] = 1
   return m
 }
 
@@ -230,23 +276,19 @@ export function invert(a: Mat4, out?: Mat4): Mat4 {
 /** Transform a point by a row-major matrix, including homogeneous division. */
 export function transformPoint(m: Mat4, point: Vec3): Vec3 {
   const [x, y, z] = point
-  const w = m[12]!*x + m[13]!*y + m[14]!*z + m[15]!
+  const w = m[12]! * x + m[13]! * y + m[14]! * z + m[15]!
   const iw = Number.isFinite(w) && Math.abs(w) > 1e-12 ? 1 / w : 1
   return [
-    (m[0]!*x + m[1]!*y + m[2]!*z + m[3]!) * iw,
-    (m[4]!*x + m[5]!*y + m[6]!*z + m[7]!) * iw,
-    (m[8]!*x + m[9]!*y + m[10]!*z + m[11]!) * iw,
+    (m[0]! * x + m[1]! * y + m[2]! * z + m[3]!) * iw,
+    (m[4]! * x + m[5]! * y + m[6]! * z + m[7]!) * iw,
+    (m[8]! * x + m[9]! * y + m[10]! * z + m[11]!) * iw,
   ]
 }
 
 /** Transform a direction by the linear part of a row-major matrix. */
 export function transformVector(m: Mat4, vector: Vec3): Vec3 {
   const [x, y, z] = vector
-  return [
-    m[0]!*x + m[1]!*y + m[2]!*z,
-    m[4]!*x + m[5]!*y + m[6]!*z,
-    m[8]!*x + m[9]!*y + m[10]!*z,
-  ]
+  return [m[0]! * x + m[1]! * y + m[2]! * z, m[4]! * x + m[5]! * y + m[6]! * z, m[8]! * x + m[9]! * y + m[10]! * z]
 }
 
 /**
@@ -280,23 +322,29 @@ export function rayAabbDistance(ray: Ray3, bounds: Aabb3, maxDistance = Infinity
 
 /** Double-sided Moller-Trumbore ray/triangle intersection. */
 export function rayTriangleDistance(ray: Ray3, a: Vec3, b: Vec3, c: Vec3): number | null {
-  const e1x = b[0]-a[0], e1y = b[1]-a[1], e1z = b[2]-a[2]
-  const e2x = c[0]-a[0], e2y = c[1]-a[1], e2z = c[2]-a[2]
-  const px = ray.direction[1]*e2z - ray.direction[2]*e2y
-  const py = ray.direction[2]*e2x - ray.direction[0]*e2z
-  const pz = ray.direction[0]*e2y - ray.direction[1]*e2x
-  const det = e1x*px + e1y*py + e1z*pz
+  const e1x = b[0] - a[0],
+    e1y = b[1] - a[1],
+    e1z = b[2] - a[2]
+  const e2x = c[0] - a[0],
+    e2y = c[1] - a[1],
+    e2z = c[2] - a[2]
+  const px = ray.direction[1] * e2z - ray.direction[2] * e2y
+  const py = ray.direction[2] * e2x - ray.direction[0] * e2z
+  const pz = ray.direction[0] * e2y - ray.direction[1] * e2x
+  const det = e1x * px + e1y * py + e1z * pz
   if (Math.abs(det) < 1e-10) return null
   const invDet = 1 / det
-  const tx = ray.origin[0]-a[0], ty = ray.origin[1]-a[1], tz = ray.origin[2]-a[2]
-  const u = (tx*px + ty*py + tz*pz) * invDet
+  const tx = ray.origin[0] - a[0],
+    ty = ray.origin[1] - a[1],
+    tz = ray.origin[2] - a[2]
+  const u = (tx * px + ty * py + tz * pz) * invDet
   if (u < 0 || u > 1) return null
-  const qx = ty*e1z - tz*e1y
-  const qy = tz*e1x - tx*e1z
-  const qz = tx*e1y - ty*e1x
-  const v = (ray.direction[0]*qx + ray.direction[1]*qy + ray.direction[2]*qz) * invDet
+  const qx = ty * e1z - tz * e1y
+  const qy = tz * e1x - tx * e1z
+  const qz = tx * e1y - ty * e1x
+  const v = (ray.direction[0] * qx + ray.direction[1] * qy + ray.direction[2] * qz) * invDet
   if (v < 0 || u + v > 1) return null
-  const distance = (e2x*qx + e2y*qy + e2z*qz) * invDet
+  const distance = (e2x * qx + e2y * qy + e2z * qz) * invDet
   return distance >= 0 && Number.isFinite(distance) ? distance : null
 }
 
@@ -326,28 +374,36 @@ export function rayIndexedMeshDistance(
   let hit = false
   for (let i = 0; i + 2 < indices.length; i += 3) {
     const ia = indices[i]! * vertexStride
-    const ib = indices[i+1]! * vertexStride
-    const ic = indices[i+2]! * vertexStride
+    const ib = indices[i + 1]! * vertexStride
+    const ic = indices[i + 2]! * vertexStride
     if (ic + 2 >= vertices.length || ib + 2 >= vertices.length || ia + 2 >= vertices.length) continue
 
-    const ax = vertices[ia]!, ay = vertices[ia+1]!, az = vertices[ia+2]!
-    const e1x = vertices[ib]!-ax, e1y = vertices[ib+1]!-ay, e1z = vertices[ib+2]!-az
-    const e2x = vertices[ic]!-ax, e2y = vertices[ic+1]!-ay, e2z = vertices[ic+2]!-az
-    const px = ray.direction[1]*e2z - ray.direction[2]*e2y
-    const py = ray.direction[2]*e2x - ray.direction[0]*e2z
-    const pz = ray.direction[0]*e2y - ray.direction[1]*e2x
-    const det = e1x*px + e1y*py + e1z*pz
+    const ax = vertices[ia]!,
+      ay = vertices[ia + 1]!,
+      az = vertices[ia + 2]!
+    const e1x = vertices[ib]! - ax,
+      e1y = vertices[ib + 1]! - ay,
+      e1z = vertices[ib + 2]! - az
+    const e2x = vertices[ic]! - ax,
+      e2y = vertices[ic + 1]! - ay,
+      e2z = vertices[ic + 2]! - az
+    const px = ray.direction[1] * e2z - ray.direction[2] * e2y
+    const py = ray.direction[2] * e2x - ray.direction[0] * e2z
+    const pz = ray.direction[0] * e2y - ray.direction[1] * e2x
+    const det = e1x * px + e1y * py + e1z * pz
     if (Math.abs(det) < 1e-10) continue
     const invDet = 1 / det
-    const tx = ray.origin[0]-ax, ty = ray.origin[1]-ay, tz = ray.origin[2]-az
-    const u = (tx*px + ty*py + tz*pz) * invDet
+    const tx = ray.origin[0] - ax,
+      ty = ray.origin[1] - ay,
+      tz = ray.origin[2] - az
+    const u = (tx * px + ty * py + tz * pz) * invDet
     if (u < 0 || u > 1) continue
-    const qx = ty*e1z - tz*e1y
-    const qy = tz*e1x - tx*e1z
-    const qz = tx*e1y - ty*e1x
-    const v = (ray.direction[0]*qx + ray.direction[1]*qy + ray.direction[2]*qz) * invDet
+    const qx = ty * e1z - tz * e1y
+    const qy = tz * e1x - tx * e1z
+    const qz = tx * e1y - ty * e1x
+    const v = (ray.direction[0] * qx + ray.direction[1] * qy + ray.direction[2] * qz) * invDet
     if (v < 0 || u + v > 1) continue
-    const distance = (e2x*qx + e2y*qy + e2z*qz) * invDet
+    const distance = (e2x * qx + e2y * qy + e2z * qz) * invDet
     if (distance >= 0 && distance < nearest && Number.isFinite(distance)) {
       nearest = distance
       hit = true

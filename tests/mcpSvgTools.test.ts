@@ -6,7 +6,9 @@ import { setRushGraphParameters, type RushGraph } from '../src/language/rushGrap
 
 interface ToolResult {
   isError?: boolean
-  content: Array<{ type: 'text'; text: string } | { type: 'resource'; resource: { uri: string; mimeType: string; text: string } }>
+  content: Array<
+    { type: 'text'; text: string } | { type: 'resource'; resource: { uri: string; mimeType: string; text: string } }
+  >
 }
 interface JsonRpcResponse {
   id: number
@@ -16,12 +18,29 @@ interface JsonRpcResponse {
 interface ToolSchema {
   name: string
   annotations: { readOnlyHint: boolean; openWorldHint: boolean }
-  inputSchema: { type: string; required: string[]; additionalProperties: boolean; properties: Record<string, Record<string, unknown>> }
+  inputSchema: {
+    type: string
+    required: string[]
+    additionalProperties: boolean
+    properties: Record<string, Record<string, unknown>>
+  }
 }
-interface ExtrusionResult { source: string; svg: string; warnings: string[]; analysis: GeometryAnalysis }
-interface RushGraphExtrusionResult extends ExtrusionResult { document: RushGraph; document_sha256: string; rush_source: string; rush_analysis: GeometryAnalysis }
+interface ExtrusionResult {
+  source: string
+  svg: string
+  warnings: string[]
+  analysis: GeometryAnalysis
+}
+interface RushGraphExtrusionResult extends ExtrusionResult {
+  document: RushGraph
+  document_sha256: string
+  rush_source: string
+  rush_analysis: GeometryAnalysis
+}
 const closeables: Array<() => Promise<void>> = []
-afterEach(async () => { await Promise.all(closeables.splice(0).map(close => close())) })
+afterEach(async () => {
+  await Promise.all(closeables.splice(0).map(close => close()))
+})
 
 /** Exercise the public MCP boundary without loading storage, other tools, or an upstream runtime. */
 async function connect() {
@@ -38,21 +57,38 @@ async function connect() {
   }
   await client.start()
   await server.connect(transport)
-  closeables.push(async () => { await server.close(); await client.close() })
+  closeables.push(async () => {
+    await server.close()
+    await client.close()
+  })
   async function request(method: string, params: Record<string, unknown> = {}) {
     const id = nextId++
     const response = new Promise<JsonRpcResponse>((resolve, reject) => {
-      const timeout = setTimeout(() => { pending.delete(id); reject(new Error(`Timed out waiting for ${method}`)) }, 15000)
-      pending.set(id, result => { clearTimeout(timeout); resolve(result) })
+      const timeout = setTimeout(() => {
+        pending.delete(id)
+        reject(new Error(`Timed out waiting for ${method}`))
+      }, 15000)
+      pending.set(id, result => {
+        clearTimeout(timeout)
+        resolve(result)
+      })
     })
     await client.send({ jsonrpc: '2.0', id, method, params } as JSONRPCMessage)
     const envelope = await response
     if (envelope.error) throw new Error(`${envelope.error.code}: ${envelope.error.message}`)
     return envelope.result ?? {}
   }
-  await request('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'svg-test', version: '1.0.0' } })
+  await request('initialize', {
+    protocolVersion: '2025-11-25',
+    capabilities: {},
+    clientInfo: { name: 'svg-test', version: '1.0.0' },
+  })
   await client.send({ jsonrpc: '2.0', method: 'notifications/initialized' } as JSONRPCMessage)
-  return { request, call: async (name: string, args: Record<string, unknown>) => await request('tools/call', { name, arguments: args }) as unknown as ToolResult }
+  return {
+    request,
+    call: async (name: string, args: Record<string, unknown>) =>
+      (await request('tools/call', { name, arguments: args })) as unknown as ToolResult,
+  }
 }
 function text(result: ToolResult) {
   const item = result.content.find(item => item.type === 'text')
@@ -69,7 +105,8 @@ function extrusion(result: ToolResult): ExtrusionResult {
   expect(result.isError, text(result)).not.toBe(true)
   return JSON.parse(text(result)) as ExtrusionResult
 }
-const rectangle = '<svg xmlns="http://www.w3.org/2000/svg" width="10mm" height="10mm" viewBox="0 0 10 10"><rect width="10" height="10"/></svg>'
+const rectangle =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="10mm" height="10mm" viewBox="0 0 10 10"><rect width="10" height="10"/></svg>'
 const styled = `<svg xmlns="http://www.w3.org/2000/svg" width="20mm" height="10mm" viewBox="0 0 20 10">
   <defs><rect id="tile" width="8" height="8"/><clipPath id="window"><rect x="1" y="2" width="14" height="4"/></clipPath></defs>
   <style>.ink { fill: #2563eb; } .hidden { display: none; }</style>
@@ -80,8 +117,12 @@ const styled = `<svg xmlns="http://www.w3.org/2000/svg" width="20mm" height="10m
 describe('SVG tools over MCP', () => {
   it('advertises all three tools with strict typed controls and the standalone 96 DPI default', async () => {
     const { request } = await connect()
-    const listed = await request('tools/list') as unknown as { tools: ToolSchema[] }
-    expect(listed.tools.map(tool => tool.name).sort()).toEqual(['rush_svg_export', 'rush_svg_extrude', 'rush_svg_preview'])
+    const listed = (await request('tools/list')) as unknown as { tools: ToolSchema[] }
+    expect(listed.tools.map(tool => tool.name).sort()).toEqual([
+      'rush_svg_export',
+      'rush_svg_extrude',
+      'rush_svg_preview',
+    ])
     for (const name of ['rush_svg_preview', 'rush_svg_extrude']) {
       const tool = listed.tools.find(tool => tool.name === name)!
       expect(tool.annotations).toMatchObject({ readOnlyHint: true, openWorldHint: false })
@@ -98,13 +139,19 @@ describe('SVG tools over MCP', () => {
       })
     }
     expect(listed.tools.find(tool => tool.name === 'rush_svg_extrude')!.inputSchema.required).toContain('height')
-    expect(listed.tools.find(tool => tool.name === 'rush_svg_extrude')!.inputSchema.properties.includeRushGraph).toMatchObject({ type: 'boolean', default: false })
-    expect(listed.tools.find(tool => tool.name === 'rush_svg_export')!.inputSchema.properties.axis).toMatchObject({ enum: ['x', 'y', 'z'], default: 'z' })
+    expect(
+      listed.tools.find(tool => tool.name === 'rush_svg_extrude')!.inputSchema.properties.includeRushGraph,
+    ).toMatchObject({ type: 'boolean', default: false })
+    expect(listed.tools.find(tool => tool.name === 'rush_svg_export')!.inputSchema.properties.axis).toMatchObject({
+      enum: ['x', 'y', 'z'],
+      default: 'z',
+    })
   })
 
   it('returns metadata and portable artwork retaining gradients and outlined text', async () => {
     const { call } = await connect()
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="60mm" height="20mm" viewBox="0 0 60 20"><defs><linearGradient id="ink"><stop stop-color="#ff0000"/><stop offset="1" stop-color="#0000ff"/></linearGradient></defs><rect x="1" y="1" width="18" height="18" fill="url(#ink)"/><text x="24" y="15" font-family="Noto Sans" font-size="12" fill="#008000">SVG</text></svg>'
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="60mm" height="20mm" viewBox="0 0 60 20"><defs><linearGradient id="ink"><stop stop-color="#ff0000"/><stop offset="1" stop-color="#0000ff"/></linearGradient></defs><rect x="1" y="1" width="18" height="18" fill="url(#ink)"/><text x="24" y="15" font-family="Noto Sans" font-size="12" fill="#008000">SVG</text></svg>'
     const result = await call('rush_svg_preview', { svg })
     expect(result.isError, text(result)).not.toBe(true)
     expect(result.content.map(item => item.type)).toEqual(['text', 'resource'])
@@ -135,7 +182,8 @@ describe('SVG tools over MCP', () => {
     const restored = extrusion(await call('rush_svg_extrude', { svg: model.svg, height: 3, dpi: 300 }))
     expect(restored.analysis.volume).toBeCloseTo(144, 5)
     // A tight SVG viewBox resets the origin; fabrication dimensions and area remain unchanged.
-    const dimensions = (analysis: GeometryAnalysis) => analysis.bounds!.max.map((value, axis) => value - analysis.bounds!.min[axis])
+    const dimensions = (analysis: GeometryAnalysis) =>
+      analysis.bounds!.max.map((value, axis) => value - analysis.bounds!.min[axis])
     expect(dimensions(restored.analysis)).toEqual([14, 4, 3])
     expect(dimensions(restored.analysis)).toEqual(dimensions(model.analysis))
   })
@@ -143,7 +191,10 @@ describe('SVG tools over MCP', () => {
   it('applies explicit pixel DPI to preview and extrusion while preserving millimeter dimensions', async () => {
     const { call } = await connect()
     const pixels = '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96"/></svg>'
-    for (const [dpi, size] of [[96, 25.4], [192, 12.7]]) {
+    for (const [dpi, size] of [
+      [96, 25.4],
+      [192, 12.7],
+    ]) {
       const preview = await call('rush_svg_preview', { svg: pixels, dpi })
       expect(preview.isError, text(preview)).not.toBe(true)
       expect(JSON.parse(text(preview)).widthMm).toBeCloseTo(size, 5)
@@ -154,10 +205,17 @@ describe('SVG tools over MCP', () => {
 
   it('returns an editable native RushGraph preserving holes, islands, separate parts and physical coordinates', async () => {
     const { call } = await connect()
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="30mm" height="20mm" viewBox="0 0 30 20"><path fill-rule="evenodd" d="M0 0H20V20H0Z M5 5H15V15H5Z M9 9H11V11H9Z"/><rect x="24" y="2" width="4" height="3"/></svg>'
-    const result = extrusion(await call('rush_svg_extrude', { svg, height: 2, includeRushGraph: true })) as RushGraphExtrusionResult
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="30mm" height="20mm" viewBox="0 0 30 20"><path fill-rule="evenodd" d="M0 0H20V20H0Z M5 5H15V15H5Z M9 9H11V11H9Z"/><rect x="24" y="2" width="4" height="3"/></svg>'
+    const result = extrusion(
+      await call('rush_svg_extrude', { svg, height: 2, includeRushGraph: true }),
+    ) as RushGraphExtrusionResult
     const area = 20 * 20 - 10 * 10 + 2 * 2 + 4 * 3
-    expect(result.document).toMatchObject({ language: 'rush/ir-1', units: 'mm', parameters: [{ id: 'svg_height', value: 2 }] })
+    expect(result.document).toMatchObject({
+      language: 'rush/ir-1',
+      units: 'mm',
+      parameters: [{ id: 'svg_height', value: 2 }],
+    })
     expect(result.document.nodes.filter(node => node.op === 'polygon')).toHaveLength(4)
     expect(result.document.nodes.filter(node => node.op === 'difference')).toHaveLength(2)
     expect(result.document_sha256).toMatch(/^[a-f0-9]{64}$/)
@@ -191,7 +249,7 @@ describe('SVG tools over MCP', () => {
   it('reports the native polygon point limit instead of reducing curve detail', async () => {
     const { call } = await connect()
     const points = Array.from({ length: 257 }, (_, index) => {
-      const angle = index * Math.PI * 2 / 257
+      const angle = (index * Math.PI * 2) / 257
       return `${10 + Math.cos(angle) * 9},${10 + Math.sin(angle) * 9}`
     }).join(' ')
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="20mm" height="20mm" viewBox="0 0 20 20"><polygon points="${points}"/></svg>`
@@ -199,17 +257,26 @@ describe('SVG tools over MCP', () => {
     expect(limited.isError).toBe(true)
     expect(text(limited)).toMatch(/RushGraph.*256 points/i)
     const model = extrusion(await call('rush_svg_extrude', { svg, height: 1 }))
-    const area = 257 * 9 ** 2 * Math.sin(2 * Math.PI / 257) / 2
+    const area = (257 * 9 ** 2 * Math.sin((2 * Math.PI) / 257)) / 2
     expect(model.analysis.volume).toBeCloseTo(area, 4)
   })
 
   it('requires explicit silhouette conversion for masks and reports the requested raster settings', async () => {
     const { call } = await connect()
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="16mm" height="16mm" viewBox="0 0 16 16"><defs><mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16"><rect width="8" height="16" fill="white"/><rect x="8" width="8" height="16" fill="black"/></mask></defs><rect width="16" height="16" mask="url(#m)"/></svg>'
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="16mm" height="16mm" viewBox="0 0 16 16"><defs><mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16"><rect width="8" height="16" fill="white"/><rect x="8" width="8" height="16" fill="black"/></mask></defs><rect width="16" height="16" mask="url(#m)"/></svg>'
     const vector = await call('rush_svg_extrude', { svg, height: 2 })
     expect(vector.isError).toBe(true)
     expect(text(vector)).toMatch(/silhouette/i)
-    const rendered = extrusion(await call('rush_svg_extrude', { svg, height: 2, geometryMode: 'silhouette', rasterSize: 128, alphaThreshold: 0.75 }))
+    const rendered = extrusion(
+      await call('rush_svg_extrude', {
+        svg,
+        height: 2,
+        geometryMode: 'silhouette',
+        rasterSize: 128,
+        alphaThreshold: 0.75,
+      }),
+    )
     expect(rendered.analysis.volume).toBeCloseTo(256, 4)
     expect(rendered.warnings.join(' ')).toMatch(/128/)
     expect(rendered.warnings.join(' ')).toMatch(/0\.75/)
@@ -218,7 +285,15 @@ describe('SVG tools over MCP', () => {
 
   it('returns tool-level typed validation failures for invalid parameters without breaking the connection', async () => {
     const { call } = await connect()
-    for (const invalid of [{ dpi: '96' }, { geometryMode: 'automatic' }, { rasterSize: 127 }, { rasterSize: 256.5 }, { alphaThreshold: 0 }, { tolerance: 0 }, { unexpected: true }]) {
+    for (const invalid of [
+      { dpi: '96' },
+      { geometryMode: 'automatic' },
+      { rasterSize: 127 },
+      { rasterSize: 256.5 },
+      { alphaThreshold: 0 },
+      { tolerance: 0 },
+      { unexpected: true },
+    ]) {
       const result = await call('rush_svg_preview', { svg: rectangle, ...invalid })
       expect(result.isError, JSON.stringify(invalid)).toBe(true)
       expect(text(result)).toContain('Input validation error')
@@ -233,7 +308,11 @@ describe('SVG tools over MCP', () => {
 
   it('rejects malformed or active SVG rather than returning a partial successful preview', async () => {
     const { call } = await connect()
-    for (const svg of ['<svg><path></svg>', '<svg><script>alert(1)</script><rect width="10" height="10"/></svg>', '<svg><rect width="10" height="10" onload="alert(1)"/></svg>']) {
+    for (const svg of [
+      '<svg><path></svg>',
+      '<svg><script>alert(1)</script><rect width="10" height="10"/></svg>',
+      '<svg><rect width="10" height="10" onload="alert(1)"/></svg>',
+    ]) {
       const result = await call('rush_svg_preview', { svg })
       expect(result.isError).toBe(true)
       expect(text(result)).toMatch(/malformed|static|forbidden/i)
@@ -268,7 +347,13 @@ describe('SVG tools over MCP', () => {
 
   it('exports an actual RushGraph projection as SVG and reimports the same area', async () => {
     const { call } = await connect()
-    const document = { language: 'rush/ir-1', units: 'mm', parameters: [], nodes: [{ id: 'part', op: 'box', size: [20, 10, 4] }], root: 'part' }
+    const document = {
+      language: 'rush/ir-1',
+      units: 'mm',
+      parameters: [],
+      nodes: [{ id: 'part', op: 'box', size: [20, 10, 4] }],
+      root: 'part',
+    }
     const exported = await call('rush_svg_export', { document, axis: 'x' })
     expect(exported.isError).not.toBe(true)
     const output = resource(exported)

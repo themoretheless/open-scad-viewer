@@ -1,8 +1,4 @@
-import {
-  preflightStepInput,
-  type ParserInputBudgets,
-  type ParserPreflightStats,
-} from '../language/parserInputBudgets'
+import { preflightStepInput, type ParserInputBudgets, type ParserPreflightStats } from '../language/parserInputBudgets'
 
 export interface RawStepEntity {
   readonly id: number
@@ -35,26 +31,31 @@ function references(args: string): readonly number[] {
   return Object.freeze([...withoutStrings.matchAll(/#(\d+)/g)].map(match => Number(match[1])))
 }
 
-export function buildStepRawArtifact(
-  text: string,
-  budgets?: ParserInputBudgets,
-): StepRawArtifact {
+export function buildStepRawArtifact(text: string, budgets?: ParserInputBudgets): StepRawArtifact {
   const stats = preflightStepInput(text, budgets)
   const entities: RawStepEntity[] = []
   const index: Record<number, RawStepEntity> = {}
   const diagnostics: StepRawDiagnostic[] = []
   const expression = /#(\d+)\s*=\s*([A-Z_0-9]+)\s*\(((?:[^']|'(?:[^']|'')*')*?)\)\s*;/gis
   for (const match of text.matchAll(expression)) {
-    const id = Number(match[1]), type = match[2]!.toUpperCase(), args = match[3]!
+    const id = Number(match[1]),
+      type = match[2]!.toUpperCase(),
+      args = match[3]!
     const entity: RawStepEntity = Object.freeze({
-      id, type, args, source: match[0], references: references(args),
+      id,
+      type,
+      args,
+      source: match[0],
+      references: references(args),
     })
     if (index[id]) {
-      diagnostics.push(Object.freeze({
-        code: 'duplicate-entity' as const,
-        entityId: id,
-        message: `Duplicate STEP entity #${id}`,
-      }))
+      diagnostics.push(
+        Object.freeze({
+          code: 'duplicate-entity' as const,
+          entityId: id,
+          message: `Duplicate STEP entity #${id}`,
+        }),
+      )
       continue
     }
     entities.push(entity)
@@ -62,12 +63,15 @@ export function buildStepRawArtifact(
   }
   for (const entity of entities) {
     for (const referenceId of entity.references) {
-      if (!index[referenceId]) diagnostics.push(Object.freeze({
-        code: 'dangling-reference' as const,
-        entityId: entity.id,
-        referenceId,
-        message: `STEP entity #${entity.id} references missing #${referenceId}`,
-      }))
+      if (!index[referenceId])
+        diagnostics.push(
+          Object.freeze({
+            code: 'dangling-reference' as const,
+            entityId: entity.id,
+            referenceId,
+            message: `STEP entity #${entity.id} references missing #${referenceId}`,
+          }),
+        )
     }
   }
   return Object.freeze({

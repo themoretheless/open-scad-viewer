@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  buildMeshBvh,
-  meshBvhTransferables,
-} from '../src/kernel/meshBvh'
+import { buildMeshBvh, meshBvhTransferables } from '../src/kernel/meshBvh'
 
 import type { BvhRay, MeshBvh, MeshBvhHit, RaycastMeshBvhOptions } from '../src/kernel/meshBvh'
 import { createPickingSnapshotInKernel } from '../src/kernel/geometry/meshAnalysis'
@@ -10,13 +7,22 @@ import { callGeometryRust } from '../src/kernel/geometry/kernel'
 
 // Exercise the shipped Rust/WASM query, including upload and disposal. The
 // worker BVH supplies construction options only; Rust owns the query snapshot.
-function raycastMeshBvh(bvh: MeshBvh, vertices: Float32Array, indices: Uint32Array,
-  ray: BvhRay, options: RaycastMeshBvhOptions = {}): MeshBvhHit | null {
+function raycastMeshBvh(
+  bvh: MeshBvh,
+  vertices: Float32Array,
+  indices: Uint32Array,
+  ray: BvhRay,
+  options: RaycastMeshBvhOptions = {},
+): MeshBvhHit | null {
   const handle = createPickingSnapshotInKernel(vertices, indices, bvh.vertexStride, bvh.leafSize)
   try {
     return callGeometryRust('mesh_picking', {
-      action: 'query', handle, origin: ray.origin, direction: ray.direction,
-      minT: options.minT ?? null, maxT: options.maxT ?? null,
+      action: 'query',
+      handle,
+      origin: ray.origin,
+      direction: ray.direction,
+      minT: options.minT ?? null,
+      maxT: options.maxT ?? null,
       excludedTriangles: Array.from(options.excludedTriangles ?? []),
       localFromWorld: options.localFromWorld ? Array.from(options.localFromWorld) : null,
     })
@@ -41,13 +47,23 @@ describe('mesh BVH construction', () => {
 
   it('omits invalid and exactly degenerate triangles', () => {
     const vertices = vertexBuffer([
-      [0, 0, 0], [1, 0, 0], [0, 1, 0],
-      [2, 0, 0], [3, 0, 0], [4, 0, 0],
+      [0, 0, 0],
+      [1, 0, 0],
+      [0, 1, 0],
+      [2, 0, 0],
+      [3, 0, 0],
+      [4, 0, 0],
     ])
     const indices = new Uint32Array([
-      0, 1, 2, // valid triangle 0
-      3, 4, 5, // collinear triangle 1
-      0, 1, 99, // invalid triangle 2
+      0,
+      1,
+      2, // valid triangle 0
+      3,
+      4,
+      5, // collinear triangle 1
+      0,
+      1,
+      99, // invalid triangle 2
     ])
     const bvh = buildMeshBvh(vertices, indices)
     expect([...bvh.triangles]).toEqual([0])
@@ -80,7 +96,11 @@ describe('mesh BVH construction', () => {
 
 describe('Rust/WASM mesh BVH raycasting', () => {
   it('returns triangle identity, hit points, barycentrics and face orientation', () => {
-    const vertices = vertexBuffer([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+    const vertices = vertexBuffer([
+      [0, 0, 0],
+      [1, 0, 0],
+      [0, 1, 0],
+    ])
     const indices = new Uint32Array([0, 1, 2])
     const bvh = buildMeshBvh(vertices, indices)
     const hit = raycastMeshBvh(bvh, vertices, indices, {
@@ -104,8 +124,12 @@ describe('Rust/WASM mesh BVH raycasting', () => {
 
   it('traverses front-to-back and returns the nearest original triangle', () => {
     const vertices = vertexBuffer([
-      [0, 0, 0], [1, 0, 0], [0, 1, 0],
-      [0, 0, 1], [1, 0, 1], [0, 1, 1],
+      [0, 0, 0],
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+      [1, 0, 1],
+      [0, 1, 1],
     ])
     // The farther triangle intentionally comes first in the source index list.
     const indices = new Uint32Array([0, 1, 2, 3, 4, 5])
@@ -120,8 +144,12 @@ describe('Rust/WASM mesh BVH raycasting', () => {
 
   it('keeps strict distance ordering at large ray parameters', () => {
     const vertices = vertexBuffer([
-      [0, 0, 0], [1, 0, 0], [0, 1, 0],
-      [0, 0, 1e-6], [1, 0, 1e-6], [0, 1, 1e-6],
+      [0, 0, 0],
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1e-6],
+      [1, 0, 1e-6],
+      [0, 1, 1e-6],
     ])
     const indices = new Uint32Array([0, 1, 2, 3, 4, 5])
     const bvh = buildMeshBvh(vertices, indices)
@@ -139,8 +167,12 @@ describe('Rust/WASM mesh BVH raycasting', () => {
 
   it('can enumerate exact same-depth triangle ties by identity', () => {
     const vertices = vertexBuffer([
-      [0, 0, 0], [1, 0, 0], [0, 1, 0],
-      [0, 0, 0], [1, 0, 0], [0, 1, 0],
+      [0, 0, 0],
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 0],
+      [1, 0, 0],
+      [0, 1, 0],
     ])
     const indices = new Uint32Array([0, 1, 2, 3, 4, 5])
     const bvh = buildMeshBvh(vertices, indices)
@@ -157,34 +189,50 @@ describe('Rust/WASM mesh BVH raycasting', () => {
   })
 
   it('honours min/max ray parameters and rejects misses or zero rays', () => {
-    const vertices = vertexBuffer([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+    const vertices = vertexBuffer([
+      [0, 0, 0],
+      [1, 0, 0],
+      [0, 1, 0],
+    ])
     const indices = new Uint32Array([0, 1, 2])
     const bvh = buildMeshBvh(vertices, indices)
     const ray = { origin: [0.2, 0.2, 2] as const, direction: [0, 0, -1] as const }
     expect(raycastMeshBvh(bvh, vertices, indices, ray, { maxT: 1.9 })).toBeNull()
     expect(raycastMeshBvh(bvh, vertices, indices, ray, { minT: 2.1 })).toBeNull()
-    expect(raycastMeshBvh(bvh, vertices, indices, {
-      origin: [2, 2, 2], direction: [0, 0, -1],
-    })).toBeNull()
-    expect(raycastMeshBvh(bvh, vertices, indices, {
-      origin: [0.2, 0.2, 2], direction: [0, 0, 0],
-    })).toBeNull()
+    expect(
+      raycastMeshBvh(bvh, vertices, indices, {
+        origin: [2, 2, 2],
+        direction: [0, 0, -1],
+      }),
+    ).toBeNull()
+    expect(
+      raycastMeshBvh(bvh, vertices, indices, {
+        origin: [0.2, 0.2, 2],
+        direction: [0, 0, 0],
+      }),
+    ).toBeNull()
   })
 
   it('preserves world-space t and returns local/world data through an affine transform', () => {
-    const vertices = vertexBuffer([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+    const vertices = vertexBuffer([
+      [0, 0, 0],
+      [1, 0, 0],
+      [0, 1, 0],
+    ])
     const indices = new Uint32Array([0, 1, 2])
     const bvh = buildMeshBvh(vertices, indices)
     // The local mesh is translated to world Z=5; this is inverse(model).
-    const localFromWorld = new Float32Array([
-      1, 0, 0, 0,
-      0, 1, 0, 0,
-      0, 0, 1, -5,
-      0, 0, 0, 1,
-    ])
-    const hit = raycastMeshBvh(bvh, vertices, indices, {
-      origin: [0.25, 0.25, 10], direction: [0, 0, -1],
-    }, { localFromWorld })
+    const localFromWorld = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, -5, 0, 0, 0, 1])
+    const hit = raycastMeshBvh(
+      bvh,
+      vertices,
+      indices,
+      {
+        origin: [0.25, 0.25, 10],
+        direction: [0, 0, -1],
+      },
+      { localFromWorld },
+    )
 
     expect(hit?.t).toBeCloseTo(5, 12)
     expect(hit?.localPoint).toEqual([0.25, 0.25, 0])
@@ -193,11 +241,16 @@ describe('Rust/WASM mesh BVH raycasting', () => {
   })
 
   it('reports back faces while keeping the geometric normal', () => {
-    const vertices = vertexBuffer([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+    const vertices = vertexBuffer([
+      [0, 0, 0],
+      [1, 0, 0],
+      [0, 1, 0],
+    ])
     const indices = new Uint32Array([0, 1, 2])
     const bvh = buildMeshBvh(vertices, indices)
     const hit = raycastMeshBvh(bvh, vertices, indices, {
-      origin: [0.25, 0.25, -2], direction: [0, 0, 1],
+      origin: [0.25, 0.25, -2],
+      direction: [0, 0, 1],
     })
     expect(hit?.frontFace).toBe(false)
     expect(hit?.localNormal).toEqual([0, 0, 1])
@@ -206,7 +259,11 @@ describe('Rust/WASM mesh BVH raycasting', () => {
 
 describe('mesh BVH transfer data', () => {
   it('exposes every typed-array backing buffer exactly once', () => {
-    const vertices = vertexBuffer([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+    const vertices = vertexBuffer([
+      [0, 0, 0],
+      [1, 0, 0],
+      [0, 1, 0],
+    ])
     const bvh = buildMeshBvh(vertices, new Uint32Array([0, 1, 2]))
     const buffers = meshBvhTransferables(bvh)
     expect(buffers).toEqual([bvh.bounds.buffer, bvh.nodes.buffer, bvh.triangles.buffer])

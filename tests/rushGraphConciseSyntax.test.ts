@@ -71,10 +71,16 @@ show plate()`
   })
 
   it.each([
-    'plate()', 'plate(1mm,2mm,3mm)', 'plate(width:1mm, width:2mm)',
-    'plate(1mm, depth:2mm)', 'plate(width:1mm, unknown:2mm)', 'plate(1deg)',
+    'plate()',
+    'plate(1mm,2mm,3mm)',
+    'plate(width:1mm, width:2mm)',
+    'plate(1mm, depth:2mm)',
+    'plate(width:1mm, unknown:2mm)',
+    'plate(1deg)',
   ])('rejects invalid binding or units: %s', call => {
-    expect(() => compile('fn plate width: length, depth: length = 2mm => box([width,depth,1mm])\nshow ' + call)).toThrow()
+    expect(() =>
+      compile('fn plate width: length, depth: length = 2mm => box([width,depth,1mm])\nshow ' + call),
+    ).toThrow()
   })
 
   it('retains no-result function semantics and assertion failures', () => {
@@ -98,29 +104,45 @@ show [3mm,4mm].select(plate)`
   })
 
   it('passes the optional callback index only when explicitly required', () => {
-    same(`fn plate height: length, index: int, spacing: length = 3mm => box([1mm,1mm,height]).move(x: index*spacing)
-show [2mm,4mm].select(plate)`, 'show [box([1mm,1mm,2mm]).move(x:0mm),box([1mm,1mm,4mm]).move(x:3mm)]')
+    same(
+      `fn plate height: length, index: int, spacing: length = 3mm => box([1mm,1mm,height]).move(x: index*spacing)
+show [2mm,4mm].select(plate)`,
+      'show [box([1mm,1mm,2mm]).move(x:0mm),box([1mm,1mm,4mm]).move(x:3mm)]',
+    )
   })
 
   it('uses named callbacks in repeat, predicates and reducers', () => {
-    same(`fn part index: int => sphere(1mm).move(x:index*3mm)
-show repeat(3,part)`, 'show repeat(3,i => sphere(1mm).move(x:i*3mm))')
-    same(`fn positive value: int => value > 0
+    same(
+      `fn part index: int => sphere(1mm).move(x:index*3mm)
+show repeat(3,part)`,
+      'show repeat(3,i => sphere(1mm).move(x:i*3mm))',
+    )
+    same(
+      `fn positive value: int => value > 0
 fn add left: int, right: int => left + right
-show sphere([-1,2,3].where(positive).aggregate(0,add))`, 'show sphere(5)')
+show sphere([-1,2,3].where(positive).aggregate(0,add))`,
+      'show sphere(5)',
+    )
   })
 
   it('preserves assertion scopes and rejects wrong callback arity', () => {
     expect(() => compile('fn part index: int => box([index,1,1])\nshow repeat(2,part)')).toThrow()
     expect(() => compile('fn part x: int, y: int, z: int => sphere(1)\nshow [1].select(part)')).toThrow('Callback')
     expect(() => compile('fn part x: int, y: int => sphere(1)\nshow repeat(2,part)')).toThrow('one index')
-    expect(() => compile('fn part x: int -> Geometry\n  assert(x > 0).message("Callback assertion")\n  ret sphere(x)\nshow [1,0].select(part)')).toThrow('Callback assertion')
+    expect(() =>
+      compile(
+        'fn part x: int -> Geometry\n  assert(x > 0).message("Callback assertion")\n  ret sphere(x)\nshow [1,0].select(part)',
+      ),
+    ).toThrow('Callback assertion')
   })
 })
 
 describe('list indexing and destructuring', () => {
   it('indexes nested lists and records, with normal expression precedence', () => {
-    same('items = [{sizes:[2mm,3mm]},{sizes:[4mm,5mm]}]\nshow box([items[1].sizes[0],items[0].sizes[1],1mm])', 'show box([4mm,3mm,1mm])')
+    same(
+      'items = [{sizes:[2mm,3mm]},{sizes:[4mm,5mm]}]\nshow box([items[1].sizes[0],items[0].sizes[1],1mm])',
+      'show box([4mm,3mm,1mm])',
+    )
     same('sizes=[2,4,6]\nshow sphere(sizes[1+1]*2)', 'show sphere(12)')
   })
 
@@ -129,7 +151,7 @@ describe('list indexing and destructuring', () => {
     const document = structuredClone(compiled.document)
     document.parameters[0]!.value = 1
     expect(compileRushGraph(document).source).toBe(compile('show sphere(4mm)').source)
-    for (const index of ['-1','2','0.5','1mm']) expect(() => compile(`show sphere([2mm,4mm][${index}])`)).toThrow()
+    for (const index of ['-1', '2', '0.5', '1mm']) expect(() => compile(`show sphere([2mm,4mm][${index}])`)).toThrow()
   })
 
   it('selects a geometry item without displaying the other items', async () => {
@@ -140,10 +162,13 @@ describe('list indexing and destructuring', () => {
 
   it('destructures literal and dynamic lists at top level and inside functions', () => {
     same('[width,depth,height]=[20mm,12mm,4mm]\nshow box([width,depth,height])', 'show box([20mm,12mm,4mm])')
-    same(`fn part sizes: Vec<length> -> Geometry
+    same(
+      `fn part sizes: Vec<length> -> Geometry
   [width,depth,height] = sizes
   ret box([width,depth,height])
-show part([20mm,12mm,4mm])`, 'show box([20mm,12mm,4mm])')
+show part([20mm,12mm,4mm])`,
+      'show box([20mm,12mm,4mm])',
+    )
     expect(() => compile('[x,y]=[1,2,3]\nshow sphere(x)')).toThrow('exactly 2')
     expect(() => compile('[x,x]=[1,2]\nshow sphere(x)')).toThrow('duplicate')
   })
@@ -155,15 +180,21 @@ show part([20mm,12mm,4mm])`, 'show box([20mm,12mm,4mm])')
   })
 
   it('destructures in foreach and match blocks', () => {
-    same(`parts = foreach sizes in [[2mm,3mm],[4mm,5mm]]
+    same(
+      `parts = foreach sizes in [[2mm,3mm],[4mm,5mm]]
   [width,height] = sizes
   yield box([width,1mm,height])
-show parts`, 'show [box([2mm,1mm,3mm]),box([4mm,1mm,5mm])]')
-    same(`show match 1
+show parts`,
+      'show [box([2mm,1mm,3mm]),box([4mm,1mm,5mm])]',
+    )
+    same(
+      `show match 1
   1 =>
     [width,height] = [2mm,3mm]
     ret box([width,1mm,height])
-  _ => sphere(1mm)`, 'show box([2mm,1mm,3mm])')
+  _ => sphere(1mm)`,
+      'show box([2mm,1mm,3mm])',
+    )
   })
 })
 
@@ -188,6 +219,8 @@ describe('collection transformations', () => {
 assert measure(parts).height.approximately(2mm)
 show parts.scale(z:2)`
     expect((await build(source)).meshes).toHaveLength(2)
-    await expect(build(source.replace('approximately(2mm)', 'approximately(4mm)'))).rejects.toThrow('Geometry assertions')
+    await expect(build(source.replace('approximately(2mm)', 'approximately(4mm)'))).rejects.toThrow(
+      'Geometry assertions',
+    )
   })
 })

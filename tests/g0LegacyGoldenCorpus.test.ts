@@ -29,9 +29,7 @@ describe('G0.9 legacy golden corpus index', () => {
   it('records cancel terminals, MCP goldens, and provenance', () => {
     expect(corpus.cancelTerminals.length).toBeGreaterThanOrEqual(3)
     expect(corpus.mcpPathGoldens.length).toBeGreaterThanOrEqual(3)
-    expect(readFileSync(resolve(root, corpus.provenanceBundle), 'utf8')).toContain(
-      'legacy-manifold-plan-golden-corpus',
-    )
+    expect(readFileSync(resolve(root, corpus.provenanceBundle), 'utf8')).toContain('legacy-manifold-plan-golden-corpus')
   })
 })
 

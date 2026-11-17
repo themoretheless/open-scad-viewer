@@ -1,11 +1,8 @@
-import type {DirectMaterial} from '../../../app/directModeling'
-import {
-  type ComputedRef,
-  type Ref,
-} from 'svet'
+import type { DirectMaterial } from '../../../app/directModeling'
+import { type ComputedRef, type Ref } from 'svet'
 import { SolidDisplayQueue } from '../../../kernel/solidDisplayQueue'
 import { SolidGpuLayer } from '../../../kernel/solidGpuView'
-import type {UseViewportLayerAndPolygonsOptions} from '../useViewportLayerAndPolygons'
+import type { UseViewportLayerAndPolygonsOptions } from '../useViewportLayerAndPolygons'
 export interface ViewportOperationsContext {
   fpsPrevious: number
   fpsIntervals: number[]
@@ -34,5 +31,20 @@ export interface ViewportOperationsContext {
   cancelDisplayPreparation: () => void
   displayGeneration: number
   displayPending: Ref<boolean, boolean>
-  polygons: ComputedRef<{ preview: number; surface: boolean; normal: number[]; closed: boolean; vertices: [number, number, number][]; id: string; material: DirectMaterial | undefined; triangle: number; key: string; points: string; shade: number; depth: number; }[]>
+  polygons: ComputedRef<
+    {
+      preview: number
+      surface: boolean
+      normal: number[]
+      closed: boolean
+      vertices: [number, number, number][]
+      id: string
+      material: DirectMaterial | undefined
+      triangle: number
+      key: string
+      points: string
+      shade: number
+      depth: number
+    }[]
+  >
 }

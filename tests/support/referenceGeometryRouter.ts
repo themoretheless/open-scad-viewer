@@ -5,25 +5,23 @@
  * implementation small and literal: its purpose is to detect drift in the
  * production scanner, not to share that scanner's abstractions.
  */
-export type ReferenceRouteOutcome = {
-  kind: 'route'
-  languageContract: 'legacy/current' | 'openscad-viewer/brep-1'
-  engineClass: 'mesh' | 'brep'
-  requiredCapabilities: string[]
-} | {
-  kind: 'error'
-  message: string
-  reportedContract: string | null
-  line: number | null
-}
+export type ReferenceRouteOutcome =
+  | {
+      kind: 'route'
+      languageContract: 'legacy/current' | 'openscad-viewer/brep-1'
+      engineClass: 'mesh' | 'brep'
+      requiredCapabilities: string[]
+    }
+  | {
+      kind: 'error'
+      message: string
+      reportedContract: string | null
+      line: number | null
+    }
 
 const CAPABILITY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/
 
-function error(
-  message: string,
-  reportedContract: string | null,
-  line: number | null,
-): ReferenceRouteOutcome {
+function error(message: string, reportedContract: string | null, line: number | null): ReferenceRouteOutcome {
   return { kind: 'error', message, reportedContract, line }
 }
 
@@ -118,11 +116,7 @@ export function referenceGeometryRoute(source: string): ReferenceRouteOutcome {
 
     if (language) {
       if (bodyStarted || codeBefore) {
-        return error(
-          'The @language directive must be in the leading source header.',
-          language[1],
-          lineNumber,
-        )
+        return error('The @language directive must be in the leading source header.', language[1], lineNumber)
       }
       if (firstLanguageLine !== null) {
         return error(
@@ -132,11 +126,7 @@ export function referenceGeometryRoute(source: string): ReferenceRouteOutcome {
         )
       }
       if (language[1] !== 'legacy/current' && language[1] !== 'openscad-viewer/brep-1') {
-        return error(
-          `Unsupported geometry language contract ${language[1]}.`,
-          language[1],
-          lineNumber,
-        )
+        return error(`Unsupported geometry language contract ${language[1]}.`, language[1], lineNumber)
       }
       languageContract = language[1]
       firstLanguageLine = lineNumber
@@ -145,28 +135,16 @@ export function referenceGeometryRoute(source: string): ReferenceRouteOutcome {
 
     if (requires) {
       if (bodyStarted || codeBefore) {
-        return error(
-          'The @requires directive must be in the leading source header.',
-          languageContract,
-          lineNumber,
-        )
+        return error('The @requires directive must be in the leading source header.', languageContract, lineNumber)
       }
       const identifiers = requires[1].split(/[\s,]+/).filter(Boolean)
       if (identifiers.length === 0 || identifiers.some(identifier => !CAPABILITY.test(identifier))) {
-        return error(
-          'The @requires directive contains an invalid capability identifier.',
-          languageContract,
-          lineNumber,
-        )
+        return error('The @requires directive contains an invalid capability identifier.', languageContract, lineNumber)
       }
       for (const identifier of identifiers) {
         capabilities.add(identifier)
         if (capabilities.size > 32) {
-          return error(
-            'The source may require at most 32 capabilities.',
-            languageContract,
-            lineNumber,
-          )
+          return error('The source may require at most 32 capabilities.', languageContract, lineNumber)
         }
       }
       continue
@@ -182,11 +160,7 @@ export function referenceGeometryRoute(source: string): ReferenceRouteOutcome {
 
     const malformed = /^\s*\/\/\s*@(language|requires|engine)\b/i.exec(directive)
     if (malformed) {
-      return error(
-        `Malformed @${malformed[1].toLowerCase()} directive.`,
-        languageContract,
-        lineNumber,
-      )
+      return error(`Malformed @${malformed[1].toLowerCase()} directive.`, languageContract, lineNumber)
     }
     if (visible.text.trim() !== '' && !/^\s*\/\//.test(visible.text)) bodyStarted = true
   }

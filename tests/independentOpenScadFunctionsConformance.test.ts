@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  OPENSCAD_2021_01_BUILTIN_FUNCTIONS,
-  OPENSCAD_2021_01_FUNCTION_COUNT,
-} from '../src/core/openScad2021Contract'
+import { OPENSCAD_2021_01_BUILTIN_FUNCTIONS, OPENSCAD_2021_01_FUNCTION_COUNT } from '../src/core/openScad2021Contract'
 import { parseOpenSCAD } from '../src/language/openscadParser'
 import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 
@@ -15,12 +12,18 @@ describe('independent OpenSCAD 2021.01 function conformance', () => {
     for (const entry of OPENSCAD_2021_01_BUILTIN_FUNCTIONS) {
       const direct = await parseOpenSCAD(entry.smoke.source, fullProfile)
       expect(direct.meshes, entry.name).toHaveLength(1)
-      expect(direct.warnings.some(message => message.startsWith('ECHO:')), entry.name).toBe(true)
+      expect(
+        direct.warnings.some(message => message.startsWith('ECHO:')),
+        entry.name,
+      ).toBe(true)
 
       const semantic = lowerOpenSCADToSemanticProgram(entry.smoke.source, fullProfile)
       expect(semantic.terminalError, entry.name).toBeNull()
       expect(semantic.program.core.nodes.length, entry.name).toBeGreaterThan(0)
-      expect(semantic.warnings.some(message => message.startsWith('ECHO:')), entry.name).toBe(true)
+      expect(
+        semantic.warnings.some(message => message.startsWith('ECHO:')),
+        entry.name,
+      ).toBe(true)
     }
   })
 

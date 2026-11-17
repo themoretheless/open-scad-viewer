@@ -105,10 +105,7 @@ export function binaryNumber(name: string, operation: (left: number, right: numb
     // value, so side effects in the right slot remain observable.
     const left = args[0]
     const right = args[1]
-    return operation(
-      numberValue(context, name, left, 0),
-      numberValue(context, name, right, 1),
-    )
+    return operation(numberValue(context, name, left, 0), numberValue(context, name, right, 1))
   }
 }
 
@@ -141,38 +138,50 @@ export function formatNumber(value: number): string {
 }
 
 export function quotedExpressionString(value: string): string {
-  return `"${value.replace(/[\t\n\r"\\]/gu, character => ({
-    '\t': '\\t',
-    '\n': '\\n',
-    '\r': '\\r',
-    '"': '\\"',
-    '\\': '\\\\',
-  })[character] ?? character)}"`
+  return `"${value.replace(
+    /[\t\n\r"\\]/gu,
+    character =>
+      ({
+        '\t': '\\t',
+        '\n': '\\n',
+        '\r': '\\r',
+        '"': '\\"',
+        '\\': '\\\\',
+      })[character] ?? character,
+  )}"`
 }
 
 export function binaryToken(operator: TT): string {
-  return ({
-    [TT.Plus]: '+',
-    [TT.Minus]: '-',
-    [TT.Star]: '*',
-    [TT.Slash]: '/',
-    [TT.Percent]: '%',
-    [TT.Caret]: '^',
-    [TT.Lt]: '<',
-    [TT.Gt]: '>',
-    [TT.LtEq]: '<=',
-    [TT.GtEq]: '>=',
-    [TT.EqEq]: '==',
-    [TT.NotEq]: '!=',
-    [TT.And]: '&&',
-    [TT.Or]: '||',
-  } as Partial<Record<TT, string>>)[operator] ?? TT[operator]
+  return (
+    (
+      {
+        [TT.Plus]: '+',
+        [TT.Minus]: '-',
+        [TT.Star]: '*',
+        [TT.Slash]: '/',
+        [TT.Percent]: '%',
+        [TT.Caret]: '^',
+        [TT.Lt]: '<',
+        [TT.Gt]: '>',
+        [TT.LtEq]: '<=',
+        [TT.GtEq]: '>=',
+        [TT.EqEq]: '==',
+        [TT.NotEq]: '!=',
+        [TT.And]: '&&',
+        [TT.Or]: '||',
+      } as Partial<Record<TT, string>>
+    )[operator] ?? TT[operator]
+  )
 }
 
 export function expressionArguments(args: readonly ExpressionArgument[]): string {
-  return args.map(argument => argument.name === undefined
-    ? formatExpression(argument.value)
-    : `${argument.name} = ${formatExpression(argument.value)}`).join(', ')
+  return args
+    .map(argument =>
+      argument.name === undefined
+        ? formatExpression(argument.value)
+        : `${argument.name} = ${formatExpression(argument.value)}`,
+    )
+    .join(', ')
 }
 
 /** Canonical source-shaped representation used by str(function-value). */
@@ -182,46 +191,69 @@ export function formatExpression(expression: Expr): string {
       if (typeof expression.value === 'string') return quotedExpressionString(expression.value)
       return formatValue(expression.value as OpenScadBuiltinValue, undefined, true)
     }
-    case 'identifier': return expression.name
-    case 'vector': return `[${expression.items.map(formatExpression).join(', ')}]`
-    case 'range': return `[${formatExpression(expression.start)} : ${expression.step === undefined
-      ? ''
-      : `${formatExpression(expression.step)} : `}${formatExpression(expression.end)}]`
-    case 'unary': return `${expression.op === TT.Not ? '!' : expression.op === TT.Minus ? '-' : '+'}${formatExpression(expression.value)}`
-    case 'binary': return `(${formatExpression(expression.left)} ${binaryToken(expression.op)} ${formatExpression(expression.right)})`
-    case 'ternary': return `(${formatExpression(expression.test)} ? ${formatExpression(expression.yes)} : ${formatExpression(expression.no)})`
-    case 'function': return formatFunction(expression)
+    case 'identifier':
+      return expression.name
+    case 'vector':
+      return `[${expression.items.map(formatExpression).join(', ')}]`
+    case 'range':
+      return `[${formatExpression(expression.start)} : ${
+        expression.step === undefined ? '' : `${formatExpression(expression.step)} : `
+      }${formatExpression(expression.end)}]`
+    case 'unary':
+      return `${expression.op === TT.Not ? '!' : expression.op === TT.Minus ? '-' : '+'}${formatExpression(expression.value)}`
+    case 'binary':
+      return `(${formatExpression(expression.left)} ${binaryToken(expression.op)} ${formatExpression(expression.right)})`
+    case 'ternary':
+      return `(${formatExpression(expression.test)} ? ${formatExpression(expression.yes)} : ${formatExpression(expression.no)})`
+    case 'function':
+      return formatFunction(expression)
     case 'call': {
       const callee = formatExpression(expression.callee)
       return `${expression.callee.kind === 'function' ? `(${callee})` : callee}(${expressionArguments(expression.args)})`
     }
-    case 'index': return `${formatExpression(expression.value)}[${formatExpression(expression.index)}]`
-    case 'member': return `${formatExpression(expression.value)}.${expression.name}`
-    case 'let': return `let(${expressionArguments(expression.args)}) ${formatExpression(expression.body)}`
-    case 'assert': return `assert(${expressionArguments(expression.args)})${expression.body === undefined ? '' : ` ${formatExpression(expression.body)}`}`
-    case 'echo': return `echo(${expressionArguments(expression.args)})${expression.body === undefined ? '' : ` ${formatExpression(expression.body)}`}`
-    case 'lc-for': return `for(${expressionArguments(expression.args)}) (${formatExpression(expression.body)})`
-    case 'lc-for-c': return `for(${expressionArguments(expression.init)}; ${formatExpression(expression.condition)}; ${expressionArguments(expression.update)}) (${formatExpression(expression.body)})`
-    case 'lc-if': return `if(${formatExpression(expression.condition)}) (${formatExpression(expression.yes)})${expression.no === undefined ? '' : ` else (${formatExpression(expression.no)})`}`
-    case 'lc-let': return `let(${expressionArguments(expression.args)}) (${formatExpression(expression.body)})`
-    case 'lc-each': return `each (${formatExpression(expression.value)})`
+    case 'index':
+      return `${formatExpression(expression.value)}[${formatExpression(expression.index)}]`
+    case 'member':
+      return `${formatExpression(expression.value)}.${expression.name}`
+    case 'let':
+      return `let(${expressionArguments(expression.args)}) ${formatExpression(expression.body)}`
+    case 'assert':
+      return `assert(${expressionArguments(expression.args)})${expression.body === undefined ? '' : ` ${formatExpression(expression.body)}`}`
+    case 'echo':
+      return `echo(${expressionArguments(expression.args)})${expression.body === undefined ? '' : ` ${formatExpression(expression.body)}`}`
+    case 'lc-for':
+      return `for(${expressionArguments(expression.args)}) (${formatExpression(expression.body)})`
+    case 'lc-for-c':
+      return `for(${expressionArguments(expression.init)}; ${formatExpression(expression.condition)}; ${expressionArguments(expression.update)}) (${formatExpression(expression.body)})`
+    case 'lc-if':
+      return `if(${formatExpression(expression.condition)}) (${formatExpression(expression.yes)})${expression.no === undefined ? '' : ` else (${formatExpression(expression.no)})`}`
+    case 'lc-let':
+      return `let(${expressionArguments(expression.args)}) (${formatExpression(expression.body)})`
+    case 'lc-each':
+      return `each (${formatExpression(expression.value)})`
   }
 }
 
 export function formatFunction(value: Pick<FunctionValue, 'params' | 'body'>): string {
-  const parameters = value.params.map(parameter => parameter.defaultValue === undefined
-    ? parameter.name
-    : `${parameter.name} = ${formatExpression(parameter.defaultValue)}`).join(', ')
+  const parameters = value.params
+    .map(parameter =>
+      parameter.defaultValue === undefined
+        ? parameter.name
+        : `${parameter.name} = ${formatExpression(parameter.defaultValue)}`,
+    )
+    .join(', ')
   return `function(${parameters}) ${formatExpression(value.body)}`
 }
 
 export function isFunctionValue(value: OpenScadBuiltinValue): value is FunctionValue {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
   const candidate = value as Partial<FunctionValue>
-  return candidate.kind === 'function-value'
-    && Array.isArray(candidate.params)
-    && typeof candidate.body === 'object'
-    && candidate.body !== null
+  return (
+    candidate.kind === 'function-value' &&
+    Array.isArray(candidate.params) &&
+    typeof candidate.body === 'object' &&
+    candidate.body !== null
+  )
 }
 
 export function formatValue(
@@ -250,10 +282,12 @@ export function isRangeValue(value: OpenScadBuiltinValue): value is {
 } {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
   const candidate = value as Partial<{ kind: string; start: unknown; step: unknown; end: unknown }>
-  return candidate.kind === 'range-value'
-    && typeof candidate.start === 'number'
-    && typeof candidate.step === 'number'
-    && typeof candidate.end === 'number'
+  return (
+    candidate.kind === 'range-value' &&
+    typeof candidate.start === 'number' &&
+    typeof candidate.step === 'number' &&
+    typeof candidate.end === 'number'
+  )
 }
 
 export function compareUtf8(left: string, right: string): number {
@@ -340,9 +374,8 @@ export function minMax(name: 'min' | 'max'): BuiltinHandler {
       if (values.length === 0) return fail(context, name, 'expects at least 1 vector element')
       let selected = values[0]
       for (let index = 1; index < values.length; index++) {
-        const compared = name === 'min'
-          ? compareValues(values[index], selected)
-          : compareValues(selected, values[index])
+        const compared =
+          name === 'min' ? compareValues(values[index], selected) : compareValues(selected, values[index])
         if (compared !== undefined && compared < 0) selected = values[index]
       }
       return selected
@@ -363,9 +396,7 @@ export function hashFloatingPoint(value: number): number {
 
   let exponent = Math.floor(Math.log2(Math.abs(value))) + 1
   const divisor = 2 ** exponent
-  let mantissa = Number.isFinite(divisor) && divisor !== 0
-    ? value / divisor
-    : value / (2 ** (exponent - 1)) / 2
+  let mantissa = Number.isFinite(divisor) && divisor !== 0 ? value / divisor : value / 2 ** (exponent - 1) / 2
   let sign = 1
   if (mantissa < 0) {
     sign = -1

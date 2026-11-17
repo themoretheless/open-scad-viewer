@@ -5,15 +5,7 @@
  * `computed`, `reactive`, `shallowReactive`, `readonly`, `effectScope`),
  * powered by the Svet glitch-free reactive graph in `./svet.ts`.
  */
-import {
-  signal,
-  computed as svetComputed,
-  batch,
-  untrack,
-  createRoot,
-  onCleanup,
-  type Signal,
-} from './svet'
+import { signal, computed as svetComputed, batch, untrack, createRoot, onCleanup, type Signal } from './svet'
 
 const RAW_SYM = Symbol('svet.raw')
 const IS_REACTIVE_SYM = Symbol('svet.reactive')
@@ -144,9 +136,7 @@ function createReactiveObject<T extends object>(target: T, shallow: boolean): T 
     set(obj, key, value, receiver) {
       const oldValue = (obj as any)[key]
       const rawValue = shallow ? value : toRaw(value)
-      const hadKey = Array.isArray(obj)
-        ? Number(key) < obj.length
-        : Object.prototype.hasOwnProperty.call(obj, key)
+      const hadKey = Array.isArray(obj) ? Number(key) < obj.length : Object.prototype.hasOwnProperty.call(obj, key)
       if (!shallow && isRef(oldValue) && !isRef(value)) {
         oldValue.value = value
         return true
@@ -250,7 +240,7 @@ class RefImpl<T> implements Ref<T> {
     const nextRaw = useDirect ? newVal : toRaw(newVal)
     if (!Object.is(nextRaw, this._rawValue)) {
       this._rawValue = nextRaw
-      this._value = useDirect ? newVal : reactive(nextRaw as unknown as object) as unknown as T
+      this._value = useDirect ? newVal : (reactive(nextRaw as unknown as object) as unknown as T)
       this._sig.set(this._sig.peek() + 1)
     }
   }
@@ -358,7 +348,11 @@ class EffectScopeImpl implements EffectScope {
     for (const child of this.scopes) child.stop()
     this.scopes.length = 0
     for (let i = this.cleanups.length - 1; i >= 0; i--) {
-      try { this.cleanups[i]!() } catch { /* ignore */ }
+      try {
+        this.cleanups[i]!()
+      } catch {
+        /* ignore */
+      }
     }
     this.cleanups.length = 0
   }

@@ -63,9 +63,11 @@ export interface WebGpuCapabilitySnapshot {
  * Architecture, e.g. NVIDIA / AMD PCIe discrete VRAM).
  */
 export function detectAdapterMemoryArchitecture(adapter: GPUAdapter): WebGpuMemoryArchitecture {
-  const info = (adapter as GPUAdapter & {
-    info?: { vendor?: string; architecture?: string; description?: string; device?: string }
-  }).info
+  const info = (
+    adapter as GPUAdapter & {
+      info?: { vendor?: string; architecture?: string; description?: string; device?: string }
+    }
+  ).info
   const vendor = (info?.vendor ?? '').toLowerCase()
   const arch = (info?.architecture ?? '').toLowerCase()
   const desc = `${info?.description ?? ''} ${info?.device ?? ''}`.toLowerCase()
@@ -135,22 +137,28 @@ export function unsupportedWebGpuFeatures(adapter: GPUAdapter, features: readonl
 export function requiredWgslLanguageFeatures(wgsl: string): WgslLanguageFeatureName[] {
   const features: WgslLanguageFeatureName[] = []
   for (const match of wgsl.matchAll(/\brequires\s+([A-Za-z0-9_,\s]+?)\s*;/g)) {
-    for (const feature of match[1]!.split(',').map(value => value.trim()).filter(Boolean)) {
-      if (KNOWN_WGSL_LANGUAGE_FEATURES.has(feature as WgslLanguageFeatureName)
-        && !features.includes(feature as WgslLanguageFeatureName)) {
+    for (const feature of match[1]!
+      .split(',')
+      .map(value => value.trim())
+      .filter(Boolean)) {
+      if (
+        KNOWN_WGSL_LANGUAGE_FEATURES.has(feature as WgslLanguageFeatureName) &&
+        !features.includes(feature as WgslLanguageFeatureName)
+      ) {
         features.push(feature as WgslLanguageFeatureName)
       }
     }
   }
-  if (/\brequires\s+linear_indexing\b/.test(wgsl)
-    || /@builtin\s*\(\s*(global_invocation_index|workgroup_index)\s*\)/.test(wgsl)) {
+  if (
+    /\brequires\s+linear_indexing\b/.test(wgsl) ||
+    /@builtin\s*\(\s*(global_invocation_index|workgroup_index)\s*\)/.test(wgsl)
+  ) {
     if (!features.includes('linear_indexing')) features.push('linear_indexing')
   }
   if (/\brequires\s+immediate_address_space\b/.test(wgsl) || /\bvar\s*<\s*immediate\s*>/.test(wgsl)) {
     if (!features.includes('immediate_address_space')) features.push('immediate_address_space')
   }
-  if (/\brequires\s+buffer_view\b/.test(wgsl)
-    || /\b(bufferView|bufferArrayView|bufferLength)\s*\(/.test(wgsl)) {
+  if (/\brequires\s+buffer_view\b/.test(wgsl) || /\b(bufferView|bufferArrayView|bufferLength)\s*\(/.test(wgsl)) {
     if (!features.includes('buffer_view')) features.push('buffer_view')
   }
   if (/@builtin\s*\(\s*primitive_index\s*\)/.test(wgsl)) {
@@ -176,10 +184,7 @@ export function requiredFeaturesForWgsl(wgsl: string): WgslFeatureCheck {
 
 export function unsupportedFeaturesForWgsl(adapter: GPUAdapter, wgsl: string): string[] {
   const required = requiredFeaturesForWgsl(wgsl)
-  return [
-    ...unsupportedWgslLanguageFeatures(required.wgsl),
-    ...unsupportedWebGpuFeatures(adapter, required.webgpu),
-  ]
+  return [...unsupportedWgslLanguageFeatures(required.wgsl), ...unsupportedWebGpuFeatures(adapter, required.webgpu)]
 }
 
 export function selectSupportedWgslVariant(adapter: GPUAdapter, variants: readonly WgslVariant[]): WgslVariant {
@@ -195,7 +200,13 @@ export function selectSupportedWgslVariant(adapter: GPUAdapter, variants: readon
 export async function inspectWebGpuCapabilities(): Promise<WebGpuCapabilitySnapshot> {
   const adapter = await navigator.gpu?.requestAdapter({ powerPreference: 'high-performance' })
   if (!adapter) {
-    return { available: false, webgpuFeatures: [], wgslLanguageFeatures: [], subgroupMinSize: null, subgroupMaxSize: null }
+    return {
+      available: false,
+      webgpuFeatures: [],
+      wgslLanguageFeatures: [],
+      subgroupMinSize: null,
+      subgroupMaxSize: null,
+    }
   }
   const limits = adapter.limits as GPUSupportedLimits & { subgroupMinSize?: number; subgroupMaxSize?: number }
   return {

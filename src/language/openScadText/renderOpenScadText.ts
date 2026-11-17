@@ -1,8 +1,39 @@
-import { OPENSCAD_2021_TEXT_EM_SCALE, OPENSCAD_TEXT_MAX_ABS_SIZE, OPENSCAD_TEXT_MAX_ABS_SPACING, OPENSCAD_TEXT_MAX_CODE_POINTS, OPENSCAD_TEXT_MAX_GLYPHS, OPENSCAD_TEXT_MAX_VERTICES, OpenScadTextError, preparedRuntimes } from '../openScadText'
-import type { OpenScadTextContour, OpenScadTextGlyph, OpenScadTextLayout, OpenScadTextParameters, PreparedOpenScadTextAssets, RawContour } from '../openScadText'
+import {
+  OPENSCAD_2021_TEXT_EM_SCALE,
+  OPENSCAD_TEXT_MAX_ABS_SIZE,
+  OPENSCAD_TEXT_MAX_ABS_SPACING,
+  OPENSCAD_TEXT_MAX_CODE_POINTS,
+  OPENSCAD_TEXT_MAX_GLYPHS,
+  OPENSCAD_TEXT_MAX_VERTICES,
+  OpenScadTextError,
+  preparedRuntimes,
+} from '../openScadText'
+import type {
+  OpenScadTextContour,
+  OpenScadTextGlyph,
+  OpenScadTextLayout,
+  OpenScadTextParameters,
+  PreparedOpenScadTextAssets,
+  RawContour,
+} from '../openScadText'
 import { OpenScadProject } from '../openScadProject'
-import { boundedParameter, calculateOpenScadTextSegments, codePointCount, resolveFont, textError } from './prepareOpenScadTextAssets'
-import { directionForScript, effectiveScript, flattenGlyph, fontForLayout, freezePoint, horizontalAlignment, normalizeDirection, verticalAlignment } from './normalizeDirection'
+import {
+  boundedParameter,
+  calculateOpenScadTextSegments,
+  codePointCount,
+  resolveFont,
+  textError,
+} from './prepareOpenScadTextAssets'
+import {
+  directionForScript,
+  effectiveScript,
+  flattenGlyph,
+  fontForLayout,
+  freezePoint,
+  horizontalAlignment,
+  normalizeDirection,
+  verticalAlignment,
+} from './normalizeDirection'
 import { isWellFormedUnicode } from '../../core/unicode'
 
 /**
@@ -49,8 +80,12 @@ export function renderOpenScadText(
   if (typeof language !== 'string' || !/^[A-Za-z0-9-]{1,64}$/u.test(language)) {
     return textError('E_TEXT_PARAMETER_INVALID', 'text() language must be a bounded ASCII BCP-47 tag.')
   }
-  if (typeof requestedDirection !== 'string' || typeof requestedScript !== 'string'
-    || !isWellFormedUnicode(requestedDirection) || !isWellFormedUnicode(requestedScript)) {
+  if (
+    typeof requestedDirection !== 'string' ||
+    typeof requestedScript !== 'string' ||
+    !isWellFormedUnicode(requestedDirection) ||
+    !isWellFormedUnicode(requestedScript)
+  ) {
     return textError('E_TEXT_PARAMETER_INVALID', 'text() direction and script must be Unicode strings.')
   }
   const curveSegments = calculateOpenScadTextSegments(
@@ -90,9 +125,16 @@ export function renderOpenScadText(
         { limit: OPENSCAD_TEXT_MAX_GLYPHS, actual: shaped.length },
       )
     }
-    if (shaped.some(glyph => !Number.isSafeInteger(glyph.g) || glyph.g < 0
-      || !Number.isSafeInteger(glyph.cl) || glyph.cl < 0
-      || ![glyph.dx, glyph.dy, glyph.ax, glyph.ay].every(Number.isFinite))) {
+    if (
+      shaped.some(
+        glyph =>
+          !Number.isSafeInteger(glyph.g) ||
+          glyph.g < 0 ||
+          !Number.isSafeInteger(glyph.cl) ||
+          glyph.cl < 0 ||
+          ![glyph.dx, glyph.dy, glyph.ax, glyph.ay].every(Number.isFinite),
+      )
+    ) {
       return textError('E_TEXT_SHAPING_FAILED', `Font ${descriptor.path} returned invalid shaping positions.`, {
         fontPath: descriptor.path,
         faceIndex: descriptor.faceIndex,
@@ -118,9 +160,8 @@ export function renderOpenScadText(
       }
     }
     const xAlignment = halign === 'right' ? -width : halign === 'center' ? -width / 2 : 0
-    const yAlignment = valign === 'top' ? -ascent
-      : valign === 'center' ? descent / 2 - ascent / 2
-        : valign === 'bottom' ? descent : 0
+    const yAlignment =
+      valign === 'top' ? -ascent : valign === 'center' ? descent / 2 - ascent / 2 : valign === 'bottom' ? descent : 0
 
     const outlineCache = new Map<number, readonly RawContour[]>()
     const glyphs: OpenScadTextGlyph[] = []
@@ -167,14 +208,16 @@ export function renderOpenScadText(
         }
       }
       polygonCount += contours.length
-      glyphs.push(Object.freeze({
-        glyphId: glyph.g,
-        cluster: glyph.cl,
-        flags: glyph.flags,
-        offset: freezePoint(size * glyphOffsetX, size * glyphOffsetY),
-        advance: freezePoint(size * glyph.ax * unitScale * spacing, size * glyph.ay * unitScale * spacing),
-        contours: Object.freeze(contours),
-      }))
+      glyphs.push(
+        Object.freeze({
+          glyphId: glyph.g,
+          cluster: glyph.cl,
+          flags: glyph.flags,
+          offset: freezePoint(size * glyphOffsetX, size * glyphOffsetY),
+          advance: freezePoint(size * glyph.ax * unitScale * spacing, size * glyph.ay * unitScale * spacing),
+          contours: Object.freeze(contours),
+        }),
+      )
       advanceX += glyph.ax * unitScale * spacing
       advanceY += glyph.ay * unitScale * spacing
     }
@@ -194,10 +237,13 @@ export function renderOpenScadText(
       width: size * width,
       ascent: size * ascent,
       descent: size * descent,
-      bounds: vertexCount === 0 ? null : Object.freeze({
-        min: freezePoint(minX, minY),
-        max: freezePoint(maxX, maxY),
-      }),
+      bounds:
+        vertexCount === 0
+          ? null
+          : Object.freeze({
+              min: freezePoint(minX, minY),
+              max: freezePoint(maxX, maxY),
+            }),
       polygonCount,
       vertexCount,
     })

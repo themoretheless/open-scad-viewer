@@ -1,8 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { IDBFactory } from 'fake-indexeddb'
 import { IndexedDbWorkspaceRepository, WorkspaceIndexedDbConflictError } from '../src/app/workspaceIndexedDb'
-import { applyParameterPreset, captureParameterPreset, parameterTemplateHash, parseParameterPresets } from '../src/app/parameterPresets'
-import { createWorkspaceDocument, parseWorkspaceDocumentValue, updateWorkspaceDocument, workspaceDocumentsEqual } from '../src/app/workspaceDocument'
+import {
+  applyParameterPreset,
+  captureParameterPreset,
+  parameterTemplateHash,
+  parseParameterPresets,
+} from '../src/app/parameterPresets'
+import {
+  createWorkspaceDocument,
+  parseWorkspaceDocumentValue,
+  updateWorkspaceDocument,
+  workspaceDocumentsEqual,
+} from '../src/app/workspaceDocument'
 
 const source = 'width = 10; // [1:1:40]\nlabel = "small";\nenabled = true;\ncube(width);'
 
@@ -24,7 +34,9 @@ describe('parameter presets', () => {
     expect(() => captureParameterPreset('x=1;\nx=2;', 'Duplicate', 'id')).toThrow()
     expect(() => captureParameterPreset('cube(1);', 'Empty', 'id')).toThrow()
     expect(parseParameterPresets([{ ...preset, values: [{ name: 'width', value: Infinity }] }])).toBeNull()
-    expect(parseParameterPresets(Array.from({ length: 21 }, (_, i) => ({ ...preset, id: `${i}`, name: `${i}` })))).toBeNull()
+    expect(
+      parseParameterPresets(Array.from({ length: 21 }, (_, i) => ({ ...preset, id: `${i}`, name: `${i}` }))),
+    ).toBeNull()
     expect(parseParameterPresets([preset, { ...preset, id: 'id-2' }])).toBeNull()
   })
 
@@ -50,8 +62,12 @@ describe('parameter presets', () => {
     try {
       const base = createWorkspaceDocument(source)
       await first.save(base, null)
-      const saved = updateWorkspaceDocument(base, { parameterPresets: [captureParameterPreset(source, 'First', 'id-1')] })
-      const concurrent = updateWorkspaceDocument(base, { parameterPresets: [captureParameterPreset(source, 'Second', 'id-2')] })
+      const saved = updateWorkspaceDocument(base, {
+        parameterPresets: [captureParameterPreset(source, 'First', 'id-1')],
+      })
+      const concurrent = updateWorkspaceDocument(base, {
+        parameterPresets: [captureParameterPreset(source, 'Second', 'id-2')],
+      })
       await first.save(saved, base)
       await expect(second.save(concurrent, base)).rejects.toBeInstanceOf(WorkspaceIndexedDbConflictError)
       expect(await second.load()).toEqual({ status: 'found', snapshot: saved })

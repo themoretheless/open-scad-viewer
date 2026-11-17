@@ -9,15 +9,39 @@ export function identityMat4(): Float32Array {
 
 export function multiplyMat4(a: Float32Array, b: Float32Array, out?: Float32Array): Float32Array {
   const dst = out ?? new Float32Array(16)
-  const a00 = a[0]!, a01 = a[1]!, a02 = a[2]!, a03 = a[3]!
-  const a10 = a[4]!, a11 = a[5]!, a12 = a[6]!, a13 = a[7]!
-  const a20 = a[8]!, a21 = a[9]!, a22 = a[10]!, a23 = a[11]!
-  const a30 = a[12]!, a31 = a[13]!, a32 = a[14]!, a33 = a[15]!
+  const a00 = a[0]!,
+    a01 = a[1]!,
+    a02 = a[2]!,
+    a03 = a[3]!
+  const a10 = a[4]!,
+    a11 = a[5]!,
+    a12 = a[6]!,
+    a13 = a[7]!
+  const a20 = a[8]!,
+    a21 = a[9]!,
+    a22 = a[10]!,
+    a23 = a[11]!
+  const a30 = a[12]!,
+    a31 = a[13]!,
+    a32 = a[14]!,
+    a33 = a[15]!
 
-  const b00 = b[0]!, b01 = b[1]!, b02 = b[2]!, b03 = b[3]!
-  const b10 = b[4]!, b11 = b[5]!, b12 = b[6]!, b13 = b[7]!
-  const b20 = b[8]!, b21 = b[9]!, b22 = b[10]!, b23 = b[11]!
-  const b30 = b[12]!, b31 = b[13]!, b32 = b[14]!, b33 = b[15]!
+  const b00 = b[0]!,
+    b01 = b[1]!,
+    b02 = b[2]!,
+    b03 = b[3]!
+  const b10 = b[4]!,
+    b11 = b[5]!,
+    b12 = b[6]!,
+    b13 = b[7]!
+  const b20 = b[8]!,
+    b21 = b[9]!,
+    b22 = b[10]!,
+    b23 = b[11]!
+  const b30 = b[12]!,
+    b31 = b[13]!,
+    b32 = b[14]!,
+    b33 = b[15]!
 
   dst[0] = a00 * b00 + a01 * b10 + a02 * b20 + a03 * b30
   dst[1] = a00 * b01 + a01 * b11 + a02 * b21 + a03 * b31
@@ -40,7 +64,6 @@ export function multiplyMat4(a: Float32Array, b: Float32Array, out?: Float32Arra
   dst[15] = a30 * b03 + a31 * b13 + a32 * b23 + a33 * b33
   return dst
 }
-
 
 export function translationMat4(tx: number, ty: number, tz: number): Float32Array {
   const m = identityMat4()
@@ -97,9 +120,12 @@ export function rotationEulerMat4(rxDeg: number, ryDeg: number, rzDeg: number): 
   const ay = ryDeg * deg2rad
   const az = rzDeg * deg2rad
 
-  const cx = Math.cos(ax), sx = Math.sin(ax)
-  const cy = Math.cos(ay), sy = Math.sin(ay)
-  const cz = Math.cos(az), sz = Math.sin(az)
+  const cx = Math.cos(ax),
+    sx = Math.sin(ax)
+  const cy = Math.cos(ay),
+    sy = Math.sin(ay)
+  const cz = Math.cos(az),
+    sz = Math.sin(az)
 
   // Direct composition of Euler Z * Y * X
   const m = new Float32Array(16)
@@ -123,9 +149,15 @@ export function normalMatrixFromModel(model: Float32Array, out?: Float32Array): 
     n.fill(0)
     n[0] = n[5] = n[10] = n[15] = 1
   }
-  const m00 = model[0]!, m01 = model[1]!, m02 = model[2]!
-  const m10 = model[4]!, m11 = model[5]!, m12 = model[6]!
-  const m20 = model[8]!, m21 = model[9]!, m22 = model[10]!
+  const m00 = model[0]!,
+    m01 = model[1]!,
+    m02 = model[2]!
+  const m10 = model[4]!,
+    m11 = model[5]!,
+    m12 = model[6]!
+  const m20 = model[8]!,
+    m21 = model[9]!,
+    m22 = model[10]!
 
   const c00 = m11 * m22 - m12 * m21
   const c01 = -(m10 * m22 - m12 * m20)
@@ -178,35 +210,155 @@ export function generateUnitCube(center = true): GeometryData {
   // Format: [px, py, pz, nx, ny, nz]
   const vertices = new Float32Array([
     // Front face (Z+)
-    min, min, max,  0, 0, 1,
-    max, min, max,  0, 0, 1,
-    max, max, max,  0, 0, 1,
-    min, max, max,  0, 0, 1,
+    min,
+    min,
+    max,
+    0,
+    0,
+    1,
+    max,
+    min,
+    max,
+    0,
+    0,
+    1,
+    max,
+    max,
+    max,
+    0,
+    0,
+    1,
+    min,
+    max,
+    max,
+    0,
+    0,
+    1,
     // Back face (Z-)
-    max, min, min,  0, 0, -1,
-    min, min, min,  0, 0, -1,
-    min, max, min,  0, 0, -1,
-    max, max, min,  0, 0, -1,
+    max,
+    min,
+    min,
+    0,
+    0,
+    -1,
+    min,
+    min,
+    min,
+    0,
+    0,
+    -1,
+    min,
+    max,
+    min,
+    0,
+    0,
+    -1,
+    max,
+    max,
+    min,
+    0,
+    0,
+    -1,
     // Right face (X+)
-    max, min, min,  1, 0, 0,
-    max, max, min,  1, 0, 0,
-    max, max, max,  1, 0, 0,
-    max, min, max,  1, 0, 0,
+    max,
+    min,
+    min,
+    1,
+    0,
+    0,
+    max,
+    max,
+    min,
+    1,
+    0,
+    0,
+    max,
+    max,
+    max,
+    1,
+    0,
+    0,
+    max,
+    min,
+    max,
+    1,
+    0,
+    0,
     // Left face (X-)
-    min, min, max, -1, 0, 0,
-    min, max, max, -1, 0, 0,
-    min, max, min, -1, 0, 0,
-    min, min, min, -1, 0, 0,
+    min,
+    min,
+    max,
+    -1,
+    0,
+    0,
+    min,
+    max,
+    max,
+    -1,
+    0,
+    0,
+    min,
+    max,
+    min,
+    -1,
+    0,
+    0,
+    min,
+    min,
+    min,
+    -1,
+    0,
+    0,
     // Top face (Y+)
-    min, max, max,  0, 1, 0,
-    max, max, max,  0, 1, 0,
-    max, max, min,  0, 1, 0,
-    min, max, min,  0, 1, 0,
+    min,
+    max,
+    max,
+    0,
+    1,
+    0,
+    max,
+    max,
+    max,
+    0,
+    1,
+    0,
+    max,
+    max,
+    min,
+    0,
+    1,
+    0,
+    min,
+    max,
+    min,
+    0,
+    1,
+    0,
     // Bottom face (Y-)
-    min, min, min,  0, -1, 0,
-    max, min, min,  0, -1, 0,
-    max, min, max,  0, -1, 0,
-    min, min, max,  0, -1, 0,
+    min,
+    min,
+    min,
+    0,
+    -1,
+    0,
+    max,
+    min,
+    min,
+    0,
+    -1,
+    0,
+    max,
+    min,
+    max,
+    0,
+    -1,
+    0,
+    min,
+    min,
+    max,
+    0,
+    -1,
+    0,
   ])
 
   const indices = new Uint32Array(36)
@@ -246,8 +398,12 @@ export function generateUnitCylinder(segments = 32, center = true): GeometryData
 
   // Top cap center
   const topCenterIdx = 0
-  vertices[vPtr++] = 0; vertices[vPtr++] = 0; vertices[vPtr++] = zMax
-  vertices[vPtr++] = 0; vertices[vPtr++] = 0; vertices[vPtr++] = 1
+  vertices[vPtr++] = 0
+  vertices[vPtr++] = 0
+  vertices[vPtr++] = zMax
+  vertices[vPtr++] = 0
+  vertices[vPtr++] = 0
+  vertices[vPtr++] = 1
 
   // Top cap perimeter
   const topStartIdx = 1
@@ -256,8 +412,12 @@ export function generateUnitCylinder(segments = 32, center = true): GeometryData
     const theta = i * twoPiOverSegs
     const x = Math.cos(theta)
     const y = Math.sin(theta)
-    vertices[vPtr++] = x; vertices[vPtr++] = y; vertices[vPtr++] = zMax
-    vertices[vPtr++] = 0; vertices[vPtr++] = 0; vertices[vPtr++] = 1
+    vertices[vPtr++] = x
+    vertices[vPtr++] = y
+    vertices[vPtr++] = zMax
+    vertices[vPtr++] = 0
+    vertices[vPtr++] = 0
+    vertices[vPtr++] = 1
   }
   for (let i = 0; i < segments; i++) {
     const next = (i + 1) % segments
@@ -268,8 +428,12 @@ export function generateUnitCylinder(segments = 32, center = true): GeometryData
 
   // Bottom cap center
   const bottomCenterIdx = vPtr / 6
-  vertices[vPtr++] = 0; vertices[vPtr++] = 0; vertices[vPtr++] = zMin
-  vertices[vPtr++] = 0; vertices[vPtr++] = 0; vertices[vPtr++] = -1
+  vertices[vPtr++] = 0
+  vertices[vPtr++] = 0
+  vertices[vPtr++] = zMin
+  vertices[vPtr++] = 0
+  vertices[vPtr++] = 0
+  vertices[vPtr++] = -1
 
   // Bottom cap perimeter
   const bottomStartIdx = bottomCenterIdx + 1
@@ -277,8 +441,12 @@ export function generateUnitCylinder(segments = 32, center = true): GeometryData
     const theta = i * twoPiOverSegs
     const x = Math.cos(theta)
     const y = Math.sin(theta)
-    vertices[vPtr++] = x; vertices[vPtr++] = y; vertices[vPtr++] = zMin
-    vertices[vPtr++] = 0; vertices[vPtr++] = 0; vertices[vPtr++] = -1
+    vertices[vPtr++] = x
+    vertices[vPtr++] = y
+    vertices[vPtr++] = zMin
+    vertices[vPtr++] = 0
+    vertices[vPtr++] = 0
+    vertices[vPtr++] = -1
   }
   for (let i = 0; i < segments; i++) {
     const next = (i + 1) % segments
@@ -294,19 +462,31 @@ export function generateUnitCylinder(segments = 32, center = true): GeometryData
     const x = Math.cos(theta)
     const y = Math.sin(theta)
     // Top vertex
-    vertices[vPtr++] = x; vertices[vPtr++] = y; vertices[vPtr++] = zMax
-    vertices[vPtr++] = x; vertices[vPtr++] = y; vertices[vPtr++] = 0
+    vertices[vPtr++] = x
+    vertices[vPtr++] = y
+    vertices[vPtr++] = zMax
+    vertices[vPtr++] = x
+    vertices[vPtr++] = y
+    vertices[vPtr++] = 0
     // Bottom vertex
-    vertices[vPtr++] = x; vertices[vPtr++] = y; vertices[vPtr++] = zMin
-    vertices[vPtr++] = x; vertices[vPtr++] = y; vertices[vPtr++] = 0
+    vertices[vPtr++] = x
+    vertices[vPtr++] = y
+    vertices[vPtr++] = zMin
+    vertices[vPtr++] = x
+    vertices[vPtr++] = y
+    vertices[vPtr++] = 0
   }
   for (let i = 0; i < segments; i++) {
     const iTop = sideStartIdx + i * 2
     const iBot = iTop + 1
     const nTop = sideStartIdx + (i + 1) * 2
     const nBot = nTop + 1
-    indices[iPtr++] = iTop; indices[iPtr++] = nTop; indices[iPtr++] = iBot
-    indices[iPtr++] = iBot; indices[iPtr++] = nTop; indices[iPtr++] = nBot
+    indices[iPtr++] = iTop
+    indices[iPtr++] = nTop
+    indices[iPtr++] = iBot
+    indices[iPtr++] = iBot
+    indices[iPtr++] = nTop
+    indices[iPtr++] = nBot
   }
 
   const data: GeometryData = { vertices, indices }
@@ -342,8 +522,12 @@ export function generateUnitSphere(segments = 32, rings = 16): GeometryData {
       const y = Math.sin(theta) * sinPhi
       const z = cosPhi
       // Normalized position doubles as normal
-      vertices[vPtr++] = x; vertices[vPtr++] = y; vertices[vPtr++] = z
-      vertices[vPtr++] = x; vertices[vPtr++] = y; vertices[vPtr++] = z
+      vertices[vPtr++] = x
+      vertices[vPtr++] = y
+      vertices[vPtr++] = z
+      vertices[vPtr++] = x
+      vertices[vPtr++] = y
+      vertices[vPtr++] = z
     }
   }
 
@@ -351,8 +535,12 @@ export function generateUnitSphere(segments = 32, rings = 16): GeometryData {
     for (let s = 0; s < segments; s++) {
       const first = r * (segments + 1) + s
       const second = first + segments + 1
-      indices[iPtr++] = first; indices[iPtr++] = second; indices[iPtr++] = first + 1
-      indices[iPtr++] = second; indices[iPtr++] = second + 1; indices[iPtr++] = first + 1
+      indices[iPtr++] = first
+      indices[iPtr++] = second
+      indices[iPtr++] = first + 1
+      indices[iPtr++] = second
+      indices[iPtr++] = second + 1
+      indices[iPtr++] = first + 1
     }
   }
 

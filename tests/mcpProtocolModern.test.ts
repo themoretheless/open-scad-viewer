@@ -1,9 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import {
-  fromJsonSchema,
-  InMemoryTransport,
-  type JSONRPCMessage,
-} from '@modelcontextprotocol/server'
+import { fromJsonSchema, InMemoryTransport, type JSONRPCMessage } from '@modelcontextprotocol/server'
 import { serveStdio, type StdioServerHandle } from '@modelcontextprotocol/server/stdio'
 import { BoundedTransport, MAX_MCP_SUBSCRIPTIONS } from '../src/mcp/boundedTransport'
 import { createOpenScadMcpServer } from '../src/mcp/createServer'
@@ -30,11 +26,13 @@ const modernMeta = {
   'io.modelcontextprotocol/clientCapabilities': {},
 }
 
-async function connectedModernServer(options: {
-  geometry?: HeadlessGeometryService
-  maxInFlightRequests?: number
-  maxSubscriptions?: number
-} = {}) {
+async function connectedModernServer(
+  options: {
+    geometry?: HeadlessGeometryService
+    maxInFlightRequests?: number
+    maxSubscriptions?: number
+  } = {},
+) {
   const store = await DuckDbModelStore.open(':memory:')
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
   const boundedTransport = new BoundedTransport(serverTransport, {
@@ -55,15 +53,16 @@ async function connectedModernServer(options: {
   }
   await clientTransport.start()
   const handle: StdioServerHandle = serveStdio(
-    () => createOpenScadMcpServer({
-      store,
-      geometry: options.geometry,
-      onRequestSettled: requestId => {
-        settledIds.add(requestId)
-        boundedTransport.settleRequest(requestId)
-      },
-      onRequestCancelled: requestId => boundedTransport.cancelRequest(requestId),
-    }),
+    () =>
+      createOpenScadMcpServer({
+        store,
+        geometry: options.geometry,
+        onRequestSettled: requestId => {
+          settledIds.add(requestId)
+          boundedTransport.settleRequest(requestId)
+        },
+        onRequestCancelled: requestId => boundedTransport.cancelRequest(requestId),
+      }),
     {
       transport: boundedTransport,
       maxSubscriptions: options.maxSubscriptions ?? MAX_MCP_SUBSCRIPTIONS,
@@ -92,27 +91,26 @@ async function connectedModernServer(options: {
     return value.result ?? {}
   }
 
-  const modernRequest = (method: string, params: Record<string, unknown> = {}) => request(method, {
-    ...params,
-    _meta: modernMeta,
-  })
+  const modernRequest = (method: string, params: Record<string, unknown> = {}) =>
+    request(method, {
+      ...params,
+      _meta: modernMeta,
+    })
 
-  const sendModernRequest = (id: number, method: string, params: Record<string, unknown> = {}) => (
+  const sendModernRequest = (id: number, method: string, params: Record<string, unknown> = {}) =>
     clientTransport.send({
       jsonrpc: '2.0',
       id,
       method,
       params: { ...params, _meta: modernMeta },
     } as JSONRPCMessage)
-  )
 
-  const sendModernNotification = (method: string, params: Record<string, unknown>) => (
+  const sendModernNotification = (method: string, params: Record<string, unknown>) =>
     clientTransport.send({
       jsonrpc: '2.0',
       method,
       params: { ...params, _meta: modernMeta },
     } as JSONRPCMessage)
-  )
 
   closeables.push(async () => {
     await handle.close()
@@ -136,8 +134,12 @@ class BlockingGeometryService extends HeadlessGeometryService {
 
   constructor() {
     super()
-    this.started = new Promise(resolve => { this.markStarted = resolve })
-    this.released = new Promise(resolve => { this.releaseGate = resolve })
+    this.started = new Promise(resolve => {
+      this.markStarted = resolve
+    })
+    this.released = new Promise(resolve => {
+      this.releaseGate = resolve
+    })
   }
 
   release() {
@@ -155,16 +157,21 @@ describe('OpenSCAD MCP server, protocol 2026-07-28', () => {
   it('returns schema-valid runtime unavailability without changing static manifest identity', async () => {
     const engine = new GeometryBuildEngine([])
     const expected = await engine.capabilities()
-    const {modernRequest} = await connectedModernServer({geometry: new HeadlessGeometryService(engine)})
+    const { modernRequest } = await connectedModernServer({ geometry: new HeadlessGeometryService(engine) })
     const listing = await modernRequest('tools/list')
-    const tool = (listing.tools as Array<{name: string; outputSchema: Record<string, unknown>}>).find(t => t.name === 'openscad_list_engines')!
-    const result = await modernRequest('tools/call', {name: 'openscad_list_engines', arguments: {}})
+    const tool = (listing.tools as Array<{ name: string; outputSchema: Record<string, unknown> }>).find(
+      t => t.name === 'openscad_list_engines',
+    )!
+    const result = await modernRequest('tools/call', { name: 'openscad_list_engines', arguments: {} })
     expect(result.isError).not.toBe(true)
-    expect(await fromJsonSchema(tool.outputSchema)['~standard'].validate(result.structuredContent)).not.toHaveProperty('issues')
-    const content = result.structuredContent as {geometry_engines: {engines: Array<Record<string, unknown>>}}
+    expect(await fromJsonSchema(tool.outputSchema)['~standard'].validate(result.structuredContent)).not.toHaveProperty(
+      'issues',
+    )
+    const content = result.structuredContent as { geometry_engines: { engines: Array<Record<string, unknown>> } }
     expect(content.geometry_engines.engines).toHaveLength(2)
-    expect(content.geometry_engines.engines.map(item => item.manifest_digest))
-      .toEqual(expected.engines.map(item => item.manifestDigest))
+    expect(content.geometry_engines.engines.map(item => item.manifest_digest)).toEqual(
+      expected.engines.map(item => item.manifestDigest),
+    )
     for (const engine of content.geometry_engines.engines) {
       expect(engine.availability).toBe('unavailable')
       expect(engine.unavailable_reason).toEqual(expect.any(String))
@@ -194,22 +201,27 @@ describe('OpenSCAD MCP server, protocol 2026-07-28', () => {
     expect(tools._meta).toMatchObject({
       'io.modelcontextprotocol/serverInfo': { name: 'open-scad-viewer', version: '0.1.0' },
     })
-    expect((tools.tools as Array<{ name: string }>).map(tool => tool.name)).toEqual(expect.arrayContaining([
-      'openscad_analyze',
-      'openscad_check',
-    ]))
-    const getModelTool = (tools.tools as Array<{
-      name: string
-      outputSchema?: Record<string, unknown>
-    }>).find(tool => tool.name === 'openscad_get_model')
-    const listEnginesTool = (tools.tools as Array<{
-      name: string
-      outputSchema?: Record<string, unknown>
-    }>).find(tool => tool.name === 'openscad_list_engines')
-    const analyzeTool = (tools.tools as Array<{
-      name: string
-      outputSchema?: Record<string, unknown>
-    }>).find(tool => tool.name === 'openscad_analyze')
+    expect((tools.tools as Array<{ name: string }>).map(tool => tool.name)).toEqual(
+      expect.arrayContaining(['openscad_analyze', 'openscad_check']),
+    )
+    const getModelTool = (
+      tools.tools as Array<{
+        name: string
+        outputSchema?: Record<string, unknown>
+      }>
+    ).find(tool => tool.name === 'openscad_get_model')
+    const listEnginesTool = (
+      tools.tools as Array<{
+        name: string
+        outputSchema?: Record<string, unknown>
+      }>
+    ).find(tool => tool.name === 'openscad_list_engines')
+    const analyzeTool = (
+      tools.tools as Array<{
+        name: string
+        outputSchema?: Record<string, unknown>
+      }>
+    ).find(tool => tool.name === 'openscad_analyze')
     const missing = await modernRequest('tools/call', {
       name: 'openscad_get_model',
       arguments: { id: 'missing:modern' },
@@ -218,55 +230,59 @@ describe('OpenSCAD MCP server, protocol 2026-07-28', () => {
       isError: true,
       structuredContent: { error: { code: 'model_not_found' } },
     })
-    const validation = await fromJsonSchema(getModelTool!.outputSchema!)['~standard']
-      .validate(missing.structuredContent)
+    const validation = await fromJsonSchema(getModelTool!.outputSchema!)['~standard'].validate(
+      missing.structuredContent,
+    )
     expect(validation).not.toHaveProperty('issues')
 
     const prompts = await modernRequest('prompts/list')
     expect(prompts).toMatchObject({ ttlMs: 300_000, cacheScope: 'private' })
-    expect((prompts.prompts as Array<{ name: string }>).map(prompt => prompt.name)).toEqual(expect.arrayContaining([
-      'openscad_customize_workflow',
-      'openscad_review_model',
-    ]))
+    expect((prompts.prompts as Array<{ name: string }>).map(prompt => prompt.name)).toEqual(
+      expect.arrayContaining(['openscad_customize_workflow', 'openscad_review_model']),
+    )
 
     const resources = await modernRequest('resources/list')
     expect(resources).toMatchObject({ ttlMs: 0, cacheScope: 'private' })
     expect(resources._meta).toMatchObject({
       'io.modelcontextprotocol/serverInfo': { name: 'open-scad-viewer', version: '0.1.0' },
     })
-    expect((resources.resources as Array<{ uri: string }>).map(resource => resource.uri))
-      .toEqual(expect.arrayContaining([
+    expect((resources.resources as Array<{ uri: string }>).map(resource => resource.uri)).toEqual(
+      expect.arrayContaining([
         'openscad://examples/basic',
         'openscad://engines/mesh/capabilities/own-rust-node-v1',
         'openscad://engines/brep/capabilities/brep-contract-v1',
-      ]))
+      ]),
+    )
 
     const templates = await modernRequest('resources/templates/list')
-    expect((templates.resourceTemplates as Array<{ uriTemplate: string }>))
-      .toEqual(expect.arrayContaining([
+    expect(templates.resourceTemplates as Array<{ uriTemplate: string }>).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
           uriTemplate: 'openscad://engines/{engine_class}/capabilities/{manifest_version}',
         }),
-      ]))
+      ]),
+    )
 
-    const listedEngines = await modernRequest('tools/call', {
+    const listedEngines = (await modernRequest('tools/call', {
       name: 'openscad_list_engines',
       arguments: {},
-    }) as { structuredContent: Record<string, unknown> }
-    const engineValidation = await fromJsonSchema(listEnginesTool!.outputSchema!)['~standard']
-      .validate(listedEngines.structuredContent)
+    })) as { structuredContent: Record<string, unknown> }
+    const engineValidation = await fromJsonSchema(listEnginesTool!.outputSchema!)['~standard'].validate(
+      listedEngines.structuredContent,
+    )
     expect(engineValidation).not.toHaveProperty('issues')
     const forgedRegistry = structuredClone(listedEngines.structuredContent) as {
       geometry_engines: { routes: Array<{ engine_class: string }> }
     }
     forgedRegistry.geometry_engines.routes[0].engine_class = 'brep'
-    expect(await fromJsonSchema(listEnginesTool!.outputSchema!)['~standard']
-      .validate(forgedRegistry)).toHaveProperty('issues')
+    expect(await fromJsonSchema(listEnginesTool!.outputSchema!)['~standard'].validate(forgedRegistry)).toHaveProperty(
+      'issues',
+    )
 
-    const analyzed = await modernRequest('tools/call', {
+    const analyzed = (await modernRequest('tools/call', {
       name: 'openscad_analyze',
       arguments: { source: 'cube(1);', quality: 'full' },
-    }) as { structuredContent: Record<string, unknown> }
+    })) as { structuredContent: Record<string, unknown> }
     const analyzeValidator = fromJsonSchema(analyzeTool!.outputSchema!)['~standard']
     const analysisValidation = await analyzeValidator.validate(analyzed.structuredContent)
     expect(analysisValidation).not.toHaveProperty('issues')
@@ -283,15 +299,14 @@ describe('OpenSCAD MCP server, protocol 2026-07-28', () => {
     plannedSuccess.build.execution.evidence = 'planned'
     expect(await analyzeValidator.validate(plannedSuccess)).toHaveProperty('issues')
 
-    const failedBrep = await modernRequest('tools/call', {
+    const failedBrep = (await modernRequest('tools/call', {
       name: 'openscad_analyze',
       arguments: {
         source: '// @language openscad-viewer/brep-1\ncube(1);',
         quality: 'full',
       },
-    }) as { structuredContent: Record<string, unknown> }
-    expect(await analyzeValidator.validate(failedBrep.structuredContent))
-      .not.toHaveProperty('issues')
+    })) as { structuredContent: Record<string, unknown> }
+    expect(await analyzeValidator.validate(failedBrep.structuredContent)).not.toHaveProperty('issues')
     const forgedFailure = structuredClone(failedBrep.structuredContent) as {
       build: {
         source_sha256: string
@@ -324,12 +339,10 @@ describe('OpenSCAD MCP server, protocol 2026-07-28', () => {
 
   it('keeps cancelled work admitted until the actual tool handler settles', async () => {
     const geometry = new BlockingGeometryService()
-    const {
-      modernRequest,
-      sendModernRequest,
-      sendModernNotification,
-      settledIds,
-    } = await connectedModernServer({ geometry, maxInFlightRequests: 1 })
+    const { modernRequest, sendModernRequest, sendModernNotification, settledIds } = await connectedModernServer({
+      geometry,
+      maxInFlightRequests: 1,
+    })
     await modernRequest('server/discover')
 
     await sendModernRequest(77, 'tools/call', {
@@ -351,12 +364,9 @@ describe('OpenSCAD MCP server, protocol 2026-07-28', () => {
   })
 
   it('does not leak admission when cancellation races SDK validation or built-in ping', async () => {
-    const {
-      modernRequest,
-      sendModernRequest,
-      sendModernNotification,
-      settledIds,
-    } = await connectedModernServer({ maxInFlightRequests: 1 })
+    const { modernRequest, sendModernRequest, sendModernNotification, settledIds } = await connectedModernServer({
+      maxInFlightRequests: 1,
+    })
     await modernRequest('server/discover')
 
     const malformedCall = sendModernRequest(70, 'tools/call', { arguments: {} })
@@ -381,12 +391,9 @@ describe('OpenSCAD MCP server, protocol 2026-07-28', () => {
   })
 
   it('keeps lifecycle wrapping when modern stdio replaces the discover handler', async () => {
-    const {
-      modernRequest,
-      sendModernRequest,
-      sendModernNotification,
-      settledIds,
-    } = await connectedModernServer({ maxInFlightRequests: 1 })
+    const { modernRequest, sendModernRequest, sendModernNotification, settledIds } = await connectedModernServer({
+      maxInFlightRequests: 1,
+    })
     await modernRequest('server/discover')
 
     await Promise.all([
@@ -403,25 +410,27 @@ describe('OpenSCAD MCP server, protocol 2026-07-28', () => {
   })
 
   it('settles an acknowledged subscription outside the request budget and remains usable after cancel', async () => {
-    const {
-      modernRequest,
-      sendModernRequest,
-      sendModernNotification,
-      messages,
-    } = await connectedModernServer({ maxInFlightRequests: 1, maxSubscriptions: 1 })
+    const { modernRequest, sendModernRequest, sendModernNotification, messages } = await connectedModernServer({
+      maxInFlightRequests: 1,
+      maxSubscriptions: 1,
+    })
     await modernRequest('server/discover')
 
     await sendModernRequest(88, 'subscriptions/listen', {
       notifications: { resourcesListChanged: true },
     })
-    await vi.waitFor(() => expect(messages).toContainEqual(expect.objectContaining({
-      method: 'notifications/subscriptions/acknowledged',
-      params: expect.objectContaining({
-        _meta: expect.objectContaining({
-          'io.modelcontextprotocol/subscriptionId': 88,
+    await vi.waitFor(() =>
+      expect(messages).toContainEqual(
+        expect.objectContaining({
+          method: 'notifications/subscriptions/acknowledged',
+          params: expect.objectContaining({
+            _meta: expect.objectContaining({
+              'io.modelcontextprotocol/subscriptionId': 88,
+            }),
+          }),
         }),
-      }),
-    })))
+      ),
+    )
     await new Promise<void>(resolve => queueMicrotask(resolve))
 
     expect((await modernRequest('tools/list')).tools).toEqual(expect.any(Array))

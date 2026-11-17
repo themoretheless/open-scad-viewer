@@ -41,7 +41,8 @@ it('bounds retained characters and re-inspects evicted keys in FIFO order', () =
 it('retains the entry-count bound independently of character capacity', () => {
   const inspect = vi.fn(inspectNurbsBrep)
   const cache = new BrepInspectionCache({ maxEntries: 1, maxCharacters: 1_000_000 }, inspect)
-  const first = box(1), second = box(2)
+  const first = box(1),
+    second = box(2)
   cache.inspect(first)
   cache.inspect(second)
   expect(cache.size).toBe(1)
@@ -51,7 +52,8 @@ it('retains the entry-count bound independently of character capacity', () => {
 })
 
 it('validates oversized inputs every time without flushing existing entries', () => {
-  const small = box(1), large = box(12345)
+  const small = box(1),
+    large = box(12345)
   const budget = JSON.stringify(small).length
   expect(JSON.stringify(large).length).toBeGreaterThan(budget)
   const inspect = vi.fn(inspectNurbsBrep)
@@ -70,14 +72,16 @@ it.each([0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])('rejects inval
   expect(() => new BrepInspectionCache({ maxEntries: 1, maxCharacters: value })).toThrow(RangeError)
 })
 
-it('keeps validation results across a full 1000-instance scene scan and still rejects edits',()=>{
- const inspect=vi.fn(inspectNurbsBrep),cache=new BrepInspectionCache(undefined,inspect)
- const models=Array.from({length:1001},(_,i)=>box(i+1))
- for(const model of models)cache.inspect(model)
- for(const model of models)cache.inspect(structuredClone(model))
- expect(inspect).toHaveBeenCalledTimes(models.length)
- const changed=structuredClone(models[500]);changed.edges[0].vertices[0]=99999
- expect(()=>cache.inspect(changed)).toThrow()
- expect(inspect).toHaveBeenCalledTimes(models.length+1)
- expect(cache.retainedCharacters).toBeLessThanOrEqual(64_000_000)
+it('keeps validation results across a full 1000-instance scene scan and still rejects edits', () => {
+  const inspect = vi.fn(inspectNurbsBrep),
+    cache = new BrepInspectionCache(undefined, inspect)
+  const models = Array.from({ length: 1001 }, (_, i) => box(i + 1))
+  for (const model of models) cache.inspect(model)
+  for (const model of models) cache.inspect(structuredClone(model))
+  expect(inspect).toHaveBeenCalledTimes(models.length)
+  const changed = structuredClone(models[500])
+  changed.edges[0].vertices[0] = 99999
+  expect(() => cache.inspect(changed)).toThrow()
+  expect(inspect).toHaveBeenCalledTimes(models.length + 1)
+  expect(cache.retainedCharacters).toBeLessThanOrEqual(64_000_000)
 })

@@ -18,8 +18,11 @@ function multiplyRowMajor(a: Mat4, b: Mat4): Mat4 {
   const out = new Float32Array(16)
   for (let row = 0; row < 4; row++) {
     for (let column = 0; column < 4; column++) {
-      out[row * 4 + column] = a[row * 4]! * b[column]! + a[row * 4 + 1]! * b[4 + column]!
-        + a[row * 4 + 2]! * b[8 + column]! + a[row * 4 + 3]! * b[12 + column]!
+      out[row * 4 + column] =
+        a[row * 4]! * b[column]! +
+        a[row * 4 + 1]! * b[4 + column]! +
+        a[row * 4 + 2]! * b[8 + column]! +
+        a[row * 4 + 3]! * b[12 + column]!
     }
   }
   return out
@@ -36,7 +39,12 @@ export interface ShadowBounds {
  * column-major into `out` at `offset`. Used by both the shadow-map depth
  * pass and the surface/grid shaders sampling it.
  */
-export function shadowLightVP(out: Float32Array, offset: number, bounds: ShadowBounds | null, light: readonly [number, number, number]) {
+export function shadowLightVP(
+  out: Float32Array,
+  offset: number,
+  bounds: ShadowBounds | null,
+  light: readonly [number, number, number],
+) {
   if (!bounds) {
     out.fill(0, offset, offset + 16)
     out[offset] = out[offset + 5] = out[offset + 10] = out[offset + 15] = 1
@@ -90,14 +98,25 @@ export function fillSceneUniforms(sd: Float32Array, params: SceneUniformParams) 
     }
   }
   const eyeOff = SCENE_UNIFORM_LAYOUT.eyeFloatOffset
-  sd[eyeOff] = eye[0]; sd[eyeOff + 1] = eye[1]; sd[eyeOff + 2] = eye[2]; sd[eyeOff + 3] = 1
+  sd[eyeOff] = eye[0]
+  sd[eyeOff + 1] = eye[1]
+  sd[eyeOff + 2] = eye[2]
+  sd[eyeOff + 3] = 1
   const lightOff = SCENE_UNIFORM_LAYOUT.lightFloatOffset
-  sd[lightOff] = 0.55; sd[lightOff + 1] = 0.75; sd[lightOff + 2] = 0.45; sd[lightOff + 3] = 0
+  sd[lightOff] = 0.55
+  sd[lightOff + 1] = 0.75
+  sd[lightOff + 2] = 0.45
+  sd[lightOff + 3] = 0
   const ambientOff = SCENE_UNIFORM_LAYOUT.ambientFloatOffset
-  sd[ambientOff] = 0.22; sd[ambientOff + 1] = 0.22; sd[ambientOff + 2] = 0.24; sd[ambientOff + 3] = 1
+  sd[ambientOff] = 0.22
+  sd[ambientOff + 1] = 0.22
+  sd[ambientOff + 2] = 0.24
+  sd[ambientOff + 3] = 1
   const sectionOff = SCENE_UNIFORM_LAYOUT.sectionFloatOffset
-  sd[sectionOff] = params.sectionNormal[0]; sd[sectionOff + 1] = params.sectionNormal[1]
-  sd[sectionOff + 2] = params.sectionNormal[2]; sd[sectionOff + 3] = params.sectionOffset
+  sd[sectionOff] = params.sectionNormal[0]
+  sd[sectionOff + 1] = params.sectionNormal[1]
+  sd[sectionOff + 2] = params.sectionNormal[2]
+  sd[sectionOff + 3] = params.sectionOffset
   const optionsOff = SCENE_UNIFORM_LAYOUT.optionsFloatOffset
   sd[optionsOff] = params.sectionEnabled ? 1 : 0
   sd[optionsOff + 1] = params.gridStep
@@ -112,8 +131,11 @@ export function fillSceneUniforms(sd: Float32Array, params: SceneUniformParams) 
   sd.set(theme.gridColor, SCENE_UNIFORM_LAYOUT.gridFloatOffset)
   sd.set(theme.capColor, SCENE_UNIFORM_LAYOUT.capFloatOffset)
   if (params.shadowActive) {
-    shadowLightVP(sd, SCENE_UNIFORM_LAYOUT.lightVPFloatOffset, params.bounds,
-      [sd[lightOff], sd[lightOff + 1]!, sd[lightOff + 2]!])
+    shadowLightVP(sd, SCENE_UNIFORM_LAYOUT.lightVPFloatOffset, params.bounds, [
+      sd[lightOff],
+      sd[lightOff + 1]!,
+      sd[lightOff + 2]!,
+    ])
   } else {
     sd.fill(0, SCENE_UNIFORM_LAYOUT.lightVPFloatOffset, SCENE_UNIFORM_LAYOUT.lightVPFloatOffset + 16)
   }
@@ -156,24 +178,44 @@ export function fillObjectUniform(
   // Column-major bytes for inverse-transpose(row-major model).
   uniform.set(inverseTransform, 16)
   uniform.set(color, 32)
-  uniform[36] = alpha; uniform[37] = 0
-  uniform[38] = edge; uniform[39] = 0
+  uniform[36] = alpha
+  uniform[37] = 0
+  uniform[38] = edge
+  uniform[39] = 0
   // morph.x drives the GPU vertex blend; rest is 1 (target vertices),
   // which keeps the zero slot-1 dummy inert: mix(dummy, pos, 1) = pos.
-  uniform[40] = 1; uniform[41] = 0; uniform[42] = 0; uniform[43] = 0
+  uniform[40] = 1
+  uniform[41] = 0
+  uniform[42] = 0
+  uniform[43] = 0
   // Material tail: a provided MaterialDef overrides the identity defaults,
   // and the scene-level default material applies to meshes without one.
   if (material) {
-    uniform[44] = material.baseColor[0]; uniform[45] = material.baseColor[1]; uniform[46] = material.baseColor[2]
+    uniform[44] = material.baseColor[0]
+    uniform[45] = material.baseColor[1]
+    uniform[46] = material.baseColor[2]
     uniform[47] = material.metallic
-    uniform[48] = material.emissive[0]; uniform[49] = material.emissive[1]; uniform[50] = material.emissive[2]
+    uniform[48] = material.emissive[0]
+    uniform[49] = material.emissive[1]
+    uniform[50] = material.emissive[2]
     uniform[51] = material.roughness
-    uniform[52] = 0; uniform[53] = 0; uniform[54] = 0; uniform[55] = 0
+    uniform[52] = 0
+    uniform[53] = 0
+    uniform[54] = 0
+    uniform[55] = 0
   } else {
     const dm = defaultMaterial
-    uniform[44] = dm.baseColor[0]; uniform[45] = dm.baseColor[1]; uniform[46] = dm.baseColor[2]
+    uniform[44] = dm.baseColor[0]
+    uniform[45] = dm.baseColor[1]
+    uniform[46] = dm.baseColor[2]
     uniform[47] = dm.metallic
-    uniform[48] = dm.emissive[0]; uniform[49] = dm.emissive[1]; uniform[50] = dm.emissive[2]; uniform[51] = dm.roughness
-    uniform[52] = 0; uniform[53] = 0; uniform[54] = 0; uniform[55] = 0
+    uniform[48] = dm.emissive[0]
+    uniform[49] = dm.emissive[1]
+    uniform[50] = dm.emissive[2]
+    uniform[51] = dm.roughness
+    uniform[52] = 0
+    uniform[53] = 0
+    uniform[54] = 0
+    uniform[55] = 0
   }
 }

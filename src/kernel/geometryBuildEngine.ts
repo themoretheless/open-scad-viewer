@@ -24,12 +24,8 @@ const PROVIDER_INITIALIZATION_TIMEOUT_MS = 5_000
 
 export { GeometryLanguageContractError } from '../core/geometryExecution'
 
-export function attachGeometryExecutionToError(
-  error: unknown,
-  execution: GeometryExecutionDescriptor,
-): void {
-  if (error !== null && (typeof error === 'object' || typeof error === 'function')
-    && !EXECUTION_BY_ERROR.has(error)) {
+export function attachGeometryExecutionToError(error: unknown, execution: GeometryExecutionDescriptor): void {
+  if (error !== null && (typeof error === 'object' || typeof error === 'function') && !EXECUTION_BY_ERROR.has(error)) {
     EXECUTION_BY_ERROR.set(error, execution)
   }
 }
@@ -156,19 +152,16 @@ export class GeometryEngineUnavailableError extends Error {
 }
 
 export type GeometryEngineAvailabilityCause =
-  | 'not-deployed'
-  | 'provider-missing'
-  | 'readiness-timeout'
-  | 'readiness-failed'
-  | 'revoked'
-  | 'quarantined'
+  'not-deployed' | 'provider-missing' | 'readiness-timeout' | 'readiness-failed' | 'revoked' | 'quarantined'
 
 export class GeometryCapabilityUnavailableError extends Error {
   constructor(
     readonly execution: GeometryExecutionDescriptor,
     readonly missingCapabilities: string[],
   ) {
-    super(`Geometry engine ${execution.engineClass} does not provide required capabilities: ${missingCapabilities.join(', ')}`)
+    super(
+      `Geometry engine ${execution.engineClass} does not provide required capabilities: ${missingCapabilities.join(', ')}`,
+    )
     this.name = 'GeometryCapabilityUnavailableError'
   }
 }
@@ -202,9 +195,7 @@ export interface GeometryManifestRevocationSnapshot {
   readonly revokedManifestDigests: readonly string[]
 }
 
-function revocationAttestationPreimage(
-  record: Omit<GeometryManifestRevocationRecord, 'attestationSha256'>,
-): string {
+function revocationAttestationPreimage(record: Omit<GeometryManifestRevocationRecord, 'attestationSha256'>): string {
   return [
     'geometry-manifest-revocation-v1',
     record.schemaVersion,
@@ -241,25 +232,29 @@ export class GeometryManifestRevocationRegistry {
   }
 
   apply(record: GeometryManifestRevocationRecord): void {
-    if (record.schemaVersion !== 1
-      || !Number.isSafeInteger(record.epoch)
-      || record.epoch !== this.epoch + 1) {
+    if (record.schemaVersion !== 1 || !Number.isSafeInteger(record.epoch) || record.epoch !== this.epoch + 1) {
       throw new TypeError('Geometry revocation epochs must be consecutive positive integers')
     }
-    if (!/^[a-f0-9]{64}$/.test(record.manifestDigest)
-      || !record.reason.trim() || record.reason.length > 512
-      || !record.authority.trim() || record.authority.length > 128
-      || !Number.isFinite(Date.parse(record.effectiveAt))) {
+    if (
+      !/^[a-f0-9]{64}$/.test(record.manifestDigest) ||
+      !record.reason.trim() ||
+      record.reason.length > 512 ||
+      !record.authority.trim() ||
+      record.authority.length > 128 ||
+      !Number.isFinite(Date.parse(record.effectiveAt))
+    ) {
       throw new TypeError('Geometry revocation record is malformed')
     }
-    const expected = sha256Hex(revocationAttestationPreimage({
-      schemaVersion: 1,
-      epoch: record.epoch,
-      manifestDigest: record.manifestDigest,
-      reason: record.reason,
-      effectiveAt: record.effectiveAt,
-      authority: record.authority,
-    }))
+    const expected = sha256Hex(
+      revocationAttestationPreimage({
+        schemaVersion: 1,
+        epoch: record.epoch,
+        manifestDigest: record.manifestDigest,
+        reason: record.reason,
+        effectiveAt: record.effectiveAt,
+        authority: record.authority,
+      }),
+    )
     if (record.attestationSha256 !== expected) {
       throw new TypeError('Geometry revocation record attestation does not match its fields')
     }
@@ -305,12 +300,15 @@ function cloneManifest(manifest: GeometryEngineManifest): GeometryEngineManifest
  */
 export class GeometryBuildEngine {
   private readonly providers: ReadonlyMap<GeometryEngineClass, GeometryBackendProvider>
-  private readonly readiness = new Map<GeometryEngineClass, {
-    state: 'unknown' | 'available' | 'unavailable' | 'quarantined'
-    reason: string | null
-    cause: GeometryEngineAvailabilityCause | null
-    timeoutPhase?: 'readiness' | 'initialization'
-  }>()
+  private readonly readiness = new Map<
+    GeometryEngineClass,
+    {
+      state: 'unknown' | 'available' | 'unavailable' | 'quarantined'
+      reason: string | null
+      cause: GeometryEngineAvailabilityCause | null
+      timeoutPhase?: 'readiness' | 'initialization'
+    }
+  >()
   private readonly readinessAttempts = new Map<GeometryEngineClass, Promise<boolean>>()
   private readonly revokedManifestDigests: ReadonlySet<string>
   private readonly revocations: GeometryManifestRevocationRegistry | null
@@ -330,18 +328,18 @@ export class GeometryBuildEngine {
     const entries = new Map<GeometryEngineClass, GeometryBackendProvider>()
     for (const provider of providers) {
       const manifest = MANIFESTS[provider.engineClass]
-      const archivedManifest = GEOMETRY_MANIFEST_ARCHIVE[
-        ACTIVE_GEOMETRY_MANIFEST_VERSIONS[provider.engineClass]
-      ]
+      const archivedManifest = GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS[provider.engineClass]]
       const admission = geometryProviderAdmissionForManifest(archivedManifest)
       if (!admission.allowed || manifest.availability !== 'available') {
         throw new TypeError(
           `Cannot register an unqualified geometry provider for ${provider.engineClass}: ${admission.reason}`,
         )
       }
-      if (provider.engineKey !== manifest.engineKey
-        || provider.kernelFingerprint !== manifest.kernelFingerprint
-        || provider.capabilityManifestVersion !== manifest.capabilityManifestVersion) {
+      if (
+        provider.engineKey !== manifest.engineKey ||
+        provider.kernelFingerprint !== manifest.kernelFingerprint ||
+        provider.capabilityManifestVersion !== manifest.capabilityManifestVersion
+      ) {
         throw new TypeError(
           `Cannot register an unqualified geometry provider: identity does not match the qualified ${provider.engineClass} manifest`,
         )
@@ -365,13 +363,16 @@ export class GeometryBuildEngine {
       }
     }
     const readiness = this.readiness.get(engineClass)
-    if (manifest.availability === 'available'
-      && (!this.providers.has(engineClass) || readiness?.state !== 'available')) {
+    if (
+      manifest.availability === 'available' &&
+      (!this.providers.has(engineClass) || readiness?.state !== 'available')
+    ) {
       return {
         ...manifest,
         availability: 'unavailable',
-        unavailableReason: readiness?.reason
-          ?? (this.providers.has(engineClass)
+        unavailableReason:
+          readiness?.reason ??
+          (this.providers.has(engineClass)
             ? 'The qualified provider has not passed its runtime readiness check.'
             : 'No qualified runtime provider is registered in this process.'),
       }
@@ -399,29 +400,34 @@ export class GeometryBuildEngine {
     if (readiness?.state === 'available') return provider
     if (readiness?.state === 'quarantined') return null
     const pending = this.readinessAttempts.get(engineClass)
-    if (readiness?.state === 'unavailable'
-      && !(pending && timeoutMs === PROVIDER_INITIALIZATION_TIMEOUT_MS
-        && readiness.timeoutPhase === 'readiness')) return null
+    if (
+      readiness?.state === 'unavailable' &&
+      !(pending && timeoutMs === PROVIDER_INITIALIZATION_TIMEOUT_MS && readiness.timeoutPhase === 'readiness')
+    )
+      return null
 
     let attempt = pending
     if (!attempt) {
       attempt = Promise.resolve()
         .then(() => provider.warm())
-        .then(() => {
-          if (this.readiness.get(engineClass)?.state !== 'quarantined') {
-            this.readiness.set(engineClass, { state: 'available', reason: null, cause: null })
-          }
-          return true
-        }, () => {
-          if (this.readiness.get(engineClass)?.state !== 'quarantined') {
-            this.readiness.set(engineClass, {
-              state: 'unavailable',
-              reason: 'The qualified provider failed its runtime readiness check.',
-              cause: 'readiness-failed',
-            })
-          }
-          return false
-        })
+        .then(
+          () => {
+            if (this.readiness.get(engineClass)?.state !== 'quarantined') {
+              this.readiness.set(engineClass, { state: 'available', reason: null, cause: null })
+            }
+            return true
+          },
+          () => {
+            if (this.readiness.get(engineClass)?.state !== 'quarantined') {
+              this.readiness.set(engineClass, {
+                state: 'unavailable',
+                reason: 'The qualified provider failed its runtime readiness check.',
+                cause: 'readiness-failed',
+              })
+            }
+            return false
+          },
+        )
         .finally(() => {
           if (this.readinessAttempts.get(engineClass) === attempt) {
             this.readinessAttempts.delete(engineClass)
@@ -435,14 +441,14 @@ export class GeometryBuildEngine {
     let outcome: 'available' | 'unavailable' | 'timeout'
     try {
       outcome = await Promise.race([
-        attempt.then(available => available ? 'available' as const : 'unavailable' as const),
+        attempt.then(available => (available ? ('available' as const) : ('unavailable' as const))),
         new Promise<'timeout'>(resolve => {
           timeoutId = setTimeout(() => resolve('timeout'), timeoutMs)
         }),
         new Promise<never>((_, reject) => {
           if (!signal) return
           onAbort = () => reject(new DOMException('Build cancelled', 'AbortError'))
-          signal.addEventListener('abort', onAbort, {once: true})
+          signal.addEventListener('abort', onAbort, { once: true })
           if (signal.aborted) onAbort()
         }),
       ])
@@ -470,8 +476,10 @@ export class GeometryBuildEngine {
   }
 
   private isManifestRevoked(manifestDigest: string): boolean {
-    return this.revokedManifestDigests.has(manifestDigest)
-      || (this.revocations?.snapshot().revokedManifestDigests.includes(manifestDigest) ?? false)
+    return (
+      this.revokedManifestDigests.has(manifestDigest) ||
+      (this.revocations?.snapshot().revokedManifestDigests.includes(manifestDigest) ?? false)
+    )
   }
 
   private policyEpoch(): number {
@@ -479,9 +487,7 @@ export class GeometryBuildEngine {
   }
 
   async capabilities(): Promise<GeometryEngineRegistrySnapshot> {
-    await Promise.all([...this.providers.keys()].map(engineClass => (
-      this.ensureProviderReady(engineClass)
-    )))
+    await Promise.all([...this.providers.keys()].map(engineClass => this.ensureProviderReady(engineClass)))
     return {
       contractVersion: 1,
       sourceDirectedRouting: true,
@@ -500,15 +506,12 @@ export class GeometryBuildEngine {
     return planGeometrySourceExecution(source, request)
   }
 
-  private admitSource(
-    source: string,
-    request: GeometryBuildRequest,
-  ): GeometryExecutionDescriptor {
+  private admitSource(source: string, request: GeometryBuildRequest): GeometryExecutionDescriptor {
     const execution = this.planSource(source, request)
     const manifest = MANIFESTS[execution.engineClass]
-    const missingCapabilities = execution.requiredCapabilities.filter(capability => (
-      !manifest.capabilities.includes(capability)
-    ))
+    const missingCapabilities = execution.requiredCapabilities.filter(
+      capability => !manifest.capabilities.includes(capability),
+    )
     if (missingCapabilities.length) {
       throw new GeometryCapabilityUnavailableError(execution, missingCapabilities)
     }
@@ -539,8 +542,8 @@ export class GeometryBuildEngine {
     if (!provider) {
       throw new GeometryEngineUnavailableError(
         execution,
-        this.runtimeManifest(execution.engineClass).unavailableReason
-          ?? 'The qualified provider failed its runtime readiness check.',
+        this.runtimeManifest(execution.engineClass).unavailableReason ??
+          'The qualified provider failed its runtime readiness check.',
         this.readiness.get(execution.engineClass)?.cause ?? 'readiness-failed',
       )
     }
@@ -593,21 +596,36 @@ export class GeometryBuildEngine {
         )
       }
     } catch (error) {
-      if (error instanceof GeometryEngineUnavailableError || error instanceof GeometryCapabilityUnavailableError || error instanceof GeometryLanguageContractError) {
-        this.quarantineProvider(execution.engineClass, 'The qualified provider was quarantined after throwing a facade-owned routing error.')
+      if (
+        error instanceof GeometryEngineUnavailableError ||
+        error instanceof GeometryCapabilityUnavailableError ||
+        error instanceof GeometryLanguageContractError
+      ) {
+        this.quarantineProvider(
+          execution.engineClass,
+          'The qualified provider was quarantined after throwing a facade-owned routing error.',
+        )
         const contractError = new GeometryProviderContractError('Geometry provider threw a facade-owned routing error')
         attachGeometryExecutionToError(contractError, runtimeExecution)
         throw contractError
       }
       if (error === null || (typeof error !== 'object' && typeof error !== 'function')) {
-        this.quarantineProvider(execution.engineClass, 'The qualified provider was quarantined after rejecting with a non-object error.')
+        this.quarantineProvider(
+          execution.engineClass,
+          'The qualified provider was quarantined after rejecting with a non-object error.',
+        )
         const contractError = new GeometryProviderContractError('Geometry provider rejected with a non-object error')
         attachGeometryExecutionToError(contractError, runtimeExecution)
         throw contractError
       }
       if (geometryExecutionForError(error) !== undefined) {
-        this.quarantineProvider(execution.engineClass, 'The qualified provider was quarantined after reusing an error across executions.')
-        const contractError = new GeometryProviderContractError('Geometry provider reused an error object across executions')
+        this.quarantineProvider(
+          execution.engineClass,
+          'The qualified provider was quarantined after reusing an error across executions.',
+        )
+        const contractError = new GeometryProviderContractError(
+          'Geometry provider reused an error object across executions',
+        )
         attachGeometryExecutionToError(contractError, runtimeExecution)
         throw contractError
       }
@@ -615,9 +633,11 @@ export class GeometryBuildEngine {
       throw error
     }
     const publicationReadiness = this.readiness.get(execution.engineClass)
-    if (this.policyEpoch() !== policyEpoch
-      || this.isManifestRevoked(manifest.manifestDigest)
-      || publicationReadiness?.state !== 'available') {
+    if (
+      this.policyEpoch() !== policyEpoch ||
+      this.isManifestRevoked(manifest.manifestDigest) ||
+      publicationReadiness?.state !== 'available'
+    ) {
       throw new GeometryEngineUnavailableError(
         runtimeExecution,
         publicationReadiness?.state === 'quarantined'

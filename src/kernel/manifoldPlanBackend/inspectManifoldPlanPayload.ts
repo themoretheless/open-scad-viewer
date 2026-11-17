@@ -1,15 +1,18 @@
 import { loadCadKernelOps } from '../cadKernelOps'
 import type { CadKernelHandle, CadKernelOps, CadKernelSolidAnalysis } from '../cadKernelOps'
 import { MANIFOLD_PLAN_CARRIERS, MANIFOLD_PLAN_PAYLOAD, ManifoldPlanBackend } from '../manifoldPlanBackend'
-import type { ManifoldPlanCarrier, ManifoldPlanPayload, ManifoldPlanPayloadFamily, ManifoldPlanPayloadView, OwnedManifoldPlanPayload } from '../manifoldPlanBackend'
+import type {
+  ManifoldPlanCarrier,
+  ManifoldPlanPayload,
+  ManifoldPlanPayloadFamily,
+  ManifoldPlanPayloadView,
+  OwnedManifoldPlanPayload,
+} from '../manifoldPlanBackend'
 import type { SemanticCarrierKey, SemanticRuntimeValue } from '../../language/semantic/semanticProgramExecutor'
 import type { SemanticNode, SemanticValueType } from '../../core/semanticProgram'
 
 export type ManifoldPlanBackendErrorCode =
-  | 'E_MANIFOLD_PLAN_BUSY'
-  | 'E_MANIFOLD_PLAN_CONTRACT'
-  | 'E_MANIFOLD_PLAN_LIFECYCLE'
-  | 'E_MANIFOLD_PLAN_UNSUPPORTED'
+  'E_MANIFOLD_PLAN_BUSY' | 'E_MANIFOLD_PLAN_CONTRACT' | 'E_MANIFOLD_PLAN_LIFECYCLE' | 'E_MANIFOLD_PLAN_UNSUPPORTED'
 
 export class ManifoldPlanBackendError extends Error {
   constructor(
@@ -24,10 +27,12 @@ export class ManifoldPlanBackendError extends Error {
 /** @internal Mesh analysis/shadow qualification boundary, never a compiler API. */
 export function inspectManifoldPlanPayload(payload: ManifoldPlanPayload): ManifoldPlanPayloadView {
   const owned = payload as Partial<OwnedManifoldPlanPayload>
-  if (owned[MANIFOLD_PLAN_PAYLOAD] !== true
-    || owned.handle === undefined
-    || owned.kernel === undefined
-    || owned.provenance === undefined) {
+  if (
+    owned[MANIFOLD_PLAN_PAYLOAD] !== true ||
+    owned.handle === undefined ||
+    owned.kernel === undefined ||
+    owned.provenance === undefined
+  ) {
     throw new TypeError('Value is not a Manifold plan payload')
   }
   return Object.freeze({
@@ -38,14 +43,14 @@ export function inspectManifoldPlanPayload(payload: ManifoldPlanPayload): Manifo
 }
 
 /** @internal The only allocating mesh-analysis operation exposed to assemblers. */
-export function analyzeManifoldPlanSolid(
-  payload: ManifoldPlanPayload,
-): CadKernelSolidAnalysis {
+export function analyzeManifoldPlanSolid(payload: ManifoldPlanPayload): CadKernelSolidAnalysis {
   const owned = payload as Partial<OwnedManifoldPlanPayload>
-  if (owned[MANIFOLD_PLAN_PAYLOAD] !== true
-    || owned.handle === undefined
-    || owned.kernel === undefined
-    || owned.carrierKey !== 'solid-set/d3/mesh') {
+  if (
+    owned[MANIFOLD_PLAN_PAYLOAD] !== true ||
+    owned.handle === undefined ||
+    owned.kernel === undefined ||
+    owned.carrierKey !== 'solid-set/d3/mesh'
+  ) {
     throw new TypeError('Value is not a solid Manifold plan payload')
   }
   return owned.kernel.analyzeSolid(owned.handle)
@@ -59,17 +64,11 @@ export function isSupportedCarrier(value: SemanticCarrierKey): value is Manifold
   return (MANIFOLD_PLAN_CARRIERS as readonly string[]).includes(value)
 }
 
-export function backendError(
-  code: ManifoldPlanBackendErrorCode,
-  message: string,
-): ManifoldPlanBackendError {
+export function backendError(code: ManifoldPlanBackendErrorCode, message: string): ManifoldPlanBackendError {
   return new ManifoldPlanBackendError(code, message)
 }
 
-export function safeDelete(
-  kernel: CadKernelOps,
-  handle: CadKernelHandle,
-): unknown | undefined {
+export function safeDelete(kernel: CadKernelOps, handle: CadKernelHandle): unknown | undefined {
   try {
     kernel.delete(handle)
     return undefined
@@ -87,24 +86,21 @@ export function requirePayload(
     throw backendError('E_MANIFOLD_PLAN_CONTRACT', `${node.kind} received a missing input after shared empty reduction`)
   }
   const payload = input.payload as Partial<OwnedManifoldPlanPayload>
-  if (payload[MANIFOLD_PLAN_PAYLOAD] !== true
-    || payload.handle === undefined
-    || payload.kernel === undefined) {
+  if (payload[MANIFOLD_PLAN_PAYLOAD] !== true || payload.handle === undefined || payload.kernel === undefined) {
     throw backendError('E_MANIFOLD_PLAN_CONTRACT', `${node.kind} received a foreign Manifold payload`)
   }
   const dimension = payload.carrierKey === 'region/d2/mesh' ? 2 : 3
   if (dimension !== expectedDimension) {
-    throw backendError('E_MANIFOLD_PLAN_CONTRACT', `${node.kind} received a ${dimension}D input where ${expectedDimension}D was required`)
+    throw backendError(
+      'E_MANIFOLD_PLAN_CONTRACT',
+      `${node.kind} received a ${dimension}D input where ${expectedDimension}D was required`,
+    )
   }
   return payload as OwnedManifoldPlanPayload
 }
 
 export function matrix3FromMatrix4(matrix: readonly number[]): readonly number[] {
-  return [
-    matrix[0]!, matrix[1]!, 0,
-    matrix[4]!, matrix[5]!, 0,
-    matrix[12]!, matrix[13]!, 1,
-  ]
+  return [matrix[0]!, matrix[1]!, 0, matrix[4]!, matrix[5]!, 0, matrix[12]!, matrix[13]!, 1]
 }
 
 /** Load a non-instrumented module so ownership stays per lease, not global. */
@@ -113,5 +109,8 @@ export async function loadManifoldPlanBackend(): Promise<ManifoldPlanBackend> {
 }
 
 export function unsupportedBrepNode(node: SemanticNode): never {
-  throw backendError('E_MANIFOLD_PLAN_UNSUPPORTED', `${node.kind} is a B-rep operation and cannot be executed by the mesh-only Manifold backend`)
+  throw backendError(
+    'E_MANIFOLD_PLAN_UNSUPPORTED',
+    `${node.kind} is a B-rep operation and cannot be executed by the mesh-only Manifold backend`,
+  )
 }

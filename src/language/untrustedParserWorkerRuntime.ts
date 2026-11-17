@@ -4,9 +4,12 @@ import type { UntrustedParserJob, UntrustedParserResult } from './untrustedParse
 
 export function executeUntrustedParserJob(job: UntrustedParserJob): UntrustedParserResult {
   switch (job.kind) {
-    case 'step-raw': return buildStepRawArtifact(job.text, job.budgets)
-    case 'iges-preflight': return preflightIgesInput(job.text, job.budgets)
-    case 'stl-preflight': return preflightStlInput(job.bytes, job.budgets)
+    case 'step-raw':
+      return buildStepRawArtifact(job.text, job.budgets)
+    case 'iges-preflight':
+      return preflightIgesInput(job.text, job.budgets)
+    case 'stl-preflight':
+      return preflightStlInput(job.bytes, job.budgets)
   }
 }
 

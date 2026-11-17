@@ -8,12 +8,48 @@ import {
 describe('WebGPU Compute G-Code Toolpath Segment & Layer Filter', () => {
   const sampleMoveRows = new Float64Array([
     // x, y, z, e, feedrateMmS, layerIndex, extrudedFlag
-    0, 0, 0.2, 0.0, 60, 0, 0,
-    10, 0, 0.2, 0.5, 30, 0, 1,
-    10, 10, 0.2, 1.0, 60, 0, 1,
-    0, 10, 0.2, 1.0, 120, 0, 0, // travel on layer 0
-    0, 10, 0.4, 1.0, 120, 1, 0, // Z hop to layer 1
-    20, 10, 0.4, 2.0, 90, 1, 1, // extrusion on layer 1
+    0,
+    0,
+    0.2,
+    0.0,
+    60,
+    0,
+    0,
+    10,
+    0,
+    0.2,
+    0.5,
+    30,
+    0,
+    1,
+    10,
+    10,
+    0.2,
+    1.0,
+    60,
+    0,
+    1,
+    0,
+    10,
+    0.2,
+    1.0,
+    120,
+    0,
+    0, // travel on layer 0
+    0,
+    10,
+    0.4,
+    1.0,
+    120,
+    1,
+    0, // Z hop to layer 1
+    20,
+    10,
+    0.4,
+    2.0,
+    90,
+    1,
+    1, // extrusion on layer 1
   ])
 
   it('filters G-Code segments by layer range and travel/extrusion flags', () => {

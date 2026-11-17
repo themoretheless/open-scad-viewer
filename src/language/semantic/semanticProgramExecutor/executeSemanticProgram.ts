@@ -1,9 +1,36 @@
 import { SemanticProgramExecutionError } from '../semanticProgramExecutor'
-import type { SemanticBackendCloseResult, SemanticBackendContext, SemanticBackendPayloadLease, SemanticBackendSession, SemanticExecutedOutput, SemanticExecutionControl, SemanticExecutionResult, SemanticProgramBackend, SemanticRuntimeValue } from '../semanticProgramExecutor'
+import type {
+  SemanticBackendCloseResult,
+  SemanticBackendContext,
+  SemanticBackendPayloadLease,
+  SemanticBackendSession,
+  SemanticExecutedOutput,
+  SemanticExecutionControl,
+  SemanticExecutionResult,
+  SemanticProgramBackend,
+  SemanticRuntimeValue,
+} from '../semanticProgramExecutor'
 import { requireTrustedSemanticLowering } from '../semanticProgramLowerer'
 import type { SemanticLoweringSuccess } from '../semanticProgramLowerer'
-import { awaitBackendWithControl, bindBackendMethod, bindBackendSession, captureCommittedDisposer, checkSemanticExecutionControl, closeFailedSession, executionFailure, nodeMustReturnValueAfterReduction, reduceEmptyInputs, semanticCarrierKey, snapshotCloseRecord, snapshotRuntimeValue } from './checkSemanticExecutionControl'
-import { semanticNodeInputs, semanticNodeProducerOperationNames, semanticResultItems } from '../../../core/semanticProgram'
+import {
+  awaitBackendWithControl,
+  bindBackendMethod,
+  bindBackendSession,
+  captureCommittedDisposer,
+  checkSemanticExecutionControl,
+  closeFailedSession,
+  executionFailure,
+  nodeMustReturnValueAfterReduction,
+  reduceEmptyInputs,
+  semanticCarrierKey,
+  snapshotCloseRecord,
+  snapshotRuntimeValue,
+} from './checkSemanticExecutionControl'
+import {
+  semanticNodeInputs,
+  semanticNodeProducerOperationNames,
+  semanticResultItems,
+} from '../../../core/semanticProgram'
 
 /** Executes only an atomically exact-source-lowered artifact, never a structural SPE1 alone. */
 export async function executeSemanticProgram<TPayloadFamily extends object>(
@@ -18,18 +45,24 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
   const nodes = program.core.nodes
   const maxNodes = control.maxNodes ?? nodes.length
   if (!Number.isSafeInteger(maxNodes) || maxNodes < 0 || nodes.length > maxNodes) {
-    throw new SemanticProgramExecutionError('E_SEMANTIC_BUDGET', null, `Semantic program requires ${nodes.length} nodes but the effective limit is ${String(maxNodes)}`)
+    throw new SemanticProgramExecutionError(
+      'E_SEMANTIC_BUDGET',
+      null,
+      `Semantic program requires ${nodes.length} nodes but the effective limit is ${String(maxNodes)}`,
+    )
   }
   checkSemanticExecutionControl(control, null)
 
   let publishedSession: unknown
   try {
-    publishedSession = backend.begin(Object.freeze({
-      programHash: attestation.programHash,
-      languageContract: program.core.language.contract,
-      limits: Object.freeze({ maxNodes }),
-      signal: executionController.signal,
-    }))
+    publishedSession = backend.begin(
+      Object.freeze({
+        programHash: attestation.programHash,
+        languageContract: program.core.language.contract,
+        limits: Object.freeze({ maxNodes }),
+        signal: executionController.signal,
+      }),
+    )
   } catch (error) {
     const failure = new SemanticProgramExecutionError(
       'E_SEMANTIC_BACKEND_BEGIN',
@@ -42,7 +75,9 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
 
   if (publishedSession === null || typeof publishedSession !== 'object') {
     const failure = new SemanticProgramExecutionError(
-      'E_SEMANTIC_BACKEND_BEGIN', null, 'Semantic backend begin did not publish a session',
+      'E_SEMANTIC_BACKEND_BEGIN',
+      null,
+      'Semantic backend begin did not publish a session',
     )
     failure.backendCause = new TypeError('begin() did not return a session object')
     throw failure
@@ -52,7 +87,9 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
     close = bindBackendMethod(publishedSession, 'close') as SemanticBackendSession<TPayloadFamily>['close']
   } catch (error) {
     const failure = new SemanticProgramExecutionError(
-      'E_SEMANTIC_BACKEND_BEGIN', null, 'Published backend session has no callable data close method',
+      'E_SEMANTIC_BACKEND_BEGIN',
+      null,
+      'Published backend session has no callable data close method',
     )
     failure.backendCause = error
     throw failure
@@ -62,7 +99,9 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
     session = bindBackendSession<TPayloadFamily>(publishedSession, close)
   } catch (error) {
     const primary = new SemanticProgramExecutionError(
-      'E_SEMANTIC_BACKEND_FAILURE', null, 'Published backend session has an invalid lifecycle shape',
+      'E_SEMANTIC_BACKEND_FAILURE',
+      null,
+      'Published backend session has an invalid lifecycle shape',
     )
     primary.backendCause = error
     return closeFailedSession(
@@ -77,8 +116,8 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
   const seenLeases = new Set<SemanticBackendPayloadLease>()
   const producerByNode: Array<SemanticBackendContext['producer']> = Array(nodes.length).fill(null)
   for (const occurrence of program.core.occurrences) {
-    if (occurrence.node === null || occurrence.outputOrdinal === null
-      || producerByNode[occurrence.node] !== null) continue
+    if (occurrence.node === null || occurrence.outputOrdinal === null || producerByNode[occurrence.node] !== null)
+      continue
     const operation = program.core.operations[occurrence.operation]!
     if (!semanticNodeProducerOperationNames(nodes[occurrence.node]!).includes(operation.name)) continue
     producerByNode[occurrence.node] = Object.freeze({
@@ -99,15 +138,27 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
       const reduction = reduceEmptyInputs(node, authoredInputs)
       let value = reduction.result
       if (value === undefined) {
-        const returned = await awaitBackendWithControl(() => session.evaluate(node, reduction.inputs, Object.freeze({
-          nodeIndex: node.id,
-          carrierKey: semanticCarrierKey(node.valueType),
-          inputNodeIndices: Object.freeze(reduction.positions.map(position => authoredInputNodeIndices[position]!)),
-          producer: producerByNode[node.id]!,
-          programHash: attestation.programHash,
-          languageContract: program.core.language.contract,
-          signal: executionController.signal,
-        })), control, executionController, node.id)
+        const returned = await awaitBackendWithControl(
+          () =>
+            session.evaluate(
+              node,
+              reduction.inputs,
+              Object.freeze({
+                nodeIndex: node.id,
+                carrierKey: semanticCarrierKey(node.valueType),
+                inputNodeIndices: Object.freeze(
+                  reduction.positions.map(position => authoredInputNodeIndices[position]!),
+                ),
+                producer: producerByNode[node.id]!,
+                programHash: attestation.programHash,
+                languageContract: program.core.language.contract,
+                signal: executionController.signal,
+              }),
+            ),
+          control,
+          executionController,
+          node.id,
+        )
         checkSemanticExecutionControl(control, node.id)
         value = snapshotRuntimeValue(
           returned,
@@ -116,20 +167,24 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
           program.core.language.contract === 'legacy/current',
           session,
           lease => {
-          if (seenLeases.has(lease)) {
-            throw new SemanticProgramExecutionError(
-              'E_SEMANTIC_BACKEND_TYPE',
-              node.id,
-              'Backend reused a payload lease; every non-empty return requires a unique lease',
-            )
-          }
-          seenLeases.add(lease)
-          leasesByNode[node.id] = lease
+            if (seenLeases.has(lease)) {
+              throw new SemanticProgramExecutionError(
+                'E_SEMANTIC_BACKEND_TYPE',
+                node.id,
+                'Backend reused a payload lease; every non-empty return requires a unique lease',
+              )
+            }
+            seenLeases.add(lease)
+            leasesByNode[node.id] = lease
           },
         )
         checkSemanticExecutionControl(control, node.id)
         if (value.tag === 'empty' && nodeMustReturnValueAfterReduction(node)) {
-          throw new SemanticProgramExecutionError('E_SEMANTIC_BACKEND_TYPE', node.id, 'Backend returned empty where the shared semantic empty algebra requires a value')
+          throw new SemanticProgramExecutionError(
+            'E_SEMANTIC_BACKEND_TYPE',
+            node.id,
+            'Backend returned empty where the shared semantic empty algebra requires a value',
+          )
         }
       }
       values[node.id] = value
@@ -137,7 +192,11 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
       try {
         control.onNode?.(completedNodes, nodes.length)
       } catch {
-        throw new SemanticProgramExecutionError('E_SEMANTIC_CALLBACK', node.id, 'Semantic execution progress callback failed')
+        throw new SemanticProgramExecutionError(
+          'E_SEMANTIC_CALLBACK',
+          node.id,
+          'Semantic execution progress callback failed',
+        )
       }
       checkSemanticExecutionControl(control, node.id)
       activeNode = null
@@ -162,24 +221,36 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
   let retained: readonly SemanticBackendPayloadLease[]
   try {
     const resultItems = semanticResultItems(program.core.result)
-    outputs = Object.freeze(resultItems.map(output => Object.freeze({
-      value: values[output.node]!,
-      occurrence: program.core.occurrences[output.identityOccurrence]!,
-      color: output.color,
-    })))
-    retained = Object.freeze([...new Set(resultItems
-      .map(output => leasesByNode[output.node])
-      .filter((lease): lease is SemanticBackendPayloadLease => lease !== undefined))])
+    outputs = Object.freeze(
+      resultItems.map(output =>
+        Object.freeze({
+          value: values[output.node]!,
+          occurrence: program.core.occurrences[output.identityOccurrence]!,
+          color: output.color,
+        }),
+      ),
+    )
+    retained = Object.freeze([
+      ...new Set(
+        resultItems
+          .map(output => leasesByNode[output.node])
+          .filter((lease): lease is SemanticBackendPayloadLease => lease !== undefined),
+      ),
+    ])
   } catch (error) {
     return closeFailedSession(session, executionController, executionFailure(error, null))
   }
 
   let committed: SemanticBackendCloseResult
   try {
-    committed = await Promise.resolve().then(() => session.close(Object.freeze({
-      tag: 'commit' as const,
-      retained,
-    })))
+    committed = await Promise.resolve().then(() =>
+      session.close(
+        Object.freeze({
+          tag: 'commit' as const,
+          retained,
+        }),
+      ),
+    )
   } catch (error) {
     const failure = new SemanticProgramExecutionError(
       'E_SEMANTIC_BACKEND_CLOSE',
@@ -194,15 +265,21 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
   let disposeBackendResult: (() => Promise<void>) | null = null
   try {
     disposeBackendResult = snapshotCloseRecord(committed, 'committed')
-    if (disposeBackendResult === null) throw new SemanticProgramExecutionError(
-      'E_SEMANTIC_BACKEND_CLOSE', null, 'Backend commit omitted its result lease',
-    )
-  } catch (error) {
-    const primary = error instanceof SemanticProgramExecutionError
-      ? error
-      : new SemanticProgramExecutionError(
-        'E_SEMANTIC_BACKEND_CLOSE', null, 'Backend returned an invalid commit ownership record',
+    if (disposeBackendResult === null)
+      throw new SemanticProgramExecutionError(
+        'E_SEMANTIC_BACKEND_CLOSE',
+        null,
+        'Backend commit omitted its result lease',
       )
+  } catch (error) {
+    const primary =
+      error instanceof SemanticProgramExecutionError
+        ? error
+        : new SemanticProgramExecutionError(
+            'E_SEMANTIC_BACKEND_CLOSE',
+            null,
+            'Backend returned an invalid commit ownership record',
+          )
     if (emergencyDispose !== null) {
       try {
         await emergencyDispose()
@@ -227,7 +304,9 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
       program,
       attestation,
       outputs,
-      get disposed() { return disposed },
+      get disposed() {
+        return disposed
+      },
       dispose,
       [Symbol.asyncDispose]: dispose,
     })

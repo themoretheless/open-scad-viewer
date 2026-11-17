@@ -12,8 +12,12 @@ export class RendererRecoveryGate {
   private followUpStarted = false
   private exhausted = false
 
-  get isActive() { return this.active }
-  get mustDeferReady() { return this.followUpPending || this.exhausted }
+  get isActive() {
+    return this.active
+  }
+  get mustDeferReady() {
+    return this.followUpPending || this.exhausted
+  }
 
   registerDeviceLoss(): RendererRecoveryLossDecision {
     if (!this.active) {

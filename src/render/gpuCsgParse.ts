@@ -1,7 +1,15 @@
 /** Lowers OpenSCAD statements into a flat GPU CSG preview tree. */
 import { compileOpenSCAD, type Statement, type CallNode, type Expr } from '../language/openscadCompiler'
 import type { CsgOp, GpuCsgNode, GpuCsgPrimitive, GpuCsgTerm, GpuCsgTree } from './gpuCsgTypes'
-import { createCsgPrimitive, resetCsgIdCounter, identityMat4, multiplyMat4, rotationEulerMat4, scaleMat4, translationMat4 } from './gpuCsgPrimitives'
+import {
+  createCsgPrimitive,
+  resetCsgIdCounter,
+  identityMat4,
+  multiplyMat4,
+  rotationEulerMat4,
+  scaleMat4,
+  translationMat4,
+} from './gpuCsgPrimitives'
 
 /**
  * Recursively flattens an arbitrary CSG tree into Sequenced Convex Subtraction (SCS) terms:
@@ -11,11 +19,13 @@ import { createCsgPrimitive, resetCsgIdCounter, identityMat4, multiplyMat4, rota
 export function flattenCsgNode(node: GpuCsgNode, parentTransform: Float32Array = identityMat4()): GpuCsgTerm[] {
   if (node.type === 'primitive') {
     const combinedTransform = multiplyMat4(parentTransform, node.primitive.transform)
-    return [{
-      positive: { ...node.primitive, transform: combinedTransform },
-      cutters: [],
-      operation: 'difference',
-    }]
+    return [
+      {
+        positive: { ...node.primitive, transform: combinedTransform },
+        cutters: [],
+        operation: 'difference',
+      },
+    ]
   }
 
   const currentTransform = node.transform ? multiplyMat4(parentTransform, node.transform) : parentTransform

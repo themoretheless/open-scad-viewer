@@ -1,7 +1,6 @@
 /** Deterministic CPU NURBS tessellation reference and shared grid helpers (WebGPU fallback). */
 import { forEachChunkedAsync, type CooperativeAsyncOptions } from '../core/cooperativeAsync'
 
-
 export interface GpuNurbsSurface {
   degreeU: number
   degreeV: number
@@ -45,9 +44,9 @@ export function generateQuadIndices(samplesU: number, samplesV: number): Uint32A
   for (let iv = 0; iv < samplesV - 1; iv++) {
     for (let iu = 0; iu < samplesU - 1; iu++) {
       const v00 = iu + iv * samplesU
-      const v10 = (iu + 1) + iv * samplesU
+      const v10 = iu + 1 + iv * samplesU
       const v01 = iu + (iv + 1) * samplesU
-      const v11 = (iu + 1) + (iv + 1) * samplesU
+      const v11 = iu + 1 + (iv + 1) * samplesU
 
       // Tri 1: CCW
       indices[ptr++] = v00
@@ -99,7 +98,7 @@ function createBasisEvaluator(maxDeg: number) {
     deg: number,
     knots: number[] | Float32Array,
     basisOut: Float64Array,
-    dersOut: Float64Array
+    dersOut: Float64Array,
   ): void {
     ndu[0] = 1.0
     for (let j = 1; j <= deg; j++) {
@@ -150,7 +149,7 @@ function createBasisEvaluator(maxDeg: number) {
 export function referenceNurbsTessellate(
   surface: GpuNurbsSurface,
   samplesU = 32,
-  samplesV = 32
+  samplesV = 32,
 ): GpuNurbsTessellationResult {
   const p = surface.degreeU
   const q = surface.degreeV
@@ -190,9 +189,18 @@ export function referenceNurbsTessellate(
       const spanU = findSpan(numCpU - 1, p, u, ku)
       evaluateBasis(spanU, u, p, ku, buBasis, buDers)
 
-      let ptX = 0, ptY = 0, ptZ = 0, ptW = 0
-      let duX = 0, duY = 0, duZ = 0, duW = 0
-      let dvX = 0, dvY = 0, dvZ = 0, dvW = 0
+      let ptX = 0,
+        ptY = 0,
+        ptZ = 0,
+        ptW = 0
+      let duX = 0,
+        duY = 0,
+        duZ = 0,
+        duW = 0
+      let dvX = 0,
+        dvY = 0,
+        dvZ = 0,
+        dvW = 0
 
       for (let r = 0; r <= p; r++) {
         const cpx = spanU - p + r
@@ -205,7 +213,9 @@ export function referenceNurbsTessellate(
           const dmv = bvDers[s]!
 
           const idx = cpx + cpy * numCpU
-          let cx = 0, cy = 0, cz = 0
+          let cx = 0,
+            cy = 0,
+            cz = 0
           if (isFlatCp) {
             const base = idx * 3
             cx = cp[base] ?? 0
@@ -213,7 +223,11 @@ export function referenceNurbsTessellate(
             cz = cp[base + 2] ?? 0
           } else {
             const pt = (cp as Array<[number, number, number]>)[idx]
-            if (pt) { cx = pt[0]; cy = pt[1]; cz = pt[2] }
+            if (pt) {
+              cx = pt[0]
+              cy = pt[1]
+              cz = pt[2]
+            }
           }
           const cw = weights ? (weights[idx] ?? 1.0) : 1.0
 
@@ -227,15 +241,30 @@ export function referenceNurbsTessellate(
           const wdu = dnu * mv
           const wdv = nu * dmv
 
-          ptX += cx * wpt; ptY += cy * wpt; ptZ += cz * wpt; ptW += cw * wpt
-          duX += cx * wdu; duY += cy * wdu; duZ += cz * wdu; duW += cw * wdu
-          dvX += cx * wdv; dvY += cy * wdv; dvZ += cz * wdv; dvW += cw * wdv
+          ptX += cx * wpt
+          ptY += cy * wpt
+          ptZ += cz * wpt
+          ptW += cw * wpt
+          duX += cx * wdu
+          duY += cy * wdu
+          duZ += cz * wdu
+          duW += cw * wdu
+          dvX += cx * wdv
+          dvY += cy * wdv
+          dvZ += cz * wdv
+          dvW += cw * wdv
         }
       }
 
-      let posX = ptX, posY = ptY, posZ = ptZ
-      let tanUX = duX, tanUY = duY, tanUZ = duZ
-      let tanVX = dvX, tanVY = dvY, tanVZ = dvZ
+      let posX = ptX,
+        posY = ptY,
+        posZ = ptZ
+      let tanUX = duX,
+        tanUY = duY,
+        tanUZ = duZ
+      let tanVX = dvX,
+        tanVY = dvY,
+        tanVZ = dvZ
 
       if (isRational && Math.abs(ptW) > 1e-12) {
         const invW = 1.0 / ptW
@@ -256,9 +285,13 @@ export function referenceNurbsTessellate(
       const len = Math.hypot(nx, ny, nz)
       if (len > 1e-7) {
         const invLen = 1.0 / len
-        nx *= invLen; ny *= invLen; nz *= invLen
+        nx *= invLen
+        ny *= invLen
+        nz *= invLen
       } else {
-        nx = 0; ny = 0; nz = 1
+        nx = 0
+        ny = 0
+        nz = 1
       }
 
       const vIdx = iu + iv * samplesU
@@ -291,7 +324,7 @@ export async function referenceNurbsTessellateAsync(
   surface: GpuNurbsSurface,
   samplesU = 32,
   samplesV = 32,
-  options: CooperativeAsyncOptions = {}
+  options: CooperativeAsyncOptions = {},
 ): Promise<GpuNurbsTessellationResult> {
   const p = surface.degreeU
   const q = surface.degreeV
@@ -333,9 +366,18 @@ export async function referenceNurbsTessellateAsync(
         const spanU = findSpan(numCpU - 1, p, u, ku)
         evaluateBasis(spanU, u, p, ku, buBasis, buDers)
 
-        let ptX = 0, ptY = 0, ptZ = 0, ptW = 0
-        let duX = 0, duY = 0, duZ = 0, duW = 0
-        let dvX = 0, dvY = 0, dvZ = 0, dvW = 0
+        let ptX = 0,
+          ptY = 0,
+          ptZ = 0,
+          ptW = 0
+        let duX = 0,
+          duY = 0,
+          duZ = 0,
+          duW = 0
+        let dvX = 0,
+          dvY = 0,
+          dvZ = 0,
+          dvW = 0
 
         for (let r = 0; r <= p; r++) {
           const cpx = spanU - p + r
@@ -348,7 +390,9 @@ export async function referenceNurbsTessellateAsync(
             const dmv = bvDers[s]!
 
             const idx = cpx + cpy * numCpU
-            let cx = 0, cy = 0, cz = 0
+            let cx = 0,
+              cy = 0,
+              cz = 0
             if (isFlatCp) {
               const base = idx * 3
               cx = cp[base] ?? 0
@@ -356,7 +400,11 @@ export async function referenceNurbsTessellateAsync(
               cz = cp[base + 2] ?? 0
             } else {
               const pt = (cp as Array<[number, number, number]>)[idx]
-              if (pt) { cx = pt[0]; cy = pt[1]; cz = pt[2] }
+              if (pt) {
+                cx = pt[0]
+                cy = pt[1]
+                cz = pt[2]
+              }
             }
             const cw = weights ? (weights[idx] ?? 1.0) : 1.0
 
@@ -370,15 +418,30 @@ export async function referenceNurbsTessellateAsync(
             const wdu = dnu * mv
             const wdv = nu * dmv
 
-            ptX += cx * wpt; ptY += cy * wpt; ptZ += cz * wpt; ptW += cw * wpt
-            duX += cx * wdu; duY += cy * wdu; duZ += cz * wdu; duW += cw * wdu
-            dvX += cx * wdv; dvY += cy * wdv; dvZ += cz * wdv; dvW += cw * wdv
+            ptX += cx * wpt
+            ptY += cy * wpt
+            ptZ += cz * wpt
+            ptW += cw * wpt
+            duX += cx * wdu
+            duY += cy * wdu
+            duZ += cz * wdu
+            duW += cw * wdu
+            dvX += cx * wdv
+            dvY += cy * wdv
+            dvZ += cz * wdv
+            dvW += cw * wdv
           }
         }
 
-        let posX = ptX, posY = ptY, posZ = ptZ
-        let tanUX = duX, tanUY = duY, tanUZ = duZ
-        let tanVX = dvX, tanVY = dvY, tanVZ = dvZ
+        let posX = ptX,
+          posY = ptY,
+          posZ = ptZ
+        let tanUX = duX,
+          tanUY = duY,
+          tanUZ = duZ
+        let tanVX = dvX,
+          tanVY = dvY,
+          tanVZ = dvZ
 
         if (isRational && Math.abs(ptW) > 1e-12) {
           const invW = 1.0 / ptW
@@ -399,9 +462,13 @@ export async function referenceNurbsTessellateAsync(
         const len = Math.hypot(nx, ny, nz)
         if (len > 1e-7) {
           const invLen = 1.0 / len
-          nx *= invLen; ny *= invLen; nz *= invLen
+          nx *= invLen
+          ny *= invLen
+          nz *= invLen
         } else {
-          nx = 0; ny = 0; nz = 1
+          nx = 0
+          ny = 0
+          nz = 1
         }
 
         const vIdx = iu + iv * samplesU
@@ -416,7 +483,7 @@ export async function referenceNurbsTessellateAsync(
         vertices[off + 7] = tv
       }
     },
-    { ...options, checkStride: Math.max(1, Math.floor(256 / Math.max(1, samplesU))) }
+    { ...options, checkStride: Math.max(1, Math.floor(256 / Math.max(1, samplesU))) },
   )
 
   const indices = generateQuadIndices(samplesU, samplesV)

@@ -1,8 +1,8 @@
-import type {PolygonMesh} from '../kernel/geometry/polygon'
-import {callGeometryRust} from '../kernel/geometry/kernel'
+import type { PolygonMesh } from '../kernel/geometry/polygon'
+import { callGeometryRust } from '../kernel/geometry/kernel'
 
 export interface BuildSurfaceOptions {
-  buildDirection: [number,number,number]
+  buildDirection: [number, number, number]
   coneDegrees: number
   planeOffsetMm: number
   planeToleranceMm: number
@@ -18,5 +18,8 @@ export interface BuildSurfaceReport {
 
 /** Whole-triangle geometric classification, not support prediction or print certification. */
 export function inspectBuildSurfaces(mesh: PolygonMesh, options: BuildSurfaceOptions): BuildSurfaceReport {
-  return callGeometryRust('mesh_build_surfaces', {...options, mesh:{positions:mesh.positions,indices:mesh.indices}})
+  return callGeometryRust('mesh_build_surfaces', {
+    ...options,
+    mesh: { positions: mesh.positions, indices: mesh.indices },
+  })
 }

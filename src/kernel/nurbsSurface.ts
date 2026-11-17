@@ -34,61 +34,103 @@ export type NurbsSurfaceEvaluation = {
   domainV: [number, number]
 }
 
-
-export function validateNurbsSurface(surface: NurbsSurface): void { callNurbsRust('surface_validate', { surface }) }
-export function evaluateNurbsSurface(surface: NurbsSurface, u: number, v: number): NurbsSurfaceEvaluation { return callNurbsRust('surface_evaluate', { surface, u, v }) }
+export function validateNurbsSurface(surface: NurbsSurface): void {
+  callNurbsRust('surface_validate', { surface })
+}
+export function evaluateNurbsSurface(surface: NurbsSurface, u: number, v: number): NurbsSurfaceEvaluation {
+  return callNurbsRust('surface_evaluate', { surface, u, v })
+}
 /** Immutable validated Rust snapshot. Release explicitly after bounded sampling. */
-export function createNurbsSurfaceEvaluator(surface: NurbsSurface): ((u: number, v: number) => NurbsSurfaceEvaluation) & { dispose(): void } {
+export function createNurbsSurfaceEvaluator(
+  surface: NurbsSurface,
+): ((u: number, v: number) => NurbsSurfaceEvaluation) & { dispose(): void } {
   const evaluator = createRustSurfaceEvaluator(surface)
   let disposed = false
   const sample = (u: number, v: number): NurbsSurfaceEvaluation => {
     if (disposed) throw new Error('NURBS surface evaluator is disposed.')
     return decodeNurbsResult(evaluator.evaluate(u, v))
   }
-  sample.dispose = () => { if (!disposed) { disposed = true; evaluator.free() } }
+  sample.dispose = () => {
+    if (!disposed) {
+      disposed = true
+      evaluator.free()
+    }
+  }
   return sample
 }
-export function insertNurbsSurfaceKnot(surface: NurbsSurface, axis: NurbsSurfaceAxis, value: number, count = 1): NurbsSurface { return callNurbsRust('surface_insert', { surface, axis, u: value, count }) }
-export function elevateNurbsSurface(surface: NurbsSurface, axis: NurbsSurfaceAxis, targetDegree: number): NurbsSurface { return callNurbsRust('surface_elevate', { surface, axis, degree: targetDegree }) }
-export function reverseNurbsSurface(surface: NurbsSurface, axis: NurbsSurfaceAxis): NurbsSurface { return callNurbsRust('surface_reverse', { surface, axis }) }
+export function insertNurbsSurfaceKnot(
+  surface: NurbsSurface,
+  axis: NurbsSurfaceAxis,
+  value: number,
+  count = 1,
+): NurbsSurface {
+  return callNurbsRust('surface_insert', { surface, axis, u: value, count })
+}
+export function elevateNurbsSurface(surface: NurbsSurface, axis: NurbsSurfaceAxis, targetDegree: number): NurbsSurface {
+  return callNurbsRust('surface_elevate', { surface, axis, degree: targetDegree })
+}
+export function reverseNurbsSurface(surface: NurbsSurface, axis: NurbsSurfaceAxis): NurbsSurface {
+  return callNurbsRust('surface_reverse', { surface, axis })
+}
 export function trimNurbsSurface(surface: NurbsSurface, bounds: [number, number, number, number]): NurbsSurface
-export function trimNurbsSurface(surface: NurbsSurface, uMin: number, uMax: number, vMin: number, vMax: number): NurbsSurface
-export function trimNurbsSurface(surface: NurbsSurface, first: number | [number, number, number, number], uMax?: number, vMin?: number, vMax?: number): NurbsSurface {
+export function trimNurbsSurface(
+  surface: NurbsSurface,
+  uMin: number,
+  uMax: number,
+  vMin: number,
+  vMax: number,
+): NurbsSurface
+export function trimNurbsSurface(
+  surface: NurbsSurface,
+  first: number | [number, number, number, number],
+  uMax?: number,
+  vMin?: number,
+  vMax?: number,
+): NurbsSurface {
   return callNurbsRust('surface_trim', { surface, bounds: Array.isArray(first) ? first : [first, uMax, vMin, vMax] })
 }
-export function isoNurbsCurve(surface: NurbsSurface, direction: NurbsSurfaceAxis, parameter: number): NurbsCurve { return callNurbsRust('surface_iso', { surface, axis: direction, u: parameter }) }
-export function nurbsSurfaceBounds(surface: NurbsSurface): { min: Point3; max: Point3 } { return callNurbsRust('surface_bounds', { surface }) }
+export function isoNurbsCurve(surface: NurbsSurface, direction: NurbsSurfaceAxis, parameter: number): NurbsCurve {
+  return callNurbsRust('surface_iso', { surface, axis: direction, u: parameter })
+}
+export function nurbsSurfaceBounds(surface: NurbsSurface): { min: Point3; max: Point3 } {
+  return callNurbsRust('surface_bounds', { surface })
+}
 
 /** Distance between complete surface images; trimmed B-rep faces are a separate domain. */
 export interface NurbsSurfaceDistance {
-  method:'interval-tensor-de-boor-pair-subdivision'
-  scope:'untrimmed-surfaces'
-  distanceIntervalMm:[number,number]
-  parameters:[[number,number],[number,number]]
-  points:[Point3,Point3]
-  pointEnclosures:[Array<[number,number]>,Array<[number,number]>]
-  converged:boolean
-  reason:'tolerance'|'work-limit'|'precision-limit'
-  cells:number
-  maxCells:number
-  toleranceMm:number
+  method: 'interval-tensor-de-boor-pair-subdivision'
+  scope: 'untrimmed-surfaces'
+  distanceIntervalMm: [number, number]
+  parameters: [[number, number], [number, number]]
+  points: [Point3, Point3]
+  pointEnclosures: [Array<[number, number]>, Array<[number, number]>]
+  converged: boolean
+  reason: 'tolerance' | 'work-limit' | 'precision-limit'
+  cells: number
+  maxCells: number
+  toleranceMm: number
 }
-export function measureNurbsSurfaceDistance(a:NurbsSurface,b:NurbsSurface,toleranceMm=0.001,maxCells=10000):NurbsSurfaceDistance {
-  return callNurbsRust('surface_distance',{a,b,toleranceMm,maxCells})
+export function measureNurbsSurfaceDistance(
+  a: NurbsSurface,
+  b: NurbsSurface,
+  toleranceMm = 0.001,
+  maxCells = 10000,
+): NurbsSurfaceDistance {
+  return callNurbsRust('surface_distance', { a, b, toleranceMm, maxCells })
 }
 
-export function transformNurbsSurface(surface:NurbsSurface,matrix:number[][]):NurbsSurface {return callNurbsRust("surface_affine",{surface,matrix})}
-export function transformNurbsSurfacePatches(patches:NurbsSurface[],matrix:number[][]):NurbsSurface[] {return callNurbsRust("patches_affine",{patches,matrix})}
+export function transformNurbsSurface(surface: NurbsSurface, matrix: number[][]): NurbsSurface {
+  return callNurbsRust('surface_affine', { surface, matrix })
+}
+export function transformNurbsSurfacePatches(patches: NurbsSurface[], matrix: number[][]): NurbsSurface[] {
+  return callNurbsRust('patches_affine', { patches, matrix })
+}
 
 /**
  * Evaluate the unit surface normal at `(u, v)` on `surface`, falling back to normalized
  * $\partial_u S \times \partial_v S$ if needed.
  */
-export function evaluateNurbsSurfaceNormal(
-  surface: NurbsSurface,
-  u: number,
-  v: number,
-): Point3 | null {
+export function evaluateNurbsSurfaceNormal(surface: NurbsSurface, u: number, v: number): Point3 | null {
   const ev = evaluateNurbsSurface(surface, u, v)
   if (ev.normal) {
     const [nx, ny, nz] = ev.normal
@@ -115,11 +157,7 @@ export function evaluateNurbsSurfaceNormal(
  * Approximate total surface area $\iint \|\partial_u S \times \partial_v S\| \, du \, dv$
  * over the active `(u, v)` parameter domain using midpoint quadrature on a `stepsU x stepsV` grid.
  */
-export function evaluateNurbsSurfaceArea(
-  surface: NurbsSurface,
-  stepsU = 16,
-  stepsV = 16,
-): number {
+export function evaluateNurbsSurfaceArea(surface: NurbsSurface, stepsU = 16, stepsV = 16): number {
   const nu = Math.max(1, Math.floor(stepsU))
   const nv = Math.max(1, Math.floor(stepsV))
   const evaluator = createNurbsSurfaceEvaluator(surface)

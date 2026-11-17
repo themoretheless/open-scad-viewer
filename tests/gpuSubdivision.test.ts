@@ -49,7 +49,7 @@ describe('WebGPU Compute Catmull–Clark Subdivision & Brush Sculpting', () => {
 
     const r2 = referenceRefineSubdivision(square, 2)
     expect(r2.cage.faces.length).toBe(16)
-    expect(r2.faceIds.every((id) => id === 0)).toBe(true)
+    expect(r2.faceIds.every(id => id === 0)).toBe(true)
   })
 
   it('refines a closed manifold cube cage via runGpuSubdivisionRefine', async () => {

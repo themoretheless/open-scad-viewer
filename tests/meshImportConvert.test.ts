@@ -19,46 +19,78 @@ const closedMesh = built.mesh
 const encoder = new TextEncoder()
 
 /** Unit cube as a closed indexed mesh (8 vertices, 12 triangles). */
-const CUBE_POSITIONS = [0,0,0, 1,0,0, 1,1,0, 0,1,0, 0,0,1, 1,0,1, 1,1,1, 0,1,1]
-const CUBE_QUADS = [[0,3,2,1],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]]
-const CUBE_TRIANGLES = CUBE_QUADS.flatMap(([a,b,c,d]) => [a,b,c, a,c,d])
+const CUBE_POSITIONS = [0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1]
+const CUBE_QUADS = [
+  [0, 3, 2, 1],
+  [4, 5, 6, 7],
+  [0, 1, 5, 4],
+  [1, 2, 6, 5],
+  [2, 3, 7, 6],
+  [3, 0, 4, 7],
+]
+const CUBE_TRIANGLES = CUBE_QUADS.flatMap(([a, b, c, d]) => [a, b, c, a, c, d])
 
 function cubeObj(): string {
-  const v = Array.from({ length: 8 }, (_, i) => `v ${CUBE_POSITIONS[i*3]} ${CUBE_POSITIONS[i*3+1]} ${CUBE_POSITIONS[i*3+2]}`)
-  const f = CUBE_QUADS.map(q => `f ${q.map(i => `${i+1}/1/${i+1}`).join(' ')}`)
+  const v = Array.from(
+    { length: 8 },
+    (_, i) => `v ${CUBE_POSITIONS[i * 3]} ${CUBE_POSITIONS[i * 3 + 1]} ${CUBE_POSITIONS[i * 3 + 2]}`,
+  )
+  const f = CUBE_QUADS.map(q => `f ${q.map(i => `${i + 1}/1/${i + 1}`).join(' ')}`)
   return ['# cube', 'mtllib cube.mtl', 'o cube', ...v, 'vn 0 0 1', 'vt 0 0', 'usemtl red', 's off', ...f, ''].join('\n')
 }
 
 function cubePlyAscii(): string {
   return [
-    'ply', 'format ascii 1.0', 'comment test cube',
-    'element vertex 8', 'property float x', 'property float y', 'property float z', 'property uchar red',
-    'element face 6', 'property list uchar int vertex_indices',
+    'ply',
+    'format ascii 1.0',
+    'comment test cube',
+    'element vertex 8',
+    'property float x',
+    'property float y',
+    'property float z',
+    'property uchar red',
+    'element face 6',
+    'property list uchar int vertex_indices',
     'end_header',
-    ...Array.from({ length: 8 }, (_, i) => `${CUBE_POSITIONS[i*3]} ${CUBE_POSITIONS[i*3+1]} ${CUBE_POSITIONS[i*3+2]} 255`),
+    ...Array.from(
+      { length: 8 },
+      (_, i) => `${CUBE_POSITIONS[i * 3]} ${CUBE_POSITIONS[i * 3 + 1]} ${CUBE_POSITIONS[i * 3 + 2]} 255`,
+    ),
     ...CUBE_QUADS.map(q => `4 ${q.join(' ')}`),
     '',
   ].join('\n')
 }
 
 function cubePlyBinary(littleEndian: boolean): Uint8Array {
-  const header = encoder.encode([
-    'ply', `format ${littleEndian ? 'binary_little_endian' : 'binary_big_endian'} 1.0`,
-    'element vertex 8', 'property double x', 'property double y', 'property double z',
-    'element face 12', 'property list uchar uint vertex_indices', 'property int flags',
-    'end_header', '',
-  ].join('\n'))
+  const header = encoder.encode(
+    [
+      'ply',
+      `format ${littleEndian ? 'binary_little_endian' : 'binary_big_endian'} 1.0`,
+      'element vertex 8',
+      'property double x',
+      'property double y',
+      'property double z',
+      'element face 12',
+      'property list uchar uint vertex_indices',
+      'property int flags',
+      'end_header',
+      '',
+    ].join('\n'),
+  )
   const body = new ArrayBuffer(8 * 24 + 12 * (1 + 12 + 4))
   const view = new DataView(body)
   let o = 0
   for (let i = 0; i < 24; i++, o += 8) view.setFloat64(o, CUBE_POSITIONS[i], littleEndian)
   for (let t = 0; t < 12; t++) {
-    view.setUint8(o, 3); o += 1
-    for (let k = 0; k < 3; k++, o += 4) view.setUint32(o, CUBE_TRIANGLES[t*3+k], littleEndian)
-    view.setInt32(o, -1, littleEndian); o += 4
+    view.setUint8(o, 3)
+    o += 1
+    for (let k = 0; k < 3; k++, o += 4) view.setUint32(o, CUBE_TRIANGLES[t * 3 + k], littleEndian)
+    view.setInt32(o, -1, littleEndian)
+    o += 4
   }
   const out = new Uint8Array(header.byteLength + body.byteLength)
-  out.set(header); out.set(new Uint8Array(body), header.byteLength)
+  out.set(header)
+  out.set(new Uint8Array(body), header.byteLength)
   return out
 }
 
@@ -115,10 +147,7 @@ describe('meshImport', () => {
   })
 
   it('reports residual boundary defects without changing them in Conservative mode', async () => {
-    const openTetra = [
-      'v 0 0 0', 'v 1 0 0', 'v 0 1 0', 'v 0 0 1',
-      'f 1 3 2', 'f 1 2 4', 'f 2 3 4',
-    ].join('\n')
+    const openTetra = ['v 0 0 0', 'v 1 0 0', 'v 0 1 0', 'v 0 0 1', 'f 1 3 2', 'f 1 2 4', 'f 2 3 4'].join('\n')
     const mesh = await importMeshFile('open.obj', encoder.encode(openTetra))
     expect(mesh.triangleCount).toBe(3)
     expect(mesh.manifold.before.isManifoldWithBoundary).toBe(true)
@@ -128,10 +157,7 @@ describe('meshImport', () => {
   })
 
   it('fills a simple import hole in Full mode and localizes the repair report', async () => {
-    const openTetra = [
-      'v 0 0 0', 'v 1 0 0', 'v 0 1 0', 'v 0 0 1',
-      'f 1 3 2', 'f 1 2 4', 'f 2 3 4',
-    ].join('\n')
+    const openTetra = ['v 0 0 0', 'v 1 0 0', 'v 0 1 0', 'v 0 0 1', 'f 1 3 2', 'f 1 2 4', 'f 2 3 4'].join('\n')
     const checked = await importMeshFile('open.obj', encoder.encode(openTetra), { repair: 'none' })
     expect(checked.manifold.repair).toBeNull()
     expect(checked.manifold.after.boundaryEdges).toHaveLength(6)
@@ -155,12 +181,31 @@ describe('meshImport', () => {
   it('reports typed errors for bad input', async () => {
     await expect(importMeshFile('x.gltf', new Uint8Array(16))).rejects.toMatchObject({ code: 'unsupported-format' })
     await expect(importMeshFile('x.obj', new Uint8Array(21_000_000))).rejects.toMatchObject({ code: 'too-large' })
-    await expect(importMeshFile('x.obj', encoder.encode('v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 4\n'))).rejects.toMatchObject({ code: 'invalid-data' })
+    await expect(importMeshFile('x.obj', encoder.encode('v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 4\n'))).rejects.toMatchObject(
+      { code: 'invalid-data' },
+    )
     await expect(importMeshFile('x.obj', encoder.encode('v 0 0 0\n'))).rejects.toMatchObject({ code: 'empty' })
-    await expect(importMeshFile('x.ply', encoder.encode('ply\nformat ascii 1.0\nelement vertex 1\nproperty float x\nend_header\n0\n'))).rejects.toBeInstanceOf(MeshImportError)
-    await expect(importMeshFile('x.ply', encoder.encode('ply\nformat binary_little_endian 1.0\nelement vertex 8\nproperty float x\nproperty float y\nproperty float z\nelement face 1\nproperty list uchar int vertex_indices\nend_header\n'))).rejects.toMatchObject({ code: 'invalid-data' })
-    await expect(importMeshFile('x.stl', encoder.encode('garbage'))).rejects.toMatchObject({ code: 'invalid-data', format: 'stl' })
-    await expect(importMeshFile('x.obj', new Uint8Array([0xff, 0xfe, 0x00]))).rejects.toMatchObject({ code: 'encoding' })
+    await expect(
+      importMeshFile(
+        'x.ply',
+        encoder.encode('ply\nformat ascii 1.0\nelement vertex 1\nproperty float x\nend_header\n0\n'),
+      ),
+    ).rejects.toBeInstanceOf(MeshImportError)
+    await expect(
+      importMeshFile(
+        'x.ply',
+        encoder.encode(
+          'ply\nformat binary_little_endian 1.0\nelement vertex 8\nproperty float x\nproperty float y\nproperty float z\nelement face 1\nproperty list uchar int vertex_indices\nend_header\n',
+        ),
+      ),
+    ).rejects.toMatchObject({ code: 'invalid-data' })
+    await expect(importMeshFile('x.stl', encoder.encode('garbage'))).rejects.toMatchObject({
+      code: 'invalid-data',
+      format: 'stl',
+    })
+    await expect(importMeshFile('x.obj', new Uint8Array([0xff, 0xfe, 0x00]))).rejects.toMatchObject({
+      code: 'encoding',
+    })
   })
 })
 
@@ -198,7 +243,9 @@ describe('meshConvert', () => {
   })
 
   it('rejects unknown targets and sanitises output names', async () => {
-    await expect(convertMeshFile('cube.obj', encoder.encode(cubeObj()), 'gltf' as never)).rejects.toThrow(/Unsupported target/u)
+    await expect(convertMeshFile('cube.obj', encoder.encode(cubeObj()), 'gltf' as never)).rejects.toThrow(
+      /Unsupported target/u,
+    )
     const result = await convertMeshFile('../we/ird.obj', encoder.encode(cubeObj()), 'ply')
     expect(result.fileName).toBe('.._we_ird.ply')
   })

@@ -21,21 +21,24 @@ import {
   type WorkspaceRepositoryLoadResult,
   type WorkspaceSnapshotRepository,
 } from '../src/app/workspaceIndexedDb'
-import {
-  BrowserWorkspacePersistence,
-  type RemovableWorkspaceStorage,
-} from '../src/app/workspacePersistence'
+import { BrowserWorkspacePersistence, type RemovableWorkspaceStorage } from '../src/app/workspacePersistence'
 
 class MemoryStorage implements RemovableWorkspaceStorage {
   readonly values = new Map<string, string>()
   failWrites = false
-  getItem(key: string) { return this.values.get(key) ?? null }
+  getItem(key: string) {
+    return this.values.get(key) ?? null
+  }
   setItem(key: string, value: string) {
     if (this.failWrites) throw new Error('storage unavailable')
     this.values.set(key, value)
   }
-  removeItem(key: string) { this.values.delete(key) }
-  keys() { return [...this.values.keys()].sort() }
+  removeItem(key: string) {
+    this.values.delete(key)
+  }
+  keys() {
+    return [...this.values.keys()].sort()
+  }
 }
 
 class ControlledRepository implements WorkspaceSnapshotRepository {
@@ -50,9 +53,7 @@ class ControlledRepository implements WorkspaceSnapshotRepository {
 
   async load(): Promise<WorkspaceRepositoryLoadResult> {
     if (this.loadError) throw this.loadError
-    return this.value
-      ? { status: 'found', snapshot: { ...this.value } }
-      : { status: 'empty' }
+    return this.value ? { status: 'found', snapshot: { ...this.value } } : { status: 'empty' }
   }
   async save(snapshot: WorkspaceDocumentSnapshot, expected?: WorkspaceDocumentSnapshot | null) {
     this.started.push({ snapshot: { ...snapshot }, expected: expected ? { ...expected } : expected })
@@ -66,13 +67,7 @@ class ControlledRepository implements WorkspaceSnapshotRepository {
   async close() {}
 }
 
-function snapshot(
-  source: string,
-  updatedAt: number,
-  revision = 0,
-  mutation = revision,
-  documentId = 'workspace-test',
-) {
+function snapshot(source: string, updatedAt: number, revision = 0, mutation = revision, documentId = 'workspace-test') {
   return createWorkspaceDocument(source, {
     documentId,
     fileName: 'part.scad',
@@ -90,7 +85,8 @@ function requestResult<T>(request: IDBRequest<T>): Promise<T> {
 }
 
 function recoveryRecords(storage: MemoryStorage) {
-  return storage.keys()
+  return storage
+    .keys()
     .map(key => loadWorkspaceRecovery(storage, key))
     .filter((record): record is NonNullable<typeof record> => record !== null)
 }
@@ -136,9 +132,9 @@ describe('IndexedDB workspace persistence', () => {
     const repository = new IndexedDbWorkspaceRepository(new IDBFactory())
     const exact = snapshot('é'.repeat(MAX_WORKSPACE_SOURCE_LENGTH / 2), 12, 1)
     await expect(repository.save(exact, null)).resolves.toBeUndefined()
-    const plusOne = {...exact,source:exact.source+'a',revision:2,mutation:2,updatedAt:13}
+    const plusOne = { ...exact, source: exact.source + 'a', revision: 2, mutation: 2, updatedAt: 13 }
     await expect(repository.save(plusOne, exact)).rejects.toThrow(RangeError)
-    await expect(repository.load()).resolves.toEqual({status:'found',snapshot:exact})
+    await expect(repository.load()).resolves.toEqual({ status: 'found', snapshot: exact })
     await repository.close()
   })
 
@@ -331,7 +327,9 @@ describe('IndexedDB workspace persistence', () => {
     const initialized = await persistence.initialize({ fallbackSource: 'cube(1);' })
     repository.started.splice(0)
     let releaseFirst!: () => void
-    repository.saveGate = new Promise(resolve => { releaseFirst = resolve })
+    repository.saveGate = new Promise(resolve => {
+      releaseFirst = resolve
+    })
     const older = updateWorkspaceDocument(initialized.document, { source: 'cube(2);' }, 50)
     const newer = updateWorkspaceDocument(older, { source: 'cube(3);' }, 51)
 
@@ -430,8 +428,10 @@ describe('IndexedDB workspace persistence', () => {
     await firstSession.initialize({ fallbackSource: 'fallback' })
     const recovered = updateWorkspaceDocument(base, { source: 'recovered();' }, 86)
     expect(firstSession.stageRecovery(recovered)).toBe(true)
-    expect(recoveryRecords(storage).find(record => workspaceDocumentsEqual(record.snapshot, recovered))?.base)
-      .toEqual({ status: 'found', snapshot: base })
+    expect(recoveryRecords(storage).find(record => workspaceDocumentsEqual(record.snapshot, recovered))?.base).toEqual({
+      status: 'found',
+      snapshot: base,
+    })
 
     repository.started.splice(0)
     const nextSession = new BrowserWorkspacePersistence(repository, storage)
@@ -480,8 +480,11 @@ describe('IndexedDB workspace persistence', () => {
     expect(await firstTab.save(firstDraft)).toBe(true)
     expect(await secondTab.save(secondDraft)).toBe(false)
     expect(repository.value).toEqual(firstDraft)
-    expect(recoveryRecords(storage).map(record => record.snapshot.source).sort())
-      .toEqual(['first-tab();', 'second-tab();'])
+    expect(
+      recoveryRecords(storage)
+        .map(record => record.snapshot.source)
+        .sort(),
+    ).toEqual(['first-tab();', 'second-tab();'])
   })
 
   it('blocks already queued writes after the first compare-and-swap conflict', async () => {
@@ -494,7 +497,9 @@ describe('IndexedDB workspace persistence', () => {
     repository.started.splice(0)
 
     let releaseFirst!: () => void
-    repository.saveGate = new Promise(resolve => { releaseFirst = resolve })
+    repository.saveGate = new Promise(resolve => {
+      releaseFirst = resolve
+    })
     const firstLocal = updateWorkspaceDocument(base, { source: 'local-1();' }, 91)
     const secondLocal = updateWorkspaceDocument(firstLocal, { source: 'local-2();' }, 92)
     const remote = updateWorkspaceDocument(base, { source: 'remote();' }, 93)
@@ -531,7 +536,8 @@ it('manual save writes the current draft without requiring a conflict and surviv
 })
 
 it('ignores an older committed checkpoint when IndexedDB has a newer saved document', async () => {
-  const storage = new MemoryStorage(), repository = new ControlledRepository()
+  const storage = new MemoryStorage(),
+    repository = new ControlledRepository()
   const old = snapshot('old width 72;', 100, 1, 1)
   repository.value = old
   const first = new BrowserWorkspacePersistence(repository, storage)
@@ -540,12 +546,17 @@ it('ignores an older committed checkpoint when IndexedDB has a newer saved docum
   const saved = updateWorkspaceDocument(old, { source: 'saved width 160;' }, 101)
   repository.value = saved
   const reopened = new BrowserWorkspacePersistence(repository, storage)
-  expect(await reopened.initialize({ fallbackSource: 'fallback' })).toMatchObject({ document: saved, durable: true, backend: 'indexeddb' })
+  expect(await reopened.initialize({ fallbackSource: 'fallback' })).toMatchObject({
+    document: saved,
+    durable: true,
+    backend: 'indexeddb',
+  })
   expect(reopened.hasConflict).toBe(false)
 })
 
 it('accepting the IndexedDB version resets autosave lineage and resolves the discarded recovery', async () => {
-  const storage = new MemoryStorage(), repository = new ControlledRepository()
+  const storage = new MemoryStorage(),
+    repository = new ControlledRepository()
   const base = snapshot('base();', 110, 1, 1, 'first-document')
   repository.value = base
   const persistence = new BrowserWorkspacePersistence(repository, storage)
@@ -559,6 +570,6 @@ it('accepting the IndexedDB version resets autosave lineage and resolves the dis
   expect(await persistence.save(edit)).toBe(true)
   persistence.stageRecovery(edit)
   const reopened = new BrowserWorkspacePersistence(repository, storage)
-  expect(await reopened.initialize({ fallbackSource: 'fallback' })).toMatchObject({document: edit,durable: true})
+  expect(await reopened.initialize({ fallbackSource: 'fallback' })).toMatchObject({ document: edit, durable: true })
   expect(reopened.hasConflict).toBe(false)
 })

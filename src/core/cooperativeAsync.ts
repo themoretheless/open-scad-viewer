@@ -48,7 +48,7 @@ function createAbortError(): Error {
 export async function forEachChunkedAsync(
   length: number,
   step: (index: number) => void,
-  options: CooperativeAsyncOptions = {}
+  options: CooperativeAsyncOptions = {},
 ): Promise<void> {
   const timeBudgetMs = options.timeBudgetMs ?? 12
   const checkStride = Math.max(1, options.checkStride ?? 256)
@@ -77,7 +77,7 @@ export async function forEachChunkedAsync(
 export async function mapChunkedAsync<T, R>(
   items: readonly T[],
   mapper: (item: T, index: number) => R,
-  options: CooperativeAsyncOptions = {}
+  options: CooperativeAsyncOptions = {},
 ): Promise<R[]> {
   const out = new Array<R>(items.length)
   await forEachChunkedAsync(
@@ -85,7 +85,7 @@ export async function mapChunkedAsync<T, R>(
     i => {
       out[i] = mapper(items[i]!, i)
     },
-    options
+    options,
   )
   return out
 }

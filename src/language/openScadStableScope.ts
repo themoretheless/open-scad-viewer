@@ -1,10 +1,4 @@
-import type {
-  Expr,
-  FunctionNode,
-  ModuleNode,
-  Statement,
-  Value,
-} from './openscadCompiler'
+import type { Expr, FunctionNode, ModuleNode, Statement, Value } from './openscadCompiler'
 
 interface VariableBinding {
   readonly firstStatement: number

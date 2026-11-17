@@ -14,8 +14,18 @@ import { elevateNurbsCurve, insertNurbsKnot, type NurbsCurve } from '../src/kern
 function circle(): NurbsCurve {
   return {
     degree: 2,
-    knots: [0, 0, 0, .25, .25, .5, .5, .75, .75, 1, 1, 1],
-    controlPoints: [[3, 0], [3, 3], [0, 3], [-3, 3], [-3, 0], [-3, -3], [0, -3], [3, -3], [3, 0]],
+    knots: [0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1],
+    controlPoints: [
+      [3, 0],
+      [3, 3],
+      [0, 3],
+      [-3, 3],
+      [-3, 0],
+      [-3, -3],
+      [0, -3],
+      [3, -3],
+      [3, 0],
+    ],
     weights: [1, Math.SQRT1_2, 1, Math.SQRT1_2, 1, Math.SQRT1_2, 1, Math.SQRT1_2, 1],
   }
 }
@@ -42,7 +52,7 @@ function mass(model: NurbsBrep, volume: number, centroid: number[]) {
 
 it('keeps refined full-circle geometry invariant under knot-domain and weight basis changes', () => {
   let curve = circle()
-  for (const knot of [.07, .31, .68, .93]) curve = insertNurbsKnot(curve, knot, 1)
+  for (const knot of [0.07, 0.31, 0.68, 0.93]) curve = insertNurbsKnot(curve, knot, 1)
   curve = { ...curve, knots: curve.knots.map(t => -7 + 16 * t), weights: curve.weights.map(w => 37 * w) }
   const source = JSON.stringify(curve)
   const profile = validateBrepProfile([[curve]])
@@ -74,21 +84,25 @@ it('admits affine 3D solids and elliptical 2D profiles with analytic mass checks
   const polygon = await solid(`linear_extrude(height=4,center=true)
     translate([7,-4]) scale([2,3]) rotate(37) mirror([1,2]) square([2,1],center=true);`)
   mass(polygon, 48, [7, -4, 0])
-  mass(await solid('linear_extrude(height=4) scale([2,3]) rotate(37) circle(3);'),216*Math.PI,[0,0,2])
+  mass(await solid('linear_extrude(height=4) scale([2,3]) rotate(37) circle(3);'), 216 * Math.PI, [0, 0, 2])
 })
 
 it('refuses implicit 3D projection and retains elevated multi-span curve bases', async () => {
   const planar3d = { ...circle(), controlPoints: circle().controlPoints.map(p => [...p, 0]) }
   expect(() => validateBrepProfile([[planar3d]])).toThrow(/2D|XY/)
   expect(() => extrudeBrepCurves([[planar3d]], 0, 2)).toThrow(/2D/)
-  const elevated=elevateNurbsCurve(circle(),3),profile=validateBrepProfile([[elevated]])
+  const elevated = elevateNurbsCurve(circle(), 3),
+    profile = validateBrepProfile([[elevated]])
   expect(profile.loops[0][0]).toEqual(elevated)
-  expect(profile.areaMm2).toBeCloseTo(9*Math.PI,8)
-  mass(extrudeBrepCurves(profile.loops,0,2),18*Math.PI,[0,0,1])
-  expect(() => lower('linear_extrude(height=2) multmatrix([[1,0,0,0],[0,1,0,0],[0,0,1,1],[0,0,0,1]]) square(2);'))
-    .toThrow(/must preserve the XY plane/)
-  await expect(solid('linear_extrude(height=2) projection() cube(1);'))
-    .rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_FAILURE', backendCause: { code: 'E_BREP_SEMANTIC_UNSUPPORTED' } })
+  expect(profile.areaMm2).toBeCloseTo(9 * Math.PI, 8)
+  mass(extrudeBrepCurves(profile.loops, 0, 2), 18 * Math.PI, [0, 0, 1])
+  expect(() =>
+    lower('linear_extrude(height=2) multmatrix([[1,0,0,0],[0,1,0,0],[0,0,1,1],[0,0,0,1]]) square(2);'),
+  ).toThrow(/must preserve the XY plane/)
+  await expect(solid('linear_extrude(height=2) projection() cube(1);')).rejects.toMatchObject({
+    code: 'E_SEMANTIC_BACKEND_FAILURE',
+    backendCause: { code: 'E_BREP_SEMANTIC_UNSUPPORTED' },
+  })
 })
 
 it('retains XY matrix profile transforms with independent area, volume and centroid checks', async () => {
@@ -99,8 +113,13 @@ it('retains XY matrix profile transforms with independent area, volume and centr
     multmatrix([[0,2,0,7],[2,0,0,-4],[0,0,1,0],[0,0,0,1]])
       difference(){circle(3);circle(1);}`)
   mass(ring, 96 * Math.PI, [7, -4, 0])
-  mass(await solid(`linear_extrude(height=2)
-    multmatrix([[1,.1,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]) circle(3);`),18*Math.PI,[0,0,1])
-  expect(() => lowerOpenSCADToSemanticProgram('multmatrix([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]) square(2);'))
-    .toThrow(/multmatrix currently supports 3D children only/)
+  mass(
+    await solid(`linear_extrude(height=2)
+    multmatrix([[1,.1,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]) circle(3);`),
+    18 * Math.PI,
+    [0, 0, 1],
+  )
+  expect(() =>
+    lowerOpenSCADToSemanticProgram('multmatrix([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]) square(2);'),
+  ).toThrow(/multmatrix currently supports 3D children only/)
 })

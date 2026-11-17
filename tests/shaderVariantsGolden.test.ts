@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { DEEP_MESH_WGSL, EDGE_WGSL, MESH_MATCAP_WGSL, MESH_PBR_WGSL, MESH_SECTION_CAP_WGSL, MESH_TOON_WGSL, MESH_UNLIT_WGSL, MESH_WGSL } from '../src/render/shaders'
+import {
+  DEEP_MESH_WGSL,
+  EDGE_WGSL,
+  MESH_MATCAP_WGSL,
+  MESH_PBR_WGSL,
+  MESH_SECTION_CAP_WGSL,
+  MESH_TOON_WGSL,
+  MESH_UNLIT_WGSL,
+  MESH_WGSL,
+} from '../src/render/shaders'
 import { immediateObjectShader, instancedObjectShader } from '../src/render/shaders/variants'
 import { VARIANTS_GOLDEN } from '../src/render/shaders/generated/variants.golden'
 
@@ -20,20 +29,24 @@ const OBJECT_SHADERS = [
 
 describe('variant golden parity (TS vs Rust)', () => {
   it.each(OBJECT_SHADERS.map(([name, code, output]) => [name, code, output] as const))(
-    'immediate variant of %s matches the Rust golden', (name, code) => {
+    'immediate variant of %s matches the Rust golden',
+    (name, code) => {
       expect(VARIANTS_GOLDEN[`immediate:${name}`]).toBeDefined()
       expect(immediateObjectShader(code)).toBe(VARIANTS_GOLDEN[`immediate:${name}`])
-    })
+    },
+  )
 
   it.each(OBJECT_SHADERS.map(([name, code, output]) => [name, code, output] as const))(
-    'instanced variant of %s matches the Rust golden', (name, code, output) => {
+    'instanced variant of %s matches the Rust golden',
+    (name, code, output) => {
       expect(VARIANTS_GOLDEN[`instanced:${name}`]).toBeDefined()
       expect(instancedObjectShader(code, output)).toBe(VARIANTS_GOLDEN[`instanced:${name}`])
-    })
+    },
+  )
 
   it('golden covers every object shader and both transforms', () => {
-    expect(Object.keys(VARIANTS_GOLDEN).sort()).toEqual(OBJECT_SHADERS
-      .flatMap(([name]) => [`immediate:${name}`, `instanced:${name}`])
-      .sort())
+    expect(Object.keys(VARIANTS_GOLDEN).sort()).toEqual(
+      OBJECT_SHADERS.flatMap(([name]) => [`immediate:${name}`, `instanced:${name}`]).sort(),
+    )
   })
 })

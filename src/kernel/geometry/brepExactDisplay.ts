@@ -13,7 +13,9 @@ export interface ExactFullRoundDisplay extends Pick<BrepMesh, 'report' | 'faceId
   readonly geometricErrorCertified: false
 }
 export function prepareExactFullRoundDisplay(
-  artifact: Readonly<Record<string, unknown>>, segments = 4, maxTriangles = 20_000,
+  artifact: Readonly<Record<string, unknown>>,
+  segments = 4,
+  maxTriangles = 20_000,
 ): ExactFullRoundDisplay {
   return callGeometryRust('cad_full_round_exact_display', { artifact, segments, maxTriangles })
 }

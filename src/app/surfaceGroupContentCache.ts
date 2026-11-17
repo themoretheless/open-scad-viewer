@@ -1,4 +1,4 @@
-import {adaptiveCacheBytes} from './adaptiveMemoryBudget'
+import { adaptiveCacheBytes } from './adaptiveMemoryBudget'
 /** LRU reuse across publications, bounded independently of live scene ownership. */
 export class SurfaceGroupContentCache {
   private readonly entries = new Map<string, { ids: Uint32Array; bytes: number }>()
@@ -17,9 +17,13 @@ export class SurfaceGroupContentCache {
     this.maxBytes = limits.maxBytes
   }
 
-  get size() { return this.entries.size }
+  get size() {
+    return this.entries.size
+  }
   /** Backing-buffer bytes plus UTF-16 key storage; not a JavaScript heap/RSS bound. */
-  get retainedBytes() { return this.bytes }
+  get retainedBytes() {
+    return this.bytes
+  }
 
   getOrCompute(key: string, compute: () => Uint32Array): Uint32Array {
     const limit = this.adaptive ? adaptiveCacheBytes(this.maxBytes) : this.maxBytes
@@ -29,7 +33,11 @@ export class SurfaceGroupContentCache {
       this.entries.delete(oldest)
     }
     const existing = this.entries.get(key)
-    if (existing) { this.entries.delete(key); this.entries.set(key, existing); return existing.ids }
+    if (existing) {
+      this.entries.delete(key)
+      this.entries.set(key, existing)
+      return existing.ids
+    }
     const ids = compute()
     const bytes = ids.buffer.byteLength + key.length * 2
     // A failed computation or oversized value must preserve useful cached entries.

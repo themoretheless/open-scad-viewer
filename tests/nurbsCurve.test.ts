@@ -1,13 +1,27 @@
 import { describe, expect, it } from 'vitest'
 import {
-  decomposeNurbsCurve, elevateNurbsCurve, evaluateNurbsCurve, insertNurbsKnot,
-  nurbsBasisDerivatives, nurbsCurveBounds, reverseNurbsCurve, splitNurbsCurve,
-  trimNurbsCurve, validateNurbsCurve, type NurbsCurve,
+  decomposeNurbsCurve,
+  elevateNurbsCurve,
+  evaluateNurbsCurve,
+  insertNurbsKnot,
+  nurbsBasisDerivatives,
+  nurbsCurveBounds,
+  reverseNurbsCurve,
+  splitNurbsCurve,
+  trimNurbsCurve,
+  validateNurbsCurve,
+  type NurbsCurve,
 } from '../src/kernel/nurbsCurve'
 
 const circle: NurbsCurve = {
-  degree: 2, knots: [0, 0, 0, 1, 1, 1],
-  controlPoints: [[1, 0, 0], [1, 1, 0], [0, 1, 0]], weights: [1, Math.SQRT1_2, 1],
+  degree: 2,
+  knots: [0, 0, 0, 1, 1, 1],
+  controlPoints: [
+    [1, 0, 0],
+    [1, 1, 0],
+    [0, 1, 0],
+  ],
+  weights: [1, Math.SQRT1_2, 1],
 }
 
 function near(actual: number[], expected: number[], digits = 11) {
@@ -17,7 +31,7 @@ function near(actual: number[], expected: number[], digits = 11) {
 
 function equalGeometry(a: NurbsCurve, b: NurbsCurve, start = b.knots[b.degree], end = b.knots[b.controlPoints.length]) {
   for (let i = 0; i <= 50; i++) {
-    const u = start + (end - start) * i / 50
+    const u = start + ((end - start) * i) / 50
     near(evaluateNurbsCurve(a, u).point, evaluateNurbsCurve(b, u).point)
   }
 }
@@ -36,8 +50,18 @@ describe('own NURBS curve mathematics', () => {
   })
 
   it('supports nonclamped natural domains and partitions unity including endpoints', () => {
-    const curve: NurbsCurve = { degree: 2, knots: [-2, -1, 0, 1, 2, 3, 4, 5],
-      controlPoints: [[0, 0], [2, 4], [5, 3], [6, 1], [8, -1]], weights: [1, 1, 1, 1, 1] }
+    const curve: NurbsCurve = {
+      degree: 2,
+      knots: [-2, -1, 0, 1, 2, 3, 4, 5],
+      controlPoints: [
+        [0, 0],
+        [2, 4],
+        [5, 3],
+        [6, 1],
+        [8, -1],
+      ],
+      weights: [1, 1, 1, 1, 1],
+    }
     near(evaluateNurbsCurve(curve, 0).point, [1, 2])
     near(evaluateNurbsCurve(curve, 3).point, [7, 0])
     for (const u of [0, 0.4, 1, 1.5, 2.4, 3]) {
@@ -68,7 +92,10 @@ describe('own NURBS curve mathematics', () => {
     expect(elevated.controlPoints).toHaveLength(11)
     equalGeometry(curve, elevated)
     const pieces = decomposeNurbsCurve(curve)
-    expect(pieces.map(piece => piece.domain)).toEqual([[0, 0.25], [0.25, 1]])
+    expect(pieces.map(piece => piece.domain)).toEqual([
+      [0, 0.25],
+      [0.25, 1],
+    ])
     for (const piece of pieces) {
       expect(piece.curve.controlPoints).toHaveLength(3)
       equalGeometry(curve, piece.curve)
@@ -96,14 +123,25 @@ describe('own NURBS curve mathematics', () => {
       const a = evaluateNurbsCurve(offset, 15 - u)
       const b = evaluateNurbsCurve(reverse, u)
       near(a.point, b.point)
-      near(a.d1!.map(value => -value), b.d1!)
+      near(
+        a.d1!.map(value => -value),
+        b.d1!,
+      )
       near(a.d2!, b.d2!)
     }
   })
 
   it('refuses two-sided derivatives at low-continuity knots', () => {
-    const curve: NurbsCurve = { degree: 1, knots: [0, 0, 1, 2, 2],
-      controlPoints: [[0, 0], [1, 0], [1, 2]], weights: [1, 1, 1] }
+    const curve: NurbsCurve = {
+      degree: 1,
+      knots: [0, 0, 1, 2, 2],
+      controlPoints: [
+        [0, 0],
+        [1, 0],
+        [1, 2],
+      ],
+      weights: [1, 1, 1],
+    }
     const corner = evaluateNurbsCurve(curve, 1)
     near(corner.point, [1, 0])
     expect(corner).toMatchObject({ d1: null, d2: null, derivative_status: 'insufficient_continuity', continuity: 0 })
@@ -113,11 +151,23 @@ describe('own NURBS curve mathematics', () => {
   })
 
   it('validates explicit periodic wrapping and evaluates a continuous seam', () => {
-    const curve: NurbsCurve = { degree: 2, knots: [-2, -1, 0, 1, 2, 3, 4, 5, 6],
-      controlPoints: [[1, 0], [0, 1], [-1, 0], [0, -1], [1, 0], [0, 1]],
-      weights: [1, 1, 1, 1, 1, 1], periodic: true }
+    const curve: NurbsCurve = {
+      degree: 2,
+      knots: [-2, -1, 0, 1, 2, 3, 4, 5, 6],
+      controlPoints: [
+        [1, 0],
+        [0, 1],
+        [-1, 0],
+        [0, -1],
+        [1, 0],
+        [0, 1],
+      ],
+      weights: [1, 1, 1, 1, 1, 1],
+      periodic: true,
+    }
     validateNurbsCurve(curve)
-    const first = evaluateNurbsCurve(curve, 0), last = evaluateNurbsCurve(curve, 4)
+    const first = evaluateNurbsCurve(curve, 0),
+      last = evaluateNurbsCurve(curve, 4)
     near(first.point, last.point)
     near(first.d1!, last.d1!)
     expect(first).toMatchObject({ continuity: 1, derivative_status: 'insufficient_continuity', d2: null })
@@ -125,7 +175,9 @@ describe('own NURBS curve mathematics', () => {
     equalGeometry(curve, insertNurbsKnot(curve, 1.5))
     expect(insertNurbsKnot(curve, 1.5).periodic).toBe(false)
     expect(reverseNurbsCurve(curve).periodic).toBe(true)
-    expect(() => validateNurbsCurve({ ...curve, controlPoints: [...curve.controlPoints.slice(0, -1), [9, 9]] })).toThrow(/repeat/)
+    expect(() =>
+      validateNurbsCurve({ ...curve, controlPoints: [...curve.controlPoints.slice(0, -1), [9, 9]] }),
+    ).toThrow(/repeat/)
     const tiny = { ...curve, knots: curve.knots.map(knot => knot * 1e-20) }
     validateNurbsCurve(tiny)
     tiny.knots[1] = -0.5e-20
@@ -135,7 +187,8 @@ describe('own NURBS curve mathematics', () => {
   it('keeps derivative jets invariant under large exactly representable translations', () => {
     const shifted = { ...circle, controlPoints: circle.controlPoints.map(point => point.map(value => value + 1e8)) }
     for (const u of [0, 0.1, 0.5, 0.8, 1]) {
-      const original = evaluateNurbsCurve(circle, u), translated = evaluateNurbsCurve(shifted, u)
+      const original = evaluateNurbsCurve(circle, u),
+        translated = evaluateNurbsCurve(shifted, u)
       near(translated.d1!, original.d1!, 13)
       near(translated.d2!, original.d2!, 13)
       translated.point.forEach((value, axis) => expect(value).toBe(original.point[axis] + 1e8))
@@ -146,7 +199,8 @@ describe('own NURBS curve mathematics', () => {
     const high = elevateNurbsCurve(circle, 25)
     expect(high.controlPoints).toHaveLength(26)
     for (const u of [0, 1e-10, 1e-5, 0.3, 0.6, 1 - 1e-10, 1]) {
-      const a = evaluateNurbsCurve(circle, u), b = evaluateNurbsCurve(high, u)
+      const a = evaluateNurbsCurve(circle, u),
+        b = evaluateNurbsCurve(high, u)
       near(a.point, b.point, 12)
       near(a.d1!, b.d1!, 11)
       near(a.d2!, b.d2!, 9)
@@ -161,8 +215,12 @@ describe('own NURBS curve mathematics', () => {
     expect(() => validateNurbsCurve({ ...circle, knots: [0, 0, 0, -1, 1, 1] })).toThrow(/nondecreasing/)
     expect(() => evaluateNurbsCurve(circle, 1.1)).toThrow(/domain/)
     expect(() => elevateNurbsCurve(circle, 1)).toThrow(/Elevation/)
-    const many: NurbsCurve = { degree: 1, knots: [0, ...Array.from({ length: 30 }, (_, i) => i), 29],
-      controlPoints: Array.from({ length: 30 }, (_, i) => [i, i % 2]), weights: new Array(30).fill(1) }
+    const many: NurbsCurve = {
+      degree: 1,
+      knots: [0, ...Array.from({ length: 30 }, (_, i) => i), 29],
+      controlPoints: Array.from({ length: 30 }, (_, i) => [i, i % 2]),
+      weights: new Array(30).fill(1),
+    }
     expect(() => elevateNurbsCurve(many, 25)).toThrow(/256/)
   })
 })

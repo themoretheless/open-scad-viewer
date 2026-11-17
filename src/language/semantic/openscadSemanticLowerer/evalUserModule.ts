@@ -4,8 +4,21 @@ import type { CallNode, ExpressionArgument, ModuleNode, Statement, Value } from 
 import { SemanticProgramBuilder, resolveStableExpressionArguments } from '../openscadSemanticLowerer'
 import type { EvalContext, SemanticShape } from '../openscadSemanticLowerer'
 import { OpenScadStableScope } from '../../openScadStableScope'
-import { SEMANTIC_PROGRAM_EXECUTION_VERSION, semanticNodeInputs, semanticNodeProducerOperationNames, semanticResultItems } from '../../../core/semanticProgram'
-import type { SemanticColor, SemanticDynamicSlot, SemanticExecutionPlanV1, SemanticOccurrence, SemanticOutputRef, SemanticProgramCoreV1, SemanticResult } from '../../../core/semanticProgram'
+import {
+  SEMANTIC_PROGRAM_EXECUTION_VERSION,
+  semanticNodeInputs,
+  semanticNodeProducerOperationNames,
+  semanticResultItems,
+} from '../../../core/semanticProgram'
+import type {
+  SemanticColor,
+  SemanticDynamicSlot,
+  SemanticExecutionPlanV1,
+  SemanticOccurrence,
+  SemanticOutputRef,
+  SemanticProgramCoreV1,
+  SemanticResult,
+} from '../../../core/semanticProgram'
 import { callExpressionArguments, evalExpression } from './evalExpression'
 import { evaluationError, isStableProfile, overlayDynamicVariables } from '../../openScadStableExpressionEval'
 import { frameChildren, invoke, semanticSlot } from './evalPreparedNodes'
@@ -46,11 +59,12 @@ export function evalUserModule(
     const parameterValues = new Map<string, Value>()
     for (const parameter of module.params) {
       const supplied = resolved.get(parameter.name)
-      const value = supplied !== undefined
-        ? callerValues.get(supplied)
-        : parameter.defaultValue !== undefined
-          ? evalExpression(parameter.defaultValue, { ...moduleContext, env: new Map(definitionEnv) })
-          : undefined
+      const value =
+        supplied !== undefined
+          ? callerValues.get(supplied)
+          : parameter.defaultValue !== undefined
+            ? evalExpression(parameter.defaultValue, { ...moduleContext, env: new Map(definitionEnv) })
+            : undefined
       parameterValues.set(parameter.name, value)
     }
     env = new Map(definitionEnv)
@@ -102,7 +116,8 @@ export function countStatements(statements: readonly Statement[]): number {
   for (const statement of statements) {
     total++
     if (statement.type === 'module') total += countStatements(statement.children)
-    else if (statement.type === 'call') total += countStatements(statement.children) + countStatements(statement.alternative)
+    else if (statement.type === 'call')
+      total += countStatements(statement.children) + countStatements(statement.alternative)
   }
   return total
 }
@@ -118,7 +133,6 @@ export function resultFromShapes(shapes: readonly SemanticShape[]): SemanticProg
   if (items.length === 1) return { tag: 'single', item: items[0]! }
   return { tag: 'multi', items }
 }
-
 
 /**
  * Hidden reducers are created only after their authored buckets have been
@@ -139,15 +153,11 @@ export function canonicalizeCompletedDag(
   for (const node of builder.nodes) {
     for (const input of semanticNodeInputs(node)) consumed[input] = 1
   }
-  const terminalRoots = terminalDiagnostic === null
-    ? []
-    : builder.evaluationOrder.filter(node => consumed[node] === 0)
-  const rootCandidates = terminalDiagnostic === null
-    ? [
-      ...semanticResultItems(result).map(item => item.node),
-      ...builder.discardedEffects.map(effect => effect.root),
-    ]
-    : terminalRoots
+  const terminalRoots = terminalDiagnostic === null ? [] : builder.evaluationOrder.filter(node => consumed[node] === 0)
+  const rootCandidates =
+    terminalDiagnostic === null
+      ? [...semanticResultItems(result).map(item => item.node), ...builder.discardedEffects.map(effect => effect.root)]
+      : terminalRoots
   const rootSet = new Set(rootCandidates)
   const roots = builder.evaluationOrder.filter(node => rootSet.has(node))
   const visited = new Uint8Array(builder.nodes.length)
@@ -155,11 +165,13 @@ export function canonicalizeCompletedDag(
   for (const root of roots) {
     if (visited[root]) continue
     visited[root] = 1
-    const stack: Array<{ node: number; nextInput: number; inputs: readonly number[] }> = [{
-      node: root,
-      nextInput: 0,
-      inputs: semanticNodeInputs(builder.nodes[root]!),
-    }]
+    const stack: Array<{ node: number; nextInput: number; inputs: readonly number[] }> = [
+      {
+        node: root,
+        nextInput: 0,
+        inputs: semanticNodeInputs(builder.nodes[root]!),
+      },
+    ]
     while (stack.length > 0) {
       const frame = stack[stack.length - 1]!
       if (frame.nextInput < frame.inputs.length) {
@@ -179,17 +191,13 @@ export function canonicalizeCompletedDag(
   // schema 1.2 is the authored kernel schedule itself, not a DFS presentation
   // order: independent child constructors may all execute before a mapping
   // operation materializes their outputs.
-  postorder.splice(
-    0,
-    postorder.length,
-    ...builder.evaluationOrder.filter(node => visited[node] === 1),
-  )
+  postorder.splice(0, postorder.length, ...builder.evaluationOrder.filter(node => visited[node] === 1))
   const oldToNew = new Int32Array(builder.nodes.length)
   oldToNew.fill(-1)
-  postorder.forEach((oldId, newId) => { oldToNew[oldId] = newId })
-  const canonicalNodes = postorder.map((oldId, newId) => (
-    remapSemanticNode(builder.nodes[oldId]!, newId, oldToNew)
-  ))
+  postorder.forEach((oldId, newId) => {
+    oldToNew[oldId] = newId
+  })
+  const canonicalNodes = postorder.map((oldId, newId) => remapSemanticNode(builder.nodes[oldId]!, newId, oldToNew))
   builder.nodes.splice(0, builder.nodes.length, ...canonicalNodes)
 
   // Legacy evaluation can intentionally execute a discarded branch (notably
@@ -207,9 +215,11 @@ export function canonicalizeCompletedDag(
   // whose logical occurrence directly references an unpublished node were
   // seeded above, so one forward pass closes both ancestry relations in O(n).
   for (const occurrence of builder.occurrences) {
-    if (removedOccurrenceIds.has(occurrence.occurrenceId)
-      || (occurrence.parent !== null && removeOccurrence[occurrence.parent] === 1)
-      || (occurrence.staticParent !== null && removeOccurrence[occurrence.staticParent] === 1)) {
+    if (
+      removedOccurrenceIds.has(occurrence.occurrenceId) ||
+      (occurrence.parent !== null && removeOccurrence[occurrence.parent] === 1) ||
+      (occurrence.staticParent !== null && removeOccurrence[occurrence.staticParent] === 1)
+    ) {
       removeOccurrence[occurrence.id] = 1
       removedOccurrenceIds.add(occurrence.occurrenceId)
     }
@@ -262,9 +272,12 @@ export function canonicalizeCompletedDag(
   }
   const canonicalResult: SemanticResult = (() => {
     switch (result.tag) {
-      case 'empty': return result
-      case 'single': return { tag: 'single', item: remapOutput(result.item) }
-      case 'multi': return { tag: 'multi', items: result.items.map(remapOutput) }
+      case 'empty':
+        return result
+      case 'single':
+        return { tag: 'single', item: remapOutput(result.item) }
+      case 'multi':
+        return { tag: 'multi', items: result.items.map(remapOutput) }
     }
   })()
   const producerForRoot = (oldRoot: number): number | null => {
@@ -295,16 +308,19 @@ export function canonicalizeCompletedDag(
     }
     return { ...effect, root, ownerOccurrence }
   })
-  const terminal = terminalDiagnostic === null ? null : {
-    tag: 'legacy-language-error' as const,
-    occurrence: occurrenceOldToNew[terminalOccurrence!]!,
-    diagnosticTemplate: terminalDiagnostic,
-    prefixFrontier: terminalRoots.map(oldRoot => {
-      const root = oldToNew[oldRoot]!
-      if (root < 0) throw new Error('Semantic terminal prefix lost a root during canonicalization')
-      return { root, ownerOccurrence: producerForRoot(oldRoot) }
-    }),
-  }
+  const terminal =
+    terminalDiagnostic === null
+      ? null
+      : {
+          tag: 'legacy-language-error' as const,
+          occurrence: occurrenceOldToNew[terminalOccurrence!]!,
+          diagnosticTemplate: terminalDiagnostic,
+          prefixFrontier: terminalRoots.map(oldRoot => {
+            const root = oldToNew[oldRoot]!
+            if (root < 0) throw new Error('Semantic terminal prefix lost a root during canonicalization')
+            return { root, ownerOccurrence: producerForRoot(oldRoot) }
+          }),
+        }
   if (terminal !== null && terminal.occurrence < 0) {
     throw new Error('Semantic terminal occurrence was removed during canonicalization')
   }

@@ -2,10 +2,7 @@ import { parentPort } from 'node:worker_threads'
 import type { GeometryExecutionDescriptor } from '../core/geometryExecution'
 import { meshTransferables } from '../core/mesh'
 import { defaultGeometryKernel } from '../kernel/cadGeometryKernel'
-import {
-  defaultGeometryBuildEngine,
-  type GeometryBuildResult,
-} from '../kernel/geometryBuildEngine'
+import { defaultGeometryBuildEngine, type GeometryBuildResult } from '../kernel/geometryBuildEngine'
 import {
   DIRECT_GEOMETRY_IDENTITY,
   DIRECT_GEOMETRY_PROTOCOL_VERSION,
@@ -111,12 +108,16 @@ async function build(request: DirectGeometryBuildRequest): Promise<void> {
       { quality: request.quality, purpose: request.purpose },
       { shouldAbort: () => cancelled },
     )
-    postTerminal(request, {
-      ...eventEnvelope(request),
-      status: 'succeeded',
-      kind: 'build',
-      built,
-    }, meshTransferables(built.result.meshes))
+    postTerminal(
+      request,
+      {
+        ...eventEnvelope(request),
+        status: 'succeeded',
+        kind: 'build',
+        built,
+      },
+      meshTransferables(built.result.meshes),
+    )
   } catch (error) {
     const execution = directGeometryExecutionForError(error, planned)
     postTerminal(request, {

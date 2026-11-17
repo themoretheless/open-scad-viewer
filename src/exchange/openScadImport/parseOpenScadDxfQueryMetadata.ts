@@ -1,9 +1,49 @@
-import { IDENTITY_2, OPENSCAD_IMPORT_MAX_DXF_QUERY_RECORDS, OPENSCAD_IMPORT_MAX_PROJECT_2D_POINTS, OPENSCAD_IMPORT_MAX_PROJECT_DXF_QUERY_RECORDS, OPENSCAD_IMPORT_MAX_PROJECT_TRIANGLES, OPENSCAD_IMPORT_MAX_PROJECT_VERTICES, OPENSCAD_IMPORT_MAX_XML_ELEMENTS, OpenScadImportDataError } from '../openScadImport'
-import type { DxfBlock, DxfEntity, DxfSegment, Matrix2, OpenScad2021LegacyImportFormat, OpenScadDxfDimensionMetadata, OpenScadDxfIntermediate, OpenScadDxfLineSegmentMetadata, OpenScadDxfQueryMetadata, OpenScadImportFormat, OpenScadImportGeometry, OpenScadImportGeometry2D, OpenScadImportPoint2, OpenScadImportPreparationBudget, OpenScadImportRegion2D, PreparedImportDecode } from '../openScadImport'
+import {
+  IDENTITY_2,
+  OPENSCAD_IMPORT_MAX_DXF_QUERY_RECORDS,
+  OPENSCAD_IMPORT_MAX_PROJECT_2D_POINTS,
+  OPENSCAD_IMPORT_MAX_PROJECT_DXF_QUERY_RECORDS,
+  OPENSCAD_IMPORT_MAX_PROJECT_TRIANGLES,
+  OPENSCAD_IMPORT_MAX_PROJECT_VERTICES,
+  OPENSCAD_IMPORT_MAX_XML_ELEMENTS,
+  OpenScadImportDataError,
+} from '../openScadImport'
+import type {
+  DxfBlock,
+  DxfEntity,
+  DxfSegment,
+  Matrix2,
+  OpenScad2021LegacyImportFormat,
+  OpenScadDxfDimensionMetadata,
+  OpenScadDxfIntermediate,
+  OpenScadDxfLineSegmentMetadata,
+  OpenScadDxfQueryMetadata,
+  OpenScadImportFormat,
+  OpenScadImportGeometry,
+  OpenScadImportGeometry2D,
+  OpenScadImportPoint2,
+  OpenScadImportPreparationBudget,
+  OpenScadImportRegion2D,
+  PreparedImportDecode,
+} from '../openScadImport'
 import { OpenScadProject } from '../../language/openScadProject'
 import type { OpenScadProjectFile } from '../../language/openScadProject'
 import type { SvgOptions } from '../svgDocument'
-import { arcPoints, dxfInteger, dxfNumber, dxfPairs, dxfPolyline, dxfSections, dxfValue, geometry2D, multiply2, parseOpenScad3mfWithBudget, parseOpenScadSvg, stitchDxfSegments, transform2 } from './parseOpenScad3mf'
+import {
+  arcPoints,
+  dxfInteger,
+  dxfNumber,
+  dxfPairs,
+  dxfPolyline,
+  dxfSections,
+  dxfValue,
+  geometry2D,
+  multiply2,
+  parseOpenScad3mfWithBudget,
+  parseOpenScadSvg,
+  stitchDxfSegments,
+  transform2,
+} from './parseOpenScad3mf'
 import { boundedCount, dataError, finiteNumber, parseOpenScadOff, parseOpenScadStl, textOf } from './parseOpenScadStl'
 import { parseOpenScadAmfWithBudget } from './parseOpenScadAmf'
 
@@ -12,7 +52,8 @@ export function dxfLwPolyline(entity: DxfEntity): OpenScadImportPoint2[] {
   for (const pair of entity.pairs) {
     if (pair.code === 10) points.push([finiteNumber(pair.value, 'DXF polyline x', 'dxf'), null])
     else if (pair.code === 20 && points.length) {
-      if (points.at(-1)![1] !== null) return dataError('E_IMPORT_INVALID_DATA', 'DXF LWPOLYLINE repeats a y coordinate.', 'dxf')
+      if (points.at(-1)![1] !== null)
+        return dataError('E_IMPORT_INVALID_DATA', 'DXF LWPOLYLINE repeats a y coordinate.', 'dxf')
       points.at(-1)![1] = finiteNumber(pair.value, 'DXF polyline y', 'dxf')
     }
     // OpenSCAD 2021.01 intentionally treats group-42 bulges as straight chords.
@@ -38,24 +79,20 @@ export function dxfDimensionMetadata(
     if (section !== 'BLOCKS' && section !== 'ENTITIES') continue
     for (const entity of entities) {
       if (entity.type !== 'DIMENSION') continue
-      boundedCount(
-        dimensions.length + 1,
-        OPENSCAD_IMPORT_MAX_DXF_QUERY_RECORDS,
-        'DXF query record count',
-        'dxf',
+      boundedCount(dimensions.length + 1, OPENSCAD_IMPORT_MAX_DXF_QUERY_RECORDS, 'DXF query record count', 'dxf')
+      const coordinates = Array.from({ length: 7 }, (_, index) =>
+        Object.freeze([dxfNumber(entity, 10 + index, 0), dxfNumber(entity, 20 + index, 0)] as const),
       )
-      const coordinates = Array.from({ length: 7 }, (_, index) => Object.freeze([
-        dxfNumber(entity, 10 + index, 0),
-        dxfNumber(entity, 20 + index, 0),
-      ] as const))
-      dimensions.push(Object.freeze({
-        layer: dxfValue(entity, 8, ''),
-        name: dxfValue(entity, 1, ''),
-        type: dxfInteger(entity, 70, 0),
-        angle: dxfNumber(entity, 50, 0),
-        coordinates: Object.freeze(coordinates),
-        modelSpace: section === 'ENTITIES',
-      }))
+      dimensions.push(
+        Object.freeze({
+          layer: dxfValue(entity, 8, ''),
+          name: dxfValue(entity, 1, ''),
+          type: dxfInteger(entity, 70, 0),
+          angle: dxfNumber(entity, 50, 0),
+          coordinates: Object.freeze(coordinates),
+          modelSpace: section === 'ENTITIES',
+        }),
+      )
     }
   }
   return Object.freeze(dimensions)
@@ -71,29 +108,23 @@ export function parseOpenScadDxfIntermediate(file: OpenScadProjectFile): OpenSca
     if (header.type !== 'BLOCK') continue
     const name = dxfValue(header, 2, dxfValue(header, 3, ''))
     const members: DxfEntity[] = []
-    while (cursor < blockEntities.length && blockEntities[cursor]!.type !== 'ENDBLK') members.push(blockEntities[cursor++]!)
+    while (cursor < blockEntities.length && blockEntities[cursor]!.type !== 'ENDBLK')
+      members.push(blockEntities[cursor++]!)
     if (cursor < blockEntities.length) cursor++
-    if (name) blocks.set(name, {
-      base: [dxfNumber(header, 10, 0), dxfNumber(header, 20, 0)],
-      entities: Object.freeze(members),
-    })
+    if (name)
+      blocks.set(name, {
+        base: [dxfNumber(header, 10, 0), dxfNumber(header, 20, 0)],
+        entities: Object.freeze(members),
+      })
   }
 
   const regions: OpenScadImportRegion2D[] = []
   const segments: DxfSegment[] = []
   const querySegments: OpenScadDxfLineSegmentMetadata[] = []
   let expansions = 0
-  const recordQuerySegments = (
-    points: readonly OpenScadImportPoint2[],
-    layer: string,
-  ): void => {
+  const recordQuerySegments = (points: readonly OpenScadImportPoint2[], layer: string): void => {
     for (let index = 1; index < points.length; index++) {
-      boundedCount(
-        querySegments.length + 1,
-        OPENSCAD_IMPORT_MAX_DXF_QUERY_RECORDS,
-        'DXF query record count',
-        'dxf',
-      )
+      boundedCount(querySegments.length + 1, OPENSCAD_IMPORT_MAX_DXF_QUERY_RECORDS, 'DXF query record count', 'dxf')
       querySegments.push({ layer, start: points[index - 1]!, end: points[index]! })
     }
   }
@@ -108,15 +139,25 @@ export function parseOpenScadDxfIntermediate(file: OpenScadProjectFile): OpenSca
     if (closed && transformed.length >= 3) regions.push({ contours: [transformed], fillRule: 'evenodd', layer })
     else if (transformed.length >= 2) segments.push({ layer, points: transformed })
   }
-  const visit = (items: readonly DxfEntity[], matrix: Matrix2, inheritedLayer: string, stack: readonly string[]): void => {
+  const visit = (
+    items: readonly DxfEntity[],
+    matrix: Matrix2,
+    inheritedLayer: string,
+    stack: readonly string[],
+  ): void => {
     for (let cursor = 0; cursor < items.length; cursor++) {
       const entity = items[cursor]!
       const layer = entityLayer(entity, inheritedLayer)
       if (entity.type === 'LINE') {
-        addPolyline([
-          [dxfNumber(entity, 10), dxfNumber(entity, 20)],
-          [dxfNumber(entity, 11), dxfNumber(entity, 21)],
-        ], false, layer, matrix)
+        addPolyline(
+          [
+            [dxfNumber(entity, 10), dxfNumber(entity, 20)],
+            [dxfNumber(entity, 11), dxfNumber(entity, 21)],
+          ],
+          false,
+          layer,
+          matrix,
+        )
       } else if (entity.type === 'LWPOLYLINE') {
         addPolyline(dxfLwPolyline(entity), (dxfInteger(entity, 70) & 1) !== 0, layer, matrix)
       } else if (entity.type === 'POLYLINE') {
@@ -130,20 +171,27 @@ export function parseOpenScadDxfIntermediate(file: OpenScadProjectFile): OpenSca
       } else if (entity.type === 'CIRCLE') {
         const center: OpenScadImportPoint2 = [dxfNumber(entity, 10), dxfNumber(entity, 20)]
         const radius = dxfNumber(entity, 40)
-        const contour = arcPoints(center, radius, radius, 0, Math.PI * 2).slice(0, -1).map(point => transform2(matrix, point))
+        const contour = arcPoints(center, radius, radius, 0, Math.PI * 2)
+          .slice(0, -1)
+          .map(point => transform2(matrix, point))
         if (contour.length >= 2) recordQuerySegments([...contour, contour[0]!], layer)
         regions.push({ contours: [contour], fillRule: 'evenodd', layer })
       } else if (entity.type === 'ARC') {
-        const start = dxfNumber(entity, 50) * Math.PI / 180
-        let sweep = (dxfNumber(entity, 51) - dxfNumber(entity, 50)) * Math.PI / 180
+        const start = (dxfNumber(entity, 50) * Math.PI) / 180
+        let sweep = ((dxfNumber(entity, 51) - dxfNumber(entity, 50)) * Math.PI) / 180
         while (sweep <= 0) sweep += Math.PI * 2
-        addPolyline(arcPoints(
-          [dxfNumber(entity, 10), dxfNumber(entity, 20)],
-          dxfNumber(entity, 40),
-          dxfNumber(entity, 40),
-          start,
-          sweep,
-        ), false, layer, matrix)
+        addPolyline(
+          arcPoints(
+            [dxfNumber(entity, 10), dxfNumber(entity, 20)],
+            dxfNumber(entity, 40),
+            dxfNumber(entity, 40),
+            start,
+            sweep,
+          ),
+          false,
+          layer,
+          matrix,
+        )
       } else if (entity.type === 'ELLIPSE') {
         const major: OpenScadImportPoint2 = [dxfNumber(entity, 11), dxfNumber(entity, 21)]
         const radius = Math.hypot(...major)
@@ -171,22 +219,35 @@ export function parseOpenScadDxfIntermediate(file: OpenScadProjectFile): OpenSca
         if (stack.includes(name)) return dataError('E_IMPORT_INVALID_DATA', `DXF block cycle includes ${name}.`, 'dxf')
         expansions++
         if (expansions > OPENSCAD_IMPORT_MAX_XML_ELEMENTS) {
-          return dataError('E_IMPORT_LIMIT', 'DXF block expansion limit exceeded.', 'dxf', OPENSCAD_IMPORT_MAX_XML_ELEMENTS, expansions)
+          return dataError(
+            'E_IMPORT_LIMIT',
+            'DXF block expansion limit exceeded.',
+            'dxf',
+            OPENSCAD_IMPORT_MAX_XML_ELEMENTS,
+            expansions,
+          )
         }
-        const rotation = dxfNumber(entity, 50, 0) * Math.PI / 180
-        const sx = dxfNumber(entity, 41, 1), sy = dxfNumber(entity, 42, 1)
+        const rotation = (dxfNumber(entity, 50, 0) * Math.PI) / 180
+        const sx = dxfNumber(entity, 41, 1),
+          sy = dxfNumber(entity, 42, 1)
         const insertion: OpenScadImportPoint2 = [dxfNumber(entity, 10, 0), dxfNumber(entity, 20, 0)]
         if (sx === 0 || sy === 0) return dataError('E_IMPORT_INVALID_DATA', 'DXF INSERT scale cannot be zero.', 'dxf')
-        const a = Math.cos(rotation) * sx, b = Math.sin(rotation) * sx
-        const c = -Math.sin(rotation) * sy, d = Math.cos(rotation) * sy
+        const a = Math.cos(rotation) * sx,
+          b = Math.sin(rotation) * sx
+        const c = -Math.sin(rotation) * sy,
+          d = Math.cos(rotation) * sy
         const local: Matrix2 = [
-          a, b, c, d,
+          a,
+          b,
+          c,
+          d,
           insertion[0] - a * block.base[0] - c * block.base[1],
           insertion[1] - b * block.base[0] - d * block.base[1],
         ]
         const columns = dxfInteger(entity, 70, 1)
         const rows = dxfInteger(entity, 71, 1)
-        if (columns < 1 || rows < 1) return dataError('E_IMPORT_INVALID_DATA', 'DXF INSERT array dimensions must be positive.', 'dxf')
+        if (columns < 1 || rows < 1)
+          return dataError('E_IMPORT_INVALID_DATA', 'DXF INSERT array dimensions must be positive.', 'dxf')
         boundedCount(columns * rows, OPENSCAD_IMPORT_MAX_XML_ELEMENTS, 'DXF INSERT array size', 'dxf')
         for (let row = 0; row < rows; row++) {
           for (let column = 0; column < columns; column++) {
@@ -206,11 +267,15 @@ export function parseOpenScadDxfIntermediate(file: OpenScadProjectFile): OpenSca
     regions: Object.freeze(regions),
     queryMetadata: Object.freeze({
       dimensions,
-      lineSegments: Object.freeze(querySegments.map(segment => Object.freeze({
-        layer: segment.layer,
-        start: Object.freeze([segment.start[0], segment.start[1]] as const),
-        end: Object.freeze([segment.end[0], segment.end[1]] as const),
-      }))),
+      lineSegments: Object.freeze(
+        querySegments.map(segment =>
+          Object.freeze({
+            layer: segment.layer,
+            start: Object.freeze([segment.start[0], segment.start[1]] as const),
+            end: Object.freeze([segment.end[0], segment.end[1]] as const),
+          }),
+        ),
+      ),
       recordCount,
     }),
   })
@@ -233,12 +298,18 @@ export async function parseOpenScadImportFile(
   projectBudget?: OpenScadImportPreparationBudget,
 ): Promise<OpenScadImportGeometry> {
   switch (format) {
-    case 'svg': return parseOpenScadSvg(file, dpi)
-    case 'dxf': return parseOpenScadDxf(file)
-    case 'stl': return parseOpenScadStl(file)
-    case 'off': return parseOpenScadOff(file)
-    case 'amf': return parseOpenScadAmfWithBudget(file, projectBudget)
-    case '3mf': return parseOpenScad3mfWithBudget(file, projectBudget)
+    case 'svg':
+      return parseOpenScadSvg(file, dpi)
+    case 'dxf':
+      return parseOpenScadDxf(file)
+    case 'stl':
+      return parseOpenScadStl(file)
+    case 'off':
+      return parseOpenScadOff(file)
+    case 'amf':
+      return parseOpenScadAmfWithBudget(file, projectBudget)
+    case '3mf':
+      return parseOpenScad3mfWithBudget(file, projectBudget)
   }
 }
 
@@ -336,9 +407,10 @@ export async function prepareOpenScadImportAsset(
   }
 
   try {
-    const asset = format === 'svg'
-      ? parseOpenScadSvg(file, 72, svgOptions)
-      : await parseOpenScadImportFile(file, format, 72, budget)
+    const asset =
+      format === 'svg'
+        ? parseOpenScadSvg(file, 72, svgOptions)
+        : await parseOpenScadImportFile(file, format, 72, budget)
     reservePreparedGeometry(budget, asset)
     return Object.freeze({ asset })
   } catch (error) {

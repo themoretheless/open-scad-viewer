@@ -31,7 +31,7 @@ function calls(program: readonly Statement[]): CallNode[] {
 
 function expectCompileError(
   operation: () => unknown,
-  code: typeof OPENSCAD_PROJECT_COMPILE_ERROR_CODES[number],
+  code: (typeof OPENSCAD_PROJECT_COMPILE_ERROR_CODES)[number],
 ): OpenScadProjectCompileError {
   try {
     operation()
@@ -45,10 +45,7 @@ function expectCompileError(
 
 describe('OpenSCAD full-profile dependency directives', () => {
   it('retains robust include/use nodes only in the full profile', () => {
-    const source = [
-      'include /* comment */ <lib/my part-v1.scad>;',
-      'use <nested/café.scad>',
-    ].join('\n')
+    const source = ['include /* comment */ <lib/my part-v1.scad>;', 'use <nested/café.scad>'].join('\n')
     const program = parseOpenScadProjectSource(source)
 
     expect(program).toMatchObject([
@@ -70,19 +67,20 @@ describe('OpenSCAD full-profile dependency directives', () => {
     expect(structuredClone(program)).toEqual(program)
     expect(allFrozen(program)).toBe(true)
 
-    expect(() => compileOpenSCAD('include <lib/my part-v1.scad>'))
-      .toThrow(expect.objectContaining({ code: 'E_FEATURE_INCLUDE' }))
-    expect(() => compileOpenSCAD('use <unterminated'))
-      .toThrow(expect.objectContaining({ code: 'E_FEATURE_USE' }))
-    expect(() => compileOpenSCAD('include <part.scad>', {
-      languageProfile: 'openscad/stable-2021.01',
-    })).toThrow(/requires project compilation/)
+    expect(() => compileOpenSCAD('include <lib/my part-v1.scad>')).toThrow(
+      expect.objectContaining({ code: 'E_FEATURE_INCLUDE' }),
+    )
+    expect(() => compileOpenSCAD('use <unterminated')).toThrow(expect.objectContaining({ code: 'E_FEATURE_USE' }))
+    expect(() =>
+      compileOpenSCAD('include <part.scad>', {
+        languageProfile: 'openscad/stable-2021.01',
+      }),
+    ).toThrow(/requires project compilation/)
   })
 
   it('positions malformed full-profile directive diagnostics', () => {
     for (const source of ['include <>', 'use <unterminated', 'include "part.scad"']) {
-      expect(() => parseOpenScadProjectSource(source))
-        .toThrow(expect.objectContaining({ name: 'OpenSCADParseError' }))
+      expect(() => parseOpenScadProjectSource(source)).toThrow(expect.objectContaining({ name: 'OpenSCADParseError' }))
     }
   })
 })
@@ -110,8 +108,7 @@ describe('OpenSCAD project compiler', () => {
     const expandedCalls = calls(program)
     const flatCalls = calls(compileOpenSCAD('cube(0); cube(1); cube(2); cube(3); cube(4);'))
 
-    expect(expandedCalls.map(call => (call.args._0 as { value: number }).value))
-      .toEqual([0, 1, 2, 3, 4])
+    expect(expandedCalls.map(call => (call.args._0 as { value: number }).value)).toEqual([0, 1, 2, 3, 4])
     expect(expandedCalls.map(call => call.sourcePath)).toEqual([
       'main.scad',
       'lib/part.scad',
@@ -119,8 +116,7 @@ describe('OpenSCAD project compiler', () => {
       'lib/part.scad',
       'main.scad',
     ])
-    expect(expandedCalls.map(call => call.operationId))
-      .toEqual(flatCalls.map(call => call.operationId))
+    expect(expandedCalls.map(call => call.operationId)).toEqual(flatCalls.map(call => call.operationId))
     expect(new Set(expandedCalls.map(call => call.operationId)).size).toBe(5)
     expect(structuredClone(program)).toEqual(program)
     expect(allFrozen(program)).toBe(true)
@@ -187,9 +183,11 @@ describe('OpenSCAD project compiler', () => {
     })
 
     const program = compileOpenScadProject(project)
-    expect(program.map(statement => statement.type === 'call'
-      ? `call:${statement.name}`
-      : `${statement.type}:${statement.name}`)).toEqual([
+    expect(
+      program.map(statement =>
+        statement.type === 'call' ? `call:${statement.name}` : `${statement.type}:${statement.name}`,
+      ),
+    ).toEqual([
       'module:helper',
       'function:extra',
       'module:widget',
@@ -222,10 +220,7 @@ describe('OpenSCAD project compiler', () => {
     })
 
     const program = compileOpenScadProject(project)
-    expect(calls(program).map(call => call.operationId)).toEqual([
-      'op:root/call%3Acube%230',
-      'op:root/call%3Acube%231',
-    ])
+    expect(calls(program).map(call => call.operationId)).toEqual(['op:root/call%3Acube%230', 'op:root/call%3Acube%231'])
     expect(containsDirective(program)).toBe(false)
   })
 
@@ -234,10 +229,9 @@ describe('OpenSCAD project compiler', () => {
       entrypoint: 'main.scad',
       files: [{ kind: 'source', path: 'main.scad', source: 'include <lib/missing.scad>' }],
     })
-    expect(expectCompileError(
-      () => compileOpenScadProject(missing),
-      'E_PROJECT_DEPENDENCY_MISSING',
-    ).details).toMatchObject({
+    expect(
+      expectCompileError(() => compileOpenScadProject(missing), 'E_PROJECT_DEPENDENCY_MISSING').details,
+    ).toMatchObject({
       directive: 'include',
       importer: 'main.scad',
       specifier: 'lib/missing.scad',
@@ -251,10 +245,9 @@ describe('OpenSCAD project compiler', () => {
         { kind: 'blob', path: 'lib/data.scad', data: new Uint8Array([1]) },
       ],
     })
-    expect(expectCompileError(
-      () => compileOpenScadProject(binary),
-      'E_PROJECT_DEPENDENCY_NOT_SOURCE',
-    ).details).toMatchObject({ directive: 'use', path: 'lib/data.scad' })
+    expect(
+      expectCompileError(() => compileOpenScadProject(binary), 'E_PROJECT_DEPENDENCY_NOT_SOURCE').details,
+    ).toMatchObject({ directive: 'use', path: 'lib/data.scad' })
 
     const cyclic = new OpenScadProject({
       entrypoint: 'main.scad',
@@ -263,10 +256,7 @@ describe('OpenSCAD project compiler', () => {
         { kind: 'source', path: 'lib/a.scad', source: 'use <../main.scad>' },
       ],
     })
-    const cycleError = expectCompileError(
-      () => compileOpenScadProject(cyclic),
-      'E_PROJECT_DEPENDENCY_CYCLE',
-    )
+    const cycleError = expectCompileError(() => compileOpenScadProject(cyclic), 'E_PROJECT_DEPENDENCY_CYCLE')
     expect(cycleError.details.chain).toEqual(['main.scad', 'lib/a.scad', 'main.scad'])
     expect(Object.isFrozen(cycleError.details.chain)).toBe(true)
   })
@@ -276,10 +266,12 @@ describe('OpenSCAD project compiler', () => {
       entrypoint: 'main.scad',
       files: [{ kind: 'source', path: 'main.scad', source: 'include <../escape.scad>' }],
     })
-    expect(() => compileOpenScadProject(project)).toThrow(expect.objectContaining({
-      name: 'OpenScadProjectError',
-      code: 'E_PROJECT_PATH_ESCAPE',
-    } satisfies Partial<OpenScadProjectError>))
+    expect(() => compileOpenScadProject(project)).toThrow(
+      expect.objectContaining({
+        name: 'OpenScadProjectError',
+        code: 'E_PROJECT_PATH_ESCAPE',
+      } satisfies Partial<OpenScadProjectError>),
+    )
   })
 
   it('bounds repeated dependency expansion even when dependencies are empty', () => {
@@ -308,10 +300,7 @@ describe('OpenSCAD project compiler', () => {
       ],
     })
 
-    const error = expectCompileError(
-      () => compileOpenScadProject(project),
-      'E_PROJECT_EXPANSION_LIMIT',
-    )
+    const error = expectCompileError(() => compileOpenScadProject(project), 'E_PROJECT_EXPANSION_LIMIT')
     expect(error.details).toMatchObject({
       metric: 'dependency-expansions',
       limit: OPENSCAD_PROJECT_MAX_DEPENDENCY_EXPANSIONS,
@@ -333,10 +322,7 @@ describe('OpenSCAD project compiler', () => {
       ],
     })
 
-    const error = expectCompileError(
-      () => compileOpenScadProject(project),
-      'E_PROJECT_EXPANSION_LIMIT',
-    )
+    const error = expectCompileError(() => compileOpenScadProject(project), 'E_PROJECT_EXPANSION_LIMIT')
     expect(error.details).toMatchObject({
       metric: 'syntax-nodes',
       limit: OPENSCAD_PROJECT_MAX_EXPANDED_SYNTAX_NODES,
@@ -369,7 +355,6 @@ describe('OpenSCAD project compiler', () => {
 
   it('publishes a frozen, unique project-compile error inventory', () => {
     expect(Object.isFrozen(OPENSCAD_PROJECT_COMPILE_ERROR_CODES)).toBe(true)
-    expect(new Set(OPENSCAD_PROJECT_COMPILE_ERROR_CODES).size)
-      .toBe(OPENSCAD_PROJECT_COMPILE_ERROR_CODES.length)
+    expect(new Set(OPENSCAD_PROJECT_COMPILE_ERROR_CODES).size).toBe(OPENSCAD_PROJECT_COMPILE_ERROR_CODES.length)
   })
 })

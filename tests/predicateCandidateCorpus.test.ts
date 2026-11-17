@@ -1,12 +1,20 @@
-import {readFileSync} from 'node:fs'
-import {describe, expect, it} from 'vitest'
-import {candidateExactSign, generatePredicateCandidateCorpus, renderPredicateCandidateJson,
-  renderPredicateCandidateRust} from './support/predicateCandidateCorpus'
+import { readFileSync } from 'node:fs'
+import { describe, expect, it } from 'vitest'
+import {
+  candidateExactSign,
+  generatePredicateCandidateCorpus,
+  renderPredicateCandidateJson,
+  renderPredicateCandidateRust,
+} from './support/predicateCandidateCorpus'
 
 describe('independent native predicate candidate corpus', () => {
   it('reproduces the readable and native fixtures from independent exact rational arithmetic', () => {
-    expect(readFileSync(new URL('./fixtures/predicate-candidate-corpus-v1.json', import.meta.url), 'utf8')).toBe(renderPredicateCandidateJson())
-    expect(readFileSync(new URL('./fixtures/predicate-candidate-corpus-v1.rs', import.meta.url), 'utf8')).toBe(renderPredicateCandidateRust())
+    expect(readFileSync(new URL('./fixtures/predicate-candidate-corpus-v1.json', import.meta.url), 'utf8')).toBe(
+      renderPredicateCandidateJson(),
+    )
+    expect(readFileSync(new URL('./fixtures/predicate-candidate-corpus-v1.rs', import.meta.url), 'utf8')).toBe(
+      renderPredicateCandidateRust(),
+    )
   })
 
   it('covers all three predicates, every sign, source bit extremes and canonical rational constants', () => {
@@ -14,13 +22,23 @@ describe('independent native predicate candidate corpus', () => {
     expect(new Set(corpus.map(test => test.id)).size).toBe(corpus.length)
     expect(corpus.filter(test => test.mustDecide).length).toBeGreaterThan(100)
     for (const predicate of ['orient2d', 'orient3d', 'compare_squared_distance']) {
-      expect(new Set(corpus.filter(test => test.predicate === predicate).map(test => test.expectedSign))).toEqual(new Set([-1, 0, 1]))
+      expect(new Set(corpus.filter(test => test.predicate === predicate).map(test => test.expectedSign))).toEqual(
+        new Set([-1, 0, 1]),
+      )
     }
     for (const test of corpus) expect(test.expectedSign, test.id).toBe(candidateExactSign(test))
-    expect(corpus.flatMap(test => test.leaves).some(leaf => leaf.kind === 'binary64' && leaf.bits === '8000000000000000')).toBe(true)
-    expect(corpus.flatMap(test => test.leaves).some(leaf => leaf.kind === 'binary64' && leaf.bits === '0000000000000001')).toBe(true)
-    expect(corpus.flatMap(test => test.leaves).some(leaf => leaf.kind === 'binary64' && leaf.bits === '7fefffffffffffff')).toBe(true)
-    expect(corpus.flatMap(test => test.leaves).some(leaf => leaf.kind === 'rational' && leaf.denominator === '3')).toBe(true)
+    expect(
+      corpus.flatMap(test => test.leaves).some(leaf => leaf.kind === 'binary64' && leaf.bits === '8000000000000000'),
+    ).toBe(true)
+    expect(
+      corpus.flatMap(test => test.leaves).some(leaf => leaf.kind === 'binary64' && leaf.bits === '0000000000000001'),
+    ).toBe(true)
+    expect(
+      corpus.flatMap(test => test.leaves).some(leaf => leaf.kind === 'binary64' && leaf.bits === '7fefffffffffffff'),
+    ).toBe(true)
+    expect(corpus.flatMap(test => test.leaves).some(leaf => leaf.kind === 'rational' && leaf.denominator === '3')).toBe(
+      true,
+    )
   })
 
   it('contains cases that fail rounded determinant and rounded rational shortcuts', () => {

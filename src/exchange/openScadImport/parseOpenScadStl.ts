@@ -1,4 +1,12 @@
-import { FORMAT_SET, NUMBER, OPENSCAD_IMPORT_MAX_TRIANGLES, OPENSCAD_IMPORT_MAX_VERTICES, OpenScadImportDataError, UTF8, UTF8_FATAL } from '../openScadImport'
+import {
+  FORMAT_SET,
+  NUMBER,
+  OPENSCAD_IMPORT_MAX_TRIANGLES,
+  OPENSCAD_IMPORT_MAX_VERTICES,
+  OpenScadImportDataError,
+  UTF8,
+  UTF8_FATAL,
+} from '../openScadImport'
 import type { OpenScadImportFormat, OpenScadImportGeometry, OpenScadImportGeometry3D } from '../openScadImport'
 import type { OpenScadProjectFile } from '../../language/openScadProject'
 
@@ -19,17 +27,18 @@ export function finiteNumber(token: string, label: string, format: OpenScadImpor
   return value
 }
 
-export function boundedCount(
-  value: number,
-  limit: number,
-  label: string,
-  format: OpenScadImportFormat,
-): number {
+export function boundedCount(value: number, limit: number, label: string, format: OpenScadImportFormat): number {
   if (!Number.isSafeInteger(value) || value < 0) {
     return dataError('E_IMPORT_INVALID_DATA', `${label} must be a non-negative integer.`, format)
   }
   if (value > limit) {
-    return dataError('E_IMPORT_LIMIT', `${label} exceeds the ${limit.toLocaleString('en-US')} limit.`, format, limit, value)
+    return dataError(
+      'E_IMPORT_LIMIT',
+      `${label} exceeds the ${limit.toLocaleString('en-US')} limit.`,
+      format,
+      limit,
+      value,
+    )
   }
   return value
 }
@@ -51,21 +60,36 @@ export function formatOfPath(path: string): OpenScadImportFormat | null {
   const dot = path.lastIndexOf('.')
   if (dot < 0) return null
   const format = path.slice(dot + 1).toLowerCase()
-  return FORMAT_SET.has(format) ? format as OpenScadImportFormat : null
+  return FORMAT_SET.has(format) ? (format as OpenScadImportFormat) : null
 }
 
 export function samePoint3(vertices: ArrayLike<number>, a: number, b: number): boolean {
-  return vertices[a * 3] === vertices[b * 3]
-    && vertices[a * 3 + 1] === vertices[b * 3 + 1]
-    && vertices[a * 3 + 2] === vertices[b * 3 + 2]
+  return (
+    vertices[a * 3] === vertices[b * 3] &&
+    vertices[a * 3 + 1] === vertices[b * 3 + 1] &&
+    vertices[a * 3 + 2] === vertices[b * 3 + 2]
+  )
 }
 
 export function triangleDegenerate(vertices: ArrayLike<number>, a: number, b: number, c: number): boolean {
-  if (a === b || b === c || a === c || samePoint3(vertices, a, b)
-    || samePoint3(vertices, b, c) || samePoint3(vertices, a, c)) return true
-  const ax = vertices[a * 3]!, ay = vertices[a * 3 + 1]!, az = vertices[a * 3 + 2]!
-  const abx = vertices[b * 3]! - ax, aby = vertices[b * 3 + 1]! - ay, abz = vertices[b * 3 + 2]! - az
-  const acx = vertices[c * 3]! - ax, acy = vertices[c * 3 + 1]! - ay, acz = vertices[c * 3 + 2]! - az
+  if (
+    a === b ||
+    b === c ||
+    a === c ||
+    samePoint3(vertices, a, b) ||
+    samePoint3(vertices, b, c) ||
+    samePoint3(vertices, a, c)
+  )
+    return true
+  const ax = vertices[a * 3]!,
+    ay = vertices[a * 3 + 1]!,
+    az = vertices[a * 3 + 2]!
+  const abx = vertices[b * 3]! - ax,
+    aby = vertices[b * 3 + 1]! - ay,
+    abz = vertices[b * 3 + 2]! - az
+  const acx = vertices[c * 3]! - ax,
+    acy = vertices[c * 3 + 1]! - ay,
+    acz = vertices[c * 3 + 2]! - az
   const nx = aby * acz - abz * acy
   const ny = abz * acx - abx * acz
   const nz = abx * acy - aby * acx
@@ -97,14 +121,20 @@ export function geometry3D(
     const value = sourceVertices[index]!
     const stored = Math.fround(value)
     if (!Number.isFinite(value) || !Number.isFinite(stored)) {
-      return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} contains a non-finite or out-of-range coordinate.`, format)
+      return dataError(
+        'E_IMPORT_INVALID_DATA',
+        `${format.toUpperCase()} contains a non-finite or out-of-range coordinate.`,
+        format,
+      )
     }
     vertices[index] = stored
   }
   const triangles: number[] = []
   const validIndex = (index: number): boolean => Number.isSafeInteger(index) && index >= 0 && index < vertexCount
   for (let offset = 0; offset < sourceTriangles.length; offset += 3) {
-    const a = sourceTriangles[offset]!, b = sourceTriangles[offset + 1]!, c = sourceTriangles[offset + 2]!
+    const a = sourceTriangles[offset]!,
+      b = sourceTriangles[offset + 1]!,
+      c = sourceTriangles[offset + 2]!
     if (!validIndex(a) || !validIndex(b) || !validIndex(c)) {
       return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} triangle index is out of bounds.`, format)
     }
@@ -130,12 +160,16 @@ export function cloneGeometry(geometry: OpenScadImportGeometry): OpenScadImportG
       triangles: new Uint32Array(geometry.triangles),
     })
   }
-  const regions = geometry.regions.map(region => Object.freeze({
-    ...region,
-    contours: Object.freeze(region.contours.map(contour => Object.freeze(
-      contour.map(point => Object.freeze([point[0], point[1]] as const)),
-    ))),
-  }))
+  const regions = geometry.regions.map(region =>
+    Object.freeze({
+      ...region,
+      contours: Object.freeze(
+        region.contours.map(contour =>
+          Object.freeze(contour.map(point => Object.freeze([point[0], point[1]] as const))),
+        ),
+      ),
+    }),
+  )
   return Object.freeze({ ...geometry, regions: Object.freeze(regions) })
 }
 
@@ -148,8 +182,9 @@ export function startsWithSolid(bytes: Uint8Array): boolean {
 /** Decode binary or ASCII STL into bounded indexed-neutral triangle geometry. */
 export function parseOpenScadStl(file: OpenScadProjectFile): OpenScadImportGeometry3D {
   const bytes = bytesOf(file)
-  const binarySizeMatches = bytes.byteLength >= 84
-    && 84 + new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(80, true) * 50 === bytes.byteLength
+  const binarySizeMatches =
+    bytes.byteLength >= 84 &&
+    84 + new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(80, true) * 50 === bytes.byteLength
   if (binarySizeMatches) return parseBinaryOpenScadStl(bytes)
   if (startsWithSolid(bytes)) return parseAsciiOpenScadStl(textOf(file, 'stl'))
   return dataError('E_IMPORT_INVALID_DATA', 'STL is neither a size-consistent binary file nor an ASCII solid.', 'stl')
@@ -169,7 +204,11 @@ export function parseBinaryOpenScadStl(bytes: Uint8Array): OpenScadImportGeometr
     for (let channel = 0; channel < 9; channel++) {
       const value = view.getFloat32(record + 12 + channel * 4, true)
       if (!Number.isFinite(value)) {
-        return dataError('E_IMPORT_INVALID_DATA', `STL triangle ${triangle + 1} contains a non-finite coordinate.`, 'stl')
+        return dataError(
+          'E_IMPORT_INVALID_DATA',
+          `STL triangle ${triangle + 1} contains a non-finite coordinate.`,
+          'stl',
+        )
       }
       vertices.push(value)
     }
@@ -189,10 +228,12 @@ export function parseAsciiOpenScadStl(text: string): OpenScadImportGeometry3D {
     const parts = line.split(/\s+/u)
     const keyword = parts[0]!.toLowerCase()
     if (keyword === 'solid') {
-      if (state !== 'before') return dataError('E_IMPORT_INVALID_DATA', 'ASCII STL contains a misplaced solid declaration.', 'stl')
+      if (state !== 'before')
+        return dataError('E_IMPORT_INVALID_DATA', 'ASCII STL contains a misplaced solid declaration.', 'stl')
       state = 'solid'
     } else if (keyword === 'endsolid') {
-      if (state !== 'solid') return dataError('E_IMPORT_INVALID_DATA', 'ASCII STL ended inside a facet or outside a solid.', 'stl')
+      if (state !== 'solid')
+        return dataError('E_IMPORT_INVALID_DATA', 'ASCII STL ended inside a facet or outside a solid.', 'stl')
       state = 'ended'
     } else if (keyword === 'facet') {
       if (state !== 'solid' || parts[1]?.toLowerCase() !== 'normal' || parts.length !== 5) {
@@ -230,7 +271,11 @@ export function parseAsciiOpenScadStl(text: string): OpenScadImportGeometry3D {
       facetVertices = []
       state = 'solid'
     } else {
-      return dataError('E_IMPORT_INVALID_DATA', `ASCII STL contains unsupported statement ${JSON.stringify(parts[0])}.`, 'stl')
+      return dataError(
+        'E_IMPORT_INVALID_DATA',
+        `ASCII STL contains unsupported statement ${JSON.stringify(parts[0])}.`,
+        'stl',
+      )
     }
   }
   if (state !== 'ended' || facetVertices.length !== 0) {
@@ -249,12 +294,18 @@ export function offLines(text: string): string[][] {
 }
 
 export function polygonNormal(vertices: readonly number[], face: readonly number[]): [number, number, number] {
-  let nx = 0, ny = 0, nz = 0
+  let nx = 0,
+    ny = 0,
+    nz = 0
   for (let index = 0; index < face.length; index++) {
     const current = face[index]! * 3
     const next = face[(index + 1) % face.length]! * 3
-    const x = vertices[current]!, y = vertices[current + 1]!, z = vertices[current + 2]!
-    const xx = vertices[next]!, yy = vertices[next + 1]!, zz = vertices[next + 2]!
+    const x = vertices[current]!,
+      y = vertices[current + 1]!,
+      z = vertices[current + 2]!
+    const xx = vertices[next]!,
+      yy = vertices[next + 1]!,
+      zz = vertices[next + 2]!
     nx += (y - yy) * (z + zz)
     ny += (z - zz) * (x + xx)
     nz += (x - xx) * (y + yy)
@@ -262,32 +313,41 @@ export function polygonNormal(vertices: readonly number[], face: readonly number
   return [nx, ny, nz]
 }
 
-export function triangulateFace3D(vertices: readonly number[], face: readonly number[], format: OpenScadImportFormat): number[] {
+export function triangulateFace3D(
+  vertices: readonly number[],
+  face: readonly number[],
+  format: OpenScadImportFormat,
+): number[] {
   if (face.length === 3) return [...face]
   const normal = polygonNormal(vertices, face)
-  const axis = Math.abs(normal[0]) >= Math.abs(normal[1]) && Math.abs(normal[0]) >= Math.abs(normal[2])
-    ? 0
-    : Math.abs(normal[1]) >= Math.abs(normal[2]) ? 1 : 2
+  const axis =
+    Math.abs(normal[0]) >= Math.abs(normal[1]) && Math.abs(normal[0]) >= Math.abs(normal[2])
+      ? 0
+      : Math.abs(normal[1]) >= Math.abs(normal[2])
+        ? 1
+        : 2
   const project = (index: number): [number, number] => {
     const offset = index * 3
     return axis === 0
       ? [vertices[offset + 1]!, vertices[offset + 2]!]
-      : axis === 1 ? [vertices[offset]!, vertices[offset + 2]!] : [vertices[offset]!, vertices[offset + 1]!]
+      : axis === 1
+        ? [vertices[offset]!, vertices[offset + 2]!]
+        : [vertices[offset]!, vertices[offset + 1]!]
   }
   type Point2 = readonly [number, number]
   const points = face.map(project)
   let area = 0
   for (let index = 0; index < points.length; index++) {
-    const a = points[index]!, b = points[(index + 1) % points.length]!
+    const a = points[index]!,
+      b = points[(index + 1) % points.length]!
     area += a[0] * b[1] - b[0] * a[1]
   }
-  if (area === 0) return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} contains a degenerate polygon face.`, format)
+  if (area === 0)
+    return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} contains a degenerate polygon face.`, format)
   const orientation = Math.sign(area)
   const remaining = [...face.keys()]
   const output: number[] = []
-  const cross = (a: Point2, b: Point2, c: Point2) => (
-    (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
-  )
+  const cross = (a: Point2, b: Point2, c: Point2) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
   const inside = (point: Point2, a: Point2, b: Point2, c: Point2) => {
     const ab = cross(a, b, point) * orientation
     const bc = cross(b, c, point) * orientation
@@ -300,16 +360,28 @@ export function triangulateFace3D(vertices: readonly number[], face: readonly nu
       const before = remaining[(cursor + remaining.length - 1) % remaining.length]!
       const current = remaining[cursor]!
       const after = remaining[(cursor + 1) % remaining.length]!
-      const a = points[before]!, b = points[current]!, c = points[after]!
+      const a = points[before]!,
+        b = points[current]!,
+        c = points[after]!
       if (cross(a, b, c) * orientation <= 0) continue
-      if (remaining.some(candidate => candidate !== before && candidate !== current && candidate !== after
-        && inside(points[candidate]!, a, b, c))) continue
+      if (
+        remaining.some(
+          candidate =>
+            candidate !== before && candidate !== current && candidate !== after && inside(points[candidate]!, a, b, c),
+        )
+      )
+        continue
       output.push(face[before]!, face[current]!, face[after]!)
       remaining.splice(cursor, 1)
       clipped = true
       break
     }
-    if (!clipped) return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} contains a self-intersecting polygon face.`, format)
+    if (!clipped)
+      return dataError(
+        'E_IMPORT_INVALID_DATA',
+        `${format.toUpperCase()} contains a self-intersecting polygon face.`,
+        format,
+      )
   }
   output.push(face[remaining[0]!]!, face[remaining[1]!]!, face[remaining[2]!]!)
   return output
@@ -324,7 +396,7 @@ export function parseOpenScadOff(file: OpenScadProjectFile): OpenScadImportGeome
   if (header !== 'OFF' && header !== 'COFF') {
     return dataError('E_IMPORT_INVALID_DATA', 'OFF input must begin with OFF or COFF.', 'off')
   }
-  const counts = headerLine.length ? headerLine : lines[lineIndex++] ?? []
+  const counts = headerLine.length ? headerLine : (lines[lineIndex++] ?? [])
   if (counts.length < 3) return dataError('E_IMPORT_INVALID_DATA', 'OFF input is missing its counts line.', 'off')
   const vertexCount = boundedCount(
     finiteNumber(counts[0]!, 'OFF vertex count', 'off'),
@@ -361,7 +433,8 @@ export function parseOpenScadOff(file: OpenScadProjectFile): OpenScadImportGeome
       'off',
     )
     if (size < 3) return dataError('E_IMPORT_INVALID_DATA', 'OFF faces require at least three vertices.', 'off')
-    if (fields.length < size + 1) return dataError('E_IMPORT_INVALID_DATA', `OFF face ${faceIndex + 1} is incomplete.`, 'off')
+    if (fields.length < size + 1)
+      return dataError('E_IMPORT_INVALID_DATA', `OFF face ${faceIndex + 1} is incomplete.`, 'off')
     const face: number[] = []
     for (let index = 0; index < size; index++) {
       const value = finiteNumber(fields[index + 1]!, 'OFF face index', 'off')
@@ -395,8 +468,8 @@ export function decodeXmlEntities(value: string, format: OpenScadImportFormat): 
     let code = -1
     if (/^#[0-9]+$/u.test(entity)) code = Number(entity.slice(1))
     else if (/^#x[0-9a-f]+$/iu.test(entity)) code = Number.parseInt(entity.slice(2), 16)
-    if (Number.isSafeInteger(code) && code >= 0 && code <= 0x10ffff
-      && !(code >= 0xd800 && code <= 0xdfff)) return String.fromCodePoint(code)
+    if (Number.isSafeInteger(code) && code >= 0 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff))
+      return String.fromCodePoint(code)
     return dataError('E_IMPORT_INVALID_DATA', `XML contains unsupported entity &${entity};.`, format)
   })
 }

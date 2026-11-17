@@ -1,11 +1,20 @@
-import { OPENSCAD_IMPORT_MAX_TRIANGLES, OPENSCAD_IMPORT_MAX_VERTICES, OPENSCAD_IMPORT_MAX_XML_DEPTH, OPENSCAD_IMPORT_MAX_XML_ELEMENTS } from '../openScadImport'
+import {
+  OPENSCAD_IMPORT_MAX_TRIANGLES,
+  OPENSCAD_IMPORT_MAX_VERTICES,
+  OPENSCAD_IMPORT_MAX_XML_DEPTH,
+  OPENSCAD_IMPORT_MAX_XML_ELEMENTS,
+} from '../openScadImport'
 import type { Matrix4, MutableXmlElement, OpenScadImportFormat, RawMesh3D, XmlElement } from '../openScadImport'
 import { boundedCount, dataError, decodeXmlEntities, finiteNumber, xmlNameCharacter } from './parseOpenScadStl'
 
 /** Strict, entity-safe XML subset shared by SVG, AMF, and 3MF. */
 export function parseXml(text: string, format: OpenScadImportFormat): XmlElement {
   if (/<!DOCTYPE|<!ENTITY/iu.test(text)) {
-    return dataError('E_IMPORT_UNSUPPORTED_FEATURE', `${format.toUpperCase()} XML declarations cannot define entities or a DTD.`, format)
+    return dataError(
+      'E_IMPORT_UNSUPPORTED_FEATURE',
+      `${format.toUpperCase()} XML declarations cannot define entities or a DTD.`,
+      format,
+    )
   }
   const document: MutableXmlElement = {
     name: '#document',
@@ -26,7 +35,11 @@ export function parseXml(text: string, format: OpenScadImportFormat): XmlElement
   const name = (): string => {
     const start = cursor
     if (!xmlNameCharacter(text[cursor] ?? '', true)) {
-      return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML contains an invalid element or attribute name.`, format)
+      return dataError(
+        'E_IMPORT_INVALID_DATA',
+        `${format.toUpperCase()} XML contains an invalid element or attribute name.`,
+        format,
+      )
     }
     cursor++
     while (cursor < text.length && xmlNameCharacter(text[cursor]!, false)) cursor++
@@ -43,19 +56,26 @@ export function parseXml(text: string, format: OpenScadImportFormat): XmlElement
     cursor = open
     if (text.startsWith('<!--', cursor)) {
       const end = text.indexOf('-->', cursor + 4)
-      if (end < 0) return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML comment is unterminated.`, format)
+      if (end < 0)
+        return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML comment is unterminated.`, format)
       cursor = end + 3
       continue
     }
     if (text.startsWith('<?', cursor)) {
       const end = text.indexOf('?>', cursor + 2)
-      if (end < 0) return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML processing instruction is unterminated.`, format)
+      if (end < 0)
+        return dataError(
+          'E_IMPORT_INVALID_DATA',
+          `${format.toUpperCase()} XML processing instruction is unterminated.`,
+          format,
+        )
       cursor = end + 2
       continue
     }
     if (text.startsWith('<![CDATA[', cursor)) {
       const end = text.indexOf(']]>', cursor + 9)
-      if (end < 0) return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML CDATA is unterminated.`, format)
+      if (end < 0)
+        return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML CDATA is unterminated.`, format)
       stack.at(-1)!.text += text.slice(cursor + 9, end)
       cursor = end + 3
       continue
@@ -65,7 +85,8 @@ export function parseXml(text: string, format: OpenScadImportFormat): XmlElement
       skipWhitespace()
       const closing = name().toLowerCase()
       skipWhitespace()
-      if (text[cursor] !== '>') return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML closing tag is malformed.`, format)
+      if (text[cursor] !== '>')
+        return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML closing tag is malformed.`, format)
       cursor++
       const current = stack.pop()
       if (!current || current === document || current.name.toLowerCase() !== closing) {
@@ -74,7 +95,11 @@ export function parseXml(text: string, format: OpenScadImportFormat): XmlElement
       continue
     }
     if (text.startsWith('<!', cursor)) {
-      return dataError('E_IMPORT_UNSUPPORTED_FEATURE', `${format.toUpperCase()} XML declaration is unsupported.`, format)
+      return dataError(
+        'E_IMPORT_UNSUPPORTED_FEATURE',
+        `${format.toUpperCase()} XML declaration is unsupported.`,
+        format,
+      )
     }
 
     cursor++
@@ -101,21 +126,34 @@ export function parseXml(text: string, format: OpenScadImportFormat): XmlElement
         return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML contains a duplicate attribute.`, format)
       }
       skipWhitespace()
-      if (text[cursor++] !== '=') return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML attribute is missing '='.`, format)
+      if (text[cursor++] !== '=')
+        return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML attribute is missing '='.`, format)
       skipWhitespace()
       const quote = text[cursor++]
       if (quote !== '"' && quote !== "'") {
-        return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML attribute values must be quoted.`, format)
+        return dataError(
+          'E_IMPORT_INVALID_DATA',
+          `${format.toUpperCase()} XML attribute values must be quoted.`,
+          format,
+        )
       }
       const end = text.indexOf(quote, cursor)
-      if (end < 0) return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML attribute is unterminated.`, format)
+      if (end < 0)
+        return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML attribute is unterminated.`, format)
       attributes[attributeName] = decodeXmlEntities(text.slice(cursor, end), format)
       cursor = end + 1
       if (Object.keys(attributes).length > 64) {
-        return dataError('E_IMPORT_LIMIT', `${format.toUpperCase()} XML element exceeds 64 attributes.`, format, 64, Object.keys(attributes).length)
+        return dataError(
+          'E_IMPORT_LIMIT',
+          `${format.toUpperCase()} XML element exceeds 64 attributes.`,
+          format,
+          64,
+          Object.keys(attributes).length,
+        )
       }
     }
-    if (!terminated) return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML start tag is unterminated.`, format)
+    if (!terminated)
+      return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML start tag is unterminated.`, format)
     const namespaces = { ...stack.at(-1)!.namespaces }
     for (const [attributeName, value] of Object.entries(attributes)) {
       if (attributeName === 'xmlns') {
@@ -123,7 +161,12 @@ export function parseXml(text: string, format: OpenScadImportFormat): XmlElement
         else namespaces[''] = value
       } else if (attributeName.startsWith('xmlns:')) {
         const prefix = attributeName.slice(6)
-        if (!prefix || value === '') return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML namespace declaration is invalid.`, format)
+        if (!prefix || value === '')
+          return dataError(
+            'E_IMPORT_INVALID_DATA',
+            `${format.toUpperCase()} XML namespace declaration is invalid.`,
+            format,
+          )
         namespaces[prefix] = value
       }
     }
@@ -137,7 +180,11 @@ export function parseXml(text: string, format: OpenScadImportFormat): XmlElement
     const elementQName = qname(elementName)
     const namespaceUri = namespaces[elementQName.prefix] ?? null
     if (elementQName.prefix && namespaceUri === null) {
-      return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML uses an undeclared namespace prefix.`, format)
+      return dataError(
+        'E_IMPORT_INVALID_DATA',
+        `${format.toUpperCase()} XML uses an undeclared namespace prefix.`,
+        format,
+      )
     }
     const attributeNamespaces: Record<string, string | null> = {}
     for (const attributeName of Object.keys(attributes)) {
@@ -146,9 +193,13 @@ export function parseXml(text: string, format: OpenScadImportFormat): XmlElement
         continue
       }
       const attributeQName = qname(attributeName)
-      const attributeNamespace = attributeQName.prefix ? namespaces[attributeQName.prefix] ?? null : null
+      const attributeNamespace = attributeQName.prefix ? (namespaces[attributeQName.prefix] ?? null) : null
       if (attributeQName.prefix && attributeNamespace === null) {
-        return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML attribute uses an undeclared namespace prefix.`, format)
+        return dataError(
+          'E_IMPORT_INVALID_DATA',
+          `${format.toUpperCase()} XML attribute uses an undeclared namespace prefix.`,
+          format,
+        )
       }
       attributeNamespaces[attributeName] = attributeNamespace
     }
@@ -187,7 +238,11 @@ export function parseXml(text: string, format: OpenScadImportFormat): XmlElement
     }
   }
   if (stack.length !== 1 || document.children.length !== 1 || document.text.trim() !== '') {
-    return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML must contain exactly one root element.`, format)
+    return dataError(
+      'E_IMPORT_INVALID_DATA',
+      `${format.toUpperCase()} XML must contain exactly one root element.`,
+      format,
+    )
   }
   return document.children[0]!
 }
@@ -262,19 +317,23 @@ export function requiredAttributeNs(
 ): string {
   const value = attributeNs(element, key, namespaceUri)
   if (value === undefined || value.trim() === '') {
-    return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} <${element.localName}> is missing ${key}.`, format)
+    return dataError(
+      'E_IMPORT_INVALID_DATA',
+      `${format.toUpperCase()} <${element.localName}> is missing ${key}.`,
+      format,
+    )
   }
   return value.trim()
 }
 
-export function requiredAttribute(
-  element: XmlElement,
-  key: string,
-  format: OpenScadImportFormat,
-): string {
+export function requiredAttribute(element: XmlElement, key: string, format: OpenScadImportFormat): string {
   const value = attribute(element, key)
   if (value === undefined || value.trim() === '') {
-    return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} <${element.localName}> is missing ${key}.`, format)
+    return dataError(
+      'E_IMPORT_INVALID_DATA',
+      `${format.toUpperCase()} <${element.localName}> is missing ${key}.`,
+      format,
+    )
   }
   return value.trim()
 }
@@ -284,7 +343,8 @@ export function numericAttribute(element: XmlElement, key: string, format: OpenS
 }
 
 export function numericText(element: XmlElement | null, label: string, format: OpenScadImportFormat): number {
-  if (element === null) return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} is missing ${label}.`, format)
+  if (element === null)
+    return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} is missing ${label}.`, format)
   return finiteNumber(element.text.trim(), label, format)
 }
 
@@ -301,7 +361,12 @@ export function unitScale(unit: string | undefined, format: 'amf' | '3mf'): numb
     feet: 304.8,
   }
   const scale = scales[normalized]
-  if (scale === undefined) return dataError('E_IMPORT_UNSUPPORTED_FEATURE', `${format.toUpperCase()} unit ${JSON.stringify(unit)} is unsupported.`, format)
+  if (scale === undefined)
+    return dataError(
+      'E_IMPORT_UNSUPPORTED_FEATURE',
+      `${format.toUpperCase()} unit ${JSON.stringify(unit)} is unsupported.`,
+      format,
+    )
   return scale
 }
 
@@ -328,14 +393,33 @@ export function transform3(matrix: Matrix4, x: number, y: number, z: number): [n
 }
 
 export function rotation4(rx: number, ry: number, rz: number, translation: readonly [number, number, number]): Matrix4 {
-  const x = rx * Math.PI / 180, y = ry * Math.PI / 180, z = rz * Math.PI / 180
-  const cx = Math.cos(x), sx = Math.sin(x), cy = Math.cos(y), sy = Math.sin(y), cz = Math.cos(z), sz = Math.sin(z)
+  const x = (rx * Math.PI) / 180,
+    y = (ry * Math.PI) / 180,
+    z = (rz * Math.PI) / 180
+  const cx = Math.cos(x),
+    sx = Math.sin(x),
+    cy = Math.cos(y),
+    sy = Math.sin(y),
+    cz = Math.cos(z),
+    sz = Math.sin(z)
   // OpenSCAD/AMF rotate in X, then Y, then Z order.
   return [
-    cz * cy, cz * sy * sx - sz * cx, cz * sy * cx + sz * sx, translation[0],
-    sz * cy, sz * sy * sx + cz * cx, sz * sy * cx - cz * sx, translation[1],
-    -sy, cy * sx, cy * cx, translation[2],
-    0, 0, 0, 1,
+    cz * cy,
+    cz * sy * sx - sz * cx,
+    cz * sy * cx + sz * sx,
+    translation[0],
+    sz * cy,
+    sz * sy * sx + cz * cx,
+    sz * sy * cx - cz * sx,
+    translation[1],
+    -sy,
+    cy * sx,
+    cy * cx,
+    translation[2],
+    0,
+    0,
+    0,
+    1,
   ]
 }
 
@@ -351,21 +435,26 @@ export function appendRawMesh(
   const nextTriangles = targetTriangles.length / 3 + mesh.triangles.length / 3
   boundedCount(nextVertices, OPENSCAD_IMPORT_MAX_VERTICES, `${format.toUpperCase()} expanded vertex count`, format)
   boundedCount(nextTriangles, OPENSCAD_IMPORT_MAX_TRIANGLES, `${format.toUpperCase()} expanded triangle count`, format)
-  const m0 = matrix[0], m1 = matrix[1], m2 = matrix[2], m3 = matrix[3]
-  const m4 = matrix[4], m5 = matrix[5], m6 = matrix[6], m7 = matrix[7]
-  const m8 = matrix[8], m9 = matrix[9], m10 = matrix[10], m11 = matrix[11]
+  const m0 = matrix[0],
+    m1 = matrix[1],
+    m2 = matrix[2],
+    m3 = matrix[3]
+  const m4 = matrix[4],
+    m5 = matrix[5],
+    m6 = matrix[6],
+    m7 = matrix[7]
+  const m8 = matrix[8],
+    m9 = matrix[9],
+    m10 = matrix[10],
+    m11 = matrix[11]
   const srcVertices = mesh.vertices
   for (let offset = 0; offset < srcVertices.length; offset += 3) {
-    const x = srcVertices[offset]!, y = srcVertices[offset + 1]!, z = srcVertices[offset + 2]!
-    targetVertices.push(
-      m0 * x + m1 * y + m2 * z + m3,
-      m4 * x + m5 * y + m6 * z + m7,
-      m8 * x + m9 * y + m10 * z + m11,
-    )
+    const x = srcVertices[offset]!,
+      y = srcVertices[offset + 1]!,
+      z = srcVertices[offset + 2]!
+    targetVertices.push(m0 * x + m1 * y + m2 * z + m3, m4 * x + m5 * y + m6 * z + m7, m8 * x + m9 * y + m10 * z + m11)
   }
-  const determinant = m0 * (m5 * m10 - m6 * m9)
-    - m1 * (m4 * m10 - m6 * m8)
-    + m2 * (m4 * m9 - m5 * m8)
+  const determinant = m0 * (m5 * m10 - m6 * m9) - m1 * (m4 * m10 - m6 * m8) + m2 * (m4 * m9 - m5 * m8)
   if (determinant === 0 || !Number.isFinite(determinant)) {
     return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} transform is singular or non-finite.`, format)
   }

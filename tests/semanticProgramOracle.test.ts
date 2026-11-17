@@ -54,21 +54,19 @@ function reverseObjectInsertionOrder(value: unknown): unknown {
 function recomputeOccurrence(program: ReferenceSemanticProgramV1, index: number): void {
   const occurrence = program.core.occurrences[index]
   const operation = program.core.operations[occurrence.operation]
-  const parentId = occurrence.parent === null
-    ? null
-    : program.core.occurrences[occurrence.parent].occurrenceId
-  const staticParentId = occurrence.staticParent === null
-    ? null
-    : program.core.occurrences[occurrence.staticParent].occurrenceId
+  const parentId = occurrence.parent === null ? null : program.core.occurrences[occurrence.parent].occurrenceId
+  const staticParentId =
+    occurrence.staticParent === null ? null : program.core.occurrences[occurrence.staticParent].occurrenceId
   occurrence.occurrenceId = referenceSemanticOccurrenceIdV1(
     parentId,
     staticParentId,
     operation.operationId,
     occurrence.dynamicSlots,
   )
-  occurrence.sceneEntityId = occurrence.outputOrdinal === null
-    ? null
-    : referenceSemanticSceneEntityIdV1(occurrence.occurrenceId, occurrence.outputOrdinal)
+  occurrence.sceneEntityId =
+    occurrence.outputOrdinal === null
+      ? null
+      : referenceSemanticSceneEntityIdV1(occurrence.occurrenceId, occurrence.outputOrdinal)
 }
 
 function resetSuccessfulExecution(program: ReferenceSemanticProgramV1): void {
@@ -80,16 +78,17 @@ function resetSuccessfulExecution(program: ReferenceSemanticProgramV1): void {
   }
 }
 
-function coherentlyRenumberNodes(
-  program: ReferenceSemanticProgramV1,
-  oldIdsInNewOrder: readonly number[],
-): void {
-  if (oldIdsInNewOrder.length !== program.core.nodes.length
-    || new Set(oldIdsInNewOrder).size !== oldIdsInNewOrder.length) {
+function coherentlyRenumberNodes(program: ReferenceSemanticProgramV1, oldIdsInNewOrder: readonly number[]): void {
+  if (
+    oldIdsInNewOrder.length !== program.core.nodes.length ||
+    new Set(oldIdsInNewOrder).size !== oldIdsInNewOrder.length
+  ) {
     throw new Error('Fixture node renumbering requires one complete permutation')
   }
   const oldToNew = new Int32Array(oldIdsInNewOrder.length)
-  oldIdsInNewOrder.forEach((oldId, newId) => { oldToNew[oldId] = newId })
+  oldIdsInNewOrder.forEach((oldId, newId) => {
+    oldToNew[oldId] = newId
+  })
   const remap = (oldId: number): number => oldToNew[oldId]
   program.core.nodes = oldIdsInNewOrder.map((oldId, newId) => {
     const node = clone(program.core.nodes[oldId])
@@ -213,11 +212,13 @@ function makeSkippedStaticParentFixture(): ReferenceSemanticProgramV1 {
     if (occurrence.parent !== null && occurrence.parent >= 2) occurrence.parent += 1
     if (occurrence.staticParent !== null && occurrence.staticParent >= 2) occurrence.staticParent += 1
   }
-  const dynamicSlots = [{
-    name: 'expansion',
-    value: { tag: 'string', value: 'module-frame' },
-    duplicateOrdinal: 0,
-  }]
+  const dynamicSlots = [
+    {
+      name: 'expansion',
+      value: { tag: 'string', value: 'module-frame' },
+      duplicateOrdinal: 0,
+    },
+  ]
   const occurrenceId = referenceSemanticOccurrenceIdV1(
     program.core.occurrences[1].occurrenceId,
     program.core.occurrences[1].occurrenceId,
@@ -246,46 +247,195 @@ function makeCanonicalOccurrenceRowFixture(): ReferenceSemanticProgramV1 {
   const program = makeReferenceSemanticProgramV1()
   const paths = [
     [{ kind: 'module', name: 'scene', ordinal: 0 }],
-    [{ kind: 'module', name: 'scene', ordinal: 0 }, { kind: 'call', name: 'projection', ordinal: 0 }],
-    [{ kind: 'module', name: 'scene', ordinal: 0 }, { kind: 'call', name: 'projection', ordinal: 0 }, { kind: 'call', name: 'cube', ordinal: 0 }],
-    [{ kind: 'module', name: 'scene', ordinal: 0 }, { kind: 'call', name: 'projection', ordinal: 0 }, { kind: 'call', name: 'sphere', ordinal: 0 }],
-    [{ kind: 'module', name: 'scene', ordinal: 0 }, { kind: 'call', name: 'projection', ordinal: 0 }, { kind: 'control', name: 'group', ordinal: 0 }],
+    [
+      { kind: 'module', name: 'scene', ordinal: 0 },
+      { kind: 'call', name: 'projection', ordinal: 0 },
+    ],
+    [
+      { kind: 'module', name: 'scene', ordinal: 0 },
+      { kind: 'call', name: 'projection', ordinal: 0 },
+      { kind: 'call', name: 'cube', ordinal: 0 },
+    ],
+    [
+      { kind: 'module', name: 'scene', ordinal: 0 },
+      { kind: 'call', name: 'projection', ordinal: 0 },
+      { kind: 'call', name: 'sphere', ordinal: 0 },
+    ],
+    [
+      { kind: 'module', name: 'scene', ordinal: 0 },
+      { kind: 'call', name: 'projection', ordinal: 0 },
+      { kind: 'control', name: 'group', ordinal: 0 },
+    ],
   ]
   const operationIds = paths.map(referenceSemanticOperationIdV1)
   program.core.operations = [
-    { id: 0, operationId: operationIds[0], parent: null, childOrdinal: 0, name: 'scene', category: 'module', structuralPath: paths[0], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 1, operationId: operationIds[1], parent: 0, childOrdinal: 0, name: 'projection', category: 'geometry', structuralPath: paths[1], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 2, operationId: operationIds[2], parent: 1, childOrdinal: 0, name: 'cube', category: 'geometry', structuralPath: paths[2], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 3, operationId: operationIds[3], parent: 1, childOrdinal: 0, name: 'sphere', category: 'geometry', structuralPath: paths[3], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 4, operationId: operationIds[4], parent: 1, childOrdinal: 0, name: 'group', category: 'control', structuralPath: paths[4], identityEvidence: 'structural-unique', ambiguityGroup: null },
+    {
+      id: 0,
+      operationId: operationIds[0],
+      parent: null,
+      childOrdinal: 0,
+      name: 'scene',
+      category: 'module',
+      structuralPath: paths[0],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 1,
+      operationId: operationIds[1],
+      parent: 0,
+      childOrdinal: 0,
+      name: 'projection',
+      category: 'geometry',
+      structuralPath: paths[1],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 2,
+      operationId: operationIds[2],
+      parent: 1,
+      childOrdinal: 0,
+      name: 'cube',
+      category: 'geometry',
+      structuralPath: paths[2],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 3,
+      operationId: operationIds[3],
+      parent: 1,
+      childOrdinal: 0,
+      name: 'sphere',
+      category: 'geometry',
+      structuralPath: paths[3],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 4,
+      operationId: operationIds[4],
+      parent: 1,
+      childOrdinal: 0,
+      name: 'group',
+      category: 'control',
+      structuralPath: paths[4],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
   ]
   program.core.nodes = [
-    { id: 0, kind: 'box', valueType: { geometryKind: 'solid-set', space: 'd3', representation: 'mesh', evidence: { tag: 'representation-preserving' } }, size: [1, 2, 3], center: false },
-    { id: 1, kind: 'sphere-polygonal', valueType: { geometryKind: 'solid-set', space: 'd3', representation: 'mesh', evidence: { tag: 'representation-preserving' } }, radius: 2, radialSegments: 32 },
-    { id: 2, kind: 'projection', valueType: { geometryKind: 'region', space: 'd2', representation: 'mesh', evidence: { tag: 'representation-preserving' } }, input: 0, cut: false },
-    { id: 3, kind: 'projection', valueType: { geometryKind: 'region', space: 'd2', representation: 'mesh', evidence: { tag: 'representation-preserving' } }, input: 1, cut: false },
+    {
+      id: 0,
+      kind: 'box',
+      valueType: {
+        geometryKind: 'solid-set',
+        space: 'd3',
+        representation: 'mesh',
+        evidence: { tag: 'representation-preserving' },
+      },
+      size: [1, 2, 3],
+      center: false,
+    },
+    {
+      id: 1,
+      kind: 'sphere-polygonal',
+      valueType: {
+        geometryKind: 'solid-set',
+        space: 'd3',
+        representation: 'mesh',
+        evidence: { tag: 'representation-preserving' },
+      },
+      radius: 2,
+      radialSegments: 32,
+    },
+    {
+      id: 2,
+      kind: 'projection',
+      valueType: {
+        geometryKind: 'region',
+        space: 'd2',
+        representation: 'mesh',
+        evidence: { tag: 'representation-preserving' },
+      },
+      input: 0,
+      cut: false,
+    },
+    {
+      id: 3,
+      kind: 'projection',
+      valueType: {
+        geometryKind: 'region',
+        space: 'd2',
+        representation: 'mesh',
+        evidence: { tag: 'representation-preserving' },
+      },
+      input: 1,
+      cut: false,
+    },
   ]
-  const occurrenceIds = [
-    referenceSemanticOccurrenceIdV1(null, null, operationIds[0], []),
-    '',
-    '',
-    '',
-  ]
+  const occurrenceIds = [referenceSemanticOccurrenceIdV1(null, null, operationIds[0], []), '', '', '']
   occurrenceIds[1] = referenceSemanticOccurrenceIdV1(occurrenceIds[0], occurrenceIds[0], operationIds[1], [])
   occurrenceIds[2] = referenceSemanticOccurrenceIdV1(occurrenceIds[1], occurrenceIds[1], operationIds[2], [])
   occurrenceIds[3] = referenceSemanticOccurrenceIdV1(occurrenceIds[1], occurrenceIds[1], operationIds[3], [])
-  const transparentChildId = referenceSemanticOccurrenceIdV1(
-    occurrenceIds[1],
-    occurrenceIds[1],
-    operationIds[4],
-    [],
-  )
+  const transparentChildId = referenceSemanticOccurrenceIdV1(occurrenceIds[1], occurrenceIds[1], operationIds[4], [])
   program.core.occurrences = [
-    { id: 0, occurrenceId: occurrenceIds[0], operation: 0, parent: null, staticParent: null, dynamicSlots: [], node: null, outputOrdinal: null, sceneEntityId: null },
-    { id: 1, occurrenceId: occurrenceIds[1], operation: 1, parent: 0, staticParent: 0, dynamicSlots: [], node: 2, outputOrdinal: 0, sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[1], 0) },
-    { id: 2, occurrenceId: occurrenceIds[2], operation: 2, parent: 1, staticParent: 1, dynamicSlots: [], node: 0, outputOrdinal: 0, sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[2], 0) },
-    { id: 3, occurrenceId: occurrenceIds[3], operation: 3, parent: 1, staticParent: 1, dynamicSlots: [], node: 1, outputOrdinal: 0, sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[3], 0) },
-    { id: 4, occurrenceId: occurrenceIds[1], operation: 1, parent: 0, staticParent: 0, dynamicSlots: [], node: 3, outputOrdinal: 1, sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[1], 1) },
+    {
+      id: 0,
+      occurrenceId: occurrenceIds[0],
+      operation: 0,
+      parent: null,
+      staticParent: null,
+      dynamicSlots: [],
+      node: null,
+      outputOrdinal: null,
+      sceneEntityId: null,
+    },
+    {
+      id: 1,
+      occurrenceId: occurrenceIds[1],
+      operation: 1,
+      parent: 0,
+      staticParent: 0,
+      dynamicSlots: [],
+      node: 2,
+      outputOrdinal: 0,
+      sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[1], 0),
+    },
+    {
+      id: 2,
+      occurrenceId: occurrenceIds[2],
+      operation: 2,
+      parent: 1,
+      staticParent: 1,
+      dynamicSlots: [],
+      node: 0,
+      outputOrdinal: 0,
+      sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[2], 0),
+    },
+    {
+      id: 3,
+      occurrenceId: occurrenceIds[3],
+      operation: 3,
+      parent: 1,
+      staticParent: 1,
+      dynamicSlots: [],
+      node: 1,
+      outputOrdinal: 0,
+      sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[3], 0),
+    },
+    {
+      id: 4,
+      occurrenceId: occurrenceIds[1],
+      operation: 1,
+      parent: 0,
+      staticParent: 0,
+      dynamicSlots: [],
+      node: 3,
+      outputOrdinal: 1,
+      sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[1], 1),
+    },
     {
       id: 5,
       occurrenceId: transparentChildId,
@@ -323,31 +473,154 @@ function makeCanonicalFirstTransparentWrapperFixture(): ReferenceSemanticProgram
   const program = makeReferenceSemanticProgramV1()
   const paths = [
     [{ kind: 'module', name: 'scene', ordinal: 0 }],
-    [{ kind: 'module', name: 'scene', ordinal: 0 }, { kind: 'call', name: 'color', ordinal: 0 }],
-    [{ kind: 'module', name: 'scene', ordinal: 0 }, { kind: 'call', name: 'color', ordinal: 0 }, { kind: 'call', name: 'cube', ordinal: 0 }],
-    [{ kind: 'module', name: 'scene', ordinal: 0 }, { kind: 'call', name: 'color', ordinal: 0 }, { kind: 'call', name: 'sphere', ordinal: 0 }],
+    [
+      { kind: 'module', name: 'scene', ordinal: 0 },
+      { kind: 'call', name: 'color', ordinal: 0 },
+    ],
+    [
+      { kind: 'module', name: 'scene', ordinal: 0 },
+      { kind: 'call', name: 'color', ordinal: 0 },
+      { kind: 'call', name: 'cube', ordinal: 0 },
+    ],
+    [
+      { kind: 'module', name: 'scene', ordinal: 0 },
+      { kind: 'call', name: 'color', ordinal: 0 },
+      { kind: 'call', name: 'sphere', ordinal: 0 },
+    ],
   ]
   const operationIds = paths.map(referenceSemanticOperationIdV1)
   program.core.operations = [
-    { id: 0, operationId: operationIds[0], parent: null, childOrdinal: 0, name: 'scene', category: 'module', structuralPath: paths[0], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 1, operationId: operationIds[1], parent: 0, childOrdinal: 0, name: 'color', category: 'presentation', structuralPath: paths[1], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 2, operationId: operationIds[2], parent: 1, childOrdinal: 0, name: 'cube', category: 'geometry', structuralPath: paths[2], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 3, operationId: operationIds[3], parent: 1, childOrdinal: 0, name: 'sphere', category: 'geometry', structuralPath: paths[3], identityEvidence: 'structural-unique', ambiguityGroup: null },
+    {
+      id: 0,
+      operationId: operationIds[0],
+      parent: null,
+      childOrdinal: 0,
+      name: 'scene',
+      category: 'module',
+      structuralPath: paths[0],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 1,
+      operationId: operationIds[1],
+      parent: 0,
+      childOrdinal: 0,
+      name: 'color',
+      category: 'presentation',
+      structuralPath: paths[1],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 2,
+      operationId: operationIds[2],
+      parent: 1,
+      childOrdinal: 0,
+      name: 'cube',
+      category: 'geometry',
+      structuralPath: paths[2],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 3,
+      operationId: operationIds[3],
+      parent: 1,
+      childOrdinal: 0,
+      name: 'sphere',
+      category: 'geometry',
+      structuralPath: paths[3],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
   ]
   program.core.nodes = [
-    { id: 0, kind: 'box', valueType: { geometryKind: 'solid-set', space: 'd3', representation: 'mesh', evidence: { tag: 'representation-preserving' } }, size: [1, 2, 3], center: false },
-    { id: 1, kind: 'sphere-polygonal', valueType: { geometryKind: 'solid-set', space: 'd3', representation: 'mesh', evidence: { tag: 'representation-preserving' } }, radius: 2, radialSegments: 32 },
+    {
+      id: 0,
+      kind: 'box',
+      valueType: {
+        geometryKind: 'solid-set',
+        space: 'd3',
+        representation: 'mesh',
+        evidence: { tag: 'representation-preserving' },
+      },
+      size: [1, 2, 3],
+      center: false,
+    },
+    {
+      id: 1,
+      kind: 'sphere-polygonal',
+      valueType: {
+        geometryKind: 'solid-set',
+        space: 'd3',
+        representation: 'mesh',
+        evidence: { tag: 'representation-preserving' },
+      },
+      radius: 2,
+      radialSegments: 32,
+    },
   ]
   const rootId = referenceSemanticOccurrenceIdV1(null, null, operationIds[0], [])
   const wrapperId = referenceSemanticOccurrenceIdV1(rootId, rootId, operationIds[1], [])
   const cubeId = referenceSemanticOccurrenceIdV1(wrapperId, wrapperId, operationIds[2], [])
   const sphereId = referenceSemanticOccurrenceIdV1(wrapperId, wrapperId, operationIds[3], [])
   program.core.occurrences = [
-    { id: 0, occurrenceId: rootId, operation: 0, parent: null, staticParent: null, dynamicSlots: [], node: null, outputOrdinal: null, sceneEntityId: null },
-    { id: 1, occurrenceId: wrapperId, operation: 1, parent: 0, staticParent: 0, dynamicSlots: [], node: 0, outputOrdinal: 0, sceneEntityId: referenceSemanticSceneEntityIdV1(wrapperId, 0) },
-    { id: 2, occurrenceId: wrapperId, operation: 1, parent: 0, staticParent: 0, dynamicSlots: [], node: 1, outputOrdinal: 1, sceneEntityId: referenceSemanticSceneEntityIdV1(wrapperId, 1) },
-    { id: 3, occurrenceId: cubeId, operation: 2, parent: 1, staticParent: 1, dynamicSlots: [], node: 0, outputOrdinal: 0, sceneEntityId: referenceSemanticSceneEntityIdV1(cubeId, 0) },
-    { id: 4, occurrenceId: sphereId, operation: 3, parent: 1, staticParent: 1, dynamicSlots: [], node: 1, outputOrdinal: 0, sceneEntityId: referenceSemanticSceneEntityIdV1(sphereId, 0) },
+    {
+      id: 0,
+      occurrenceId: rootId,
+      operation: 0,
+      parent: null,
+      staticParent: null,
+      dynamicSlots: [],
+      node: null,
+      outputOrdinal: null,
+      sceneEntityId: null,
+    },
+    {
+      id: 1,
+      occurrenceId: wrapperId,
+      operation: 1,
+      parent: 0,
+      staticParent: 0,
+      dynamicSlots: [],
+      node: 0,
+      outputOrdinal: 0,
+      sceneEntityId: referenceSemanticSceneEntityIdV1(wrapperId, 0),
+    },
+    {
+      id: 2,
+      occurrenceId: wrapperId,
+      operation: 1,
+      parent: 0,
+      staticParent: 0,
+      dynamicSlots: [],
+      node: 1,
+      outputOrdinal: 1,
+      sceneEntityId: referenceSemanticSceneEntityIdV1(wrapperId, 1),
+    },
+    {
+      id: 3,
+      occurrenceId: cubeId,
+      operation: 2,
+      parent: 1,
+      staticParent: 1,
+      dynamicSlots: [],
+      node: 0,
+      outputOrdinal: 0,
+      sceneEntityId: referenceSemanticSceneEntityIdV1(cubeId, 0),
+    },
+    {
+      id: 4,
+      occurrenceId: sphereId,
+      operation: 3,
+      parent: 1,
+      staticParent: 1,
+      dynamicSlots: [],
+      node: 1,
+      outputOrdinal: 0,
+      sceneEntityId: referenceSemanticSceneEntityIdV1(sphereId, 0),
+    },
   ]
   program.core.result = {
     tag: 'multi',
@@ -374,9 +647,10 @@ function makePrimitiveSchemaFixture(
   fields: Record<string, unknown>,
   contract: 'legacy/current' | 'openscad-viewer/brep-1' = 'legacy/current',
 ): { program: ReferenceSemanticProgramV1; source: string } {
-  const source = contract === 'legacy/current'
-    ? `${name}();`
-    : `// @language openscad-viewer/brep-1\n// @requires geometry.brep\n${name}();`
+  const source =
+    contract === 'legacy/current'
+      ? `${name}();`
+      : `// @language openscad-viewer/brep-1\n// @requires geometry.brep\n${name}();`
   const path = [{ kind: 'call', name, ordinal: 0 }]
   const operationId = referenceSemanticOperationIdV1(path)
   const occurrenceId = referenceSemanticOccurrenceIdV1(null, null, operationId, [])
@@ -389,50 +663,58 @@ function makePrimitiveSchemaFixture(
     semanticsRevision: contract === 'legacy/current' ? '1.0.0' : 'brep-1.0.0',
     capabilityGraphVersion: 'semantic-capabilities-v1',
   }
-  program.core.operations = [{
-    id: 0,
-    operationId,
-    parent: null,
-    childOrdinal: 0,
-    name,
-    category: 'geometry',
-    structuralPath: path,
-    identityEvidence: 'structural-unique',
-    ambiguityGroup: null,
-  }]
-  program.core.nodes = [{
-    id: 0,
-    kind: name,
-    valueType: {
-      geometryKind,
-      space,
-      representation: contract === 'legacy/current' ? 'mesh' : 'analytic-brep',
-      evidence: { tag: 'representation-preserving' },
+  program.core.operations = [
+    {
+      id: 0,
+      operationId,
+      parent: null,
+      childOrdinal: 0,
+      name,
+      category: 'geometry',
+      structuralPath: path,
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
     },
-    ...fields,
-  }]
-  program.core.occurrences = [{
-    id: 0,
-    occurrenceId,
-    operation: 0,
-    parent: null,
-    staticParent: null,
-    dynamicSlots: [],
-    node: 0,
-    outputOrdinal: 0,
-    sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceId, 0),
-  }]
+  ]
+  program.core.nodes = [
+    {
+      id: 0,
+      kind: name,
+      valueType: {
+        geometryKind,
+        space,
+        representation: contract === 'legacy/current' ? 'mesh' : 'analytic-brep',
+        evidence: { tag: 'representation-preserving' },
+      },
+      ...fields,
+    },
+  ]
+  program.core.occurrences = [
+    {
+      id: 0,
+      occurrenceId,
+      operation: 0,
+      parent: null,
+      staticParent: null,
+      dynamicSlots: [],
+      node: 0,
+      outputOrdinal: 0,
+      sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceId, 0),
+    },
+  ]
   program.core.result = {
     tag: 'single',
     item: { node: 0, producerOccurrence: 0, identityOccurrence: 0, color: [1, 1, 1, 1] },
   }
   program.core.declaredCapabilities = contract === 'legacy/current' ? [] : ['geometry.brep']
   program.core.diagnosticTemplates = []
-  program.provenance = [{
-    operation: 0,
-    span: { start: source.lastIndexOf(name), end: source.length },
-    label: `${name}()`,
-  }]
+  program.provenance = [
+    {
+      operation: 0,
+      span: { start: source.lastIndexOf(name), end: source.length },
+      label: `${name}()`,
+    },
+  ]
   program.tessellationIntents = []
   program.diagnostics = []
   resetSuccessfulExecution(program)
@@ -444,15 +726,29 @@ function makeDiscardedDifferenceEffectFixture(
   contract: 'legacy/current' | 'openscad-viewer/brep-1' = 'legacy/current',
 ): { program: ReferenceSemanticProgramV1; source: string } {
   const body = 'difference(){ let(x=0); cube(1); sphere(1); }'
-  const source = contract === 'legacy/current'
-    ? body
-    : `// @language openscad-viewer/brep-1\n// @requires geometry.brep\n${body}`
+  const source =
+    contract === 'legacy/current' ? body : `// @language openscad-viewer/brep-1\n// @requires geometry.brep\n${body}`
   const paths = [
     [{ kind: 'call', name: 'difference', ordinal: 0 }],
-    [{ kind: 'call', name: 'difference', ordinal: 0 }, { kind: 'body', name: '$body', ordinal: 0 }],
-    [{ kind: 'call', name: 'difference', ordinal: 0 }, { kind: 'body', name: '$body', ordinal: 0 }, { kind: 'control', name: 'let', ordinal: 0 }],
-    [{ kind: 'call', name: 'difference', ordinal: 0 }, { kind: 'body', name: '$body', ordinal: 0 }, { kind: 'call', name: 'cube', ordinal: 0 }],
-    [{ kind: 'call', name: 'difference', ordinal: 0 }, { kind: 'body', name: '$body', ordinal: 0 }, { kind: 'call', name: 'sphere', ordinal: 0 }],
+    [
+      { kind: 'call', name: 'difference', ordinal: 0 },
+      { kind: 'body', name: '$body', ordinal: 0 },
+    ],
+    [
+      { kind: 'call', name: 'difference', ordinal: 0 },
+      { kind: 'body', name: '$body', ordinal: 0 },
+      { kind: 'control', name: 'let', ordinal: 0 },
+    ],
+    [
+      { kind: 'call', name: 'difference', ordinal: 0 },
+      { kind: 'body', name: '$body', ordinal: 0 },
+      { kind: 'call', name: 'cube', ordinal: 0 },
+    ],
+    [
+      { kind: 'call', name: 'difference', ordinal: 0 },
+      { kind: 'body', name: '$body', ordinal: 0 },
+      { kind: 'call', name: 'sphere', ordinal: 0 },
+    ],
   ]
   const operationIds = paths.map(referenceSemanticOperationIdV1)
   const program = makeReferenceSemanticProgramV1()
@@ -463,11 +759,61 @@ function makeDiscardedDifferenceEffectFixture(
     capabilityGraphVersion: 'semantic-capabilities-v1',
   }
   program.core.operations = [
-    { id: 0, operationId: operationIds[0], parent: null, childOrdinal: 0, name: 'difference', category: 'boolean', structuralPath: paths[0], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 1, operationId: operationIds[1], parent: 0, childOrdinal: 0, name: '$body', category: 'control', structuralPath: paths[1], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 2, operationId: operationIds[2], parent: 1, childOrdinal: 0, name: 'let', category: 'control', structuralPath: paths[2], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 3, operationId: operationIds[3], parent: 1, childOrdinal: 0, name: 'cube', category: 'geometry', structuralPath: paths[3], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 4, operationId: operationIds[4], parent: 1, childOrdinal: 0, name: 'sphere', category: 'geometry', structuralPath: paths[4], identityEvidence: 'structural-unique', ambiguityGroup: null },
+    {
+      id: 0,
+      operationId: operationIds[0],
+      parent: null,
+      childOrdinal: 0,
+      name: 'difference',
+      category: 'boolean',
+      structuralPath: paths[0],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 1,
+      operationId: operationIds[1],
+      parent: 0,
+      childOrdinal: 0,
+      name: '$body',
+      category: 'control',
+      structuralPath: paths[1],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 2,
+      operationId: operationIds[2],
+      parent: 1,
+      childOrdinal: 0,
+      name: 'let',
+      category: 'control',
+      structuralPath: paths[2],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 3,
+      operationId: operationIds[3],
+      parent: 1,
+      childOrdinal: 0,
+      name: 'cube',
+      category: 'geometry',
+      structuralPath: paths[3],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 4,
+      operationId: operationIds[4],
+      parent: 1,
+      childOrdinal: 0,
+      name: 'sphere',
+      category: 'geometry',
+      structuralPath: paths[4],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
   ]
   const valueType = {
     geometryKind: contract === 'legacy/current' ? 'solid-set' : 'solid',
@@ -482,32 +828,78 @@ function makeDiscardedDifferenceEffectFixture(
       : { id: 1, kind: 'sphere-analytic', valueType: clone(valueType), radius: 1 },
     { id: 2, kind: 'boolean', valueType: clone(valueType), operation: 'union', inputs: [0, 1] },
   ]
-  const occurrenceIds = [
-    referenceSemanticOccurrenceIdV1(null, null, operationIds[0], []),
-    '',
-    '',
-    '',
-    '',
-  ]
+  const occurrenceIds = [referenceSemanticOccurrenceIdV1(null, null, operationIds[0], []), '', '', '', '']
   occurrenceIds[1] = referenceSemanticOccurrenceIdV1(occurrenceIds[0], occurrenceIds[0], operationIds[1], [])
   occurrenceIds[2] = referenceSemanticOccurrenceIdV1(occurrenceIds[1], occurrenceIds[1], operationIds[2], [])
   occurrenceIds[3] = referenceSemanticOccurrenceIdV1(occurrenceIds[1], occurrenceIds[1], operationIds[3], [])
   occurrenceIds[4] = referenceSemanticOccurrenceIdV1(occurrenceIds[1], occurrenceIds[1], operationIds[4], [])
   program.core.occurrences = [
-    { id: 0, occurrenceId: occurrenceIds[0], operation: 0, parent: null, staticParent: null, dynamicSlots: [], node: null, outputOrdinal: null, sceneEntityId: null },
-    { id: 1, occurrenceId: occurrenceIds[1], operation: 1, parent: 0, staticParent: 0, dynamicSlots: [], node: null, outputOrdinal: null, sceneEntityId: null },
-    { id: 2, occurrenceId: occurrenceIds[2], operation: 2, parent: 1, staticParent: 1, dynamicSlots: [], node: null, outputOrdinal: null, sceneEntityId: null },
-    { id: 3, occurrenceId: occurrenceIds[3], operation: 3, parent: 1, staticParent: 1, dynamicSlots: [], node: 0, outputOrdinal: 0, sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[3], 0) },
-    { id: 4, occurrenceId: occurrenceIds[4], operation: 4, parent: 1, staticParent: 1, dynamicSlots: [], node: 1, outputOrdinal: 0, sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[4], 0) },
+    {
+      id: 0,
+      occurrenceId: occurrenceIds[0],
+      operation: 0,
+      parent: null,
+      staticParent: null,
+      dynamicSlots: [],
+      node: null,
+      outputOrdinal: null,
+      sceneEntityId: null,
+    },
+    {
+      id: 1,
+      occurrenceId: occurrenceIds[1],
+      operation: 1,
+      parent: 0,
+      staticParent: 0,
+      dynamicSlots: [],
+      node: null,
+      outputOrdinal: null,
+      sceneEntityId: null,
+    },
+    {
+      id: 2,
+      occurrenceId: occurrenceIds[2],
+      operation: 2,
+      parent: 1,
+      staticParent: 1,
+      dynamicSlots: [],
+      node: null,
+      outputOrdinal: null,
+      sceneEntityId: null,
+    },
+    {
+      id: 3,
+      occurrenceId: occurrenceIds[3],
+      operation: 3,
+      parent: 1,
+      staticParent: 1,
+      dynamicSlots: [],
+      node: 0,
+      outputOrdinal: 0,
+      sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[3], 0),
+    },
+    {
+      id: 4,
+      occurrenceId: occurrenceIds[4],
+      operation: 4,
+      parent: 1,
+      staticParent: 1,
+      dynamicSlots: [],
+      node: 1,
+      outputOrdinal: 0,
+      sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[4], 0),
+    },
   ]
   program.core.execution = {
     version: 'semantic-execution-v2',
     evaluationOrder: [0, 1, 2],
-    discardedEffects: [{
-      tag: 'legacy-difference-cutters',
-      ownerOccurrence: 0,
-      root: 2,
-    }],
+    discardedEffects: [
+      {
+        tag: 'legacy-difference-cutters',
+        ownerOccurrence: 0,
+        root: 2,
+      },
+    ],
     terminal: null,
   }
   program.core.result = { tag: 'empty', type: 'never' }
@@ -587,9 +979,10 @@ function makeEffectBeforePublishedCubeFixture(): { program: ReferenceSemanticPro
   return { program, source }
 }
 
-function makeManyDiscardedDifferenceEffectsFixture(
-  count = 1_001,
-): { program: ReferenceSemanticProgramV1; source: string } {
+function makeManyDiscardedDifferenceEffectsFixture(count = 1_001): {
+  program: ReferenceSemanticProgramV1
+  source: string
+} {
   const statement = 'difference(){ let(x=0); cube(1); }\n'
   const source = statement.repeat(count)
   const program = makeReferenceSemanticProgramV1()
@@ -618,20 +1011,100 @@ function makeManyDiscardedDifferenceEffectsFixture(
     ]
     const operationIds = paths.map(referenceSemanticOperationIdV1)
     operations.push(
-      { id: operationBase, operationId: operationIds[0], parent: null, childOrdinal: index, name: 'difference', category: 'boolean', structuralPath: paths[0], identityEvidence: 'same-name-positional', ambiguityGroup },
-      { id: operationBase + 1, operationId: operationIds[1], parent: operationBase, childOrdinal: 0, name: '$body', category: 'control', structuralPath: paths[1], identityEvidence: 'structural-unique', ambiguityGroup: null },
-      { id: operationBase + 2, operationId: operationIds[2], parent: operationBase + 1, childOrdinal: 0, name: 'let', category: 'control', structuralPath: paths[2], identityEvidence: 'structural-unique', ambiguityGroup: null },
-      { id: operationBase + 3, operationId: operationIds[3], parent: operationBase + 1, childOrdinal: 0, name: 'cube', category: 'geometry', structuralPath: paths[3], identityEvidence: 'structural-unique', ambiguityGroup: null },
+      {
+        id: operationBase,
+        operationId: operationIds[0],
+        parent: null,
+        childOrdinal: index,
+        name: 'difference',
+        category: 'boolean',
+        structuralPath: paths[0],
+        identityEvidence: 'same-name-positional',
+        ambiguityGroup,
+      },
+      {
+        id: operationBase + 1,
+        operationId: operationIds[1],
+        parent: operationBase,
+        childOrdinal: 0,
+        name: '$body',
+        category: 'control',
+        structuralPath: paths[1],
+        identityEvidence: 'structural-unique',
+        ambiguityGroup: null,
+      },
+      {
+        id: operationBase + 2,
+        operationId: operationIds[2],
+        parent: operationBase + 1,
+        childOrdinal: 0,
+        name: 'let',
+        category: 'control',
+        structuralPath: paths[2],
+        identityEvidence: 'structural-unique',
+        ambiguityGroup: null,
+      },
+      {
+        id: operationBase + 3,
+        operationId: operationIds[3],
+        parent: operationBase + 1,
+        childOrdinal: 0,
+        name: 'cube',
+        category: 'geometry',
+        structuralPath: paths[3],
+        identityEvidence: 'structural-unique',
+        ambiguityGroup: null,
+      },
     )
     const differenceId = referenceSemanticOccurrenceIdV1(null, null, operationIds[0], [])
     const bodyId = referenceSemanticOccurrenceIdV1(differenceId, differenceId, operationIds[1], [])
     const letId = referenceSemanticOccurrenceIdV1(bodyId, bodyId, operationIds[2], [])
     const cubeId = referenceSemanticOccurrenceIdV1(bodyId, bodyId, operationIds[3], [])
     occurrences.push(
-      { id: occurrenceBase, occurrenceId: differenceId, operation: operationBase, parent: null, staticParent: null, dynamicSlots: [], node: null, outputOrdinal: null, sceneEntityId: null },
-      { id: occurrenceBase + 1, occurrenceId: bodyId, operation: operationBase + 1, parent: occurrenceBase, staticParent: occurrenceBase, dynamicSlots: [], node: null, outputOrdinal: null, sceneEntityId: null },
-      { id: occurrenceBase + 2, occurrenceId: letId, operation: operationBase + 2, parent: occurrenceBase + 1, staticParent: occurrenceBase + 1, dynamicSlots: [], node: null, outputOrdinal: null, sceneEntityId: null },
-      { id: occurrenceBase + 3, occurrenceId: cubeId, operation: operationBase + 3, parent: occurrenceBase + 1, staticParent: occurrenceBase + 1, dynamicSlots: [], node: index, outputOrdinal: 0, sceneEntityId: referenceSemanticSceneEntityIdV1(cubeId, 0) },
+      {
+        id: occurrenceBase,
+        occurrenceId: differenceId,
+        operation: operationBase,
+        parent: null,
+        staticParent: null,
+        dynamicSlots: [],
+        node: null,
+        outputOrdinal: null,
+        sceneEntityId: null,
+      },
+      {
+        id: occurrenceBase + 1,
+        occurrenceId: bodyId,
+        operation: operationBase + 1,
+        parent: occurrenceBase,
+        staticParent: occurrenceBase,
+        dynamicSlots: [],
+        node: null,
+        outputOrdinal: null,
+        sceneEntityId: null,
+      },
+      {
+        id: occurrenceBase + 2,
+        occurrenceId: letId,
+        operation: operationBase + 2,
+        parent: occurrenceBase + 1,
+        staticParent: occurrenceBase + 1,
+        dynamicSlots: [],
+        node: null,
+        outputOrdinal: null,
+        sceneEntityId: null,
+      },
+      {
+        id: occurrenceBase + 3,
+        occurrenceId: cubeId,
+        operation: operationBase + 3,
+        parent: occurrenceBase + 1,
+        staticParent: occurrenceBase + 1,
+        dynamicSlots: [],
+        node: index,
+        outputOrdinal: 0,
+        sceneEntityId: referenceSemanticSceneEntityIdV1(cubeId, 0),
+      },
     )
     nodes.push({ id: index, kind: 'box', valueType: clone(valueType), size: [1, 1, 1], center: false })
     effects.push({ tag: 'legacy-difference-cutters', ownerOccurrence: occurrenceBase, root: index })
@@ -670,29 +1143,78 @@ function makeManyDiscardedDifferenceEffectsFixture(
 function makeTerminalPrefixFixture(message = 'later'): { program: ReferenceSemanticProgramV1; source: string } {
   const source = `polyhedron(points=[[0,0,0],[1,0,0],[0,1,0],[0,0,1]],faces=[[0,1,2]]); assert(false, ${JSON.stringify(message)}) cube(1);`
   const detail = `Assertion 'false' failed: ${message}`
-  const paths = [
-    [{ kind: 'call', name: 'polyhedron', ordinal: 0 }],
-    [{ kind: 'call', name: 'assert', ordinal: 0 }],
-  ]
+  const paths = [[{ kind: 'call', name: 'polyhedron', ordinal: 0 }], [{ kind: 'call', name: 'assert', ordinal: 0 }]]
   const operationIds = paths.map(referenceSemanticOperationIdV1)
   const polyhedronOccurrenceId = referenceSemanticOccurrenceIdV1(null, null, operationIds[0], [])
   const assertOccurrenceId = referenceSemanticOccurrenceIdV1(null, null, operationIds[1], [])
   const program = makeReferenceSemanticProgramV1()
   program.source = referenceSemanticSourceDescriptorV1(source)
   program.core.operations = [
-    { id: 0, operationId: operationIds[0], parent: null, childOrdinal: 0, name: 'polyhedron', category: 'geometry', structuralPath: paths[0], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 1, operationId: operationIds[1], parent: null, childOrdinal: 0, name: 'assert', category: 'assertion', structuralPath: paths[1], identityEvidence: 'structural-unique', ambiguityGroup: null },
+    {
+      id: 0,
+      operationId: operationIds[0],
+      parent: null,
+      childOrdinal: 0,
+      name: 'polyhedron',
+      category: 'geometry',
+      structuralPath: paths[0],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 1,
+      operationId: operationIds[1],
+      parent: null,
+      childOrdinal: 0,
+      name: 'assert',
+      category: 'assertion',
+      structuralPath: paths[1],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
   ]
-  program.core.nodes = [{
-    id: 0,
-    kind: 'polyhedron',
-    valueType: { geometryKind: 'solid-set', space: 'd3', representation: 'mesh', evidence: { tag: 'representation-preserving' } },
-    vertices: [[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]],
-    triangles: [[0, 1, 2]],
-  }]
+  program.core.nodes = [
+    {
+      id: 0,
+      kind: 'polyhedron',
+      valueType: {
+        geometryKind: 'solid-set',
+        space: 'd3',
+        representation: 'mesh',
+        evidence: { tag: 'representation-preserving' },
+      },
+      vertices: [
+        [0, 0, 0],
+        [1, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1],
+      ],
+      triangles: [[0, 1, 2]],
+    },
+  ]
   program.core.occurrences = [
-    { id: 0, occurrenceId: polyhedronOccurrenceId, operation: 0, parent: null, staticParent: null, dynamicSlots: [], node: 0, outputOrdinal: 0, sceneEntityId: referenceSemanticSceneEntityIdV1(polyhedronOccurrenceId, 0) },
-    { id: 1, occurrenceId: assertOccurrenceId, operation: 1, parent: null, staticParent: null, dynamicSlots: [], node: null, outputOrdinal: null, sceneEntityId: null },
+    {
+      id: 0,
+      occurrenceId: polyhedronOccurrenceId,
+      operation: 0,
+      parent: null,
+      staticParent: null,
+      dynamicSlots: [],
+      node: 0,
+      outputOrdinal: 0,
+      sceneEntityId: referenceSemanticSceneEntityIdV1(polyhedronOccurrenceId, 0),
+    },
+    {
+      id: 1,
+      occurrenceId: assertOccurrenceId,
+      operation: 1,
+      parent: null,
+      staticParent: null,
+      dynamicSlots: [],
+      node: null,
+      outputOrdinal: null,
+      sceneEntityId: null,
+    },
   ]
   program.core.execution = {
     version: 'semantic-execution-v2',
@@ -706,26 +1228,30 @@ function makeTerminalPrefixFixture(message = 'later'): { program: ReferenceSeman
     },
   }
   program.core.result = { tag: 'empty', type: 'never' }
-  program.core.diagnosticTemplates = [{
-    id: 0,
-    code: 'LEGACY_LANGUAGE_ERROR',
-    severity: 'error',
-    operation: 1,
-    arguments: [
-      { name: 'errorName', value: { tag: 'string', value: 'OpenSCADParseError' } },
-      { name: 'detailSha256', value: { tag: 'string', value: sha256(new TextEncoder().encode(detail)) } },
-    ],
-  }]
+  program.core.diagnosticTemplates = [
+    {
+      id: 0,
+      code: 'LEGACY_LANGUAGE_ERROR',
+      severity: 'error',
+      operation: 1,
+      arguments: [
+        { name: 'errorName', value: { tag: 'string', value: 'OpenSCADParseError' } },
+        { name: 'detailSha256', value: { tag: 'string', value: sha256(new TextEncoder().encode(detail)) } },
+      ],
+    },
+  ]
   program.provenance = [
     { operation: 0, span: { start: 0, end: source.indexOf(';') + 1 }, label: 'polyhedron()' },
     { operation: 1, span: { start: source.indexOf('assert'), end: source.length }, label: 'assert()' },
   ]
   program.tessellationIntents = []
-  program.diagnostics = [{
-    template: 0,
-    message,
-    span: { start: source.indexOf('assert'), end: source.length },
-  }]
+  program.diagnostics = [
+    {
+      template: 0,
+      message,
+      span: { start: source.indexOf('assert'), end: source.length },
+    },
+  ]
   program.core.capabilityClosure = referenceSemanticCapabilityClosureV1(program.core)
   return { program, source }
 }
@@ -739,24 +1265,104 @@ function makeTerminalSiblingScheduleFixture(): { program: ReferenceSemanticProgr
     [{ kind: 'call', name: 'assert', ordinal: 0 }],
   ]
   const operationIds = paths.map(referenceSemanticOperationIdV1)
-  const occurrenceIds = operationIds.map(operationId => (
-    referenceSemanticOccurrenceIdV1(null, null, operationId, [])
-  ))
+  const occurrenceIds = operationIds.map(operationId => referenceSemanticOccurrenceIdV1(null, null, operationId, []))
   const program = makeReferenceSemanticProgramV1()
   program.source = referenceSemanticSourceDescriptorV1(source)
   program.core.operations = [
-    { id: 0, operationId: operationIds[0], parent: null, childOrdinal: 0, name: 'cube', category: 'geometry', structuralPath: paths[0], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 1, operationId: operationIds[1], parent: null, childOrdinal: 0, name: 'sphere', category: 'geometry', structuralPath: paths[1], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 2, operationId: operationIds[2], parent: null, childOrdinal: 0, name: 'assert', category: 'assertion', structuralPath: paths[2], identityEvidence: 'structural-unique', ambiguityGroup: null },
+    {
+      id: 0,
+      operationId: operationIds[0],
+      parent: null,
+      childOrdinal: 0,
+      name: 'cube',
+      category: 'geometry',
+      structuralPath: paths[0],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 1,
+      operationId: operationIds[1],
+      parent: null,
+      childOrdinal: 0,
+      name: 'sphere',
+      category: 'geometry',
+      structuralPath: paths[1],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 2,
+      operationId: operationIds[2],
+      parent: null,
+      childOrdinal: 0,
+      name: 'assert',
+      category: 'assertion',
+      structuralPath: paths[2],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
   ]
   program.core.nodes = [
-    { id: 0, kind: 'box', valueType: { geometryKind: 'solid-set', space: 'd3', representation: 'mesh', evidence: { tag: 'representation-preserving' } }, size: [1, 1, 1], center: false },
-    { id: 1, kind: 'sphere-polygonal', valueType: { geometryKind: 'solid-set', space: 'd3', representation: 'mesh', evidence: { tag: 'representation-preserving' } }, radius: 1, radialSegments: 16 },
+    {
+      id: 0,
+      kind: 'box',
+      valueType: {
+        geometryKind: 'solid-set',
+        space: 'd3',
+        representation: 'mesh',
+        evidence: { tag: 'representation-preserving' },
+      },
+      size: [1, 1, 1],
+      center: false,
+    },
+    {
+      id: 1,
+      kind: 'sphere-polygonal',
+      valueType: {
+        geometryKind: 'solid-set',
+        space: 'd3',
+        representation: 'mesh',
+        evidence: { tag: 'representation-preserving' },
+      },
+      radius: 1,
+      radialSegments: 16,
+    },
   ]
   program.core.occurrences = [
-    { id: 0, occurrenceId: occurrenceIds[0], operation: 0, parent: null, staticParent: null, dynamicSlots: [], node: 0, outputOrdinal: 0, sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[0], 0) },
-    { id: 1, occurrenceId: occurrenceIds[1], operation: 1, parent: null, staticParent: null, dynamicSlots: [], node: 1, outputOrdinal: 0, sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[1], 0) },
-    { id: 2, occurrenceId: occurrenceIds[2], operation: 2, parent: null, staticParent: null, dynamicSlots: [], node: null, outputOrdinal: null, sceneEntityId: null },
+    {
+      id: 0,
+      occurrenceId: occurrenceIds[0],
+      operation: 0,
+      parent: null,
+      staticParent: null,
+      dynamicSlots: [],
+      node: 0,
+      outputOrdinal: 0,
+      sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[0], 0),
+    },
+    {
+      id: 1,
+      occurrenceId: occurrenceIds[1],
+      operation: 1,
+      parent: null,
+      staticParent: null,
+      dynamicSlots: [],
+      node: 1,
+      outputOrdinal: 0,
+      sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[1], 0),
+    },
+    {
+      id: 2,
+      occurrenceId: occurrenceIds[2],
+      operation: 2,
+      parent: null,
+      staticParent: null,
+      dynamicSlots: [],
+      node: null,
+      outputOrdinal: null,
+      sceneEntityId: null,
+    },
   ]
   program.core.execution = {
     version: 'semantic-execution-v2',
@@ -766,59 +1372,83 @@ function makeTerminalSiblingScheduleFixture(): { program: ReferenceSemanticProgr
       tag: 'legacy-language-error',
       occurrence: 2,
       diagnosticTemplate: 0,
-      prefixFrontier: [{ root: 0, ownerOccurrence: 0 }, { root: 1, ownerOccurrence: 1 }],
+      prefixFrontier: [
+        { root: 0, ownerOccurrence: 0 },
+        { root: 1, ownerOccurrence: 1 },
+      ],
     },
   }
   program.core.result = { tag: 'empty', type: 'never' }
   program.core.declaredCapabilities = []
-  program.core.diagnosticTemplates = [{
-    id: 0,
-    code: 'LEGACY_LANGUAGE_ERROR',
-    severity: 'error',
-    operation: 2,
-    arguments: [
-      { name: 'errorName', value: { tag: 'string', value: 'OpenSCADParseError' } },
-      { name: 'detailSha256', value: { tag: 'string', value: sha256(new TextEncoder().encode(detail)) } },
-    ],
-  }]
+  program.core.diagnosticTemplates = [
+    {
+      id: 0,
+      code: 'LEGACY_LANGUAGE_ERROR',
+      severity: 'error',
+      operation: 2,
+      arguments: [
+        { name: 'errorName', value: { tag: 'string', value: 'OpenSCADParseError' } },
+        { name: 'detailSha256', value: { tag: 'string', value: sha256(new TextEncoder().encode(detail)) } },
+      ],
+    },
+  ]
   program.provenance = [
     { operation: 0, span: { start: source.indexOf('cube'), end: source.indexOf('cube') + 4 }, label: 'cube()' },
     { operation: 1, span: { start: source.indexOf('sphere'), end: source.indexOf('sphere') + 6 }, label: 'sphere()' },
     { operation: 2, span: { start: source.indexOf('assert'), end: source.length }, label: 'assert()' },
   ]
   program.tessellationIntents = []
-  program.diagnostics = [{ template: 0, message: detail, span: { start: source.indexOf('assert'), end: source.indexOf('assert') + 1 } }]
+  program.diagnostics = [
+    { template: 0, message: detail, span: { start: source.indexOf('assert'), end: source.indexOf('assert') + 1 } },
+  ]
   program.core.capabilityClosure = referenceSemanticCapabilityClosureV1(program.core)
   return { program, source }
 }
 
 type PostChildTerminalKind = 'difference-mix' | 'union-mix' | 'linear-extrude-solid' | 'partial-rotate'
 
-function makePostChildTerminalFixture(
-  kind: PostChildTerminalKind,
-): { program: ReferenceSemanticProgramV1; source: string } {
+function makePostChildTerminalFixture(kind: PostChildTerminalKind): {
+  program: ReferenceSemanticProgramV1
+  source: string
+} {
   const specification = (() => {
     switch (kind) {
-      case 'difference-mix': return {
-        source: 'difference(){cube(1);square(1);}',
-        rootName: 'difference', rootCategory: 'boolean', children: ['cube', 'square'],
-        detail: 'difference() cannot mix 2D and 3D children', partialRoot: false,
-      }
-      case 'union-mix': return {
-        source: 'union(){cube(1);square(1);}',
-        rootName: 'union', rootCategory: 'boolean', children: ['cube', 'square'],
-        detail: 'union() cannot mix 2D and 3D children', partialRoot: false,
-      }
-      case 'linear-extrude-solid': return {
-        source: 'linear_extrude(1) cube(1);',
-        rootName: 'linear_extrude', rootCategory: 'geometry', children: ['cube'],
-        detail: 'linear_extrude() requires 2D children', partialRoot: false,
-      }
-      case 'partial-rotate': return {
-        source: 'rotate(a=1,v=[0,0,0]){square(1);cube(1);}',
-        rootName: 'rotate', rootCategory: 'transform', children: ['square', 'cube'],
-        detail: 'Rotation axis cannot be zero', partialRoot: true,
-      }
+      case 'difference-mix':
+        return {
+          source: 'difference(){cube(1);square(1);}',
+          rootName: 'difference',
+          rootCategory: 'boolean',
+          children: ['cube', 'square'],
+          detail: 'difference() cannot mix 2D and 3D children',
+          partialRoot: false,
+        }
+      case 'union-mix':
+        return {
+          source: 'union(){cube(1);square(1);}',
+          rootName: 'union',
+          rootCategory: 'boolean',
+          children: ['cube', 'square'],
+          detail: 'union() cannot mix 2D and 3D children',
+          partialRoot: false,
+        }
+      case 'linear-extrude-solid':
+        return {
+          source: 'linear_extrude(1) cube(1);',
+          rootName: 'linear_extrude',
+          rootCategory: 'geometry',
+          children: ['cube'],
+          detail: 'linear_extrude() requires 2D children',
+          partialRoot: false,
+        }
+      case 'partial-rotate':
+        return {
+          source: 'rotate(a=1,v=[0,0,0]){square(1);cube(1);}',
+          rootName: 'rotate',
+          rootCategory: 'transform',
+          children: ['square', 'cube'],
+          detail: 'Rotation axis cannot be zero',
+          partialRoot: true,
+        }
     }
   })()
   const rootPath = [{ kind: 'call', name: specification.rootName, ordinal: 0 }]
@@ -842,9 +1472,11 @@ function makePostChildTerminalFixture(
   const meshEvidence = { tag: 'representation-preserving' }
   const regionType = { geometryKind: 'region', space: 'd2', representation: 'mesh', evidence: meshEvidence }
   const solidType = { geometryKind: 'solid-set', space: 'd3', representation: 'mesh', evidence: meshEvidence }
-  const childNodes = specification.children.map((name, id) => name === 'cube'
-    ? { id, kind: 'box', valueType: clone(solidType), size: [1, 1, 1], center: false }
-    : { id, kind: 'rectangle', valueType: clone(regionType), size: [1, 1], center: false })
+  const childNodes = specification.children.map((name, id) =>
+    name === 'cube'
+      ? { id, kind: 'box', valueType: clone(solidType), size: [1, 1, 1], center: false }
+      : { id, kind: 'rectangle', valueType: clone(regionType), size: [1, 1], center: false },
+  )
   const nodes: Record<string, any>[] = [...childNodes]
   if (specification.partialRoot) {
     nodes.push({
@@ -853,23 +1485,34 @@ function makePostChildTerminalFixture(
       valueType: clone(regionType),
       input: 0,
       matrix: [
-        0.9998476951563913, 0.01745240643728351, 0, 0,
-        -0.01745240643728351, 0.9998476951563913, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1,
+        0.9998476951563913, 0.01745240643728351, 0, 0, -0.01745240643728351, 0.9998476951563913, 0, 0, 0, 0, 1, 0, 0, 0,
+        0, 1,
       ],
     })
   }
   const rootNode = specification.partialRoot ? 2 : null
   const occurrences: Record<string, any>[] = [
     {
-      id: 0, occurrenceId: occurrenceIds[0], operation: 0, parent: null, staticParent: null,
-      dynamicSlots: [], node: rootNode, outputOrdinal: rootNode === null ? null : 0,
+      id: 0,
+      occurrenceId: occurrenceIds[0],
+      operation: 0,
+      parent: null,
+      staticParent: null,
+      dynamicSlots: [],
+      node: rootNode,
+      outputOrdinal: rootNode === null ? null : 0,
       sceneEntityId: rootNode === null ? null : referenceSemanticSceneEntityIdV1(occurrenceIds[0], 0),
     },
     {
-      id: 1, occurrenceId: occurrenceIds[1], operation: 1, parent: 0, staticParent: 0,
-      dynamicSlots: [], node: null, outputOrdinal: null, sceneEntityId: null,
+      id: 1,
+      occurrenceId: occurrenceIds[1],
+      operation: 1,
+      parent: 0,
+      staticParent: 0,
+      dynamicSlots: [],
+      node: null,
+      outputOrdinal: null,
+      sceneEntityId: null,
     },
     ...specification.children.map((_, index) => ({
       id: index + 2,
@@ -884,13 +1527,36 @@ function makePostChildTerminalFixture(
     })),
   ]
   const prefixFrontier = specification.partialRoot
-    ? [{ root: 1, ownerOccurrence: 3 }, { root: 2, ownerOccurrence: 0 }]
+    ? [
+        { root: 1, ownerOccurrence: 3 },
+        { root: 2, ownerOccurrence: 0 },
+      ]
     : childNodes.map((node, index) => ({ root: node.id, ownerOccurrence: index + 2 }))
   const program = makeReferenceSemanticProgramV1()
   program.source = referenceSemanticSourceDescriptorV1(specification.source)
   program.core.operations = [
-    { id: 0, operationId: operationIds[0], parent: null, childOrdinal: 0, name: specification.rootName, category: specification.rootCategory, structuralPath: paths[0], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 1, operationId: operationIds[1], parent: 0, childOrdinal: 0, name: '$body', category: 'control', structuralPath: paths[1], identityEvidence: 'structural-unique', ambiguityGroup: null },
+    {
+      id: 0,
+      operationId: operationIds[0],
+      parent: null,
+      childOrdinal: 0,
+      name: specification.rootName,
+      category: specification.rootCategory,
+      structuralPath: paths[0],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 1,
+      operationId: operationIds[1],
+      parent: 0,
+      childOrdinal: 0,
+      name: '$body',
+      category: 'control',
+      structuralPath: paths[1],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
     ...specification.children.map((name, index) => ({
       id: index + 2,
       operationId: operationIds[index + 2],
@@ -918,16 +1584,21 @@ function makePostChildTerminalFixture(
   }
   program.core.result = { tag: 'empty', type: 'never' }
   program.core.declaredCapabilities = []
-  program.core.diagnosticTemplates = [{
-    id: 0,
-    code: 'LEGACY_LANGUAGE_ERROR',
-    severity: 'error',
-    operation: 0,
-    arguments: [
-      { name: 'errorName', value: { tag: 'string', value: 'OpenSCADParseError' } },
-      { name: 'detailSha256', value: { tag: 'string', value: sha256(new TextEncoder().encode(specification.detail)) } },
-    ],
-  }]
+  program.core.diagnosticTemplates = [
+    {
+      id: 0,
+      code: 'LEGACY_LANGUAGE_ERROR',
+      severity: 'error',
+      operation: 0,
+      arguments: [
+        { name: 'errorName', value: { tag: 'string', value: 'OpenSCADParseError' } },
+        {
+          name: 'detailSha256',
+          value: { tag: 'string', value: sha256(new TextEncoder().encode(specification.detail)) },
+        },
+      ],
+    },
+  ]
   program.provenance = program.core.operations.map((operation: Record<string, any>) => {
     const token = operation.name === '$body' ? specification.rootName : operation.name
     const start = specification.source.indexOf(token)
@@ -944,23 +1615,49 @@ function makeAncestorPostChildTerminalFixture(): { program: ReferenceSemanticPro
   const detail = 'union() cannot mix 2D and 3D children'
   const paths = [
     [{ kind: 'call', name: 'translate', ordinal: 0 }],
-    [{ kind: 'call', name: 'translate', ordinal: 0 }, { kind: 'body', name: '$body', ordinal: 0 }],
-    [{ kind: 'call', name: 'translate', ordinal: 0 }, { kind: 'body', name: '$body', ordinal: 0 }, { kind: 'call', name: 'union', ordinal: 0 }],
-    [{ kind: 'call', name: 'translate', ordinal: 0 }, { kind: 'body', name: '$body', ordinal: 0 }, { kind: 'call', name: 'union', ordinal: 0 }, { kind: 'body', name: '$body', ordinal: 0 }],
-    [{ kind: 'call', name: 'translate', ordinal: 0 }, { kind: 'body', name: '$body', ordinal: 0 }, { kind: 'call', name: 'union', ordinal: 0 }, { kind: 'body', name: '$body', ordinal: 0 }, { kind: 'call', name: 'cube', ordinal: 0 }],
-    [{ kind: 'call', name: 'translate', ordinal: 0 }, { kind: 'body', name: '$body', ordinal: 0 }, { kind: 'call', name: 'union', ordinal: 0 }, { kind: 'body', name: '$body', ordinal: 0 }, { kind: 'call', name: 'square', ordinal: 0 }],
+    [
+      { kind: 'call', name: 'translate', ordinal: 0 },
+      { kind: 'body', name: '$body', ordinal: 0 },
+    ],
+    [
+      { kind: 'call', name: 'translate', ordinal: 0 },
+      { kind: 'body', name: '$body', ordinal: 0 },
+      { kind: 'call', name: 'union', ordinal: 0 },
+    ],
+    [
+      { kind: 'call', name: 'translate', ordinal: 0 },
+      { kind: 'body', name: '$body', ordinal: 0 },
+      { kind: 'call', name: 'union', ordinal: 0 },
+      { kind: 'body', name: '$body', ordinal: 0 },
+    ],
+    [
+      { kind: 'call', name: 'translate', ordinal: 0 },
+      { kind: 'body', name: '$body', ordinal: 0 },
+      { kind: 'call', name: 'union', ordinal: 0 },
+      { kind: 'body', name: '$body', ordinal: 0 },
+      { kind: 'call', name: 'cube', ordinal: 0 },
+    ],
+    [
+      { kind: 'call', name: 'translate', ordinal: 0 },
+      { kind: 'body', name: '$body', ordinal: 0 },
+      { kind: 'call', name: 'union', ordinal: 0 },
+      { kind: 'body', name: '$body', ordinal: 0 },
+      { kind: 'call', name: 'square', ordinal: 0 },
+    ],
   ]
   const operationIds = paths.map(referenceSemanticOperationIdV1)
   const parents: Array<number | null> = [null, 0, 1, 2, 3, 3]
   const occurrenceIds: string[] = []
   for (let index = 0; index < paths.length; index++) {
     const parent = parents[index]
-    occurrenceIds.push(referenceSemanticOccurrenceIdV1(
-      parent === null ? null : occurrenceIds[parent],
-      parent === null ? null : occurrenceIds[parent],
-      operationIds[index],
-      [],
-    ))
+    occurrenceIds.push(
+      referenceSemanticOccurrenceIdV1(
+        parent === null ? null : occurrenceIds[parent],
+        parent === null ? null : occurrenceIds[parent],
+        operationIds[index],
+        [],
+      ),
+    )
   }
   const program = makeReferenceSemanticProgramV1()
   program.source = referenceSemanticSourceDescriptorV1(source)
@@ -989,8 +1686,30 @@ function makeAncestorPostChildTerminalFixture(): { program: ReferenceSemanticPro
     sceneEntityId: id >= 4 ? referenceSemanticSceneEntityIdV1(occurrenceIds[id], 0) : null,
   }))
   program.core.nodes = [
-    { id: 0, kind: 'box', valueType: { geometryKind: 'solid-set', space: 'd3', representation: 'mesh', evidence: { tag: 'representation-preserving' } }, size: [1, 1, 1], center: false },
-    { id: 1, kind: 'rectangle', valueType: { geometryKind: 'region', space: 'd2', representation: 'mesh', evidence: { tag: 'representation-preserving' } }, size: [1, 1], center: false },
+    {
+      id: 0,
+      kind: 'box',
+      valueType: {
+        geometryKind: 'solid-set',
+        space: 'd3',
+        representation: 'mesh',
+        evidence: { tag: 'representation-preserving' },
+      },
+      size: [1, 1, 1],
+      center: false,
+    },
+    {
+      id: 1,
+      kind: 'rectangle',
+      valueType: {
+        geometryKind: 'region',
+        space: 'd2',
+        representation: 'mesh',
+        evidence: { tag: 'representation-preserving' },
+      },
+      size: [1, 1],
+      center: false,
+    },
   ]
   program.core.execution = {
     version: 'semantic-execution-v2',
@@ -1000,28 +1719,35 @@ function makeAncestorPostChildTerminalFixture(): { program: ReferenceSemanticPro
       tag: 'legacy-language-error',
       occurrence: 2,
       diagnosticTemplate: 0,
-      prefixFrontier: [{ root: 0, ownerOccurrence: 4 }, { root: 1, ownerOccurrence: 5 }],
+      prefixFrontier: [
+        { root: 0, ownerOccurrence: 4 },
+        { root: 1, ownerOccurrence: 5 },
+      ],
     },
   }
   program.core.result = { tag: 'empty', type: 'never' }
   program.core.declaredCapabilities = []
-  program.core.diagnosticTemplates = [{
-    id: 0,
-    code: 'LEGACY_LANGUAGE_ERROR',
-    severity: 'error',
-    operation: 2,
-    arguments: [
-      { name: 'errorName', value: { tag: 'string', value: 'OpenSCADParseError' } },
-      { name: 'detailSha256', value: { tag: 'string', value: sha256(new TextEncoder().encode(detail)) } },
-    ],
-  }]
+  program.core.diagnosticTemplates = [
+    {
+      id: 0,
+      code: 'LEGACY_LANGUAGE_ERROR',
+      severity: 'error',
+      operation: 2,
+      arguments: [
+        { name: 'errorName', value: { tag: 'string', value: 'OpenSCADParseError' } },
+        { name: 'detailSha256', value: { tag: 'string', value: sha256(new TextEncoder().encode(detail)) } },
+      ],
+    },
+  ]
   program.provenance = names.map((name, operation) => {
     const token = name === '$body' ? (operation === 1 ? 'translate' : 'union') : name
     const start = source.indexOf(token)
     return { operation, span: { start, end: start + token.length }, label: `${name}()` }
   })
   program.tessellationIntents = []
-  program.diagnostics = [{ template: 0, message: detail, span: { start: source.indexOf('union'), end: source.indexOf('union') + 1 } }]
+  program.diagnostics = [
+    { template: 0, message: detail, span: { start: source.indexOf('union'), end: source.indexOf('union') + 1 } },
+  ]
   program.core.capabilityClosure = referenceSemanticCapabilityClosureV1(program.core)
   return { program, source }
 }
@@ -1051,7 +1777,17 @@ function makeActiveAncestorDifferenceTerminalFixture(): {
   ]
   const operationIds = paths.map(referenceSemanticOperationIdV1)
   const names = ['difference', '$body', 'group', '$body', 'cube', 'sphere', 'assert', '$body', 'cube']
-  const categories = ['boolean', 'control', 'control', 'control', 'geometry', 'geometry', 'assertion', 'control', 'geometry']
+  const categories = [
+    'boolean',
+    'control',
+    'control',
+    'control',
+    'geometry',
+    'geometry',
+    'assertion',
+    'control',
+    'geometry',
+  ]
   const parents: Array<number | null> = [null, 0, 1, 2, 3, 3, 1, 6, 7]
   const program = makeReferenceSemanticProgramV1()
   program.source = referenceSemanticSourceDescriptorV1(source)
@@ -1074,12 +1810,14 @@ function makeActiveAncestorDifferenceTerminalFixture(): {
   const occurrenceIds: string[] = []
   for (let id = 0; id <= 6; id++) {
     const parent = parents[id]
-    occurrenceIds.push(referenceSemanticOccurrenceIdV1(
-      parent === null ? null : occurrenceIds[parent],
-      parent === null ? null : occurrenceIds[parent],
-      operationIds[id],
-      id === 6 ? assertSlots : [],
-    ))
+    occurrenceIds.push(
+      referenceSemanticOccurrenceIdV1(
+        parent === null ? null : occurrenceIds[parent],
+        parent === null ? null : occurrenceIds[parent],
+        operationIds[id],
+        id === 6 ? assertSlots : [],
+      ),
+    )
   }
   program.core.occurrences = names.slice(0, 7).map((_, id) => {
     const node = id === 4 ? 0 : id === 5 ? 1 : null
@@ -1119,29 +1857,31 @@ function makeActiveAncestorDifferenceTerminalFixture(): {
   }
   program.core.result = { tag: 'empty', type: 'never' }
   program.core.declaredCapabilities = []
-  program.core.diagnosticTemplates = [{
-    id: 0,
-    code: 'LEGACY_LANGUAGE_ERROR',
-    severity: 'error',
-    operation: 6,
-    arguments: [
-      { name: 'errorName', value: { tag: 'string', value: 'OpenSCADParseError' } },
-      { name: 'detailSha256', value: { tag: 'string', value: sha256(new TextEncoder().encode(detail)) } },
-    ],
-  }]
+  program.core.diagnosticTemplates = [
+    {
+      id: 0,
+      code: 'LEGACY_LANGUAGE_ERROR',
+      severity: 'error',
+      operation: 6,
+      arguments: [
+        { name: 'errorName', value: { tag: 'string', value: 'OpenSCADParseError' } },
+        { name: 'detailSha256', value: { tag: 'string', value: sha256(new TextEncoder().encode(detail)) } },
+      ],
+    },
+  ]
   program.provenance = names.map((name, operation) => {
-    const token = name === '$body'
-      ? operation === 1 ? 'difference' : operation === 3 ? 'group' : 'assert'
-      : name
+    const token = name === '$body' ? (operation === 1 ? 'difference' : operation === 3 ? 'group' : 'assert') : name
     const start = operation === 8 ? source.lastIndexOf('cube') : source.indexOf(token)
     return { operation, span: { start, end: start + token.length }, label: `${name}()` }
   })
   program.tessellationIntents = []
-  program.diagnostics = [{
-    template: 0,
-    message: detail,
-    span: { start: source.indexOf('assert'), end: source.indexOf('assert') + 1 },
-  }]
+  program.diagnostics = [
+    {
+      template: 0,
+      message: detail,
+      span: { start: source.indexOf('assert'), end: source.indexOf('assert') + 1 },
+    },
+  ]
   program.core.capabilityClosure = referenceSemanticCapabilityClosureV1(program.core)
   return { program, source }
 }
@@ -1149,10 +1889,7 @@ function makeActiveAncestorDifferenceTerminalFixture(): {
 function makeDuplicateOrdinalFixture(): ReferenceSemanticProgramV1 {
   const program = makeReferenceSemanticProgramV1()
   const parentOperation = program.core.operations[2]
-  const structuralPath = [
-    ...clone(parentOperation.structuralPath),
-    { kind: 'control', name: 'group', ordinal: 0 },
-  ]
+  const structuralPath = [...clone(parentOperation.structuralPath), { kind: 'control', name: 'group', ordinal: 0 }]
   const operationId = referenceSemanticOperationIdV1(structuralPath)
   program.core.operations.push({
     id: 5,
@@ -1171,11 +1908,13 @@ function makeDuplicateOrdinalFixture(): ReferenceSemanticProgramV1 {
     label: 'group()',
   })
   for (const duplicateOrdinal of [0, 1]) {
-    const dynamicSlots = [{
-      name: 'repeat',
-      value: { tag: 'number', value: 7 },
-      duplicateOrdinal,
-    }]
+    const dynamicSlots = [
+      {
+        name: 'repeat',
+        value: { tag: 'number', value: 7 },
+        duplicateOrdinal,
+      },
+    ]
     const parent = program.core.occurrences[2]
     const index = program.core.occurrences.length
     program.core.occurrences.push({
@@ -1200,11 +1939,13 @@ function makeDuplicateOrdinalFixture(): ReferenceSemanticProgramV1 {
 
 function makeSiblingIdentityDonationFixture(): ReferenceSemanticProgramV1 {
   const program = makeReferenceSemanticProgramV1()
-  const dynamicSlots = [{
-    name: 'branch',
-    value: { tag: 'string', value: 'sibling-producer' },
-    duplicateOrdinal: 0,
-  }]
+  const dynamicSlots = [
+    {
+      name: 'branch',
+      value: { tag: 'string', value: 'sibling-producer' },
+      duplicateOrdinal: 0,
+    },
+  ]
   const parent = program.core.occurrences[0]
   program.core.occurrences.push({
     id: 5,
@@ -1229,16 +1970,9 @@ function makeSiblingIdentityDonationFixture(): ReferenceSemanticProgramV1 {
 function makeSharedPrimitiveNodeFixture(): ReferenceSemanticProgramV1 {
   const program = makeReferenceSemanticProgramV1()
   const firstCube = program.core.operations[3]
-  const path = [
-    ...clone(program.core.operations[2].structuralPath),
-    { kind: 'call', name: 'cube', ordinal: 1 },
-  ]
+  const path = [...clone(program.core.operations[2].structuralPath), { kind: 'call', name: 'cube', ordinal: 1 }]
   const operationId = referenceSemanticOperationIdV1(path)
-  const ambiguityGroup = referenceSemanticAmbiguityGroupIdV1(
-    firstCube.structuralPath.slice(0, -1),
-    'geometry',
-    'cube',
-  )
+  const ambiguityGroup = referenceSemanticAmbiguityGroupIdV1(firstCube.structuralPath.slice(0, -1), 'geometry', 'cube')
   firstCube.identityEvidence = 'same-name-positional'
   firstCube.ambiguityGroup = ambiguityGroup
   program.core.operations.push({
@@ -1254,12 +1988,7 @@ function makeSharedPrimitiveNodeFixture(): ReferenceSemanticProgramV1 {
   })
   program.core.nodes[2].inputs = [0, 1, 0]
   const parent = program.core.occurrences[2]
-  const occurrenceId = referenceSemanticOccurrenceIdV1(
-    parent.occurrenceId,
-    parent.occurrenceId,
-    operationId,
-    [],
-  )
+  const occurrenceId = referenceSemanticOccurrenceIdV1(parent.occurrenceId, parent.occurrenceId, operationId, [])
   program.core.occurrences.push({
     id: 5,
     occurrenceId,
@@ -1313,26 +2042,89 @@ function makeLegacyLinearExtrudeFixture(scale: unknown): ReferenceSemanticProgra
   ]
   const paths = [
     [{ kind: 'module', name: 'scene', ordinal: 0 }],
-    [{ kind: 'module', name: 'scene', ordinal: 0 }, { kind: 'call', name: 'linear_extrude', ordinal: 0 }],
-    [{ kind: 'module', name: 'scene', ordinal: 0 }, { kind: 'call', name: 'linear_extrude', ordinal: 0 }, { kind: 'call', name: 'square', ordinal: 0 }],
+    [
+      { kind: 'module', name: 'scene', ordinal: 0 },
+      { kind: 'call', name: 'linear_extrude', ordinal: 0 },
+    ],
+    [
+      { kind: 'module', name: 'scene', ordinal: 0 },
+      { kind: 'call', name: 'linear_extrude', ordinal: 0 },
+      { kind: 'call', name: 'square', ordinal: 0 },
+    ],
   ]
   const ids = paths.map(referenceSemanticOperationIdV1)
   program.core.operations = [
-    { id: 0, operationId: ids[0], parent: null, childOrdinal: 0, name: 'scene', category: 'module', structuralPath: paths[0], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 1, operationId: ids[1], parent: 0, childOrdinal: 0, name: 'linear_extrude', category: 'geometry', structuralPath: paths[1], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 2, operationId: ids[2], parent: 1, childOrdinal: 0, name: 'square', category: 'geometry', structuralPath: paths[2], identityEvidence: 'structural-unique', ambiguityGroup: null },
+    {
+      id: 0,
+      operationId: ids[0],
+      parent: null,
+      childOrdinal: 0,
+      name: 'scene',
+      category: 'module',
+      structuralPath: paths[0],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 1,
+      operationId: ids[1],
+      parent: 0,
+      childOrdinal: 0,
+      name: 'linear_extrude',
+      category: 'geometry',
+      structuralPath: paths[1],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 2,
+      operationId: ids[2],
+      parent: 1,
+      childOrdinal: 0,
+      name: 'square',
+      category: 'geometry',
+      structuralPath: paths[2],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
   ]
-  const occurrenceIds = [
-    referenceSemanticOccurrenceIdV1(null, null, ids[0], []),
-    '',
-    '',
-  ]
+  const occurrenceIds = [referenceSemanticOccurrenceIdV1(null, null, ids[0], []), '', '']
   occurrenceIds[1] = referenceSemanticOccurrenceIdV1(occurrenceIds[0], occurrenceIds[0], ids[1], [])
   occurrenceIds[2] = referenceSemanticOccurrenceIdV1(occurrenceIds[1], occurrenceIds[1], ids[2], [])
   program.core.occurrences = [
-    { id: 0, occurrenceId: occurrenceIds[0], operation: 0, parent: null, staticParent: null, dynamicSlots: [], node: null, outputOrdinal: null, sceneEntityId: null },
-    { id: 1, occurrenceId: occurrenceIds[1], operation: 1, parent: 0, staticParent: 0, dynamicSlots: [], node: 1, outputOrdinal: 0, sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[1], 0) },
-    { id: 2, occurrenceId: occurrenceIds[2], operation: 2, parent: 1, staticParent: 1, dynamicSlots: [], node: 0, outputOrdinal: 0, sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[2], 0) },
+    {
+      id: 0,
+      occurrenceId: occurrenceIds[0],
+      operation: 0,
+      parent: null,
+      staticParent: null,
+      dynamicSlots: [],
+      node: null,
+      outputOrdinal: null,
+      sceneEntityId: null,
+    },
+    {
+      id: 1,
+      occurrenceId: occurrenceIds[1],
+      operation: 1,
+      parent: 0,
+      staticParent: 0,
+      dynamicSlots: [],
+      node: 1,
+      outputOrdinal: 0,
+      sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[1], 0),
+    },
+    {
+      id: 2,
+      occurrenceId: occurrenceIds[2],
+      operation: 2,
+      parent: 1,
+      staticParent: 1,
+      dynamicSlots: [],
+      node: 0,
+      outputOrdinal: 0,
+      sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceIds[2], 0),
+    },
   ]
   program.core.result = {
     tag: 'single',
@@ -1378,16 +2170,86 @@ function makePartitionedDifferenceFixture(): ReferenceSemanticProgramV1 {
   const operationIds = paths.map(referenceSemanticOperationIdV1)
   const groupAmbiguity = referenceSemanticAmbiguityGroupIdV1(body, 'control', 'group')
   const specifications = [
-    { parent: null, childOrdinal: 0, name: 'difference', category: 'boolean', identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { parent: 0, childOrdinal: 0, name: '$body', category: 'control', identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { parent: 1, childOrdinal: 0, name: 'group', category: 'control', identityEvidence: 'same-name-positional', ambiguityGroup: groupAmbiguity },
-    { parent: 2, childOrdinal: 0, name: '$body', category: 'control', identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { parent: 3, childOrdinal: 0, name: 'cube', category: 'geometry', identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { parent: 3, childOrdinal: 0, name: 'sphere', category: 'geometry', identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { parent: 1, childOrdinal: 1, name: 'group', category: 'control', identityEvidence: 'same-name-positional', ambiguityGroup: groupAmbiguity },
-    { parent: 6, childOrdinal: 0, name: '$body', category: 'control', identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { parent: 7, childOrdinal: 0, name: 'cube', category: 'geometry', identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { parent: 7, childOrdinal: 0, name: 'sphere', category: 'geometry', identityEvidence: 'structural-unique', ambiguityGroup: null },
+    {
+      parent: null,
+      childOrdinal: 0,
+      name: 'difference',
+      category: 'boolean',
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      parent: 0,
+      childOrdinal: 0,
+      name: '$body',
+      category: 'control',
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      parent: 1,
+      childOrdinal: 0,
+      name: 'group',
+      category: 'control',
+      identityEvidence: 'same-name-positional',
+      ambiguityGroup: groupAmbiguity,
+    },
+    {
+      parent: 2,
+      childOrdinal: 0,
+      name: '$body',
+      category: 'control',
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      parent: 3,
+      childOrdinal: 0,
+      name: 'cube',
+      category: 'geometry',
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      parent: 3,
+      childOrdinal: 0,
+      name: 'sphere',
+      category: 'geometry',
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      parent: 1,
+      childOrdinal: 1,
+      name: 'group',
+      category: 'control',
+      identityEvidence: 'same-name-positional',
+      ambiguityGroup: groupAmbiguity,
+    },
+    {
+      parent: 6,
+      childOrdinal: 0,
+      name: '$body',
+      category: 'control',
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      parent: 7,
+      childOrdinal: 0,
+      name: 'cube',
+      category: 'geometry',
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      parent: 7,
+      childOrdinal: 0,
+      name: 'sphere',
+      category: 'geometry',
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
   ]
   program.core.operations = specifications.map((specification, id) => ({
     id,
@@ -1416,12 +2278,7 @@ function makePartitionedDifferenceFixture(): ReferenceSemanticProgramV1 {
   program.core.occurrences = specifications.map((_, id) => {
     const parent = parentRows[id]
     const parentId = parent === null ? null : occurrenceIds[parent]
-    const occurrenceId = referenceSemanticOccurrenceIdV1(
-      parentId,
-      parentId,
-      operationIds[id],
-      [],
-    )
+    const occurrenceId = referenceSemanticOccurrenceIdV1(parentId, parentId, operationIds[id], [])
     occurrenceIds.push(occurrenceId)
     const node = nodeRows[id]
     return {
@@ -1475,15 +2332,78 @@ function makeChildrenContinuationFixture(): ReferenceSemanticProgramV1 {
   const operationIds = paths.map(referenceSemanticOperationIdV1)
   const wrapAmbiguity = referenceSemanticAmbiguityGroupIdV1([], 'module', 'wrap')
   const specifications = [
-    { parent: null, childOrdinal: 0, name: 'wrap', category: 'module', identityEvidence: 'same-name-positional', ambiguityGroup: wrapAmbiguity },
-    { parent: 0, childOrdinal: 0, name: '$body', category: 'control', identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { parent: 1, childOrdinal: 0, name: 'translate', category: 'transform', identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { parent: 2, childOrdinal: 0, name: '$body', category: 'control', identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { parent: 3, childOrdinal: 0, name: 'children', category: 'control', identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { parent: null, childOrdinal: 1, name: 'wrap', category: 'module', identityEvidence: 'same-name-positional', ambiguityGroup: wrapAmbiguity },
-    { parent: 5, childOrdinal: 0, name: '$body', category: 'control', identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { parent: 6, childOrdinal: 0, name: '$expansion', category: 'control', identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { parent: 7, childOrdinal: 0, name: 'cube', category: 'geometry', identityEvidence: 'structural-unique', ambiguityGroup: null },
+    {
+      parent: null,
+      childOrdinal: 0,
+      name: 'wrap',
+      category: 'module',
+      identityEvidence: 'same-name-positional',
+      ambiguityGroup: wrapAmbiguity,
+    },
+    {
+      parent: 0,
+      childOrdinal: 0,
+      name: '$body',
+      category: 'control',
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      parent: 1,
+      childOrdinal: 0,
+      name: 'translate',
+      category: 'transform',
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      parent: 2,
+      childOrdinal: 0,
+      name: '$body',
+      category: 'control',
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      parent: 3,
+      childOrdinal: 0,
+      name: 'children',
+      category: 'control',
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      parent: null,
+      childOrdinal: 1,
+      name: 'wrap',
+      category: 'module',
+      identityEvidence: 'same-name-positional',
+      ambiguityGroup: wrapAmbiguity,
+    },
+    {
+      parent: 5,
+      childOrdinal: 0,
+      name: '$body',
+      category: 'control',
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      parent: 6,
+      childOrdinal: 0,
+      name: '$expansion',
+      category: 'control',
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      parent: 7,
+      childOrdinal: 0,
+      name: 'cube',
+      category: 'geometry',
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
   ]
   program.core.operations = specifications.map((specification, id) => ({
     id,
@@ -1491,21 +2411,27 @@ function makeChildrenContinuationFixture(): ReferenceSemanticProgramV1 {
     ...specification,
     structuralPath: paths[id],
   }))
-  const parameterSlots = [{
-    name: 'x',
-    value: { tag: 'number', value: 1 },
-    duplicateOrdinal: 0,
-  }]
-  const evaluationSlots = [{
-    name: '$evaluation',
-    value: { tag: 'undefined' },
-    duplicateOrdinal: 0,
-  }]
-  const indexSlots = [{
-    name: '$index',
-    value: { tag: 'undefined' },
-    duplicateOrdinal: 0,
-  }]
+  const parameterSlots = [
+    {
+      name: 'x',
+      value: { tag: 'number', value: 1 },
+      duplicateOrdinal: 0,
+    },
+  ]
+  const evaluationSlots = [
+    {
+      name: '$evaluation',
+      value: { tag: 'undefined' },
+      duplicateOrdinal: 0,
+    },
+  ]
+  const indexSlots = [
+    {
+      name: '$index',
+      value: { tag: 'undefined' },
+      duplicateOrdinal: 0,
+    },
+  ]
   const parentRows: Array<number | null> = [null, 0, 1, 2, 3, 4, 5, 6, 7]
   const staticRows: Array<number | null> = [null, 0, null, 2, 3, 4, 5, 1, 7]
   const slots = [
@@ -1554,12 +2480,13 @@ function makeChildrenContinuationFixture(): ReferenceSemanticProgramV1 {
   }
   program.core.nodes = [
     { id: 0, kind: 'box', valueType: clone(valueType), size: [1, 1, 1], center: false },
-    { id: 1, kind: 'transform', valueType: clone(valueType), input: 0, matrix: [
-      1, 0, 0, 0,
-      0, 1, 0, 0,
-      0, 0, 1, 0,
-      1, 0, 0, 1,
-    ] },
+    {
+      id: 1,
+      kind: 'transform',
+      valueType: clone(valueType),
+      input: 0,
+      matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1],
+    },
   ]
   program.core.result = {
     tag: 'single',
@@ -1630,12 +2557,16 @@ const mutations: Mutation[] = [
   {
     name: 'unknown envelope field',
     family: 'field',
-    mutate: program => { program.engine = 'forged' },
+    mutate: program => {
+      program.engine = 'forged'
+    },
   },
   {
     name: 'unknown node field',
     family: 'field',
-    mutate: program => { program.core.nodes[0].provider = 'forged' },
+    mutate: program => {
+      program.core.nodes[0].provider = 'forged'
+    },
   },
   {
     name: 'accessor field at the trust boundary',
@@ -1643,7 +2574,9 @@ const mutations: Mutation[] = [
     mutate: program => {
       Object.defineProperty(program.core.nodes[0], 'size', {
         enumerable: true,
-        get: () => { throw new Error('accessor must not execute') },
+        get: () => {
+          throw new Error('accessor must not execute')
+        },
       })
     },
   },
@@ -1653,9 +2586,8 @@ const mutations: Mutation[] = [
     mutate: program => {
       const target = { tag: 'forged' }
       program.core.nodes[0].valueType.evidence = new Proxy(target, {
-        get: (object, property, receiver) => property === 'tag'
-          ? 'representation-preserving'
-          : Reflect.get(object, property, receiver),
+        get: (object, property, receiver) =>
+          property === 'tag' ? 'representation-preserving' : Reflect.get(object, property, receiver),
       })
     },
   },
@@ -1672,47 +2604,65 @@ const mutations: Mutation[] = [
   {
     name: 'non-plain object at the trust boundary',
     family: 'schema',
-    mutate: program => { Object.setPrototypeOf(program.core.nodes[0], { forged: true }) },
+    mutate: program => {
+      Object.setPrototypeOf(program.core.nodes[0], { forged: true })
+    },
   },
   {
     name: 'legacy dimension field smuggled beside valueType',
     family: 'field',
-    mutate: program => { program.core.nodes[0].dimension = 'solid3' },
+    mutate: program => {
+      program.core.nodes[0].dimension = 'solid3'
+    },
   },
   {
     name: 'valueType is missing its evidence field',
     family: 'field',
-    mutate: program => { delete program.core.nodes[0].valueType.evidence },
+    mutate: program => {
+      delete program.core.nodes[0].valueType.evidence
+    },
   },
   {
     name: 'unknown geometry kind',
     family: 'type',
-    mutate: program => { program.core.nodes[0].valueType.geometryKind = 'volume' },
+    mutate: program => {
+      program.core.nodes[0].valueType.geometryKind = 'volume'
+    },
   },
   {
     name: 'geometry kind and space are incompatible',
     family: 'type',
-    mutate: program => { program.core.nodes[0].valueType.space = 'd2' },
+    mutate: program => {
+      program.core.nodes[0].valueType.space = 'd2'
+    },
   },
   {
     name: 'primitive representation disagrees with its language contract',
     family: 'type',
-    mutate: program => { program.core.nodes[0].valueType.representation = 'analytic-brep' },
+    mutate: program => {
+      program.core.nodes[0].valueType.representation = 'analytic-brep'
+    },
   },
   {
     name: 'unknown representation evidence tag',
     family: 'field',
-    mutate: program => { program.core.nodes[0].valueType.evidence.tag = 'exact' },
+    mutate: program => {
+      program.core.nodes[0].valueType.evidence.tag = 'exact'
+    },
   },
   {
     name: 'representation evidence has no string discriminant',
     family: 'schema',
-    mutate: program => { program.core.nodes[0].valueType.evidence = {} },
+    mutate: program => {
+      program.core.nodes[0].valueType.evidence = {}
+    },
   },
   {
     name: 'certified representation claims preserving evidence',
     family: 'type',
-    mutate: program => { program.core.nodes[0].valueType.representation = 'certified-approx-brep' },
+    mutate: program => {
+      program.core.nodes[0].valueType.representation = 'certified-approx-brep'
+    },
   },
   {
     name: 'certified evidence has a noncanonical policy hash',
@@ -1741,37 +2691,51 @@ const mutations: Mutation[] = [
   {
     name: 'transform changes an input value axis',
     family: 'type',
-    mutate: program => { program.core.nodes[3].valueType.geometryKind = 'solid' },
+    mutate: program => {
+      program.core.nodes[3].valueType.geometryKind = 'solid'
+    },
   },
   {
     name: 'unknown result tag',
     family: 'field',
-    mutate: program => { program.core.result.tag = 'collection' },
+    mutate: program => {
+      program.core.result.tag = 'collection'
+    },
   },
   {
     name: 'result has no string discriminant',
     family: 'schema',
-    mutate: program => { delete program.core.result.tag },
+    mutate: program => {
+      delete program.core.result.tag
+    },
   },
   {
     name: 'unsupported core version',
     family: 'version',
-    mutate: program => { program.core.schemaVersion.major = 2 },
+    mutate: program => {
+      program.core.schemaVersion.major = 2
+    },
   },
   {
     name: 'negative zero geometry',
     family: 'number',
-    mutate: program => { program.core.nodes[0].size[0] = -0 },
+    mutate: program => {
+      program.core.nodes[0].size[0] = -0
+    },
   },
   {
     name: 'unknown node tag',
     family: 'field',
-    mutate: program => { program.core.nodes[0].kind = 'mesh' },
+    mutate: program => {
+      program.core.nodes[0].kind = 'mesh'
+    },
   },
   {
     name: 'forward DAG edge',
     family: 'reference',
-    mutate: program => { program.core.nodes[3].input = 3 },
+    mutate: program => {
+      program.core.nodes[3].input = 3
+    },
   },
   {
     name: 'unreachable trailing node',
@@ -1788,42 +2752,58 @@ const mutations: Mutation[] = [
   {
     name: 'forged static operation digest',
     family: 'identity',
-    mutate: program => { program.core.operations[3].operationId = `opv1:${'0'.repeat(64)}` },
+    mutate: program => {
+      program.core.operations[3].operationId = `opv1:${'0'.repeat(64)}`
+    },
   },
   {
     name: 'forged dynamic occurrence digest',
     family: 'identity',
-    mutate: program => { program.core.occurrences[4].occurrenceId = `occv1:${'0'.repeat(64)}` },
+    mutate: program => {
+      program.core.occurrences[4].occurrenceId = `occv1:${'0'.repeat(64)}`
+    },
   },
   {
     name: 'forged scene identity digest',
     family: 'identity',
-    mutate: program => { program.core.occurrences[3].sceneEntityId = `entity:v2:${'0'.repeat(64)}` },
+    mutate: program => {
+      program.core.occurrences[3].sceneEntityId = `entity:v2:${'0'.repeat(64)}`
+    },
   },
   {
     name: 'producer occurrence points at another node',
     family: 'identity',
-    mutate: program => { program.core.result.item.producerOccurrence = 2 },
+    mutate: program => {
+      program.core.result.item.producerOccurrence = 2
+    },
   },
   {
     name: 'identity occurrence has no scene identity',
     family: 'identity',
-    mutate: program => { program.core.result.item.identityOccurrence = 1 },
+    mutate: program => {
+      program.core.result.item.identityOccurrence = 1
+    },
   },
   {
     name: 'identity occurrence crosses a non-preserving Boolean node',
     family: 'identity',
-    mutate: program => { program.core.result.item.identityOccurrence = 3 },
+    mutate: program => {
+      program.core.result.item.identityOccurrence = 3
+    },
   },
   {
     name: 'unknown typed identity value',
     family: 'field',
-    mutate: program => { program.core.occurrences[4].dynamicSlots[0].value.tag = 'scalar' },
+    mutate: program => {
+      program.core.occurrences[4].dynamicSlots[0].value.tag = 'scalar'
+    },
   },
   {
     name: 'typed identity value has no string discriminant',
     family: 'schema',
-    mutate: program => { delete program.core.occurrences[4].dynamicSlots[0].value.tag },
+    mutate: program => {
+      delete program.core.occurrences[4].dynamicSlots[0].value.tag
+    },
   },
   {
     name: 'same-name sibling ordinal has a gap',
@@ -1842,11 +2822,7 @@ const mutations: Mutation[] = [
     mutate: program => {
       const first = program.core.operations[3]
       const duplicate = program.core.operations[4]
-      const group = referenceSemanticAmbiguityGroupIdV1(
-        first.structuralPath.slice(0, -1),
-        first.category,
-        first.name,
-      )
+      const group = referenceSemanticAmbiguityGroupIdV1(first.structuralPath.slice(0, -1), first.category, first.name)
       first.identityEvidence = 'same-name-positional'
       first.ambiguityGroup = group
       duplicate.name = first.name
@@ -1869,7 +2845,9 @@ const mutations: Mutation[] = [
   {
     name: 'missing inferred capability',
     family: 'closure',
-    mutate: program => { program.core.capabilityClosure.pop() },
+    mutate: program => {
+      program.core.capabilityClosure.pop()
+    },
   },
   {
     name: 'unsorted capability closure',
@@ -1884,19 +2862,23 @@ const mutations: Mutation[] = [
     name: 'legacy envelope carries tessellation policy',
     family: 'type',
     mutate: program => {
-      program.tessellationIntents = [{
-        occurrence: 4,
-        chordTolerance: 0.05,
-        angularToleranceDegrees: 5,
-        minSegments: 8,
-        maxSegments: 64,
-      }]
+      program.tessellationIntents = [
+        {
+          occurrence: 4,
+          chordTolerance: 0.05,
+          angularToleranceDegrees: 5,
+          minSegments: 8,
+          maxSegments: 64,
+        },
+      ]
     },
   },
   {
     name: 'source digest forgery',
     family: 'source',
-    mutate: program => { program.source.sha256 = '0'.repeat(64) },
+    mutate: program => {
+      program.source.sha256 = '0'.repeat(64)
+    },
   },
   {
     name: 'source routing requirements disagree with core',
@@ -1917,10 +2899,7 @@ const mutations: Mutation[] = [
 
 describe('independent SemanticProgram V1 oracle', () => {
   it('has no dependency edge into production source', () => {
-    const oracleSource = readFileSync(
-      new URL('./support/referenceSemanticProgramV1.ts', import.meta.url),
-      'utf8',
-    )
+    const oracleSource = readFileSync(new URL('./support/referenceSemanticProgramV1.ts', import.meta.url), 'utf8')
     const imports = oracleSource.match(/^\s*import\s+.*$/gm) ?? []
     expect(imports).toEqual(["import { createHash } from 'node:crypto'"])
     expect(oracleSource).not.toMatch(/(?:from\s*|import\s*\()['"][^'"]*src\//)
@@ -1934,14 +2913,8 @@ describe('independent SemanticProgram V1 oracle', () => {
 
   it('pins independent SPE1/SPC1 golden bytes and the domain-separated program hash', () => {
     const program = makeReferenceSemanticProgramV1()
-    expect(() => referenceValidateSemanticProgramV1(
-      program,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).not.toThrow()
-    expect(() => normalizeSemanticProgram(
-      program,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).not.toThrow()
+    expect(() => referenceValidateSemanticProgramV1(program, REFERENCE_SEMANTIC_SOURCE_V1)).not.toThrow()
+    expect(() => normalizeSemanticProgram(program, REFERENCE_SEMANTIC_SOURCE_V1)).not.toThrow()
 
     const referenceEnvelope = referenceEncodeSemanticProgramV1(program)
     const referenceCore = referenceEncodeSemanticProgramCoreV1(program)
@@ -1949,12 +2922,14 @@ describe('independent SemanticProgram V1 oracle', () => {
     const productionCore = encodeSemanticProgramCore(program)
     const tessellationPolicy = encodeSemanticTessellationPolicy(program)
 
-    expect(program.core.capabilityClosure).toEqual(expect.arrayContaining([
-      'geometry.kind.solid-set',
-      'geometry.space.d3',
-      'representation.mesh',
-      'evidence.representation-preserving',
-    ]))
+    expect(program.core.capabilityClosure).toEqual(
+      expect.arrayContaining([
+        'geometry.kind.solid-set',
+        'geometry.space.d3',
+        'representation.mesh',
+        'evidence.representation-preserving',
+      ]),
+    )
     expect(program.core.capabilityClosure).not.toContain('geometry.solid3')
 
     expect(productionEnvelope).toEqual(referenceEnvelope)
@@ -1967,9 +2942,10 @@ describe('independent SemanticProgram V1 oracle', () => {
     expect(referenceCore).toHaveLength(6_592)
     expect(sha256(referenceEnvelope)).toBe('20c8e1b773a60bbf9e84443b7ff6adca804ab35ce1805e1f48237564afa0c93e')
     expect(sha256(referenceCore)).toBe('aafc85582e01c55891e8424aabc67a29b09a2b4043fb778a53146928b26cd0f9')
-    expect(referenceSemanticProgramHashV1(program)).toBe('473c09ca5352e45e626398c642ddafe04647f38809f1140d4f24c970b102b260')
-    expect(referenceSemanticProgramHashV1(program.core))
-      .toBe(referenceSemanticProgramHashV1(program))
+    expect(referenceSemanticProgramHashV1(program)).toBe(
+      '473c09ca5352e45e626398c642ddafe04647f38809f1140d4f24c970b102b260',
+    )
+    expect(referenceSemanticProgramHashV1(program.core)).toBe(referenceSemanticProgramHashV1(program))
     expect(semanticProgramHash(program)).toBe(referenceSemanticProgramHashV1(program))
     expect(semanticProgramHash(program.core)).toBe(referenceSemanticProgramHashV1(program.core))
     expect(new TextDecoder().decode(referenceEnvelope.subarray(0, 4))).toBe('SPE1')
@@ -1993,19 +2969,49 @@ describe('independent SemanticProgram V1 oracle', () => {
     })
 
     const malformed = [
-      (() => { const program = clone(valid); program.schemaVersion.minor = 0; return program })(),
-      (() => { const program = clone(valid); program.core.schemaVersion.minor = 0; return program })(),
-      (() => { const program = clone(valid); program.core.requiredFeatures = []; return program })(),
-      (() => { const program = clone(valid); program.core.requiredFeatures = ['semantic.execution-v1']; return program })(),
-      (() => { const program = clone(valid); program.core.requiredFeatures = ['semantic.execution-v1', 'semantic.execution-v2']; return program })(),
-      (() => { const program = clone(valid); delete program.core.execution; return program })(),
-      (() => { const program = clone(valid); program.core.execution.version = 'semantic-execution-v1'; return program })(),
+      (() => {
+        const program = clone(valid)
+        program.schemaVersion.minor = 0
+        return program
+      })(),
+      (() => {
+        const program = clone(valid)
+        program.core.schemaVersion.minor = 0
+        return program
+      })(),
+      (() => {
+        const program = clone(valid)
+        program.core.requiredFeatures = []
+        return program
+      })(),
+      (() => {
+        const program = clone(valid)
+        program.core.requiredFeatures = ['semantic.execution-v1']
+        return program
+      })(),
+      (() => {
+        const program = clone(valid)
+        program.core.requiredFeatures = ['semantic.execution-v1', 'semantic.execution-v2']
+        return program
+      })(),
+      (() => {
+        const program = clone(valid)
+        delete program.core.execution
+        return program
+      })(),
+      (() => {
+        const program = clone(valid)
+        program.core.execution.version = 'semantic-execution-v1'
+        return program
+      })(),
     ]
     for (const program of malformed) {
-      expect(() => referenceValidateSemanticProgramV1(program, REFERENCE_SEMANTIC_SOURCE_V1))
-        .toThrow(ReferenceSemanticProgramError)
-      expect(() => normalizeSemanticProgram(program, REFERENCE_SEMANTIC_SOURCE_V1))
-        .toThrow(SemanticProgramValidationError)
+      expect(() => referenceValidateSemanticProgramV1(program, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+        ReferenceSemanticProgramError,
+      )
+      expect(() => normalizeSemanticProgram(program, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+        SemanticProgramValidationError,
+      )
     }
   })
 
@@ -2025,8 +3031,9 @@ describe('independent SemanticProgram V1 oracle', () => {
       const program = makeReferenceSemanticProgramV1()
       program.schemaVersion.minor = minor
       program.core.schemaVersion.minor = minor
-      expect(() => referenceValidateSemanticProgramV1(program, REFERENCE_SEMANTIC_SOURCE_V1))
-        .toThrow(ReferenceSemanticProgramError)
+      expect(() => referenceValidateSemanticProgramV1(program, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+        ReferenceSemanticProgramError,
+      )
       expectRelower(() => normalizeSemanticProgram(program, REFERENCE_SEMANTIC_SOURCE_V1))
 
       const envelope = referenceEncodeSemanticProgramV1(makeReferenceSemanticProgramV1())
@@ -2048,20 +3055,24 @@ describe('independent SemanticProgram V1 oracle', () => {
     for (const evaluationOrder of malformedOrders) {
       const program = makeReferenceSemanticProgramV1()
       program.core.execution.evaluationOrder = evaluationOrder
-      expect(() => referenceValidateSemanticProgramV1(program, REFERENCE_SEMANTIC_SOURCE_V1))
-        .toThrow(ReferenceSemanticProgramError)
-      expect(() => normalizeSemanticProgram(program, REFERENCE_SEMANTIC_SOURCE_V1))
-        .toThrow(SemanticProgramValidationError)
+      expect(() => referenceValidateSemanticProgramV1(program, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+        ReferenceSemanticProgramError,
+      )
+      expect(() => normalizeSemanticProgram(program, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+        SemanticProgramValidationError,
+      )
     }
   })
 
   it('rejects a topologically safe swap of authored sibling kernel calls', () => {
     const program = makeReferenceSemanticProgramV1()
     program.core.execution.evaluationOrder = [1, 0, 2, 3]
-    expect(() => referenceValidateSemanticProgramV1(program, REFERENCE_SEMANTIC_SOURCE_V1))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(program, REFERENCE_SEMANTIC_SOURCE_V1))
-      .toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(program, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      ReferenceSemanticProgramError,
+    )
+    expect(() => normalizeSemanticProgram(program, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      SemanticProgramValidationError,
+    )
   })
 
   it('rejects coherent node renumbering that hides a normal sibling schedule swap', () => {
@@ -2069,10 +3080,10 @@ describe('independent SemanticProgram V1 oracle', () => {
     coherentlyRenumberNodes(forged, [1, 0, 2, 3])
     expect(forged.core.execution.evaluationOrder).toEqual([0, 1, 2, 3])
     expect(forged.core.nodes[2].inputs).toEqual([1, 0])
-    expect(() => referenceValidateSemanticProgramV1(forged, REFERENCE_SEMANTIC_SOURCE_V1))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(forged, REFERENCE_SEMANTIC_SOURCE_V1))
-      .toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(forged, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      ReferenceSemanticProgramError,
+    )
+    expect(() => normalizeSemanticProgram(forged, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(SemanticProgramValidationError)
   })
 
   it('rejects coherent renumbering that moves a later published cube before an eager effect', () => {
@@ -2085,10 +3096,8 @@ describe('independent SemanticProgram V1 oracle', () => {
     expect(forged.core.execution.evaluationOrder).toEqual([0, 1, 2, 3])
     expect(forged.core.execution.discardedEffects[0].root).toBe(3)
     expect(forged.core.result.item.node).toBe(0)
-    expect(() => referenceValidateSemanticProgramV1(forged, fixture.source))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(forged, fixture.source))
-      .toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(forged, fixture.source)).toThrow(ReferenceSemanticProgramError)
+    expect(() => normalizeSemanticProgram(forged, fixture.source)).toThrow(SemanticProgramValidationError)
   })
 
   it('rejects coherent renumbering that reverses completed terminal-prefix siblings', () => {
@@ -2099,12 +3108,11 @@ describe('independent SemanticProgram V1 oracle', () => {
     const forged = clone(fixture.program)
     coherentlyRenumberNodes(forged, [1, 0])
     expect(forged.core.execution.evaluationOrder).toEqual([0, 1])
-    expect(forged.core.execution.terminal.prefixFrontier.map((entry: Record<string, any>) => entry.root))
-      .toEqual([0, 1])
-    expect(() => referenceValidateSemanticProgramV1(forged, fixture.source))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(forged, fixture.source))
-      .toThrow(SemanticProgramValidationError)
+    expect(forged.core.execution.terminal.prefixFrontier.map((entry: Record<string, any>) => entry.root)).toEqual([
+      0, 1,
+    ])
+    expect(() => referenceValidateSemanticProgramV1(forged, fixture.source)).toThrow(ReferenceSemanticProgramError)
+    expect(() => normalizeSemanticProgram(forged, fixture.source)).toThrow(SemanticProgramValidationError)
   })
 
   it('refuses flat-v0 structural defaults and requires fresh exact-source lowering', () => {
@@ -2122,8 +3130,7 @@ describe('independent SemanticProgram V1 oracle', () => {
       occurrences: [{ node: 0, span: { start: 0, end: source.length }, label: 'cube()' }],
       capabilities: [],
     }
-    expect(() => referenceValidateSemanticProgramV1(flatV0, source))
-      .toThrow(ReferenceSemanticProgramError)
+    expect(() => referenceValidateSemanticProgramV1(flatV0, source)).toThrow(ReferenceSemanticProgramError)
 
     let failure: unknown
     try {
@@ -2160,37 +3167,31 @@ describe('independent SemanticProgram V1 oracle', () => {
       span: { start: 0, end: nonEmptyBaseSource.length },
       label: `${operation.name}()`,
     }))
-    expect(() => referenceValidateSemanticProgramV1(forgedNonEmptyBase, nonEmptyBaseSource))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(forgedNonEmptyBase, nonEmptyBaseSource))
-      .toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(forgedNonEmptyBase, nonEmptyBaseSource)).toThrow(
+      ReferenceSemanticProgramError,
+    )
+    expect(() => normalizeSemanticProgram(forgedNonEmptyBase, nonEmptyBaseSource)).toThrow(
+      SemanticProgramValidationError,
+    )
 
     const forgedOwner = clone(valid.program)
     forgedOwner.core.execution.discardedEffects[0].ownerOccurrence = 1
-    expect(() => referenceValidateSemanticProgramV1(forgedOwner, valid.source))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(forgedOwner, valid.source))
-      .toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(forgedOwner, valid.source)).toThrow(ReferenceSemanticProgramError)
+    expect(() => normalizeSemanticProgram(forgedOwner, valid.source)).toThrow(SemanticProgramValidationError)
 
     const forgedRoot = clone(valid.program)
     forgedRoot.core.execution.discardedEffects[0].root = 1
-    expect(() => referenceValidateSemanticProgramV1(forgedRoot, valid.source))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(forgedRoot, valid.source))
-      .toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(forgedRoot, valid.source)).toThrow(ReferenceSemanticProgramError)
+    expect(() => normalizeSemanticProgram(forgedRoot, valid.source)).toThrow(SemanticProgramValidationError)
 
     const omitted = clone(valid.program)
     omitted.core.execution.discardedEffects = []
-    expect(() => referenceValidateSemanticProgramV1(omitted, valid.source))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(omitted, valid.source))
-      .toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(omitted, valid.source)).toThrow(ReferenceSemanticProgramError)
+    expect(() => normalizeSemanticProgram(omitted, valid.source)).toThrow(SemanticProgramValidationError)
 
     const brep = makeDiscardedDifferenceEffectFixture('openscad-viewer/brep-1')
-    expect(() => referenceValidateSemanticProgramV1(brep.program, brep.source))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(brep.program, brep.source))
-      .toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(brep.program, brep.source)).toThrow(ReferenceSemanticProgramError)
+    expect(() => normalizeSemanticProgram(brep.program, brep.source)).toThrow(SemanticProgramValidationError)
   })
 
   it('binds discarded cutter effects to exact authored kernel order', () => {
@@ -2198,10 +3199,8 @@ describe('independent SemanticProgram V1 oracle', () => {
 
     const reordered = clone(valid.program)
     reordered.core.execution.evaluationOrder = [1, 0, 2]
-    expect(() => referenceValidateSemanticProgramV1(reordered, valid.source))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(reordered, valid.source))
-      .toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(reordered, valid.source)).toThrow(ReferenceSemanticProgramError)
+    expect(() => normalizeSemanticProgram(reordered, valid.source)).toThrow(SemanticProgramValidationError)
   })
 
   it('admits 1001 independently owned eager effects under the node-derived cap', () => {
@@ -2224,25 +3223,51 @@ describe('independent SemanticProgram V1 oracle', () => {
     expect(() => normalizeSemanticProgram(admittedTypeError, valid.source)).not.toThrow()
 
     const mutations: Array<(program: ReferenceSemanticProgramV1) => void> = [
-      program => { program.core.execution.terminal.prefixFrontier = [] },
-      program => { program.core.execution.terminal.prefixFrontier[0].ownerOccurrence = null },
-      program => { program.core.execution.terminal.prefixFrontier[0].ownerOccurrence = 1 },
-      program => { program.core.execution.terminal.occurrence = 0 },
-      program => { program.core.execution.terminal.diagnosticTemplate = 1 },
-      program => { program.core.diagnosticTemplates[0].severity = 'warning' },
-      program => { program.core.diagnosticTemplates[0].code = 'ARBITRARY_ERROR' },
-      program => { program.core.diagnosticTemplates[0].operation = 0 },
-      program => { program.core.diagnosticTemplates[0].arguments[0].name = 'class' },
-      program => { program.core.diagnosticTemplates[0].arguments[0].value.value = 'Error' },
-      program => { program.core.diagnosticTemplates[0].arguments[1].value.value = '0'.repeat(63) },
       program => {
-        program.core.execution.discardedEffects = [{
-          tag: 'legacy-difference-cutters',
-          ownerOccurrence: 0,
-          root: 0,
-        }]
+        program.core.execution.terminal.prefixFrontier = []
       },
-      program => { program.core.execution.terminal = null },
+      program => {
+        program.core.execution.terminal.prefixFrontier[0].ownerOccurrence = null
+      },
+      program => {
+        program.core.execution.terminal.prefixFrontier[0].ownerOccurrence = 1
+      },
+      program => {
+        program.core.execution.terminal.occurrence = 0
+      },
+      program => {
+        program.core.execution.terminal.diagnosticTemplate = 1
+      },
+      program => {
+        program.core.diagnosticTemplates[0].severity = 'warning'
+      },
+      program => {
+        program.core.diagnosticTemplates[0].code = 'ARBITRARY_ERROR'
+      },
+      program => {
+        program.core.diagnosticTemplates[0].operation = 0
+      },
+      program => {
+        program.core.diagnosticTemplates[0].arguments[0].name = 'class'
+      },
+      program => {
+        program.core.diagnosticTemplates[0].arguments[0].value.value = 'Error'
+      },
+      program => {
+        program.core.diagnosticTemplates[0].arguments[1].value.value = '0'.repeat(63)
+      },
+      program => {
+        program.core.execution.discardedEffects = [
+          {
+            tag: 'legacy-difference-cutters',
+            ownerOccurrence: 0,
+            root: 0,
+          },
+        ]
+      },
+      program => {
+        program.core.execution.terminal = null
+      },
       program => {
         program.core.result = {
           tag: 'single',
@@ -2253,34 +3278,30 @@ describe('independent SemanticProgram V1 oracle', () => {
     for (const mutate of mutations) {
       const forged = clone(valid.program)
       mutate(forged)
-      expect(() => referenceValidateSemanticProgramV1(forged, valid.source))
-        .toThrow(ReferenceSemanticProgramError)
-      expect(() => normalizeSemanticProgram(forged, valid.source))
-        .toThrow(SemanticProgramValidationError)
+      expect(() => referenceValidateSemanticProgramV1(forged, valid.source)).toThrow(ReferenceSemanticProgramError)
+      expect(() => normalizeSemanticProgram(forged, valid.source)).toThrow(SemanticProgramValidationError)
     }
   })
 
-  it.each([
-    'difference-mix',
-    'union-mix',
-    'linear-extrude-solid',
-    'partial-rotate',
-  ] as const)('admits a self-consistent post-child active-subtree terminal: %s', kind => {
-    const fixture = makePostChildTerminalFixture(kind)
-    const terminal = fixture.program.core.execution.terminal
-    expect(terminal.occurrence).toBe(0)
-    expect(fixture.program.core.occurrences.length).toBeGreaterThan(terminal.occurrence + 1)
-    if (kind === 'partial-rotate') {
-      expect(fixture.program.core.occurrences[terminal.occurrence]).toMatchObject({
-        node: 2,
-        outputOrdinal: 0,
-      })
-    }
-    expect(() => referenceValidateSemanticProgramV1(fixture.program, fixture.source)).not.toThrow()
-    expect(() => normalizeSemanticProgram(fixture.program, fixture.source)).not.toThrow()
-    expect(encodeSemanticProgram(fixture.program)).toEqual(referenceEncodeSemanticProgramV1(fixture.program))
-    expect(semanticProgramHash(fixture.program)).toBe(referenceSemanticProgramHashV1(fixture.program))
-  })
+  it.each(['difference-mix', 'union-mix', 'linear-extrude-solid', 'partial-rotate'] as const)(
+    'admits a self-consistent post-child active-subtree terminal: %s',
+    kind => {
+      const fixture = makePostChildTerminalFixture(kind)
+      const terminal = fixture.program.core.execution.terminal
+      expect(terminal.occurrence).toBe(0)
+      expect(fixture.program.core.occurrences.length).toBeGreaterThan(terminal.occurrence + 1)
+      if (kind === 'partial-rotate') {
+        expect(fixture.program.core.occurrences[terminal.occurrence]).toMatchObject({
+          node: 2,
+          outputOrdinal: 0,
+        })
+      }
+      expect(() => referenceValidateSemanticProgramV1(fixture.program, fixture.source)).not.toThrow()
+      expect(() => normalizeSemanticProgram(fixture.program, fixture.source)).not.toThrow()
+      expect(encodeSemanticProgram(fixture.program)).toEqual(referenceEncodeSemanticProgramV1(fixture.program))
+      expect(semanticProgramHash(fixture.program)).toBe(referenceSemanticProgramHashV1(fixture.program))
+    },
+  )
 
   it.each([
     'difference(){cube(1);square(1);}',
@@ -2316,9 +3337,11 @@ describe('independent SemanticProgram V1 oracle', () => {
     const artifact = lowerOpenSCADToSemanticProgram(source, { captureTerminalFailure: true })
     expect(artifact.terminalError).toBeNull()
     expect(artifact.program.core.operations.some(operation => operation.name === unsupported)).toBe(true)
-    expect(artifact.program.core.occurrences.some(occurrence => (
-      artifact.program.core.operations[occurrence.operation].name === unsupported
-    ))).toBe(false)
+    expect(
+      artifact.program.core.occurrences.some(
+        occurrence => artifact.program.core.operations[occurrence.operation].name === unsupported,
+      ),
+    ).toBe(false)
     expect(() => referenceValidateSemanticProgramV1(artifact.program, source)).not.toThrow()
     expect(() => normalizeSemanticProgram(artifact.program, source)).not.toThrow()
   })
@@ -2332,10 +3355,8 @@ describe('independent SemanticProgram V1 oracle', () => {
     forged.core.operations[0].structuralPath = path
     forged.provenance[0].label = 'text()'
     recomputeOccurrence(forged, 0)
-    expect(() => referenceValidateSemanticProgramV1(forged, source))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(forged, source))
-      .toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(forged, source)).toThrow(ReferenceSemanticProgramError)
+    expect(() => normalizeSemanticProgram(forged, source)).toThrow(SemanticProgramValidationError)
   })
 
   it('replays a completed base reducer before an active-ancestor cutter terminal', () => {
@@ -2356,8 +3377,7 @@ describe('independent SemanticProgram V1 oracle', () => {
     const artifact = lowerOpenSCADToSemanticProgram(fixture.source, { captureTerminalFailure: true })
     expect(artifact.terminalError).not.toBeNull()
     expect(artifact.program.core.execution.evaluationOrder).toEqual([0, 1, 2])
-    expect(artifact.program.core.execution.terminal?.prefixFrontier)
-      .toEqual([{ root: 2, ownerOccurrence: null }])
+    expect(artifact.program.core.execution.terminal?.prefixFrontier).toEqual([{ root: 2, ownerOccurrence: null }])
     expect(() => referenceValidateSemanticProgramV1(artifact.program, fixture.source)).not.toThrow()
   })
 
@@ -2379,14 +3399,15 @@ describe('independent SemanticProgram V1 oracle', () => {
       captureTerminalFailure: true,
     })
     expect(artifact.program.core.execution.evaluationOrder).toEqual(specification.order)
-    expect(artifact.program.core.nodes.map(node => (
-      node.kind === 'boolean' ? node.operation : node.kind
-    ))).toEqual(specification.kinds)
+    expect(artifact.program.core.nodes.map(node => (node.kind === 'boolean' ? node.operation : node.kind))).toEqual(
+      specification.kinds,
+    )
     if (specification.terminalRoot === null) {
       expect(artifact.program.core.execution.terminal).toBeNull()
     } else {
-      expect(artifact.program.core.execution.terminal?.prefixFrontier)
-        .toEqual([{ root: specification.terminalRoot, ownerOccurrence: null }])
+      expect(artifact.program.core.execution.terminal?.prefixFrontier).toEqual([
+        { root: specification.terminalRoot, ownerOccurrence: null },
+      ])
     }
     expect(() => referenceValidateSemanticProgramV1(artifact.program, specification.source)).not.toThrow()
     expect(() => normalizeSemanticProgram(artifact.program, specification.source)).not.toThrow()
@@ -2410,14 +3431,16 @@ describe('independent SemanticProgram V1 oracle', () => {
   it('propagates a post-child terminal through its unfinished runtime ancestor chain', () => {
     const fixture = makeAncestorPostChildTerminalFixture()
     expect(fixture.program.core.execution.terminal.occurrence).toBe(2)
-    expect(fixture.program.core.occurrences.slice(3).every((_: unknown, index: number) => {
-      let parent = index + 3
-      while (parent !== null) {
-        if (parent === 2) return true
-        parent = fixture.program.core.occurrences[parent].parent
-      }
-      return false
-    })).toBe(true)
+    expect(
+      fixture.program.core.occurrences.slice(3).every((_: unknown, index: number) => {
+        let parent = index + 3
+        while (parent !== null) {
+          if (parent === 2) return true
+          parent = fixture.program.core.occurrences[parent].parent
+        }
+        return false
+      }),
+    ).toBe(true)
     expect(() => referenceValidateSemanticProgramV1(fixture.program, fixture.source)).not.toThrow()
     expect(() => normalizeSemanticProgram(fixture.program, fixture.source)).not.toThrow()
   })
@@ -2427,30 +3450,26 @@ describe('independent SemanticProgram V1 oracle', () => {
     const forged = clone(fixture.program)
     forged.core.execution.terminal.occurrence = 0
     forged.core.diagnosticTemplates[0].operation = 0
-    expect(() => referenceValidateSemanticProgramV1(forged, fixture.source))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(forged, fixture.source))
-      .toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(forged, fixture.source)).toThrow(ReferenceSemanticProgramError)
+    expect(() => normalizeSemanticProgram(forged, fixture.source)).toThrow(SemanticProgramValidationError)
   })
 
   it('does not relax completed sibling production inside an active terminal subtree', () => {
     const fixture = makePostChildTerminalFixture('partial-rotate')
     const forged = clone(fixture.program)
     forged.core.occurrences[2].node = 1
-    expect(() => referenceValidateSemanticProgramV1(forged, fixture.source))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(forged, fixture.source))
-      .toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(forged, fixture.source)).toThrow(ReferenceSemanticProgramError)
+    expect(() => normalizeSemanticProgram(forged, fixture.source)).toThrow(SemanticProgramValidationError)
   })
 
   it('binds terminal interruption occurrence and diagnostic arguments into the core hash', () => {
     const valid = makeTerminalPrefixFixture()
     const deletedInterruption = clone(valid.program)
     deletedInterruption.core.occurrences.pop()
-    expect(() => referenceValidateSemanticProgramV1(deletedInterruption, valid.source))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(deletedInterruption, valid.source))
-      .toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(deletedInterruption, valid.source)).toThrow(
+      ReferenceSemanticProgramError,
+    )
+    expect(() => normalizeSemanticProgram(deletedInterruption, valid.source)).toThrow(SemanticProgramValidationError)
 
     const messageA = makeTerminalPrefixFixture('A')
     const messageB = makeTerminalPrefixFixture('B')
@@ -2458,8 +3477,7 @@ describe('independent SemanticProgram V1 oracle', () => {
     expect(() => referenceValidateSemanticProgramV1(messageB.program, messageB.source)).not.toThrow()
     expect(() => normalizeSemanticProgram(messageA.program, messageA.source)).not.toThrow()
     expect(() => normalizeSemanticProgram(messageB.program, messageB.source)).not.toThrow()
-    expect(referenceSemanticProgramHashV1(messageA.program))
-      .not.toBe(referenceSemanticProgramHashV1(messageB.program))
+    expect(referenceSemanticProgramHashV1(messageA.program)).not.toBe(referenceSemanticProgramHashV1(messageB.program))
     expect(semanticProgramHash(messageA.program)).toBe(referenceSemanticProgramHashV1(messageA.program))
     expect(semanticProgramHash(messageB.program)).toBe(referenceSemanticProgramHashV1(messageB.program))
   })
@@ -2468,11 +3486,9 @@ describe('independent SemanticProgram V1 oracle', () => {
     const first = makeReferenceSemanticProgramV1()
     const reordered = reverseObjectInsertionOrder(first) as ReferenceSemanticProgramV1
     referenceValidateSemanticProgramV1(reordered, REFERENCE_SEMANTIC_SOURCE_V1)
-    expect(referenceEncodeSemanticProgramV1(reordered))
-      .toEqual(referenceEncodeSemanticProgramV1(first))
+    expect(referenceEncodeSemanticProgramV1(reordered)).toEqual(referenceEncodeSemanticProgramV1(first))
     expect(encodeSemanticProgram(reordered)).toEqual(encodeSemanticProgram(first))
-    expect(referenceSemanticProgramHashV1(reordered))
-      .toBe(referenceSemanticProgramHashV1(first))
+    expect(referenceSemanticProgramHashV1(reordered)).toBe(referenceSemanticProgramHashV1(first))
   })
 
   it('bounds aggregate canonical string bytes before the 64 MiB frame ceiling', () => {
@@ -2495,23 +3511,18 @@ describe('independent SemanticProgram V1 oracle', () => {
     }))
     program.core.capabilityClosure = referenceSemanticCapabilityClosureV1(program.core)
 
-    expect(() => referenceValidateSemanticProgramV1(
-      program,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(
-      program,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(SemanticProgramValidationError)
-    expect(() => referenceEncodeSemanticProgramV1(program))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => encodeSemanticProgram(program))
-      .toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(program, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      ReferenceSemanticProgramError,
+    )
+    expect(() => normalizeSemanticProgram(program, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      SemanticProgramValidationError,
+    )
+    expect(() => referenceEncodeSemanticProgramV1(program)).toThrow(ReferenceSemanticProgramError)
+    expect(() => encodeSemanticProgram(program)).toThrow(SemanticProgramValidationError)
   })
 
   it('bounds source descriptors before UTF-8 encoding and hashing', () => {
-    expect(() => referenceSemanticSourceDescriptorV1('x'.repeat(250_001)))
-      .toThrow(ReferenceSemanticProgramError)
+    expect(() => referenceSemanticSourceDescriptorV1('x'.repeat(250_001))).toThrow(ReferenceSemanticProgramError)
   })
 
   it('keeps source-bound presentation outside SPC1 while core mutations enter the hash', () => {
@@ -2523,21 +3534,15 @@ describe('independent SemanticProgram V1 oracle', () => {
     referenceValidateSemanticProgramV1(presentationOnly, secondSource)
     normalizeSemanticProgram(presentationOnly, secondSource)
 
-    expect(referenceEncodeSemanticProgramCoreV1(presentationOnly))
-      .toEqual(referenceEncodeSemanticProgramCoreV1(first))
-    expect(encodeSemanticProgramCore(presentationOnly))
-      .toEqual(encodeSemanticProgramCore(first))
-    expect(referenceSemanticProgramHashV1(presentationOnly))
-      .toBe(referenceSemanticProgramHashV1(first))
-    expect(referenceEncodeSemanticProgramV1(presentationOnly))
-      .not.toEqual(referenceEncodeSemanticProgramV1(first))
+    expect(referenceEncodeSemanticProgramCoreV1(presentationOnly)).toEqual(referenceEncodeSemanticProgramCoreV1(first))
+    expect(encodeSemanticProgramCore(presentationOnly)).toEqual(encodeSemanticProgramCore(first))
+    expect(referenceSemanticProgramHashV1(presentationOnly)).toBe(referenceSemanticProgramHashV1(first))
+    expect(referenceEncodeSemanticProgramV1(presentationOnly)).not.toEqual(referenceEncodeSemanticProgramV1(first))
 
     const semanticChange = clone(first)
     semanticChange.core.result.item.color[0] = 0.5
-    expect(referenceSemanticProgramHashV1(semanticChange))
-      .not.toBe(referenceSemanticProgramHashV1(first))
-    expect(semanticProgramHash(semanticChange))
-      .toBe(referenceSemanticProgramHashV1(semanticChange))
+    expect(referenceSemanticProgramHashV1(semanticChange)).not.toBe(referenceSemanticProgramHashV1(first))
+    expect(semanticProgramHash(semanticChange)).toBe(referenceSemanticProgramHashV1(semanticChange))
   })
 
   it.each(mutations)('rejects $name in both validators', ({ family, mutate }) => {
@@ -2565,75 +3570,51 @@ describe('independent SemanticProgram V1 oracle', () => {
 
   it('rejects scene-identity swapping across multi-output node lineage', () => {
     const valid = makeMultiOutputFixture()
-    expect(() => referenceValidateSemanticProgramV1(
-      valid,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).not.toThrow()
-    expect(() => normalizeSemanticProgram(
-      valid,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).not.toThrow()
+    expect(() => referenceValidateSemanticProgramV1(valid, REFERENCE_SEMANTIC_SOURCE_V1)).not.toThrow()
+    expect(() => normalizeSemanticProgram(valid, REFERENCE_SEMANTIC_SOURCE_V1)).not.toThrow()
 
     const spoofed = clone(valid)
     const [first, second] = spoofed.core.result.items
-    ;[first.identityOccurrence, second.identityOccurrence] = [
-      second.identityOccurrence,
-      first.identityOccurrence,
-    ]
-    expect(() => referenceValidateSemanticProgramV1(
-      spoofed,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(
-      spoofed,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(SemanticProgramValidationError)
+    ;[first.identityOccurrence, second.identityOccurrence] = [second.identityOccurrence, first.identityOccurrence]
+    expect(() => referenceValidateSemanticProgramV1(spoofed, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      ReferenceSemanticProgramError,
+    )
+    expect(() => normalizeSemanticProgram(spoofed, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      SemanticProgramValidationError,
+    )
   })
 
   it('admits self-owned and canonical-first descendant identities for multi-output occurrence rows', () => {
     const selfOwned = makeCanonicalOccurrenceRowFixture()
     const selfOwnedItems = selfOwned.core.result.items
-    expect(selfOwned.core.occurrences[selfOwnedItems[0].producerOccurrence].occurrenceId)
-      .toBe(selfOwned.core.occurrences[selfOwnedItems[1].producerOccurrence].occurrenceId)
-    expect(selfOwnedItems.map(item => item.identityOccurrence))
-      .toEqual(selfOwnedItems.map(item => item.producerOccurrence))
-    expect(() => referenceValidateSemanticProgramV1(
-      selfOwned,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).not.toThrow()
-    expect(() => normalizeSemanticProgram(
-      selfOwned,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).not.toThrow()
+    expect(selfOwned.core.occurrences[selfOwnedItems[0].producerOccurrence].occurrenceId).toBe(
+      selfOwned.core.occurrences[selfOwnedItems[1].producerOccurrence].occurrenceId,
+    )
+    expect(selfOwnedItems.map(item => item.identityOccurrence)).toEqual(
+      selfOwnedItems.map(item => item.producerOccurrence),
+    )
+    expect(() => referenceValidateSemanticProgramV1(selfOwned, REFERENCE_SEMANTIC_SOURCE_V1)).not.toThrow()
+    expect(() => normalizeSemanticProgram(selfOwned, REFERENCE_SEMANTIC_SOURCE_V1)).not.toThrow()
 
     const canonicalFirst = makeCanonicalFirstTransparentWrapperFixture()
     const [first, second] = canonicalFirst.core.result.items
-    expect(canonicalFirst.core.occurrences[first.producerOccurrence].occurrenceId)
-      .toBe(canonicalFirst.core.occurrences[second.producerOccurrence].occurrenceId)
+    expect(canonicalFirst.core.occurrences[first.producerOccurrence].occurrenceId).toBe(
+      canonicalFirst.core.occurrences[second.producerOccurrence].occurrenceId,
+    )
     expect(second.producerOccurrence).toBe(2)
     expect(second.identityOccurrence).toBe(4)
     expect(canonicalFirst.core.occurrences[second.identityOccurrence].parent).toBe(1)
-    expect(() => referenceValidateSemanticProgramV1(
-      canonicalFirst,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).not.toThrow()
-    expect(() => normalizeSemanticProgram(
-      canonicalFirst,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).not.toThrow()
+    expect(() => referenceValidateSemanticProgramV1(canonicalFirst, REFERENCE_SEMANTIC_SOURCE_V1)).not.toThrow()
+    expect(() => normalizeSemanticProgram(canonicalFirst, REFERENCE_SEMANTIC_SOURCE_V1)).not.toThrow()
   })
 
   it('rejects a preserving multi-output wrapper that steals its child identity', () => {
     const forged = makeCanonicalFirstTransparentWrapperFixture()
     forged.core.result.items[0].identityOccurrence = 1
-    expect(() => referenceValidateSemanticProgramV1(
-      forged,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(
-      forged,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(forged, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      ReferenceSemanticProgramError,
+    )
+    expect(() => normalizeSemanticProgram(forged, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(SemanticProgramValidationError)
   })
 
   it('admits only the exact legacy zero/zero polyhedron exception', () => {
@@ -2643,10 +3624,8 @@ describe('independent SemanticProgram V1 oracle', () => {
     })
     expect(() => referenceValidateSemanticProgramV1(exact.program, exact.source)).not.toThrow()
     expect(() => normalizeSemanticProgram(exact.program, exact.source)).not.toThrow()
-    expect(encodeSemanticProgram(exact.program))
-      .toEqual(referenceEncodeSemanticProgramV1(exact.program))
-    expect(semanticProgramHash(exact.program))
-      .toBe(referenceSemanticProgramHashV1(exact.program))
+    expect(encodeSemanticProgram(exact.program)).toEqual(referenceEncodeSemanticProgramV1(exact.program))
+    expect(semanticProgramHash(exact.program)).toBe(referenceSemanticProgramHashV1(exact.program))
 
     const partials = [
       makePrimitiveSchemaFixture('polyhedron', {
@@ -2654,25 +3633,33 @@ describe('independent SemanticProgram V1 oracle', () => {
         triangles: [[0, 0, 0]],
       }),
       makePrimitiveSchemaFixture('polyhedron', {
-        vertices: [[0, 0, 0], [1, 0, 0], [0, 1, 0]],
+        vertices: [
+          [0, 0, 0],
+          [1, 0, 0],
+          [0, 1, 0],
+        ],
         triangles: [],
       }),
     ]
     for (const partial of partials) {
-      expect(() => referenceValidateSemanticProgramV1(partial.program, partial.source))
-        .toThrow(ReferenceSemanticProgramError)
-      expect(() => normalizeSemanticProgram(partial.program, partial.source))
-        .toThrow(SemanticProgramValidationError)
+      expect(() => referenceValidateSemanticProgramV1(partial.program, partial.source)).toThrow(
+        ReferenceSemanticProgramError,
+      )
+      expect(() => normalizeSemanticProgram(partial.program, partial.source)).toThrow(SemanticProgramValidationError)
     }
 
-    const brepEmpty = makePrimitiveSchemaFixture('polyhedron', {
-      vertices: [],
-      triangles: [],
-    }, 'openscad-viewer/brep-1')
-    expect(() => referenceValidateSemanticProgramV1(brepEmpty.program, brepEmpty.source))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(brepEmpty.program, brepEmpty.source))
-      .toThrow(SemanticProgramValidationError)
+    const brepEmpty = makePrimitiveSchemaFixture(
+      'polyhedron',
+      {
+        vertices: [],
+        triangles: [],
+      },
+      'openscad-viewer/brep-1',
+    )
+    expect(() => referenceValidateSemanticProgramV1(brepEmpty.program, brepEmpty.source)).toThrow(
+      ReferenceSemanticProgramError,
+    )
+    expect(() => normalizeSemanticProgram(brepEmpty.program, brepEmpty.source)).toThrow(SemanticProgramValidationError)
   })
 
   it('keeps repeated polyhedron indices legacy-only while admitting strict B-rep topology', () => {
@@ -2689,26 +3676,44 @@ describe('independent SemanticProgram V1 oracle', () => {
     expect(() => referenceValidateSemanticProgramV1(repeated.program, repeated.source)).not.toThrow()
     expect(() => normalizeSemanticProgram(repeated.program, repeated.source)).not.toThrow()
 
-    const repeatedBrep = makePrimitiveSchemaFixture('polyhedron', {
-      vertices,
-      triangles: [[0, 0, 1]],
-    }, 'openscad-viewer/brep-1')
-    expect(() => referenceValidateSemanticProgramV1(repeatedBrep.program, repeatedBrep.source))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(repeatedBrep.program, repeatedBrep.source))
-      .toThrow(SemanticProgramValidationError)
+    const repeatedBrep = makePrimitiveSchemaFixture(
+      'polyhedron',
+      {
+        vertices,
+        triangles: [[0, 0, 1]],
+      },
+      'openscad-viewer/brep-1',
+    )
+    expect(() => referenceValidateSemanticProgramV1(repeatedBrep.program, repeatedBrep.source)).toThrow(
+      ReferenceSemanticProgramError,
+    )
+    expect(() => normalizeSemanticProgram(repeatedBrep.program, repeatedBrep.source)).toThrow(
+      SemanticProgramValidationError,
+    )
 
-    const strictBrep = makePrimitiveSchemaFixture('polyhedron', {
-      vertices,
-      triangles: [[0, 1, 2], [0, 3, 1], [0, 2, 3], [1, 3, 2]],
-    }, 'openscad-viewer/brep-1')
+    const strictBrep = makePrimitiveSchemaFixture(
+      'polyhedron',
+      {
+        vertices,
+        triangles: [
+          [0, 1, 2],
+          [0, 3, 1],
+          [0, 2, 3],
+          [1, 3, 2],
+        ],
+      },
+      'openscad-viewer/brep-1',
+    )
     expect(() => referenceValidateSemanticProgramV1(strictBrep.program, strictBrep.source)).not.toThrow()
     expect(() => normalizeSemanticProgram(strictBrep.program, strictBrep.source)).not.toThrow()
   })
 
   it('keeps zero-to-two-point polygon rings legacy-only and preserves nonempty ring framing', () => {
     for (let pointCount = 0; pointCount <= 2; pointCount++) {
-      const points = [[0, 0], [1, 0]].slice(0, pointCount)
+      const points = [
+        [0, 0],
+        [1, 0],
+      ].slice(0, pointCount)
       const legacy = makePrimitiveSchemaFixture('polygon', {
         rings: [points],
         fillRule: 'even-odd',
@@ -2716,43 +3721,53 @@ describe('independent SemanticProgram V1 oracle', () => {
       expect(() => referenceValidateSemanticProgramV1(legacy.program, legacy.source)).not.toThrow()
       expect(() => normalizeSemanticProgram(legacy.program, legacy.source)).not.toThrow()
 
-      const brep = makePrimitiveSchemaFixture('polygon', {
-        rings: [points],
-        fillRule: 'even-odd',
-      }, 'openscad-viewer/brep-1')
-      expect(() => referenceValidateSemanticProgramV1(brep.program, brep.source))
-        .toThrow(ReferenceSemanticProgramError)
-      expect(() => normalizeSemanticProgram(brep.program, brep.source))
-        .toThrow(SemanticProgramValidationError)
+      const brep = makePrimitiveSchemaFixture(
+        'polygon',
+        {
+          rings: [points],
+          fillRule: 'even-odd',
+        },
+        'openscad-viewer/brep-1',
+      )
+      expect(() => referenceValidateSemanticProgramV1(brep.program, brep.source)).toThrow(ReferenceSemanticProgramError)
+      expect(() => normalizeSemanticProgram(brep.program, brep.source)).toThrow(SemanticProgramValidationError)
     }
 
     const noRings = makePrimitiveSchemaFixture('polygon', {
       rings: [],
       fillRule: 'even-odd',
     })
-    expect(() => referenceValidateSemanticProgramV1(noRings.program, noRings.source))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(noRings.program, noRings.source))
-      .toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(noRings.program, noRings.source)).toThrow(
+      ReferenceSemanticProgramError,
+    )
+    expect(() => normalizeSemanticProgram(noRings.program, noRings.source)).toThrow(SemanticProgramValidationError)
 
-    const strictBrep = makePrimitiveSchemaFixture('polygon', {
-      rings: [[[0, 0], [1, 0], [0, 1]]],
-      fillRule: 'even-odd',
-    }, 'openscad-viewer/brep-1')
+    const strictBrep = makePrimitiveSchemaFixture(
+      'polygon',
+      {
+        rings: [
+          [
+            [0, 0],
+            [1, 0],
+            [0, 1],
+          ],
+        ],
+        fillRule: 'even-odd',
+      },
+      'openscad-viewer/brep-1',
+    )
     expect(() => referenceValidateSemanticProgramV1(strictBrep.program, strictBrep.source)).not.toThrow()
     expect(() => normalizeSemanticProgram(strictBrep.program, strictBrep.source)).not.toThrow()
   })
 
   it('rejects sibling occurrence identity donation across a valid transform node lineage', () => {
     const siblingDonation = makeSiblingIdentityDonationFixture()
-    expect(() => referenceValidateSemanticProgramV1(
-      siblingDonation,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(
-      siblingDonation,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(siblingDonation, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      ReferenceSemanticProgramError,
+    )
+    expect(() => normalizeSemanticProgram(siblingDonation, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      SemanticProgramValidationError,
+    )
   })
 
   it.each([
@@ -2784,14 +3799,10 @@ describe('independent SemanticProgram V1 oracle', () => {
     },
   ])('rejects closed-production forgery: $name', ({ make }) => {
     const forged = make()
-    expect(() => referenceValidateSemanticProgramV1(
-      forged,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(
-      forged,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(forged, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      ReferenceSemanticProgramError,
+    )
+    expect(() => normalizeSemanticProgram(forged, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(SemanticProgramValidationError)
   })
 
   it('admits only control/module skips to the nearest static-parent occurrence', () => {
@@ -2801,40 +3812,30 @@ describe('independent SemanticProgram V1 oracle', () => {
 
     const nonExpansionSkip = clone(valid)
     nonExpansionSkip.core.operations[5].category = 'geometry'
-    expect(() => referenceValidateSemanticProgramV1(
-      nonExpansionSkip,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(
-      nonExpansionSkip,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(nonExpansionSkip, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      ReferenceSemanticProgramError,
+    )
+    expect(() => normalizeSemanticProgram(nonExpansionSkip, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      SemanticProgramValidationError,
+    )
 
     const nonNearest = clone(valid)
     nonNearest.core.operations[1].category = 'control'
     nonNearest.core.occurrences[2].operation = 1
     nonNearest.core.occurrences[2].staticParent = 0
     recomputeOccurrence(nonNearest, 2)
-    expect(() => referenceValidateSemanticProgramV1(
-      nonNearest,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(
-      nonNearest,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(nonNearest, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      ReferenceSemanticProgramError,
+    )
+    expect(() => normalizeSemanticProgram(nonNearest, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      SemanticProgramValidationError,
+    )
   })
 
   it('accepts the exact caller-body/module-definition/children continuation tuple', () => {
     const valid = makeChildrenContinuationFixture()
-    expect(() => referenceValidateSemanticProgramV1(
-      valid,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).not.toThrow()
-    expect(() => normalizeSemanticProgram(
-      valid,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).not.toThrow()
+    expect(() => referenceValidateSemanticProgramV1(valid, REFERENCE_SEMANTIC_SOURCE_V1)).not.toThrow()
+    expect(() => normalizeSemanticProgram(valid, REFERENCE_SEMANTIC_SOURCE_V1)).not.toThrow()
     expect(encodeSemanticProgram(valid)).toEqual(referenceEncodeSemanticProgramV1(valid))
     expect(semanticProgramHash(valid)).toBe(referenceSemanticProgramHashV1(valid))
   })
@@ -2850,11 +3851,13 @@ describe('independent SemanticProgram V1 oracle', () => {
     {
       name: 'caller body has a second direct definition child',
       mutate: (program: ReferenceSemanticProgramV1) => {
-        const dynamicSlots = [{
-          name: 'x',
-          value: { tag: 'number', value: 2 },
-          duplicateOrdinal: 0,
-        }]
+        const dynamicSlots = [
+          {
+            name: 'x',
+            value: { tag: 'number', value: 2 },
+            duplicateOrdinal: 0,
+          },
+        ]
         const parent = 1
         program.core.occurrences.push({
           id: program.core.occurrences.length,
@@ -2877,11 +3880,13 @@ describe('independent SemanticProgram V1 oracle', () => {
     {
       name: 'children has a second direct expansion child',
       mutate: (program: ReferenceSemanticProgramV1) => {
-        const dynamicSlots = [{
-          name: '$index',
-          value: { tag: 'undefined' },
-          duplicateOrdinal: 1,
-        }]
+        const dynamicSlots = [
+          {
+            name: '$index',
+            value: { tag: 'undefined' },
+            duplicateOrdinal: 1,
+          },
+        ]
         const parent = 6
         const staticParent = 1
         program.core.occurrences.push({
@@ -2931,14 +3936,10 @@ describe('independent SemanticProgram V1 oracle', () => {
   ])('rejects malformed children continuation: $name', ({ mutate }) => {
     const forged = makeChildrenContinuationFixture()
     mutate(forged)
-    expect(() => referenceValidateSemanticProgramV1(
-      forged,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(
-      forged,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(forged, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      ReferenceSemanticProgramError,
+    )
+    expect(() => normalizeSemanticProgram(forged, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(SemanticProgramValidationError)
   })
 
   it('requires parent and staticParent to target the canonical first occurrence row', () => {
@@ -2949,14 +3950,10 @@ describe('independent SemanticProgram V1 oracle', () => {
     const alias = clone(valid)
     alias.core.occurrences[5].parent = 4
     alias.core.occurrences[5].staticParent = 4
-    expect(() => referenceValidateSemanticProgramV1(
-      alias,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(
-      alias,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(alias, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      ReferenceSemanticProgramError,
+    )
+    expect(() => normalizeSemanticProgram(alias, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(SemanticProgramValidationError)
   })
 
   it('assigns equal dynamic-slot duplicate ordinals in first-seen language order', () => {
@@ -2969,60 +3966,41 @@ describe('independent SemanticProgram V1 oracle', () => {
     reversed.core.occurrences[6].dynamicSlots[0].duplicateOrdinal = 0
     recomputeOccurrence(reversed, 5)
     recomputeOccurrence(reversed, 6)
-    expect(() => referenceValidateSemanticProgramV1(reversed, REFERENCE_SEMANTIC_SOURCE_V1))
-      .toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(reversed, REFERENCE_SEMANTIC_SOURCE_V1))
-      .toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(reversed, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      ReferenceSemanticProgramError,
+    )
+    expect(() => normalizeSemanticProgram(reversed, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      SemanticProgramValidationError,
+    )
   })
 
   it('validates legacy linear-extrude scale as Vec2 while preserving zero top-scale compatibility', () => {
     const collapsed = makeLegacyLinearExtrudeFixture([0, 0])
-    expect(collapsed.core.capabilityClosure)
-      .toContain('geometry.transition.region.d2.to.solid-set.d3')
-    expect(() => referenceValidateSemanticProgramV1(
-      collapsed,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).not.toThrow()
-    expect(() => normalizeSemanticProgram(
-      collapsed,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).not.toThrow()
+    expect(collapsed.core.capabilityClosure).toContain('geometry.transition.region.d2.to.solid-set.d3')
+    expect(() => referenceValidateSemanticProgramV1(collapsed, REFERENCE_SEMANTIC_SOURCE_V1)).not.toThrow()
+    expect(() => normalizeSemanticProgram(collapsed, REFERENCE_SEMANTIC_SOURCE_V1)).not.toThrow()
 
     const forged = makeLegacyLinearExtrudeFixture(['forged'])
-    expect(() => referenceValidateSemanticProgramV1(
-      forged,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(
-      forged,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(SemanticProgramValidationError)
+    expect(() => referenceValidateSemanticProgramV1(forged, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      ReferenceSemanticProgramError,
+    )
+    expect(() => normalizeSemanticProgram(forged, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(SemanticProgramValidationError)
   })
 
   it('recomputes first-child difference buckets and their hidden canonical union reducers', () => {
     const valid = makePartitionedDifferenceFixture()
-    expect(() => referenceValidateSemanticProgramV1(
-      valid,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).not.toThrow()
-    expect(() => normalizeSemanticProgram(
-      valid,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).not.toThrow()
+    expect(() => referenceValidateSemanticProgramV1(valid, REFERENCE_SEMANTIC_SOURCE_V1)).not.toThrow()
+    expect(() => normalizeSemanticProgram(valid, REFERENCE_SEMANTIC_SOURCE_V1)).not.toThrow()
 
     const escapedPartition = clone(valid)
     escapedPartition.core.nodes[2].operation = 'intersection'
-    escapedPartition.core.capabilityClosure = referenceSemanticCapabilityClosureV1(
-      escapedPartition.core,
+    escapedPartition.core.capabilityClosure = referenceSemanticCapabilityClosureV1(escapedPartition.core)
+    expect(() => referenceValidateSemanticProgramV1(escapedPartition, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      ReferenceSemanticProgramError,
     )
-    expect(() => referenceValidateSemanticProgramV1(
-      escapedPartition,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(ReferenceSemanticProgramError)
-    expect(() => normalizeSemanticProgram(
-      escapedPartition,
-      REFERENCE_SEMANTIC_SOURCE_V1,
-    )).toThrow(SemanticProgramValidationError)
+    expect(() => normalizeSemanticProgram(escapedPartition, REFERENCE_SEMANTIC_SOURCE_V1)).toThrow(
+      SemanticProgramValidationError,
+    )
   })
 
   it('accepts a valid 12,000-node chain without recursive host-stack dependence', () => {

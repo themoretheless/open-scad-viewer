@@ -34,6 +34,12 @@ export interface GpuCsgTree {
 
 export type GpuCsgNode =
   | { type: 'primitive'; primitive: GpuCsgPrimitive }
-  | { type: 'operation'; op: CsgOp; children: GpuCsgNode[]; transform?: Float32Array; color?: [number, number, number, number] }
+  | {
+      type: 'operation'
+      op: CsgOp
+      children: GpuCsgNode[]
+      transform?: Float32Array
+      color?: [number, number, number, number]
+    }
 
 /* ── Matrix Math Utilities (Pure JS/TS, zero-dependency) ── */

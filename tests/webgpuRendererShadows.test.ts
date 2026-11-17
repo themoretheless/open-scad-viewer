@@ -9,11 +9,24 @@ import { SCENE_UNIFORM_LAYOUT } from '../src/render/shaders'
  * and the disabled default keeps the frame (and scene uniform) byte-identical.
  */
 
-interface FakeTexture { label: string; view: object; destroyed: boolean; destroy(): void }
+interface FakeTexture {
+  label: string
+  view: object
+  destroyed: boolean
+  destroy(): void
+}
 
 function fakeTexture(label: string): FakeTexture & { createView(): object } {
   const view = { viewOf: label }
-  return { label, view, destroyed: false, createView: () => view, destroy() { this.destroyed = true } }
+  return {
+    label,
+    view,
+    destroyed: false,
+    createView: () => view,
+    destroy() {
+      this.destroyed = true
+    },
+  }
 }
 
 function fakeMesh() {
@@ -42,7 +55,11 @@ function fakeDevice(record: {
   textures: Array<{ size: number[]; format: string; usage: number }>
   samplers: unknown[]
   bindGroups: Array<{ layout: unknown; entries: unknown[] }>
-  pipelines: Array<{ depthStencil?: { format: string; depthBiasSlopeScale?: number }; fragment?: unknown; layout?: { groups: number } }>
+  pipelines: Array<{
+    depthStencil?: { format: string; depthBiasSlopeScale?: number }
+    fragment?: unknown
+    layout?: { groups: number }
+  }>
   passes: Array<{ colors: number; depthFormat: string | null; indexedDraws: number }>
   writes: Array<{ buffer: unknown; data: Float32Array }>
 }) {
@@ -67,7 +84,9 @@ function fakeDevice(record: {
       indexedDraws: 0,
     }
     record.passes.push(entry)
-    pass.drawIndexed = () => { entry.indexedDraws++ }
+    pass.drawIndexed = () => {
+      entry.indexedDraws++
+    }
     return pass
   }
   return {
@@ -83,16 +102,25 @@ function fakeDevice(record: {
       record.textures.push(descriptor)
       return fakeTexture(`tex${record.textures.length}`)
     },
-    createSampler: (descriptor: unknown) => { const sampler = { descriptor }; record.samplers.push(sampler); return sampler },
+    createSampler: (descriptor: unknown) => {
+      const sampler = { descriptor }
+      record.samplers.push(sampler)
+      return sampler
+    },
     createBuffer: () => ({}),
     createBindGroupLayout: () => ({}),
-    createPipelineLayout: (descriptor: { bindGroupLayouts: unknown[] }) => ({ groups: descriptor.bindGroupLayouts.length }),
+    createPipelineLayout: (descriptor: { bindGroupLayouts: unknown[] }) => ({
+      groups: descriptor.bindGroupLayouts.length,
+    }),
     createShaderModule: () => ({}),
     createBindGroup: (descriptor: { layout: unknown; entries: unknown[] }) => {
       record.bindGroups.push(descriptor)
       return { bg: descriptor }
     },
-    createRenderPipeline: (descriptor: { depthStencil?: { format: string; depthBiasSlopeScale?: number }; fragment?: unknown }) => {
+    createRenderPipeline: (descriptor: {
+      depthStencil?: { format: string; depthBiasSlopeScale?: number }
+      fragment?: unknown
+    }) => {
       record.pipelines.push(descriptor)
       return { pipe: descriptor }
     },
@@ -105,7 +133,11 @@ function recordShape() {
     textures: [] as Array<{ size: number[]; format: string; usage: number }>,
     samplers: [] as unknown[],
     bindGroups: [] as Array<{ layout: unknown; entries: unknown[] }>,
-    pipelines: [] as Array<{ depthStencil?: { format: string; depthBiasSlopeScale?: number }; fragment?: unknown; layout?: { groups: number } }>,
+    pipelines: [] as Array<{
+      depthStencil?: { format: string; depthBiasSlopeScale?: number }
+      fragment?: unknown
+      layout?: { groups: number }
+    }>,
     passes: [] as Array<{ colors: number; depthFormat: string | null; indexedDraws: number }>,
     writes: [] as Array<{ buffer: unknown; data: Float32Array }>,
   }
@@ -180,7 +212,9 @@ describe('WebGPURenderer contact shadows', () => {
     const { renderer, internal, record } = harness()
     renderer.setShadowsEnabled(true)
     expect(record.textures).toContainEqual({
-      size: [1024, 1024], format: 'depth32float', usage: 16 | 4,
+      size: [1024, 1024],
+      format: 'depth32float',
+      usage: 16 | 4,
     })
     internal.render()
 
@@ -203,8 +237,9 @@ describe('WebGPURenderer contact shadows', () => {
     const data = write!.data
     expect(data).toHaveLength(SCENE_UNIFORM_LAYOUT.floats)
     // Shadow tail fully inert: lightVP zeros, params (0, texel, bias, strength).
-    expect([...data.slice(SCENE_UNIFORM_LAYOUT.lightVPFloatOffset, SCENE_UNIFORM_LAYOUT.lightVPFloatOffset + 16)])
-      .toEqual(new Array(16).fill(0))
+    expect([
+      ...data.slice(SCENE_UNIFORM_LAYOUT.lightVPFloatOffset, SCENE_UNIFORM_LAYOUT.lightVPFloatOffset + 16),
+    ]).toEqual(new Array(16).fill(0))
     expect(data[SCENE_UNIFORM_LAYOUT.shadowFloatOffset]).toBe(0)
     expect(data[SCENE_UNIFORM_LAYOUT.shadowFloatOffset + 1]).toBeCloseTo(1 / 1024)
     // Legacy head unchanged: light and ambient still at floats 20..27.

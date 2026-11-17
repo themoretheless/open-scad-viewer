@@ -28,9 +28,18 @@ const finiteNonNegative = (value: number) => Number.isFinite(value) && value >= 
  * last admitted representation when refinement is refused.
  */
 export function selectDisplayRepresentation(input: DisplayPolicyInput): DisplayRepresentation {
-  if (![input.projectedPixels, input.targetErrorPixels, input.admittedBytes,
-    input.budgetBytes, input.previewBytes, input.exactBytes].every(finiteNonNegative)
-    || input.budgetBytes < input.admittedBytes) return 'bounding-box'
+  if (
+    ![
+      input.projectedPixels,
+      input.targetErrorPixels,
+      input.admittedBytes,
+      input.budgetBytes,
+      input.previewBytes,
+      input.exactBytes,
+    ].every(finiteNonNegative) ||
+    input.budgetBytes < input.admittedBytes
+  )
+    return 'bounding-box'
 
   const remaining = input.budgetBytes - input.admittedBytes
   const needsPreview = input.projectedPixels > input.targetErrorPixels

@@ -20,14 +20,17 @@ function bounds(result: GeometryEvaluationResult) {
 
 describe('direct OpenSCAD 2021 primitive and transform plan wiring', () => {
   it('evaluates primitive arguments once before suppressing primitive children', async () => {
-    const result = await parseOpenSCAD(`
+    const result = await parseOpenSCAD(
+      `
       cube(
         size=echo("primitive-arg") [2,"bad",4],
         mystery=echo("ignored-arg") 12
       ) {
         echo("primitive-child") cube(99);
       }
-    `, stable)
+    `,
+      stable,
+    )
 
     expect(result.meshes).toHaveLength(1)
     expect(result.volume).toBeCloseTo(2, 6)
@@ -35,11 +38,13 @@ describe('direct OpenSCAD 2021 primitive and transform plan wiring', () => {
     expect(result.warnings.filter(warning => warning === 'ECHO: "primitive-arg"')).toHaveLength(1)
     expect(result.warnings.filter(warning => warning === 'ECHO: "ignored-arg"')).toHaveLength(1)
     expect(result.warnings).not.toContain('ECHO: "primitive-child"')
-    expect(result.warnings).toEqual(expect.arrayContaining([
-      'Ignoring unknown argument mystery to cube()',
-      expect.stringContaining('cube size was not a scalar'),
-      'cube() ignores child geometry',
-    ]))
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        'Ignoring unknown argument mystery to cube()',
+        expect.stringContaining('cube size was not a scalar'),
+        'cube() ignores child geometry',
+      ]),
+    )
   })
 
   it('keeps radius/diameter priority and composes common and end cylinder radii', async () => {
@@ -60,21 +65,16 @@ describe('direct OpenSCAD 2021 primitive and transform plan wiring', () => {
   })
 
   it('turns invalid ranges into empty geometry without throwing', async () => {
-    for (const source of [
-      'cube(0);',
-      'sphere(r=-1);',
-      'cylinder(h=0,r=1);',
-      'linear_extrude(1) square([1,0]);',
-    ]) {
+    for (const source of ['cube(0);', 'sphere(r=-1);', 'cylinder(h=0,r=1);', 'linear_extrude(1) square([1,0]);']) {
       const result = await parseOpenSCAD(source, stable)
       expect(result.meshes, source).toEqual([])
-      expect(result.warnings.some(warning => warning.includes('empty object')), source).toBe(true)
+      expect(
+        result.warnings.some(warning => warning.includes('empty object')),
+        source,
+      ).toBe(true)
     }
 
-    const malformedSquare = await parseOpenSCAD(
-      'linear_extrude(1) square([2,3,4]);',
-      stable,
-    )
+    const malformedSquare = await parseOpenSCAD('linear_extrude(1) square([2,3,4]);', stable)
     expect(malformedSquare.volume).toBeCloseTo(1, 6)
     expect(malformedSquare.warnings).toContain(
       'square size was not a scalar or exact 2-component numeric vector; unit size is used',
@@ -82,33 +82,41 @@ describe('direct OpenSCAD 2021 primitive and transform plan wiring', () => {
   })
 
   it('accepts vec2 polyhedron points and skips out-of-range polygon path entries', async () => {
-    const polyhedron = await parseOpenSCAD(`
+    const polyhedron = await parseOpenSCAD(
+      `
       polyhedron(
         points=[[0,0],[1,0],[0,1],[0,0,1]],
         faces=[[0,1,2],[0,3,1],[1,3,2],[2,3,0]]
       );
-    `, stable)
-    const polygon = await parseOpenSCAD(`
+    `,
+      stable,
+    )
+    const polygon = await parseOpenSCAD(
+      `
       linear_extrude(1)
         polygon(points=[[0,0],[1,0],[0,1]],paths=[[0,99,1,2]]);
-    `, stable)
+    `,
+      stable,
+    )
 
     expect(polyhedron.meshes).toHaveLength(1)
     expect(polyhedron.volume).toBeCloseTo(1 / 6, 6)
     expect(polygon.meshes).toHaveLength(1)
     expect(polygon.volume).toBeCloseTo(0.5, 6)
-    expect(polygon.warnings).toContain(
-      'polygon skipped a path entry whose point index is outside the point vector',
-    )
+    expect(polygon.warnings).toContain('polygon skipped a path entry whose point index is outside the point vector')
   })
 
   it('evaluates transform arguments before children and unions children before transforming', async () => {
-    const ordered = await parseOpenSCAD(`
+    const ordered = await parseOpenSCAD(
+      `
       translate(echo("transform-arg") [0,0,0]) {
         echo("transform-child") cube(1);
       }
-    `, stable)
-    const unioned = await parseOpenSCAD(`
+    `,
+      stable,
+    )
+    const unioned = await parseOpenSCAD(
+      `
       intersection() {
         scale(1) {
           cube(1);
@@ -116,7 +124,9 @@ describe('direct OpenSCAD 2021 primitive and transform plan wiring', () => {
         }
         translate([-1,-1,-1]) cube([5,3,3]);
       }
-    `, stable)
+    `,
+      stable,
+    )
 
     const argumentIndex = ordered.warnings.indexOf('ECHO: "transform-arg"')
     const childIndex = ordered.warnings.indexOf('ECHO: "transform-child"')
@@ -130,18 +140,18 @@ describe('direct OpenSCAD 2021 primitive and transform plan wiring', () => {
     const partialMatrix = await parseOpenSCAD('multmatrix([[2]]) cube(1);', stable)
     const translated = await parseOpenSCAD('translate([2,3,4]) cube(1);', stable)
     const mirrored = await parseOpenSCAD('mirror([1,0,0]) cube([1,2,3]);', stable)
-    const normalized2d = await parseOpenSCAD(`
+    const normalized2d = await parseOpenSCAD(
+      `
       linear_extrude(1)
         multmatrix([
           [4,0,0,8], [0,6,0,10], [0,0,2,0], [0,0,0,2]
         ]) square(1);
-    `, stable)
-    const singular3d = await parseOpenSCAD('scale([0,1,1]) cube(1);', stable)
-    const nonfinite = await parseOpenSCAD('scale([1e309,1,1]) cube(1);', stable)
-    const singular2d = await parseOpenSCAD(
-      'linear_extrude(1) rotate(a=90,v=[1,0,0]) square(1);',
+    `,
       stable,
     )
+    const singular3d = await parseOpenSCAD('scale([0,1,1]) cube(1);', stable)
+    const nonfinite = await parseOpenSCAD('scale([1e309,1,1]) cube(1);', stable)
+    const singular2d = await parseOpenSCAD('linear_extrude(1) rotate(a=90,v=[1,0,0]) square(1);', stable)
 
     expect(partialMatrix.volume).toBeCloseTo(2, 6)
     expect(bounds(translated)).toMatchObject({ min: [2, 3, 4], max: [3, 4, 5] })
@@ -150,9 +160,7 @@ describe('direct OpenSCAD 2021 primitive and transform plan wiring', () => {
     expect(normalized2d.volume).toBeCloseTo(6, 6)
     expect(singular3d.meshes).toEqual([])
     expect(nonfinite.meshes).toEqual([])
-    expect(nonfinite.warnings).toContain(
-      'scale produced a non-finite matrix, so its child geometry is removed',
-    )
+    expect(nonfinite.warnings).toContain('scale produced a non-finite matrix, so its child geometry is removed')
     expect(singular2d.meshes).toEqual([])
   })
 

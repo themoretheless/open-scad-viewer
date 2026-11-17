@@ -18,18 +18,18 @@ type SemanticPayloadKey<TPayloadFamily extends object> = keyof TPayloadFamily & 
 
 export type SemanticRuntimeValue<TPayloadFamily extends object> =
   | Readonly<{
-    tag: 'empty'
-    valueType: SemanticValueType
-    evidence: SemanticRuntimeEvidence
-  }>
-  | {
-    [K in SemanticPayloadKey<TPayloadFamily>]: Readonly<{
-      tag: 'value' | 'materialized-empty'
+      tag: 'empty'
       valueType: SemanticValueType
       evidence: SemanticRuntimeEvidence
-      payload: TPayloadFamily[K]
     }>
-  }[SemanticPayloadKey<TPayloadFamily>]
+  | {
+      [K in SemanticPayloadKey<TPayloadFamily>]: Readonly<{
+        tag: 'value' | 'materialized-empty'
+        valueType: SemanticValueType
+        evidence: SemanticRuntimeEvidence
+        payload: TPayloadFamily[K]
+      }>
+    }[SemanticPayloadKey<TPayloadFamily>]
 
 declare const SEMANTIC_BACKEND_PAYLOAD_LEASE: unique symbol
 
@@ -40,28 +40,28 @@ export type SemanticBackendPayloadLease<K extends SemanticCarrierKey = SemanticC
 
 export type SemanticBackendEvaluation<TPayloadFamily extends object> =
   | Readonly<{
-    tag: 'empty'
-    valueType: SemanticValueType
-    evidence: SemanticRuntimeEvidence
-  }>
-  | {
-    [K in SemanticPayloadKey<TPayloadFamily>]: Readonly<{
-      tag: 'value' | 'materialized-empty'
+      tag: 'empty'
       valueType: SemanticValueType
       evidence: SemanticRuntimeEvidence
-      payload: TPayloadFamily[K]
-      lease: SemanticBackendPayloadLease<K>
     }>
-  }[SemanticPayloadKey<TPayloadFamily>]
+  | {
+      [K in SemanticPayloadKey<TPayloadFamily>]: Readonly<{
+        tag: 'value' | 'materialized-empty'
+        valueType: SemanticValueType
+        evidence: SemanticRuntimeEvidence
+        payload: TPayloadFamily[K]
+        lease: SemanticBackendPayloadLease<K>
+      }>
+    }[SemanticPayloadKey<TPayloadFamily>]
 
 export type SemanticRuntimeEvidence =
   | Readonly<{ tag: 'representation-preserving' }>
   | Readonly<{
-    tag: 'certified-approximation'
-    certificateProfile: string
-    certificatePolicyHash: string
-    certificateId: string
-  }>
+      tag: 'certified-approximation'
+      certificateProfile: string
+      certificatePolicyHash: string
+      certificateId: string
+    }>
 
 export interface SemanticBackendContext {
   readonly nodeIndex: number
@@ -88,19 +88,19 @@ export interface SemanticBackendBeginContext {
 
 export type SemanticBackendCloseOutcome =
   | Readonly<{
-    tag: 'commit'
-    retained: readonly SemanticBackendPayloadLease[]
-  }>
+      tag: 'commit'
+      retained: readonly SemanticBackendPayloadLease[]
+    }>
   | Readonly<{
-    tag: 'abort'
-    code: 'E_SEMANTIC_ABORTED' | 'E_SEMANTIC_DEADLINE'
-    node: number | null
-  }>
+      tag: 'abort'
+      code: 'E_SEMANTIC_ABORTED' | 'E_SEMANTIC_DEADLINE'
+      node: number | null
+    }>
   | Readonly<{
-    tag: 'failure'
-    code: SemanticExecutionErrorCode
-    node: number | null
-  }>
+      tag: 'failure'
+      code: SemanticExecutionErrorCode
+      node: number | null
+    }>
 
 export interface SemanticBackendResultLease {
   /** Must be concurrency-safe and idempotent. */
@@ -108,16 +108,11 @@ export interface SemanticBackendResultLease {
 }
 
 export type SemanticBackendCloseResult =
-  | Readonly<{ tag: 'closed' }>
-  | Readonly<{ tag: 'committed'; resultLease: SemanticBackendResultLease }>
+  Readonly<{ tag: 'closed' }> | Readonly<{ tag: 'committed'; resultLease: SemanticBackendResultLease }>
 
 export interface SemanticBackendSession<TPayloadFamily extends object> {
   /** Provider-owned carrier check; opaque payloads are never inferred from truthiness. */
-  validatePayload(
-    carrierKey: SemanticCarrierKey,
-    payload: unknown,
-    lease: SemanticBackendPayloadLease,
-  ): boolean
+  validatePayload(carrierKey: SemanticCarrierKey, payload: unknown, lease: SemanticBackendPayloadLease): boolean
   evaluate(
     node: SemanticNode,
     inputs: readonly SemanticRuntimeValue<TPayloadFamily>[],

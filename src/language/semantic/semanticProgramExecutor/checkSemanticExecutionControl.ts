@@ -1,5 +1,12 @@
 import { SemanticProgramExecutionError } from '../semanticProgramExecutor'
-import type { SemanticBackendCloseOutcome, SemanticBackendPayloadLease, SemanticBackendSession, SemanticCarrierKey, SemanticExecutionControl, SemanticRuntimeValue } from '../semanticProgramExecutor'
+import type {
+  SemanticBackendCloseOutcome,
+  SemanticBackendPayloadLease,
+  SemanticBackendSession,
+  SemanticCarrierKey,
+  SemanticExecutionControl,
+  SemanticRuntimeValue,
+} from '../semanticProgramExecutor'
 import type { SemanticNode, SemanticValueType } from '../../../core/semanticProgram'
 
 export function semanticCarrierKey(valueType: SemanticValueType): SemanticCarrierKey {
@@ -7,15 +14,22 @@ export function semanticCarrierKey(valueType: SemanticValueType): SemanticCarrie
 }
 
 export function checkSemanticExecutionControl(control: SemanticExecutionControl, node: number | null): void {
-  if (control.signal?.aborted) throw new SemanticProgramExecutionError('E_SEMANTIC_ABORTED', node, 'Semantic program execution was cancelled')
+  if (control.signal?.aborted)
+    throw new SemanticProgramExecutionError('E_SEMANTIC_ABORTED', node, 'Semantic program execution was cancelled')
   try {
-    if (control.shouldAbort?.()) throw new SemanticProgramExecutionError('E_SEMANTIC_ABORTED', node, 'Semantic program execution was cancelled')
+    if (control.shouldAbort?.())
+      throw new SemanticProgramExecutionError('E_SEMANTIC_ABORTED', node, 'Semantic program execution was cancelled')
   } catch (error) {
     if (error instanceof SemanticProgramExecutionError) throw error
-    throw new SemanticProgramExecutionError('E_SEMANTIC_ABORTED', node, 'Semantic execution cancellation callback failed')
+    throw new SemanticProgramExecutionError(
+      'E_SEMANTIC_ABORTED',
+      node,
+      'Semantic execution cancellation callback failed',
+    )
   }
   if (control.deadlineAt !== undefined) {
-    if (!Number.isFinite(control.deadlineAt)) throw new SemanticProgramExecutionError('E_SEMANTIC_DEADLINE', node, 'deadlineAt must be finite')
+    if (!Number.isFinite(control.deadlineAt))
+      throw new SemanticProgramExecutionError('E_SEMANTIC_DEADLINE', node, 'deadlineAt must be finite')
     const now = control.now ?? (() => performance.now())
     let sampled: number
     try {
@@ -23,8 +37,18 @@ export function checkSemanticExecutionControl(control: SemanticExecutionControl,
     } catch {
       throw new SemanticProgramExecutionError('E_SEMANTIC_DEADLINE', node, 'Semantic execution clock callback failed')
     }
-    if (!Number.isFinite(sampled)) throw new SemanticProgramExecutionError('E_SEMANTIC_DEADLINE', node, 'Semantic execution clock must return a finite number')
-    if (sampled >= control.deadlineAt) throw new SemanticProgramExecutionError('E_SEMANTIC_DEADLINE', node, 'Semantic program execution deadline exceeded')
+    if (!Number.isFinite(sampled))
+      throw new SemanticProgramExecutionError(
+        'E_SEMANTIC_DEADLINE',
+        node,
+        'Semantic execution clock must return a finite number',
+      )
+    if (sampled >= control.deadlineAt)
+      throw new SemanticProgramExecutionError(
+        'E_SEMANTIC_DEADLINE',
+        node,
+        'Semantic program execution deadline exceeded',
+      )
   }
 }
 
@@ -46,7 +70,8 @@ export async function awaitBackendWithControl<T>(
       reject(error)
     }
     if (control.signal) {
-      const onAbort = () => stop(new SemanticProgramExecutionError('E_SEMANTIC_ABORTED', node, 'Semantic program execution was cancelled'))
+      const onAbort = () =>
+        stop(new SemanticProgramExecutionError('E_SEMANTIC_ABORTED', node, 'Semantic program execution was cancelled'))
       control.signal.addEventListener('abort', onAbort, { once: true })
       removeExternalAbort = () => control.signal?.removeEventListener('abort', onAbort)
       if (control.signal.aborted) onAbort()
@@ -54,9 +79,18 @@ export async function awaitBackendWithControl<T>(
     if (control.shouldAbort) {
       cancellationPoll = setInterval(() => {
         try {
-          if (control.shouldAbort?.()) stop(new SemanticProgramExecutionError('E_SEMANTIC_ABORTED', node, 'Semantic program execution was cancelled'))
+          if (control.shouldAbort?.())
+            stop(
+              new SemanticProgramExecutionError('E_SEMANTIC_ABORTED', node, 'Semantic program execution was cancelled'),
+            )
         } catch {
-          stop(new SemanticProgramExecutionError('E_SEMANTIC_ABORTED', node, 'Semantic execution cancellation callback failed'))
+          stop(
+            new SemanticProgramExecutionError(
+              'E_SEMANTIC_ABORTED',
+              node,
+              'Semantic execution cancellation callback failed',
+            ),
+          )
         }
       }, 8)
     }
@@ -70,19 +104,39 @@ export async function awaitBackendWithControl<T>(
         return
       }
       if (!Number.isFinite(sampled)) {
-        stop(new SemanticProgramExecutionError('E_SEMANTIC_DEADLINE', node, 'Semantic execution clock must return a finite number'))
+        stop(
+          new SemanticProgramExecutionError(
+            'E_SEMANTIC_DEADLINE',
+            node,
+            'Semantic execution clock must return a finite number',
+          ),
+        )
         return
       }
       if (sampled >= control.deadlineAt) {
-        stop(new SemanticProgramExecutionError('E_SEMANTIC_DEADLINE', node, 'Semantic program execution deadline exceeded'))
+        stop(
+          new SemanticProgramExecutionError(
+            'E_SEMANTIC_DEADLINE',
+            node,
+            'Semantic program execution deadline exceeded',
+          ),
+        )
         return
       }
-      timeout = setTimeout(() => stop(new SemanticProgramExecutionError(
-        'E_SEMANTIC_DEADLINE', node, 'Semantic program execution deadline exceeded',
-      )), Math.min(0x7fffffff, control.deadlineAt - sampled))
+      timeout = setTimeout(
+        () =>
+          stop(
+            new SemanticProgramExecutionError(
+              'E_SEMANTIC_DEADLINE',
+              node,
+              'Semantic program execution deadline exceeded',
+            ),
+          ),
+        Math.min(0x7fffffff, control.deadlineAt - sampled),
+      )
     }
   })
-  const pending = Promise.resolve().then(() => stopped ? new Promise<T>(() => {}) : start())
+  const pending = Promise.resolve().then(() => (stopped ? new Promise<T>(() => {}) : start()))
   try {
     return await Promise.race([pending, interruption])
   } finally {
@@ -130,9 +184,12 @@ export function snapshotValueType(
 ): void {
   const record = snapshotDataRecord(value, invalid)
   requireExactKeys(record, ['geometryKind', 'space', 'representation', 'evidence'], invalid)
-  if (record.get('geometryKind') !== expected.geometryKind
-    || record.get('space') !== expected.space
-    || record.get('representation') !== expected.representation) throw invalid()
+  if (
+    record.get('geometryKind') !== expected.geometryKind ||
+    record.get('space') !== expected.space ||
+    record.get('representation') !== expected.representation
+  )
+    throw invalid()
   const evidence = snapshotDataRecord(record.get('evidence'), invalid)
   if (expected.evidence.tag === 'representation-preserving') {
     requireExactKeys(evidence, ['tag'], invalid)
@@ -140,9 +197,12 @@ export function snapshotValueType(
     return
   }
   requireExactKeys(evidence, ['tag', 'certificateProfile', 'certificatePolicyHash'], invalid)
-  if (evidence.get('tag') !== 'certified-approximation'
-    || evidence.get('certificateProfile') !== expected.evidence.certificateProfile
-    || evidence.get('certificatePolicyHash') !== expected.evidence.certificatePolicyHash) throw invalid()
+  if (
+    evidence.get('tag') !== 'certified-approximation' ||
+    evidence.get('certificateProfile') !== expected.evidence.certificateProfile ||
+    evidence.get('certificatePolicyHash') !== expected.evidence.certificatePolicyHash
+  )
+    throw invalid()
 }
 
 export function snapshotRuntimeValue<TPayloadFamily extends object>(
@@ -153,13 +213,20 @@ export function snapshotRuntimeValue<TPayloadFamily extends object>(
   session: SemanticBackendSession<TPayloadFamily>,
   recordLease: (lease: SemanticBackendPayloadLease) => void,
 ): SemanticRuntimeValue<TPayloadFamily> {
-  const invalid = () => new SemanticProgramExecutionError('E_SEMANTIC_BACKEND_TYPE', node, 'Backend returned a value incompatible with the node valueType/evidence contract')
+  const invalid = () =>
+    new SemanticProgramExecutionError(
+      'E_SEMANTIC_BACKEND_TYPE',
+      node,
+      'Backend returned a value incompatible with the node valueType/evidence contract',
+    )
   const record = snapshotDataRecord(value, invalid)
   const tag = record.get('tag')
-  const required = tag === 'empty'
-    ? ['tag', 'valueType', 'evidence']
-    : tag === 'value' || tag === 'materialized-empty'
-      ? ['tag', 'valueType', 'evidence', 'payload', 'lease'] : []
+  const required =
+    tag === 'empty'
+      ? ['tag', 'valueType', 'evidence']
+      : tag === 'value' || tag === 'materialized-empty'
+        ? ['tag', 'valueType', 'evidence', 'payload', 'lease']
+        : []
   if (required.length === 0) throw invalid()
   if (tag === 'materialized-empty' && !allowMaterializedEmpty) throw invalid()
   requireExactKeys(record, required, invalid)
@@ -176,18 +243,17 @@ export function snapshotRuntimeValue<TPayloadFamily extends object>(
     if (lease === null || (typeof lease !== 'object' && typeof lease !== 'function')) throw invalid()
     let validPayload = false
     try {
-      validPayload = session.validatePayload(
-        semanticCarrierKey(expected),
-        payload,
-        lease as SemanticBackendPayloadLease,
-      ) === true
+      validPayload =
+        session.validatePayload(semanticCarrierKey(expected), payload, lease as SemanticBackendPayloadLease) === true
     } catch {
       throw invalid()
     }
     if (!validPayload) throw invalid()
     recordLease(lease as SemanticBackendPayloadLease)
     return Object.freeze({
-      tag: tag as 'value' | 'materialized-empty', valueType: expected, evidence: frozenEvidence,
+      tag: tag as 'value' | 'materialized-empty',
+      valueType: expected,
+      evidence: frozenEvidence,
       payload,
     }) as SemanticRuntimeValue<TPayloadFamily>
   }
@@ -196,11 +262,13 @@ export function snapshotRuntimeValue<TPayloadFamily extends object>(
   throw invalid()
 }
 
-export function typedEmpty<TPayloadFamily extends object>(
-  node: SemanticNode,
-): SemanticRuntimeValue<TPayloadFamily> {
+export function typedEmpty<TPayloadFamily extends object>(node: SemanticNode): SemanticRuntimeValue<TPayloadFamily> {
   if (node.valueType.evidence.tag !== 'representation-preserving') {
-    throw new SemanticProgramExecutionError('E_SEMANTIC_BACKEND_TYPE', node.id, 'Cannot synthesize certified emptiness without a trusted certificate verifier')
+    throw new SemanticProgramExecutionError(
+      'E_SEMANTIC_BACKEND_TYPE',
+      node.id,
+      'Cannot synthesize certified emptiness without a trusted certificate verifier',
+    )
   }
   return Object.freeze({
     tag: 'empty' as const,
@@ -246,7 +314,8 @@ export function reduceEmptyInputs<TPayloadFamily extends object>(
           : { inputs, positions: allPositions }
       }
       if (node.operation === 'difference') {
-        if (inputs[0]?.tag === 'empty') return { result: typedEmpty(node), inputs: Object.freeze([]), positions: Object.freeze([]) }
+        if (inputs[0]?.tag === 'empty')
+          return { result: typedEmpty(node), inputs: Object.freeze([]), positions: Object.freeze([]) }
         return select((input, index) => index === 0 || input.tag !== 'empty')
       }
       const present = select(input => input.tag !== 'empty')
@@ -258,22 +327,27 @@ export function reduceEmptyInputs<TPayloadFamily extends object>(
 }
 
 export function nodeMustReturnValueAfterReduction(node: SemanticNode): boolean {
-  if (node.kind === 'full-round-exact'
-    || node.kind === 'hull'
-    || node.kind === 'linear-extrude'
-    || node.kind === 'rotate-extrude-analytic'
-    || node.kind === 'rotate-extrude-polygonal') return true
+  if (
+    node.kind === 'full-round-exact' ||
+    node.kind === 'hull' ||
+    node.kind === 'linear-extrude' ||
+    node.kind === 'rotate-extrude-analytic' ||
+    node.kind === 'rotate-extrude-polygonal'
+  )
+    return true
   if (node.kind === 'boolean') return node.operation === 'union'
   if (node.kind === 'projection') return !node.cut
   if (node.kind === 'offset') return node.distance >= 0
-  return node.kind === 'box'
-    || node.kind === 'sphere-analytic'
-    || node.kind === 'sphere-polygonal'
-    || node.kind === 'cylinder-analytic'
-    || node.kind === 'cylinder-polygonal'
-    || node.kind === 'rectangle'
-    || node.kind === 'circle-analytic'
-    || node.kind === 'circle-polygonal'
+  return (
+    node.kind === 'box' ||
+    node.kind === 'sphere-analytic' ||
+    node.kind === 'sphere-polygonal' ||
+    node.kind === 'cylinder-analytic' ||
+    node.kind === 'cylinder-polygonal' ||
+    node.kind === 'rectangle' ||
+    node.kind === 'circle-analytic' ||
+    node.kind === 'circle-polygonal'
+  )
 }
 
 export function executionFailure(error: unknown, node: number | null): SemanticProgramExecutionError {
@@ -307,8 +381,14 @@ export function bindBackendSession<TPayloadFamily extends object>(
   close: SemanticBackendSession<TPayloadFamily>['close'],
 ): SemanticBackendSession<TPayloadFamily> {
   const evaluate = bindBackendMethod(value, 'evaluate') as SemanticBackendSession<TPayloadFamily>['evaluate']
-  const validatePayload = bindBackendMethod(value, 'validatePayload') as SemanticBackendSession<TPayloadFamily>['validatePayload']
-  const releasePayload = bindBackendMethod(value, 'releasePayload') as SemanticBackendSession<TPayloadFamily>['releasePayload']
+  const validatePayload = bindBackendMethod(
+    value,
+    'validatePayload',
+  ) as SemanticBackendSession<TPayloadFamily>['validatePayload']
+  const releasePayload = bindBackendMethod(
+    value,
+    'releasePayload',
+  ) as SemanticBackendSession<TPayloadFamily>['releasePayload']
   return Object.freeze({
     evaluate,
     validatePayload,
@@ -317,15 +397,13 @@ export function bindBackendSession<TPayloadFamily extends object>(
   })
 }
 
-export function snapshotCloseRecord(
-  value: unknown,
-  expected: 'closed' | 'committed',
-): (() => Promise<void>) | null {
-  const invalid = () => new SemanticProgramExecutionError(
-    'E_SEMANTIC_BACKEND_CLOSE',
-    null,
-    `Backend close did not return the required ${expected} ownership result`,
-  )
+export function snapshotCloseRecord(value: unknown, expected: 'closed' | 'committed'): (() => Promise<void>) | null {
+  const invalid = () =>
+    new SemanticProgramExecutionError(
+      'E_SEMANTIC_BACKEND_CLOSE',
+      null,
+      `Backend close did not return the required ${expected} ownership result`,
+    )
   const record = snapshotDataRecord(value, invalid)
   if (expected === 'closed') {
     requireExactKeys(record, ['tag'], invalid)
@@ -346,8 +424,13 @@ export function captureCommittedDisposer(value: unknown): (() => Promise<void>) 
   if (value === null || typeof value !== 'object') return null
   try {
     const descriptor = Object.getOwnPropertyDescriptor(value, 'resultLease')
-    if (descriptor === undefined || !('value' in descriptor)
-      || descriptor.value === null || typeof descriptor.value !== 'object') return null
+    if (
+      descriptor === undefined ||
+      !('value' in descriptor) ||
+      descriptor.value === null ||
+      typeof descriptor.value !== 'object'
+    )
+      return null
     const dispose = bindBackendMethod(descriptor.value, 'dispose')
     return () => Promise.resolve().then(dispose)
   } catch {
@@ -361,10 +444,10 @@ export async function closeFailedSession<TPayloadFamily extends object>(
   primary: SemanticProgramExecutionError,
 ): Promise<never> {
   if (!controller.signal.aborted) controller.abort(primary)
-  const outcome: SemanticBackendCloseOutcome = primary.code === 'E_SEMANTIC_ABORTED'
-    || primary.code === 'E_SEMANTIC_DEADLINE'
-    ? Object.freeze({ tag: 'abort', code: primary.code, node: primary.node })
-    : Object.freeze({ tag: 'failure', code: primary.code, node: primary.node })
+  const outcome: SemanticBackendCloseOutcome =
+    primary.code === 'E_SEMANTIC_ABORTED' || primary.code === 'E_SEMANTIC_DEADLINE'
+      ? Object.freeze({ tag: 'abort', code: primary.code, node: primary.node })
+      : Object.freeze({ tag: 'failure', code: primary.code, node: primary.node })
   try {
     const closed = await Promise.resolve().then(() => session.close(outcome))
     snapshotCloseRecord(closed, 'closed')

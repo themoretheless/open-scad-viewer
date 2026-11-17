@@ -1,5 +1,5 @@
 import type { DirectExtrusionOperation } from '../../app/directExtrusion'
-import {createViewportOperations} from './useViewportLayerAndPolygons/viewportOperations'
+import { createViewportOperations } from './useViewportLayerAndPolygons/viewportOperations'
 import {
   computed,
   nextTick,
@@ -64,48 +64,147 @@ export interface UseViewportLayerAndPolygonsOptions {
 export const INVALID_HUE = 0
 
 export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygonsOptions) {
-  const {hasDragNodes, setDragNodes, fpsTick, applyDragPreviewTransform, clearDragPreview, settleAfterDrag, displayMeshFor, shadeFromNormal, stopGpuLayer, retryGpuLayer, mountGpuCanvas, refreshDisplayPreparation, vrSnapshot, meshPolygons, polygonColor, surfacePolygons} = createViewportOperations({
-    get fpsPrevious() { return fpsPrevious },
-    set fpsPrevious(value: typeof fpsPrevious) { fpsPrevious = value },
-    get fpsIntervals() { return fpsIntervals },
-    set fpsIntervals(value: typeof fpsIntervals) { fpsIntervals = value },
-    get fpsSince() { return fpsSince },
-    set fpsSince(value: typeof fpsSince) { fpsSince = value },
-    get fps() { return fps },
-    get frameMs() { return frameMs },
-    get drawMs() { return drawMs },
-    get gpuLayer() { return gpuLayer },
-    set gpuLayer(value: typeof gpuLayer) { gpuLayer = value },
-    get fpsHandle() { return fpsHandle },
-    set fpsHandle(value: typeof fpsHandle) { fpsHandle = value },
-    get dragNodes() { return dragNodes },
-    set dragNodes(value: typeof dragNodes) { dragNodes = value },
-    get dragOffsetIds() { return dragOffsetIds },
-    set dragOffsetIds(value: typeof dragOffsetIds) { dragOffsetIds = value },
-    get settling() { return settling },
-    get settleHandle() { return settleHandle },
-    set settleHandle(value: typeof settleHandle) { settleHandle = value },
-    get displayVersion() { return displayVersion },
-    get options() { return options },
-    get smoothDisplay() { return smoothDisplay },
-    get displayQueue() { return displayQueue },
-    get gpuGeneration() { return gpuGeneration },
-    set gpuGeneration(value: typeof gpuGeneration) { gpuGeneration = value },
-    get gpuResize() { return gpuResize },
-    set gpuResize(value: typeof gpuResize) { gpuResize = value },
-    get gpuActive() { return gpuActive },
-    get gpuInitializing() { return gpuInitializing },
-    get gpuCanvas() { return gpuCanvas },
-    set gpuCanvas(value: typeof gpuCanvas) { gpuCanvas = value },
-    get gpuRetryVisible() { return gpuRetryVisible },
-    get gpuFailureNotice() { return gpuFailureNotice },
-    get gpuInitStarted() { return gpuInitStarted },
-    set gpuInitStarted(value: typeof gpuInitStarted) { gpuInitStarted = value },
-    get cancelDisplayPreparation() { return cancelDisplayPreparation },
-    get displayGeneration() { return displayGeneration },
-    set displayGeneration(value: typeof displayGeneration) { displayGeneration = value },
-    get displayPending() { return displayPending },
-    get polygons() { return polygons },
+  const {
+    hasDragNodes,
+    setDragNodes,
+    fpsTick,
+    applyDragPreviewTransform,
+    clearDragPreview,
+    settleAfterDrag,
+    displayMeshFor,
+    shadeFromNormal,
+    stopGpuLayer,
+    retryGpuLayer,
+    mountGpuCanvas,
+    refreshDisplayPreparation,
+    vrSnapshot,
+    meshPolygons,
+    polygonColor,
+    surfacePolygons,
+  } = createViewportOperations({
+    get fpsPrevious() {
+      return fpsPrevious
+    },
+    set fpsPrevious(value: typeof fpsPrevious) {
+      fpsPrevious = value
+    },
+    get fpsIntervals() {
+      return fpsIntervals
+    },
+    set fpsIntervals(value: typeof fpsIntervals) {
+      fpsIntervals = value
+    },
+    get fpsSince() {
+      return fpsSince
+    },
+    set fpsSince(value: typeof fpsSince) {
+      fpsSince = value
+    },
+    get fps() {
+      return fps
+    },
+    get frameMs() {
+      return frameMs
+    },
+    get drawMs() {
+      return drawMs
+    },
+    get gpuLayer() {
+      return gpuLayer
+    },
+    set gpuLayer(value: typeof gpuLayer) {
+      gpuLayer = value
+    },
+    get fpsHandle() {
+      return fpsHandle
+    },
+    set fpsHandle(value: typeof fpsHandle) {
+      fpsHandle = value
+    },
+    get dragNodes() {
+      return dragNodes
+    },
+    set dragNodes(value: typeof dragNodes) {
+      dragNodes = value
+    },
+    get dragOffsetIds() {
+      return dragOffsetIds
+    },
+    set dragOffsetIds(value: typeof dragOffsetIds) {
+      dragOffsetIds = value
+    },
+    get settling() {
+      return settling
+    },
+    get settleHandle() {
+      return settleHandle
+    },
+    set settleHandle(value: typeof settleHandle) {
+      settleHandle = value
+    },
+    get displayVersion() {
+      return displayVersion
+    },
+    get options() {
+      return options
+    },
+    get smoothDisplay() {
+      return smoothDisplay
+    },
+    get displayQueue() {
+      return displayQueue
+    },
+    get gpuGeneration() {
+      return gpuGeneration
+    },
+    set gpuGeneration(value: typeof gpuGeneration) {
+      gpuGeneration = value
+    },
+    get gpuResize() {
+      return gpuResize
+    },
+    set gpuResize(value: typeof gpuResize) {
+      gpuResize = value
+    },
+    get gpuActive() {
+      return gpuActive
+    },
+    get gpuInitializing() {
+      return gpuInitializing
+    },
+    get gpuCanvas() {
+      return gpuCanvas
+    },
+    set gpuCanvas(value: typeof gpuCanvas) {
+      gpuCanvas = value
+    },
+    get gpuRetryVisible() {
+      return gpuRetryVisible
+    },
+    get gpuFailureNotice() {
+      return gpuFailureNotice
+    },
+    get gpuInitStarted() {
+      return gpuInitStarted
+    },
+    set gpuInitStarted(value: typeof gpuInitStarted) {
+      gpuInitStarted = value
+    },
+    get cancelDisplayPreparation() {
+      return cancelDisplayPreparation
+    },
+    get displayGeneration() {
+      return displayGeneration
+    },
+    set displayGeneration(value: typeof displayGeneration) {
+      displayGeneration = value
+    },
+    get displayPending() {
+      return displayPending
+    },
+    get polygons() {
+      return polygons
+    },
   })
 
   /**
@@ -146,8 +245,6 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
    */
   const settling = ref(false)
   let settleHandle = 0
-
-
 
   const smoothDisplay = ref(true)
   // Exact geometry keys survive history clones and include retained B-rep changes.
@@ -237,7 +334,9 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
     const items = [
       ...options.renderBodies.value.filter(b => !hideSelected || !adv.bodyIds.has(b.id)).map(b => ({ b, preview: 0 })),
       ...(adv.document?.bodies ?? []).filter(b => adv.bodyIds.has(b.id)).map(b => ({ b, preview: 1 })),
-      ...(options.previewBody.value && !options.previewReplacesTarget.value ? [{ b: options.previewBody.value, preview: 2 }] : []),
+      ...(options.previewBody.value && !options.previewReplacesTarget.value
+        ? [{ b: options.previewBody.value, preview: 2 }]
+        : []),
     ]
     const bodies = items.flatMap(({ b, preview }) => {
       const display = displayMeshFor(b)
@@ -246,16 +345,16 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
       const bodyHue = options.invalidIds?.value.includes(b.id)
         ? INVALID_HUE
         : subtract?.a.includes(b.id)
-        ? 45
-        : subtract?.b.includes(b.id)
-          ? 350
-          : options.selectedIds.value.includes(b.id)
-            ? 266
-            : options.hovered.value === b.id
-              ? 190
-              : b.material
-                ? -1
-                : 220
+          ? 45
+          : subtract?.b.includes(b.id)
+            ? 350
+            : options.selectedIds.value.includes(b.id)
+              ? 266
+              : options.hovered.value === b.id
+                ? 190
+                : b.material
+                  ? -1
+                  : 220
       const faceHighlight = options.selectedBody.value?.id === b.id && options.pickMode.value === 'face'
       const hues = new Float32Array(count)
       for (let i = 0; i < count; i++) {
@@ -293,7 +392,9 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
       ...(options.document.value.surfaces ?? [])
         .filter(item => options.objectInView(item.id) && !(hideSelected && adv.surfaceIds.includes(item.id)))
         .map(item => ({ item, preview: false })),
-      ...(adv.document?.surfaces ?? []).filter(item => adv.surfaceIds.includes(item.id)).map(item => ({ item, preview: true })),
+      ...(adv.document?.surfaces ?? [])
+        .filter(item => adv.surfaceIds.includes(item.id))
+        .map(item => ({ item, preview: true })),
     ]
     for (const { item, preview } of surfaceItems) {
       const mesh = options.surfaceDisplayQueue.get(item)
@@ -347,13 +448,17 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
     const bodies = [
       ...options.renderBodies.value.filter(b => !adv.document || !adv.bodyIds.has(b.id)).map(b => ({ b, preview: 0 })),
       ...(adv.document?.bodies ?? []).filter(b => adv.bodyIds.has(b.id)).map(b => ({ b, preview: 1 })),
-      ...(!options.previewReplacesTarget.value && options.previewBody.value ? [{ b: options.previewBody.value, preview: 2 }] : []),
+      ...(!options.previewReplacesTarget.value && options.previewBody.value
+        ? [{ b: options.previewBody.value, preview: 2 }]
+        : []),
     ]
     const surfaces = [
       ...(options.document.value.surfaces ?? [])
         .filter(item => options.objectInView(item.id) && (!adv.document || !adv.surfaceIds.includes(item.id)))
         .map(item => ({ item, preview: 0 })),
-      ...(adv.document?.surfaces ?? []).filter(item => adv.surfaceIds.includes(item.id)).map(item => ({ item, preview: 1 })),
+      ...(adv.document?.surfaces ?? [])
+        .filter(item => adv.surfaceIds.includes(item.id))
+        .map(item => ({ item, preview: 1 })),
     ]
     if (!surfaces.length && !bodies.some(({ b, preview }) => preview || (b.material?.opacity ?? 1) < 1)) return null
     const items = [
@@ -372,7 +477,9 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
     try {
       return {
         items,
-        tree: new TransparentBsp(items.map(p => ({ owner: p.key, triangle: p.vertices as unknown as [Vec3, Vec3, Vec3] }))),
+        tree: new TransparentBsp(
+          items.map(p => ({ owner: p.key, triangle: p.vertices as unknown as [Vec3, Vec3, Vec3] })),
+        ),
       }
     } catch {
       return { items, tree: null }
@@ -388,7 +495,9 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
     const projectPoint = createDirectProjector(options.camera.value)
     const transparent = cpuTransparency.value
     if (!transparent?.tree) {
-      restingPolygons = options.renderBodies.value.flatMap(b => meshPolygons(b, 0, projectPoint)).sort((a, b) => a.depth - b.depth)
+      restingPolygons = options.renderBodies.value
+        .flatMap(b => meshPolygons(b, 0, projectPoint))
+        .sort((a, b) => a.depth - b.depth)
     }
     if (transparent) {
       limited = !transparent.tree
@@ -408,33 +517,35 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
         } catch {
           limited = true
         }
-        restingPolygons = (fragments ?? transparent.items.map(p => ({ owner: p.key, triangle: p.vertices }))).flatMap((fragment, i) => {
-          const original = source.get(fragment.owner)!
-          const vertices = fragment.triangle.map(p => projectPoint([...p]))
-          const a = vertices[0]!
-          const b = vertices[1]!
-          const c = vertices[2]!
-          if (
-            original.closed &&
-            !original.preview &&
-            !original.surface &&
-            (original.material?.opacity ?? 1) === 1 &&
-            (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]) <= 0
-          ) {
-            return []
-          }
+        restingPolygons = (fragments ?? transparent.items.map(p => ({ owner: p.key, triangle: p.vertices }))).flatMap(
+          (fragment, i) => {
+            const original = source.get(fragment.owner)!
+            const vertices = fragment.triangle.map(p => projectPoint([...p]))
+            const a = vertices[0]!
+            const b = vertices[1]!
+            const c = vertices[2]!
+            if (
+              original.closed &&
+              !original.preview &&
+              !original.surface &&
+              (original.material?.opacity ?? 1) === 1 &&
+              (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]) <= 0
+            ) {
+              return []
+            }
 
-          return [
-            {
-              ...original,
-              key: original.key + ':split:' + i,
-              vertices,
-              depth: vertices.reduce((sum, p) => sum + p[2] / 3, 0),
-              points: vertices.map(p => p.slice(0, 2).join(',')).join(' '),
-              shade: shadeFromNormal(original.normal!, projectPoint),
-            },
-          ]
-        })
+            return [
+              {
+                ...original,
+                key: original.key + ':split:' + i,
+                vertices,
+                depth: vertices.reduce((sum, p) => sum + p[2] / 3, 0),
+                points: vertices.map(p => p.slice(0, 2).join(',')).join(' '),
+                shade: shadeFromNormal(original.normal!, projectPoint),
+              },
+            ]
+          },
+        )
         if (limited) restingPolygons.sort((a, b) => a.depth - b.depth)
       }
     }
@@ -443,7 +554,9 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
 
   const polygons = computed(() => polygonView.value.items)
   const cpuOrbitReady = ref(false)
-  const cpuOrbitActive = computed(() => !gpuActive.value && options.cameraDragging.value && polygons.value.length > 1200)
+  const cpuOrbitActive = computed(
+    () => !gpuActive.value && options.cameraDragging.value && polygons.value.length > 1200,
+  )
 
   const cpuOrbitTriangles = computed(() =>
     cpuOrbitActive.value

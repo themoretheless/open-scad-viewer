@@ -1,9 +1,22 @@
 import { AbortedError } from '../../openscadErrors'
-import type { CallNode, FunctionNode, ModuleNode, OpenScadLanguageProfile, Statement, Value } from '../../openscadCompiler'
+import type {
+  CallNode,
+  FunctionNode,
+  ModuleNode,
+  OpenScadLanguageProfile,
+  Statement,
+  Value,
+} from '../../openscadCompiler'
 import type { EvalContext, PassedCallChildren, RegisteredOperations } from '../openscadSemanticLowerer'
 import { MAX_EVALUATED_VALUE_UNITS, evaluationError, isFunctionValue } from '../../openScadStableExpressionEval'
 import { deriveSemanticAmbiguityGroupId, deriveSemanticOperationId } from '../../../core/semanticProgram'
-import type { SemanticIdentityValue, SemanticOperationCategory, SemanticStaticOperation, SemanticStructuralPathSegment, SemanticValueType } from '../../../core/semanticProgram'
+import type {
+  SemanticIdentityValue,
+  SemanticOperationCategory,
+  SemanticStaticOperation,
+  SemanticStructuralPathSegment,
+  SemanticValueType,
+} from '../../../core/semanticProgram'
 import { evalExpression } from './evalExpression'
 import { formatOpenScadValue, isOpenScadRange } from '../openScadValueSemantics'
 
@@ -44,9 +57,12 @@ export function operationCategory(
   if (moduleNames.has(name)) return 'module'
   if (['translate', 'rotate', 'scale', 'mirror', 'multmatrix'].includes(name)) return 'transform'
   if (['union', 'difference', 'intersection', 'hull'].includes(name)) return 'boolean'
-  if (['if', 'let', 'for', 'children', 'group', 'render'].includes(name)
-    || (languageProfile === 'openscad/stable-2021.01' && ['assign', 'child'].includes(name))
-    || (languageProfile === 'openscad/stable-2021.01' && name === 'echo')) return 'control'
+  if (
+    ['if', 'let', 'for', 'children', 'group', 'render'].includes(name) ||
+    (languageProfile === 'openscad/stable-2021.01' && ['assign', 'child'].includes(name)) ||
+    (languageProfile === 'openscad/stable-2021.01' && name === 'echo')
+  )
+    return 'control'
   if (name === 'assert') return 'assertion'
   if (name === 'color') return 'presentation'
   return 'geometry'
@@ -64,11 +80,16 @@ export function semanticOperationName(
     // Semantic-program v1 intentionally has a closed production vocabulary.
     // Historical spellings are lowered onto the equivalent frozen operation;
     // provenance still retains the authored spelling and source span.
-    case 'assign': return '$assign'
-    case 'child': return 'children'
-    case 'dxf_linear_extrude': return 'linear_extrude'
-    case 'dxf_rotate_extrude': return 'rotate_extrude'
-    default: return statement.name
+    case 'assign':
+      return '$assign'
+    case 'child':
+      return 'children'
+    case 'dxf_linear_extrude':
+      return 'linear_extrude'
+    case 'dxf_rotate_extrude':
+      return 'rotate_extrude'
+    default:
+      return statement.name
   }
 }
 
@@ -131,8 +152,7 @@ export function registerOperations(
         // rule. In the full frontend profile echo is therefore represented as
         // a diagnostic effect while its transparent children occupy the same
         // structural scope.
-        if (languageProfile === 'openscad/stable-2021.01'
-          && statement.type === 'call' && statement.name === 'echo') {
+        if (languageProfile === 'openscad/stable-2021.01' && statement.type === 'call' && statement.name === 'echo') {
           appendCandidates(statement.children)
         } else candidates.push(statement)
       }
@@ -140,18 +160,24 @@ export function registerOperations(
     appendCandidates(statements)
     const totals = new Map<string, number>()
     candidates.forEach(statement => {
-      const category = statement.type === 'assign'
-        ? 'control'
-        : statement.type === 'module' ? 'module' : operationCategory(statement.name, moduleNames, languageProfile)
+      const category =
+        statement.type === 'assign'
+          ? 'control'
+          : statement.type === 'module'
+            ? 'module'
+            : operationCategory(statement.name, moduleNames, languageProfile)
       const name = semanticOperationName(statement, languageProfile)
       const key = `${category}\0${name}`
       totals.set(key, (totals.get(key) ?? 0) + 1)
     })
     const ordinals = new Map<string, number>()
     for (const statement of candidates) {
-      const category = statement.type === 'assign'
-        ? 'control'
-        : statement.type === 'module' ? 'module' : operationCategory(statement.name, moduleNames, languageProfile)
+      const category =
+        statement.type === 'assign'
+          ? 'control'
+          : statement.type === 'module'
+            ? 'module'
+            : operationCategory(statement.name, moduleNames, languageProfile)
       const name = semanticOperationName(statement, languageProfile)
       const key = `${category}\0${name}`
       const ordinal = ordinals.get(key) ?? 0
@@ -173,17 +199,16 @@ export function registerOperations(
         category,
         structuralPath,
         identityEvidence: ambiguous ? 'same-name-positional' : 'structural-unique',
-        ambiguityGroup: ambiguous
-          ? deriveSemanticAmbiguityGroupId(parentPath, category, name)
-          : null,
+        ambiguityGroup: ambiguous ? deriveSemanticAmbiguityGroupId(parentPath, category, name) : null,
       }
       operations.push(operation)
       provenance.push({
         operation: id,
         span: { start: statement.p, end: statement.end },
-        label: statement.type === 'assign'
-          ? `${statement.name}=`
-          : `${statement.name}${statement.type === 'call' ? '()' : ''}`,
+        label:
+          statement.type === 'assign'
+            ? `${statement.name}=`
+            : `${statement.name}${statement.type === 'call' ? '()' : ''}`,
       })
       byStatement.set(statement, id)
       if (statement.type === 'assign') {
@@ -199,8 +224,10 @@ export function registerOperations(
         const elseFrame = addFrame(statement, id, structuralPath, '$else', 'branch')
         alternativeByCall.set(statement, elseFrame)
         visitSiblings(statement.alternative, elseFrame, operations[elseFrame]!.structuralPath)
-      } else if ((statement.name === 'children' || statement.name === 'child')
-        && detachedContinuations?.has(statement)) {
+      } else if (
+        (statement.name === 'children' || statement.name === 'child') &&
+        detachedContinuations?.has(statement)
+      ) {
         // children() owns a runtime caller continuation rather than syntactic
         // children. When it becomes a detached root, give that continuation a
         // real static expansion frame in the root registry so replay can keep
@@ -226,9 +253,8 @@ export function registerOperations(
       }
     }
   }
-  const roots = detachedRoot === undefined
-    ? ast
-    : [...ast.filter(statement => statement !== detachedRoot), detachedRoot]
+  const roots =
+    detachedRoot === undefined ? ast : [...ast.filter(statement => statement !== detachedRoot), detachedRoot]
   visitSiblings(roots, null, [], detachedRoot !== undefined)
   return { operations, provenance, byStatement, bodyByStatement, alternativeByCall, expansionByCall }
 }
@@ -239,12 +265,18 @@ export function poll(ctx: EvalContext): void {
 
 export function registerStringValue(value: string, ctx: EvalContext, position: number, label = 'Evaluation'): string {
   ctx.valueBudget.used += Math.max(1, value.length)
-  if (ctx.valueBudget.used > MAX_EVALUATED_VALUE_UNITS) evaluationError(ctx, position, `${label} exceeds the ${MAX_EVALUATED_VALUE_UNITS.toLocaleString('en-US')} value-allocation budget`)
+  if (ctx.valueBudget.used > MAX_EVALUATED_VALUE_UNITS)
+    evaluationError(
+      ctx,
+      position,
+      `${label} exceeds the ${MAX_EVALUATED_VALUE_UNITS.toLocaleString('en-US')} value-allocation budget`,
+    )
   return value
 }
 
 export function finiteNumber(value: Value, ctx: EvalContext, position: number, label: string): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) evaluationError(ctx, position, `${label} must be a finite number`)
+  if (typeof value !== 'number' || !Number.isFinite(value))
+    evaluationError(ctx, position, `${label} must be a finite number`)
   return canonicalNumber(value)
 }
 
@@ -254,8 +286,9 @@ export function vectorValue(value: Value, ctx: EvalContext, position: number, la
 }
 
 export function truthy(value: Value): boolean {
-  return value !== false && value !== undefined && value !== 0 && value !== ''
-    && (!Array.isArray(value) || value.length > 0)
+  return (
+    value !== false && value !== undefined && value !== 0 && value !== '' && (!Array.isArray(value) || value.length > 0)
+  )
 }
 
 export function deepEqual(left: Value, right: Value): boolean {
@@ -286,12 +319,13 @@ export function resolveStableVariable(
     const local = scope.resolveLocalVariable(
       name,
       visibleBefore,
-      (expression, site) => evalExpression(expression, {
-        ...ctx,
-        env: site.env,
-        stableScope: site.scope,
-        scopeVisibleBefore: site.visibleBefore,
-      }),
+      (expression, site) =>
+        evalExpression(expression, {
+          ...ctx,
+          env: site.env,
+          stableScope: site.scope,
+          scopeVisibleBefore: site.visibleBefore,
+        }),
       message => stableWarning(ctx, position, message, 'W_OPENSCAD_SCOPE'),
     )
     if (local.found) return local
@@ -312,12 +346,5 @@ export function stableWarning(
   code = 'W_OPENSCAD_VALUE',
   dedupe = true,
 ): void {
-  ctx.builder.warn(
-    null,
-    code,
-    [],
-    message,
-    { start: position, end: Math.min(ctx.source.length, position + 1) },
-    dedupe,
-  )
+  ctx.builder.warn(null, code, [], message, { start: position, end: Math.min(ctx.source.length, position + 1) }, dedupe)
 }

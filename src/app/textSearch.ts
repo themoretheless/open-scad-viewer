@@ -41,8 +41,13 @@ export function wrappedMatchIndex(current: number, count: number, direction: 1 |
 }
 
 export function replaceExpectedMatch(source: string, match: TextMatch, replacement: string): string | null {
-  if (match.start < 0 || match.end < match.start || match.end > source.length
-    || source.slice(match.start, match.end) !== match.text) return null
+  if (
+    match.start < 0 ||
+    match.end < match.start ||
+    match.end > source.length ||
+    source.slice(match.start, match.end) !== match.text
+  )
+    return null
   const nextLength = source.length - (match.end - match.start) + replacement.length
   if (nextLength > MAX_TEXT_SEARCH_SOURCE_LENGTH) return null
   return source.slice(0, match.start) + replacement + source.slice(match.end)

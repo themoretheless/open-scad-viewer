@@ -22,11 +22,7 @@ export function releaseOverlaySlot(slot: OverlaySlot): void {
  * hover updates therefore reuse the same GPU buffer via queue.writeBuffer
  * instead of a destroy/create pair.
  */
-export function writeOverlaySlot(
-  dev: GPUDevice | null,
-  slot: OverlaySlot,
-  values: number[],
-): void {
+export function writeOverlaySlot(dev: GPUDevice | null, slot: OverlaySlot, values: number[]): void {
   slot.count = 0
   if (!dev || !values.length) return
   const data = new Float32Array(values)
@@ -57,11 +53,7 @@ export function writeOverlaySlot(
   }
 }
 
-export function appendColoredPositions(
-  target: number[],
-  positions: Float32Array,
-  color: readonly number[],
-): void {
+export function appendColoredPositions(target: number[], positions: Float32Array, color: readonly number[]): void {
   for (let offset = 0; offset + 2 < positions.length; offset += 3) {
     target.push(positions[offset]!, positions[offset + 1]!, positions[offset + 2]!, ...color)
   }
@@ -70,13 +62,10 @@ export function appendColoredPositions(
 export function pointForOverlay(meshes: readonly GMesh[], hit: PickHit): Vec3 | null {
   const mesh = meshes[hit.meshIndex]
   if (!mesh) return null
-  return pointOverlayPosition(
-    mesh.vertices,
-    mesh.indices,
-    mesh.transform,
-    hit.triangleIndex,
-    hit.barycentric,
-  ) ?? (hit.point.every(Number.isFinite) ? [...hit.point] : null)
+  return (
+    pointOverlayPosition(mesh.vertices, mesh.indices, mesh.transform, hit.triangleIndex, hit.barycentric) ??
+    (hit.point.every(Number.isFinite) ? [...hit.point] : null)
+  )
 }
 
 export function appendFaceOverlayForMesh(
@@ -114,9 +103,24 @@ export function appendPointOverlayAt(
 ): void {
   const markerSize = Math.max(0.002, (radius ?? 10) * 0.022)
   const positions = new Float32Array([
-    point[0] - markerSize, point[1], point[2], point[0] + markerSize, point[1], point[2],
-    point[0], point[1] - markerSize, point[2], point[0], point[1] + markerSize, point[2],
-    point[0], point[1], point[2] - markerSize, point[0], point[1], point[2] + markerSize,
+    point[0] - markerSize,
+    point[1],
+    point[2],
+    point[0] + markerSize,
+    point[1],
+    point[2],
+    point[0],
+    point[1] - markerSize,
+    point[2],
+    point[0],
+    point[1] + markerSize,
+    point[2],
+    point[0],
+    point[1],
+    point[2] - markerSize,
+    point[0],
+    point[1],
+    point[2] + markerSize,
   ])
   appendColoredPositions(lineValues, positions, color)
 }
@@ -129,7 +133,10 @@ export function rebuildMeasurementBufferData(
   if (!dev || !measurementPoints.length) return { buffer: null, count: 0 }
   const data: number[] = []
   const markerSize = Math.max(0.01, (boundsRadius ?? 10) * 0.018)
-  const colors = [[1, 0.55, 0.08, 1], [0.1, 0.82, 1, 1]]
+  const colors = [
+    [1, 0.55, 0.08, 1],
+    [0.1, 0.82, 1, 1],
+  ]
   const line = (a: Vec3, b: Vec3, color: number[]) => data.push(...a, ...color, ...b, ...color)
   measurementPoints.forEach((point, index) => {
     const color = colors[index] ?? colors[0]!
@@ -166,9 +173,7 @@ export function rebuildSelectionOverlaySlots(options: {
   const lineValues: number[] = []
   const deepLineValues: number[] = []
   const add = (hit: PickHit, preselected: boolean) => {
-    const targetLines = !preselected && (hit.cycleIndex ?? 0) > 0
-      ? deepLineValues
-      : lineValues
+    const targetLines = !preselected && (hit.cycleIndex ?? 0) > 0 ? deepLineValues : lineValues
     if (options.selectionMode === 'face') {
       const mesh = options.meshes[hit.meshIndex]
       if (!mesh || !options.isMeshVisible(hit.meshIndex)) return

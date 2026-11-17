@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
-import {readFileSync, readdirSync} from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
-import {test} from 'node:test'
-import {fileURLToPath} from 'node:url'
+import { test } from 'node:test'
+import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const read = relative => readFileSync(path.join(root, relative), 'utf8')
@@ -19,7 +19,7 @@ const requiredCommands = ['core', 'abi', 'property', 'ts'].map(name => `test:man
 
 function rustFiles(relative) {
   const absolute = path.join(root, relative)
-  return readdirSync(absolute, {withFileTypes:true}).flatMap(entry => {
+  return readdirSync(absolute, { withFileTypes: true }).flatMap(entry => {
     const child = path.join(relative, entry.name)
     return entry.isDirectory() ? rustFiles(child) : entry.name.endsWith('.rs') ? [child] : []
   })
@@ -44,8 +44,11 @@ test('manifold required checks are wired locally and into CI', () => {
 test('manifold required tests have no pre-existing skip, focus or ignore exceptions', () => {
   for (const file of requiredTypeScript) {
     const source = read(file)
-    assert.doesNotMatch(source, /\b(?:describe|it|test)\s*\.\s*(?:skip|todo|only)\b|\.\s*skipIf\s*\(/u,
-      `${file} contains a skipped, focused or todo test`)
+    assert.doesNotMatch(
+      source,
+      /\b(?:describe|it|test)\s*\.\s*(?:skip|todo|only)\b|\.\s*skipIf\s*\(/u,
+      `${file} contains a skipped, focused or todo test`,
+    )
   }
   const rust = [
     ...rustFiles('crates/manifold-core'),
@@ -53,7 +56,10 @@ test('manifold required tests have no pre-existing skip, focus or ignore excepti
     'crates/geometry-bridge/src/tests/abi.rs',
   ]
   for (const file of rust) {
-    assert.doesNotMatch(read(file), /#\s*\[\s*ignore(?:\s*\([^\]]*\))?\s*\]/u,
-      `${file} contains an ignored required test`)
+    assert.doesNotMatch(
+      read(file),
+      /#\s*\[\s*ignore(?:\s*\([^\]]*\))?\s*\]/u,
+      `${file} contains an ignored required test`,
+    )
   }
 })

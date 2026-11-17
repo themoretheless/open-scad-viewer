@@ -1,7 +1,15 @@
-import {
-  type SemanticProgramDiagnosticCode,
-} from '../../core/semanticProgram'
-export { validateSemanticProgramV1, normalizeSemanticProgram, normalizeDecodedSemanticProgram, normalizeSemanticProgramCore, normalizeDecodedSemanticProgramCore, normalizeSemanticProgramCoreInput, semanticSourceDescriptor, attestSemanticProgramSource, semanticDiagnosticCodeIsPublic } from './semanticProgramValidator/validateSemanticProgramV1'
+import { type SemanticProgramDiagnosticCode } from '../../core/semanticProgram'
+export {
+  validateSemanticProgramV1,
+  normalizeSemanticProgram,
+  normalizeDecodedSemanticProgram,
+  normalizeSemanticProgramCore,
+  normalizeDecodedSemanticProgramCore,
+  normalizeSemanticProgramCoreInput,
+  semanticSourceDescriptor,
+  attestSemanticProgramSource,
+  semanticDiagnosticCodeIsPublic,
+} from './semanticProgramValidator/validateSemanticProgramV1'
 
 export class SemanticProgramValidationError extends TypeError {
   constructor(
@@ -44,9 +52,19 @@ export interface ValidatedSemanticExecution {
 }
 
 export type SemanticProductionRule =
-  | 'primitive' | 'transform-map' | 'projection-map' | 'offset-map' | 'full-round-exact-map'
-  | 'preserving-alias' | 'transparent' | 'boolean' | 'hull' | 'difference'
-  | 'linear-extrude' | 'rotate-extrude' | 'terminal-unsupported'
+  | 'primitive'
+  | 'transform-map'
+  | 'projection-map'
+  | 'offset-map'
+  | 'full-round-exact-map'
+  | 'preserving-alias'
+  | 'transparent'
+  | 'boolean'
+  | 'hull'
+  | 'difference'
+  | 'linear-extrude'
+  | 'rotate-extrude'
+  | 'terminal-unsupported'
 
 export interface SemanticProductionItem {
   readonly node: number
@@ -57,8 +75,7 @@ export interface SemanticProductionItem {
 }
 
 export type SemanticScheduleEvent =
-  | { readonly tag: 'group'; readonly group: number }
-  | { readonly tag: 'node'; readonly node: number }
+  { readonly tag: 'group'; readonly group: number } | { readonly tag: 'node'; readonly node: number }
 
 export interface SemanticProductionGroup {
   readonly canonical: number
@@ -70,4 +87,6 @@ export interface SemanticProductionGroup {
   readonly transparent: boolean
 }
 
-export interface SnapshotBudget { values: number }
+export interface SnapshotBudget {
+  values: number
+}

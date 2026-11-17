@@ -9,10 +9,7 @@ import {
   type OpenScadParsedStatement,
   type Statement,
 } from './openscadCompiler'
-import {
-  OpenScadProject,
-  resolveOpenScadProjectPath,
-} from './openScadProject'
+import { OpenScadProject, resolveOpenScadProjectPath } from './openScadProject'
 
 export const OPENSCAD_PROJECT_MAX_DEPENDENCY_EXPANSIONS = 512
 export const OPENSCAD_PROJECT_MAX_EXPANDED_STATEMENTS = 50_000
@@ -26,8 +23,7 @@ export const OPENSCAD_PROJECT_COMPILE_ERROR_CODES = Object.freeze([
   'E_PROJECT_MODIFIER_TARGET',
 ] as const)
 
-export type OpenScadProjectCompileErrorCode =
-  typeof OPENSCAD_PROJECT_COMPILE_ERROR_CODES[number]
+export type OpenScadProjectCompileErrorCode = (typeof OPENSCAD_PROJECT_COMPILE_ERROR_CODES)[number]
 
 export interface OpenScadProjectCompileErrorDetails {
   readonly directive?: DirectiveNode['directive']
@@ -64,10 +60,8 @@ function isDirective(statement: OpenScadParsedStatement): statement is Directive
 }
 
 function countExpressionNodes(expression: Expr): number {
-  const countArguments = (args: readonly { readonly value: Expr }[]): number => args.reduce(
-    (total, argument) => total + countExpressionNodes(argument.value),
-    0,
-  )
+  const countArguments = (args: readonly { readonly value: Expr }[]): number =>
+    args.reduce((total, argument) => total + countExpressionNodes(argument.value), 0)
   switch (expression.kind) {
     case 'literal':
     case 'identifier':
@@ -75,27 +69,38 @@ function countExpressionNodes(expression: Expr): number {
     case 'vector':
       return 1 + expression.items.reduce((total, item) => total + countExpressionNodes(item), 0)
     case 'range':
-      return 1 + countExpressionNodes(expression.start)
-        + (expression.step === undefined ? 0 : countExpressionNodes(expression.step))
-        + countExpressionNodes(expression.end)
+      return (
+        1 +
+        countExpressionNodes(expression.start) +
+        (expression.step === undefined ? 0 : countExpressionNodes(expression.step)) +
+        countExpressionNodes(expression.end)
+      )
     case 'unary':
       return 1 + countExpressionNodes(expression.value)
     case 'binary':
       return 1 + countExpressionNodes(expression.left) + countExpressionNodes(expression.right)
     case 'ternary':
-      return 1 + countExpressionNodes(expression.test)
-        + countExpressionNodes(expression.yes)
-        + countExpressionNodes(expression.no)
+      return (
+        1 +
+        countExpressionNodes(expression.test) +
+        countExpressionNodes(expression.yes) +
+        countExpressionNodes(expression.no)
+      )
     case 'function':
-      return 1 + expression.params.reduce(
-        (total, param) => total + (param.defaultValue === undefined
-          ? 0
-          : countExpressionNodes(param.defaultValue)),
-        0,
-      ) + countExpressionNodes(expression.body)
+      return (
+        1 +
+        expression.params.reduce(
+          (total, param) => total + (param.defaultValue === undefined ? 0 : countExpressionNodes(param.defaultValue)),
+          0,
+        ) +
+        countExpressionNodes(expression.body)
+      )
     case 'call':
-      return 1 + countExpressionNodes(expression.callee)
-        + expression.args.reduce((total, arg) => total + countExpressionNodes(arg.value), 0)
+      return (
+        1 +
+        countExpressionNodes(expression.callee) +
+        expression.args.reduce((total, arg) => total + countExpressionNodes(arg.value), 0)
+      )
     case 'index':
       return 1 + countExpressionNodes(expression.value) + countExpressionNodes(expression.index)
     case 'member':
@@ -104,19 +109,28 @@ function countExpressionNodes(expression: Expr): number {
       return 1 + countArguments(expression.args) + countExpressionNodes(expression.body)
     case 'assert':
     case 'echo':
-      return 1 + countArguments(expression.args)
-        + (expression.body === undefined ? 0 : countExpressionNodes(expression.body))
+      return (
+        1 +
+        countArguments(expression.args) +
+        (expression.body === undefined ? 0 : countExpressionNodes(expression.body))
+      )
     case 'lc-for':
       return 1 + countArguments(expression.args) + countExpressionNodes(expression.body)
     case 'lc-for-c':
-      return 1 + countArguments(expression.init)
-        + countExpressionNodes(expression.condition)
-        + countArguments(expression.update)
-        + countExpressionNodes(expression.body)
+      return (
+        1 +
+        countArguments(expression.init) +
+        countExpressionNodes(expression.condition) +
+        countArguments(expression.update) +
+        countExpressionNodes(expression.body)
+      )
     case 'lc-if':
-      return 1 + countExpressionNodes(expression.condition)
-        + countExpressionNodes(expression.yes)
-        + (expression.no === undefined ? 0 : countExpressionNodes(expression.no))
+      return (
+        1 +
+        countExpressionNodes(expression.condition) +
+        countExpressionNodes(expression.yes) +
+        (expression.no === undefined ? 0 : countExpressionNodes(expression.no))
+      )
     case 'lc-let':
       return 1 + countArguments(expression.args) + countExpressionNodes(expression.body)
     case 'lc-each':
@@ -132,24 +146,22 @@ function countSyntaxNodes(statements: readonly OpenScadParsedStatement[]): numbe
     if (statement.type === 'assign') {
       total += countExpressionNodes(statement.value)
     } else if (statement.type === 'function') {
-      total += statement.params.reduce(
-        (sum, param) => sum + (param.defaultValue === undefined
-          ? 0
-          : countExpressionNodes(param.defaultValue)),
-        0,
-      ) + countExpressionNodes(statement.body)
+      total +=
+        statement.params.reduce(
+          (sum, param) => sum + (param.defaultValue === undefined ? 0 : countExpressionNodes(param.defaultValue)),
+          0,
+        ) + countExpressionNodes(statement.body)
     } else {
-      total += statement.type === 'call'
-        ? (statement.callArguments ?? Object.values(statement.args).map(value => ({ value }))).reduce(
-          (sum, argument) => sum + countExpressionNodes(argument.value),
-          0,
-        )
-        : statement.params.reduce(
-          (sum, param) => sum + (param.defaultValue === undefined
-            ? 0
-            : countExpressionNodes(param.defaultValue)),
-          0,
-        )
+      total +=
+        statement.type === 'call'
+          ? (statement.callArguments ?? Object.values(statement.args).map(value => ({ value }))).reduce(
+              (sum, argument) => sum + countExpressionNodes(argument.value),
+              0,
+            )
+          : statement.params.reduce(
+              (sum, param) => sum + (param.defaultValue === undefined ? 0 : countExpressionNodes(param.defaultValue)),
+              0,
+            )
       total += countSyntaxNodes(statement.children as readonly OpenScadParsedStatement[])
       if (statement.type === 'call') {
         total += countSyntaxNodes(statement.alternative as readonly OpenScadParsedStatement[])
@@ -195,11 +207,7 @@ export function compileOpenScadProject(project: OpenScadProject): readonly State
     }
   }
 
-  const reserveDependency = (
-    importer: string,
-    directive: DirectiveNode,
-    path: string,
-  ): void => {
+  const reserveDependency = (importer: string, directive: DirectiveNode, path: string): void => {
     dependencyExpansions++
     if (dependencyExpansions > OPENSCAD_PROJECT_MAX_DEPENDENCY_EXPANSIONS) {
       throw new OpenScadProjectCompileError(
@@ -298,12 +306,7 @@ export function compileOpenScadProject(project: OpenScadProject): readonly State
     }
 
     reserveDependency(importer, directive, path)
-    return expandFile(
-      path,
-      definitionsOnly || directive.directive === 'use',
-      [...stack, path],
-      leadingModifiers,
-    )
+    return expandFile(path, definitionsOnly || directive.directive === 'use', [...stack, path], leadingModifiers)
   }
 
   const rejectModifierTarget = (
@@ -312,9 +315,7 @@ export function compileOpenScadProject(project: OpenScadProject): readonly State
     target: Statement | 'end-of-block' | 'end-of-project',
   ): never => {
     const first = pending[0]!
-    const targetName = typeof target === 'string'
-      ? target
-      : `${target.type} ${target.name}`
+    const targetName = typeof target === 'string' ? target : `${target.type} ${target.name}`
     throw new OpenScadProjectCompileError(
       'E_PROJECT_MODIFIER_TARGET',
       `Viewport modifier ${first.modifier.token} from ${first.sourcePath} cannot prefix ${targetName} in ${targetPath}.`,
@@ -326,11 +327,7 @@ export function compileOpenScadProject(project: OpenScadProject): readonly State
     )
   }
 
-  const cloneStatement = (
-    statement: Statement,
-    path: string,
-    stack: readonly string[],
-  ): Statement => {
+  const cloneStatement = (statement: Statement, path: string, stack: readonly string[]): Statement => {
     reserveStatement(path)
     if (statement.type === 'call') {
       const {
@@ -342,27 +339,15 @@ export function compileOpenScadProject(project: OpenScadProject): readonly State
       return {
         ...structuredClone(fields),
         sourcePath: path,
-        children: expandBodyStatements(
-          sourceChildren as readonly OpenScadParsedStatement[],
-          path,
-          stack,
-        ),
-        alternative: expandBodyStatements(
-          sourceAlternative as readonly OpenScadParsedStatement[],
-          path,
-          stack,
-        ),
+        children: expandBodyStatements(sourceChildren as readonly OpenScadParsedStatement[], path, stack),
+        alternative: expandBodyStatements(sourceAlternative as readonly OpenScadParsedStatement[], path, stack),
       } as CallNode
     }
     if (statement.type === 'module') {
       const { children: sourceChildren, ...fields } = statement
       return {
         ...structuredClone(fields),
-        children: expandBodyStatements(
-          sourceChildren as readonly OpenScadParsedStatement[],
-          path,
-          stack,
-        ),
+        children: expandBodyStatements(sourceChildren as readonly OpenScadParsedStatement[], path, stack),
       } as ModuleNode
     }
     return structuredClone(statement)
@@ -383,20 +368,18 @@ export function compileOpenScadProject(project: OpenScadProject): readonly State
           modifier,
           sourcePath: path,
         }))
-        const dependency = expandDependency(
-          statement,
-          path,
-          definitionsOnly,
-          stack,
-          [...pending, ...directiveModifiers],
-        )
+        const dependency = expandDependency(statement, path, definitionsOnly, stack, [
+          ...pending,
+          ...directiveModifiers,
+        ])
         expanded.push(...dependency.statements)
         pending = dependency.pending
         continue
       }
-      const ownModifiers = statement.type === 'call'
-        ? (statement.viewportModifiers ?? []).map(modifier => ({ modifier, sourcePath: path }))
-        : []
+      const ownModifiers =
+        statement.type === 'call'
+          ? (statement.viewportModifiers ?? []).map(modifier => ({ modifier, sourcePath: path }))
+          : []
       const effectiveModifiers = [...pending, ...ownModifiers]
       pending = []
       if (effectiveModifiers.length > 0 && statement.type !== 'call') {
@@ -406,15 +389,17 @@ export function compileOpenScadProject(project: OpenScadProject): readonly State
         continue
       }
       const cloned = cloneStatement(statement, path, stack)
-      expanded.push(effectiveModifiers.length > 0 && cloned.type === 'call'
-        ? {
-          ...cloned,
-          viewportModifiers: effectiveModifiers.map(entry => ({
-            ...structuredClone(entry.modifier),
-            sourcePath: entry.sourcePath,
-          })),
-        }
-        : cloned)
+      expanded.push(
+        effectiveModifiers.length > 0 && cloned.type === 'call'
+          ? {
+              ...cloned,
+              viewportModifiers: effectiveModifiers.map(entry => ({
+                ...structuredClone(entry.modifier),
+                sourcePath: entry.sourcePath,
+              })),
+            }
+          : cloned,
+      )
     }
     return { statements: expanded, pending }
   }

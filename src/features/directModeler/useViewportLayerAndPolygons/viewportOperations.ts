@@ -1,8 +1,11 @@
-import {
-  type ComponentPublicInstance,
-} from 'svet'
+import { type ComponentPublicInstance } from 'svet'
 import type { DirectDocument } from '../../../app/directModeling'
-import { createDirectProjector, directExtrusionTool, directFaceShade, projectDirectPoint } from '../../../app/directModelingTools'
+import {
+  createDirectProjector,
+  directExtrusionTool,
+  directFaceShade,
+  projectDirectPoint,
+} from '../../../app/directModelingTools'
 import type { PolygonMesh } from '../../../kernel/geometry/polygon'
 import { type DisplayMesh } from '../../../kernel/solidDisplayCache'
 import { isSolidGpuSupported, SolidGpuLayer } from '../../../kernel/solidGpuView'
@@ -11,11 +14,15 @@ import type { SolidNurbsSurface } from '../../../kernel/solidNurbs'
 import { prepareVrPolygons } from '../../../render/vrScene'
 import { COARSE_DISPLAY } from '.././helpers'
 import { currentRenderSeam } from '../../../dev/testSeam'
-import type {ViewportOperationsContext} from './viewportOperationsContext'
+import type { ViewportOperationsContext } from './viewportOperationsContext'
 export function createViewportOperations(context: ViewportOperationsContext) {
-function hasDragNodes(): boolean { return context.dragNodes.length > 0 }
-function setDragNodes(nodes: SVGElement[]) { context.dragNodes = nodes }
-function fpsTick(now: number) {
+  function hasDragNodes(): boolean {
+    return context.dragNodes.length > 0
+  }
+  function setDragNodes(nodes: SVGElement[]) {
+    context.dragNodes = nodes
+  }
+  function fpsTick(now: number) {
     if (context.fpsPrevious) context.fpsIntervals.push(now - context.fpsPrevious)
     context.fpsPrevious = now
     const elapsed = now - context.fpsSince
@@ -29,12 +36,12 @@ function fpsTick(now: number) {
     }
     context.fpsHandle = requestAnimationFrame(fpsTick)
   }
-function applyDragPreviewTransform(offset: string, ids: string[], worldDelta: [number, number, number]) {
+  function applyDragPreviewTransform(offset: string, ids: string[], worldDelta: [number, number, number]) {
     for (const node of context.dragNodes) node.setAttribute('transform', offset)
     context.dragOffsetIds = ids
     context.gpuLayer?.setDragOffset(context.dragOffsetIds, worldDelta)
   }
-function clearDragPreview() {
+  function clearDragPreview() {
     for (const node of context.dragNodes) node.removeAttribute?.('transform')
     context.dragNodes = []
     if (context.dragOffsetIds.length) {
@@ -42,7 +49,7 @@ function clearDragPreview() {
       context.dragOffsetIds = []
     }
   }
-function settleAfterDrag() {
+  function settleAfterDrag() {
     // The committed document normally rebuilds the GPU buffer, but never rely on that: a
     // commit that changes nothing leaves the buffer, and with it a stale offset, in place.
     if (context.dragOffsetIds.length) {
@@ -60,7 +67,7 @@ function settleAfterDrag() {
       clearDragPreview()
     }, 140) as unknown as number
   }
-function triangleNormals(mesh: PolygonMesh) {
+  function triangleNormals(mesh: PolygonMesh) {
     const indices = mesh.indices
     const pos = mesh.positions
     const count = indices.length / 3
@@ -86,11 +93,12 @@ function triangleNormals(mesh: PolygonMesh) {
     }
     return normals
   }
-function displayMeshFor(b: ReturnType<typeof directExtrusionTool>): DisplayMesh {
+  function displayMeshFor(b: ReturnType<typeof directExtrusionTool>): DisplayMesh {
     void context.displayVersion.value
     const transforming =
       context.options.previewingTransform.value &&
-      (context.options.selectedIds.value.includes(b.id) || (!!b.instance && context.options.selectedIds.value.includes(b.instance.sourceId)))
+      (context.options.selectedIds.value.includes(b.id) ||
+        (!!b.instance && context.options.selectedIds.value.includes(b.instance.sourceId)))
     if (
       !transforming &&
       !(context.options.heightDragging.value && b === context.options.previewBody.value) &&
@@ -103,11 +111,13 @@ function displayMeshFor(b: ReturnType<typeof directExtrusionTool>): DisplayMesh 
     }
     return { mesh: b.mesh, map: null, normals: triangleNormals(b.mesh) }
   }
-function shadeFromNormal(n: number[], projectPoint?: (p: number[]) => [number, number, number]): number {
-    const light = projectPoint ? projectPoint(n) : projectDirectPoint([n[0]!, n[1]!, n[2]!], context.options.camera.value)
+  function shadeFromNormal(n: number[], projectPoint?: (p: number[]) => [number, number, number]): number {
+    const light = projectPoint
+      ? projectPoint(n)
+      : projectDirectPoint([n[0]!, n[1]!, n[2]!], context.options.camera.value)
     return Math.max(24, Math.min(78, 48 + 20 * light[2] - 15 * light[1] + 8 * light[0]))
   }
-function stopGpuLayer() {
+  function stopGpuLayer() {
     context.gpuGeneration++
     context.gpuResize?.disconnect()
     context.gpuResize = null
@@ -116,7 +126,7 @@ function stopGpuLayer() {
     context.gpuActive.value = false
     context.gpuInitializing.value = false
   }
-function retryGpuLayer() {
+  function retryGpuLayer() {
     if (context.gpuInitializing.value || !context.gpuCanvas || !context.options.props.open) return
     stopGpuLayer()
     const generation = context.gpuGeneration
@@ -149,7 +159,9 @@ function retryGpuLayer() {
       }
       const wrap = canvas.parentElement
       if (wrap) {
-        context.gpuResize = new ResizeObserver(() => layer.resize(wrap.clientWidth, wrap.clientHeight, window.devicePixelRatio || 1))
+        context.gpuResize = new ResizeObserver(() =>
+          layer.resize(wrap.clientWidth, wrap.clientHeight, window.devicePixelRatio || 1),
+        )
         context.gpuResize.observe(wrap)
         layer.resize(wrap.clientWidth, wrap.clientHeight, window.devicePixelRatio || 1)
       }
@@ -159,15 +171,21 @@ function retryGpuLayer() {
       if (context.options.getNotice() === context.gpuFailureNotice.value) context.options.setNotice('')
     })
   }
-function mountGpuCanvas(el: Element | ComponentPublicInstance | null) {
-    if (typeof HTMLCanvasElement === 'undefined' || !(el instanceof HTMLCanvasElement) || context.gpuInitStarted || !isSolidGpuSupported()) return
+  function mountGpuCanvas(el: Element | ComponentPublicInstance | null) {
+    if (
+      typeof HTMLCanvasElement === 'undefined' ||
+      !(el instanceof HTMLCanvasElement) ||
+      context.gpuInitStarted ||
+      !isSolidGpuSupported()
+    )
+      return
     // The recording render seam promises no WebGPU adapter or device, so the Solid view stays on its CPU/SVG path.
     if (currentRenderSeam() === 'recording') return
     context.gpuInitStarted = true
     context.gpuCanvas = el
     retryGpuLayer()
   }
-function refreshDisplayPreparation(advDoc: DirectDocument | null | undefined) {
+  function refreshDisplayPreparation(advDoc: DirectDocument | null | undefined) {
     context.cancelDisplayPreparation()
     if (!context.options.props.open || !context.options.kernelReady.value) return
     const generation = context.displayGeneration
@@ -180,7 +198,8 @@ function refreshDisplayPreparation(advDoc: DirectDocument | null | undefined) {
         (context.smoothDisplay.value || (b.brep?.shells.some(s => s.closed) && b.brep.shells.some(s => !s.closed))) &&
         !(
           context.options.previewingTransform.value &&
-          (context.options.selectedIds.value.includes(b.id) || (!!b.instance && context.options.selectedIds.value.includes(b.instance.sourceId)))
+          (context.options.selectedIds.value.includes(b.id) ||
+            (!!b.instance && context.options.selectedIds.value.includes(b.instance.sourceId)))
         ),
     )
     context.displayPending.value = true
@@ -193,7 +212,7 @@ function refreshDisplayPreparation(advDoc: DirectDocument | null | undefined) {
         if (generation === context.displayGeneration) context.displayPending.value = false
       })
   }
-function vrSnapshot() {
+  function vrSnapshot() {
     return prepareVrPolygons(
       context.options.renderBodies.value.map(body => ({
         ...displayMeshFor(body).mesh,
@@ -201,7 +220,7 @@ function vrSnapshot() {
       })),
     )
   }
-function meshPolygons(
+  function meshPolygons(
     b: ReturnType<typeof directExtrusionTool>,
     preview = 0,
     projectPoint = createDirectProjector(context.options.camera.value),
@@ -211,7 +230,8 @@ function meshPolygons(
       context.options.cameraDragging.value || context.gpuActive.value
         ? { ...COARSE_DISPLAY, mesh: b.mesh, normals: world ? triangleNormals(b.mesh) : [] }
         : displayMeshFor(b)
-    const closed = display.closed ?? (b.brep?.shells.some(s => !s.closed) ? context.displayQueue.get(b)?.workClosed : null)
+    const closed =
+      display.closed ?? (b.brep?.shells.some(s => !s.closed) ? context.displayQueue.get(b)?.workClosed : null)
     const allClosed = !!b.brep?.shells.length && b.brep.shells.every(s => s.closed)
     const mesh = display.mesh
     const pos = mesh.positions
@@ -240,7 +260,8 @@ function meshPolygons(
       const p1 = points[indices[o + 1]!]!
       const p2 = points[indices[o + 2]!]!
       const isClosed = closed?.[i] ?? allClosed
-      if (checkBackface && isClosed && (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0]) <= 0) continue
+      if (checkBackface && isClosed && (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0]) <= 0)
+        continue
       const triangle = display.map ? display.map[i]! : i
       const face = [p0, p1, p2]
       out.push({
@@ -264,7 +285,7 @@ function meshPolygons(
     }
     return out
   }
-function polygonColor(p: (typeof context.polygons.value)[number]) {
+  function polygonColor(p: (typeof context.polygons.value)[number]) {
     const subtract = context.options.getSubtract()
     return p.preview
       ? p.preview === 2
@@ -302,10 +323,28 @@ function polygonColor(p: (typeof context.polygons.value)[number]) {
                         : 220
             } 45% ${p.shade}%)`
   }
-function surfacePolygons(item: SolidNurbsSurface) {
+  function surfacePolygons(item: SolidNurbsSurface) {
     void context.options.surfaceDisplayVersion.value
     const mesh = context.options.surfaceDisplayQueue.get(item)
     return mesh ? meshPolygons({ id: item.id, name: item.name, mesh }) : []
   }
-return {hasDragNodes, setDragNodes, fpsTick, applyDragPreviewTransform, clearDragPreview, settleAfterDrag, triangleNormals, displayMeshFor, shadeFromNormal, stopGpuLayer, retryGpuLayer, mountGpuCanvas, refreshDisplayPreparation, vrSnapshot, meshPolygons, polygonColor, surfacePolygons}
+  return {
+    hasDragNodes,
+    setDragNodes,
+    fpsTick,
+    applyDragPreviewTransform,
+    clearDragPreview,
+    settleAfterDrag,
+    triangleNormals,
+    displayMeshFor,
+    shadeFromNormal,
+    stopGpuLayer,
+    retryGpuLayer,
+    mountGpuCanvas,
+    refreshDisplayPreparation,
+    vrSnapshot,
+    meshPolygons,
+    polygonColor,
+    surfacePolygons,
+  }
 }

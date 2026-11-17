@@ -68,9 +68,14 @@ export interface MeshConvertResult {
 
 /** Build the export-ready mesh wrapper (Rust inspection report attached). */
 export function polygonMeshToExportMesh(mesh: PolygonMesh): NurbsMesh {
-  const positions = mesh.positions.slice(), indices = mesh.indices.slice()
+  const positions = mesh.positions.slice(),
+    indices = mesh.indices.slice()
   const report = inspectNurbsMesh(positions, indices)
-  return { positions, indices, report: { ...report, errorBoundCertified: false, selfIntersectionStatus: 'not_checked' } }
+  return {
+    positions,
+    indices,
+    report: { ...report, errorBoundCertified: false, selfIntersectionStatus: 'not_checked' },
+  }
 }
 
 export function convertedFileName(inputName: string, extension: string): string {
@@ -89,9 +94,7 @@ export async function exportMesh(
   if (!isMeshExportFormat(target)) throw new Error(`Unsupported target format ${JSON.stringify(target)}.`)
   onProgress?.({ phase: 'inspect', completed: 0, total: 2 })
   const serialize = (prepared: NurbsMesh) =>
-    options.compressed ?? true
-      ? exportMeshFormatCompressed(prepared, target)
-      : exportMeshFormat(prepared, target)
+    (options.compressed ?? true) ? exportMeshFormatCompressed(prepared, target) : exportMeshFormat(prepared, target)
 
   const quality = options.quality ?? 'viewport'
   const source = typeof options.source === 'string' ? options.source.trim() : ''

@@ -1,27 +1,68 @@
 /**
  * # Svet Fine-Grained Reactive Signals & Compiled Forma AST Engine (`svet.ts`)
  */
-export interface ReadonlySignal<T> { (): T; readonly id: number; readonly __svet_sig: true; peek(): T; dispose(): void }
-export interface Signal<T> extends ReadonlySignal<T> { set(value: T | ((prev: T) => T)): void; update(updater: (prev: T) => T): void }
-export interface EffectHandle { readonly id: number; run(): void; dispose(): void }
-export interface OwnerScope { disposables: Array<() => void>; children: Set<OwnerScope> | null; parent: OwnerScope | null; disposed: boolean }
+export interface ReadonlySignal<T> {
+  (): T
+  readonly id: number
+  readonly __svet_sig: true
+  peek(): T
+  dispose(): void
+}
+export interface Signal<T> extends ReadonlySignal<T> {
+  set(value: T | ((prev: T) => T)): void
+  update(updater: (prev: T) => T): void
+}
+export interface EffectHandle {
+  readonly id: number
+  run(): void
+  dispose(): void
+}
+export interface OwnerScope {
+  disposables: Array<() => void>
+  children: Set<OwnerScope> | null
+  parent: OwnerScope | null
+  disposed: boolean
+}
 
-const STATE_CLEAN = 0, STATE_CHECK = 1, STATE_DIRTY = 2
+const STATE_CLEAN = 0,
+  STATE_CHECK = 1,
+  STATE_DIRTY = 2
 
 interface ObserverNode {
-  readonly kind: 'computed' | 'effect'; readonly id: number; state: number
-  deps: Set<SignalNode<any> | ComputedNode<any>>; cleanups: Array<() => void>; disposed: boolean; run(): void
+  readonly kind: 'computed' | 'effect'
+  readonly id: number
+  state: number
+  deps: Set<SignalNode<any> | ComputedNode<any>>
+  cleanups: Array<() => void>
+  disposed: boolean
+  run(): void
 }
 interface SignalNode<T> {
-  readonly kind: 'signal'; readonly id: number; value: T; version: number; subs: Set<ObserverNode>; disposed: boolean
+  readonly kind: 'signal'
+  readonly id: number
+  value: T
+  version: number
+  subs: Set<ObserverNode>
+  disposed: boolean
 }
 interface ComputedNode<T> extends ObserverNode {
-  readonly kind: 'computed'; value: T; version: number; initialized: boolean; computing: boolean
-  fn: () => T; equals: (a: T, b: T) => boolean; subs: Set<ObserverNode>
+  readonly kind: 'computed'
+  value: T
+  version: number
+  initialized: boolean
+  computing: boolean
+  fn: () => T
+  equals: (a: T, b: T) => boolean
+  subs: Set<ObserverNode>
 }
 interface EffectNode extends ObserverNode {
-  readonly kind: 'effect'; fn: (onCleanupFn: (cb: () => void) => void) => void | (() => void)
-  owner: OwnerScope | null; queued: boolean; running: boolean; sync: boolean; scheduler?: (() => void) | undefined
+  readonly kind: 'effect'
+  fn: (onCleanupFn: (cb: () => void) => void) => void | (() => void)
+  owner: OwnerScope | null
+  queued: boolean
+  running: boolean
+  sync: boolean
+  scheduler?: (() => void) | undefined
 }
 
 let nextNodeId = 1
@@ -34,7 +75,9 @@ const pendingEffects: EffectNode[] = []
 let flushing = false
 
 const allocNodeId = (): number => freeIds.pop() ?? nextNodeId++
-const releaseNodeId = (id: number): void => { freeIds.push(id) }
+const releaseNodeId = (id: number): void => {
+  freeIds.push(id)
+}
 
 function clearObserverDeps(observer: ObserverNode): void {
   for (const dep of observer.deps) dep.subs.delete(observer)
@@ -45,7 +88,11 @@ function runObserverCleanups(observer: ObserverNode): void {
   if (observer.cleanups.length === 0) return
   const list = observer.cleanups.splice(0)
   for (let i = list.length - 1; i >= 0; i--) {
-    try { list[i]!() } catch { /* continue */ }
+    try {
+      list[i]!()
+    } catch {
+      /* continue */
+    }
   }
 }
 
@@ -164,7 +211,14 @@ function flushEffects(): void {
 }
 
 export function signal<T>(initialValue: T, equals: (a: T, b: T) => boolean = Object.is): Signal<T> {
-  const node: SignalNode<T> = { kind: 'signal', id: allocNodeId(), value: initialValue, version: 0, subs: new Set(), disposed: false }
+  const node: SignalNode<T> = {
+    kind: 'signal',
+    id: allocNodeId(),
+    value: initialValue,
+    version: 0,
+    subs: new Set(),
+    disposed: false,
+  }
   const read = (() => {
     if (!node.disposed && trackingEnabled && activeObserver) {
       node.subs.add(activeObserver)
@@ -199,8 +253,19 @@ export function signal<T>(initialValue: T, equals: (a: T, b: T) => boolean = Obj
 
 export function computed<T>(fn: () => T, equals: (a: T, b: T) => boolean = Object.is): ReadonlySignal<T> {
   const node: ComputedNode<T> = {
-    kind: 'computed', id: allocNodeId(), state: STATE_DIRTY, deps: new Set(), cleanups: [], disposed: false,
-    value: undefined as unknown as T, version: 0, initialized: false, computing: false, fn, equals, subs: new Set(),
+    kind: 'computed',
+    id: allocNodeId(),
+    state: STATE_DIRTY,
+    deps: new Set(),
+    cleanups: [],
+    disposed: false,
+    value: undefined as unknown as T,
+    version: 0,
+    initialized: false,
+    computing: false,
+    fn,
+    equals,
+    subs: new Set(),
     run: () => recomputeNode(node),
   }
   const read = (() => {
@@ -236,8 +301,17 @@ export function effect(
   options?: { sync?: boolean; scheduler?: (() => void) | undefined },
 ): EffectHandle {
   const node: EffectNode = {
-    kind: 'effect', id: allocNodeId(), state: STATE_DIRTY, deps: new Set(), cleanups: [], disposed: false,
-    fn, owner: currentOwner, queued: false, running: false, sync: Boolean(options?.sync),
+    kind: 'effect',
+    id: allocNodeId(),
+    state: STATE_DIRTY,
+    deps: new Set(),
+    cleanups: [],
+    disposed: false,
+    fn,
+    owner: currentOwner,
+    queued: false,
+    running: false,
+    sync: Boolean(options?.sync),
     scheduler: options?.scheduler,
     run() {
       if (node.disposed || node.running) return
@@ -282,13 +356,21 @@ export function effect(
 
 export function batch<T>(fn: () => T): T {
   batchDepth++
-  try { return fn() } finally { if (--batchDepth === 0) flushEffects() }
+  try {
+    return fn()
+  } finally {
+    if (--batchDepth === 0) flushEffects()
+  }
 }
 
 export function untrack<T>(fn: () => T): T {
   const prev = trackingEnabled
   trackingEnabled = false
-  try { return fn() } finally { trackingEnabled = prev }
+  try {
+    return fn()
+  } finally {
+    trackingEnabled = prev
+  }
 }
 
 function disposeScope(scope: OwnerScope): void {
@@ -299,7 +381,11 @@ function disposeScope(scope: OwnerScope): void {
     scope.children.clear()
   }
   for (let i = scope.disposables.length - 1; i >= 0; i--) {
-    try { scope.disposables[i]!() } catch { /* continue */ }
+    try {
+      scope.disposables[i]!()
+    } catch {
+      /* continue */
+    }
   }
   scope.disposables.length = 0
   if (scope.parent?.children) {
@@ -316,7 +402,11 @@ export function createRoot<T>(fn: (dispose: () => void) => T): T {
     prevOwner.children.add(scope)
   }
   currentOwner = scope
-  try { return fn(() => untrack(() => disposeScope(scope))) } finally { currentOwner = prevOwner }
+  try {
+    return fn(() => untrack(() => disposeScope(scope)))
+  } finally {
+    currentOwner = prevOwner
+  }
 }
 
 export function onCleanup(cb: () => void): void {
@@ -332,9 +422,18 @@ export type CompiledExprAst =
   | { type: 'ident'; name: string; path: readonly string[]; static: false }
   | { type: 'unary'; op: '!' | '-' | '+'; arg: CompiledExprAst; static: boolean }
   | { type: 'binary'; op: string; left: CompiledExprAst; right: CompiledExprAst; static: boolean }
-  | { type: 'conditional'; test: CompiledExprAst; consequent: CompiledExprAst; alternate: CompiledExprAst; static: boolean }
+  | {
+      type: 'conditional'
+      test: CompiledExprAst
+      consequent: CompiledExprAst
+      alternate: CompiledExprAst
+      static: boolean
+    }
 
-interface ExprTok { kind: 'num' | 'str' | 'ident' | 'op' | 'punc'; val: string }
+interface ExprTok {
+  kind: 'num' | 'str' | 'ident' | 'op' | 'punc'
+  val: string
+}
 
 const exprAstCache = new Map<string, CompiledExprAst>()
 const MAX_EXPR_CACHE = 2048
@@ -345,7 +444,10 @@ function tokenizeExpr(src: string): ExprTok[] {
   const n = src.length
   while (i < n) {
     const ch = src[i]!
-    if (/\s/.test(ch)) { i++; continue }
+    if (/\s/.test(ch)) {
+      i++
+      continue
+    }
     if (ch === '"' || ch === "'") {
       const q = ch
       let s = ''
@@ -358,7 +460,12 @@ function tokenizeExpr(src: string): ExprTok[] {
       tokens.push({ kind: 'str', val: s })
       continue
     }
-    if (/\d/.test(ch) || (ch === '-' && /\d/.test(src[i + 1] ?? '') && (tokens.length === 0 || tokens.at(-1)!.kind === 'op' || tokens.at(-1)!.val === '('))) {
+    if (
+      /\d/.test(ch) ||
+      (ch === '-' &&
+        /\d/.test(src[i + 1] ?? '') &&
+        (tokens.length === 0 || tokens.at(-1)!.kind === 'op' || tokens.at(-1)!.val === '('))
+    ) {
       let numStr = ch
       i++
       while (i < n && /[0-9.]/.test(src[i]!)) numStr += src[i++]!
@@ -368,11 +475,27 @@ function tokenizeExpr(src: string): ExprTok[] {
       continue
     }
     const three = src.slice(i, i + 3)
-    if (three === '===' || three === '!==') { tokens.push({ kind: 'op', val: three }); i += 3; continue }
+    if (three === '===' || three === '!==') {
+      tokens.push({ kind: 'op', val: three })
+      i += 3
+      continue
+    }
     const two = src.slice(i, i + 2)
-    if (['==', '!=', '<=', '>=', '&&', '||', '??'].includes(two)) { tokens.push({ kind: 'op', val: two }); i += 2; continue }
-    if ('+-*/%<>!?:'.includes(ch)) { tokens.push({ kind: 'op', val: ch }); i++; continue }
-    if ('()[].,'.includes(ch)) { tokens.push({ kind: 'punc', val: ch }); i++; continue }
+    if (['==', '!=', '<=', '>=', '&&', '||', '??'].includes(two)) {
+      tokens.push({ kind: 'op', val: two })
+      i += 2
+      continue
+    }
+    if ('+-*/%<>!?:'.includes(ch)) {
+      tokens.push({ kind: 'op', val: ch })
+      i++
+      continue
+    }
+    if ('()[].,'.includes(ch)) {
+      tokens.push({ kind: 'punc', val: ch })
+      i++
+      continue
+    }
     if (/[a-zA-Z_$#]/.test(ch)) {
       let id = ''
       while (i < n && /[a-zA-Z0-9_$#-]/.test(src[i]!)) id += src[i++]!
@@ -411,7 +534,8 @@ export function compileFormaExpression(raw: string): CompiledExprAst {
         const prop = next()
         if (prop) parts.push(prop.val)
       }
-      if (parts[0] === 'tokens' && parts.length > 1) return { type: 'token', key: parts.slice(1).join('.'), static: true }
+      if (parts[0] === 'tokens' && parts.length > 1)
+        return { type: 'token', key: parts.slice(1).join('.'), static: true }
       if (parts[0] === 'i18n' && parts.length > 1) return { type: 'i18n', key: parts.slice(1).join('.'), static: false }
       if (parts[0] === 'state' && parts.length > 1) return { type: 'state', path: parts.slice(1), static: false }
       return { type: 'ident', name: parts[0]!, path: parts.slice(1), static: false }
@@ -458,7 +582,13 @@ export function compileFormaExpression(raw: string): CompiledExprAst {
       const consequent = parseTernary()
       if (peek()?.val === ':') next()
       const alternate = parseTernary()
-      return { type: 'conditional', test, consequent, alternate, static: test.static && consequent.static && alternate.static }
+      return {
+        type: 'conditional',
+        test,
+        consequent,
+        alternate,
+        static: test.static && consequent.static && alternate.static,
+      }
     }
     return test
   }

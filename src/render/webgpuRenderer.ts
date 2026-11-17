@@ -2,28 +2,15 @@ import { remapNativeFaceSelection } from './nativeFaceSelection'
 /**
  * WebGPU 3D renderer — Phong shading, orbit camera, grid floor, axis gizmo.
  */
-import {
-  type Aabb3, type Vec3,
-} from '../kernel/geometry/math3d'
-import {
-  CameraHistory,
-  cameraStatesEqual,
-  type CameraHistorySnapshot,
-  type CameraState,
-} from './cameraHistory'
+import { type Aabb3, type Vec3 } from '../kernel/geometry/math3d'
+import { CameraHistory, cameraStatesEqual, type CameraHistorySnapshot, type CameraState } from './cameraHistory'
 import { NativePickingCache } from './nativePickingCache'
 import { warmGeometryKernel } from '../kernel/geometry/kernel'
 import { acquireWebGPUDevice, watchDeviceFailures } from './gpuDeviceManager'
 import { computeSurfaceSize, createDepthTarget } from './surfaceResources'
 import { clientRayInKernel, projectPointInKernel } from '../kernel/geometry/viewport'
 import type { MeshData } from '../core/mesh'
-import {
-  ISO_PITCH,
-  ISO_YAW,
-  standardViewOrientation,
-  type ProjectionMode,
-  type StandardView,
-} from './viewportModel'
+import { ISO_PITCH, ISO_YAW, standardViewOrientation, type ProjectionMode, type StandardView } from './viewportModel'
 export { projectAxesToScreen } from './viewportModel'
 export type { ProjectionMode, StandardView } from './viewportModel'
 import type {
@@ -61,16 +48,8 @@ import {
 export { computePinchUpdate } from './cameraGestures'
 import type { KeyboardCameraStep } from './keyboardCamera'
 export type { PinchCameraState, PinchPoint } from './cameraGestures'
-import {
-  chooseDepthCandidate,
-  type DepthCandidate,
-  type DepthCycleState,
-} from './selectionCycling'
-import {
-  buildSceneAabbIndex,
-  disposeSceneAabbIndex,
-  type SceneAabbIndex,
-} from './sceneAabbIndex'
+import { chooseDepthCandidate, type DepthCandidate, type DepthCycleState } from './selectionCycling'
+import { buildSceneAabbIndex, disposeSceneAabbIndex, type SceneAabbIndex } from './sceneAabbIndex'
 import { TransparentSortBuffer } from './transparentOrdering'
 import { MeshDrawBundle } from './meshDrawBundle'
 import { ViewFrustum } from './viewFrustum'
@@ -83,13 +62,8 @@ import { GpuResidencyCache } from './gpuResidencyCache'
 import { combineBounds, measureMeshBounds, type MeshBoundsCache } from './meshBounds'
 import { GpuGeometryCache } from './gpuGeometryCache'
 import { carryInteraction, diffSceneEntities, previousSceneIntact, sameInteractionTarget } from './sceneDelta'
-import {
-  OBJECT_UNIFORM_LAYOUT,
-  SCENE_UNIFORM_LAYOUT,
-} from './shaders'
-import {
-  PipelineFactory,
-} from './pipelineFactory'
+import { OBJECT_UNIFORM_LAYOUT, SCENE_UNIFORM_LAYOUT } from './shaders'
+import { PipelineFactory } from './pipelineFactory'
 import { TextureResources } from './textureResources'
 import { GpuCsgRenderer, type GpuCsgTree } from './gpuCsgPreview'
 export type { GpuCsgTree } from './gpuCsgPreview'
@@ -138,13 +112,8 @@ import {
   reconcileMeshStyles,
   stageSceneMeshes,
 } from './meshBufferManager'
-import {
-  findHitCandidatesForRay,
-} from './pickingController'
-import {
-  advanceSceneGeometryAnimation,
-  encodeAndSubmitFrame,
-} from './framePassEncoder'
+import { findHitCandidatesForRay } from './pickingController'
+import { advanceSceneGeometryAnimation, encodeAndSubmitFrame } from './framePassEncoder'
 
 function clampDistanceValue(distance: number) {
   return clampGestureDistance(distance)
@@ -178,7 +147,6 @@ export function isAabbInFrustum(
   return true
 }
 
-
 /* ── Renderer class ───────────────────────────────── */
 
 export class WebGPURenderer {
@@ -206,7 +174,7 @@ export class WebGPURenderer {
       this.clearDrawCaches()
       this.requestRender()
     },
-    onLoadError: (error) => {
+    onLoadError: error => {
       // A missing capture/map must not break rendering: stay on the current
       // one. Reported through the lifecycle status (not a bare callback) so
       // the next validated frame clears it instead of leaving it sticky.
@@ -318,7 +286,9 @@ export class WebGPURenderer {
 
   private pendingFrameToken: number | null = null
   private uploadMetrics: SceneUploadMetrics = { geometryUploadBytes: 0, geometryBuffersCreated: 0, reusedEntities: 0 }
-  get sceneUploadMetrics(): SceneUploadMetrics { return { ...this.uploadMetrics } }
+  get sceneUploadMetrics(): SceneUploadMetrics {
+    return { ...this.uploadMetrics }
+  }
   onFrameSubmitted: ((token: number, submittedAt: number) => void) | null = null
 
   onSelectionChange: SelectionChangeHandler | null = null
@@ -333,15 +303,21 @@ export class WebGPURenderer {
 
   private status: RendererLifecycleEvent = { status: 'idle' }
 
-  yaw = ISO_YAW; pitch = ISO_PITCH; dist = DEFAULT_DISTANCE
-  tx = 0; ty = 0; tz = 0
+  yaw = ISO_YAW
+  pitch = ISO_PITCH
+  dist = DEFAULT_DISTANCE
+  tx = 0
+  ty = 0
+  tz = 0
 
   private raf = 0
   private frameRetryCount = 0
   /** Frame counter for async validation results; a late clean result must not clear a newer failure. */
   private frameSequence = 0
   /** Budget preset, progressive and on-demand LOD levels, bounding-box draws. */
-  private readonly display = new MeshDisplayController(() => { if (!this.dead) this.requestRender() })
+  private readonly display = new MeshDisplayController(() => {
+    if (!this.dead) this.requestRender()
+  })
   private residency: { dev: GPUDevice; cache: GpuResidencyCache; geometry: GpuGeometryCache } | null = null
   private lastFailedFrame = 0
   private dead = true
@@ -352,13 +328,16 @@ export class WebGPURenderer {
   private readonly resizeWatcher = new ResizeWatcher()
   private inputBound = false
   private previousTouchAction = ''
-  private drag = false; private pan = false
+  private drag = false
+  private pan = false
   private activePointer: number | null = null
   private activePointerType = ''
   private pointers = new Map<number, { x: number; y: number }>()
   private pinching = false
-  private mx = 0; private my = 0
-  private downX = 0; private downY = 0
+  private mx = 0
+  private my = 0
+  private downX = 0
+  private downY = 0
   private downButton = -1
   private gestureMoved = false
   private gestureCameraStart: CameraState | null = null
@@ -376,10 +355,15 @@ export class WebGPURenderer {
 
   private getCameraEpoch(): number {
     const aspect = this.getAspect()
-    if (this.yaw !== this.lastCameraPose.yaw || this.pitch !== this.lastCameraPose.pitch
-      || this.dist !== this.lastCameraPose.dist || this.tx !== this.lastCameraPose.tx
-      || this.ty !== this.lastCameraPose.ty || this.tz !== this.lastCameraPose.tz
-      || aspect !== this.lastCameraPose.aspect) {
+    if (
+      this.yaw !== this.lastCameraPose.yaw ||
+      this.pitch !== this.lastCameraPose.pitch ||
+      this.dist !== this.lastCameraPose.dist ||
+      this.tx !== this.lastCameraPose.tx ||
+      this.ty !== this.lastCameraPose.ty ||
+      this.tz !== this.lastCameraPose.tz ||
+      aspect !== this.lastCameraPose.aspect
+    ) {
       this.lastCameraPose.yaw = this.yaw
       this.lastCameraPose.pitch = this.pitch
       this.lastCameraPose.dist = this.dist
@@ -475,7 +459,10 @@ export class WebGPURenderer {
 
   private buildSceneUB() {
     const dev = this.dev!
-    this.sceneUB = dev.createBuffer({ size: SCENE_UNIFORM_LAYOUT.bytes, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
+    this.sceneUB = dev.createBuffer({
+      size: SCENE_UNIFORM_LAYOUT.bytes,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    })
     this.lastSceneUniformsValid = false
     this.sceneBG = dev.createBindGroup({
       layout: this.pipelines.sceneBGL,
@@ -499,7 +486,10 @@ export class WebGPURenderer {
     this.gridQuadVB?.destroy()
     // The grid reconstructs the Z-up XY plane from this full-screen quad.
     const quad = new Float32Array([-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1])
-    this.gridQuadVB = dev.createBuffer({ size: quad.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
+    this.gridQuadVB = dev.createBuffer({
+      size: quad.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    })
     dev.queue.writeBuffer(this.gridQuadVB, 0, quad)
 
     const zc = [0.2, 0.45, 1, 0.95]
@@ -523,23 +513,34 @@ export class WebGPURenderer {
       this.setCsgPreviewTree(null)
       return
     }
-    void import('./gpuCsgParse').then(({ parseOpenScadCsgTree }) => {
-      const tree = parseOpenScadCsgTree(source)
-      this.setCsgPreviewTree(tree && tree.terms.length > 0 ? tree : null)
-    }).catch(() => {
-      this.setCsgPreviewTree(null)
-    })
+    void import('./gpuCsgParse')
+      .then(({ parseOpenScadCsgTree }) => {
+        const tree = parseOpenScadCsgTree(source)
+        this.setCsgPreviewTree(tree && tree.terms.length > 0 ? tree : null)
+      })
+      .catch(() => {
+        this.setCsgPreviewTree(null)
+      })
   }
 
   async gpuPickAt(clientX: number, clientY: number): Promise<number | null> {
-    const canvas = this.canvas, dev = this.dev
+    const canvas = this.canvas,
+      dev = this.dev
     if (!canvas || !dev || !this.initialized || this.dead || this.lost || this.meshes.length === 0) return null
-    return this.canvasPicker.pickAt(dev, canvas.getBoundingClientRect(), clientX, clientY, this.meshes, () => ({
-      cameraViewProjection: this.cameraState().viewProjection,
-      sectionNormal: this.sectionNormal,
-      sectionOffset: this.sectionOffset,
-      sectionEnabled: this.sectionEnabled,
-    }), this.instancedOpaque.pickInstances())
+    return this.canvasPicker.pickAt(
+      dev,
+      canvas.getBoundingClientRect(),
+      clientX,
+      clientY,
+      this.meshes,
+      () => ({
+        cameraViewProjection: this.cameraState().viewProjection,
+        sectionNormal: this.sectionNormal,
+        sectionOffset: this.sectionOffset,
+        sectionEnabled: this.sectionEnabled,
+      }),
+      this.instancedOpaque.pickInstances(),
+    )
   }
 
   getTransparencyMode(): 'sorted' | 'wboit' {
@@ -590,24 +591,40 @@ export class WebGPURenderer {
     if (!dev || !this.initialized || this.dead || this.lost) return
 
     const previous = this.meshes
-    const animate = (options.animate || this.geometryFade !== null || this.meshes.some(mesh => mesh.morph)) && !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches)
+    const animate =
+      (options.animate || this.geometryFade !== null || this.meshes.some(mesh => mesh.morph)) &&
+      !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches)
 
     const geometryCache = this.gpuResidency(dev).geometry
-    const { next, nextSceneIndex, retainedGeometryBuffers, metrics } = geometryCache.stage(meshes.flatMap(mesh => mesh.geometryAssetId ?? []), () => stageSceneMeshes(meshes, {
-      dev, previous, animate, geometryCache,
-      displayMode: this.displayMode,
-      defaultShadingModel: this.defaultShadingModel,
-      defaultMaterial: this.defaultMaterial,
-      objBGL: this.pipelines.objBGL,
-      morphDummyVB: this.morphDummyVB,
-      objectUniformScratch: this.objectUniformScratch,
-      nativePicking: this.nativePicking,
-      measureMeshBounds: (assetId, vertices, transform) => measureMeshBounds(this.meshBoundsCache, assetId, vertices, transform),
-    }))
+    const { next, nextSceneIndex, retainedGeometryBuffers, metrics } = geometryCache.stage(
+      meshes.flatMap(mesh => mesh.geometryAssetId ?? []),
+      () =>
+        stageSceneMeshes(meshes, {
+          dev,
+          previous,
+          animate,
+          geometryCache,
+          displayMode: this.displayMode,
+          defaultShadingModel: this.defaultShadingModel,
+          defaultMaterial: this.defaultMaterial,
+          objBGL: this.pipelines.objBGL,
+          morphDummyVB: this.morphDummyVB,
+          objectUniformScratch: this.objectUniformScratch,
+          nativePicking: this.nativePicking,
+          measureMeshBounds: (assetId, vertices, transform) =>
+            measureMeshBounds(this.meshBoundsCache, assetId, vertices, transform),
+        }),
+    )
     const nextBounds = combineBounds(next.map(mesh => mesh.worldBounds))
     // Interaction state survives for entities that persist unchanged (scene delta).
     const delta = diffSceneEntities(previous, next)
-    const before = { selected: this.selected, selectedHit: this.selectedHit, hovered: this.hovered, hoveredHit: this.hoveredHit, isolated: this.isolated }
+    const before = {
+      selected: this.selected,
+      selectedHit: this.selectedHit,
+      hovered: this.hovered,
+      hoveredHit: this.hoveredHit,
+      isolated: this.isolated,
+    }
     const after = carryInteraction(before, options.preserveInteraction === false ? null : delta)
     this.clearDrawCaches()
     this.meshes = next
@@ -620,7 +637,13 @@ export class WebGPURenderer {
     this.bounds = nextBounds
     this.sceneEpoch++
     this.invalidateShadowMap()
-    ;({ selected: this.selected, selectedHit: this.selectedHit, hovered: this.hovered, hoveredHit: this.hoveredHit, isolated: this.isolated } = after)
+    ;({
+      selected: this.selected,
+      selectedHit: this.selectedHit,
+      hovered: this.hovered,
+      hoveredHit: this.hoveredHit,
+      isolated: this.isolated,
+    } = after)
     this.depthCycleState = null
     if (!(options.preserveMeasurement ?? previousSceneIntact(delta, previous.length))) {
       this.measurementPoints = []
@@ -641,7 +664,11 @@ export class WebGPURenderer {
     this.scheduleEdgeBufferWarmup()
     if (!sameInteractionTarget(before, after, 'selected')) this.emitSelectionChange()
     if (!sameInteractionTarget(before, after, 'hovered')) {
-      try { this.onHoverChange?.(this.hoveredHit) } catch { /* UI callbacks must not break rendering. */ }
+      try {
+        this.onHoverChange?.(this.hoveredHit)
+      } catch {
+        /* UI callbacks must not break rendering. */
+      }
     }
 
     if (nextBounds && !this.initialFitDone) {
@@ -669,20 +696,32 @@ export class WebGPURenderer {
 
   private applyFitBounds(bounds: Bounds) {
     const [x, y, z] = bounds.center
-    this.tx = x; this.ty = y; this.tz = z
+    this.tx = x
+    this.ty = y
+    this.tz = z
     const aspect = this.getAspect()
     const halfVertical = this.perspectiveFovY / 2
     const halfHorizontal = Math.atan(Math.tan(halfVertical) * aspect)
     const limitingHalfFov = Math.max(1e-6, Math.min(halfVertical, halfHorizontal))
     const radius = Math.max(bounds.radius, 0.5)
-    this.dist = this.clampDistance(radius * 1.15 / Math.sin(limitingHalfFov))
+    this.dist = this.clampDistance((radius * 1.15) / Math.sin(limitingHalfFov))
   }
 
-  get currentDisplayMode(): DisplayMode { return this.displayMode }
-  get selectedIndex(): number | null { return this.selected }
-  get currentHit(): PickHit | null { return this.selectedHit }
-  get isIsolated(): boolean { return this.isolated }
-  get canGoToPreviousView(): boolean { return this.cameraHistory.size > 0 }
+  get currentDisplayMode(): DisplayMode {
+    return this.displayMode
+  }
+  get selectedIndex(): number | null {
+    return this.selected
+  }
+  get currentHit(): PickHit | null {
+    return this.selectedHit
+  }
+  get isIsolated(): boolean {
+    return this.isolated
+  }
+  get canGoToPreviousView(): boolean {
+    return this.cameraHistory.size > 0
+  }
 
   getCameraState(): CameraState {
     return {
@@ -711,11 +750,14 @@ export class WebGPURenderer {
    * entry. This is intended for renderer/device re-initialization.
    */
   restoreCameraState(state: CameraState): boolean {
-    if (!Number.isFinite(state.yaw)
-        || !Number.isFinite(state.pitch)
-        || !Number.isFinite(state.distance)
-        || !state.target.every(Number.isFinite)
-        || (state.projection !== 'perspective' && state.projection !== 'orthographic')) return false
+    if (
+      !Number.isFinite(state.yaw) ||
+      !Number.isFinite(state.pitch) ||
+      !Number.isFinite(state.distance) ||
+      !state.target.every(Number.isFinite) ||
+      (state.projection !== 'perspective' && state.projection !== 'orthographic')
+    )
+      return false
     const before = this.getCameraState()
     this.yaw = state.yaw
     this.pitch = Math.max(-MAX_ORBIT_PITCH, Math.min(MAX_ORBIT_PITCH, state.pitch))
@@ -767,7 +809,9 @@ export class WebGPURenderer {
     this.requestRender()
   }
 
-  get currentTheme(): RenderTheme { return this.theme }
+  get currentTheme(): RenderTheme {
+    return this.theme
+  }
 
   /**
    * Applies a render theme preset to the Scene uniform theme tail. A preset
@@ -782,7 +826,9 @@ export class WebGPURenderer {
     this.requestRender()
   }
 
-  get currentDefaultShadingModel(): ShadingModel { return this.defaultShadingModel }
+  get currentDefaultShadingModel(): ShadingModel {
+    return this.defaultShadingModel
+  }
 
   /**
    * Scene-level default shading model: applies to every mesh that does not
@@ -822,9 +868,13 @@ export class WebGPURenderer {
     const tail = this.materialTailScratch
     for (const mesh of this.meshes) {
       if (mesh.material) continue
-      tail[0] = current.baseColor[0]; tail[1] = current.baseColor[1]; tail[2] = current.baseColor[2]
+      tail[0] = current.baseColor[0]
+      tail[1] = current.baseColor[1]
+      tail[2] = current.baseColor[2]
       tail[3] = current.metallic
-      tail[4] = current.emissive[0]; tail[5] = current.emissive[1]; tail[6] = current.emissive[2]
+      tail[4] = current.emissive[0]
+      tail[5] = current.emissive[1]
+      tail[6] = current.emissive[2]
       tail[7] = current.roughness
       this.dev.queue.writeBuffer(mesh.ub, OBJECT_UNIFORM_LAYOUT.materialByteOffset, tail)
     }
@@ -836,7 +886,9 @@ export class WebGPURenderer {
   }
 
   /** Current matcap preset id ('procedural' = shader fallback path). */
-  get currentMatcap(): string { return this.textures.matcapId }
+  get currentMatcap(): string {
+    return this.textures.matcapId
+  }
 
   /**
    * Selects the matcap capture for the meshMatcap shader. 'procedural' binds
@@ -849,7 +901,9 @@ export class WebGPURenderer {
   }
 
   /** Current environment-map preset id ('none' = analytic-lighting path). */
-  get currentEnv(): string { return this.textures.envId }
+  get currentEnv(): string {
+    return this.textures.envId
+  }
 
   /** Mark the cached shadow map stale: geometry/visibility/opacity changed. */
   private invalidateShadowMap() {
@@ -917,7 +971,9 @@ export class WebGPURenderer {
       this.pitch = ISO_PITCH
       if (this.bounds) this.applyFitBounds(this.bounds)
       else {
-        this.tx = 0; this.ty = 0; this.tz = 0
+        this.tx = 0
+        this.ty = 0
+        this.tz = 0
         this.dist = DEFAULT_DISTANCE
       }
     })
@@ -925,7 +981,9 @@ export class WebGPURenderer {
 
   setProjection(projection: ProjectionMode) {
     if (this.projection === projection) return
-    this.commitCameraChange(() => { this.projection = projection })
+    this.commitCameraChange(() => {
+      this.projection = projection
+    })
   }
 
   setGridVisible(visible: boolean) {
@@ -935,7 +993,9 @@ export class WebGPURenderer {
   }
 
   /** Key-light contact shadows (mesh surfaces + grid floor). Default off. */
-  get shadowsOn(): boolean { return this.textures.shadowsEnabled }
+  get shadowsOn(): boolean {
+    return this.textures.shadowsEnabled
+  }
 
   /**
    * Toggles the contact-shadow pass. Enabling lazily allocates the real
@@ -982,13 +1042,13 @@ export class WebGPURenderer {
     this.requestRender()
   }
 
-  restoreNativeFaceSelection(previous:MeshData,hit:PickHit,index:number):boolean {
-    const next=this.meshes[index]
-    if(this.selectionMode!=='face'||!next)return false
-    const mapped=remapNativeFaceSelection(previous,next,hit,index)
-    if(!mapped)return false
+  restoreNativeFaceSelection(previous: MeshData, hit: PickHit, index: number): boolean {
+    const next = this.meshes[index]
+    if (this.selectionMode !== 'face' || !next) return false
+    const mapped = remapNativeFaceSelection(previous, next, hit, index)
+    if (!mapped) return false
     this.resetDepthCycle(false)
-    this.setSelection(index,mapped)
+    this.setSelection(index, mapped)
     return true
   }
 
@@ -1033,8 +1093,7 @@ export class WebGPURenderer {
     let selectionChanged = selectionMetadataChanged
     let stylesChanged = false
     const selectedHidden = this.selected !== null && !this.meshes[this.selected]?.visible
-    const selectedHitHidden = this.selectedHit !== null
-      && !this.meshes[this.selectedHit.meshIndex]?.visible
+    const selectedHitHidden = this.selectedHit !== null && !this.meshes[this.selectedHit.meshIndex]?.visible
     if (selectedHidden) {
       this.selected = null
       this.selectedHit = null
@@ -1047,8 +1106,9 @@ export class WebGPURenderer {
       stylesChanged = true
     }
 
-    const hoverHidden = (this.hovered !== null && !this.meshes[this.hovered]?.visible)
-      || (this.hoveredHit !== null && !this.meshes[this.hoveredHit.meshIndex]?.visible)
+    const hoverHidden =
+      (this.hovered !== null && !this.meshes[this.hovered]?.visible) ||
+      (this.hoveredHit !== null && !this.meshes[this.hoveredHit.meshIndex]?.visible)
     if (hoverHidden) {
       this.hovered = null
       this.hoveredHit = null
@@ -1065,7 +1125,11 @@ export class WebGPURenderer {
     this.rebuildSourceHighlightOverlay()
     if (selectionChanged) this.emitSelectionChange()
     if (hoverHidden) {
-      try { this.onHoverChange?.(null) } catch { /* UI callbacks must not break rendering. */ }
+      try {
+        this.onHoverChange?.(null)
+      } catch {
+        /* UI callbacks must not break rendering. */
+      }
     }
     this.requestRender()
   }
@@ -1078,7 +1142,11 @@ export class WebGPURenderer {
     this.hoveredHit = null
     this.updateMeshStyles()
     this.rebuildSelectionOverlays()
-    try { this.onHoverChange?.(null) } catch { /* UI callbacks must not break rendering. */ }
+    try {
+      this.onHoverChange?.(null)
+    } catch {
+      /* UI callbacks must not break rendering. */
+    }
     this.requestRender()
   }
 
@@ -1086,9 +1154,7 @@ export class WebGPURenderer {
     this.resetDepthCycle()
     const length = Math.hypot(...normal)
     this.sectionEnabled = enabled && length > 0 && Number.isFinite(length) && Number.isFinite(offset)
-    this.sectionNormal = this.sectionEnabled
-      ? [normal[0] / length, normal[1] / length, normal[2] / length]
-      : [0, 0, 1]
+    this.sectionNormal = this.sectionEnabled ? [normal[0] / length, normal[1] / length, normal[2] / length] : [0, 0, 1]
     this.sectionOffset = Number.isFinite(offset) ? offset : 0
     this.sceneEpoch++
     this.requestRender()
@@ -1112,9 +1178,7 @@ export class WebGPURenderer {
   /** Rehydrate inspection state after a WebGPU device/context rebuild. */
   restoreMeasurement(measurement: DistanceMeasurement | null, active = false): boolean {
     const points = measurement?.points ?? []
-    if (points.length > 2 || points.some(point => (
-      point.length !== 3 || !point.every(Number.isFinite)
-    ))) return false
+    if (points.length > 2 || points.some(point => point.length !== 3 || !point.every(Number.isFinite))) return false
     this.measurementPoints = points.map(point => [...point] as Vec3)
     this.measureActive = active
     this.rebuildMeasurementBuffer()
@@ -1229,7 +1293,11 @@ export class WebGPURenderer {
   }
 
   private emitSelectionChange() {
-    try { this.onSelectionChange?.(this.selected, this.isolated, this.selectedHit) } catch { /* UI callbacks must not break rendering. */ }
+    try {
+      this.onSelectionChange?.(this.selected, this.isolated, this.selectedHit)
+    } catch {
+      /* UI callbacks must not break rendering. */
+    }
   }
 
   private isMeshVisible(index: number) {
@@ -1269,11 +1337,16 @@ export class WebGPURenderer {
         this.dist = computeWheelDistance(this.dist, step.delta)
         return
       }
-      const next = step.kind === 'pan'
-        ? computePanUpdate(camera, step.dx, step.dy, this.canvas?.clientHeight || 1, this.perspectiveFovY)
-        : computeOrbitUpdate(camera, step.dx, step.dy)
-      this.yaw = next.yaw; this.pitch = next.pitch; this.dist = next.dist
-      this.tx = next.tx; this.ty = next.ty; this.tz = next.tz
+      const next =
+        step.kind === 'pan'
+          ? computePanUpdate(camera, step.dx, step.dy, this.canvas?.clientHeight || 1, this.perspectiveFovY)
+          : computeOrbitUpdate(camera, step.dx, step.dy)
+      this.yaw = next.yaw
+      this.pitch = next.pitch
+      this.dist = next.dist
+      this.tx = next.tx
+      this.ty = next.ty
+      this.tz = next.tz
     })
   }
 
@@ -1304,13 +1377,21 @@ export class WebGPURenderer {
   }
 
   private emitCameraHistoryChange() {
-    try { this.onCameraHistoryChange?.(this.canGoToPreviousView) } catch { /* UI callbacks must not break rendering. */ }
+    try {
+      this.onCameraHistoryChange?.(this.canGoToPreviousView)
+    } catch {
+      /* UI callbacks must not break rendering. */
+    }
   }
 
   private clearDepthCycleState(invalidateSelectedHit = true): boolean {
     this.depthCycleState = null
-    if (!invalidateSelectedHit || !this.selectedHit
-        || (this.selectedHit.cycleIndex === undefined && this.selectedHit.cycleCount === undefined)) return false
+    if (
+      !invalidateSelectedHit ||
+      !this.selectedHit ||
+      (this.selectedHit.cycleIndex === undefined && this.selectedHit.cycleCount === undefined)
+    )
+      return false
     const { cycleIndex: _cycleIndex, cycleCount: _cycleCount, ...hit } = this.selectedHit
     this.selectedHit = hit
     return true
@@ -1331,7 +1412,8 @@ export class WebGPURenderer {
   }
 
   private updateSize(): boolean {
-    const canvas = this.canvas, dev = this.dev
+    const canvas = this.canvas,
+      dev = this.dev
     if (!canvas || !dev || !this.initialized || this.lost) return false
 
     const rawDpr = typeof devicePixelRatio === 'number' ? devicePixelRatio : 1
@@ -1370,9 +1452,7 @@ export class WebGPURenderer {
   }
 
   private cameraState() {
-    const activeBounds = this.isolated && this.selected !== null
-      ? this.meshes[this.selected]?.worldBounds
-      : this.bounds
+    const activeBounds = this.isolated && this.selected !== null ? this.meshes[this.selected]?.worldBounds : this.bounds
     return computeOrbitCameraFrame({
       yaw: this.yaw,
       pitch: this.pitch,
@@ -1401,7 +1481,10 @@ export class WebGPURenderer {
 
   private render() {
     this.updateSize()
-    const canvas = this.canvas, dev = this.dev, ctx = this.ctx, sceneUB = this.sceneUB
+    const canvas = this.canvas,
+      dev = this.dev,
+      ctx = this.ctx,
+      sceneUB = this.sceneUB
     if (!canvas || !dev || !ctx || !this.depth || !sceneUB || !this.drawable || !canvas.width || !canvas.height) return
 
     const { eye, viewProjection } = this.cameraState()
@@ -1448,13 +1531,19 @@ export class WebGPURenderer {
       sceneUniformScratch: this.sceneUniformScratch,
       lastSceneUniforms: this.lastSceneUniforms,
       lastSceneUniformsValid: this.lastSceneUniformsValid,
-      setLastSceneUniformsValid: valid => { this.lastSceneUniformsValid = valid },
+      setLastSceneUniformsValid: valid => {
+        this.lastSceneUniformsValid = valid
+      },
       shadowMapEpoch: this.shadowMapEpoch,
       shadowMapRenderedEpoch: this.shadowMapRenderedEpoch,
-      setShadowMapRenderedEpoch: epoch => { this.shadowMapRenderedEpoch = epoch },
+      setShadowMapRenderedEpoch: epoch => {
+        this.shadowMapRenderedEpoch = epoch
+      },
       shadowMapVP: this.shadowMapVP,
       shadowMapVPValid: this.shadowMapVPValid,
-      setShadowMapVPValid: valid => { this.shadowMapVPValid = valid },
+      setShadowMapVPValid: valid => {
+        this.shadowMapVPValid = valid
+      },
       viewFrustum: this.viewFrustum,
       opaqueDraws: this.opaqueDraws,
       edgeDraws: this.edgeDraws,
@@ -1491,7 +1580,11 @@ export class WebGPURenderer {
     const token = this.pendingFrameToken
     this.pendingFrameToken = null
     if (token !== null) {
-      try { this.onFrameSubmitted?.(token, performance.now()) } catch { /* Diagnostics cannot break rendering. */ }
+      try {
+        this.onFrameSubmitted?.(token, performance.now())
+      } catch {
+        /* Diagnostics cannot break rendering. */
+      }
     }
   }
 
@@ -1502,22 +1595,30 @@ export class WebGPURenderer {
   }
 
   private advanceGeometryAnimation(now: number, finish = false) {
-    return advanceSceneGeometryAnimation({
-      dev: this.dev,
-      meshes: this.meshes,
-      geometryFade: this.geometryFade,
-      geometryGhosts: this.geometryGhosts,
-      morphDummyVB: this.morphDummyVB,
-      styleScratch: this.styleScratch,
-      objectUniformScratch: this.objectUniformScratch,
-      morphScratch: this.morphScratch,
-      setGeometryFade: fade => { this.geometryFade = fade },
-      setGeometryGhosts: ghosts => { this.geometryGhosts = ghosts },
-      invalidateShadowMap: () => this.invalidateShadowMap(),
-      updateMeshStyles: () => this.updateMeshStyles(),
-      destroyMeshes: meshes => this.destroyMeshes(meshes),
-      clearDrawCaches: () => this.clearDrawCaches(),
-    }, now, finish)
+    return advanceSceneGeometryAnimation(
+      {
+        dev: this.dev,
+        meshes: this.meshes,
+        geometryFade: this.geometryFade,
+        geometryGhosts: this.geometryGhosts,
+        morphDummyVB: this.morphDummyVB,
+        styleScratch: this.styleScratch,
+        objectUniformScratch: this.objectUniformScratch,
+        morphScratch: this.morphScratch,
+        setGeometryFade: fade => {
+          this.geometryFade = fade
+        },
+        setGeometryGhosts: ghosts => {
+          this.geometryGhosts = ghosts
+        },
+        invalidateShadowMap: () => this.invalidateShadowMap(),
+        updateMeshStyles: () => this.updateMeshStyles(),
+        destroyMeshes: meshes => this.destroyMeshes(meshes),
+        clearDrawCaches: () => this.clearDrawCaches(),
+      },
+      now,
+      finish,
+    )
   }
 
   private drawFrame = () => {
@@ -1552,17 +1653,22 @@ export class WebGPURenderer {
       }
     } finally {
       if (scoped) {
-        void device!.popErrorScope().then(gpuError => {
-          if (device !== this.dev || this.dead) return
-          // No retry: a validation error reproduces on every frame until the
-          // state that caused it changes.
-          if (gpuError) {
-            this.lastFailedFrame = Math.max(this.lastFailedFrame, frame)
-            this.reportError('frame', new Error(gpuError.message))
-          } else if (rendered && this.lastFailedFrame < frame) {
-            this.clearFrameError()
-          }
-        }, () => { /* Device lost: reported through device.lost. */ })
+        void device!.popErrorScope().then(
+          gpuError => {
+            if (device !== this.dev || this.dead) return
+            // No retry: a validation error reproduces on every frame until the
+            // state that caused it changes.
+            if (gpuError) {
+              this.lastFailedFrame = Math.max(this.lastFailedFrame, frame)
+              this.reportError('frame', new Error(gpuError.message))
+            } else if (rendered && this.lastFailedFrame < frame) {
+              this.clearFrameError()
+            }
+          },
+          () => {
+            /* Device lost: reported through device.lost. */
+          },
+        )
       }
     }
   }
@@ -1576,18 +1682,29 @@ export class WebGPURenderer {
   /** Every camera mutation requests a frame, so per-frame diffing observes them all. */
   /** Bind the certified display level each LOD mesh needs at the current camera. */
   private applyMeshLods() {
-    const dev = this.dev, canvas = this.canvas
+    const dev = this.dev,
+      canvas = this.canvas
     if (!dev || !canvas) return
     const camera = this.cameraState()
     const viewportHeightPx = canvas.height > 0 ? canvas.height : canvas.clientHeight
     if (!(viewportHeightPx > 0)) return
     // Selection is a pure function of camera, viewport, scene, visibility and budget.
     const changed = this.display.update({
-      dev, meshes: this.meshes, sceneEpoch: this.sceneEpoch, residency: this.gpuResidency(dev).cache,
-      camera: { eye: camera.eye, distance: this.dist, eyeDistance: camera.eyeDistance,
-        fovY: this.perspectiveFovY, projection: this.projection, viewportHeightPx },
-      selectionKey: `${camera.eye.join(',')}|${this.dist}|${this.projection}|${this.perspectiveFovY}|${viewportHeightPx}|${this.sceneEpoch}|${this.meshes.map(mesh => mesh.visible ? 1 : 0).join('')}`,
-      nativePicking: this.nativePicking, drawable: index => this.isMeshVisible(index),
+      dev,
+      meshes: this.meshes,
+      sceneEpoch: this.sceneEpoch,
+      residency: this.gpuResidency(dev).cache,
+      camera: {
+        eye: camera.eye,
+        distance: this.dist,
+        eyeDistance: camera.eyeDistance,
+        fovY: this.perspectiveFovY,
+        projection: this.projection,
+        viewportHeightPx,
+      },
+      selectionKey: `${camera.eye.join(',')}|${this.dist}|${this.projection}|${this.perspectiveFovY}|${viewportHeightPx}|${this.sceneEpoch}|${this.meshes.map(mesh => (mesh.visible ? 1 : 0)).join('')}`,
+      nativePicking: this.nativePicking,
+      drawable: index => this.isMeshVisible(index),
     })
     if (!changed.length) return
     const touched = new Set(changed)
@@ -1619,23 +1736,34 @@ export class WebGPURenderer {
     const state = this.getCameraState()
     if (this.lastNotifiedCamera && cameraStatesEqual(this.lastNotifiedCamera, state)) return
     this.lastNotifiedCamera = state
-    try { this.onCameraChange(state) } catch { /* UI callbacks must not break rendering. */ }
+    try {
+      this.onCameraChange(state)
+    } catch {
+      /* UI callbacks must not break rendering. */
+    }
   }
 
   /** CSS-pixel projection shared by interactive tools drawn over the native viewport. */
   projectWorldPoint(point: readonly number[]): [number, number] | null {
-    if(!this.canvas)return null
-    return projectPointInKernel(this.cameraState().viewProjection, point,
-      [this.canvas.clientWidth, this.canvas.clientHeight])
+    if (!this.canvas) return null
+    return projectPointInKernel(this.cameraState().viewProjection, point, [
+      this.canvas.clientWidth,
+      this.canvas.clientHeight,
+    ])
   }
-  worldRay(clientX:number,clientY:number){return this.rayForClientPoint(clientX,clientY)}
+  worldRay(clientX: number, clientY: number) {
+    return this.rayForClientPoint(clientX, clientY)
+  }
 
   private rayForClientPoint(clientX: number, clientY: number) {
     const canvas = this.canvas
     if (!canvas) return null
     const rect = canvas.getBoundingClientRect()
-    return clientRayInKernel(this.cameraState().viewProjection,
-      [rect.left, rect.top, rect.width, rect.height], [clientX, clientY])
+    return clientRayInKernel(
+      this.cameraState().viewProjection,
+      [rect.left, rect.top, rect.width, rect.height],
+      [clientX, clientY],
+    )
   }
 
   private findHitCandidates(
@@ -1649,18 +1777,21 @@ export class WebGPURenderer {
       this.advanceGeometryAnimation(performance.now(), true)
       this.requestRender(false)
     }
-    return findHitCandidatesForRay({
-      ray: this.rayForClientPoint(clientX, clientY),
-      bounds: this.bounds,
-      meshes: this.meshes,
-      selectionMode: this.selectionMode,
-      sectionEnabled: this.sectionEnabled,
-      sectionNormal: this.sectionNormal,
-      sectionOffset: this.sectionOffset,
-      sceneAabbIndex: this.currentSceneAabbIndex(),
-      nativePicking: this.nativePicking,
-      isMeshVisible: index => this.isMeshVisible(index),
-    }, maximum)
+    return findHitCandidatesForRay(
+      {
+        ray: this.rayForClientPoint(clientX, clientY),
+        bounds: this.bounds,
+        meshes: this.meshes,
+        selectionMode: this.selectionMode,
+        sectionEnabled: this.sectionEnabled,
+        sectionNormal: this.sectionNormal,
+        sectionOffset: this.sectionOffset,
+        sceneAabbIndex: this.currentSceneAabbIndex(),
+        nativePicking: this.nativePicking,
+        isMeshVisible: index => this.isMeshVisible(index),
+      },
+      maximum,
+    )
   }
 
   private findHit(clientX: number, clientY: number): PickHit | null {
@@ -1678,13 +1809,7 @@ export class WebGPURenderer {
 
     const candidates = this.findHitCandidates(clientX, clientY)
     const timestamp = typeof performance === 'undefined' ? Date.now() : performance.now()
-    const choice = chooseDepthCandidate(
-      candidates,
-      clientX,
-      clientY,
-      this.depthCycleState,
-      timestamp,
-    )
+    const choice = chooseDepthCandidate(candidates, clientX, clientY, this.depthCycleState, timestamp)
     this.depthCycleState = choice.state
     const hit = choice.candidate
       ? {
@@ -1700,17 +1825,17 @@ export class WebGPURenderer {
     // A passing pointer must not prematurely finish parameter animation.
     if (this.geometryFade || this.geometryGhosts.length || this.meshes.some(mesh => mesh.morph)) return
     const epoch = this.getInteractionEpoch()
-    if (this.lastHoverEvaluatedX === clientX && this.lastHoverEvaluatedY === clientY && this.lastHoverEpoch === epoch) return
+    if (this.lastHoverEvaluatedX === clientX && this.lastHoverEvaluatedY === clientY && this.lastHoverEpoch === epoch)
+      return
     this.lastHoverEvaluatedX = clientX
     this.lastHoverEvaluatedY = clientY
     this.lastHoverEpoch = epoch
     const hit = this.findHit(clientX, clientY)
     const index = hit?.meshIndex ?? null
-    const styleChanged = index !== this.hovered
-      || (this.selectionMode !== 'object' && (this.hoveredHit === null) !== (hit === null))
-    const overlayChanged = this.hoveredHit === null && hit === null
-      ? false
-      : !this.sameOverlayTarget(this.hoveredHit, hit)
+    const styleChanged =
+      index !== this.hovered || (this.selectionMode !== 'object' && (this.hoveredHit === null) !== (hit === null))
+    const overlayChanged =
+      this.hoveredHit === null && hit === null ? false : !this.sameOverlayTarget(this.hoveredHit, hit)
     this.hovered = index
     this.hoveredHit = hit
     if (styleChanged) this.updateMeshStyles()
@@ -1720,7 +1845,11 @@ export class WebGPURenderer {
       // id / snapped point, or a null transition); a resting pointer no longer
       // allocates a fresh hit object per animation frame. Measurement points
       // are captured on click, so no consumer needs continuous hover hits.
-      try { this.onHoverChange?.(hit) } catch { /* UI callbacks must not break rendering. */ }
+      try {
+        this.onHoverChange?.(hit)
+      } catch {
+        /* UI callbacks must not break rendering. */
+      }
       this.requestRender()
     }
   }
@@ -1753,7 +1882,11 @@ export class WebGPURenderer {
     this.hoveredHit = null
     this.updateMeshStyles()
     this.rebuildSelectionOverlays()
-    try { this.onHoverChange?.(null) } catch { /* UI callbacks must not break rendering. */ }
+    try {
+      this.onHoverChange?.(null)
+    } catch {
+      /* UI callbacks must not break rendering. */
+    }
     this.requestRender()
   }
 
@@ -1766,21 +1899,20 @@ export class WebGPURenderer {
 
   private emitMeasurementChange() {
     const points = this.measurementPoints.map(point => [...point] as Vec3)
-    const distance = points.length === 2
-      ? Math.hypot(points[1]![0]! - points[0]![0]!, points[1]![1]! - points[0]![1]!, points[1]![2]! - points[0]![2]!)
-      : null
+    const distance =
+      points.length === 2
+        ? Math.hypot(points[1]![0]! - points[0]![0]!, points[1]![1]! - points[0]![1]!, points[1]![2]! - points[0]![2]!)
+        : null
     try {
       this.onMeasurementChange?.(points.length ? { points, distance } : null, this.measureActive)
-    } catch { /* UI callbacks must not break rendering. */ }
+    } catch {
+      /* UI callbacks must not break rendering. */
+    }
   }
 
   private rebuildMeasurementBuffer() {
     this.measurementVB?.destroy()
-    const { buffer, count } = rebuildMeasurementBufferData(
-      this.dev,
-      this.measurementPoints,
-      this.bounds?.radius,
-    )
+    const { buffer, count } = rebuildMeasurementBufferData(this.dev, this.measurementPoints, this.bounds?.radius)
     this.measurementVB = buffer
     this.measurementVC = count
   }
@@ -1826,7 +1958,13 @@ export class WebGPURenderer {
       // pinch/pan; any further pointers (or non-touch devices) are ignored.
       // BOTH pointers must be touches — a stray touch landing during an
       // active mouse/pen drag must not hijack it into a surprise pinch.
-      if (this.pinching || e.pointerId === this.activePointer || e.pointerType !== 'touch' || this.activePointerType !== 'touch') return
+      if (
+        this.pinching ||
+        e.pointerId === this.activePointer ||
+        e.pointerType !== 'touch' ||
+        this.activePointerType !== 'touch'
+      )
+        return
       this.pointers.clear()
       this.pointers.set(this.activePointer, { x: this.mx, y: this.my })
       this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
@@ -1834,21 +1972,36 @@ export class WebGPURenderer {
       this.gestureMoved = true
       this.lastWheelHistoryAt = -Infinity
       this.resetDepthCycle()
-      try { canvas.setPointerCapture(e.pointerId) } catch { /* Pointer may already be gone. */ }
+      try {
+        canvas.setPointerCapture(e.pointerId)
+      } catch {
+        /* Pointer may already be gone. */
+      }
       e.preventDefault()
       return
     }
     if (e.pointerType === 'mouse' && e.button > 2) return
-    try { canvas.focus({ preventScroll: true }) } catch { canvas.focus() }
-    this.drag = true; this.pan = e.button !== 0 || e.shiftKey
+    try {
+      canvas.focus({ preventScroll: true })
+    } catch {
+      canvas.focus()
+    }
+    this.drag = true
+    this.pan = e.button !== 0 || e.shiftKey
     this.activePointer = e.pointerId
     this.activePointerType = e.pointerType
-    this.mx = e.clientX; this.my = e.clientY
-    this.downX = e.clientX; this.downY = e.clientY
+    this.mx = e.clientX
+    this.my = e.clientY
+    this.downX = e.clientX
+    this.downY = e.clientY
     this.downButton = e.button
     this.gestureMoved = false
     this.gestureCameraStart = this.getCameraState()
-    try { canvas.setPointerCapture(e.pointerId) } catch { /* Pointer may already be gone. */ }
+    try {
+      canvas.setPointerCapture(e.pointerId)
+    } catch {
+      /* Pointer may already be gone. */
+    }
     e.preventDefault()
   }
   private onMove = (e: PointerEvent) => {
@@ -1857,25 +2010,35 @@ export class WebGPURenderer {
       if (!entry) return
       let other: { x: number; y: number } | null = null
       for (const [id, point] of this.pointers) {
-        if (id !== e.pointerId) { other = point; break }
+        if (id !== e.pointerId) {
+          other = point
+          break
+        }
       }
       if (!other) return
       const prevSelf = { x: entry.x, y: entry.y }
       entry.x = e.clientX
       entry.y = e.clientY
       const next = computePinchUpdate(
-        prevSelf, other,
-        { x: e.clientX, y: e.clientY }, other,
+        prevSelf,
+        other,
+        { x: e.clientX, y: e.clientY },
+        other,
         { yaw: this.yaw, pitch: this.pitch, dist: this.dist, tx: this.tx, ty: this.ty, tz: this.tz },
         this.canvas?.clientHeight || 1,
         this.perspectiveFovY,
       )
       this.dist = next.dist
-      this.tx = next.tx; this.ty = next.ty; this.tz = next.tz
+      this.tx = next.tx
+      this.ty = next.ty
+      this.tz = next.tz
       this.requestRender()
       return
     }
-    if (!this.drag) { this.scheduleHover(e.clientX, e.clientY); return }
+    if (!this.drag) {
+      this.scheduleHover(e.clientX, e.clientY)
+      return
+    }
     if (this.activePointer !== e.pointerId) return
     if (!this.gestureMoved) {
       this.gestureMoved = Math.hypot(e.clientX - this.downX, e.clientY - this.downY) >= CLICK_MOVE_THRESHOLD
@@ -1883,8 +2046,10 @@ export class WebGPURenderer {
       this.lastWheelHistoryAt = -Infinity
       this.resetDepthCycle()
     }
-    const dx = e.clientX - this.mx, dy = e.clientY - this.my
-    this.mx = e.clientX; this.my = e.clientY
+    const dx = e.clientX - this.mx,
+      dy = e.clientY - this.my
+    this.mx = e.clientX
+    this.my = e.clientY
     // A camera move between wheel events starts a new chronological segment;
     // it must not be swallowed by the previous wheel burst's coalescing window.
     if (dx !== 0 || dy !== 0) this.lastWheelHistoryAt = -Infinity
@@ -1892,8 +2057,12 @@ export class WebGPURenderer {
     const next = this.pan
       ? computePanUpdate(camera, dx, dy, this.canvas?.clientHeight || 1, this.perspectiveFovY)
       : computeOrbitUpdate(camera, dx, dy)
-    this.yaw = next.yaw; this.pitch = next.pitch; this.dist = next.dist
-    this.tx = next.tx; this.ty = next.ty; this.tz = next.tz
+    this.yaw = next.yaw
+    this.pitch = next.pitch
+    this.dist = next.dist
+    this.tx = next.tx
+    this.ty = next.ty
+    this.tz = next.tz
     this.requestRender()
   }
   private onPointerEnd = (e: PointerEvent) => {
@@ -1904,7 +2073,11 @@ export class WebGPURenderer {
       this.pinching = false
       const canvas = this.canvas
       if (e.type !== 'lostpointercapture' && canvas?.hasPointerCapture(e.pointerId)) {
-        try { canvas.releasePointerCapture(e.pointerId) } catch { /* Capture can be released asynchronously. */ }
+        try {
+          canvas.releasePointerCapture(e.pointerId)
+        } catch {
+          /* Capture can be released asynchronously. */
+        }
       }
       const remaining = this.pointers.entries().next().value
       if (remaining) {
@@ -1923,11 +2096,12 @@ export class WebGPURenderer {
     }
     if (this.activePointer !== e.pointerId) return
     const gestureCameraStart = this.gestureCameraStart
-    const shouldPick = e.type === 'pointerup'
-      && !this.gestureMoved
-      && Math.hypot(e.clientX - this.downX, e.clientY - this.downY) < CLICK_MOVE_THRESHOLD
-      && !this.pan
-      && this.downButton === 0
+    const shouldPick =
+      e.type === 'pointerup' &&
+      !this.gestureMoved &&
+      Math.hypot(e.clientX - this.downX, e.clientY - this.downY) < CLICK_MOVE_THRESHOLD &&
+      !this.pan &&
+      this.downButton === 0
     this.activePointer = null
     this.pointers.clear()
     this.drag = false
@@ -1938,15 +2112,22 @@ export class WebGPURenderer {
     }
     const canvas = this.canvas
     if (e.type !== 'lostpointercapture' && canvas?.hasPointerCapture(e.pointerId)) {
-      try { canvas.releasePointerCapture(e.pointerId) } catch { /* Capture can be released asynchronously. */ }
+      try {
+        canvas.releasePointerCapture(e.pointerId)
+      } catch {
+        /* Capture can be released asynchronously. */
+      }
     }
     if (shouldPick) this.pickAt(e.clientX, e.clientY)
   }
   private onWheel = (e: WheelEvent) => {
     e.preventDefault()
-    const unit = e.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16
-      : e.deltaMode === WheelEvent.DOM_DELTA_PAGE ? Math.max(1, this.canvas?.clientHeight || 1)
-      : 1
+    const unit =
+      e.deltaMode === WheelEvent.DOM_DELTA_LINE
+        ? 16
+        : e.deltaMode === WheelEvent.DOM_DELTA_PAGE
+          ? Math.max(1, this.canvas?.clientHeight || 1)
+          : 1
     const nextDistance = computeWheelDistance(this.dist, e.deltaY * unit)
     if (nextDistance === this.dist) return
     this.flushActiveGestureCameraSnapshot()
@@ -2090,7 +2271,11 @@ export class WebGPURenderer {
     this.morphDummyVB = null
     this.textures.teardown()
     this.resetShadowMapCache()
-    try { this.ctx?.unconfigure() } catch { /* Context may already be lost. */ }
+    try {
+      this.ctx?.unconfigure()
+    } catch {
+      /* Context may already be lost. */
+    }
     const device = this.dev
     this.dev = null
     this.ctx = null
@@ -2107,12 +2292,18 @@ export class WebGPURenderer {
     this.initialFitDone = false
     this.drawable = false
     this.lost = false
-    try { device?.destroy() } catch { /* Repeated/lost-device cleanup is harmless. */ }
+    try {
+      device?.destroy()
+    } catch {
+      /* Repeated/lost-device cleanup is harmless. */
+    }
     if (selectionChanged) this.emitSelectionChange()
     if (hadCameraHistory) this.emitCameraHistoryChange()
   }
 
-  get currentStatus(): RendererLifecycleEvent { return this.status }
+  get currentStatus(): RendererLifecycleEvent {
+    return this.status
+  }
 
   getFrameDiagnostics(): WebGPUFrameDiagnostics {
     return {
@@ -2145,7 +2336,11 @@ export class WebGPURenderer {
 
   private updateStatus(event: RendererLifecycleEvent) {
     this.status = event
-    try { this.onStatusChange?.(event) } catch { /* UI callbacks must not break rendering. */ }
+    try {
+      this.onStatusChange?.(event)
+    } catch {
+      /* UI callbacks must not break rendering. */
+    }
   }
 
   private reportError(phase: 'initialization' | 'frame', caught: unknown) {

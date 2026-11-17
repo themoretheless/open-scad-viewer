@@ -7,10 +7,7 @@ import { BoundedTransport, MAX_MCP_SUBSCRIPTIONS } from './boundedTransport'
 import { createRushGraphMcpServer as createOpenScadMcpServer } from './createRushGraphServer'
 import { DirectGeometrySupervisor } from './directGeometrySupervisor'
 import { DuckDbModelStore } from './duckdbModelStore'
-import {
-  HeadlessGeometryService,
-  type McpGeometryBuildRuntime,
-} from './geometryService'
+import { HeadlessGeometryService, type McpGeometryBuildRuntime } from './geometryService'
 import type { ModelStore } from './modelStore'
 import {
   OfficialOpenScadRuntimeSupervisor,
@@ -121,32 +118,36 @@ export async function runMcpServer(
     const geometry = new HeadlessGeometryService(defaultGeometryBuildEngine, runtime)
     const activeTransport = dependencies.createTransport()
     transport = activeTransport
-    handle = dependencies.startServer(() => createOpenScadMcpServer({
-      store,
-      geometry,
-      officialRuntime: activeOfficialRuntime,
-      localEditor: true,
-      onRequestSettled: requestId => activeTransport.settleRequest(requestId),
-      onRequestCancelled: requestId => activeTransport.cancelRequest(requestId),
-    }), {
-      transport: activeTransport,
-      maxSubscriptions: MAX_MCP_SUBSCRIPTIONS,
-      onerror: error => {
-        console.error('MCP transport error:', error)
-        process.exitCode = 1
-        queueMicrotask(() => void close().catch(closeError => {
-          console.error('MCP shutdown failed:', closeError)
-        }))
+    handle = dependencies.startServer(
+      () =>
+        createOpenScadMcpServer({
+          store,
+          geometry,
+          officialRuntime: activeOfficialRuntime,
+          localEditor: true,
+          onRequestSettled: requestId => activeTransport.settleRequest(requestId),
+          onRequestCancelled: requestId => activeTransport.cancelRequest(requestId),
+        }),
+      {
+        transport: activeTransport,
+        maxSubscriptions: MAX_MCP_SUBSCRIPTIONS,
+        onerror: error => {
+          console.error('MCP transport error:', error)
+          process.exitCode = 1
+          queueMicrotask(
+            () =>
+              void close().catch(closeError => {
+                console.error('MCP shutdown failed:', closeError)
+              }),
+          )
+        },
       },
-    })
+    )
   } catch (error) {
     try {
       await close()
     } catch (closeError) {
-      throw new AggregateError(
-        [error, closeError],
-        'Could not start or clean up the OpenSCAD Viewer MCP server',
-      )
+      throw new AggregateError([error, closeError], 'Could not start or clean up the OpenSCAD Viewer MCP server')
     }
     throw error
   }
@@ -176,16 +177,20 @@ async function main() {
     const stop = () => {
       if (stopping) return
       stopping = true
-      void running.close().then(() => {
-        console.error('OpenSCAD Viewer MCP server closed')
-      }).catch(error => {
-        console.error('MCP shutdown failed:', error)
-        process.exitCode = 1
-      }).finally(() => {
-        // The stdio transport pauses stdin; explicitly release its owned pipe
-        // after joining workers and closing the store, including on macOS.
-        process.stdin.destroy()
-      })
+      void running
+        .close()
+        .then(() => {
+          console.error('OpenSCAD Viewer MCP server closed')
+        })
+        .catch(error => {
+          console.error('MCP shutdown failed:', error)
+          process.exitCode = 1
+        })
+        .finally(() => {
+          // The stdio transport pauses stdin; explicitly release its owned pipe
+          // after joining workers and closing the store, including on macOS.
+          process.stdin.destroy()
+        })
     }
     process.once('SIGINT', stop)
     process.once('SIGTERM', stop)
@@ -197,6 +202,5 @@ async function main() {
   }
 }
 
-const isMain = process.argv[1] !== undefined
-  && fileURLToPath(import.meta.url) === resolve(process.argv[1])
+const isMain = process.argv[1] !== undefined && fileURLToPath(import.meta.url) === resolve(process.argv[1])
 if (isMain) void main()

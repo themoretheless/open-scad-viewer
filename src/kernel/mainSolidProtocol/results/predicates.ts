@@ -3,17 +3,14 @@ import { finite } from '../../mainSolidProtocol'
 import { isSourceBodyRecordPayload } from '../../sourceBodyArchive'
 import { arrayOf } from '../mainSolidExpectation'
 
-export const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
-  !!value && typeof value === 'object'
+export const isObjectRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object'
 
 export const isSafeNonnegativeCount = (value: unknown): value is number =>
   Number.isSafeInteger(value) && Number(value) >= 0
 
-export const isSafeIntegerValue = (value: unknown): value is number =>
-  Number.isSafeInteger(value)
+export const isSafeIntegerValue = (value: unknown): value is number => Number.isSafeInteger(value)
 
-export const isNonnegativeFinite = (value: unknown): value is number =>
-  finite(value) && value >= 0
+export const isNonnegativeFinite = (value: unknown): value is number => finite(value) && value >= 0
 
 export const isOrderedInterval = (value: unknown): value is [number, number] =>
   arrayOf(value, 2, finite) && (value as number[])[0]! <= (value as number[])[1]!

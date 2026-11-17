@@ -30,31 +30,27 @@ export interface ScenePublicationPlan {
  * to a potentially different object.
  */
 export function planScenePublication(input: ScenePublicationInput): ScenePublicationPlan {
-  const previousIndexByNextIndex = input.previousMeshes.length === 0
-    ? input.nextMeshes.map(() => -1)
-    : matchMeshesByProvenance(input.previousMeshes, input.nextMeshes, {
-        sameSourceSnapshot: input.sameSourceSnapshot,
-      })
+  const previousIndexByNextIndex =
+    input.previousMeshes.length === 0
+      ? input.nextMeshes.map(() => -1)
+      : matchMeshesByProvenance(input.previousMeshes, input.nextMeshes, {
+          sameSourceSnapshot: input.sameSourceSnapshot,
+        })
 
-  const nextVisibility = previousIndexByNextIndex.map(previousIndex => (
-    previousIndex >= 0 ? input.previousVisibility[previousIndex] !== false : true
-  ))
-
-  const previousSelectedIndex = isValidSelection(
-    input.previousSelectedIndex,
-    input.previousMeshes.length,
+  const nextVisibility = previousIndexByNextIndex.map(previousIndex =>
+    previousIndex >= 0 ? input.previousVisibility[previousIndex] !== false : true,
   )
+
+  const previousSelectedIndex = isValidSelection(input.previousSelectedIndex, input.previousMeshes.length)
     ? input.previousSelectedIndex
     : null
-  const replacementSelection = previousSelectedIndex === null
-    ? -1
-    : previousIndexByNextIndex.indexOf(previousSelectedIndex)
+  const replacementSelection =
+    previousSelectedIndex === null ? -1 : previousIndexByNextIndex.indexOf(previousSelectedIndex)
   // Renderer visibility changes clear hidden selections. Preserve the same
   // invariant when a replacement scene is published, before isolation is
   // restored and can otherwise produce an apparently empty viewport.
-  const nextSelectedIndex = replacementSelection >= 0 && nextVisibility[replacementSelection] !== false
-    ? replacementSelection
-    : null
+  const nextSelectedIndex =
+    replacementSelection >= 0 && nextVisibility[replacementSelection] !== false ? replacementSelection : null
 
   return {
     previousIndexByNextIndex,

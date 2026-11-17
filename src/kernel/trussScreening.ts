@@ -1,5 +1,5 @@
-import {callGeometryRust} from './geometry/kernel'
-import type {TrussInput, TrussResponse} from './trussAnalysis'
+import { callGeometryRust } from './geometry/kernel'
+import type { TrussInput, TrussResponse } from './trussAnalysis'
 
 export interface AxialLimits {
   tensionMpa: number
@@ -16,10 +16,15 @@ export interface AxialScreeningRow {
 }
 
 /** Transport only; validation, envelope and ranking are native. */
-export function screenTrussMembers(model: TrussInput, responses: TrussResponse[], limits: AxialLimits): AxialScreeningRow[] {
+export function screenTrussMembers(
+  model: TrussInput,
+  responses: TrussResponse[],
+  limits: AxialLimits,
+): AxialScreeningRow[] {
   return callGeometryRust('truss_screen', {
     areasMm2: model.members.map(member => member.areaMm2),
-    forcesN: responses.map(response => response.axialForcesN), limits,
+    forcesN: responses.map(response => response.axialForcesN),
+    limits,
   })
 }
 
@@ -39,7 +44,7 @@ export interface ValidatedPrintProfile {
   propertyModel: 'user-supplied-isotropic-axial'
 }
 export function validatePrintStrengthProfile(profile: PrintStrengthProfile): ValidatedPrintProfile {
-  return callGeometryRust('print_strength_profile', {profile})
+  return callGeometryRust('print_strength_profile', { profile })
 }
 
 export interface ThermalSample {
@@ -60,8 +65,8 @@ export interface ThermalStrengthResult {
   youngMpa: number
   tensionMpa: number
   compressionMpa: number
-  nozzleBracketC: [number,number]
-  serviceBracketC: [number,number]
+  nozzleBracketC: [number, number]
+  serviceBracketC: [number, number]
 }
 export function evaluateThermalStrength(request: ThermalStrengthRequest): ThermalStrengthResult {
   return callGeometryRust('thermal_strength', request)

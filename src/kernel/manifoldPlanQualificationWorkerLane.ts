@@ -81,10 +81,15 @@ export interface ManifoldPlanQualificationWorkerLaneSnapshot {
 
 let compiledGeometryModule: Promise<WebAssembly.Module> | undefined
 function hostGeometryModule(): Promise<WebAssembly.Module> {
-  compiledGeometryModule ??= compileGeometryKernelArtifact().then(module => {
-    assertVerifiedWasmModule(module, geometryArtifactIdentity)
-    return module
-  }).catch(error => { compiledGeometryModule = undefined; throw error })
+  compiledGeometryModule ??= compileGeometryKernelArtifact()
+    .then(module => {
+      assertVerifiedWasmModule(module, geometryArtifactIdentity)
+      return module
+    })
+    .catch(error => {
+      compiledGeometryModule = undefined
+      throw error
+    })
   return compiledGeometryModule
 }
 
@@ -128,18 +133,9 @@ export class ManifoldPlanQualificationWorkerLane {
   constructor(options: ManifoldPlanQualificationWorkerLaneOptions = {}) {
     this.usesDefaultWorker = options.workerFactory === undefined
     this.workerFactory = options.workerFactory ?? defaultWorkerFactory
-    this.startupTimeoutMs = duration(
-      options.startupTimeoutMs ?? 10_000,
-      'startupTimeoutMs',
-      MAX_DEADLINE_MS,
-    )
+    this.startupTimeoutMs = duration(options.startupTimeoutMs ?? 10_000, 'startupTimeoutMs', MAX_DEADLINE_MS)
     this.defaultDeadlineMs = duration(options.deadlineMs ?? 30_000, 'deadlineMs', MAX_DEADLINE_MS)
-    this.cancellationGraceMs = duration(
-      options.cancellationGraceMs ?? 25,
-      'cancellationGraceMs',
-      MAX_GRACE_MS,
-      true,
-    )
+    this.cancellationGraceMs = duration(options.cancellationGraceMs ?? 25, 'cancellationGraceMs', MAX_GRACE_MS, true)
   }
 
   snapshot(): ManifoldPlanQualificationWorkerLaneSnapshot {
@@ -164,11 +160,7 @@ export class ManifoldPlanQualificationWorkerLane {
         this.activeWorkerEpoch,
       )
     }
-    const deadlineMs = duration(
-      options.deadlineMs ?? this.defaultDeadlineMs,
-      'deadlineMs',
-      MAX_DEADLINE_MS,
-    )
+    const deadlineMs = duration(options.deadlineMs ?? this.defaultDeadlineMs, 'deadlineMs', MAX_DEADLINE_MS)
     const workerEpoch = this.nextEpoch++
     const jobId = this.nextJobId++
     let sourceSha256 = this.lastSourceSha256
@@ -238,19 +230,21 @@ export class ManifoldPlanQualificationWorkerLane {
         cleanup()
         terminate()
         if (stopReason !== null) {
-          reject(new ManifoldPlanQualificationWorkerLaneError(
-            stopReason === 'cancelled'
-              ? 'E_MANIFOLD_PLAN_WORKER_CANCELLED'
-              : stopReason === 'startup'
-                ? 'E_MANIFOLD_PLAN_WORKER_STARTUP'
-                : 'E_MANIFOLD_PLAN_WORKER_DEADLINE',
-            stopReason === 'cancelled'
-              ? 'Manifold plan qualification Worker evaluation was cancelled'
-              : stopReason === 'startup'
-                ? 'Manifold plan qualification Worker did not acknowledge startup in time'
-                : 'Manifold plan qualification Worker evaluation exceeded its deadline',
-            workerEpoch,
-          ))
+          reject(
+            new ManifoldPlanQualificationWorkerLaneError(
+              stopReason === 'cancelled'
+                ? 'E_MANIFOLD_PLAN_WORKER_CANCELLED'
+                : stopReason === 'startup'
+                  ? 'E_MANIFOLD_PLAN_WORKER_STARTUP'
+                  : 'E_MANIFOLD_PLAN_WORKER_DEADLINE',
+              stopReason === 'cancelled'
+                ? 'Manifold plan qualification Worker evaluation was cancelled'
+                : stopReason === 'startup'
+                  ? 'Manifold plan qualification Worker did not acknowledge startup in time'
+                  : 'Manifold plan qualification Worker evaluation exceeded its deadline',
+              workerEpoch,
+            ),
+          )
         } else if (failure !== null) {
           reject(failure)
         } else if (terminal?.status === 'failed') {
@@ -258,11 +252,13 @@ export class ManifoldPlanQualificationWorkerLane {
         } else if (terminal?.status === 'succeeded') {
           resolve(terminal.result)
         } else {
-          reject(new ManifoldPlanQualificationWorkerLaneError(
-            'E_MANIFOLD_PLAN_WORKER_PROTOCOL',
-            'Manifold plan qualification Worker settled without a terminal',
-            workerEpoch,
-          ))
+          reject(
+            new ManifoldPlanQualificationWorkerLaneError(
+              'E_MANIFOLD_PLAN_WORKER_PROTOCOL',
+              'Manifold plan qualification Worker settled without a terminal',
+              workerEpoch,
+            ),
+          )
         }
       }
       const requestStop = (reason: 'cancelled' | 'startup' | 'deadline') => {
@@ -277,7 +273,11 @@ export class ManifoldPlanQualificationWorkerLane {
           reason: reason === 'cancelled' ? 'cancelled' : 'deadline',
           identity: MCP_MANIFOLD_PLAN_QUALIFICATION_IDENTITY,
         })
-        try { worker.postMessage(cancel) } catch { /* terminate below */ }
+        try {
+          worker.postMessage(cancel)
+        } catch {
+          /* terminate below */
+        }
         graceTimer = setTimeout(() => settle(null, null), this.cancellationGraceMs)
       }
       const onAbort = () => requestStop('cancelled')
@@ -287,11 +287,14 @@ export class ManifoldPlanQualificationWorkerLane {
           settle(null, null)
         } else if (isMcpManifoldPlanQualificationStarted(event.data, request)) {
           if (started) {
-            settle(null, new ManifoldPlanQualificationWorkerLaneError(
-              'E_MANIFOLD_PLAN_WORKER_PROTOCOL',
-              'Manifold plan qualification Worker acknowledged startup more than once',
-              workerEpoch,
-            ))
+            settle(
+              null,
+              new ManifoldPlanQualificationWorkerLaneError(
+                'E_MANIFOLD_PLAN_WORKER_PROTOCOL',
+                'Manifold plan qualification Worker acknowledged startup more than once',
+                workerEpoch,
+              ),
+            )
             return
           }
           started = true
@@ -300,39 +303,51 @@ export class ManifoldPlanQualificationWorkerLane {
           deadlineTimer = setTimeout(() => requestStop('deadline'), deadlineMs)
         } else if (isMcpManifoldPlanQualificationTerminal(event.data, request)) {
           if (!started) {
-            settle(null, new ManifoldPlanQualificationWorkerLaneError(
-              'E_MANIFOLD_PLAN_WORKER_PROTOCOL',
-              'Manifold plan qualification Worker returned a terminal before startup acknowledgement',
-              workerEpoch,
-            ))
+            settle(
+              null,
+              new ManifoldPlanQualificationWorkerLaneError(
+                'E_MANIFOLD_PLAN_WORKER_PROTOCOL',
+                'Manifold plan qualification Worker returned a terminal before startup acknowledgement',
+                workerEpoch,
+              ),
+            )
           } else {
             settle(event.data, null)
           }
         } else {
-          settle(null, new ManifoldPlanQualificationWorkerLaneError(
-            'E_MANIFOLD_PLAN_WORKER_PROTOCOL',
-            'Manifold plan qualification Worker returned an invalid or uncorrelated terminal',
-            workerEpoch,
-          ))
+          settle(
+            null,
+            new ManifoldPlanQualificationWorkerLaneError(
+              'E_MANIFOLD_PLAN_WORKER_PROTOCOL',
+              'Manifold plan qualification Worker returned an invalid or uncorrelated terminal',
+              workerEpoch,
+            ),
+          )
         }
       }
       const onError = (event: ErrorEvent) => {
         if (settling) return
-        settle(null, new ManifoldPlanQualificationWorkerLaneError(
-          'E_MANIFOLD_PLAN_WORKER_CRASH',
-          'Manifold plan qualification Worker crashed before a valid terminal',
-          workerEpoch,
-          { cause: event.error },
-        ))
+        settle(
+          null,
+          new ManifoldPlanQualificationWorkerLaneError(
+            'E_MANIFOLD_PLAN_WORKER_CRASH',
+            'Manifold plan qualification Worker crashed before a valid terminal',
+            workerEpoch,
+            { cause: event.error },
+          ),
+        )
       }
       const onMessageError = (event: MessageEvent<unknown>) => {
         if (settling) return
-        settle(null, new ManifoldPlanQualificationWorkerLaneError(
-          'E_MANIFOLD_PLAN_WORKER_PROTOCOL',
-          'Manifold plan qualification Worker message could not be deserialized',
-          workerEpoch,
-          { cause: event.data },
-        ))
+        settle(
+          null,
+          new ManifoldPlanQualificationWorkerLaneError(
+            'E_MANIFOLD_PLAN_WORKER_PROTOCOL',
+            'Manifold plan qualification Worker message could not be deserialized',
+            workerEpoch,
+            { cause: event.data },
+          ),
+        )
       }
 
       worker.addEventListener('message', onMessage)
@@ -347,25 +362,32 @@ export class ManifoldPlanQualificationWorkerLane {
       const postRequest = (module?: WebAssembly.Module) => {
         if (settling || stopReason !== null) return
         try {
-          if (module) worker.postMessage({ type: 'native-geometry-module',
-            module, identity: geometryArtifactIdentity })
+          if (module) worker.postMessage({ type: 'native-geometry-module', module, identity: geometryArtifactIdentity })
           worker.postMessage(request)
         } catch (error) {
-          settle(null, new ManifoldPlanQualificationWorkerLaneError(
-            'E_MANIFOLD_PLAN_WORKER_PROTOCOL',
-            'Manifold plan qualification request could not be posted',
-            workerEpoch, { cause: error },
-          ))
+          settle(
+            null,
+            new ManifoldPlanQualificationWorkerLaneError(
+              'E_MANIFOLD_PLAN_WORKER_PROTOCOL',
+              'Manifold plan qualification request could not be posted',
+              workerEpoch,
+              { cause: error },
+            ),
+          )
         }
       }
       if (this.usesDefaultWorker) {
         hostGeometryModule().then(postRequest, error => {
           if (settling) return
-          settle(null, new ManifoldPlanQualificationWorkerLaneError(
-            'E_MANIFOLD_PLAN_WORKER_STARTUP',
-            'Verified native geometry module could not be prepared',
-            workerEpoch, { cause: error },
-          ))
+          settle(
+            null,
+            new ManifoldPlanQualificationWorkerLaneError(
+              'E_MANIFOLD_PLAN_WORKER_STARTUP',
+              'Verified native geometry module could not be prepared',
+              workerEpoch,
+              { cause: error },
+            ),
+          )
         })
       } else postRequest()
     })

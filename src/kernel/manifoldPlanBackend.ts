@@ -32,7 +32,7 @@ export {
 
 const PRESERVING_EVIDENCE = Object.freeze({ tag: 'representation-preserving' as const })
 export const MANIFOLD_PLAN_CARRIERS = Object.freeze(['solid-set/d3/mesh', 'region/d2/mesh'] as const)
-export type ManifoldPlanCarrier = typeof MANIFOLD_PLAN_CARRIERS[number]
+export type ManifoldPlanCarrier = (typeof MANIFOLD_PLAN_CARRIERS)[number]
 export const MANIFOLD_PLAN_PAYLOAD = Symbol('ManifoldPlanPayload')
 
 /** Opaque plan value owned by one backend session; geometry is reachable only through narrow inspection helpers. */
@@ -93,16 +93,14 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
     this.releaseSession(this.quarantined, this.quarantineCause)
   }
 
-  validatePayload(
-    expectedCarrier: SemanticCarrierKey,
-    payload: unknown,
-    lease: SemanticBackendPayloadLease,
-  ): boolean {
+  validatePayload(expectedCarrier: SemanticCarrierKey, payload: unknown, lease: SemanticBackendPayloadLease): boolean {
     const entry = this.entries.get(lease)
-    return entry !== undefined
-      && !entry.released
-      && entry.payload === payload
-      && entry.payload.carrierKey === expectedCarrier
+    return (
+      entry !== undefined &&
+      !entry.released &&
+      entry.payload === payload &&
+      entry.payload.carrierKey === expectedCarrier
+    )
   }
 
   evaluate(
@@ -141,14 +139,22 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
         handle = this.promoteOriginal(unpromoted, context.nodeIndex)
       }
       // Retain empty Manifold objects so downstream ordering/provenance stays intact; assembler omits empty roots.
-      const result = this.allocate(node, expectedCarrier, handle, this.kernel.isEmpty(handle) ? 'materialized-empty' : 'value')
+      const result = this.allocate(
+        node,
+        expectedCarrier,
+        handle,
+        this.kernel.isEmpty(handle) ? 'materialized-empty' : 'value',
+      )
       handle = undefined
       return result
     } catch (error) {
       if (handle !== undefined) {
         const cleanupError = safeDelete(this.kernel, handle)
         if (cleanupError !== undefined) {
-          const failure = new AggregateError([error, cleanupError], `Manifold node ${node.id} failed and cleanup also failed`)
+          const failure = new AggregateError(
+            [error, cleanupError],
+            `Manifold node ${node.id} failed and cleanup also failed`,
+          )
           this.quarantine(failure)
           throw failure
         }
@@ -191,18 +197,23 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
       }
 
       const retained = new Set(outcome.retained)
-      if (retained.size !== outcome.retained.length
-        || [...retained].some(lease => {
+      if (
+        retained.size !== outcome.retained.length ||
+        [...retained].some(lease => {
           const entry = this.entries.get(lease)
           return entry === undefined || entry.released
-        })) {
+        })
+      ) {
         const cleanupErrors = this.releaseAll(new Set())
         const contractFailure = backendError(
           'E_MANIFOLD_PLAN_CONTRACT',
           'Commit retained a duplicate, foreign, or already released payload lease',
         )
         if (cleanupErrors.length > 0) {
-          const failure = new AggregateError([contractFailure, ...cleanupErrors], 'Invalid Manifold commit and cleanup failure')
+          const failure = new AggregateError(
+            [contractFailure, ...cleanupErrors],
+            'Invalid Manifold commit and cleanup failure',
+          )
           this.quarantine(failure)
           this.finishSession()
           throw failure
@@ -252,9 +263,10 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
         return this.kernel.polygon(node.rings)
       case 'transform': {
         const producerName = context.producer?.operationName
-        if (producerName === undefined || ![
-          'translate', 'rotate', 'scale', 'mirror', 'multmatrix',
-        ].includes(producerName)) {
+        if (
+          producerName === undefined ||
+          !['translate', 'rotate', 'scale', 'mirror', 'multmatrix'].includes(producerName)
+        ) {
           throw backendError(
             'E_MANIFOLD_PLAN_CONTRACT',
             'Transform evaluation requires one executor-attested transform producer',
@@ -269,9 +281,10 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
           return this.kernel.transform2(input.handle, matrix3FromMatrix4(node.matrix))
         }
         const input = requirePayload(inputs[0], 3, node)
-        const determinant = node.matrix[0] * (node.matrix[5] * node.matrix[10] - node.matrix[9] * node.matrix[6])
-          - node.matrix[4] * (node.matrix[1] * node.matrix[10] - node.matrix[9] * node.matrix[2])
-          + node.matrix[8] * (node.matrix[1] * node.matrix[6] - node.matrix[5] * node.matrix[2])
+        const determinant =
+          node.matrix[0] * (node.matrix[5] * node.matrix[10] - node.matrix[9] * node.matrix[6]) -
+          node.matrix[4] * (node.matrix[1] * node.matrix[10] - node.matrix[9] * node.matrix[2]) +
+          node.matrix[8] * (node.matrix[1] * node.matrix[6] - node.matrix[5] * node.matrix[2])
         if (producerName === 'mirror' && determinant === 0) {
           return this.kernel.empty3()
         }
@@ -283,10 +296,21 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
         return this.hull(node.valueType.space === 'd2' ? 2 : 3, inputs, node)
       case 'linear-extrude': {
         const input = requirePayload(inputs[0], 2, node)
-        return this.kernel.linearExtrude(input.handle, node.height, node.slices, node.twistDegrees, node.scale, node.center)
+        return this.kernel.linearExtrude(
+          input.handle,
+          node.height,
+          node.slices,
+          node.twistDegrees,
+          node.scale,
+          node.center,
+        )
       }
       case 'rotate-extrude-polygonal':
-        return this.kernel.rotateExtrude(requirePayload(inputs[0], 2, node).handle, node.radialSegments, node.angleDegrees)
+        return this.kernel.rotateExtrude(
+          requirePayload(inputs[0], 2, node).handle,
+          node.radialSegments,
+          node.angleDegrees,
+        )
       case 'projection':
         return this.kernel.projection(requirePayload(inputs[0], 3, node).handle, node.cut)
       case 'offset':
@@ -300,7 +324,13 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
     }
   }
 
-  private cylinder(height: number, radiusBottom: number, radiusTop: number, radialSegments: number, center: boolean): CadKernelHandle {
+  private cylinder(
+    height: number,
+    radiusBottom: number,
+    radiusTop: number,
+    radialSegments: number,
+    center: boolean,
+  ): CadKernelHandle {
     if (radiusBottom > 0) return this.kernel.cylinder(height, radiusBottom, radiusTop, radialSegments, center)
     let current = this.kernel.cylinder(height, radiusTop, 0, radialSegments, center)
     try {
@@ -312,12 +342,14 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
         next = this.kernel.translateZ(current, height)
         const translateCleanup = safeDelete(this.kernel, current)
         current = next
-        if (translateCleanup !== undefined) throw new AggregateError([translateCleanup], 'Cylinder translation cleanup failed')
+        if (translateCleanup !== undefined)
+          throw new AggregateError([translateCleanup], 'Cylinder translation cleanup failed')
       }
       return current
     } catch (error) {
       const cleanupError = safeDelete(this.kernel, current)
-      if (cleanupError !== undefined) throw new AggregateError([error, cleanupError], 'Cylinder construction and cleanup failed')
+      if (cleanupError !== undefined)
+        throw new AggregateError([error, cleanupError], 'Cylinder construction and cleanup failed')
       throw error
     }
   }
@@ -332,8 +364,14 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
       throw backendError('E_MANIFOLD_PLAN_CONTRACT', `${operation} received no values after shared empty reduction`)
     }
     return dimension === 2
-      ? this.kernel.boolean2(operation, inputs.map(input => requirePayload(input, 2, node).handle))
-      : this.kernel.boolean3(operation, inputs.map(input => requirePayload(input, 3, node).handle))
+      ? this.kernel.boolean2(
+          operation,
+          inputs.map(input => requirePayload(input, 2, node).handle),
+        )
+      : this.kernel.boolean3(
+          operation,
+          inputs.map(input => requirePayload(input, 3, node).handle),
+        )
   }
 
   private hull(
@@ -350,13 +388,15 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
   }
 
   private shouldPromoteOriginal(node: SemanticNode): boolean {
-    return node.kind === 'box'
-      || node.kind === 'sphere-polygonal'
-      || node.kind === 'cylinder-polygonal'
-      || node.kind === 'polyhedron'
-      || node.kind === 'hull'
-      || node.kind === 'linear-extrude'
-      || node.kind === 'rotate-extrude-polygonal'
+    return (
+      node.kind === 'box' ||
+      node.kind === 'sphere-polygonal' ||
+      node.kind === 'cylinder-polygonal' ||
+      node.kind === 'polyhedron' ||
+      node.kind === 'hull' ||
+      node.kind === 'linear-extrude' ||
+      node.kind === 'rotate-extrude-polygonal'
+    )
   }
 
   private promoteOriginal(handle: CadKernelHandle, nodeIndex: number): CadKernelHandle {

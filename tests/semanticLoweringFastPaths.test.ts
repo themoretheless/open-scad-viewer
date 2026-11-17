@@ -20,7 +20,14 @@ function referenceCompare(left: string, right: string): number {
 
 let seed = 0x5eed
 const random = () => (seed = (seed * 1_103_515_245 + 12_345) >>> 0) / 2 ** 32
-const ranges: Array<[number, number]> = [[0x20, 0x7f], [0x80, 0x7ff], [0x800, 0xd7ff], [0xd800, 0xdbff], [0xdc00, 0xdfff], [0xe000, 0xffff]]
+const ranges: Array<[number, number]> = [
+  [0x20, 0x7f],
+  [0x80, 0x7ff],
+  [0x800, 0xd7ff],
+  [0xd800, 0xdbff],
+  [0xdc00, 0xdfff],
+  [0xe000, 0xffff],
+]
 function randomUnit(): string {
   const roll = random()
   if (roll < 0.6) return String.fromCharCode(0x61 + Math.floor(random() * 4))
@@ -80,7 +87,11 @@ describe('semantic lowering fast paths', () => {
     try {
       WeakSet.prototype.has = () => true
       WeakMap.prototype.get = () => new Uint8Array([1, 2, 3])
-      try { normalizeSemanticProgram(forged) } catch (error) { forgedError = error }
+      try {
+        normalizeSemanticProgram(forged)
+      } catch (error) {
+        forgedError = error
+      }
       encodedLength = encodeSemanticProgram(program).length
     } finally {
       WeakSet.prototype.has = originalHas

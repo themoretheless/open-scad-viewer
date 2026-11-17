@@ -1,17 +1,6 @@
 import { h, type Slots, type VNode, type VNodeChild } from 'svet'
-import {
-  parseFormaUi,
-  type FormaAstNode,
-  type FormaComponentAst,
-  type FormaElementNode,
-} from './parser'
-import {
-  batch,
-  compileFormaExpression,
-  type CompiledExprAst,
-  signal,
-  type Signal,
-} from './svet'
+import { parseFormaUi, type FormaAstNode, type FormaComponentAst, type FormaElementNode } from './parser'
+import { batch, compileFormaExpression, type CompiledExprAst, signal, type Signal } from './svet'
 
 export interface FormaRenderContext {
   state: Record<string, unknown>
@@ -127,9 +116,7 @@ export function evalCompiledAst(ast: CompiledExprAst, ctx: FormaRenderContext): 
       }
     }
     case 'conditional':
-      return evalCompiledAst(ast.test, ctx)
-        ? evalCompiledAst(ast.consequent, ctx)
-        : evalCompiledAst(ast.alternate, ctx)
+      return evalCompiledAst(ast.test, ctx) ? evalCompiledAst(ast.consequent, ctx) : evalCompiledAst(ast.alternate, ctx)
   }
 }
 
@@ -167,11 +154,7 @@ function evalProp(el: FormaElementNode, name: string, ctx: FormaRenderContext): 
   return evalCompiledAst(compileFormaExpression(el.props[name]!), ctx)
 }
 
-function buildAriaAndDomAttrs(
-  el: FormaElementNode,
-  ctx: FormaRenderContext,
-  extraClass = '',
-): Record<string, unknown> {
+function buildAriaAndDomAttrs(el: FormaElementNode, ctx: FormaRenderContext, extraClass = ''): Record<string, unknown> {
   const attrs: Record<string, unknown> = {}
   const cls: string[] = []
   if (extraClass) cls.push(extraClass)
@@ -259,11 +242,8 @@ function renderElement(el: FormaElementNode, ctx: FormaRenderContext, key?: unkn
   const children = renderNodes(el.children, ctx)
   const textProp = evalProp(el, 'text', ctx) ?? evalProp(el, 'label', ctx)
   const content: VNodeChild[] =
-    textProp !== undefined && textProp !== null && textProp !== ''
-      ? [String(textProp), ...children]
-      : children
-  const withKey = (attrs: Record<string, unknown>) =>
-    key !== undefined ? { ...attrs, key } : attrs
+    textProp !== undefined && textProp !== null && textProp !== '' ? [String(textProp), ...children] : children
+  const withKey = (attrs: Record<string, unknown>) => (key !== undefined ? { ...attrs, key } : attrs)
 
   switch (el.type) {
     case 'Slot': {
@@ -436,10 +416,7 @@ export function renderNodes(nodes: FormaAstNode[], ctx: FormaRenderContext): VNo
   return out
 }
 
-export function syncFormaSignals(
-  signals: Map<string, Signal<unknown>>,
-  nextState: Record<string, unknown>,
-): void {
+export function syncFormaSignals(signals: Map<string, Signal<unknown>>, nextState: Record<string, unknown>): void {
   batch(() => {
     for (const key of Object.keys(nextState)) {
       const nextVal = nextState[key]

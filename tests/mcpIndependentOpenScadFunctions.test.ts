@@ -9,9 +9,15 @@ describe('independent OpenSCAD function execution through MCP', () => {
   let close: () => Promise<void>
   let request: (method: string, params?: Record<string, unknown>) => Promise<Record<string, unknown>>
   const upstream = {
-    capabilities: vi.fn(async () => { throw new Error('upstream oracle must not be called') }),
-    check: vi.fn(async () => { throw new Error('upstream oracle must not be called') }),
-    export: vi.fn(async () => { throw new Error('upstream oracle must not be called') }),
+    capabilities: vi.fn(async () => {
+      throw new Error('upstream oracle must not be called')
+    }),
+    check: vi.fn(async () => {
+      throw new Error('upstream oracle must not be called')
+    }),
+    export: vi.fn(async () => {
+      throw new Error('upstream oracle must not be called')
+    }),
     close: vi.fn(async () => undefined),
   } as unknown as OfficialOpenScadRuntimeService
 
@@ -22,8 +28,8 @@ describe('independent OpenSCAD function execution through MCP', () => {
     const pending = new Map<number, (value: Record<string, unknown>) => void>()
     let nextId = 1
     clientTransport.onmessage = message => {
-      if (!('id' in message) || typeof message.id !== 'number'
-        || (!('result' in message) && !('error' in message))) return
+      if (!('id' in message) || typeof message.id !== 'number' || (!('result' in message) && !('error' in message)))
+        return
       pending.get(message.id)?.(message as Record<string, unknown>)
       pending.delete(message.id)
     }
@@ -63,10 +69,10 @@ describe('independent OpenSCAD function execution through MCP', () => {
 
   it('executes the canonical 38-function inventory without calling the upstream oracle', async () => {
     for (const entry of OPENSCAD_2021_01_BUILTIN_FUNCTIONS) {
-      const called = await request('tools/call', {
+      const called = (await request('tools/call', {
         name: 'openscad_independent_check',
         arguments: { source: entry.smoke.source, quality: 'full' },
-      }) as {
+      })) as {
         isError?: boolean
         structuredContent?: {
           check: {
@@ -93,8 +99,10 @@ describe('independent OpenSCAD function execution through MCP', () => {
         },
         mesh_count: 1,
       })
-      expect(called.structuredContent!.check.warnings.some(line => line.startsWith('ECHO:')), entry.name)
-        .toBe(true)
+      expect(
+        called.structuredContent!.check.warnings.some(line => line.startsWith('ECHO:')),
+        entry.name,
+      ).toBe(true)
     }
 
     expect(upstream.capabilities).not.toHaveBeenCalled()
@@ -103,7 +111,7 @@ describe('independent OpenSCAD function execution through MCP', () => {
   })
 
   it('executes stable wrappers, comprehensions and multi-iterator controls without upstream', async () => {
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_independent_check',
       arguments: {
         quality: 'full',
@@ -123,7 +131,7 @@ describe('independent OpenSCAD function execution through MCP', () => {
             translate([i * 0.25, j * 0.25, 0]) cube(1);
         `,
       },
-    }) as {
+    })) as {
       isError?: boolean
       structuredContent?: {
         check: {
@@ -152,7 +160,7 @@ describe('independent OpenSCAD function execution through MCP', () => {
   })
 
   it('preserves stable lexical and dynamic scopes without upstream', async () => {
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_independent_check',
       arguments: {
         quality: 'full',
@@ -167,7 +175,7 @@ describe('independent OpenSCAD function execution through MCP', () => {
           let(x = 99, $foo = 7) m() cube(1);
         `,
       },
-    }) as {
+    })) as {
       isError?: boolean
       structuredContent?: {
         check: {
@@ -190,14 +198,14 @@ describe('independent OpenSCAD function execution through MCP', () => {
   })
 
   it('injects bounded animation, preview, and 2021 camera variables through MCP', async () => {
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_independent_check',
       arguments: {
         quality: 'preview',
         time: 0.625,
         source: 'echo($t, $preview, $vpt, $vpr, $vpd, $vpf); cube(1);',
       },
-    }) as {
+    })) as {
       isError?: boolean
       structuredContent?: {
         check: {
@@ -218,7 +226,7 @@ describe('independent OpenSCAD function execution through MCP', () => {
   })
 
   it('executes the stable grammar, operators, recursion, and viewport modifiers through MCP', async () => {
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_independent_check',
       arguments: {
         quality: 'full',
@@ -245,7 +253,7 @@ describe('independent OpenSCAD function execution through MCP', () => {
           }
         `,
       },
-    }) as {
+    })) as {
       isError?: boolean
       structuredContent?: {
         check: {
@@ -264,8 +272,7 @@ describe('independent OpenSCAD function execution through MCP', () => {
       volume: 1,
     })
     expect(called.structuredContent!.check.warnings).toContain('ECHO: "nested"')
-    expect(called.structuredContent!.check.warnings.some(line => line.startsWith('ECHO: 24, 3,')))
-      .toBe(true)
+    expect(called.structuredContent!.check.warnings.some(line => line.startsWith('ECHO: 24, 3,'))).toBe(true)
     expect(upstream.capabilities).not.toHaveBeenCalled()
     expect(upstream.check).not.toHaveBeenCalled()
     expect(upstream.export).not.toHaveBeenCalled()

@@ -22,7 +22,6 @@ export interface RayHit {
   tNear: number
 }
 
-
 export interface FlatBvhTree {
   /** 32-byte per node buffer (interleaved f32 bounds and u32 child/object indices) */
   nodeBuffer: ArrayBuffer
@@ -43,7 +42,6 @@ export interface BatchedRayInput {
 
 import BVH_RAYCAST_WGSL from '../../crates/compute-core/shaders/bvh_raycast.wgsl?raw'
 export { BVH_RAYCAST_WGSL }
-
 
 interface IndexedLeaf {
   objIndex: number
@@ -75,18 +73,14 @@ export function buildFlatBvh(items: readonly AabbItem[]): FlatBvhTree {
 
   // Sort items by id so lower objIndex corresponds to lexicographically smaller id for tie-breaking
   const sorted = [...items].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
-  const idTable = sorted.map((it) => it.id)
+  const idTable = sorted.map(it => it.id)
 
   const leaves: IndexedLeaf[] = sorted.map((it, idx) => ({
     objIndex: idx,
     id: it.id,
     min: [it.min[0], it.min[1], it.min[2]],
     max: [it.max[0], it.max[1], it.max[2]],
-    center: [
-      0.5 * (it.min[0] + it.max[0]),
-      0.5 * (it.min[1] + it.max[1]),
-      0.5 * (it.min[2] + it.max[2]),
-    ],
+    center: [0.5 * (it.min[0] + it.max[0]), 0.5 * (it.min[1] + it.max[1]), 0.5 * (it.min[2] + it.max[2])],
   }))
 
   const nodes: TempNode[] = []
@@ -97,7 +91,7 @@ export function buildFlatBvh(items: readonly AabbItem[]): FlatBvhTree {
       min: [0, 0, 0],
       max: [0, 0, 0],
       leftOrObj: 0,
-      rightOrLeaf: 0xFFFFFFFF,
+      rightOrLeaf: 0xffffffff,
     })
 
     if (list.length === 1) {
@@ -106,15 +100,23 @@ export function buildFlatBvh(items: readonly AabbItem[]): FlatBvhTree {
         min: leaf.min,
         max: leaf.max,
         leftOrObj: leaf.objIndex,
-        rightOrLeaf: 0xFFFFFFFF,
+        rightOrLeaf: 0xffffffff,
       }
       return nodeIdx
     }
 
-    let cMinX = Infinity, cMinY = Infinity, cMinZ = Infinity
-    let cMaxX = -Infinity, cMaxY = -Infinity, cMaxZ = -Infinity
-    let bMinX = Infinity, bMinY = Infinity, bMinZ = Infinity
-    let bMaxX = -Infinity, bMaxY = -Infinity, bMaxZ = -Infinity
+    let cMinX = Infinity,
+      cMinY = Infinity,
+      cMinZ = Infinity
+    let cMaxX = -Infinity,
+      cMaxY = -Infinity,
+      cMaxZ = -Infinity
+    let bMinX = Infinity,
+      bMinY = Infinity,
+      bMinZ = Infinity
+    let bMaxX = -Infinity,
+      bMaxY = -Infinity,
+      bMaxZ = -Infinity
 
     for (let i = 0; i < list.length; i++) {
       const it = list[i]!
@@ -184,10 +186,7 @@ export function buildFlatBvh(items: readonly AabbItem[]): FlatBvhTree {
 /**
  * Exact CPU reference implementation of batched BVH raycast over FlatBvhTree.
  */
-export function referenceBatchedBvhRaycast(
-  bvh: FlatBvhTree,
-  rays: readonly BatchedRayInput[]
-): (RayHit | null)[] {
+export function referenceBatchedBvhRaycast(bvh: FlatBvhTree, rays: readonly BatchedRayInput[]): (RayHit | null)[] {
   if (bvh.nodeCount === 0 || rays.length === 0) {
     return rays.map(() => null)
   }
@@ -210,10 +209,14 @@ export function referenceBatchedBvhRaycast(
 
   function slabTest(
     n: ReturnType<typeof readNode>,
-    ox: number, oy: number, oz: number,
-    dx: number, dy: number, dz: number,
+    ox: number,
+    oy: number,
+    oz: number,
+    dx: number,
+    dy: number,
+    dz: number,
     tMinIn: number,
-    tMaxIn: number
+    tMaxIn: number,
   ): number {
     let tNear = tMinIn
     let tFar = tMaxIn
@@ -269,7 +272,7 @@ export function referenceBatchedBvhRaycast(
 
     const tMin = Math.max(0, ray.tMin ?? 0)
     let bestT = ray.tMax ?? 1e30
-    let bestObj = 0xFFFFFFFF
+    let bestObj = 0xffffffff
 
     stack[0] = bvh.rootIndex
     let stackPtr = 1
@@ -283,7 +286,7 @@ export function referenceBatchedBvhRaycast(
       const tEntry = slabTest(node, ox, oy, oz, dx, dy, dz, tMin, bestT)
       if (tEntry < 0 || tEntry > bestT) continue
 
-      if (node.rightOrLeaf === 0xFFFFFFFF) {
+      if (node.rightOrLeaf === 0xffffffff) {
         const objId = node.leftOrObj
         if (tEntry < bestT || (tEntry === bestT && objId < bestObj)) {
           bestT = tEntry
@@ -316,7 +319,7 @@ export function referenceBatchedBvhRaycast(
       }
     }
 
-    if (bestObj !== 0xFFFFFFFF && bestObj < bvh.idTable.length) {
+    if (bestObj !== 0xffffffff && bestObj < bvh.idTable.length) {
       results.push({ id: bvh.idTable[bestObj]!, tNear: bestT })
     } else {
       results.push(null)
@@ -332,16 +335,15 @@ export function referenceBatchedBvhRaycast(
 export async function referenceBatchedBvhRaycastAsync(
   bvh: FlatBvhTree,
   rays: readonly BatchedRayInput[],
-  options: CooperativeAsyncOptions = {}
+  options: CooperativeAsyncOptions = {},
 ): Promise<(RayHit | null)[]> {
   if (bvh.nodeCount === 0 || rays.length === 0) {
     return rays.map(() => null)
   }
-  return mapChunkedAsync(
-    rays,
-    ray => referenceBatchedBvhRaycast(bvh, [ray])[0] ?? null,
-    { checkStride: 64, ...options }
-  )
+  return mapChunkedAsync(rays, ray => referenceBatchedBvhRaycast(bvh, [ray])[0] ?? null, {
+    checkStride: 64,
+    ...options,
+  })
 }
 
 /**
@@ -351,7 +353,7 @@ export async function referenceBatchedBvhRaycastAsync(
 export async function runGpuBatchedBvhRaycast(
   bvh: FlatBvhTree,
   rays: readonly BatchedRayInput[],
-  options: CooperativeAsyncOptions = {}
+  options: CooperativeAsyncOptions = {},
 ): Promise<(RayHit | null)[]> {
   if (rays.length === 0) return []
   if (bvh.nodeCount === 0) return rays.map(() => null)
@@ -412,7 +414,7 @@ export async function runGpuBatchedBvhRaycast(
         const off = i * 8
         const objId = outView.getUint32(off + 0, true)
         const tHit = outView.getFloat32(off + 4, true)
-        if (objId !== 0xFFFFFFFF && objId < bvh.idTable.length) {
+        if (objId !== 0xffffffff && objId < bvh.idTable.length) {
           hits.push({ id: bvh.idTable[objId]!, tNear: tHit })
         } else {
           hits.push(null)
@@ -440,7 +442,7 @@ export function buildMarqueeRayBatch(
   gridWidth: number,
   gridHeight: number,
   halfSpanX = 0.25,
-  halfSpanY = 0.25
+  halfSpanY = 0.25,
 ): BatchedRayInput[] {
   const rays: BatchedRayInput[] = []
   const w = Math.max(1, gridWidth)

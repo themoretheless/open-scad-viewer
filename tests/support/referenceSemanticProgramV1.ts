@@ -64,20 +64,45 @@ const KEY = Object.freeze({
   version: ['major', 'minor'],
   source: ['sha256', 'utf8ByteLength', 'utf16CodeUnitLength'],
   core: [
-    'schema', 'schemaVersion', 'requiredFeatures', 'identityVersion', 'language',
-    'units', 'operations', 'occurrences', 'nodes', 'execution', 'result', 'declaredCapabilities',
-    'capabilityClosure', 'diagnosticTemplates',
+    'schema',
+    'schemaVersion',
+    'requiredFeatures',
+    'identityVersion',
+    'language',
+    'units',
+    'operations',
+    'occurrences',
+    'nodes',
+    'execution',
+    'result',
+    'declaredCapabilities',
+    'capabilityClosure',
+    'diagnosticTemplates',
   ],
   language: ['contract', 'semanticsRevision', 'capabilityGraphVersion'],
   units: ['length', 'angle', 'handedness', 'upAxis', 'matrixLayout', 'composition'],
   operation: [
-    'id', 'operationId', 'parent', 'childOrdinal', 'name', 'category',
-    'structuralPath', 'identityEvidence', 'ambiguityGroup',
+    'id',
+    'operationId',
+    'parent',
+    'childOrdinal',
+    'name',
+    'category',
+    'structuralPath',
+    'identityEvidence',
+    'ambiguityGroup',
   ],
   pathSegment: ['kind', 'name', 'ordinal'],
   occurrence: [
-    'id', 'occurrenceId', 'operation', 'parent', 'staticParent', 'dynamicSlots', 'node',
-    'outputOrdinal', 'sceneEntityId',
+    'id',
+    'occurrenceId',
+    'operation',
+    'parent',
+    'staticParent',
+    'dynamicSlots',
+    'node',
+    'outputOrdinal',
+    'sceneEntityId',
   ],
   dynamicSlot: ['name', 'value', 'duplicateOrdinal'],
   valueType: ['geometryKind', 'space', 'representation', 'evidence'],
@@ -177,11 +202,7 @@ const BINARY_STRING_BYTES = 16 * 1024 * 1024
 const UTF8 = new TextEncoder()
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/
 
-function fail(
-  family: ReferenceSemanticFailureFamily,
-  path: string,
-  detail: string,
-): never {
+function fail(family: ReferenceSemanticFailureFamily, path: string, detail: string): never {
   throw new ReferenceSemanticProgramError(family, path, detail)
 }
 
@@ -236,12 +257,7 @@ function number(value: unknown, path: string): number {
   return value
 }
 
-function integer(
-  value: unknown,
-  path: string,
-  minimum = 0,
-  maximum = Number.MAX_SAFE_INTEGER,
-): number {
+function integer(value: unknown, path: string, minimum = 0, maximum = Number.MAX_SAFE_INTEGER): number {
   const output = number(value, path)
   if (!Number.isSafeInteger(output) || output < minimum || output > maximum) {
     fail('number', path, `expected integer in [${minimum}, ${maximum}]`)
@@ -307,8 +323,11 @@ function snapshotJsonTree(input: unknown): unknown {
     try {
       if (Array.isArray(value)) {
         const keys = Reflect.ownKeys(value)
-        if (keys.length !== value.length + 1 || keys[keys.length - 1] !== 'length'
-          || keys.slice(0, -1).some((key, index) => key !== String(index))) {
+        if (
+          keys.length !== value.length + 1 ||
+          keys[keys.length - 1] !== 'length' ||
+          keys.slice(0, -1).some((key, index) => key !== String(index))
+        ) {
           fail('field', path, 'arrays must be dense without hidden or extra fields')
         }
         const output: unknown[] = []
@@ -412,10 +431,7 @@ export function referenceSemanticOccurrenceIdV1(
   })}`
 }
 
-export function referenceSemanticSceneEntityIdV1(
-  occurrenceId: string,
-  outputOrdinal: number,
-): string {
+export function referenceSemanticSceneEntityIdV1(occurrenceId: string, outputOrdinal: number): string {
   return `entity:v2:${identityDigest('semantic-scene-entity-v1', { occurrenceId, outputOrdinal })}`
 }
 
@@ -447,18 +463,35 @@ function visibleRoutingLine(
     const current = raw[index]
     const next = raw[index + 1]
     if (block) {
-      if (current === '*' && next === '/') { block = false; index++ }
+      if (current === '*' && next === '/') {
+        block = false
+        index++
+      }
       continue
     }
     if (string) {
       if (escaped) escaped = false
       else if (current === '\\') escaped = true
-      else if (current === '"') { string = false; line += '"' }
+      else if (current === '"') {
+        string = false
+        line += '"'
+      }
       continue
     }
-    if (current === '"') { string = true; line += current; continue }
-    if (current === '/' && next === '*') { block = true; index++; continue }
-    if (current === '/' && next === '/') { line += raw.slice(index); break }
+    if (current === '"') {
+      string = true
+      line += current
+      continue
+    }
+    if (current === '/' && next === '*') {
+      block = true
+      index++
+      continue
+    }
+    if (current === '/' && next === '/') {
+      line += raw.slice(index)
+      break
+    }
     line += current
   }
   return { line, block, string, escaped }
@@ -484,8 +517,7 @@ function referenceRoutingHeader(source: string): { contract: string; capabilitie
     const requires = /^\s*\/\/\s*@requires\s+(.+?)\s*$/.exec(directive)
     const engine = /^\s*\/\/\s*@engine(?:\s+.*)?$/.exec(directive)
     if (language) {
-      if (bodyStarted || codeBefore || languageLine !== null
-        || !TAG.language.includes(language[1])) {
+      if (bodyStarted || codeBefore || languageLine !== null || !TAG.language.includes(language[1])) {
         fail('source', '$source', `invalid @language directive on line ${index + 1}`)
       }
       contract = language[1]
@@ -494,8 +526,12 @@ function referenceRoutingHeader(source: string): { contract: string; capabilitie
     }
     if (requires) {
       const identifiers = requires[1].split(/[\s,]+/).filter(Boolean)
-      if (bodyStarted || codeBefore || identifiers.length === 0
-        || identifiers.some(identifier => !IDENTIFIER.test(identifier))) {
+      if (
+        bodyStarted ||
+        codeBefore ||
+        identifiers.length === 0 ||
+        identifiers.some(identifier => !IDENTIFIER.test(identifier))
+      ) {
         fail('source', '$source', `invalid @requires directive on line ${index + 1}`)
       }
       identifiers.forEach(identifier => capabilities.add(identifier))
@@ -510,11 +546,7 @@ function referenceRoutingHeader(source: string): { contract: string; capabilitie
   return { contract, capabilities: [...capabilities].sort() }
 }
 
-function sortedIdentifiers(
-  value: unknown,
-  path: string,
-  maximum: number,
-): string[] {
+function sortedIdentifiers(value: unknown, path: string, maximum: number): string[] {
   const output = array(value, path, maximum).map((item, index) => {
     const identifier = text(item, `${path}[${index}]`, 128)
     if (!IDENTIFIER.test(identifier)) fail('field', `${path}[${index}]`, 'invalid identifier')
@@ -537,22 +569,28 @@ function validateIdentityValue(value: unknown, path: string, depth = 0): void {
   if (identity.tag === 'number') number(identity.value, `${path}.value`)
   if (identity.tag === 'string') text(identity.value, `${path}.value`, 4_096)
   if (identity.tag === 'vector') {
-    array(identity.items, `${path}.items`, 100_000)
-      .forEach((item, index) => validateIdentityValue(item, `${path}.items[${index}]`, depth + 1))
+    array(identity.items, `${path}.items`, 100_000).forEach((item, index) =>
+      validateIdentityValue(item, `${path}.items[${index}]`, depth + 1),
+    )
   }
 }
 
 function samePath(left: readonly any[], right: readonly any[]): boolean {
-  return left.length === right.length && left.every((segment, index) => (
-    segment.kind === right[index].kind
-    && segment.name === right[index].name
-    && segment.ordinal === right[index].ordinal
-  ))
+  return (
+    left.length === right.length &&
+    left.every(
+      (segment, index) =>
+        segment.kind === right[index].kind &&
+        segment.name === right[index].name &&
+        segment.ordinal === right[index].ordinal,
+    )
+  )
 }
 
 function validateOperations(value: unknown): Record<string, any>[] {
-  const operations = array(value, '$.core.operations', LIMIT.operations)
-    .map((item, index) => record(item, `$.core.operations[${index}]`))
+  const operations = array(value, '$.core.operations', LIMIT.operations).map((item, index) =>
+    record(item, `$.core.operations[${index}]`),
+  )
   const siblingCounts = new Map<string, number>()
   const siblingOrdinals = new Map<string, number[]>()
   const ambiguityCounts = new Map<string, number>()
@@ -565,9 +603,7 @@ function validateOperations(value: unknown): Record<string, any>[] {
     const path = `$.core.operations[${index}]`
     exact(operation, KEY.operation, path)
     if (operation.id !== index) fail('order', `${path}.id`, 'ID must equal array position')
-    const parent = operation.parent === null
-      ? null
-      : integer(operation.parent, `${path}.parent`, 0, index - 1)
+    const parent = operation.parent === null ? null : integer(operation.parent, `${path}.parent`, 0, index - 1)
     while (preorderStack.length > 0 && preorderStack.at(-1) !== parent) {
       closedOperations.add(preorderStack.pop()!)
     }
@@ -615,7 +651,8 @@ function validateOperations(value: unknown): Record<string, any>[] {
     ordinals.push(childOrdinal)
     siblingOrdinals.set(siblingKey, ordinals)
     if (operation.identityEvidence === 'structural-unique') {
-      if (operation.ambiguityGroup !== null) fail('identity', `${path}.ambiguityGroup`, 'unique operation has ambiguity group')
+      if (operation.ambiguityGroup !== null)
+        fail('identity', `${path}.ambiguityGroup`, 'unique operation has ambiguity group')
     } else if (operation.identityEvidence === 'same-name-positional') {
       const parentPath = parent === null ? [] : operations[parent].structuralPath
       const group = referenceSemanticAmbiguityGroupIdV1(parentPath, operation.category, name)
@@ -651,8 +688,10 @@ function validateValueType(value: unknown, path: string): Record<string, any> {
     fail('type', `${path}.geometryKind`, 'unknown geometry kind')
   }
   if (!includes(TAG.space, valueType.space)) fail('type', `${path}.space`, 'unknown geometry space')
-  if ((valueType.geometryKind === 'region' && valueType.space !== 'd2')
-    || (['sheet', 'solid', 'solid-set'].includes(valueType.geometryKind) && valueType.space !== 'd3')) {
+  if (
+    (valueType.geometryKind === 'region' && valueType.space !== 'd2') ||
+    (['sheet', 'solid', 'solid-set'].includes(valueType.geometryKind) && valueType.space !== 'd3')
+  ) {
     fail('type', path, 'geometry kind is incompatible with its ambient space')
   }
   if (!includes(TAG.representation, valueType.representation)) {
@@ -665,11 +704,7 @@ function validateValueType(value: unknown, path: string): Record<string, any> {
   if (!includes(TAG.evidence, evidence.tag)) {
     fail('field', `${path}.evidence.tag`, 'unknown representation evidence')
   }
-  exact(
-    evidence,
-    (EVIDENCE_KEY as Readonly<Record<string, readonly string[]>>)[evidence.tag],
-    `${path}.evidence`,
-  )
+  exact(evidence, (EVIDENCE_KEY as Readonly<Record<string, readonly string[]>>)[evidence.tag], `${path}.evidence`)
   if (evidence.tag === 'representation-preserving') {
     if (valueType.representation === 'certified-approx-brep') {
       fail('type', path, 'certified approximation representation requires certified evidence')
@@ -679,8 +714,7 @@ function validateValueType(value: unknown, path: string): Record<string, any> {
     if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(profile)) {
       fail('field', `${path}.evidence.certificateProfile`, 'invalid certificate profile')
     }
-    if (typeof evidence.certificatePolicyHash !== 'string'
-      || !/^[a-f0-9]{64}$/.test(evidence.certificatePolicyHash)) {
+    if (typeof evidence.certificatePolicyHash !== 'string' || !/^[a-f0-9]{64}$/.test(evidence.certificatePolicyHash)) {
       fail('field', `${path}.evidence.certificatePolicyHash`, 'expected lowercase SHA-256')
     }
     if (valueType.representation !== 'certified-approx-brep') {
@@ -691,18 +725,28 @@ function validateValueType(value: unknown, path: string): Record<string, any> {
 }
 
 function sameValueType(left: Record<string, any>, right: Record<string, any>): boolean {
-  if (left.geometryKind !== right.geometryKind || left.space !== right.space
-    || left.representation !== right.representation || left.evidence.tag !== right.evidence.tag) return false
-  return left.evidence.tag === 'representation-preserving'
-    || (left.evidence.certificateProfile === right.evidence.certificateProfile
-      && left.evidence.certificatePolicyHash === right.evidence.certificatePolicyHash)
+  if (
+    left.geometryKind !== right.geometryKind ||
+    left.space !== right.space ||
+    left.representation !== right.representation ||
+    left.evidence.tag !== right.evidence.tag
+  )
+    return false
+  return (
+    left.evidence.tag === 'representation-preserving' ||
+    (left.evidence.certificateProfile === right.evidence.certificateProfile &&
+      left.evidence.certificatePolicyHash === right.evidence.certificatePolicyHash)
+  )
 }
 
 function sameRepresentationEvidence(left: Record<string, any>, right: Record<string, any>): boolean {
-  return left.representation === right.representation && left.evidence.tag === right.evidence.tag
-    && (left.evidence.tag === 'representation-preserving'
-      || (left.evidence.certificateProfile === right.evidence.certificateProfile
-        && left.evidence.certificatePolicyHash === right.evidence.certificatePolicyHash))
+  return (
+    left.representation === right.representation &&
+    left.evidence.tag === right.evidence.tag &&
+    (left.evidence.tag === 'representation-preserving' ||
+      (left.evidence.certificateProfile === right.evidence.certificateProfile &&
+        left.evidence.certificatePolicyHash === right.evidence.certificatePolicyHash))
+  )
 }
 
 function expectedValueType(contract: string, geometryKind: string, space: string): Record<string, any> {
@@ -738,20 +782,24 @@ function sameContinuationBindings(
   left: readonly Record<string, any>[],
   right: readonly Record<string, any>[],
 ): boolean {
-  return left.length === right.length && left.every((slot, index) => (
-    slot.name === right[index].name && stableJson(slot.value) === stableJson(right[index].value)
-  ))
+  return (
+    left.length === right.length &&
+    left.every(
+      (slot, index) => slot.name === right[index].name && stableJson(slot.value) === stableJson(right[index].value),
+    )
+  )
 }
 
-function structuralPrefix(
-  prefix: readonly Record<string, any>[],
-  path: readonly Record<string, any>[],
-): boolean {
-  return prefix.length < path.length && prefix.every((segment, index) => (
-    segment.kind === path[index].kind
-    && segment.name === path[index].name
-    && segment.ordinal === path[index].ordinal
-  ))
+function structuralPrefix(prefix: readonly Record<string, any>[], path: readonly Record<string, any>[]): boolean {
+  return (
+    prefix.length < path.length &&
+    prefix.every(
+      (segment, index) =>
+        segment.kind === path[index].kind &&
+        segment.name === path[index].name &&
+        segment.ordinal === path[index].ordinal,
+    )
+  )
 }
 
 /** Recomputes the one admitted caller-body/definition/children continuation. */
@@ -769,28 +817,39 @@ function childrenContinuationAnchors(
   const expansionOperation = operations[expansion.operation]
   const childrenOperation = operations[children.operation]
   const callerBodyOperation = operations[callerBody.operation]
-  if (expansionOperation === undefined || childrenOperation === undefined
-    || callerBodyOperation === undefined) return null
+  if (expansionOperation === undefined || childrenOperation === undefined || callerBodyOperation === undefined)
+    return null
   const expansionSegment = expansionOperation.structuralPath.at(-1)
   const childrenSegment = childrenOperation.structuralPath.at(-1)
   const bodySegment = callerBodyOperation.structuralPath.at(-1)
-  if (expansionOperation.category !== 'control' || expansionOperation.name !== '$expansion'
-    || expansionSegment?.kind !== 'control' || expansionSegment.ordinal !== 0
-    || childrenOperation.category !== 'control' || childrenOperation.name !== 'children'
-    || childrenSegment?.kind !== 'control'
-    || callerBodyOperation.category !== 'control' || callerBodyOperation.name !== '$body'
-    || bodySegment?.kind !== 'body' || bodySegment.ordinal !== 0
-    || expansionOperation.parent !== callerBody.operation) return null
+  if (
+    expansionOperation.category !== 'control' ||
+    expansionOperation.name !== '$expansion' ||
+    expansionSegment?.kind !== 'control' ||
+    expansionSegment.ordinal !== 0 ||
+    childrenOperation.category !== 'control' ||
+    childrenOperation.name !== 'children' ||
+    childrenSegment?.kind !== 'control' ||
+    callerBodyOperation.category !== 'control' ||
+    callerBodyOperation.name !== '$body' ||
+    bodySegment?.kind !== 'body' ||
+    bodySegment.ordinal !== 0 ||
+    expansionOperation.parent !== callerBody.operation
+  )
+    return null
 
   const bodyStaticChildren = index.staticChildren.get(callerBody.operation) ?? []
   if (bodyStaticChildren.length !== 1 || bodyStaticChildren[0] !== expansion.operation) return null
-  const indexSlot = (slots: readonly Record<string, any>[]): Record<string, any> | null => (
+  const indexSlot = (slots: readonly Record<string, any>[]): Record<string, any> | null =>
     slots.length === 1 && slots[0].name === '$index' ? slots[0] : null
-  )
   const childrenIndex = indexSlot(children.dynamicSlots)
   const expansionIndexSlot = indexSlot(expansion.dynamicSlots)
-  if (childrenIndex === null || expansionIndexSlot === null
-    || stableJson(childrenIndex.value) !== stableJson(expansionIndexSlot.value)) return null
+  if (
+    childrenIndex === null ||
+    expansionIndexSlot === null ||
+    stableJson(childrenIndex.value) !== stableJson(expansionIndexSlot.value)
+  )
+    return null
 
   const definition = children.parent === null ? -1 : index.nearestModule[children.parent]
   if (definition < 0 || occurrences[definition].parent !== expansion.staticParent) return null
@@ -805,20 +864,35 @@ function childrenContinuationAnchors(
   const callerStaticChildren = index.staticChildren.get(callerOccurrence.operation) ?? []
   const definitionRuntimeChildren = index.runtimeChildren.get(expansion.staticParent) ?? []
   const expansionRuntimeChildren = index.runtimeChildren.get(expansion.parent) ?? []
-  if (callerBody.parent !== caller
-    || callerStaticChildren.length !== 1 || callerStaticChildren[0] !== callerBody.operation
-    || callerOperation.category !== 'module' || callerOperation.structuralPath.at(-1)?.kind !== 'call'
-    || definitionOperation.parent !== null || definitionOperation.category !== 'module'
-    || definitionOperation.structuralPath.at(-1)?.kind !== 'module'
-    || callerOperation.name !== definitionOperation.name
-    || !sameContinuationBindings(callerOccurrence.dynamicSlots, definitionOccurrence.dynamicSlots)
-    || !structuralPrefix(definitionOperation.structuralPath, childrenOperation.structuralPath)
-    || definitionRuntimeChildren.length !== 1 || definitionRuntimeChildren[0] !== definition
-    || expansionRuntimeChildren.length !== 1 || expansionRuntimeChildren[0] !== expansionIndex
-    || expansion.node !== null || expansion.outputOrdinal !== null || expansion.sceneEntityId !== null) {
+  if (
+    callerBody.parent !== caller ||
+    callerStaticChildren.length !== 1 ||
+    callerStaticChildren[0] !== callerBody.operation ||
+    callerOperation.category !== 'module' ||
+    callerOperation.structuralPath.at(-1)?.kind !== 'call' ||
+    definitionOperation.parent !== null ||
+    definitionOperation.category !== 'module' ||
+    definitionOperation.structuralPath.at(-1)?.kind !== 'module' ||
+    callerOperation.name !== definitionOperation.name ||
+    !sameContinuationBindings(callerOccurrence.dynamicSlots, definitionOccurrence.dynamicSlots) ||
+    !structuralPrefix(definitionOperation.structuralPath, childrenOperation.structuralPath) ||
+    definitionRuntimeChildren.length !== 1 ||
+    definitionRuntimeChildren[0] !== definition ||
+    expansionRuntimeChildren.length !== 1 ||
+    expansionRuntimeChildren[0] !== expansionIndex ||
+    expansion.node !== null ||
+    expansion.outputOrdinal !== null ||
+    expansion.sceneEntityId !== null
+  ) {
     return null
   }
-  return { caller, callerBody: expansion.staticParent, definition, children: expansion.parent, expansion: expansionIndex }
+  return {
+    caller,
+    callerBody: expansion.staticParent,
+    definition,
+    children: expansion.parent,
+    expansion: expansionIndex,
+  }
 }
 
 function isModuleDefinitionActivation(
@@ -839,26 +913,38 @@ function isModuleDefinitionActivation(
   const callerStaticChildren = index.staticChildren.get(caller.operation) ?? []
   const bodyStaticChildren = index.staticChildren.get(body.operation) ?? []
   const bodyRuntimeChildren = index.runtimeChildren.get(definition.parent) ?? []
-  if (definitionOperation.parent !== null || definitionOperation.category !== 'module'
-    || definitionOperation.structuralPath.at(-1)?.kind !== 'module'
-    || callerOperation.category !== 'module' || callerOperation.structuralPath.at(-1)?.kind !== 'call'
-    || callerOperation.name !== definitionOperation.name
-    || bodyOperation.parent !== caller.operation || bodyOperation.category !== 'control'
-    || bodyOperation.name !== '$body' || bodyOperation.structuralPath.at(-1)?.kind !== 'body'
-    || callerStaticChildren.length !== 1 || callerStaticChildren[0] !== body.operation
-    || bodyStaticChildren.length !== 1
-    || bodyRuntimeChildren.length !== 1 || bodyRuntimeChildren[0] !== definitionIndex
-    || !sameContinuationBindings(caller.dynamicSlots, definition.dynamicSlots)) return false
+  if (
+    definitionOperation.parent !== null ||
+    definitionOperation.category !== 'module' ||
+    definitionOperation.structuralPath.at(-1)?.kind !== 'module' ||
+    callerOperation.category !== 'module' ||
+    callerOperation.structuralPath.at(-1)?.kind !== 'call' ||
+    callerOperation.name !== definitionOperation.name ||
+    bodyOperation.parent !== caller.operation ||
+    bodyOperation.category !== 'control' ||
+    bodyOperation.name !== '$body' ||
+    bodyOperation.structuralPath.at(-1)?.kind !== 'body' ||
+    callerStaticChildren.length !== 1 ||
+    callerStaticChildren[0] !== body.operation ||
+    bodyStaticChildren.length !== 1 ||
+    bodyRuntimeChildren.length !== 1 ||
+    bodyRuntimeChildren[0] !== definitionIndex ||
+    !sameContinuationBindings(caller.dynamicSlots, definition.dynamicSlots)
+  )
+    return false
   const expansionOperation = operations[bodyStaticChildren[0]]
   const segment = expansionOperation.structuralPath.at(-1)
-  return expansionOperation.parent === body.operation
-    && expansionOperation.category === 'control' && expansionOperation.name === '$expansion'
-    && segment?.kind === 'control' && segment.ordinal === 0
+  return (
+    expansionOperation.parent === body.operation &&
+    expansionOperation.category === 'control' &&
+    expansionOperation.name === '$expansion' &&
+    segment?.kind === 'control' &&
+    segment.ordinal === 0
+  )
 }
 
 function validateNodes(value: unknown, contract: string): Record<string, any>[] {
-  const nodes = array(value, '$.core.nodes', LIMIT.nodes)
-    .map((item, index) => record(item, `$.core.nodes[${index}]`))
+  const nodes = array(value, '$.core.nodes', LIMIT.nodes).map((item, index) => record(item, `$.core.nodes[${index}]`))
   nodes.forEach((node, index) => {
     const path = `$.core.nodes[${index}]`
     const kind = text(node.kind, `${path}.kind`, 64)
@@ -874,7 +960,8 @@ function validateNodes(value: unknown, contract: string): Record<string, any>[] 
     }
     const valueType = validateValueType(node.valueType, `${path}.valueType`)
     const requireValueType = (expected: Record<string, any>): void => {
-      if (!sameValueType(valueType, expected)) fail('type', `${path}.valueType`, 'value type does not match node transition')
+      if (!sameValueType(valueType, expected))
+        fail('type', `${path}.valueType`, 'value type does not match node transition')
     }
     const inputNode = (field: string): Record<string, any> => {
       const reference = earlierNode(node[field], `${path}.${field}`, index)
@@ -884,7 +971,8 @@ function validateNodes(value: unknown, contract: string): Record<string, any>[] 
     switch (kind) {
       case 'box':
         requireValueType(expectedValueType(contract, contract === 'legacy/current' ? 'solid-set' : 'solid', 'd3'))
-        if (tuple(node.size, 3, `${path}.size`).some(item => item <= 0)) fail('number', `${path}.size`, 'sizes must be positive')
+        if (tuple(node.size, 3, `${path}.size`).some(item => item <= 0))
+          fail('number', `${path}.size`, 'sizes must be positive')
         boolean(node.center, `${path}.center`)
         break
       case 'sphere-analytic':
@@ -908,9 +996,7 @@ function validateNodes(value: unknown, contract: string): Record<string, any>[] 
         requireValueType(expectedValueType(contract, 'solid-set', 'd3'))
         const vertices = array(node.vertices, `${path}.vertices`, 750_000)
         const triangles = array(node.triangles, `${path}.triangles`, 750_000)
-        const legacyZeroPolyhedron = contract === 'legacy/current'
-          && vertices.length === 0
-          && triangles.length === 0
+        const legacyZeroPolyhedron = contract === 'legacy/current' && vertices.length === 0 && triangles.length === 0
         if (vertices.length < 4 && !legacyZeroPolyhedron) {
           fail('type', `${path}.vertices`, 'solid needs four vertices or the exact legacy zero/zero form')
         }
@@ -918,7 +1004,9 @@ function validateNodes(value: unknown, contract: string): Record<string, any>[] 
         triangles.forEach((triangle, triangleIndex) => {
           const indices = array(triangle, `${path}.triangles[${triangleIndex}]`, 3)
           if (indices.length !== 3) fail('field', `${path}.triangles[${triangleIndex}]`, 'triangle arity')
-          const parsed = indices.map((item, component) => integer(item, `${path}.triangles[${triangleIndex}][${component}]`, 0, vertices.length - 1))
+          const parsed = indices.map((item, component) =>
+            integer(item, `${path}.triangles[${triangleIndex}][${component}]`, 0, vertices.length - 1),
+          )
           if (contract !== 'legacy/current' && new Set(parsed).size !== 3) {
             fail('type', `${path}.triangles[${triangleIndex}]`, 'triangle repeats vertex')
           }
@@ -927,7 +1015,8 @@ function validateNodes(value: unknown, contract: string): Record<string, any>[] 
       }
       case 'rectangle':
         requireValueType(expectedValueType(contract, 'region', 'd2'))
-        if (tuple(node.size, 2, `${path}.size`).some(item => item <= 0)) fail('number', `${path}.size`, 'sizes must be positive')
+        if (tuple(node.size, 2, `${path}.size`).some(item => item <= 0))
+          fail('number', `${path}.size`, 'sizes must be positive')
         boolean(node.center, `${path}.center`)
         break
       case 'circle-analytic':
@@ -956,11 +1045,11 @@ function validateNodes(value: unknown, contract: string): Record<string, any>[] 
         if (matrix[3] !== 0 || matrix[7] !== 0 || matrix[11] !== 0 || matrix[15] !== 1) {
           fail('type', `${path}.matrix`, 'matrix is not affine column-major')
         }
-        const determinant = matrix[0] * (matrix[5] * matrix[10] - matrix[9] * matrix[6])
-          - matrix[4] * (matrix[1] * matrix[10] - matrix[9] * matrix[2])
-          + matrix[8] * (matrix[1] * matrix[6] - matrix[5] * matrix[2])
-        if (contract === 'openscad-viewer/brep-1'
-          && (!Number.isFinite(determinant) || determinant === 0)) {
+        const determinant =
+          matrix[0] * (matrix[5] * matrix[10] - matrix[9] * matrix[6]) -
+          matrix[4] * (matrix[1] * matrix[10] - matrix[9] * matrix[2]) +
+          matrix[8] * (matrix[1] * matrix[6] - matrix[5] * matrix[2])
+        if (contract === 'openscad-viewer/brep-1' && (!Number.isFinite(determinant) || determinant === 0)) {
           fail('type', `${path}.matrix`, 'singular B-rep transform')
         }
         break
@@ -979,9 +1068,10 @@ function validateNodes(value: unknown, contract: string): Record<string, any>[] 
           if (candidate.space !== firstType.space || !sameRepresentationEvidence(candidate, firstType)) {
             fail('type', `${path}.inputs[${inputIndex}]`, 'operands must share space, representation, and evidence')
           }
-          const admitted = firstType.space === 'd2'
-            ? candidate.geometryKind === 'region'
-            : candidate.geometryKind === 'solid' || candidate.geometryKind === 'solid-set'
+          const admitted =
+            firstType.space === 'd2'
+              ? candidate.geometryKind === 'region'
+              : candidate.geometryKind === 'solid' || candidate.geometryKind === 'solid-set'
           if (!admitted) fail('type', `${path}.inputs[${inputIndex}]`, 'operand geometry kind is not admitted')
         })
         requireValueType({
@@ -1001,8 +1091,7 @@ function validateNodes(value: unknown, contract: string): Record<string, any>[] 
         positive(node.height, `${path}.height`)
         number(node.twistDegrees, `${path}.twistDegrees`)
         integer(node.slices, `${path}.slices`, 0, 1_000_000)
-        if (contract === 'openscad-viewer/brep-1'
-          && tuple(node.scale, 2, `${path}.scale`).some(item => item === 0)) {
+        if (contract === 'openscad-viewer/brep-1' && tuple(node.scale, 2, `${path}.scale`).some(item => item === 0)) {
           fail('number', `${path}.scale`, 'B-rep extrusion scale cannot be zero')
         } else if (contract === 'legacy/current') {
           tuple(node.scale, 2, `${path}.scale`)
@@ -1017,9 +1106,10 @@ function validateNodes(value: unknown, contract: string): Record<string, any>[] 
           fail('type', `${path}.input`, 'rotate extrusion consumes Region/d2')
         }
         requireValueType({ ...inputType, geometryKind: 'solid-set', space: 'd3' })
-        const angle = contract === 'legacy/current'
-          ? number(node.angleDegrees, `${path}.angleDegrees`)
-          : positive(node.angleDegrees, `${path}.angleDegrees`)
+        const angle =
+          contract === 'legacy/current'
+            ? number(node.angleDegrees, `${path}.angleDegrees`)
+            : positive(node.angleDegrees, `${path}.angleDegrees`)
         if (contract === 'openscad-viewer/brep-1' && angle > 360) {
           fail('number', `${path}.angleDegrees`, 'angle exceeds 360')
         }
@@ -1028,8 +1118,10 @@ function validateNodes(value: unknown, contract: string): Record<string, any>[] 
       }
       case 'projection': {
         const inputType = inputNode('input').valueType
-        if (inputType.space !== 'd3'
-          || (inputType.geometryKind !== 'solid' && inputType.geometryKind !== 'solid-set')) {
+        if (
+          inputType.space !== 'd3' ||
+          (inputType.geometryKind !== 'solid' && inputType.geometryKind !== 'solid-set')
+        ) {
           fail('type', `${path}.input`, 'projection consumes Solid|SolidSet/d3')
         }
         requireValueType({ ...inputType, geometryKind: 'region', space: 'd2' })
@@ -1055,8 +1147,9 @@ function validateOccurrences(
   operations: Record<string, any>[],
   nodes: Record<string, any>[],
 ): Record<string, any>[] {
-  const occurrences = array(value, '$.core.occurrences', LIMIT.occurrences)
-    .map((item, index) => record(item, `$.core.occurrences[${index}]`))
+  const occurrences = array(value, '$.core.occurrences', LIMIT.occurrences).map((item, index) =>
+    record(item, `$.core.occurrences[${index}]`),
+  )
   const staticChildren = new Map<number, number[]>()
   operations.forEach((operation, index) => {
     if (operation.parent === null) return
@@ -1068,19 +1161,23 @@ function validateOccurrences(
   const nearestModule = new Int32Array(occurrences.length)
   nearestModule.fill(-1)
   occurrences.forEach((occurrence, index) => {
-    const parent = Number.isSafeInteger(occurrence.parent)
-      && occurrence.parent >= 0 && occurrence.parent < index ? occurrence.parent : null
+    const parent =
+      Number.isSafeInteger(occurrence.parent) && occurrence.parent >= 0 && occurrence.parent < index
+        ? occurrence.parent
+        : null
     if (parent !== null) {
       const children = runtimeChildren.get(parent) ?? []
       children.push(index)
       runtimeChildren.set(parent, children)
     }
-    const operation = Number.isSafeInteger(occurrence.operation)
-      && occurrence.operation >= 0 && occurrence.operation < operations.length
-      ? operations[occurrence.operation] : null
-    nearestModule[index] = operation?.structuralPath.at(-1)?.kind === 'module'
-      ? index
-      : parent === null ? -1 : nearestModule[parent]
+    const operation =
+      Number.isSafeInteger(occurrence.operation) &&
+      occurrence.operation >= 0 &&
+      occurrence.operation < operations.length
+        ? operations[occurrence.operation]
+        : null
+    nearestModule[index] =
+      operation?.structuralPath.at(-1)?.kind === 'module' ? index : parent === null ? -1 : nearestModule[parent]
   })
   const continuationIndex: ContinuationIndex = { staticChildren, runtimeChildren, nearestModule }
   const continuations = new Map<number, ContinuationAnchors>()
@@ -1092,13 +1189,10 @@ function validateOccurrences(
     exact(occurrence, KEY.occurrence, path)
     if (occurrence.id !== index) fail('order', `${path}.id`, 'ID must equal array position')
     const operation = integer(occurrence.operation, `${path}.operation`, 0, operations.length - 1)
-    const parent = occurrence.parent === null
-      ? null
-      : integer(occurrence.parent, `${path}.parent`, 0, index - 1)
+    const parent = occurrence.parent === null ? null : integer(occurrence.parent, `${path}.parent`, 0, index - 1)
     const staticParentOperation = operations[operation].parent
-    const staticParent = occurrence.staticParent === null
-      ? null
-      : integer(occurrence.staticParent, `${path}.staticParent`, 0, index - 1)
+    const staticParent =
+      occurrence.staticParent === null ? null : integer(occurrence.staticParent, `${path}.staticParent`, 0, index - 1)
     let crossedOpaqueFrame = false
     if (staticParentOperation === null) {
       if (staticParent !== null) {
@@ -1158,28 +1252,34 @@ function validateOccurrences(
     const group = occurrenceGroups.get(expectedId) ?? []
     if (group.length > 0) {
       const first = occurrences[group[0]]
-      if (first.operation !== operation || first.parent !== parent || first.staticParent !== staticParent
-        || stableJson(first.dynamicSlots) !== stableJson(slots)) {
+      if (
+        first.operation !== operation ||
+        first.parent !== parent ||
+        first.staticParent !== staticParent ||
+        stableJson(first.dynamicSlots) !== stableJson(slots)
+      ) {
         fail('identity', path, 'shared occurrence identity describes different evaluation')
       }
     }
     group.push(index)
     occurrenceGroups.set(expectedId, group)
     slots.forEach((slot, slotIndex) => {
-      const duplicateKey = stableJson([
-        parent,
-        operation,
-        slotIndex,
-        slot.name,
-        slot.value,
-      ])
+      const duplicateKey = stableJson([parent, operation, slotIndex, slot.name, slot.value])
       const ordinals = duplicateSlotGroups.get(duplicateKey) ?? new Map<number, string>()
       const prior = ordinals.get(slot.duplicateOrdinal)
       if (prior !== undefined && prior !== expectedId) {
-        fail('identity', `${path}.dynamicSlots[${slotIndex}].duplicateOrdinal`, 'duplicate ordinal aliases equal dynamic values')
+        fail(
+          'identity',
+          `${path}.dynamicSlots[${slotIndex}].duplicateOrdinal`,
+          'duplicate ordinal aliases equal dynamic values',
+        )
       }
       if (prior === undefined && slot.duplicateOrdinal !== ordinals.size) {
-        fail('order', `${path}.dynamicSlots[${slotIndex}].duplicateOrdinal`, 'duplicate ordinals must be first-seen dense in language order')
+        fail(
+          'order',
+          `${path}.dynamicSlots[${slotIndex}].duplicateOrdinal`,
+          'duplicate ordinals must be first-seen dense in language order',
+        )
       }
       ordinals.set(slot.duplicateOrdinal, expectedId)
       duplicateSlotGroups.set(duplicateKey, ordinals)
@@ -1207,7 +1307,11 @@ function validateOccurrences(
       if (reference === null) continue
       const referencedId = occurrences[reference].occurrenceId
       if (occurrenceGroups.get(referencedId)?.[0] !== reference) {
-        fail('order', `$.core.occurrences[${index}].${field}`, 'occurrence references must target the canonical first row')
+        fail(
+          'order',
+          `$.core.occurrences[${index}].${field}`,
+          'occurrence references must target the canonical first row',
+        )
       }
     }
   })
@@ -1231,7 +1335,11 @@ function validateOccurrences(
   occurrences.forEach((occurrence, index) => {
     if (operations[occurrence.operation].parent !== null || occurrence.parent === null) return
     if (!isModuleDefinitionActivation(index, occurrences, operations, continuationIndex)) {
-      fail('identity', `$.core.occurrences[${index}].parent`, 'static-root occurrence is injected outside its matching module activation')
+      fail(
+        'identity',
+        `$.core.occurrences[${index}].parent`,
+        'static-root occurrence is injected outside its matching module activation',
+      )
     }
   })
   for (const anchors of continuations.values()) {
@@ -1240,9 +1348,15 @@ function validateOccurrences(
     for (const child of expandedChildren) {
       const occurrence = occurrences[child]
       const operation = operations[occurrence.operation]
-      if (occurrence.staticParent !== anchors.expansion
-        || !structuralPrefix(expansionOperation.structuralPath, operation.structuralPath)) {
-        fail('identity', `$.core.occurrences[${child}].parent`, 'expanded child escapes its caller-child static subtree')
+      if (
+        occurrence.staticParent !== anchors.expansion ||
+        !structuralPrefix(expansionOperation.structuralPath, operation.structuralPath)
+      ) {
+        fail(
+          'identity',
+          `$.core.occurrences[${child}].parent`,
+          'expanded child escapes its caller-child static subtree',
+        )
       }
     }
   }
@@ -1250,7 +1364,16 @@ function validateOccurrences(
 }
 
 function nodeInputs(node: Record<string, any>): number[] {
-  if (['transform', 'linear-extrude', 'rotate-extrude-analytic', 'rotate-extrude-polygonal', 'projection', 'offset'].includes(node.kind)) {
+  if (
+    [
+      'transform',
+      'linear-extrude',
+      'rotate-extrude-analytic',
+      'rotate-extrude-polygonal',
+      'projection',
+      'offset',
+    ].includes(node.kind)
+  ) {
     return [node.input]
   }
   if (node.kind === 'boolean' || node.kind === 'hull') return node.inputs
@@ -1263,11 +1386,7 @@ function occurrenceRoot(index: number, occurrences: Record<string, any>[]): numb
   return cursor
 }
 
-function occurrenceIsDescendantOf(
-  candidate: number,
-  ancestor: number,
-  occurrences: Record<string, any>[],
-): boolean {
+function occurrenceIsDescendantOf(candidate: number, ancestor: number, occurrences: Record<string, any>[]): boolean {
   let cursor: number | null = candidate
   while (cursor !== null) {
     if (cursor === ancestor) return true
@@ -1290,11 +1409,7 @@ function identityPreservingNodeLineage(
   return true
 }
 
-function validateResult(
-  value: unknown,
-  nodes: Record<string, any>[],
-  occurrences: Record<string, any>[],
-): number[] {
+function validateResult(value: unknown, nodes: Record<string, any>[], occurrences: Record<string, any>[]): number[] {
   const firstRowByOccurrenceId = new Map<string, number>()
   const canonicalOccurrenceRows = occurrences.map((occurrence, index) => {
     const first = firstRowByOccurrenceId.get(occurrence.occurrenceId)
@@ -1315,22 +1430,27 @@ function validateResult(
     const producer = integer(reference.producerOccurrence, `${path}.producerOccurrence`, 0, occurrences.length - 1)
     const identity = integer(reference.identityOccurrence, `${path}.identityOccurrence`, 0, occurrences.length - 1)
     if (occurrences[producer].node !== node) fail('identity', path, 'producer does not materialize output node')
-    if (occurrences[identity].sceneEntityId === null) fail('identity', path, 'identity occurrence has no scene identity')
+    if (occurrences[identity].sceneEntityId === null)
+      fail('identity', path, 'identity occurrence has no scene identity')
     const identityNode = occurrences[identity].node
     const canonicalProducer = canonicalOccurrenceRows[producer]
-    const identityIsInProducingBranch = occurrenceIsDescendantOf(identity, producer, occurrences)
-      || (
-        occurrences[canonicalProducer].occurrenceId === occurrences[producer].occurrenceId
-        && occurrenceIsDescendantOf(identity, canonicalProducer, occurrences)
-      )
-    if (identityNode === null || !identityPreservingNodeLineage(node, identityNode, nodes)
-      || occurrenceRoot(producer, occurrences) !== occurrenceRoot(identity, occurrences)
-      || !identityIsInProducingBranch) {
+    const identityIsInProducingBranch =
+      occurrenceIsDescendantOf(identity, producer, occurrences) ||
+      (occurrences[canonicalProducer].occurrenceId === occurrences[producer].occurrenceId &&
+        occurrenceIsDescendantOf(identity, canonicalProducer, occurrences))
+    if (
+      identityNode === null ||
+      !identityPreservingNodeLineage(node, identityNode, nodes) ||
+      occurrenceRoot(producer, occurrences) !== occurrenceRoot(identity, occurrences) ||
+      !identityIsInProducingBranch
+    ) {
       fail('identity', `${path}.identityOccurrence`, 'identity is outside producing branch or node lineage')
     }
-    if (identity <= priorIdentity) fail('order', `${path}.identityOccurrence`, 'root outputs are not in occurrence order')
+    if (identity <= priorIdentity)
+      fail('order', `${path}.identityOccurrence`, 'root outputs are not in occurrence order')
     priorIdentity = identity
-    if (identityOwners.has(identity)) fail('identity', `${path}.identityOccurrence`, 'scene owner reused by multiple outputs')
+    if (identityOwners.has(identity))
+      fail('identity', `${path}.identityOccurrence`, 'scene owner reused by multiple outputs')
     identityOwners.add(identity)
     const color = tuple(reference.color, 4, `${path}.color`)
     if (color.some(channel => channel < 0 || channel > 1)) fail('number', `${path}.color`, 'channel outside [0,1]')
@@ -1371,10 +1491,7 @@ type ReferenceExecution = {
   terminal: ReferenceExecutionTerminal
 }
 
-function validateDiagnosticTemplates(
-  value: unknown,
-  operations: Record<string, any>[],
-): Record<string, any>[] {
+function validateDiagnosticTemplates(value: unknown, operations: Record<string, any>[]): Record<string, any>[] {
   return array(value, '$.core.diagnosticTemplates', LIMIT.diagnostics).map((item, index) => {
     const path = `$.core.diagnosticTemplates[${index}]`
     const template = exact(item, KEY.diagnosticTemplate, path)
@@ -1424,7 +1541,8 @@ function operationMaterializesNode(operation: Record<string, any>, node: Record<
   if (node.kind === 'rectangle') return operation.name === 'square'
   if (node.kind.startsWith('circle-')) return operation.name === 'circle'
   if (node.kind === 'polygon') return operation.name === 'polygon'
-  if (node.kind === 'transform') return ['translate', 'rotate', 'scale', 'mirror', 'multmatrix'].includes(operation.name)
+  if (node.kind === 'transform')
+    return ['translate', 'rotate', 'scale', 'mirror', 'multmatrix'].includes(operation.name)
   if (node.kind === 'boolean') return operation.name === node.operation
   if (node.kind === 'hull') return operation.name === 'hull'
   if (node.kind === 'linear-extrude') return operation.name === 'linear_extrude'
@@ -1540,15 +1658,17 @@ function validateExecution(
     if (terminalTemplate.operation !== interrupted.operation) {
       fail('identity', `${path}.diagnosticTemplate`, 'terminal template does not name the interrupted activation')
     }
-    if (terminalTemplate.code !== 'LEGACY_LANGUAGE_ERROR'
-      || terminalTemplate.severity !== 'error'
-      || terminalTemplate.arguments.length !== 2
-      || terminalTemplate.arguments[0].name !== 'errorName'
-      || terminalTemplate.arguments[0].value.tag !== 'string'
-      || !['OpenSCADParseError', 'TypeError'].includes(terminalTemplate.arguments[0].value.value)
-      || terminalTemplate.arguments[1].name !== 'detailSha256'
-      || terminalTemplate.arguments[1].value.tag !== 'string'
-      || !/^[a-f0-9]{64}$/.test(terminalTemplate.arguments[1].value.value)) {
+    if (
+      terminalTemplate.code !== 'LEGACY_LANGUAGE_ERROR' ||
+      terminalTemplate.severity !== 'error' ||
+      terminalTemplate.arguments.length !== 2 ||
+      terminalTemplate.arguments[0].name !== 'errorName' ||
+      terminalTemplate.arguments[0].value.tag !== 'string' ||
+      !['OpenSCADParseError', 'TypeError'].includes(terminalTemplate.arguments[0].value.value) ||
+      terminalTemplate.arguments[1].name !== 'detailSha256' ||
+      terminalTemplate.arguments[1].value.tag !== 'string' ||
+      !/^[a-f0-9]{64}$/.test(terminalTemplate.arguments[1].value.value)
+    ) {
       fail('identity', `${path}.diagnosticTemplate`, 'terminal template does not have the exact v2 error identity')
     }
     if (discardedEffects.length !== 0) {
@@ -1558,38 +1678,44 @@ function validateExecution(
       fail('reference', `${path}.diagnosticTemplate`, 'unreferenced error template is forbidden')
     }
     const frontierRoots = new Set<number>()
-    const prefixFrontier = array(
-      rawTerminal.prefixFrontier,
-      `${path}.prefixFrontier`,
-      LIMIT.nodes,
-    ).map((rawEntry, index) => {
-      const entryPath = `${path}.prefixFrontier[${index}]`
-      const entry = exact(rawEntry, KEY.terminalPrefix, entryPath)
-      if (nodes.length === 0) fail('reference', `${entryPath}.root`, 'prefix node is absent')
-      const root = integer(entry.root, `${entryPath}.root`, 0, nodes.length - 1)
-      if (frontierRoots.has(root)) fail('order', `${entryPath}.root`, 'prefix root is duplicated')
-      frontierRoots.add(root)
-      let ownerOccurrence: number | null = null
-      if (entry.ownerOccurrence !== null) {
-        if (occurrences.length === 0) fail('reference', `${entryPath}.ownerOccurrence`, 'prefix owner is absent')
-        ownerOccurrence = integer(entry.ownerOccurrence, `${entryPath}.ownerOccurrence`, 0, occurrences.length - 1)
-        if (occurrences[ownerOccurrence].node !== root) {
-          fail('identity', `${entryPath}.ownerOccurrence`, 'prefix owner does not materialize its root')
+    const prefixFrontier = array(rawTerminal.prefixFrontier, `${path}.prefixFrontier`, LIMIT.nodes).map(
+      (rawEntry, index) => {
+        const entryPath = `${path}.prefixFrontier[${index}]`
+        const entry = exact(rawEntry, KEY.terminalPrefix, entryPath)
+        if (nodes.length === 0) fail('reference', `${entryPath}.root`, 'prefix node is absent')
+        const root = integer(entry.root, `${entryPath}.root`, 0, nodes.length - 1)
+        if (frontierRoots.has(root)) fail('order', `${entryPath}.root`, 'prefix root is duplicated')
+        frontierRoots.add(root)
+        let ownerOccurrence: number | null = null
+        if (entry.ownerOccurrence !== null) {
+          if (occurrences.length === 0) fail('reference', `${entryPath}.ownerOccurrence`, 'prefix owner is absent')
+          ownerOccurrence = integer(entry.ownerOccurrence, `${entryPath}.ownerOccurrence`, 0, occurrences.length - 1)
+          if (occurrences[ownerOccurrence].node !== root) {
+            fail('identity', `${entryPath}.ownerOccurrence`, 'prefix owner does not materialize its root')
+          }
         }
-      }
-      const materializer = occurrences.findIndex(occurrence => occurrence.node === root
-        && operationMaterializesNode(operations[occurrence.operation], nodes[root]))
-      const expectedOwner = materializer < 0 ? null : materializer
-      if (ownerOccurrence !== expectedOwner) {
-        fail('identity', `${entryPath}.ownerOccurrence`, 'prefix owner is not the exact node producer')
-      }
-      return { root, ownerOccurrence }
-    })
+        const materializer = occurrences.findIndex(
+          occurrence =>
+            occurrence.node === root && operationMaterializesNode(operations[occurrence.operation], nodes[root]),
+        )
+        const expectedOwner = materializer < 0 ? null : materializer
+        if (ownerOccurrence !== expectedOwner) {
+          fail('identity', `${entryPath}.ownerOccurrence`, 'prefix owner is not the exact node producer')
+        }
+        return { root, ownerOccurrence }
+      },
+    )
     const consumed = new Uint8Array(nodes.length)
-    nodes.forEach(node => nodeInputs(node).forEach(input => { consumed[input] = 1 }))
+    nodes.forEach(node =>
+      nodeInputs(node).forEach(input => {
+        consumed[input] = 1
+      }),
+    )
     const maximal = evaluationOrder.filter(node => consumed[node] === 0)
-    if (maximal.length !== prefixFrontier.length
-      || maximal.some((root, index) => root !== prefixFrontier[index].root)) {
+    if (
+      maximal.length !== prefixFrontier.length ||
+      maximal.some((root, index) => root !== prefixFrontier[index].root)
+    ) {
       fail('graph', `${path}.prefixFrontier`, 'prefix is not the ordered maximal completed frontier')
     }
     terminal = { tag: 'legacy-language-error', occurrence, diagnosticTemplate, prefixFrontier }
@@ -1601,9 +1727,10 @@ function validateExecution(
   for (const effect of discardedEffects) {
     if (published[effect.root]) fail('graph', '$.core.execution.discardedEffects', 'discarded effect is publishable')
   }
-  const coverageRoots = terminal === null
-    ? [...outputRoots, ...discardedEffects.map(effect => effect.root)]
-    : terminal.prefixFrontier.map(entry => entry.root)
+  const coverageRoots =
+    terminal === null
+      ? [...outputRoots, ...discardedEffects.map(effect => effect.root)]
+      : terminal.prefixFrontier.map(entry => entry.root)
   const covered = nodesReachableFrom(nodes, coverageRoots)
   if (covered.some(flag => flag === 0)) {
     fail('graph', '$.core.nodes', 'node is hidden from result, effects, and terminal prefix')
@@ -1619,9 +1746,7 @@ type ProductionItem = {
   directChild: number
 }
 
-type ScheduleEvent =
-  | { tag: 'group'; group: number }
-  | { tag: 'node'; node: number }
+type ScheduleEvent = { tag: 'group'; group: number } | { tag: 'node'; node: number }
 
 type ProductionGroup = {
   outputRows: number[]
@@ -1634,36 +1759,66 @@ type ProductionGroup = {
   transparent: boolean
 }
 
-function productionRule(
-  operation: Record<string, any>,
-  allowInterruptedUnsupported = false,
-): string {
+function productionRule(operation: Record<string, any>, allowInterruptedUnsupported = false): string {
   const pair = `${String(operation.category)}:${String(operation.name)}`
   const last = operation.structuralPath[operation.structuralPath.length - 1]
   const prior = operation.structuralPath[operation.structuralPath.length - 2]
   const authoredCall = last.kind === 'call'
-  if (operation.category === 'geometry' && authoredCall
-    && ['cube', 'sphere', 'cylinder', 'polyhedron', 'square', 'circle', 'polygon'].includes(operation.name)) return 'primitive'
-  if (operation.category === 'transform' && authoredCall
-    && ['translate', 'rotate', 'scale', 'mirror', 'multmatrix'].includes(operation.name)) return 'transform-map'
+  if (
+    operation.category === 'geometry' &&
+    authoredCall &&
+    ['cube', 'sphere', 'cylinder', 'polyhedron', 'square', 'circle', 'polygon'].includes(operation.name)
+  )
+    return 'primitive'
+  if (
+    operation.category === 'transform' &&
+    authoredCall &&
+    ['translate', 'rotate', 'scale', 'mirror', 'multmatrix'].includes(operation.name)
+  )
+    return 'transform-map'
   if (pair === 'geometry:projection' && authoredCall) return 'projection-map'
   if (pair === 'geometry:offset' && authoredCall) return 'offset-map'
   if ((pair === 'presentation:color' || pair === 'assertion:assert') && authoredCall) return 'preserving-alias'
   if (operation.category === 'control') {
     if (operation.name === '$assign' && last.kind === 'control') return 'transparent'
-    if (operation.name === '$body' && operation.parent !== null
-      && last.kind === 'body' && last.ordinal === 0 && prior !== undefined
-      && ['call', 'module', 'control'].includes(prior.kind)) return 'transparent'
-    if ((operation.name === '$then' || operation.name === '$else')
-      && last.kind === 'branch' && last.ordinal === 0
-      && prior?.kind === 'control' && prior.name === 'if') return 'transparent'
-    if (operation.name === '$expansion' && last.kind === 'control'
-      && last.ordinal === 0 && prior?.kind === 'body' && prior.name === '$body') return 'transparent'
-    if (!operation.name.startsWith('$') && last.kind === 'control'
-      && ['if', 'let', 'for', 'children', 'group', 'render'].includes(operation.name)) return 'transparent'
+    if (
+      operation.name === '$body' &&
+      operation.parent !== null &&
+      last.kind === 'body' &&
+      last.ordinal === 0 &&
+      prior !== undefined &&
+      ['call', 'module', 'control'].includes(prior.kind)
+    )
+      return 'transparent'
+    if (
+      (operation.name === '$then' || operation.name === '$else') &&
+      last.kind === 'branch' &&
+      last.ordinal === 0 &&
+      prior?.kind === 'control' &&
+      prior.name === 'if'
+    )
+      return 'transparent'
+    if (
+      operation.name === '$expansion' &&
+      last.kind === 'control' &&
+      last.ordinal === 0 &&
+      prior?.kind === 'body' &&
+      prior.name === '$body'
+    )
+      return 'transparent'
+    if (
+      !operation.name.startsWith('$') &&
+      last.kind === 'control' &&
+      ['if', 'let', 'for', 'children', 'group', 'render'].includes(operation.name)
+    )
+      return 'transparent'
   }
-  if (operation.category === 'module' && !operation.name.startsWith('$')
-    && (last.kind === 'module' || last.kind === 'call')) return 'transparent'
+  if (
+    operation.category === 'module' &&
+    !operation.name.startsWith('$') &&
+    (last.kind === 'module' || last.kind === 'call')
+  )
+    return 'transparent'
   if ((pair === 'boolean:union' || pair === 'boolean:intersection') && authoredCall) return 'boolean'
   if (pair === 'boolean:hull' && authoredCall) return 'hull'
   if (pair === 'boolean:difference' && authoredCall) return 'difference'
@@ -1702,12 +1857,26 @@ function validateOccurrenceProduction(
     const canonical = rows[0]
     groups.push(canonical)
     rowsByGroup.set(canonical, rows)
-    rows.forEach(row => { canonicalByRow[row] = canonical })
-    const zero = rows.length === 1 && occurrences[rows[0]].node === null
-      && occurrences[rows[0]].outputOrdinal === null && occurrences[rows[0]].sceneEntityId === null
-    const output = rows.every((row, ordinal) => occurrences[row].node !== null
-      && occurrences[row].outputOrdinal === ordinal && occurrences[row].sceneEntityId !== null)
-    if (!zero && !output) fail('identity', `$.core.occurrences[${canonical}]`, 'logical occurrence is neither a zero frame nor dense output rows')
+    rows.forEach(row => {
+      canonicalByRow[row] = canonical
+    })
+    const zero =
+      rows.length === 1 &&
+      occurrences[rows[0]].node === null &&
+      occurrences[rows[0]].outputOrdinal === null &&
+      occurrences[rows[0]].sceneEntityId === null
+    const output = rows.every(
+      (row, ordinal) =>
+        occurrences[row].node !== null &&
+        occurrences[row].outputOrdinal === ordinal &&
+        occurrences[row].sceneEntityId !== null,
+    )
+    if (!zero && !output)
+      fail(
+        'identity',
+        `$.core.occurrences[${canonical}]`,
+        'logical occurrence is neither a zero frame nor dense output rows',
+      )
   }
   groups.sort((left, right) => left - right)
   const activeGroups = new Set<number>()
@@ -1751,11 +1920,7 @@ function validateOccurrenceProduction(
   const owners = new Map<number, number>()
   const productions = new Map<number, ProductionGroup>()
   let expandedItems = 0
-  const append = (
-    target: ProductionItem[],
-    source: readonly ProductionItem[],
-    directChild?: number,
-  ): void => {
+  const append = (target: ProductionItem[], source: readonly ProductionItem[], directChild?: number): void => {
     expandedItems += source.length
     if (expandedItems > LIMIT.snapshotValues) {
       fail('limit', '$.core.occurrences', 'expanded occurrence frontier exceeds the bounded proof budget')
@@ -1772,7 +1937,8 @@ function validateOccurrenceProduction(
     owners.set(node, group)
   }
   const expectCount = (group: number, rows: number[], wanted: number): void => {
-    if (rows.length !== wanted) fail('identity', `$.core.occurrences[${group}]`, `production requires ${wanted} output rows`)
+    if (rows.length !== wanted)
+      fail('identity', `$.core.occurrences[${group}]`, `production requires ${wanted} output rows`)
   }
   const expectKind = (row: number, kinds: readonly string[]): Record<string, any> => {
     const reference = occurrences[row].node
@@ -1781,9 +1947,8 @@ function validateOccurrenceProduction(
     }
     return nodes[reference]
   }
-  const equalInputs = (left: readonly number[], right: readonly number[]): boolean => (
+  const equalInputs = (left: readonly number[], right: readonly number[]): boolean =>
     left.length === right.length && left.every((item, index) => item === right[index])
-  )
   const itemNodes = (items: readonly ProductionItem[]): number[] => {
     const output = new Array<number>(items.length)
     for (let index = 0; index < items.length; index++) output[index] = items[index].node
@@ -1797,8 +1962,11 @@ function validateOccurrenceProduction(
     schedule: ScheduleEvent[],
   ): Record<string, any> => {
     const reducer = nodes[reference]
-    if (reducer?.kind !== 'boolean' || reducer.operation !== 'union'
-      || !equalInputs(reducer.inputs, itemNodes(items))) {
+    if (
+      reducer?.kind !== 'boolean' ||
+      reducer.operation !== 'union' ||
+      !equalInputs(reducer.inputs, itemNodes(items))
+    ) {
       fail('identity', path, 'canonical reduction requires one exact ordered n-ary union')
     }
     claim(reducer.id, group)
@@ -1813,8 +1981,8 @@ function validateOccurrenceProduction(
     const frontier: ProductionItem[] = []
     const operation = operations[occurrences[group].operation]
     const rule = productionRule(operation, group === interruptedGroup)
-    const compilerFrontierFrame = operation.category === 'control'
-      && ['$body', '$then', '$else', '$expansion'].includes(operation.name)
+    const compilerFrontierFrame =
+      operation.category === 'control' && ['$body', '$then', '$else', '$expansion'].includes(operation.name)
     const buckets: ProductionItem[][] = []
     const schedule: ScheduleEvent[] = []
     const scheduleBuckets: ScheduleEvent[][] = []
@@ -1858,53 +2026,78 @@ function validateOccurrenceProduction(
       const bodyGroups = directGroups.filter(child => {
         const childOperation = operations[occurrences[child].operation]
         const last = childOperation.structuralPath.at(-1)
-        return childOperation.parent === operation.id
-          && childOperation.category === 'control'
-          && childOperation.name === '$body'
-          && last?.kind === 'body'
-          && last.name === '$body'
-          && last.ordinal === 0
+        return (
+          childOperation.parent === operation.id &&
+          childOperation.category === 'control' &&
+          childOperation.name === '$body' &&
+          last?.kind === 'body' &&
+          last.name === '$body' &&
+          last.ordinal === 0
+        )
       })
-      if (bodyGroups.length > 1
-        || (bodyGroups.length === 1 && directGroups.length !== 1)
-        || (bodyGroups.length === 0 && directGroups.length !== 0)) {
-        fail('identity', `$.core.occurrences[${group}]`, 'difference requires at most one exact compiler-owned body child')
+      if (
+        bodyGroups.length > 1 ||
+        (bodyGroups.length === 1 && directGroups.length !== 1) ||
+        (bodyGroups.length === 0 && directGroups.length !== 0)
+      ) {
+        fail(
+          'identity',
+          `$.core.occurrences[${group}]`,
+          'difference requires at most one exact compiler-owned body child',
+        )
       }
       const bodyGroup = bodyGroups[0]
       const bodyOperation = bodyGroup === undefined ? null : occurrences[bodyGroup].operation
-      const authoredOperations = bodyOperation === null
-        ? []
-        : (staticChildren.get(bodyOperation) ?? [])
+      const authoredOperations = bodyOperation === null ? [] : (staticChildren.get(bodyOperation) ?? [])
       const bucketByOperation = new Map<number, number>()
-      authoredOperations.forEach((operationId, index) => { bucketByOperation.set(operationId, index) })
+      authoredOperations.forEach((operationId, index) => {
+        bucketByOperation.set(operationId, index)
+      })
       const buckets = authoredOperations.map((): ProductionItem[] => [])
       const schedules = authoredOperations.map((): ScheduleEvent[] => [])
       let activeBucket: number | null = null
       for (const runtimeGroup of bodyGroup === undefined ? [] : (children.get(bodyGroup) ?? [])) {
         const bucket = bucketByOperation.get(occurrences[runtimeGroup].operation)
         if (bucket === undefined) {
-          fail('identity', `$.core.occurrences[${runtimeGroup}]`, 'difference runtime activation is not a direct authored body statement')
+          fail(
+            'identity',
+            `$.core.occurrences[${runtimeGroup}]`,
+            'difference runtime activation is not a direct authored body statement',
+          )
         }
         const production = productions.get(runtimeGroup)!
         append(buckets[bucket], production.terminalItems, runtimeGroup)
         schedules[bucket].push({ tag: 'group', group: runtimeGroup })
         if (activeGroups.has(runtimeGroup)) {
           if (activeBucket !== null) {
-            fail('identity', `$.core.occurrences[${group}]`, 'difference has more than one active authored statement bucket')
+            fail(
+              'identity',
+              `$.core.occurrences[${group}]`,
+              'difference has more than one active authored statement bucket',
+            )
           }
           activeBucket = bucket
         }
       }
       const reconstructed: ProductionItem[] = []
       for (const bucket of buckets) append(reconstructed, bucket)
-      if (reconstructed.length !== frontier.length
-        || reconstructed.some((item, index) => {
+      if (
+        reconstructed.length !== frontier.length ||
+        reconstructed.some((item, index) => {
           const expected = frontier[index]
-          return item.node !== expected.node || item.row !== expected.row
-            || item.identityOwner !== expected.identityOwner
-            || item.directChild !== expected.directChild
-        })) {
-        fail('identity', `$.core.occurrences[${group}]`, 'authored difference buckets do not exactly partition the runtime frontier')
+          return (
+            item.node !== expected.node ||
+            item.row !== expected.row ||
+            item.identityOwner !== expected.identityOwner ||
+            item.directChild !== expected.directChild
+          )
+        })
+      ) {
+        fail(
+          'identity',
+          `$.core.occurrences[${group}]`,
+          'authored difference buckets do not exactly partition the runtime frontier',
+        )
       }
       return { buckets, schedules, activeBucket }
     }
@@ -1917,41 +2110,49 @@ function validateOccurrenceProduction(
         append(cutters, partition.buckets[bucket])
       }
       if (group !== interruptedGroup && partition.activeBucket === null) {
-        fail('identity', `$.core.occurrences[${group}]`, 'active difference does not contain the interrupted runtime bucket')
+        fail(
+          'identity',
+          `$.core.occurrences[${group}]`,
+          'active difference does not contain the interrupted runtime bucket',
+        )
       }
       schedule.splice(0, schedule.length)
       schedule.push(...(partition.schedules[0] ?? []))
-      const completedReduction = (
-        items: readonly ProductionItem[],
-        phase: 'base' | 'cutters',
-      ): ProductionItem[] => {
+      const completedReduction = (items: readonly ProductionItem[], phase: 'base' | 'cutters'): ProductionItem[] => {
         if (items.length < 2) return [...items]
         const space = nodes[items[0].node].valueType.space
         if (items.some(item => nodes[item.node].valueType.space !== space)) return [...items]
-        const candidates = nodes.filter(candidate => !owners.has(candidate.id)
-          && candidate.kind === 'boolean' && candidate.operation === 'union'
-          && equalInputs(candidate.inputs, itemNodes(items)))
+        const candidates = nodes.filter(
+          candidate =>
+            !owners.has(candidate.id) &&
+            candidate.kind === 'boolean' &&
+            candidate.operation === 'union' &&
+            equalInputs(candidate.inputs, itemNodes(items)),
+        )
         if (candidates.length !== 1) {
-          fail('identity', `$.core.occurrences[${group}]`, `completed active difference ${phase} lacks one exact union reducer`)
+          fail(
+            'identity',
+            `$.core.occurrences[${group}]`,
+            `completed active difference ${phase} lacks one exact union reducer`,
+          )
         }
         scheduleNode(candidates[0].id)
-        return [{
-          node: candidates[0].id,
-          row: items[0].row,
-          identityOwner: items[0].identityOwner,
-          group,
-          directChild: group,
-        }]
+        return [
+          {
+            node: candidates[0].id,
+            row: items[0].row,
+            identityOwner: items[0].identityOwner,
+            group,
+            directChild: group,
+          },
+        ]
       }
       // A descendant failure in the first runtime bucket interrupts base
       // evaluation before unionReduceInternal runs. Once evaluation enters a
       // cutter bucket, however, the base (and its hidden union, when needed)
       // is already complete and must be owned/scheduled by this ancestor.
-      const basePhaseCompleted = group === interruptedGroup
-        || partition.activeBucket! > 0
-      const reducedBase = basePhaseCompleted
-        ? completedReduction(base, 'base')
-        : [...base]
+      const basePhaseCompleted = group === interruptedGroup || partition.activeBucket! > 0
+      const reducedBase = basePhaseCompleted ? completedReduction(base, 'base') : [...base]
       for (let bucket = 1; bucket < partition.schedules.length; bucket++) {
         schedule.push(...partition.schedules[bucket])
       }
@@ -1959,9 +2160,7 @@ function validateOccurrenceProduction(
       // is created. A descendant cutter failure therefore exposes the raw
       // completed cutter prefix; only a failure attributed to difference()
       // itself can occur after cutter reduction.
-      const reducedCutters = group === interruptedGroup
-        ? completedReduction(cutters, 'cutters')
-        : [...cutters]
+      const reducedCutters = group === interruptedGroup ? completedReduction(cutters, 'cutters') : [...cutters]
       terminalItems = [...reducedBase, ...reducedCutters]
     } else if (active && (rule === 'transform-map' || rule === 'projection-map' || rule === 'offset-map')) {
       if (outputRows.length > frontier.length) {
@@ -1969,17 +2168,22 @@ function validateOccurrenceProduction(
       }
       const parameters = new Map<string, string>()
       outputRows.forEach((row, index) => {
-        const expected = rule === 'transform-map' ? ['transform']
-          : rule === 'projection-map' ? ['projection'] : ['offset']
+        const expected =
+          rule === 'transform-map' ? ['transform'] : rule === 'projection-map' ? ['projection'] : ['offset']
         const produced = expectKind(row, expected)
         if (!equalInputs(nodeInputs(produced), [frontier[index].node])) {
           fail('identity', `$.core.occurrences[${row}].node`, 'partial map output skips its ordered frontier item')
         }
-        const current = produced.kind === 'transform' ? stableJson(produced.matrix)
-          : produced.kind === 'projection' ? String(produced.cut) : String(produced.distance)
-        const parameterBucket = rule === 'transform-map' && operation.name === 'rotate'
-          ? String(nodes[frontier[index].node].valueType.space)
-          : 'all'
+        const current =
+          produced.kind === 'transform'
+            ? stableJson(produced.matrix)
+            : produced.kind === 'projection'
+              ? String(produced.cut)
+              : String(produced.distance)
+        const parameterBucket =
+          rule === 'transform-map' && operation.name === 'rotate'
+            ? String(nodes[frontier[index].node].valueType.space)
+            : 'all'
         const prior = parameters.get(parameterBucket)
         if (prior !== undefined && prior !== current) {
           fail('identity', `$.core.occurrences[${row}].node`, 'partial map outputs do not share parameters')
@@ -1998,7 +2202,11 @@ function validateOccurrenceProduction(
       append(terminalItems, frontier.slice(outputRows.length))
     } else if (rule === 'terminal-unsupported') {
       if (!active || group !== interruptedGroup) {
-        fail('identity', `$.core.occurrences[${group}]`, 'unsupported production is not the exact interrupted activation')
+        fail(
+          'identity',
+          `$.core.occurrences[${group}]`,
+          'unsupported production is not the exact interrupted activation',
+        )
       }
       expectCount(group, outputRows, 0)
       terminalItems = [...frontier]
@@ -2013,9 +2221,13 @@ function validateOccurrenceProduction(
       if (frontier.length !== 0) fail('identity', `$.core.occurrences[${group}]`, 'primitive frontier is not empty')
       expectCount(group, outputRows, 1)
       const kinds: Readonly<Record<string, readonly string[]>> = {
-        cube: ['box'], sphere: ['sphere-analytic', 'sphere-polygonal'],
-        cylinder: ['cylinder-analytic', 'cylinder-polygonal'], polyhedron: ['polyhedron'],
-        square: ['rectangle'], circle: ['circle-analytic', 'circle-polygonal'], polygon: ['polygon'],
+        cube: ['box'],
+        sphere: ['sphere-analytic', 'sphere-polygonal'],
+        cylinder: ['cylinder-analytic', 'cylinder-polygonal'],
+        polyhedron: ['polyhedron'],
+        square: ['rectangle'],
+        circle: ['circle-analytic', 'circle-polygonal'],
+        polygon: ['polygon'],
       }
       const produced = expectKind(outputRows[0], kinds[operation.name])
       own(outputRows[0], produced.id)
@@ -2023,17 +2235,22 @@ function validateOccurrenceProduction(
       expectCount(group, outputRows, frontier.length)
       const parameters = new Map<string, string>()
       outputRows.forEach((row, index) => {
-        const expected = rule === 'transform-map' ? ['transform']
-          : rule === 'projection-map' ? ['projection'] : ['offset']
+        const expected =
+          rule === 'transform-map' ? ['transform'] : rule === 'projection-map' ? ['projection'] : ['offset']
         const produced = expectKind(row, expected)
         if (!equalInputs(nodeInputs(produced), [frontier[index].node])) {
           fail('identity', `$.core.occurrences[${row}].node`, 'map output does not consume its ordered frontier item')
         }
-        const current = produced.kind === 'transform' ? stableJson(produced.matrix)
-          : produced.kind === 'projection' ? String(produced.cut) : String(produced.distance)
-        const parameterBucket = rule === 'transform-map' && operation.name === 'rotate'
-          ? String(nodes[frontier[index].node].valueType.space)
-          : 'all'
+        const current =
+          produced.kind === 'transform'
+            ? stableJson(produced.matrix)
+            : produced.kind === 'projection'
+              ? String(produced.cut)
+              : String(produced.distance)
+        const parameterBucket =
+          rule === 'transform-map' && operation.name === 'rotate'
+            ? String(nodes[frontier[index].node].valueType.space)
+            : 'all'
         const prior = parameters.get(parameterBucket)
         if (prior !== undefined && prior !== current) {
           fail('identity', `$.core.occurrences[${row}].node`, 'map outputs do not share parameters')
@@ -2048,8 +2265,7 @@ function validateOccurrenceProduction(
             group,
             directChild: group,
           })
-        }
-        else outputItems.push({ node: produced.id, row, identityOwner: row, group, directChild: group })
+        } else outputItems.push({ node: produced.id, row, identityOwner: row, group, directChild: group })
       })
     } else if (rule === 'preserving-alias') {
       expectCount(group, outputRows, frontier.length)
@@ -2067,13 +2283,21 @@ function validateOccurrenceProduction(
         if (occurrences[outputRows[0]].node !== frontier[0].node) {
           fail('identity', `$.core.occurrences[${outputRows[0]}].node`, 'one-item reduction changes its frontier node')
         }
-        if (rule === 'hull') outputItems.push({ node: frontier[0].node, row: outputRows[0], identityOwner: outputRows[0], group, directChild: group })
+        if (rule === 'hull')
+          outputItems.push({
+            node: frontier[0].node,
+            row: outputRows[0],
+            identityOwner: outputRows[0],
+            group,
+            directChild: group,
+          })
         else preserve(outputRows[0], frontier[0])
       } else {
         expectCount(group, outputRows, 1)
         const produced = expectKind(outputRows[0], rule === 'hull' ? ['hull'] : ['boolean'])
         if (produced.kind === 'boolean') {
-          if (produced.operation !== operation.name) fail('identity', `$.core.nodes[${produced.id}].operation`, 'Boolean operation disagrees with static rule')
+          if (produced.operation !== operation.name)
+            fail('identity', `$.core.nodes[${produced.id}].operation`, 'Boolean operation disagrees with static rule')
         }
         if (!equalInputs(nodeInputs(produced), itemNodes(frontier))) {
           fail('identity', `$.core.nodes[${produced.id}]`, 'reduction inputs do not equal the ordered frontier')
@@ -2098,7 +2322,11 @@ function validateOccurrenceProduction(
       if (effect !== undefined) {
         expectCount(group, outputRows, 0)
         if (base.length > 0) {
-          fail('identity', '$.core.execution.discardedEffects', 'discarded cutters require an empty first difference activation')
+          fail(
+            'identity',
+            '$.core.execution.discardedEffects',
+            'discarded cutters require an empty first difference activation',
+          )
         }
         if (cutters.length === 0) {
           fail('identity', '$.core.execution.discardedEffects', 'empty difference frontier cannot yield an effect')
@@ -2119,15 +2347,23 @@ function validateOccurrenceProduction(
           if (terminalPrefix === null) {
             fail('identity', `$.core.occurrences[${group}]`, 'empty-base difference omits its eager cutter effect')
           }
-          const root = cutters.length === 1
-            ? cutters[0].node
-            : terminalPrefix.find(entry => {
-              const candidate = nodes[entry.root]
-              return candidate?.kind === 'boolean' && candidate.operation === 'union'
-                && equalInputs(candidate.inputs, itemNodes(cutters))
-            })?.root
+          const root =
+            cutters.length === 1
+              ? cutters[0].node
+              : terminalPrefix.find(entry => {
+                  const candidate = nodes[entry.root]
+                  return (
+                    candidate?.kind === 'boolean' &&
+                    candidate.operation === 'union' &&
+                    equalInputs(candidate.inputs, itemNodes(cutters))
+                  )
+                })?.root
           if (root === undefined || !terminalPrefix.some(entry => entry.root === root)) {
-            fail('identity', '$.core.execution.terminal.prefixFrontier', 'terminal omits an eager difference cutter root')
+            fail(
+              'identity',
+              '$.core.execution.terminal.prefixFrontier',
+              'terminal omits an eager difference cutter root',
+            )
           }
           if (cutters.length > 1) {
             unionNode(root, cutters, group, '$.core.execution.terminal.prefixFrontier', schedule)
@@ -2140,12 +2376,17 @@ function validateOccurrenceProduction(
         const row = outputRows[0]
         if (base.length === 1) {
           if (occurrences[row].node !== base[0].node) {
-            fail('identity', `$.core.occurrences[${row}].node`, 'difference without cutters must return its sole base item')
+            fail(
+              'identity',
+              `$.core.occurrences[${row}].node`,
+              'difference without cutters must return its sole base item',
+            )
           }
           preserve(row, base[0])
         } else {
           const reference = occurrences[row].node
-          if (reference === null) fail('identity', `$.core.occurrences[${row}].node`, 'difference base reduction is absent')
+          if (reference === null)
+            fail('identity', `$.core.occurrences[${row}].node`, 'difference base reduction is absent')
           unionNode(reference, base, group, `$.core.occurrences[${row}].node`, schedule)
           outputItems.push({ node: reference, row, identityOwner: row, group, directChild: group })
         }
@@ -2157,15 +2398,21 @@ function validateOccurrenceProduction(
         if (produced.operation !== 'difference' || produced.inputs.length !== 2) {
           fail('identity', `$.core.nodes[${produced.id}]`, 'difference must own one binary partition root')
         }
-        const reducedBase = base.length === 1
-          ? base[0].node
-          : unionNode(produced.inputs[0], base, group, `$.core.nodes[${produced.id}].inputs[0]`, schedule).id
+        const reducedBase =
+          base.length === 1
+            ? base[0].node
+            : unionNode(produced.inputs[0], base, group, `$.core.nodes[${produced.id}].inputs[0]`, schedule).id
         appendCutterSchedule()
-        const reducedCutters = cutters.length === 1
-          ? cutters[0].node
-          : unionNode(produced.inputs[1], cutters, group, `$.core.nodes[${produced.id}].inputs[1]`, schedule).id
+        const reducedCutters =
+          cutters.length === 1
+            ? cutters[0].node
+            : unionNode(produced.inputs[1], cutters, group, `$.core.nodes[${produced.id}].inputs[1]`, schedule).id
         if (!equalInputs(produced.inputs, [reducedBase, reducedCutters])) {
-          fail('identity', `$.core.nodes[${produced.id}].inputs`, 'difference swaps or escapes its base/cutter partition')
+          fail(
+            'identity',
+            `$.core.nodes[${produced.id}].inputs`,
+            'difference swaps or escapes its base/cutter partition',
+          )
         }
         own(row, produced.id)
       }
@@ -2173,15 +2420,21 @@ function validateOccurrenceProduction(
       expectCount(group, outputRows, 0)
     } else {
       expectCount(group, outputRows, 1)
-      const produced = expectKind(outputRows[0], rule === 'linear-extrude'
-        ? ['linear-extrude'] : ['rotate-extrude-analytic', 'rotate-extrude-polygonal'])
+      const produced = expectKind(
+        outputRows[0],
+        rule === 'linear-extrude' ? ['linear-extrude'] : ['rotate-extrude-analytic', 'rotate-extrude-polygonal'],
+      )
       const directInput = nodeInputs(produced)[0]
       if (frontier.length === 1) {
-        if (directInput !== frontier[0].node) fail('identity', `$.core.nodes[${produced.id}].input`, 'extrusion skips its sole profile')
+        if (directInput !== frontier[0].node)
+          fail('identity', `$.core.nodes[${produced.id}].input`, 'extrusion skips its sole profile')
       } else {
         const reducer = nodes[directInput]
-        if (reducer?.kind !== 'boolean' || reducer.operation !== 'union'
-          || !equalInputs(reducer.inputs, itemNodes(frontier))) {
+        if (
+          reducer?.kind !== 'boolean' ||
+          reducer.operation !== 'union' ||
+          !equalInputs(reducer.inputs, itemNodes(frontier))
+        ) {
           fail('identity', `$.core.nodes[${produced.id}].input`, 'extrusion lacks its canonical union reducer')
         }
         scheduleNode(reducer.id)
@@ -2189,9 +2442,7 @@ function validateOccurrenceProduction(
       own(outputRows[0], produced.id)
     }
     if (terminalItems === null) {
-      terminalItems = outputItems.length > 0
-        ? [...outputItems]
-        : rule === 'transparent' ? [...frontier] : []
+      terminalItems = outputItems.length > 0 ? [...outputItems] : rule === 'transparent' ? [...frontier] : []
     }
     productions.set(group, {
       outputRows,
@@ -2210,7 +2461,11 @@ function validateOccurrenceProduction(
   }
   if (owners.size !== nodes.length) {
     const unowned = nodes.find(node => !owners.has(node.id))
-    fail('identity', unowned ? `$.core.nodes[${unowned.id}]` : '$.core.nodes', 'reachable node lacks exactly one production owner')
+    fail(
+      'identity',
+      unowned ? `$.core.nodes[${unowned.id}]` : '$.core.nodes',
+      'reachable node lacks exactly one production owner',
+    )
   }
   const scheduleStack: ScheduleEvent[] = []
   for (let index = groups.length - 1; index >= 0; index--) {
@@ -2239,9 +2494,12 @@ function validateOccurrenceProduction(
       scheduleStack.push(childSchedule[index])
     }
   }
-  if (derivedSchedule.length !== nodes.length
-    || derivedSchedule.some((node, index) => node !== index)) {
-    fail('order', '$.core.execution.evaluationOrder', 'node IDs do not equal independently replayed kernel creation order')
+  if (derivedSchedule.length !== nodes.length || derivedSchedule.some((node, index) => node !== index)) {
+    fail(
+      'order',
+      '$.core.execution.evaluationOrder',
+      'node IDs do not equal independently replayed kernel creation order',
+    )
   }
   const reachable = new Set<number>()
   const pending: number[] = []
@@ -2269,13 +2527,18 @@ function validateOccurrenceProduction(
     }
   } else {
     if (resultItems.length !== 0) fail('identity', '$.core.result', 'terminal result is not bottom')
-    const derivedRoots = [...new Set([
-      ...programFrontier.map(item => item.node),
-      ...terminalEffectRoots,
-    ])].sort((left, right) => left - right)
-    if (derivedRoots.length !== terminalPrefix.length
-      || derivedRoots.some((root, index) => root !== terminalPrefix[index].root)) {
-      fail('identity', '$.core.execution.terminal.prefixFrontier', 'terminal prefix does not equal the completed production frontier')
+    const derivedRoots = [...new Set([...programFrontier.map(item => item.node), ...terminalEffectRoots])].sort(
+      (left, right) => left - right,
+    )
+    if (
+      derivedRoots.length !== terminalPrefix.length ||
+      derivedRoots.some((root, index) => root !== terminalPrefix[index].root)
+    ) {
+      fail(
+        'identity',
+        '$.core.execution.terminal.prefixFrontier',
+        'terminal prefix does not equal the completed production frontier',
+      )
     }
     for (const slot of programFrontier) pending.push(slot.group)
   }
@@ -2321,18 +2584,21 @@ export function referenceSemanticCapabilityClosureV1(core: Record<string, any>):
     }
     for (const inputIndex of nodeInputs(node)) {
       const inputType = core.nodes[inputIndex].valueType
-      if (inputType.geometryKind !== node.valueType.geometryKind
-        || inputType.space !== node.valueType.space) {
+      if (inputType.geometryKind !== node.valueType.geometryKind || inputType.space !== node.valueType.space) {
         capabilities.add(
-          `geometry.transition.${String(inputType.geometryKind)}.${String(inputType.space)}`
-          + `.to.${String(node.valueType.geometryKind)}.${String(node.valueType.space)}`,
+          `geometry.transition.${String(inputType.geometryKind)}.${String(inputType.space)}` +
+            `.to.${String(node.valueType.geometryKind)}.${String(node.valueType.space)}`,
         )
       }
       if (inputType.representation !== node.valueType.representation) {
-        capabilities.add(`representation.transition.${String(inputType.representation)}.to.${String(node.valueType.representation)}`)
+        capabilities.add(
+          `representation.transition.${String(inputType.representation)}.to.${String(node.valueType.representation)}`,
+        )
       }
       if (inputType.evidence.tag !== node.valueType.evidence.tag) {
-        capabilities.add(`evidence.transition.${String(inputType.evidence.tag)}.to.${String(node.valueType.evidence.tag)}`)
+        capabilities.add(
+          `evidence.transition.${String(inputType.evidence.tag)}.to.${String(node.valueType.evidence.tag)}`,
+        )
       }
     }
   }
@@ -2348,16 +2614,24 @@ function validateCore(value: unknown): Record<string, any> {
   if (required.length !== 1 || required[0] !== 'semantic.execution-v2') {
     fail('version', '$.core.requiredFeatures', 'v1.2 requires exactly semantic.execution-v2')
   }
-  if (core.identityVersion !== 'semantic-program-core-v1') fail('version', '$.core.identityVersion', 'unknown identity version')
+  if (core.identityVersion !== 'semantic-program-core-v1')
+    fail('version', '$.core.identityVersion', 'unknown identity version')
   const language = exact(core.language, KEY.language, '$.core.language')
   if (!includes(TAG.language, language.contract)) fail('field', '$.core.language.contract', 'unknown language contract')
   const revision = language.contract === 'legacy/current' ? '1.0.0' : 'brep-1.0.0'
-  if (language.semanticsRevision !== revision) fail('version', '$.core.language.semanticsRevision', 'wrong semantic revision')
-  if (language.capabilityGraphVersion !== 'semantic-capabilities-v1') fail('version', '$.core.language.capabilityGraphVersion', 'unknown capability graph')
+  if (language.semanticsRevision !== revision)
+    fail('version', '$.core.language.semanticsRevision', 'wrong semantic revision')
+  if (language.capabilityGraphVersion !== 'semantic-capabilities-v1')
+    fail('version', '$.core.language.capabilityGraphVersion', 'unknown capability graph')
   const units = exact(core.units, KEY.units, '$.core.units')
-  if (units.length !== 'millimeter' || units.angle !== 'degree' || units.handedness !== 'right'
-    || units.upAxis !== 'z' || units.matrixLayout !== 'column-major'
-    || units.composition !== 'parent-times-local') {
+  if (
+    units.length !== 'millimeter' ||
+    units.angle !== 'degree' ||
+    units.handedness !== 'right' ||
+    units.upAxis !== 'z' ||
+    units.matrixLayout !== 'column-major' ||
+    units.composition !== 'parent-times-local'
+  ) {
     fail('type', '$.core.units', 'units/frame convention is fixed')
   }
 
@@ -2400,16 +2674,14 @@ function validateSpan(value: unknown, path: string, sourceLength: number, emptyA
   if (end < start || (!emptyAllowed && end === start)) fail('source', path, 'invalid half-open UTF-16 span')
 }
 
-function validateReferenceEnvelopeSnapshot(
-  snapshot: unknown,
-  exactSource?: string,
-): ReferenceSemanticProgramV1 {
+function validateReferenceEnvelopeSnapshot(snapshot: unknown, exactSource?: string): ReferenceSemanticProgramV1 {
   const envelope = exact(snapshot, KEY.envelope, '$')
   if (envelope.schema !== 'semantic-program-envelope') fail('schema', '$.schema', 'wrong envelope schema')
   const version = exact(envelope.schemaVersion, KEY.version, '$.schemaVersion')
   if (version.major !== 1 || version.minor !== 2) fail('version', '$.schemaVersion', 'only 1.2 is supported')
   const source = exact(envelope.source, KEY.source, '$.source')
-  if (typeof source.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(source.sha256)) fail('field', '$.source.sha256', 'not lowercase SHA-256')
+  if (typeof source.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(source.sha256))
+    fail('field', '$.source.sha256', 'not lowercase SHA-256')
   integer(source.utf8ByteLength, '$.source.utf8ByteLength', 0, LIMIT.sourceUtf8Bytes)
   const sourceLength = integer(source.utf16CodeUnitLength, '$.source.utf16CodeUnitLength', 0, LIMIT.sourceUtf16Units)
   const core = validateCore(envelope.core)
@@ -2429,23 +2701,27 @@ function validateReferenceEnvelopeSnapshot(
     fail('type', '$.tessellationIntents', 'legacy contract already materializes tessellation')
   }
   let priorOccurrence = -1
-  intents
-    .forEach((item, index) => {
-      const path = `$.tessellationIntents[${index}]`
-      const intent = exact(item, KEY.tessellation, path)
-      const occurrence = integer(intent.occurrence, `${path}.occurrence`, 0, core.occurrences.length - 1)
-      if (core.occurrences[occurrence].node === null) fail('reference', `${path}.occurrence`, 'intent needs producing occurrence')
-      if (occurrence <= priorOccurrence) fail('order', `${path}.occurrence`, 'intents must be unique and ordered')
-      priorOccurrence = occurrence
-      if (intent.chordTolerance !== null) positive(intent.chordTolerance, `${path}.chordTolerance`)
-      if (intent.angularToleranceDegrees !== null) positive(intent.angularToleranceDegrees, `${path}.angularToleranceDegrees`)
-      const minimum = intent.minSegments === null ? null : integer(intent.minSegments, `${path}.minSegments`, 3, 1_000_000)
-      const maximum = intent.maxSegments === null ? null : integer(intent.maxSegments, `${path}.maxSegments`, 3, 1_000_000)
-      if (minimum !== null && maximum !== null && maximum < minimum) fail('number', path, 'maxSegments below minSegments')
-    })
+  intents.forEach((item, index) => {
+    const path = `$.tessellationIntents[${index}]`
+    const intent = exact(item, KEY.tessellation, path)
+    const occurrence = integer(intent.occurrence, `${path}.occurrence`, 0, core.occurrences.length - 1)
+    if (core.occurrences[occurrence].node === null)
+      fail('reference', `${path}.occurrence`, 'intent needs producing occurrence')
+    if (occurrence <= priorOccurrence) fail('order', `${path}.occurrence`, 'intents must be unique and ordered')
+    priorOccurrence = occurrence
+    if (intent.chordTolerance !== null) positive(intent.chordTolerance, `${path}.chordTolerance`)
+    if (intent.angularToleranceDegrees !== null)
+      positive(intent.angularToleranceDegrees, `${path}.angularToleranceDegrees`)
+    const minimum =
+      intent.minSegments === null ? null : integer(intent.minSegments, `${path}.minSegments`, 3, 1_000_000)
+    const maximum =
+      intent.maxSegments === null ? null : integer(intent.maxSegments, `${path}.maxSegments`, 3, 1_000_000)
+    if (minimum !== null && maximum !== null && maximum < minimum) fail('number', path, 'maxSegments below minSegments')
+  })
 
   const diagnostics = array(envelope.diagnostics, '$.diagnostics', LIMIT.diagnostics)
-  if (diagnostics.length !== core.diagnosticTemplates.length) fail('source', '$.diagnostics', 'one presentation required per template')
+  if (diagnostics.length !== core.diagnosticTemplates.length)
+    fail('source', '$.diagnostics', 'one presentation required per template')
   diagnostics.forEach((item, index) => {
     const path = `$.diagnostics[${index}]`
     const diagnostic = exact(item, KEY.diagnostic, path)
@@ -2456,17 +2732,21 @@ function validateReferenceEnvelopeSnapshot(
 
   if (exactSource !== undefined) {
     const actual = referenceSemanticSourceDescriptorV1(exactSource)
-    if (actual.sha256 !== source.sha256
-      || actual.utf8ByteLength !== source.utf8ByteLength
-      || actual.utf16CodeUnitLength !== source.utf16CodeUnitLength) {
+    if (
+      actual.sha256 !== source.sha256 ||
+      actual.utf8ByteLength !== source.utf8ByteLength ||
+      actual.utf16CodeUnitLength !== source.utf16CodeUnitLength
+    ) {
       fail('source', '$.source', 'source bytes do not match attestation')
     }
     const route = referenceRoutingHeader(exactSource)
     if (route.contract !== core.language.contract) {
       fail('source', '$.core.language.contract', 'routing language disagrees with core')
     }
-    if (route.capabilities.length !== core.declaredCapabilities.length
-      || route.capabilities.some((capability, index) => capability !== core.declaredCapabilities[index])) {
+    if (
+      route.capabilities.length !== core.declaredCapabilities.length ||
+      route.capabilities.some((capability, index) => capability !== core.declaredCapabilities[index])
+    ) {
       fail('source', '$.core.declaredCapabilities', 'routing requirements disagree with core')
     }
     const scalarBoundary = (offset: number, path: string): void => {
@@ -2490,17 +2770,11 @@ function validateReferenceEnvelopeSnapshot(
   return envelope
 }
 
-function normalizeReferenceSemanticProgramV1(
-  input: unknown,
-  exactSource?: string,
-): ReferenceSemanticProgramV1 {
+function normalizeReferenceSemanticProgramV1(input: unknown, exactSource?: string): ReferenceSemanticProgramV1 {
   return validateReferenceEnvelopeSnapshot(snapshotJsonTree(input), exactSource)
 }
 
-function normalizeReferenceSemanticProgramCoreV1(
-  input: unknown,
-  exactSource?: string,
-): Record<string, any> {
+function normalizeReferenceSemanticProgramCoreV1(input: unknown, exactSource?: string): Record<string, any> {
   const snapshot = snapshotJsonTree(input)
   const candidate = record(snapshot, '$')
   if (candidate.schema === 'semantic-program-core') return validateCore(candidate)
@@ -2524,7 +2798,9 @@ class ChunkWriter {
     this.byteLength += bytes.length
   }
 
-  byte(value: number): void { this.append(Uint8Array.of(value & 0xff)) }
+  byte(value: number): void {
+    this.append(Uint8Array.of(value & 0xff))
+  }
   u16(value: number): void {
     if (!Number.isSafeInteger(value) || value < 0 || value > 0xffff) fail('limit', '$binary', 'u16 overflow')
     this.append(Uint8Array.of((value >>> 8) & 0xff, value & 0xff))
@@ -2539,7 +2815,9 @@ class ChunkWriter {
     new DataView(bytes.buffer).setFloat64(0, value, true)
     this.append(bytes)
   }
-  raw(value: Uint8Array): void { this.append(value) }
+  raw(value: Uint8Array): void {
+    this.append(value)
+  }
   finish(): Uint8Array {
     const output = new Uint8Array(this.byteLength)
     let offset = 0
@@ -2551,7 +2829,10 @@ class ChunkWriter {
   }
 }
 
-interface EncodingBudget { values: number; stringBytes: number }
+interface EncodingBudget {
+  values: number
+  stringBytes: number
+}
 
 function addStringBytes(length: number, budget: EncodingBudget): void {
   if (length > LIMIT.stringCodeUnits * 4) fail('limit', '$binary', 'individual string exceeds byte limit')
@@ -2562,9 +2843,18 @@ function addStringBytes(length: number, budget: EncodingBudget): void {
 function encodeCanonicalValue(value: unknown, writer: ChunkWriter, budget: EncodingBudget, depth = 0): void {
   if (++budget.values > LIMIT.snapshotValues) fail('limit', '$binary', 'value budget exceeded')
   if (depth > LIMIT.snapshotDepth) fail('limit', '$binary', 'depth exceeded')
-  if (value === null) { writer.byte(WIRE_TAG.null); return }
-  if (value === false) { writer.byte(WIRE_TAG.false); return }
-  if (value === true) { writer.byte(WIRE_TAG.true); return }
+  if (value === null) {
+    writer.byte(WIRE_TAG.null)
+    return
+  }
+  if (value === false) {
+    writer.byte(WIRE_TAG.false)
+    return
+  }
+  if (value === true) {
+    writer.byte(WIRE_TAG.true)
+    return
+  }
   if (typeof value === 'number') {
     writer.byte(WIRE_TAG.number)
     writer.f64(value)
@@ -2614,26 +2904,17 @@ function frame(magic: readonly number[], payload: unknown): Uint8Array {
   return writer.finish()
 }
 
-export function referenceEncodeSemanticProgramV1(
-  input: unknown,
-  exactSource?: string,
-): Uint8Array {
+export function referenceEncodeSemanticProgramV1(input: unknown, exactSource?: string): Uint8Array {
   const snapshot = normalizeReferenceSemanticProgramV1(input, exactSource)
   return frame([0x53, 0x50, 0x45, 0x31], snapshot)
 }
 
-export function referenceEncodeSemanticProgramCoreV1(
-  input: unknown,
-  exactSource?: string,
-): Uint8Array {
+export function referenceEncodeSemanticProgramCoreV1(input: unknown, exactSource?: string): Uint8Array {
   const core = normalizeReferenceSemanticProgramCoreV1(input, exactSource)
   return frame([0x53, 0x50, 0x43, 0x31], core)
 }
 
-export function referenceSemanticProgramHashV1(
-  input: unknown,
-  exactSource?: string,
-): string {
+export function referenceSemanticProgramHashV1(input: unknown, exactSource?: string): string {
   const core = referenceEncodeSemanticProgramCoreV1(input, exactSource)
   return sha256(lengthPrefixed(UTF8.encode('semantic-program-core-v1'), core))
 }
@@ -2659,42 +2940,169 @@ export function makeReferenceSemanticProgramV1(): ReferenceSemanticProgramV1 {
   const source = REFERENCE_SEMANTIC_SOURCE_V1
   const paths = [
     [{ kind: 'module', name: 'scene', ordinal: 0 }],
-    [{ kind: 'module', name: 'scene', ordinal: 0 }, { kind: 'call', name: 'translate', ordinal: 0 }],
-    [{ kind: 'module', name: 'scene', ordinal: 0 }, { kind: 'call', name: 'translate', ordinal: 0 }, { kind: 'call', name: 'union', ordinal: 0 }],
-    [{ kind: 'module', name: 'scene', ordinal: 0 }, { kind: 'call', name: 'translate', ordinal: 0 }, { kind: 'call', name: 'union', ordinal: 0 }, { kind: 'call', name: 'cube', ordinal: 0 }],
-    [{ kind: 'module', name: 'scene', ordinal: 0 }, { kind: 'call', name: 'translate', ordinal: 0 }, { kind: 'call', name: 'union', ordinal: 0 }, { kind: 'call', name: 'sphere', ordinal: 0 }],
+    [
+      { kind: 'module', name: 'scene', ordinal: 0 },
+      { kind: 'call', name: 'translate', ordinal: 0 },
+    ],
+    [
+      { kind: 'module', name: 'scene', ordinal: 0 },
+      { kind: 'call', name: 'translate', ordinal: 0 },
+      { kind: 'call', name: 'union', ordinal: 0 },
+    ],
+    [
+      { kind: 'module', name: 'scene', ordinal: 0 },
+      { kind: 'call', name: 'translate', ordinal: 0 },
+      { kind: 'call', name: 'union', ordinal: 0 },
+      { kind: 'call', name: 'cube', ordinal: 0 },
+    ],
+    [
+      { kind: 'module', name: 'scene', ordinal: 0 },
+      { kind: 'call', name: 'translate', ordinal: 0 },
+      { kind: 'call', name: 'union', ordinal: 0 },
+      { kind: 'call', name: 'sphere', ordinal: 0 },
+    ],
   ]
   const operationIds = paths.map(referenceSemanticOperationIdV1)
   const operations = [
-    { id: 0, operationId: operationIds[0], parent: null, childOrdinal: 0, name: 'scene', category: 'module', structuralPath: paths[0], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 1, operationId: operationIds[1], parent: 0, childOrdinal: 0, name: 'translate', category: 'transform', structuralPath: paths[1], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 2, operationId: operationIds[2], parent: 1, childOrdinal: 0, name: 'union', category: 'boolean', structuralPath: paths[2], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 3, operationId: operationIds[3], parent: 2, childOrdinal: 0, name: 'cube', category: 'geometry', structuralPath: paths[3], identityEvidence: 'structural-unique', ambiguityGroup: null },
-    { id: 4, operationId: operationIds[4], parent: 2, childOrdinal: 0, name: 'sphere', category: 'geometry', structuralPath: paths[4], identityEvidence: 'structural-unique', ambiguityGroup: null },
+    {
+      id: 0,
+      operationId: operationIds[0],
+      parent: null,
+      childOrdinal: 0,
+      name: 'scene',
+      category: 'module',
+      structuralPath: paths[0],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 1,
+      operationId: operationIds[1],
+      parent: 0,
+      childOrdinal: 0,
+      name: 'translate',
+      category: 'transform',
+      structuralPath: paths[1],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 2,
+      operationId: operationIds[2],
+      parent: 1,
+      childOrdinal: 0,
+      name: 'union',
+      category: 'boolean',
+      structuralPath: paths[2],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 3,
+      operationId: operationIds[3],
+      parent: 2,
+      childOrdinal: 0,
+      name: 'cube',
+      category: 'geometry',
+      structuralPath: paths[3],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
+    {
+      id: 4,
+      operationId: operationIds[4],
+      parent: 2,
+      childOrdinal: 0,
+      name: 'sphere',
+      category: 'geometry',
+      structuralPath: paths[4],
+      identityEvidence: 'structural-unique',
+      ambiguityGroup: null,
+    },
   ]
-  const slots = [[], [], [], [], [{
-    name: '$fn',
-    value: { tag: 'number', value: 32 },
-    duplicateOrdinal: 0,
-  }]]
+  const slots = [
+    [],
+    [],
+    [],
+    [],
+    [
+      {
+        name: '$fn',
+        value: { tag: 'number', value: 32 },
+        duplicateOrdinal: 0,
+      },
+    ],
+  ]
   const parents: Array<number | null> = [null, 0, 1, 2, 2]
   const occurrenceIds: string[] = []
   for (let index = 0; index < operations.length; index++) {
     const parent = parents[index]
-    occurrenceIds.push(referenceSemanticOccurrenceIdV1(
-      parent === null ? null : occurrenceIds[parent],
-      parent === null ? null : occurrenceIds[parent],
-      operationIds[index],
-      slots[index],
-    ))
+    occurrenceIds.push(
+      referenceSemanticOccurrenceIdV1(
+        parent === null ? null : occurrenceIds[parent],
+        parent === null ? null : occurrenceIds[parent],
+        operationIds[index],
+        slots[index],
+      ),
+    )
   }
   const scene = (index: number): string => referenceSemanticSceneEntityIdV1(occurrenceIds[index], 0)
   const occurrences = [
-    { id: 0, occurrenceId: occurrenceIds[0], operation: 0, parent: null, staticParent: null, dynamicSlots: slots[0], node: null, outputOrdinal: null, sceneEntityId: null },
-    { id: 1, occurrenceId: occurrenceIds[1], operation: 1, parent: 0, staticParent: 0, dynamicSlots: slots[1], node: 3, outputOrdinal: 0, sceneEntityId: scene(1) },
-    { id: 2, occurrenceId: occurrenceIds[2], operation: 2, parent: 1, staticParent: 1, dynamicSlots: slots[2], node: 2, outputOrdinal: 0, sceneEntityId: scene(2) },
-    { id: 3, occurrenceId: occurrenceIds[3], operation: 3, parent: 2, staticParent: 2, dynamicSlots: slots[3], node: 0, outputOrdinal: 0, sceneEntityId: scene(3) },
-    { id: 4, occurrenceId: occurrenceIds[4], operation: 4, parent: 2, staticParent: 2, dynamicSlots: slots[4], node: 1, outputOrdinal: 0, sceneEntityId: scene(4) },
+    {
+      id: 0,
+      occurrenceId: occurrenceIds[0],
+      operation: 0,
+      parent: null,
+      staticParent: null,
+      dynamicSlots: slots[0],
+      node: null,
+      outputOrdinal: null,
+      sceneEntityId: null,
+    },
+    {
+      id: 1,
+      occurrenceId: occurrenceIds[1],
+      operation: 1,
+      parent: 0,
+      staticParent: 0,
+      dynamicSlots: slots[1],
+      node: 3,
+      outputOrdinal: 0,
+      sceneEntityId: scene(1),
+    },
+    {
+      id: 2,
+      occurrenceId: occurrenceIds[2],
+      operation: 2,
+      parent: 1,
+      staticParent: 1,
+      dynamicSlots: slots[2],
+      node: 2,
+      outputOrdinal: 0,
+      sceneEntityId: scene(2),
+    },
+    {
+      id: 3,
+      occurrenceId: occurrenceIds[3],
+      operation: 3,
+      parent: 2,
+      staticParent: 2,
+      dynamicSlots: slots[3],
+      node: 0,
+      outputOrdinal: 0,
+      sceneEntityId: scene(3),
+    },
+    {
+      id: 4,
+      occurrenceId: occurrenceIds[4],
+      operation: 4,
+      parent: 2,
+      staticParent: 2,
+      dynamicSlots: slots[4],
+      node: 1,
+      outputOrdinal: 0,
+      sceneEntityId: scene(4),
+    },
   ]
   const program: ReferenceSemanticProgramV1 = {
     schema: 'semantic-program-envelope',
@@ -2721,15 +3129,54 @@ export function makeReferenceSemanticProgramV1(): ReferenceSemanticProgramV1 {
       operations,
       occurrences,
       nodes: [
-        { id: 0, kind: 'box', valueType: { geometryKind: 'solid-set', space: 'd3', representation: 'mesh', evidence: { tag: 'representation-preserving' } }, size: [1, 2, 3], center: false },
-        { id: 1, kind: 'sphere-polygonal', valueType: { geometryKind: 'solid-set', space: 'd3', representation: 'mesh', evidence: { tag: 'representation-preserving' } }, radius: 2, radialSegments: 32 },
-        { id: 2, kind: 'boolean', valueType: { geometryKind: 'solid-set', space: 'd3', representation: 'mesh', evidence: { tag: 'representation-preserving' } }, operation: 'union', inputs: [0, 1] },
-        { id: 3, kind: 'transform', valueType: { geometryKind: 'solid-set', space: 'd3', representation: 'mesh', evidence: { tag: 'representation-preserving' } }, input: 2, matrix: [
-          1, 0, 0, 0,
-          0, 1, 0, 0,
-          0, 0, 1, 0,
-          4, 5, 6, 1,
-        ] },
+        {
+          id: 0,
+          kind: 'box',
+          valueType: {
+            geometryKind: 'solid-set',
+            space: 'd3',
+            representation: 'mesh',
+            evidence: { tag: 'representation-preserving' },
+          },
+          size: [1, 2, 3],
+          center: false,
+        },
+        {
+          id: 1,
+          kind: 'sphere-polygonal',
+          valueType: {
+            geometryKind: 'solid-set',
+            space: 'd3',
+            representation: 'mesh',
+            evidence: { tag: 'representation-preserving' },
+          },
+          radius: 2,
+          radialSegments: 32,
+        },
+        {
+          id: 2,
+          kind: 'boolean',
+          valueType: {
+            geometryKind: 'solid-set',
+            space: 'd3',
+            representation: 'mesh',
+            evidence: { tag: 'representation-preserving' },
+          },
+          operation: 'union',
+          inputs: [0, 1],
+        },
+        {
+          id: 3,
+          kind: 'transform',
+          valueType: {
+            geometryKind: 'solid-set',
+            space: 'd3',
+            representation: 'mesh',
+            evidence: { tag: 'representation-preserving' },
+          },
+          input: 2,
+          matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 4, 5, 6, 1],
+        },
       ],
       execution: {
         version: 'semantic-execution-v2',
@@ -2743,13 +3190,15 @@ export function makeReferenceSemanticProgramV1(): ReferenceSemanticProgramV1 {
       },
       declaredCapabilities: [],
       capabilityClosure: [],
-      diagnosticTemplates: [{
-        id: 0,
-        code: 'SEMANTIC_NOTE',
-        severity: 'info',
-        operation: 2,
-        arguments: [{ name: 'inputs', value: { tag: 'number', value: 2 } }],
-      }],
+      diagnosticTemplates: [
+        {
+          id: 0,
+          code: 'SEMANTIC_NOTE',
+          severity: 'info',
+          operation: 2,
+          arguments: [{ name: 'inputs', value: { tag: 'number', value: 2 } }],
+        },
+      ],
     },
     provenance: [
       { operation: 0, span: tokenSpan(source, 'module scene'), label: 'scene()' },
@@ -2768,24 +3217,31 @@ export function makeReferenceSemanticProgramV1(): ReferenceSemanticProgramV1 {
 export function makeReferenceLinearChainProgramV1(length: number): ReferenceSemanticProgramV1 {
   integer(length, '$fixture.length', 1, LIMIT.nodes)
   const source = 'chain();'
-  const nodes: Record<string, any>[] = [{
-    id: 0,
-    kind: 'box',
-    valueType: { geometryKind: 'solid-set', space: 'd3', representation: 'mesh', evidence: { tag: 'representation-preserving' } },
-    size: [1, 1, 1],
-    center: false,
-  }]
-  const identityMatrix = [
-    1, 0, 0, 0,
-    0, 1, 0, 0,
-    0, 0, 1, 0,
-    0, 0, 0, 1,
+  const nodes: Record<string, any>[] = [
+    {
+      id: 0,
+      kind: 'box',
+      valueType: {
+        geometryKind: 'solid-set',
+        space: 'd3',
+        representation: 'mesh',
+        evidence: { tag: 'representation-preserving' },
+      },
+      size: [1, 1, 1],
+      center: false,
+    },
   ]
+  const identityMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
   for (let index = 1; index < length; index++) {
     nodes.push({
       id: index,
       kind: 'transform',
-      valueType: { geometryKind: 'solid-set', space: 'd3', representation: 'mesh', evidence: { tag: 'representation-preserving' } },
+      valueType: {
+        geometryKind: 'solid-set',
+        space: 'd3',
+        representation: 'mesh',
+        evidence: { tag: 'representation-preserving' },
+      },
       input: index - 1,
       matrix: [...identityMatrix],
     })
@@ -2821,22 +3277,21 @@ export function makeReferenceLinearChainProgramV1(length: number): ReferenceSema
   const occurrences: Record<string, any>[] = []
   if (length === 1) {
     const cube = appendOperation(null, 'call', 'cube', 'geometry')
-    const occurrenceId = referenceSemanticOccurrenceIdV1(
-      null,
-      null,
-      operations[cube].operationId,
-      [],
-    )
+    const occurrenceId = referenceSemanticOccurrenceIdV1(null, null, operations[cube].operationId, [])
     occurrences.push({
-      id: 0, occurrenceId, operation: cube, parent: null, staticParent: null,
-      dynamicSlots: [], node: 0, outputOrdinal: 0,
+      id: 0,
+      occurrenceId,
+      operation: cube,
+      parent: null,
+      staticParent: null,
+      dynamicSlots: [],
+      node: 0,
+      outputOrdinal: 0,
       sceneEntityId: referenceSemanticSceneEntityIdV1(occurrenceId, 0),
     })
   } else {
     const moduleGroup = referenceSemanticAmbiguityGroupIdV1([], 'module', 'chain')
-    const definition = appendOperation(
-      null, 'module', 'chain', 'module', 0, 'same-name-positional', moduleGroup,
-    )
+    const definition = appendOperation(null, 'module', 'chain', 'module', 0, 'same-name-positional', moduleGroup)
     const definitionBody = appendOperation(definition, 'body', '$body', 'control')
     const blockSize = 200
     const transforms: number[] = []
@@ -2852,9 +3307,7 @@ export function makeReferenceLinearChainProgramV1(length: number): ReferenceSema
     const recursiveCall = appendOperation(staticParent, 'call', 'chain', 'module')
     const recursiveBody = appendOperation(recursiveCall, 'body', '$body', 'control')
     appendOperation(recursiveBody, 'control', '$expansion', 'control')
-    const initialCall = appendOperation(
-      null, 'call', 'chain', 'module', 1, 'same-name-positional', moduleGroup,
-    )
+    const initialCall = appendOperation(null, 'call', 'chain', 'module', 1, 'same-name-positional', moduleGroup)
     const initialBody = appendOperation(initialCall, 'body', '$body', 'control')
     appendOperation(initialBody, 'control', '$expansion', 'control')
 
@@ -2886,17 +3339,9 @@ export function makeReferenceLinearChainProgramV1(length: number): ReferenceSema
     }
 
     const initialCallOccurrence = appendOccurrence(initialCall, null, null)
-    const initialBodyOccurrence = appendOccurrence(
-      initialBody,
-      initialCallOccurrence,
-      initialCallOccurrence,
-    )
+    const initialBodyOccurrence = appendOccurrence(initialBody, initialCallOccurrence, initialCallOccurrence)
     const definitionOccurrence = appendOccurrence(definition, initialBodyOccurrence, null)
-    let currentParent = appendOccurrence(
-      definitionBody,
-      definitionOccurrence,
-      definitionOccurrence,
-    )
+    let currentParent = appendOccurrence(definitionBody, definitionOccurrence, definitionOccurrence)
     let currentStaticParent = currentParent
     let blockDepth = 0
     for (let layer = 0; layer < length - 1; layer++) {
@@ -2907,12 +3352,7 @@ export function makeReferenceLinearChainProgramV1(length: number): ReferenceSema
         length - 1 - layer,
       )
       if (layer === length - 2) {
-        appendOccurrence(
-          cubes[blockDepth],
-          transformOccurrence,
-          transformOccurrence,
-          0,
-        )
+        appendOccurrence(cubes[blockDepth], transformOccurrence, transformOccurrence, 0)
         break
       }
       blockDepth++
@@ -2921,18 +3361,10 @@ export function makeReferenceLinearChainProgramV1(length: number): ReferenceSema
         currentStaticParent = transformOccurrence
         continue
       }
-      const callOccurrence = appendOccurrence(
-        recursiveCall,
-        transformOccurrence,
-        transformOccurrence,
-      )
+      const callOccurrence = appendOccurrence(recursiveCall, transformOccurrence, transformOccurrence)
       const bodyOccurrence = appendOccurrence(recursiveBody, callOccurrence, callOccurrence)
       const recursiveDefinition = appendOccurrence(definition, bodyOccurrence, null)
-      currentParent = appendOccurrence(
-        definitionBody,
-        recursiveDefinition,
-        recursiveDefinition,
-      )
+      currentParent = appendOccurrence(definitionBody, recursiveDefinition, recursiveDefinition)
       currentStaticParent = currentParent
       blockDepth = 0
     }
@@ -2948,8 +3380,19 @@ export function makeReferenceLinearChainProgramV1(length: number): ReferenceSema
       schemaVersion: { major: 1, minor: 2 },
       requiredFeatures: ['semantic.execution-v2'],
       identityVersion: 'semantic-program-core-v1',
-      language: { contract: 'legacy/current', semanticsRevision: '1.0.0', capabilityGraphVersion: 'semantic-capabilities-v1' },
-      units: { length: 'millimeter', angle: 'degree', handedness: 'right', upAxis: 'z', matrixLayout: 'column-major', composition: 'parent-times-local' },
+      language: {
+        contract: 'legacy/current',
+        semanticsRevision: '1.0.0',
+        capabilityGraphVersion: 'semantic-capabilities-v1',
+      },
+      units: {
+        length: 'millimeter',
+        angle: 'degree',
+        handedness: 'right',
+        upAxis: 'z',
+        matrixLayout: 'column-major',
+        composition: 'parent-times-local',
+      },
       operations,
       occurrences,
       nodes,

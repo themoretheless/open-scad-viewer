@@ -39,7 +39,12 @@ export function revealDockDetails(el: Element | ComponentPublicInstance | null) 
 }
 
 export const DOCK_KEY_MAP: Record<string, RovingFocusKey> = {
-  ArrowLeft: 'ArrowLeft', ArrowUp: 'ArrowLeft', ArrowRight: 'ArrowRight', ArrowDown: 'ArrowRight', Home: 'Home', End: 'End',
+  ArrowLeft: 'ArrowLeft',
+  ArrowUp: 'ArrowLeft',
+  ArrowRight: 'ArrowRight',
+  ArrowDown: 'ArrowRight',
+  Home: 'Home',
+  End: 'End',
 }
 
 export function closeMenus() {
@@ -88,4 +93,6 @@ export function readCommandMru(): string[] {
   return [...new Set(value.filter((item): item is string => typeof item === 'string' && item.length > 0))].slice(0, 12)
 }
 
-export function sanitizeFileName(name: string) { return (name.replace(/[^\w.() -]+/g, '_') || 'model.scad').replace(/\.mg.*$/i, '.mg').replace(/\.scad.*$/i, '.scad') }
+export function sanitizeFileName(name: string) {
+  return (name.replace(/[^\w.() -]+/g, '_') || 'model.scad').replace(/\.mg.*$/i, '.mg').replace(/\.scad.*$/i, '.scad')
+}

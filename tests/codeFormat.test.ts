@@ -1,33 +1,38 @@
 import { expect, it } from 'vitest'
 import { formatCode } from '../src/language/codeFormat'
 import { compileRushFrontend } from '../src/language/rushFrontend'
-it('uses two spaces and attaches closing parentheses without changing geometry',()=>{
- const source='// @rush/1\nfn f x: int -> Geometry\n    ret hull(\n        sphere(x),\n        sphere(2),\n    )\nshow f(3)'
- const formatted=formatCode(source)
- expect(formatted).toContain('  ret hull(\n    sphere(x),\n    sphere(2))')
- expect(formatCode(formatted)).toBe(formatted)
- expect(compileRushFrontend(formatted).source).toBe(compileRushFrontend(source).source)
+it('uses two spaces and attaches closing parentheses without changing geometry', () => {
+  const source =
+    '// @rush/1\nfn f x: int -> Geometry\n    ret hull(\n        sphere(x),\n        sphere(2),\n    )\nshow f(3)'
+  const formatted = formatCode(source)
+  expect(formatted).toContain('  ret hull(\n    sphere(x),\n    sphere(2))')
+  expect(formatCode(formatted)).toBe(formatted)
+  expect(compileRushFrontend(formatted).source).toBe(compileRushFrontend(source).source)
 })
-it('does not swallow a closing delimiter into a comment or change multiline literals',()=>{
- const source='f(\n    2 // comment\n)\ntext = "a\n    b"'
- expect(formatCode(source)).toBe('f(\n  2 // comment\n)\ntext = "a\n    b"')
-})
-
-it('attaches closing parentheses followed by chained methods',()=>{
- const source='// @rush/1\nprofile = union(\n    rectangle([4,12]),\n    rectangle([3,24])\n).offset(0.7).offset(delta: -0.7)\nshow profile.extrude(2)'
- const formatted=formatCode(source)
- expect(formatted).toContain('rectangle([3, 24])).offset(0.7).offset(delta: -0.7)')
- expect(formatCode(formatted)).toBe(formatted)
- expect(compileRushFrontend(formatted).source).toBe(compileRushFrontend(source).source)
+it('does not swallow a closing delimiter into a comment or change multiline literals', () => {
+  const source = 'f(\n    2 // comment\n)\ntext = "a\n    b"'
+  expect(formatCode(source)).toBe('f(\n  2 // comment\n)\ntext = "a\n    b"')
 })
 
-it('spaces commas in parameters, calls and vectors while preserving literals and comments',()=>{
- const source='fn point x: f64,y: f64,   z: f64 -> Geometry\n  ret box([x,y,\tz]) // keep,a,b\nshow point(1,2,3)\ntext = "keep,a,  b" /* keep,c */'
- const formatted=formatCode(source)
- expect(formatted).toBe('fn point x: f64, y: f64, z: f64 -> Geometry\n  ret box([x, y, z]) // keep,a,b\nshow point(1, 2, 3)\ntext = "keep,a,  b" /* keep,c */')
- expect(formatCode(formatted)).toBe(formatted)
+it('attaches closing parentheses followed by chained methods', () => {
+  const source =
+    '// @rush/1\nprofile = union(\n    rectangle([4,12]),\n    rectangle([3,24])\n).offset(0.7).offset(delta: -0.7)\nshow profile.extrude(2)'
+  const formatted = formatCode(source)
+  expect(formatted).toContain('rectangle([3, 24])).offset(0.7).offset(delta: -0.7)')
+  expect(formatCode(formatted)).toBe(formatted)
+  expect(compileRushFrontend(formatted).source).toBe(compileRushFrontend(source).source)
 })
 
-it('keeps multiline separators and trailing commas without adding spaces before closing brackets',()=>{
- expect(formatCode('f(a,\n  b,  )\nxs = [1,2,  ]')).toBe('f(a,\n  b,)\nxs = [1, 2,]')
+it('spaces commas in parameters, calls and vectors while preserving literals and comments', () => {
+  const source =
+    'fn point x: f64,y: f64,   z: f64 -> Geometry\n  ret box([x,y,\tz]) // keep,a,b\nshow point(1,2,3)\ntext = "keep,a,  b" /* keep,c */'
+  const formatted = formatCode(source)
+  expect(formatted).toBe(
+    'fn point x: f64, y: f64, z: f64 -> Geometry\n  ret box([x, y, z]) // keep,a,b\nshow point(1, 2, 3)\ntext = "keep,a,  b" /* keep,c */',
+  )
+  expect(formatCode(formatted)).toBe(formatted)
+})
+
+it('keeps multiline separators and trailing commas without adding spaces before closing brackets', () => {
+  expect(formatCode('f(a,\n  b,  )\nxs = [1,2,  ]')).toBe('f(a,\n  b,)\nxs = [1, 2,]')
 })

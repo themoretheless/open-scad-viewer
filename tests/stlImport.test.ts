@@ -9,11 +9,7 @@ import {
   StlImportError,
 } from '../src/exchange/stlImport'
 
-type Triangle = readonly [
-  number, number, number,
-  number, number, number,
-  number, number, number,
-]
+type Triangle = readonly [number, number, number, number, number, number, number, number, number]
 
 function binaryStl(triangles: readonly Triangle[], header = ''): ArrayBuffer {
   const buffer = new ArrayBuffer(84 + triangles.length * 50)
@@ -45,9 +41,7 @@ describe('binary STL import', () => {
     expect([...mesh.vertices.slice(3, 6)]).toEqual([0, 0, 1])
     expect([...mesh.indices]).toEqual([0, 1, 2])
     expect([...mesh.faceIds]).toEqual([0])
-    expect(mesh.provenance).toEqual([
-      { triangleStart: 0, triangleEnd: 1, source: null, backside: false },
-    ])
+    expect(mesh.provenance).toEqual([{ triangleStart: 0, triangleEnd: 1, source: null, backside: false }])
   })
 
   it('treats an exact binary layout as binary even when its header starts with solid', () => {
@@ -60,7 +54,9 @@ describe('binary STL import', () => {
     new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode('\nsolid ascii')]).buffer,
   ])('classifies text-shaped size mismatches as unsupported ASCII', buffer => {
     expect(() => parseBinaryStl(buffer)).toThrowError(StlImportError)
-    try { parseBinaryStl(buffer) } catch (error) {
+    try {
+      parseBinaryStl(buffer)
+    } catch (error) {
       expect((error as StlImportError).code).toBe('unsupported-ascii')
     }
   })
@@ -82,33 +78,36 @@ describe('binary STL import', () => {
 
     const excessive = new ArrayBuffer(84)
     new DataView(excessive).setUint32(80, MAX_STL_IMPORT_TRIANGLES + 1, true)
-    try { parseBinaryStl(excessive) } catch (error) {
+    try {
+      parseBinaryStl(excessive)
+    } catch (error) {
       expect((error as StlImportError).code).toBe('too-many-triangles')
     }
 
     const nonFinite = binaryStl([UNIT_TRIANGLE])
     new DataView(nonFinite).setFloat32(96, Number.NaN, true)
-    try { parseBinaryStl(nonFinite) } catch (error) {
+    try {
+      parseBinaryStl(nonFinite)
+    } catch (error) {
       expect((error as StlImportError).code).toBe('non-finite-coordinate')
     }
   })
 
   it('filters exact degenerates without deleting unitless micro-geometry', () => {
     const tiny = Math.fround(1e-20)
-    const mesh = binaryStlToMeshData(binaryStl([
-      [0, 0, 0, 0, 0, 0, 1, 0, 0],
-      [0, 0, 0, tiny, 0, 0, 0, tiny, 0],
-    ]))
+    const mesh = binaryStlToMeshData(
+      binaryStl([
+        [0, 0, 0, 0, 0, 0, 1, 0, 0],
+        [0, 0, 0, tiny, 0, 0, 0, tiny, 0],
+      ]),
+    )
     expect(mesh.indices.length).toBe(3)
     expect(mesh.topology.degenerate).toBe(1)
     expect(mesh.vertices.slice(3, 6).every(Number.isFinite)).toBe(true)
   })
 
   it('suppresses a shared coplanar diagonal and satisfies the complete scene contract', () => {
-    const mesh = binaryStlToMeshData(binaryStl([
-      UNIT_TRIANGLE,
-      [1, 0, 0, 1, 1, 0, 0, 1, 0],
-    ]))
+    const mesh = binaryStlToMeshData(binaryStl([UNIT_TRIANGLE, [1, 0, 0, 1, 1, 0, 0, 1, 0]]))
     expect(mesh.edgeIndices.length).toBe(8)
     expect(mesh.topology).toMatchObject({ boundary: 4, crease: 0, nonManifold: 0 })
     expect(mesh.bvh.nodeCount).toBeGreaterThan(0)
@@ -121,7 +120,6 @@ describe('binary STL import', () => {
   })
 
   it('rejects invalid adapter color without creating a protocol-invalid mesh', () => {
-    expect(() => importedStlToMeshData(parseBinaryStl(binaryStl([UNIT_TRIANGLE])), [1, 1, 1, 2]))
-      .toThrow(RangeError)
+    expect(() => importedStlToMeshData(parseBinaryStl(binaryStl([UNIT_TRIANGLE])), [1, 1, 1, 2])).toThrow(RangeError)
   })
 })

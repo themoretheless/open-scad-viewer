@@ -1,5 +1,5 @@
-import {measuredPhotoInput, type PhotoCalibrationGroup} from './calibration'
-import type {PhotoPixels} from './kernel'
+import { measuredPhotoInput, type PhotoCalibrationGroup } from './calibration'
+import type { PhotoPixels } from './kernel'
 
 /** Optional JPEG EXIF hint, not calibrated intrinsics. Unknown cameras stay explicit. */
 export function photoFocalHint(buffer: ArrayBuffer): number | null {
@@ -17,7 +17,9 @@ export function photoFocalHint(buffer: ArrayBuffer): number | null {
       if (isExif) return tiffFocalHint(buffer, offset + 10, offset + length + 2)
       offset += length + 2
     }
-  } catch { /* Truncated or malformed metadata is an absent hint. */ }
+  } catch {
+    /* Truncated or malformed metadata is an absent hint. */
+  }
   return null
 }
 
@@ -33,9 +35,11 @@ function tiffFocalHint(buffer: ArrayBuffer, base: number, end: number): number |
   const entries = (offset: number): number[] => {
     const count = u16(offset)
     if (count > 512 || offset + 2 + count * 12 > view.byteLength) throw new Error('Invalid EXIF entries')
-    return Array.from({length: count}, (_, i) => offset + 2 + i * 12)
+    return Array.from({ length: count }, (_, i) => offset + 2 + i * 12)
   }
-  let model = '', focal: number | null = null, exif = 0
+  let model = '',
+    focal: number | null = null,
+    exif = 0
   for (const entry of entries(u32(4))) {
     const tag = u16(entry)
     if (tag === 0x8769) exif = u32(entry + 8)
@@ -47,16 +51,17 @@ function tiffFocalHint(buffer: ArrayBuffer, base: number, end: number): number |
       model = new TextDecoder().decode(new Uint8Array(buffer, base + offset, length)).replace(/\0/g, '')
     }
   }
-  if (exif) for (const entry of entries(exif)) {
-    if (u16(entry) === 0xa405 && u16(entry + 2) === 3) {
-      const equivalent = u16(entry + 8)
-      if (equivalent > 0 && equivalent < 2000) return equivalent
+  if (exif)
+    for (const entry of entries(exif)) {
+      if (u16(entry) === 0xa405 && u16(entry + 2) === 3) {
+        const equivalent = u16(entry + 8)
+        if (equivalent > 0 && equivalent < 2000) return equivalent
+      }
+      if (u16(entry) === 0x920a && u16(entry + 2) === 5) {
+        const offset = u32(entry + 8)
+        focal = u32(offset) / u32(offset + 4)
+      }
     }
-    if (u16(entry) === 0x920a && u16(entry + 2) === 5) {
-      const offset = u32(entry + 8)
-      focal = u32(offset) / u32(offset + 4)
-    }
-  }
   const knownFullFrame = /Canon EOS (R8|R5|R6|R |5D|6D|1D X)/i.test(model)
   return focal && Number.isFinite(focal) && knownFullFrame ? focal : null
 }
@@ -78,10 +83,17 @@ interface ObjectUrls {
 }
 
 export class PhotoInputError extends Error {
-  constructor(readonly code: 'limit' | 'size' | 'focal', readonly filename = '') {
-    super(code === 'limit' ? `At most ${MAX_PHOTOS} photos are supported`
-      : code === 'size' ? `${filename}: file exceeds 40 MiB`
-      : 'Focal equivalent must be between 8 and 1000 mm')
+  constructor(
+    readonly code: 'limit' | 'size' | 'focal',
+    readonly filename = '',
+  ) {
+    super(
+      code === 'limit'
+        ? `At most ${MAX_PHOTOS} photos are supported`
+        : code === 'size'
+          ? `${filename}: file exceeds 40 MiB`
+          : 'Focal equivalent must be between 8 and 1000 mm',
+    )
   }
 }
 
@@ -97,7 +109,9 @@ export class PhotoCollection {
 
   constructor(private readonly urls: ObjectUrls = URL) {}
 
-  get entries(): readonly ImportedPhoto[] { return this.photos }
+  get entries(): readonly ImportedPhoto[] {
+    return this.photos
+  }
 
   async add(files: readonly File[]): Promise<void> {
     if (this.disposed) throw new DOMException('Photo collection is disposed', 'AbortError')
@@ -111,7 +125,9 @@ export class PhotoCollection {
       // Start every read up front; results still publish in input order.
       const reads = files.map(file => {
         const reading = file.arrayBuffer()
-        reading.catch(() => { /* A rejected batch abandons the remaining reads. */ })
+        reading.catch(() => {
+          /* A rejected batch abandons the remaining reads. */
+        })
         return reading
       })
       for (let index = 0; index < files.length; index++) {
@@ -120,7 +136,7 @@ export class PhotoCollection {
         if (this.disposed) throw new DOMException('Photo import was cancelled', 'AbortError')
         const focal = photoFocalHint(data)
         const hint = focal !== null && validPhotoFocal(focal)
-        incoming.push({file, url: this.urls.createObjectURL(file), equivalent: hint ? focal : 50, hint})
+        incoming.push({ file, url: this.urls.createObjectURL(file), equivalent: hint ? focal : 50, hint })
       }
       this.photos = [...this.photos, ...incoming]
     } catch (error) {
@@ -140,11 +156,11 @@ export class PhotoCollection {
 
   setFocal(index: number, equivalent: number): void {
     if (!validPhotoFocal(equivalent)) throw new PhotoInputError('focal')
-    this.photos = this.photos.map((photo, i) => i === index ? {...photo, equivalent, hint: false} : photo)
+    this.photos = this.photos.map((photo, i) => (i === index ? { ...photo, equivalent, hint: false } : photo))
   }
 
   setCalibration(index: number, calibrationGroupId?: string): void {
-    this.photos = this.photos.map((photo, i) => i === index ? {...photo, calibrationGroupId} : photo)
+    this.photos = this.photos.map((photo, i) => (i === index ? { ...photo, calibrationGroupId } : photo))
   }
 
   dispose(): void {
@@ -166,7 +182,7 @@ export async function decodePhoto(
   if (!calibration && !validPhotoFocal(equivalent)) throw new PhotoInputError('focal')
   if (!Number.isInteger(maxSide) || maxSide < 48 || maxSide > 2048) throw new Error('Invalid photo resolution')
   signal?.throwIfAborted()
-  const bitmap = await createImageBitmap(file, {imageOrientation: 'from-image'})
+  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
   try {
     signal?.throwIfAborted()
     if (bitmap.width * bitmap.height > 50_000_000) throw new Error('Photo exceeds 50 megapixels')
@@ -174,11 +190,12 @@ export async function decodePhoto(
     const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height))
     const width = Math.round(bitmap.width * scale)
     const height = Math.round(bitmap.height * scale)
-    if (width < 48 || height < 48) throw new Error('Photo is too small or narrow after resizing (minimum 48 pixels per side)')
+    if (width < 48 || height < 48)
+      throw new Error('Photo is too small or narrow after resizing (minimum 48 pixels per side)')
     const canvas = document.createElement('canvas')
     canvas.width = width
     canvas.height = height
-    const context = canvas.getContext('2d', {willReadFrequently: true})
+    const context = canvas.getContext('2d', { willReadFrequently: true })
     if (!context) throw new Error('Image decoding is unavailable')
     context.drawImage(bitmap, 0, 0, width, height)
     const rgba = context.getImageData(0, 0, width, height).data
@@ -192,9 +209,9 @@ export async function decodePhoto(
       rgb[target + 2] = pixel >>> 16
     }
     const focal = calibration
-      ? Math.sqrt(calibration.fx * width / bitmap.width * calibration.fy * height / bitmap.height)
-      : equivalent * Math.hypot(width, height) / Math.hypot(36, 24)
-    return {width, height, rgb, focal, ...(measured ? {calibration: measured} : {})}
+      ? Math.sqrt((((calibration.fx * width) / bitmap.width) * calibration.fy * height) / bitmap.height)
+      : (equivalent * Math.hypot(width, height)) / Math.hypot(36, 24)
+    return { width, height, rgb, focal, ...(measured ? { calibration: measured } : {}) }
   } finally {
     bitmap.close()
   }

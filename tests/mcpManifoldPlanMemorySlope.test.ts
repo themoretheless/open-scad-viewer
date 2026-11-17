@@ -24,9 +24,7 @@ interface ProbeRecord {
   readonly samples: readonly MemorySample[]
 }
 
-const probePath = fileURLToPath(
-  new URL('./fixtures/mcp-manifold-plan-memory-probe.ts', import.meta.url),
-)
+const probePath = fileURLToPath(new URL('./fixtures/mcp-manifold-plan-memory-probe.ts', import.meta.url))
 const repositoryRoot = fileURLToPath(new URL('../', import.meta.url))
 // 28 sequential worker jobs took about 51 s on a 4-core container, close to the old 60 s cap;
 // this bounds runaway probes, not memory, which the budgets below check.
@@ -58,9 +56,7 @@ function slope(samples: readonly MemorySample[], field: keyof Omit<MemorySample,
 
 function runProbe(): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [
-      '--expose-gc', '--import', 'tsx', probePath,
-    ], {
+    const child = spawn(process.execPath, ['--expose-gc', '--import', 'tsx', probePath], {
       cwd: repositoryRoot,
       env: { ...process.env, ...probeAllocatorEnv },
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -69,8 +65,12 @@ function runProbe(): Promise<{ stdout: string; stderr: string }> {
     let stderr = ''
     child.stdout.setEncoding('utf8')
     child.stderr.setEncoding('utf8')
-    child.stdout.on('data', chunk => { stdout += chunk })
-    child.stderr.on('data', chunk => { stderr += chunk })
+    child.stdout.on('data', chunk => {
+      stdout += chunk
+    })
+    child.stderr.on('data', chunk => {
+      stderr += chunk
+    })
     const timeout = setTimeout(() => {
       child.kill()
       reject(new Error(`Memory probe exceeded ${probeTimeoutMs / 1000} seconds\n${stderr}`))
@@ -88,37 +88,39 @@ function runProbe(): Promise<{ stdout: string; stderr: string }> {
 }
 
 describe('MCP Manifold qualification child memory slope', () => {
-  it('stays within the predeclared post-join retention budget', async () => {
-    const run = await runProbe()
-    expect(run.stderr).toBe('')
-    const record = JSON.parse(run.stdout) as ProbeRecord
-    expect(record).toMatchObject({
-      schema: 'mcp-manifold-plan-memory-probe',
-      version: 1,
-      warmupJobs: 4,
-      measuredJobs: 24,
-      supervisor: {
-        activeWorkerEpoch: null,
-        workersStarted: 28,
-        workersJoined: 28,
-        quarantined: false,
-      },
-    })
-    expect(record.samples).toHaveLength(24)
-    expect(record.samples.map(sample => sample.job)).toEqual(
-      Array.from({ length: 24 }, (_, index) => index),
-    )
+  it(
+    'stays within the predeclared post-join retention budget',
+    async () => {
+      const run = await runProbe()
+      expect(run.stderr).toBe('')
+      const record = JSON.parse(run.stdout) as ProbeRecord
+      expect(record).toMatchObject({
+        schema: 'mcp-manifold-plan-memory-probe',
+        version: 1,
+        warmupJobs: 4,
+        measuredJobs: 24,
+        supervisor: {
+          activeWorkerEpoch: null,
+          workersStarted: 28,
+          workersJoined: 28,
+          quarantined: false,
+        },
+      })
+      expect(record.samples).toHaveLength(24)
+      expect(record.samples.map(sample => sample.job)).toEqual(Array.from({ length: 24 }, (_, index) => index))
 
-    const mebibyte = 1024 * 1024
-    const first = record.samples[0]
-    const last = record.samples.at(-1)!
-    expect(slope(record.samples, 'rss')).toBeLessThanOrEqual(2 * mebibyte)
-    expect(slope(record.samples, 'heapUsed')).toBeLessThanOrEqual(128 * 1024)
-    expect(slope(record.samples, 'external')).toBeLessThanOrEqual(128 * 1024)
-    expect(slope(record.samples, 'arrayBuffers')).toBeLessThanOrEqual(64 * 1024)
-    expect(last.rss - first.rss).toBeLessThanOrEqual(32 * mebibyte)
-    expect(last.heapUsed - first.heapUsed).toBeLessThanOrEqual(4 * mebibyte)
-    expect(last.external - first.external).toBeLessThanOrEqual(4 * mebibyte)
-    expect(last.arrayBuffers - first.arrayBuffers).toBeLessThanOrEqual(2 * mebibyte)
-  }, probeTimeoutMs + 10_000)
+      const mebibyte = 1024 * 1024
+      const first = record.samples[0]
+      const last = record.samples.at(-1)!
+      expect(slope(record.samples, 'rss')).toBeLessThanOrEqual(2 * mebibyte)
+      expect(slope(record.samples, 'heapUsed')).toBeLessThanOrEqual(128 * 1024)
+      expect(slope(record.samples, 'external')).toBeLessThanOrEqual(128 * 1024)
+      expect(slope(record.samples, 'arrayBuffers')).toBeLessThanOrEqual(64 * 1024)
+      expect(last.rss - first.rss).toBeLessThanOrEqual(32 * mebibyte)
+      expect(last.heapUsed - first.heapUsed).toBeLessThanOrEqual(4 * mebibyte)
+      expect(last.external - first.external).toBeLessThanOrEqual(4 * mebibyte)
+      expect(last.arrayBuffers - first.arrayBuffers).toBeLessThanOrEqual(2 * mebibyte)
+    },
+    probeTimeoutMs + 10_000,
+  )
 })

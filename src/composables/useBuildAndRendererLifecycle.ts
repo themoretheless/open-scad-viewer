@@ -1,12 +1,17 @@
-import {createRendererOperations} from './useBuildAndRendererLifecycle/rendererOperations'
-import { computed, nextTick, shallowRef, type ComputedRef, type Ref, type ShallowRef, type WritableComputedRef } from 'svet'
+import { createRendererOperations } from './useBuildAndRendererLifecycle/rendererOperations'
+import {
+  computed,
+  nextTick,
+  shallowRef,
+  type ComputedRef,
+  type Ref,
+  type ShallowRef,
+  type WritableComputedRef,
+} from 'svet'
 import type { GeometryQuality } from '../core/build'
 import { type MeshData } from '../core/mesh'
 import { AutoBuildScheduler } from '../app/autoBuildScheduler'
-import {
-  BuildCoordinator,
-  type BuildCoordinatorState,
-} from '../app/buildCoordinator'
+import { BuildCoordinator, type BuildCoordinatorState } from '../app/buildCoordinator'
 import { BuildPerformanceHistory, type BuildPerformanceSample } from '../app/buildPerformance'
 import type { CameraState } from '../render/cameraHistory'
 import { type EditorDiagnostic } from '../language/editorDiagnostics'
@@ -95,30 +100,76 @@ export interface RendererRecoveryNavigationSnapshot {
 }
 
 export function useBuildAndRendererLifecycle(options: UseBuildAndRendererLifecycleOptions) {
-  const {initializeViewportRenderer, recoverRenderer, handleGeometryResponse} = createRendererOperations({
-    get options() { return options },
-    get renderer() { return renderer },
-    set renderer(value: typeof renderer) { renderer = value },
-    get mainPreviewActive() { return mainPreviewActive },
-    set mainPreviewActive(value: typeof mainPreviewActive) { mainPreviewActive = value },
-    get mainPreserveGroup() { return mainPreserveGroup },
-    set mainPreserveGroup(value: typeof mainPreserveGroup) { mainPreserveGroup = value },
-    get pendingPerformanceFrame() { return pendingPerformanceFrame },
-    set pendingPerformanceFrame(value: typeof pendingPerformanceFrame) { pendingPerformanceFrame = value },
-    get performanceHistory() { return performanceHistory },
-    get performanceSamples() { return performanceSamples },
-    get handleRendererStatus() { return handleRendererStatus },
-    get rendererRecoveryGate() { return rendererRecoveryGate },
-    get autoBuildScheduler() { return autoBuildScheduler },
-    get buildGeneration() { return buildGeneration },
-    set buildGeneration(value: typeof buildGeneration) { buildGeneration = value },
-    get clearSweepViewportPreview() { return clearSweepViewportPreview },
-    get nextPerformanceFrameToken() { return nextPerformanceFrameToken },
-    set nextPerformanceFrameToken(value: typeof nextPerformanceFrameToken) { nextPerformanceFrameToken = value },
-    get mainEditSelection() { return mainEditSelection },
-    set mainEditSelection(value: typeof mainEditSelection) { mainEditSelection = value },
-    get fitNextRender() { return fitNextRender },
-    set fitNextRender(value: typeof fitNextRender) { fitNextRender = value },
+  const { initializeViewportRenderer, recoverRenderer, handleGeometryResponse } = createRendererOperations({
+    get options() {
+      return options
+    },
+    get renderer() {
+      return renderer
+    },
+    set renderer(value: typeof renderer) {
+      renderer = value
+    },
+    get mainPreviewActive() {
+      return mainPreviewActive
+    },
+    set mainPreviewActive(value: typeof mainPreviewActive) {
+      mainPreviewActive = value
+    },
+    get mainPreserveGroup() {
+      return mainPreserveGroup
+    },
+    set mainPreserveGroup(value: typeof mainPreserveGroup) {
+      mainPreserveGroup = value
+    },
+    get pendingPerformanceFrame() {
+      return pendingPerformanceFrame
+    },
+    set pendingPerformanceFrame(value: typeof pendingPerformanceFrame) {
+      pendingPerformanceFrame = value
+    },
+    get performanceHistory() {
+      return performanceHistory
+    },
+    get performanceSamples() {
+      return performanceSamples
+    },
+    get handleRendererStatus() {
+      return handleRendererStatus
+    },
+    get rendererRecoveryGate() {
+      return rendererRecoveryGate
+    },
+    get autoBuildScheduler() {
+      return autoBuildScheduler
+    },
+    get buildGeneration() {
+      return buildGeneration
+    },
+    set buildGeneration(value: typeof buildGeneration) {
+      buildGeneration = value
+    },
+    get clearSweepViewportPreview() {
+      return clearSweepViewportPreview
+    },
+    get nextPerformanceFrameToken() {
+      return nextPerformanceFrameToken
+    },
+    set nextPerformanceFrameToken(value: typeof nextPerformanceFrameToken) {
+      nextPerformanceFrameToken = value
+    },
+    get mainEditSelection() {
+      return mainEditSelection
+    },
+    set mainEditSelection(value: typeof mainEditSelection) {
+      mainEditSelection = value
+    },
+    get fitNextRender() {
+      return fitNextRender
+    },
+    set fitNextRender(value: typeof fitNextRender) {
+      fitNextRender = value
+    },
   })
 
   let renderer: WebGPURenderer | null = null
@@ -140,24 +191,54 @@ export function useBuildAndRendererLifecycle(options: UseBuildAndRendererLifecyc
   const buildCounters = shallowRef({ builds: 0, superseded: 0, workerStarts: 0, hardRestarts: 0 })
 
   const performanceLast = computed(() => performanceSamples.value.at(-1))
-  const performanceMs = (value: number | null | undefined) => value == null ? '—' : `${value.toFixed(1)} ms`
+  const performanceMs = (value: number | null | undefined) => (value == null ? '—' : `${value.toFixed(1)} ms`)
   const performanceRows = computed(() => {
     const sample = performanceSamples.value.at(-1)
     if (!sample) return []
     return [
       [options.lang.value === 'ru' ? 'Разбор исходника' : 'Parse', performanceMs(sample.phases.parseMs)],
-      [options.lang.value === 'ru' ? 'Инициализация ядра' : 'Kernel initialization', performanceMs(sample.phases.initializeMs)],
-      [options.lang.value === 'ru' ? 'Вычисление геометрии' : 'Geometry evaluation', performanceMs(sample.phases.evaluateMs)],
+      [
+        options.lang.value === 'ru' ? 'Инициализация ядра' : 'Kernel initialization',
+        performanceMs(sample.phases.initializeMs),
+      ],
+      [
+        options.lang.value === 'ru' ? 'Вычисление геометрии' : 'Geometry evaluation',
+        performanceMs(sample.phases.evaluateMs),
+      ],
       [options.lang.value === 'ru' ? 'Анализ геометрии' : 'Geometry analysis', performanceMs(sample.phases.analyzeMs)],
       [options.lang.value === 'ru' ? 'Вся работа в Worker' : 'Worker total', performanceMs(sample.workerMs)],
-      [options.lang.value === 'ru' ? 'Запрос → проверенный результат' : 'Request → validated result', performanceMs(sample.hostMs)],
-      [options.lang.value === 'ru' ? 'Публикация сцены (CPU)' : 'Scene publication (CPU)', performanceMs(sample.publicationMs)],
-      [options.lang.value === 'ru' ? 'Публикация → отправка кадра' : 'Publication → frame submission', performanceMs(sample.publicationToSubmitMs)],
-      [options.lang.value === 'ru' ? 'Правка → отправка кадра' : 'Edit → frame submission', performanceMs(sample.editToSubmitMs)],
-      [options.lang.value === 'ru' ? 'Переданные буферы' : 'Transferred buffers', `${(sample.transferBytes / 1024).toFixed(1)} KiB`],
-      [options.lang.value === 'ru' ? 'Загрузка вершин и индексов на GPU' : 'Vertex/index GPU upload', sample.upload ? `${(sample.upload.geometryUploadBytes / 1024).toFixed(1)} KiB` : '—'],
-      [options.lang.value === 'ru' ? 'Новые буферы вершин и индексов' : 'New vertex/index buffers', sample.upload?.geometryBuffersCreated ?? '—'],
-      [options.lang.value === 'ru' ? 'Объекты с повторно использованной геометрией' : 'Entities reusing geometry', sample.upload?.reusedEntities ?? '—'],
+      [
+        options.lang.value === 'ru' ? 'Запрос → проверенный результат' : 'Request → validated result',
+        performanceMs(sample.hostMs),
+      ],
+      [
+        options.lang.value === 'ru' ? 'Публикация сцены (CPU)' : 'Scene publication (CPU)',
+        performanceMs(sample.publicationMs),
+      ],
+      [
+        options.lang.value === 'ru' ? 'Публикация → отправка кадра' : 'Publication → frame submission',
+        performanceMs(sample.publicationToSubmitMs),
+      ],
+      [
+        options.lang.value === 'ru' ? 'Правка → отправка кадра' : 'Edit → frame submission',
+        performanceMs(sample.editToSubmitMs),
+      ],
+      [
+        options.lang.value === 'ru' ? 'Переданные буферы' : 'Transferred buffers',
+        `${(sample.transferBytes / 1024).toFixed(1)} KiB`,
+      ],
+      [
+        options.lang.value === 'ru' ? 'Загрузка вершин и индексов на GPU' : 'Vertex/index GPU upload',
+        sample.upload ? `${(sample.upload.geometryUploadBytes / 1024).toFixed(1)} KiB` : '—',
+      ],
+      [
+        options.lang.value === 'ru' ? 'Новые буферы вершин и индексов' : 'New vertex/index buffers',
+        sample.upload?.geometryBuffersCreated ?? '—',
+      ],
+      [
+        options.lang.value === 'ru' ? 'Объекты с повторно использованной геометрией' : 'Entities reusing geometry',
+        sample.upload?.reusedEntities ?? '—',
+      ],
     ]
   })
 
@@ -355,7 +436,8 @@ export function useBuildAndRendererLifecycle(options: UseBuildAndRendererLifecyc
     options.rendering.value = state.status === 'building'
     autoBuildScheduler.setBuilding(options.rendering.value)
     if (state.requestedQuality) options.renderingQuality.value = state.requestedQuality
-    if (!options.rendering.value && rendererErrorMessage && !options.error.value) options.error.value = rendererErrorMessage
+    if (!options.rendering.value && rendererErrorMessage && !options.error.value)
+      options.error.value = rendererErrorMessage
   }
 
   function cancelGeometryBuild() {
@@ -369,7 +451,10 @@ export function useBuildAndRendererLifecycle(options: UseBuildAndRendererLifecyc
     buildCoordinator?.dispose()
     previousBuildCounters = { ...buildCounters.value }
     buildCoordinator = null
-    options.error.value = caught instanceof Error ? `${options.translate('workerError')}: ${caught.message}` : options.translate('workerError')
+    options.error.value =
+      caught instanceof Error
+        ? `${options.translate('workerError')}: ${caught.message}`
+        : options.translate('workerError')
   }
 
   return {

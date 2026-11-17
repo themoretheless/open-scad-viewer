@@ -63,7 +63,10 @@ export function parseSvgTransformMatrix(transformAttr: string): SvgMatrix2D {
     const kind = match[1]
     const rawArgs = match[2]!.trim()
     if (!rawArgs) throw new Error(`Empty SVG transform arguments in ${kind}().`)
-    const args = rawArgs.split(/[\s,]+/).filter(Boolean).map(Number)
+    const args = rawArgs
+      .split(/[\s,]+/)
+      .filter(Boolean)
+      .map(Number)
     if (!args.length || args.some(v => !Number.isFinite(v) || Math.abs(v) > 1e9)) {
       throw new Error(`Non-finite or out-of-range SVG transform arguments in ${kind}().`)
     }
@@ -76,20 +79,27 @@ export function parseSvgTransformMatrix(transformAttr: string): SvgMatrix2D {
       next = [1, 0, 0, 1, args[0]!, args[1] ?? 0]
     } else if (kind === 'scale') {
       if (args.length !== 1 && args.length !== 2) throw new Error('SVG scale() requires 1 or 2 arguments.')
-      const sx = args[0]!, sy = args[1] ?? sx
+      const sx = args[0]!,
+        sy = args[1] ?? sx
       next = [sx, 0, 0, sy, 0, 0]
     } else if (kind === 'rotate') {
       if (args.length !== 1 && args.length !== 3) throw new Error('SVG rotate() requires 1 or 3 arguments.')
       const rad = (args[0]! * Math.PI) / 180
-      const c = Math.cos(rad), s = Math.sin(rad)
+      const c = Math.cos(rad),
+        s = Math.sin(rad)
       if (args.length === 1) {
         next = [c, s, -s, c, 0, 0]
       } else {
-        const cx = args[1]!, cy = args[2]!
-        next = multiplySvgMatrices(
-          multiplySvgMatrices([1, 0, 0, 1, cx, cy], [c, s, -s, c, 0, 0]),
-          [1, 0, 0, 1, -cx, -cy],
-        )
+        const cx = args[1]!,
+          cy = args[2]!
+        next = multiplySvgMatrices(multiplySvgMatrices([1, 0, 0, 1, cx, cy], [c, s, -s, c, 0, 0]), [
+          1,
+          0,
+          0,
+          1,
+          -cx,
+          -cy,
+        ])
       }
     } else if (kind === 'skewX') {
       if (args.length !== 1) throw new Error('SVG skewX() requires 1 argument.')
@@ -118,23 +128,39 @@ function prepareSvgDocument(
   action: 'parse' | 'preview' | 'profile' = 'parse',
   legacyDpi = false,
 ) {
-  if (source.length > SVG_MAX_BYTES || (source.length * 3 > SVG_MAX_BYTES && new TextEncoder().encode(source).length > SVG_MAX_BYTES)) throw new Error('SVG exceeds 4 MiB.')
+  if (
+    source.length > SVG_MAX_BYTES ||
+    (source.length * 3 > SVG_MAX_BYTES && new TextEncoder().encode(source).length > SVG_MAX_BYTES)
+  )
+    throw new Error('SVG exceeds 4 MiB.')
   const dpi = options.dpi ?? 96
   const tolerance = options.tolerance ?? 0.02
   const rasterSize = options.rasterSize ?? 512
   const alphaThreshold = options.alphaThreshold ?? 0.5
   if (!Number.isFinite(dpi) || dpi <= 0 || dpi > 100000) throw new Error('SVG DPI must be positive and at most 100000.')
-  if (!Number.isFinite(tolerance) || tolerance < 0.0001 || tolerance > 10) throw new Error('SVG tolerance must be between 0.0001 and 10 mm.')
-  if (!Number.isInteger(rasterSize) || rasterSize < 128 || rasterSize > 2048) throw new Error('SVG silhouette resolution must be between 128 and 2048 pixels.')
-  if (!Number.isFinite(alphaThreshold) || alphaThreshold < 0.01 || alphaThreshold > 1) throw new Error('SVG alpha threshold must be between 0.01 and 1.')
-  if (options.geometryMode !== undefined && options.geometryMode !== 'vector' && options.geometryMode !== 'silhouette') throw new Error('SVG geometry mode must be vector or silhouette.')
+  if (!Number.isFinite(tolerance) || tolerance < 0.0001 || tolerance > 10)
+    throw new Error('SVG tolerance must be between 0.0001 and 10 mm.')
+  if (!Number.isInteger(rasterSize) || rasterSize < 128 || rasterSize > 2048)
+    throw new Error('SVG silhouette resolution must be between 128 and 2048 pixels.')
+  if (!Number.isFinite(alphaThreshold) || alphaThreshold < 0.01 || alphaThreshold > 1)
+    throw new Error('SVG alpha threshold must be between 0.01 and 1.')
+  if (options.geometryMode !== undefined && options.geometryMode !== 'vector' && options.geometryMode !== 'silhouette')
+    throw new Error('SVG geometry mode must be vector or silhouette.')
   const fonts = options.fonts ?? []
   if (fonts.length > SVG_MAX_FONTS) throw new Error('SVG supports at most 16 custom fonts.')
-  if (fonts.some(font => !(font instanceof Uint8Array) || !font.length || font.length > SVG_MAX_FONT_BYTES)) throw new Error('Each SVG font must contain 1 byte to 4 MiB.')
-  if (fonts.reduce((sum, font) => sum + font.length, 0) > SVG_MAX_TOTAL_FONT_BYTES) throw new Error('SVG fonts exceed 8 MiB in total.')
+  if (fonts.some(font => !(font instanceof Uint8Array) || !font.length || font.length > SVG_MAX_FONT_BYTES))
+    throw new Error('Each SVG font must contain 1 byte to 4 MiB.')
+  if (fonts.reduce((sum, font) => sum + font.length, 0) > SVG_MAX_TOTAL_FONT_BYTES)
+    throw new Error('SVG fonts exceed 8 MiB in total.')
   return {
-    action, source, dpi, tolerance, legacyDpi,
-    geometryMode: options.geometryMode ?? 'vector', rasterSize, alphaThreshold,
+    action,
+    source,
+    dpi,
+    tolerance,
+    legacyDpi,
+    geometryMode: options.geometryMode ?? 'vector',
+    rasterSize,
+    alphaThreshold,
     fonts: fonts.map(fontBase64),
   }
 }

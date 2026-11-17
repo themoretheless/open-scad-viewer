@@ -47,10 +47,7 @@ export function validPartialAnnularPreviewResult(
   )
 }
 
-export function validBrepToolResult(
-  job: Extract<MainSolidExpectation, { kind: 'brepTool' }>,
-  value: unknown,
-): boolean {
+export function validBrepToolResult(job: Extract<MainSolidExpectation, { kind: 'brepTool' }>, value: unknown): boolean {
   const v = value as SolidBrepToolResult
   if (v.id !== job.id || v.kind !== job.operation) return false
   if (v.kind === 'display') {
@@ -58,22 +55,17 @@ export function validBrepToolResult(
     return (
       !!d &&
       !!d.report &&
-      (['boundaryEdges', 'nonManifoldEdges', 'orientationConflicts', 'degenerateTriangles'] as const).every(
-        k => isSafeNonnegativeCount(d.report[k]),
+      (['boundaryEdges', 'nonManifoldEdges', 'orientationConflicts', 'degenerateTriangles'] as const).every(k =>
+        isSafeNonnegativeCount(d.report[k]),
       ) &&
       Array.isArray(d.defectLines) &&
-      d.defectLines.every(
-        l => typeof l.kind === 'string' && Array.isArray(l.points) && l.points.every(vector),
-      ) &&
+      d.defectLines.every(l => typeof l.kind === 'string' && Array.isArray(l.points) && l.points.every(vector)) &&
       !!d.section &&
       vector(d.section.normal) &&
       finite(d.section.offsetMm) &&
       Array.isArray(d.section.contours) &&
       d.section.contours.every(
-        c =>
-          Array.isArray(c.points) &&
-          c.points.every(vector) &&
-          Array.isArray(c.sourceTriangles),
+        c => Array.isArray(c.points) && c.points.every(vector) && Array.isArray(c.sourceTriangles),
       ) &&
       Array.isArray(d.section.collapsedSegmentTriangles) &&
       typeof d.sectionError === 'string' &&
@@ -105,8 +97,7 @@ export function validSolidBooleanResult(value: unknown): boolean {
     validDirectDocument(v.document) &&
     typeof v.exact === 'boolean' &&
     isNonnegativeFinite(v.toleranceMm) &&
-    (v.resultId === null ||
-      (typeof v.resultId === 'string' && v.document.bodies.some(b => b.id === v.resultId)))
+    (v.resultId === null || (typeof v.resultId === 'string' && v.document.bodies.some(b => b.id === v.resultId)))
   )
 }
 
@@ -160,10 +151,7 @@ export function validSurfaceMatchResult(value: unknown): boolean {
     isNonnegativeFinite(b.firstDerivativeUpper) &&
     (b.secondDerivativeUpper === null || isNonnegativeFinite(b.secondDerivativeUpper)) &&
     (b.mixedDerivativeUpper === null || isNonnegativeFinite(b.mixedDerivativeUpper)) &&
-    (!c.accepted ||
-      (c.regularityCertified &&
-        c.tangentialSmoothnessCertified &&
-        c.errorUpper <= c.maxError))
+    (!c.accepted || (c.regularityCertified && c.tangentialSmoothnessCertified && c.errorUpper <= c.maxError))
   )
 }
 
@@ -198,12 +186,7 @@ export function validSurfaceBuildResult(
 ): boolean {
   const v = value as MainSolidResults['surfaceBuild']
   const r = v.report
-  if (
-    job.runoutId &&
-    !v.document &&
-    v.runoutReport !== undefined &&
-    !validG2RunoutDiagnosticReport(v.runoutReport)
-  ) {
+  if (job.runoutId && !v.document && v.runoutReport !== undefined && !validG2RunoutDiagnosticReport(v.runoutReport)) {
     return false
   }
   if (job.runoutId && v.document) {
@@ -240,12 +223,11 @@ export function validSurfaceBuildResult(
   }
   const certOk =
     r.continuousCertificate === undefined
-      ? r.continuousBound === false && r.accepted === (r.sampledControlDeviation <= r.budget)
+      ? r.continuousBound === false && r.accepted === r.sampledControlDeviation <= r.budget
       : !!r.continuousCertificate &&
         r.continuousCertificate.scope === 'matched-parameter-profile-deviation' &&
         typeof r.continuousCertificate.method === 'string' &&
-        (r.continuousCertificate.reason === null ||
-          typeof r.continuousCertificate.reason === 'string') &&
+        (r.continuousCertificate.reason === null || typeof r.continuousCertificate.reason === 'string') &&
         r.continuousCertificate.regularityCertified === false &&
         r.continuousCertificate.globalEmbeddingCertified === false &&
         r.continuousCertificate.seamSmoothnessCertified === false &&
@@ -255,8 +237,7 @@ export function validSurfaceBuildResult(
         r.continuousCertificate.maxCells >= r.continuousCertificate.cells &&
         r.continuousCertificate.maxCells <= 100000 &&
         r.continuousBound === (r.continuousCertificate.errorUpper !== null) &&
-        (r.continuousCertificate.errorUpper === null ||
-          isNonnegativeFinite(r.continuousCertificate.errorUpper)) &&
+        (r.continuousCertificate.errorUpper === null || isNonnegativeFinite(r.continuousCertificate.errorUpper)) &&
         r.continuousCertificate.withinBudget ===
           (r.continuousBound && r.continuousCertificate.errorUpper! <= r.budget) &&
         r.accepted === r.continuousCertificate.withinBudget
@@ -286,12 +267,10 @@ export function validNurbsRefitResult(value: unknown): boolean {
     typeof c.accepted === 'boolean' &&
     typeof c.rolledBack === 'boolean' &&
     !(c.accepted && c.rolledBack) &&
-    (['geometryErrorUpper', 'hausdorffErrorUpper', 'dataSiteErrorUpper', 'budget'] as const).every(
-      key => {
-        const n = c[key]
-        return n === undefined || isNonnegativeFinite(n)
-      },
-    ) &&
+    (['geometryErrorUpper', 'hausdorffErrorUpper', 'dataSiteErrorUpper', 'budget'] as const).every(key => {
+      const n = c[key]
+      return n === undefined || isNonnegativeFinite(n)
+    }) &&
     !!c.evidence &&
     !!c.evidence.toleranceIdentity &&
     typeof c.evidence.toleranceIdentity.canonical === 'string'

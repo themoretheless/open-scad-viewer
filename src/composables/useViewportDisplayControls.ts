@@ -143,8 +143,7 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
     }),
   )
 
-  const sceneMeshId = (index: number | null) =>
-    index === null ? null : sceneMeshes.value[index]?.entityId ?? index
+  const sceneMeshId = (index: number | null) => (index === null ? null : (sceneMeshes.value[index]?.entityId ?? index))
   const selectedSceneMeshId = computed(() => sceneMeshId(selectedMesh.value))
   const hoveredMesh = computed(() => sceneMeshId(hoveredHit.value?.meshIndex ?? null))
 
@@ -311,12 +310,16 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
 
   function setMatcap(id: string) {
     matcapId.value = id
-    void getRenderer()?.setMatcapTexture(id)?.catch(() => {})
+    void getRenderer()
+      ?.setMatcapTexture(id)
+      ?.catch(() => {})
   }
 
   function setEnv(id: string) {
     envId.value = id
-    void getRenderer()?.setEnvMap(id)?.catch(() => {})
+    void getRenderer()
+      ?.setEnvMap(id)
+      ?.catch(() => {})
   }
 
   function setShadows(enabled: boolean) {
@@ -351,8 +354,7 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
   }
 
   function meshIndex(id: number | string) {
-    const entityIndex =
-      typeof id === 'string' ? sceneMeshes.value.findIndex(mesh => mesh.entityId === id) : -1
+    const entityIndex = typeof id === 'string' ? sceneMeshes.value.findIndex(mesh => mesh.entityId === id) : -1
     const index = entityIndex >= 0 ? entityIndex : typeof id === 'number' ? id : Number(id)
     return Number.isInteger(index) && index >= 0 && index < sceneMeshes.value.length ? index : null
   }
@@ -414,9 +416,7 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
     const dz = b[2] - a[2]
     const distance = value.distance ?? (dx * dx + dy * dy + dz * dz) ** 0.5
     try {
-      await navigator.clipboard.writeText(
-        `A ${a.join(', ')}\nB ${b.join(', ')}\nDistance ${distance}`,
-      )
+      await navigator.clipboard.writeText(`A ${a.join(', ')}\nB ${b.join(', ')}\nDistance ${distance}`)
       showNotice(t('copied'))
     } catch {
       /* Clipboard may be unavailable outside a secure context. */

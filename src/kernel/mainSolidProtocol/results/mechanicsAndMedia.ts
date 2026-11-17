@@ -79,21 +79,14 @@ export function validStructuralSectionsResult(
     numericSequenceOf(
       v.sourceMesh.indices,
       v.sourceMesh.indices.length,
-      n =>
-        Number.isInteger(n) &&
-        Number(n) >= 0 &&
-        Number(n) < v.sourceMesh.positions.length / 3,
+      n => Number.isInteger(n) && Number(n) >= 0 && Number(n) < v.sourceMesh.positions.length / 3,
     ) &&
     finite(v.volumeMm3) &&
     v.volumeMm3 > 0 &&
     Number.isInteger(v.triangleCount) &&
     v.triangleCount > 0 &&
     v.triangleCount <= 100000 &&
-    isBoundaryConnectivity(
-      v.connectivity,
-      v.triangleCount,
-      v.sourceMesh.positions.length / 3,
-    ) &&
+    isBoundaryConnectivity(v.connectivity, v.triangleCount, v.sourceMesh.positions.length / 3) &&
     isMaterialAudit(v) &&
     Array.isArray(v.sections) &&
     v.sections.length === job.stations.length &&
@@ -121,10 +114,7 @@ export function validStructuralSectionsResult(
   )
 }
 
-export function validTrussResult(
-  job: Extract<MainSolidExpectation, { kind: 'truss' }>,
-  value: unknown,
-): boolean {
+export function validTrussResult(job: Extract<MainSolidExpectation, { kind: 'truss' }>, value: unknown): boolean {
   const v = value as TrussResponse
   const { nodes, members } = job
   return (
@@ -155,9 +145,7 @@ export function validInspectResult(value: unknown): boolean {
         typeof v.b === 'string' &&
         finite(v.overlapMm3) &&
         finite(v.gapMm) &&
-        (v.closestPoints === undefined ||
-          v.closestPoints === null ||
-          arrayOf(v.closestPoints, 2, vector)) &&
+        (v.closestPoints === undefined || v.closestPoints === null || arrayOf(v.closestPoints, 2, vector)) &&
         (v.displayMeshOnly === undefined || v.displayMeshOnly === true),
     )
   )

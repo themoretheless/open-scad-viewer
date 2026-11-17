@@ -16,7 +16,7 @@ export function advanceScanPlane(
   if (range === 0) return { offset: min, direction: 1 }
   const position = Math.min(range, Math.max(0, offset - min))
   const phase = direction === 1 ? position : 2 * range - position
-  const next = (phase + range * Math.max(0, elapsedMs) / oneWayMs) % (2 * range)
+  const next = (phase + (range * Math.max(0, elapsedMs)) / oneWayMs) % (2 * range)
   return {
     offset: min + (next <= range ? next : 2 * range - next),
     direction: next < range ? 1 : -1,

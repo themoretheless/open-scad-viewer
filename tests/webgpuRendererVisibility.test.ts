@@ -62,7 +62,7 @@ describe('WebGPURenderer batched visibility', () => {
       hovered: number | null
       hoveredHit: PickHit | null
       isolated: boolean
-      combineBounds: (bounds: typeof firstBounds[]) => typeof firstBounds | null
+      combineBounds: (bounds: (typeof firstBounds)[]) => typeof firstBounds | null
       updateMeshStyles: () => void
       rebuildSelectionOverlays: () => void
       rebuildSourceHighlightOverlay: () => void

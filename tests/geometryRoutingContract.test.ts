@@ -18,9 +18,7 @@ import {
   geometryExecutionForError,
   type GeometryBackendProvider,
 } from '../src/kernel/geometryBuildEngine'
-import {
-  expectedPublicErrorRetryable,
-} from '../src/mcp/errorContract'
+import { expectedPublicErrorRetryable } from '../src/mcp/errorContract'
 import { PUBLIC_ERROR_CODES, publicToolError } from '../src/mcp/publicError'
 import { referenceGeometryRoute } from './support/referenceGeometryRouter'
 
@@ -31,18 +29,20 @@ type MatrixInput =
   | { kind: 'requiredCapabilityCount'; count: number }
   | { kind: 'utf16CodeUnits'; values: number[] }
 
-type MatrixExpected = {
-  kind: 'route'
-  languageContract: 'legacy/current' | 'openscad-viewer/brep-1'
-  engineClass: 'mesh' | 'brep'
-  requiredCapabilities?: string[]
-  requiredCapabilityCount?: number
-} | {
-  kind: 'error'
-  message: string
-  reportedContract: string | null
-  line: number | null
-}
+type MatrixExpected =
+  | {
+      kind: 'route'
+      languageContract: 'legacy/current' | 'openscad-viewer/brep-1'
+      engineClass: 'mesh' | 'brep'
+      requiredCapabilities?: string[]
+      requiredCapabilityCount?: number
+    }
+  | {
+      kind: 'error'
+      message: string
+      reportedContract: string | null
+      line: number | null
+    }
 
 interface RoutingMatrix {
   schemaVersion: number
@@ -54,7 +54,7 @@ interface RoutingMatrix {
   errorPrecedence: string[]
   providerAdmissionReasonCodes: string[]
   publicDiagnostics: Array<{
-    code: typeof PUBLIC_ERROR_CODES[number]
+    code: (typeof PUBLIC_ERROR_CODES)[number]
     retryable?: boolean
     retryableByAvailabilityCause?: Record<string, boolean>
   }>
@@ -65,7 +65,7 @@ interface RoutingMatrix {
     expectedMessage: string
     availabilityCause?: string
     missingCapabilities?: string[]
-    publicCode: typeof PUBLIC_ERROR_CODES[number]
+    publicCode: (typeof PUBLIC_ERROR_CODES)[number]
     retryable: boolean
     publicDetails?: Record<string, string | boolean | null>
     expectedExecution?: Record<string, unknown>
@@ -96,10 +96,7 @@ function materialize(input: MatrixInput): string {
   if (input.kind === 'requiredCapabilityId') {
     return `// @requires a${'x'.repeat(input.length - 1)}\ncube(1);`
   }
-  const capabilities = Array.from(
-    { length: input.count },
-    (_, index) => `cap${index.toString().padStart(2, '0')}`,
-  )
+  const capabilities = Array.from({ length: input.count }, (_, index) => `cap${index.toString().padStart(2, '0')}`)
   return `// @requires ${capabilities.join(' ')}\ncube(1);`
 }
 
@@ -123,10 +120,7 @@ function productionOutcome(source: string): ReturnType<typeof referenceGeometryR
   }
 }
 
-function assertExpected(
-  outcome: ReturnType<typeof referenceGeometryRoute>,
-  expected: MatrixExpected,
-): void {
+function assertExpected(outcome: ReturnType<typeof referenceGeometryRoute>, expected: MatrixExpected): void {
   if (expected.kind === 'error') {
     expect(outcome).toEqual(expected)
     return
@@ -146,10 +140,12 @@ function assertExpected(
 }
 
 // The frozen policy matrix is version-independent; register and revoke the active exact provider.
-function manifoldProvider(options: {
-  warm?: ReturnType<typeof vi.fn>
-  build?: ReturnType<typeof vi.fn>
-} = {}) {
+function manifoldProvider(
+  options: {
+    warm?: ReturnType<typeof vi.fn>
+    build?: ReturnType<typeof vi.fn>
+  } = {},
+) {
   const warm = options.warm ?? vi.fn().mockResolvedValue(undefined)
   const build = options.build ?? vi.fn()
   const provider: GeometryBackendProvider = {
@@ -201,9 +197,11 @@ describe('frozen geometry routing contract v1', () => {
     expect(GEOMETRY_ENGINE_ROUTES).toEqual(matrix.languageRoutes)
     expect(Object.isFrozen(GEOMETRY_ENGINE_ROUTES)).toBe(true)
     expect(GEOMETRY_ENGINE_ROUTES.every(Object.isFrozen)).toBe(true)
-    expect(Object.values(GEOMETRY_MANIFEST_ARCHIVE).every(manifest => (
-      manifest.limits.sourceCharacters === matrix.sourceLimits.characters
-    ))).toBe(true)
+    expect(
+      Object.values(GEOMETRY_MANIFEST_ARCHIVE).every(
+        manifest => manifest.limits.sourceCharacters === matrix.sourceLimits.characters,
+      ),
+    ).toBe(true)
     expect(matrixBytes.toString('utf8')).not.toContain('\\ud800')
     expect(matrix.providerAdmissionReasonCodes).toEqual(GEOMETRY_PROVIDER_ADMISSION_REASON_CODES)
   })
@@ -220,16 +218,13 @@ describe('frozen geometry routing contract v1', () => {
       'selected-provider-execution',
       'serialization-export-and-persistence',
     ])
-    expect(new Set(matrix.surfaceCases.map(testCase => testCase.stage)))
-      .toEqual(new Set(matrix.errorPrecedence))
+    expect(new Set(matrix.surfaceCases.map(testCase => testCase.stage))).toEqual(new Set(matrix.errorPrecedence))
     const deployedEvidenceOverrides: Readonly<Record<string, string>> = {
       'undeployed-brep-no-manifold': 'executes a B-rep source without invoking the mesh parser',
     }
     for (const evidence of matrix.surfaceCases) {
       const source = readFileSync(new URL(`../${evidence.evidenceFile}`, import.meta.url), 'utf8')
-      expect(source, evidence.id).toContain(
-        deployedEvidenceOverrides[evidence.id] ?? evidence.evidenceTest,
-      )
+      expect(source, evidence.id).toContain(deployedEvidenceOverrides[evidence.id] ?? evidence.evidenceTest)
     }
   })
 
@@ -237,15 +232,15 @@ describe('frozen geometry routing contract v1', () => {
     expect(matrix.publicDiagnostics.map(diagnostic => diagnostic.code)).toEqual(PUBLIC_ERROR_CODES)
     for (const diagnostic of matrix.publicDiagnostics) {
       if (diagnostic.retryable !== undefined) {
-        expect(expectedPublicErrorRetryable(diagnostic.code), diagnostic.code)
-          .toBe(diagnostic.retryable)
+        expect(expectedPublicErrorRetryable(diagnostic.code), diagnostic.code).toBe(diagnostic.retryable)
       }
-      for (const [availabilityCause, retryable] of Object.entries(
-        diagnostic.retryableByAvailabilityCause ?? {},
-      )) {
-        expect(expectedPublicErrorRetryable(diagnostic.code, {
-          availability_cause: availabilityCause,
-        }), `${diagnostic.code}:${availabilityCause}`).toBe(retryable)
+      for (const [availabilityCause, retryable] of Object.entries(diagnostic.retryableByAvailabilityCause ?? {})) {
+        expect(
+          expectedPublicErrorRetryable(diagnostic.code, {
+            availability_cause: availabilityCause,
+          }),
+          `${diagnostic.code}:${availabilityCause}`,
+        ).toBe(retryable)
       }
     }
   })
@@ -260,10 +255,7 @@ describe('frozen geometry routing contract v1', () => {
   })
 
   it('deep-freezes every planned execution descriptor', () => {
-    const descriptor = planGeometrySourceExecution(
-      '// @requires geometry.mesh\ncube(1);',
-      request,
-    )
+    const descriptor = planGeometrySourceExecution('// @requires geometry.mesh\ncube(1);', request)
     expect(Object.isFrozen(descriptor)).toBe(true)
     expect(Object.isFrozen(descriptor.requiredCapabilities)).toBe(true)
     expect(Object.isFrozen(descriptor.effectiveLimits)).toBe(true)
@@ -299,10 +291,10 @@ describe('frozen geometry routing contract v1', () => {
     } else if (runtimeCase.id === 'undeployed-brep') {
       const manifold = manifoldProvider()
       const brep = brepProvider()
-      const built = await new GeometryBuildEngine([
-        manifold.provider,
-        brep.provider,
-      ]).buildSource('// @language openscad-viewer/brep-1\ncube(1);', request)
+      const built = await new GeometryBuildEngine([manifold.provider, brep.provider]).buildSource(
+        '// @language openscad-viewer/brep-1\ncube(1);',
+        request,
+      )
       expect(built.execution).toMatchObject({
         languageContract: 'openscad-viewer/brep-1',
         engineClass: 'brep',
@@ -319,10 +311,7 @@ describe('frozen geometry routing contract v1', () => {
         warm: vi.fn().mockRejectedValue(new Error('must not warm')),
       })
       try {
-        await new GeometryBuildEngine([backend.provider]).buildSource(
-          '// @requires nurbs.surfaces\ncube(1);',
-          request,
-        )
+        await new GeometryBuildEngine([backend.provider]).buildSource('// @requires nurbs.surfaces\ncube(1);', request)
       } catch (caught) {
         error = caught
       }
@@ -373,9 +362,7 @@ describe('frozen geometry routing contract v1', () => {
       const backend = manifoldProvider()
       try {
         await new GeometryBuildEngine([backend.provider], {
-          revokedManifestDigests: [
-            GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.brep].manifestDigest,
-          ],
+          revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.brep].manifestDigest],
         }).buildSource('// @language openscad-viewer/brep-1\ncube(1);', request)
       } catch (caught) {
         error = caught
@@ -424,8 +411,7 @@ describe('frozen geometry routing contract v1', () => {
     if (runtimeCase.missingCapabilities !== undefined) {
       expect(error).toMatchObject({ missingCapabilities: runtimeCase.missingCapabilities })
     }
-    const execution = geometryExecutionForError(error)
-      ?? (error as { execution?: unknown }).execution
+    const execution = geometryExecutionForError(error) ?? (error as { execution?: unknown }).execution
     if (runtimeCase.expectedExecution !== undefined) {
       expect(execution).toMatchObject(runtimeCase.expectedExecution)
     } else {

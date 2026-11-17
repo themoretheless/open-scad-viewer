@@ -5,11 +5,11 @@
  * them and the geometry kernel stays small enough to instantiate on the main thread. The transport
  * mirrors `services/geometry/kernel`: the host owns request buffers and frees every response.
  */
-import {encodeBinary} from '../../core/valueBinaryCodec'
-import {decodePacked, writeLinear} from '../../kernel/wasmHost'
-import {unpackBrotliWasmBase64} from '../../kernel/wasmBrotliPacking'
-import {compileOptionalWasm} from '../../kernel/wasmCompilation'
-import {compileWasmArtifact, compileWasmArtifactSync} from '../../kernel/wasmArtifact'
+import { encodeBinary } from '../../core/valueBinaryCodec'
+import { decodePacked, writeLinear } from '../../kernel/wasmHost'
+import { unpackBrotliWasmBase64 } from '../../kernel/wasmBrotliPacking'
+import { compileOptionalWasm } from '../../kernel/wasmCompilation'
+import { compileWasmArtifact, compileWasmArtifactSync } from '../../kernel/wasmArtifact'
 import artifactIdentity from '../../generated/language-kernel/identity'
 import wasmBase64 from '../../generated/language-kernel/bytes'
 
@@ -26,7 +26,9 @@ let initialized = false
 let warming: Promise<void> | undefined
 
 /** True once an instance exists, so main-thread callers can avoid the synchronous compile path. */
-export function isLanguageKernelReady(): boolean { return initialized }
+export function isLanguageKernelReady(): boolean {
+  return initialized
+}
 
 /** Compile and instantiate asynchronously; browsers refuse the synchronous path on the main thread. */
 export function warmLanguageKernel(): Promise<void> {
@@ -41,7 +43,9 @@ export function warmLanguageKernel(): Promise<void> {
       wasmMemory = wasm.memory
       initialized = true
     }
-  })().finally(() => { warming = undefined })
+  })().finally(() => {
+    warming = undefined
+  })
   return warming
 }
 
@@ -59,13 +63,20 @@ export function languageRequest(op: number, value: unknown): unknown {
   const bytes = encodeBinary(value)
   const ptr = writeLinear(wasmMemory, len => wasm.abi_alloc(len), bytes)
   if (!ptr) throw new Error('Language WASM request allocation failed')
-  try { return decodePacked(wasmMemory, (pointer, size) => wasm.abi_free(pointer, size), wasm.abi_request(op, ptr, bytes.length)) }
-  finally { wasm.abi_free(ptr, bytes.length) }
+  try {
+    return decodePacked(
+      wasmMemory,
+      (pointer, size) => wasm.abi_free(pointer, size),
+      wasm.abi_request(op, ptr, bytes.length),
+    )
+  } finally {
+    wasm.abi_free(ptr, bytes.length)
+  }
 }
 
 /** No JavaScript compiler fallback: both browser and Node use the same Rust frontend. */
 export function compileTextRust<T>(source: string): T {
-  const result = languageRequest(1,source) as {ok:boolean;value:T;message:string}
+  const result = languageRequest(1, source) as { ok: boolean; value: T; message: string }
   if (!result.ok) throw new Error(result.message)
   return result.value as T
 }
@@ -82,16 +93,19 @@ export interface ScadRustDiagnostic {
 /** ABI/input failures have no source diagnostic; do not present them as parse errors. */
 export interface ScadRustBoundaryFailure {
   readonly ok: false
-  readonly error: {readonly code: string; readonly message: string}
+  readonly error: { readonly code: string; readonly message: string }
   readonly diagnostics?: never
   readonly aborted?: never
 }
 export type ScadRustCompileResult =
-  | {readonly ok: true; readonly ast: readonly unknown[]}
-  | {readonly ok: false; readonly diagnostics: readonly ScadRustDiagnostic[]}
+  | { readonly ok: true; readonly ast: readonly unknown[] }
+  | { readonly ok: false; readonly diagnostics: readonly ScadRustDiagnostic[] }
   | ScadRustBoundaryFailure
-export function scadCompileRust(source: string, profile: 'openscad-viewer-subset@1' | 'openscad/stable-2021.01' = 'openscad-viewer-subset@1'): ScadRustCompileResult {
-  return languageRequest(10,{source,profile}) as ScadRustCompileResult
+export function scadCompileRust(
+  source: string,
+  profile: 'openscad-viewer-subset@1' | 'openscad/stable-2021.01' = 'openscad-viewer-subset@1',
+): ScadRustCompileResult {
+  return languageRequest(10, { source, profile }) as ScadRustCompileResult
 }
 
 /** Stage-2 OpenSCAD migration binding: value evaluation via the Rust openscad-core evaluator (ABI op 11). */
@@ -100,55 +114,90 @@ export interface ScadRustShapeDescriptor {
   readonly dimension: number
 }
 export type ScadRustEvalResult =
-  | {readonly ok: true; readonly shapes: readonly ScadRustShapeDescriptor[]; readonly warnings: readonly string[]; readonly reduced: boolean}
-  | {readonly ok: false; readonly diagnostics?: readonly ScadRustDiagnostic[]; readonly aborted?: boolean}
+  | {
+      readonly ok: true
+      readonly shapes: readonly ScadRustShapeDescriptor[]
+      readonly warnings: readonly string[]
+      readonly reduced: boolean
+    }
+  | { readonly ok: false; readonly diagnostics?: readonly ScadRustDiagnostic[]; readonly aborted?: boolean }
   | ScadRustBoundaryFailure
-export function scadEvalRust(source: string, profile: 'openscad-viewer-subset@1' | 'openscad/stable-2021.01' = 'openscad-viewer-subset@1'): ScadRustEvalResult {
-  return languageRequest(11,{source,profile}) as ScadRustEvalResult
+export function scadEvalRust(
+  source: string,
+  profile: 'openscad-viewer-subset@1' | 'openscad/stable-2021.01' = 'openscad-viewer-subset@1',
+): ScadRustEvalResult {
+  return languageRequest(11, { source, profile }) as ScadRustEvalResult
 }
 
-export type GraphRustResult<T> = {ok:true;value:T} | {ok:false;error:{code:string;path:string;message:string;details?:unknown};customizer?:unknown}
-export function prepareGraphRust<T>(kind:'graph'|'nurbs'|'text'|'textNurbs',value:unknown):GraphRustResult<T> {
-  if(kind==='text') {
-    if(typeof value !== 'string' || value.length > 262144)return {ok:false,error:{code:'text_error',path:'',message:'Rush exceeds 256 KiB.'}}
-    return languageRequest(4,value) as GraphRustResult<T>
+export type GraphRustResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; error: { code: string; path: string; message: string; details?: unknown }; customizer?: unknown }
+export function prepareGraphRust<T>(
+  kind: 'graph' | 'nurbs' | 'text' | 'textNurbs',
+  value: unknown,
+): GraphRustResult<T> {
+  if (kind === 'text') {
+    if (typeof value !== 'string' || value.length > 262144)
+      return { ok: false, error: { code: 'text_error', path: '', message: 'Rush exceeds 256 KiB.' } }
+    return languageRequest(4, value) as GraphRustResult<T>
   }
   // NURBS counts resolved values in Rust: each {param:id} becomes one value.
   // Its raw transport may therefore contain up to twice the 30000-value budget.
   // Keep paths linked until an error occurs, avoiding string allocation per value.
-  type PendingValue={value:unknown;depth:number;parent?:PendingValue;key?:string|number}
-  const pending:PendingValue[]=[{value,depth:0}]
-  const limit=kind==='graph'?20000:60000
-  const limitError=():GraphRustResult<T>=>({ok:false,error:{code:'input_limit',path:'/',message:'Document nesting or size limit exceeded.'}})
-  const pathOf=(item:PendingValue)=>{
-    const keys:(string|number)[]=[]
-    while(item.parent){keys.push(item.key!);item=item.parent}
-    return '/'+keys.reverse().join('/')
+  type PendingValue = { value: unknown; depth: number; parent?: PendingValue; key?: string | number }
+  const pending: PendingValue[] = [{ value, depth: 0 }]
+  const limit = kind === 'graph' ? 20000 : 60000
+  const limitError = (): GraphRustResult<T> => ({
+    ok: false,
+    error: { code: 'input_limit', path: '/', message: 'Document nesting or size limit exceeded.' },
+  })
+  const pathOf = (item: PendingValue) => {
+    const keys: (string | number)[] = []
+    while (item.parent) {
+      keys.push(item.key!)
+      item = item.parent
+    }
+    return '/' + keys.reverse().join('/')
   }
-  let scheduled=1
+  let scheduled = 1
   try {
-    while(pending.length){
-      const item=pending.pop()!
-      if(item.depth>64)return limitError()
-      const type=typeof item.value
-      if(type==='undefined'||type==='bigint'||type==='function'||type==='symbol'||(type==='number'&&!Number.isFinite(item.value)))
-        return {ok:false,error:{code:'invalid_document',path:pathOf(item),message:'Expected a finite JSON value.'}}
-      if(Array.isArray(item.value)){
+    while (pending.length) {
+      const item = pending.pop()!
+      if (item.depth > 64) return limitError()
+      const type = typeof item.value
+      if (
+        type === 'undefined' ||
+        type === 'bigint' ||
+        type === 'function' ||
+        type === 'symbol' ||
+        (type === 'number' && !Number.isFinite(item.value))
+      )
+        return {
+          ok: false,
+          error: { code: 'invalid_document', path: pathOf(item), message: 'Expected a finite JSON value.' },
+        }
+      if (Array.isArray(item.value)) {
         // Check before materializing/enqueuing children, including sparse arrays.
-        if(item.value.length>limit-scheduled)return limitError()
-        scheduled+=item.value.length
-        for(let i=item.value.length-1;i>=0;i--)pending.push({value:item.value[i],depth:item.depth+1,parent:item,key:i})
-      }else if(item.value&&type==='object'){
-        for(const key in item.value){
-          if(!Object.prototype.hasOwnProperty.call(item.value,key))continue
-          if(++scheduled>limit)return limitError()
-          pending.push({value:(item.value as Record<string,unknown>)[key],depth:item.depth+1,parent:item,key})
+        if (item.value.length > limit - scheduled) return limitError()
+        scheduled += item.value.length
+        for (let i = item.value.length - 1; i >= 0; i--)
+          pending.push({ value: item.value[i], depth: item.depth + 1, parent: item, key: i })
+      } else if (item.value && type === 'object') {
+        for (const key in item.value) {
+          if (!Object.prototype.hasOwnProperty.call(item.value, key)) continue
+          if (++scheduled > limit) return limitError()
+          pending.push({
+            value: (item.value as Record<string, unknown>)[key],
+            depth: item.depth + 1,
+            parent: item,
+            key,
+          })
         }
       }
     }
-  }catch{
-    return {ok:false,error:{code:'invalid_document',path:'/',message:'Document could not be inspected.'}}
+  } catch {
+    return { ok: false, error: { code: 'invalid_document', path: '/', message: 'Document could not be inspected.' } }
   }
   initialize()
-  return languageRequest(kind==='graph'?2:kind==='textNurbs'?5:3,value) as GraphRustResult<T>
+  return languageRequest(kind === 'graph' ? 2 : kind === 'textNurbs' ? 5 : 3, value) as GraphRustResult<T>
 }

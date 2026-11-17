@@ -18,21 +18,32 @@ describe('reproducible cargo flags', () => {
 
   it('escapes Windows paths as TOML basic strings', () => {
     const { args } = reproducibleCargo('C:\\a\\repo\\', { CARGO_HOME: 'C:\\Users\\r\\.cargo' })
-    expect(args[1]).toBe(String.raw`build.rustflags=["--remap-path-prefix=C:\\Users\\r\\.cargo=/cargo","--remap-path-prefix=C:\\a\\repo=/src"]`)
+    expect(args[1]).toBe(
+      String.raw`build.rustflags=["--remap-path-prefix=C:\\Users\\r\\.cargo=/cargo","--remap-path-prefix=C:\\a\\repo=/src"]`,
+    )
   })
 
   it('extends explicit RUSTFLAGS instead of being ignored by cargo', () => {
-    const { args, env } = reproducibleCargo('/r', { CARGO_HOME: '/h', RUSTFLAGS: '-Ctarget-feature=+simd128  -Copt-level=3' })
+    const { args, env } = reproducibleCargo('/r', {
+      CARGO_HOME: '/h',
+      RUSTFLAGS: '-Ctarget-feature=+simd128  -Copt-level=3',
+    })
     expect(args).toEqual([])
     expect(env.CARGO_ENCODED_RUSTFLAGS.split('\x1f')).toEqual([
-      '-Ctarget-feature=+simd128', '-Copt-level=3', '--remap-path-prefix=/h=/cargo', '--remap-path-prefix=/r=/src',
+      '-Ctarget-feature=+simd128',
+      '-Copt-level=3',
+      '--remap-path-prefix=/h=/cargo',
+      '--remap-path-prefix=/r=/src',
     ])
   })
 
   it('keeps encoded rustflags and paths with spaces intact', () => {
     const { env } = reproducibleCargo('/my repo', { CARGO_HOME: '/h', CARGO_ENCODED_RUSTFLAGS: '-Cfoo\x1f-Cbar' })
     expect(env.CARGO_ENCODED_RUSTFLAGS.split('\x1f')).toEqual([
-      '-Cfoo', '-Cbar', '--remap-path-prefix=/h=/cargo', '--remap-path-prefix=/my repo=/src',
+      '-Cfoo',
+      '-Cbar',
+      '--remap-path-prefix=/h=/cargo',
+      '--remap-path-prefix=/my repo=/src',
     ])
   })
 })

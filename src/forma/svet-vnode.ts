@@ -78,7 +78,13 @@ export interface SvetComponentInstance {
 export type VNode = SvetVNode
 export type VNodeChild = SvetVNode | string | number | boolean | null | undefined | VNodeChild[]
 export type Slots = Readonly<Record<string, ((...args: any[]) => VNode[]) | undefined>>
-export type ComponentPublicInstance<P = {}, B = {}> = { $props: P; $attrs: Record<string, any>; $slots: Slots; $emit: (event: string, ...args: any[]) => void } & P & B
+export type ComponentPublicInstance<P = {}, B = {}> = {
+  $props: P
+  $attrs: Record<string, any>
+  $slots: Slots
+  $emit: (event: string, ...args: any[]) => void
+} & P &
+  B
 export type FunctionalComponent<P = {}, E = any> = {
   (props: P, ctx: { attrs: any; slots: any; emit: E }): any
   props?: any
@@ -216,7 +222,7 @@ export function defineAsyncComponent<T extends Component = Component>(
 
 let currentScopeId: string | null = null
 export function withScopeId(id: string): <T extends (...args: any[]) => any>(fn: T) => T {
-  return (<T extends (...args: any[]) => any>(fn: T): T => {
+  return <T extends (...args: any[]) => any>(fn: T): T => {
     return ((...args: any[]) => {
       const prev = currentScopeId
       currentScopeId = id
@@ -226,7 +232,7 @@ export function withScopeId(id: string): <T extends (...args: any[]) => any>(fn:
         currentScopeId = prev
       }
     }) as unknown as T
-  })
+  }
 }
 
 export function isVNode(value: unknown): value is SvetVNode {
@@ -346,10 +352,7 @@ export function withCtx(fn: (...args: any[]) => any, ctx = currentRenderingInsta
   }
 }
 
-export function renderList(
-  source: any,
-  renderItem: (value: any, keyOrIndex: any, index?: number) => any,
-): any[] {
+export function renderList(source: any, renderItem: (value: any, keyOrIndex: any, index?: number) => any): any[] {
   if (Array.isArray(source) || typeof source === 'string') {
     const items = new Array(source.length)
     for (let i = 0, l = source.length; i < l; i++) {

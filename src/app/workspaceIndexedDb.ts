@@ -17,9 +17,7 @@ interface WorkspaceRow {
 }
 
 export type WorkspaceRepositoryLoadResult =
-  | { status: 'empty' }
-  | { status: 'found'; snapshot: WorkspaceDocumentSnapshot }
-  | { status: 'invalid' }
+  { status: 'empty' } | { status: 'found'; snapshot: WorkspaceDocumentSnapshot } | { status: 'invalid' }
 
 export interface WorkspaceSnapshotRepository {
   load(): Promise<WorkspaceRepositoryLoadResult>
@@ -132,7 +130,11 @@ export class IndexedDbWorkspaceRepository implements WorkspaceSnapshotRepository
     const pending = this.databasePromise
     this.databasePromise = null
     if (!pending) return
-    try { (await pending).close() } catch { /* A failed open has nothing to close. */ }
+    try {
+      ;(await pending).close()
+    } catch {
+      /* A failed open has nothing to close. */
+    }
   }
 
   private database(): Promise<IDBDatabase> {
@@ -142,7 +144,10 @@ export class IndexedDbWorkspaceRepository implements WorkspaceSnapshotRepository
     const pending = new Promise<IDBDatabase>((resolve, reject) => {
       const request = this.factory!.open(WORKSPACE_DATABASE_NAME, WORKSPACE_DATABASE_VERSION)
       let settled = false
-      const timeout = setTimeout(() => fail(new WorkspaceIndexedDbUnavailableError('Timed out opening IndexedDB')), this.openTimeoutMs)
+      const timeout = setTimeout(
+        () => fail(new WorkspaceIndexedDbUnavailableError('Timed out opening IndexedDB')),
+        this.openTimeoutMs,
+      )
       const fail = (error: Error) => {
         if (settled) return
         settled = true

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import {test} from 'node:test'
-import {includedOutsideCrates} from '../scripts/check-head-builds.mjs'
+import { test } from 'node:test'
+import { includedOutsideCrates } from '../scripts/check-head-builds.mjs'
 
 test('the HEAD build check exports files that crates include from outside crates/', () => {
   const files = includedOutsideCrates('HEAD')

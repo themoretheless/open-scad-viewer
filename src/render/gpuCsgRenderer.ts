@@ -6,7 +6,6 @@
  * bottlenecks during interactive preview and parameter editing.
  */
 
-
 import type { GpuCsgPrimitive, GpuCsgTree } from './gpuCsgTypes'
 import { CSG_DEPTH_WGSL, CSG_SHADE_WGSL } from './gpuCsgShaders'
 import { normalMatrixFromModel } from './gpuCsgPrimitives'
@@ -59,13 +58,15 @@ export class GpuCsgPipelineManager {
     const depthModule = dev.createShaderModule({ code: CSG_DEPTH_WGSL })
     const shadeModule = dev.createShaderModule({ code: CSG_SHADE_WGSL })
 
-    const vertexBuffers: GPUVertexBufferLayout[] = [{
-      arrayStride: 24, // 6 floats * 4 bytes
-      attributes: [
-        { shaderLocation: 0, offset: 0, format: 'float32x3' },  // position
-        { shaderLocation: 1, offset: 12, format: 'float32x3' }, // normal
-      ],
-    }]
+    const vertexBuffers: GPUVertexBufferLayout[] = [
+      {
+        arrayStride: 24, // 6 floats * 4 bytes
+        attributes: [
+          { shaderLocation: 0, offset: 0, format: 'float32x3' }, // position
+          { shaderLocation: 1, offset: 12, format: 'float32x3' }, // normal
+        ],
+      },
+    ]
 
     // 1. Pass 1: Base Depth Pipeline
     const depthPipeline = dev.createRenderPipeline({
@@ -303,11 +304,13 @@ export class GpuCsgRenderer {
       // Fast path: pure union primitive without cutters
       if (term.cutters.length === 0) {
         const pass = encoder.beginRenderPass({
-          colorAttachments: [{
-            view: colorView,
-            loadOp: isFirstTerm ? 'clear' : 'load',
-            storeOp: 'store',
-          }],
+          colorAttachments: [
+            {
+              view: colorView,
+              loadOp: isFirstTerm ? 'clear' : 'load',
+              storeOp: 'store',
+            },
+          ],
           depthStencilAttachment: {
             view: depthStencilView,
             depthClearValue: 1.0,
@@ -378,11 +381,13 @@ export class GpuCsgRenderer {
 
       // Pass 3: Shade Visible Base Surface
       const shadePass = encoder.beginRenderPass({
-        colorAttachments: [{
-          view: colorView,
-          loadOp: isFirstTerm ? 'clear' : 'load',
-          storeOp: 'store',
-        }],
+        colorAttachments: [
+          {
+            view: colorView,
+            loadOp: isFirstTerm ? 'clear' : 'load',
+            storeOp: 'store',
+          },
+        ],
         depthStencilAttachment: {
           view: depthStencilView,
           depthLoadOp: 'load',

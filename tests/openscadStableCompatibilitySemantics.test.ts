@@ -34,18 +34,14 @@ describe('OpenSCAD 2021.01 semantic compatibility modules', () => {
       }
     `)
 
-    expect(artifact.warnings).toEqual([
-      'ECHO: "first"',
-      'ECHO: "second"',
-      'ECHO: 4, 11',
-    ])
+    expect(artifact.warnings).toEqual(['ECHO: "first"', 'ECHO: "second"', 'ECHO: 4, 11'])
     expect(artifact.warnings).not.toContain('ECHO: "ignored positional"')
-    expect(artifact.program.core.nodes).toEqual([
-      expect.objectContaining({ kind: 'box', size: [4, 11, 1] }),
-    ])
-    expect(artifact.program.core.operations.some(operation => (
-      operation.category === 'control' && operation.name === '$assign'
-    ))).toBe(true)
+    expect(artifact.program.core.nodes).toEqual([expect.objectContaining({ kind: 'box', size: [4, 11, 1] })])
+    expect(
+      artifact.program.core.operations.some(
+        operation => operation.category === 'control' && operation.name === '$assign',
+      ),
+    ).toBe(true)
   })
 
   it('implements child() as the first-argument-only children continuation', () => {
@@ -63,15 +59,15 @@ describe('OpenSCAD 2021.01 semantic compatibility modules', () => {
       'Child index (5) out of bounds (2 children)',
     ])
     expect(artifact.warnings).not.toContain('ECHO: "ignored extra"')
-    expect(artifact.program.core.nodes
-      .filter(node => node.kind === 'box')
-      .map(node => node.size)).toEqual([
+    expect(artifact.program.core.nodes.filter(node => node.kind === 'box').map(node => node.size)).toEqual([
       [1, 1, 1],
       [2, 2, 2],
     ])
-    expect(artifact.program.core.operations.some(operation => (
-      operation.category === 'control' && operation.name === 'children'
-    ))).toBe(true)
+    expect(
+      artifact.program.core.operations.some(
+        operation => operation.category === 'control' && operation.name === 'children',
+      ),
+    ).toBe(true)
   })
 
   it('lowers dxf_linear_extrude() child mode with its historical slots and height fallback', () => {

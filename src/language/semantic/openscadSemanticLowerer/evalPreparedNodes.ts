@@ -1,11 +1,22 @@
 import { CSS_COLORS, IDENTITY_MATRIX, LegacyBindingCompatibilityError, MAX_SHAPES } from '../openscadSemanticLowerer'
 const MAX_FN = 256
-import type { EvalContext, RGBA, SemanticNodeWithoutId, SemanticReducedShape, SemanticShape } from '../openscadSemanticLowerer'
+import type {
+  EvalContext,
+  RGBA,
+  SemanticNodeWithoutId,
+  SemanticReducedShape,
+  SemanticShape,
+} from '../openscadSemanticLowerer'
 import { hasOpenScadViewportModifier } from '../../openscadCompiler'
 import type { CallNode, ModuleNode, Statement, Value } from '../../openscadCompiler'
 import { MAX_EVAL_OPS, evaluationError, isStableProfile } from '../../openScadStableExpressionEval'
 import { OpenSCADParseError } from '../../openscadErrors'
-import type { SemanticDimension, SemanticDynamicSlot, SemanticMatrix4, SemanticValueType } from '../../../core/semanticProgram'
+import type {
+  SemanticDimension,
+  SemanticDynamicSlot,
+  SemanticMatrix4,
+  SemanticValueType,
+} from '../../../core/semanticProgram'
 import { arg, evalExpression, evalNodes, viewportSemanticSlots } from './evalExpression'
 import { canonicalNumber, finiteNumber, identityValue, poll, vectorValue } from './semanticValueType'
 import { clamp01 } from '../../../kernel/geometry/math3d'
@@ -14,21 +25,25 @@ import { evalNode } from './evalNode'
 export function evalPreparedNodes(nodes: readonly Statement[], ctx: EvalContext): SemanticShape[] {
   const output: SemanticShape[] = []
   for (const statement of nodes) {
-    if (isStableProfile(ctx) && statement.type === 'call'
-      && hasOpenScadViewportModifier(statement, 'disable')) {
+    if (isStableProfile(ctx) && statement.type === 'call' && hasOpenScadViewportModifier(statement, 'disable')) {
       // `*` is the sole modifier which suppresses language evaluation itself.
       continue
     }
     const occurrenceStart = ctx.builder.occurrences.length
-    const background = isStableProfile(ctx) && statement.type === 'call'
-      && ctx.viewportRootOwner !== statement
-      && hasOpenScadViewportModifier(statement, 'background')
-    const backgroundCheckpoint = background && ctx.quality === 'full'
-      ? ctx.builder.runtimeCheckpoint()
-      : null
+    const background =
+      isStableProfile(ctx) &&
+      statement.type === 'call' &&
+      ctx.viewportRootOwner !== statement &&
+      hasOpenScadViewportModifier(statement, 'background')
+    const backgroundCheckpoint = background && ctx.quality === 'full' ? ctx.builder.runtimeCheckpoint() : null
     try {
       poll(ctx)
-      if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, statement.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString('en-US')} evaluation step limit`)
+      if (++ctx.budget.ops > MAX_EVAL_OPS)
+        evaluationError(
+          ctx,
+          statement.p,
+          `Model exceeds the ${MAX_EVAL_OPS.toLocaleString('en-US')} evaluation step limit`,
+        )
       if (statement.type === 'assign') {
         ctx.builder.invocation(statement, ctx.parentOccurrence, ctx.pendingSlots)
         if (!isStableProfile(ctx)) ctx.env.set(statement.name, evalExpression(statement.value, ctx))
@@ -46,10 +61,10 @@ export function evalPreparedNodes(nodes: readonly Statement[], ctx: EvalContext)
         output.push(...shapes)
         if (background && shapes.length > 0) ctx.reduced.value = true
       }
-      if (output.length > MAX_SHAPES) evaluationError(ctx, statement.p, `Model exceeds the ${MAX_SHAPES.toLocaleString('en-US')} object limit`)
+      if (output.length > MAX_SHAPES)
+        evaluationError(ctx, statement.p, `Model exceeds the ${MAX_SHAPES.toLocaleString('en-US')} object limit`)
     } catch (error) {
-      const capturable = error instanceof OpenSCADParseError
-        || error instanceof LegacyBindingCompatibilityError
+      const capturable = error instanceof OpenSCADParseError || error instanceof LegacyBindingCompatibilityError
       if (capturable && ctx.builder.terminalOccurrence === null) {
         const operation = ctx.builder.registered.byStatement.get(statement)
         // Full-profile echo is intentionally transparent in semantic-program
@@ -93,9 +108,10 @@ export function frameContext(
   ctx: EvalContext,
   alternative = false,
 ): EvalContext | null {
-  const operation = alternative && owner.type === 'call'
-    ? ctx.builder.registered.alternativeByCall.get(owner)
-    : ctx.builder.registered.bodyByStatement.get(owner)
+  const operation =
+    alternative && owner.type === 'call'
+      ? ctx.builder.registered.alternativeByCall.get(owner)
+      : ctx.builder.registered.bodyByStatement.get(owner)
   if (operation === undefined) return null
   const frame = ctx.builder.invocationOperation(operation, ownerOccurrence)
   return { ...ctx, parentOccurrence: frame, pendingSlots: [] }
@@ -115,26 +131,52 @@ export function multiplyMatrix(left: SemanticMatrix4, right: SemanticMatrix4): S
 
 export function translationMatrix(x: number, y: number, z: number): SemanticMatrix4 {
   const matrix = [...IDENTITY_MATRIX] as number[]
-  matrix[12] = x; matrix[13] = y; matrix[14] = z
+  matrix[12] = x
+  matrix[13] = y
+  matrix[14] = z
   return matrix as unknown as SemanticMatrix4
 }
 
 export function scaleMatrix(x: number, y: number, z: number): SemanticMatrix4 {
   const matrix = [...IDENTITY_MATRIX] as number[]
-  matrix[0] = x; matrix[5] = y; matrix[10] = z
+  matrix[0] = x
+  matrix[5] = y
+  matrix[10] = z
   return matrix as unknown as SemanticMatrix4
 }
 
-export function axisAngleMatrix(axis: readonly number[], degrees: number, ctx: EvalContext, position: number): SemanticMatrix4 {
+export function axisAngleMatrix(
+  axis: readonly number[],
+  degrees: number,
+  ctx: EvalContext,
+  position: number,
+): SemanticMatrix4 {
   const length = Math.hypot(axis[0] ?? 0, axis[1] ?? 0, axis[2] ?? 0)
   if (length === 0) evaluationError(ctx, position, 'Rotation axis cannot be zero')
-  const x = (axis[0] ?? 0) / length, y = (axis[1] ?? 0) / length, z = (axis[2] ?? 0) / length
-  const angle = degrees * Math.PI / 180, c = Math.cos(angle), s = Math.sin(angle), t = 1 - c
+  const x = (axis[0] ?? 0) / length,
+    y = (axis[1] ?? 0) / length,
+    z = (axis[2] ?? 0) / length
+  const angle = (degrees * Math.PI) / 180,
+    c = Math.cos(angle),
+    s = Math.sin(angle),
+    t = 1 - c
   return [
-    canonicalNumber(t*x*x+c), canonicalNumber(t*x*y+s*z), canonicalNumber(t*x*z-s*y), 0,
-    canonicalNumber(t*x*y-s*z), canonicalNumber(t*y*y+c), canonicalNumber(t*y*z+s*x), 0,
-    canonicalNumber(t*x*z+s*y), canonicalNumber(t*y*z-s*x), canonicalNumber(t*z*z+c), 0,
-    0, 0, 0, 1,
+    canonicalNumber(t * x * x + c),
+    canonicalNumber(t * x * y + s * z),
+    canonicalNumber(t * x * z - s * y),
+    0,
+    canonicalNumber(t * x * y - s * z),
+    canonicalNumber(t * y * y + c),
+    canonicalNumber(t * y * z + s * x),
+    0,
+    canonicalNumber(t * x * z + s * y),
+    canonicalNumber(t * y * z - s * x),
+    canonicalNumber(t * z * z + c),
+    0,
+    0,
+    0,
+    0,
+    1,
   ]
 }
 
@@ -146,13 +188,28 @@ export function eulerMatrix(x: number, y: number, z: number): SemanticMatrix4 {
 }
 
 export function axisAngleMatrixUnchecked(axis: readonly [number, number, number], degrees: number): SemanticMatrix4 {
-  const angle = degrees * Math.PI / 180, c = Math.cos(angle), s = Math.sin(angle), t = 1 - c
+  const angle = (degrees * Math.PI) / 180,
+    c = Math.cos(angle),
+    s = Math.sin(angle),
+    t = 1 - c
   const [x, y, z] = axis
   return [
-    canonicalNumber(t*x*x+c), canonicalNumber(t*x*y+s*z), canonicalNumber(t*x*z-s*y), 0,
-    canonicalNumber(t*x*y-s*z), canonicalNumber(t*y*y+c), canonicalNumber(t*y*z+s*x), 0,
-    canonicalNumber(t*x*z+s*y), canonicalNumber(t*y*z-s*x), canonicalNumber(t*z*z+c), 0,
-    0, 0, 0, 1,
+    canonicalNumber(t * x * x + c),
+    canonicalNumber(t * x * y + s * z),
+    canonicalNumber(t * x * z - s * y),
+    0,
+    canonicalNumber(t * x * y - s * z),
+    canonicalNumber(t * y * y + c),
+    canonicalNumber(t * y * z + s * x),
+    0,
+    canonicalNumber(t * x * z + s * y),
+    canonicalNumber(t * y * z - s * x),
+    canonicalNumber(t * z * z + c),
+    0,
+    0,
+    0,
+    0,
+    1,
   ]
 }
 
@@ -162,25 +219,34 @@ export function mirrorMatrix(
   ctx: EvalContext,
   position: number,
 ): SemanticMatrix4 {
-  const zValue = dimension === 'region2' ? 0 : vector[2] ?? 0
+  const zValue = dimension === 'region2' ? 0 : (vector[2] ?? 0)
   const length = Math.hypot(vector[0] ?? 0, vector[1] ?? 0, zValue)
   if (length === 0) {
     if (ctx.builder.languageContract === 'openscad-viewer/brep-1') {
       evaluationError(ctx, position, 'Mirror normal cannot be zero')
     }
-    return [
-      0, 0, 0, 0,
-      0, 0, 0, 0,
-      0, 0, dimension === 'region2' ? 1 : 0, 0,
-      0, 0, 0, 1,
-    ]
+    return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, dimension === 'region2' ? 1 : 0, 0, 0, 0, 0, 1]
   }
-  const x = (vector[0] ?? 0) / length, y = (vector[1] ?? 0) / length, z = zValue / length
+  const x = (vector[0] ?? 0) / length,
+    y = (vector[1] ?? 0) / length,
+    z = zValue / length
   return [
-    canonicalNumber(1-2*x*x), canonicalNumber(-2*x*y), canonicalNumber(-2*x*z), 0,
-    canonicalNumber(-2*y*x), canonicalNumber(1-2*y*y), canonicalNumber(-2*y*z), 0,
-    canonicalNumber(-2*z*x), canonicalNumber(-2*z*y), canonicalNumber(1-2*z*z), 0,
-    0, 0, 0, 1,
+    canonicalNumber(1 - 2 * x * x),
+    canonicalNumber(-2 * x * y),
+    canonicalNumber(-2 * x * z),
+    0,
+    canonicalNumber(-2 * y * x),
+    canonicalNumber(1 - 2 * y * y),
+    canonicalNumber(-2 * y * z),
+    0,
+    canonicalNumber(-2 * z * x),
+    canonicalNumber(-2 * z * y),
+    canonicalNumber(1 - 2 * z * z),
+    0,
+    0,
+    0,
+    0,
+    1,
   ]
 }
 
@@ -211,7 +277,12 @@ export function matrixValue(value: Value, ctx: EvalContext, position: number): S
 export function parseColor(value: Value, ctx: EvalContext, position: number): RGBA {
   if (Array.isArray(value)) {
     const channels = vectorValue(value, ctx, position, 'color')
-    return [clamp01(channels[0] ?? 0.5), clamp01(channels[1] ?? 0.5), clamp01(channels[2] ?? 0.5), clamp01(channels[3] ?? 1)]
+    return [
+      clamp01(channels[0] ?? 0.5),
+      clamp01(channels[1] ?? 0.5),
+      clamp01(channels[2] ?? 0.5),
+      clamp01(channels[3] ?? 1),
+    ]
   }
   if (typeof value !== 'string') evaluationError(ctx, position, 'color() expects a name or RGB(A) vector')
   const named = CSS_COLORS[value.toLowerCase()]
@@ -237,11 +308,7 @@ export function invoke(
   slots: readonly SemanticDynamicSlot[] = [],
 ): number {
   const viewportSlots = node.type === 'call' ? viewportSemanticSlots(node, ctx) : []
-  return ctx.builder.invocation(
-    node,
-    ctx.parentOccurrence,
-    [...ctx.pendingSlots, ...viewportSlots, ...slots],
-  )
+  return ctx.builder.invocation(node, ctx.parentOccurrence, [...ctx.pendingSlots, ...viewportSlots, ...slots])
 }
 
 export function nodeValueType(shape: SemanticShape, ctx: EvalContext): SemanticValueType {
@@ -252,9 +319,7 @@ export function requestedSegments(node: CallNode, ctx: EvalContext): number | nu
   const local = arg(node, '$fn', -1, undefined, ctx)
   const global = ctx.env.get('$fn')
   const raw = local === undefined || local === 0 ? global : local
-  return raw === undefined || raw === 0
-    ? null
-    : Math.round(finiteNumber(raw, ctx, node.p, '$fn'))
+  return raw === undefined || raw === 0 ? null : Math.round(finiteNumber(raw, ctx, node.p, '$fn'))
 }
 
 export function semanticSegments(
@@ -305,7 +370,9 @@ export function semanticSegmentsFromRequested(
   return segments
 }
 
-export function primitiveColor(ctx: EvalContext): RGBA { return ctx.builder.nextColor() }
+export function primitiveColor(ctx: EvalContext): RGBA {
+  return ctx.builder.nextColor()
+}
 
 export function transformShapes(
   occurrence: number,
@@ -313,12 +380,19 @@ export function transformShapes(
   matrixFor: (shape: SemanticShape) => SemanticMatrix4,
   ctx: EvalContext,
 ): SemanticShape[] {
-  return shapes.map(shape => ctx.builder.produce(occurrence, {
-    kind: 'transform',
-    valueType: nodeValueType(shape, ctx),
-    input: shape.node,
-    matrix: matrixFor(shape),
-  }, shape.color, shape.identityOccurrence))
+  return shapes.map(shape =>
+    ctx.builder.produce(
+      occurrence,
+      {
+        kind: 'transform',
+        valueType: nodeValueType(shape, ctx),
+        input: shape.node,
+        matrix: matrixFor(shape),
+      },
+      shape.color,
+      shape.identityOccurrence,
+    ),
+  )
 }
 
 export function combineShapes(
@@ -344,9 +418,8 @@ export function combineShapes(
     valueType,
     inputs: shapes.map(shape => shape.node),
   }
-  const semanticNode: SemanticNodeWithoutId = operation === 'hull'
-    ? { kind: 'hull', ...common }
-    : { kind: 'boolean', operation, ...common }
+  const semanticNode: SemanticNodeWithoutId =
+    operation === 'hull' ? { kind: 'hull', ...common } : { kind: 'boolean', operation, ...common }
   return [ctx.builder.produce(occurrence, semanticNode, shapes[0]!.color)]
 }
 
@@ -357,13 +430,15 @@ export function unionReduceInternal(
 ): SemanticReducedShape | null {
   if (shapes.length === 0) return null
   const dimension = shapes[0]!.dimension
-  if (shapes.some(shape => shape.dimension !== dimension)) evaluationError(ctx, position, 'union() cannot mix 2D and 3D children')
-  if (shapes.length === 1) return {
-    node: shapes[0]!.node,
-    dimension,
-    color: shapes[0]!.color,
-    identityOccurrence: shapes[0]!.identityOccurrence,
-  }
+  if (shapes.some(shape => shape.dimension !== dimension))
+    evaluationError(ctx, position, 'union() cannot mix 2D and 3D children')
+  if (shapes.length === 1)
+    return {
+      node: shapes[0]!.node,
+      dimension,
+      color: shapes[0]!.color,
+      identityOccurrence: shapes[0]!.identityOccurrence,
+    }
   const firstType = nodeValueType(shapes[0]!, ctx)
   const node = ctx.builder.addInternalNode({
     kind: 'boolean',

@@ -1,7 +1,6 @@
 import type { GpuCsgPrimitive } from './gpuCsgTypes'
 import { generateUnitCube, generateUnitCylinder, generateUnitSphere, type GeometryData } from './gpuCsgPrimitives'
 
-
 /* ── WebGPU Geometry Cache ────────────────────────────── */
 
 export interface CachedGpuMesh {

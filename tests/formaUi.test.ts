@@ -28,11 +28,18 @@ const renderer = createRenderer<TestNode, TestNode>({
   createElement: tag => new TestNode(tag),
   createText: text => Object.assign(new TestNode('#text'), { text }),
   createComment: () => new TestNode('#comment'),
-  setText: (n, text) => { n.text = text },
-  setElementText: (n, text) => { n.children = []; n.text = text },
+  setText: (n, text) => {
+    n.text = text
+  },
+  setElementText: (n, text) => {
+    n.children = []
+    n.text = text
+  },
   parentNode: n => n.parent,
   nextSibling: n => n.parent?.children[n.parent.children.indexOf(n) + 1] ?? null,
-  patchProp: (n, key, _old, value) => { n.props[key] = value },
+  patchProp: (n, key, _old, value) => {
+    n.props[key] = value
+  },
   insert: (n, parent, anchor) => {
     n.parent = parent
     const i = anchor ? parent.children.indexOf(anchor) : -1
@@ -43,7 +50,9 @@ const renderer = createRenderer<TestNode, TestNode>({
     if (n.parent) n.parent.children = n.parent.children.filter(c => c !== n)
   },
   setScopeId: () => {},
-  insertStaticContent: () => { throw new Error('Unexpected static content') },
+  insertStaticContent: () => {
+    throw new Error('Unexpected static content')
+  },
 })
 
 function allNodes(root: TestNode): TestNode[] {
@@ -54,12 +63,7 @@ function textContent(node: TestNode): string {
   return node.text + node.children.map(textContent).join('')
 }
 
-function mountForma(
-  source: string,
-  state: Record<string, unknown>,
-  onAction = vi.fn(),
-  onBinding = vi.fn(),
-) {
+function mountForma(source: string, state: Record<string, unknown>, onAction = vi.fn(), onBinding = vi.fn()) {
   const root = new TestNode('root')
   const Host = defineComponent({
     setup() {
@@ -124,17 +128,13 @@ describe('Forma UI engine & open-scad-viewer declarative .ui regions', () => {
       exportLabel: 'Экспорт',
     })
 
-    const sourceBtn = nodes.find(
-      n => n.tag === 'button' && String(n.props.class ?? '').includes('source-toggle'),
-    )
+    const sourceBtn = nodes.find(n => n.tag === 'button' && String(n.props.class ?? '').includes('source-toggle'))
     expect(sourceBtn).toBeDefined()
     expect(sourceBtn!.props['aria-label']).toBe('Исходный код')
     sourceBtn!.props.onClick({} as Event)
     expect(onAction).toHaveBeenCalledWith('toggleEditor', [], expect.anything())
 
-    const modeGroup = nodes.find(
-      n => n.tag === 'div' && String(n.props.class ?? '').includes('mode-switch'),
-    )
+    const modeGroup = nodes.find(n => n.tag === 'div' && String(n.props.class ?? '').includes('mode-switch'))
     expect(modeGroup).toBeDefined()
     const modeButtons = modeGroup!.children.filter(n => n.tag === 'button')
     expect(modeButtons.length).toBe(2)
@@ -154,9 +154,7 @@ describe('Forma UI engine & open-scad-viewer declarative .ui regions', () => {
       cancelSolidLabel: 'Отмена',
     })
 
-    const renderBtn = nodes.find(
-      n => n.tag === 'button' && String(n.props.class ?? '').includes('btn-primary'),
-    )
+    const renderBtn = nodes.find(n => n.tag === 'button' && String(n.props.class ?? '').includes('btn-primary'))
     expect(renderBtn).toBeDefined()
     expect(textContent(renderBtn!)).toContain('Собрать')
     renderBtn!.props.onClick({} as Event)
@@ -171,30 +169,25 @@ describe('Forma UI engine & open-scad-viewer declarative .ui regions', () => {
   })
 
   it('renders ViewerToolbar.ui, SelectionModes.ui, DockRail.ui, and Statusbar.ui', () => {
-    const viewerSlots = mountForma(
-      viewerToolbarUi,
-      {
-        toolbarClass: 'viewer-toolbar with-dock',
-        fitLabel: 'Вписать',
-        resetLabel: 'Сбросить вид',
-        canPreviousView: true,
-        previousViewLabel: 'Предыдущий вид',
-        previousViewTitle: 'Предыдущий вид',
-        isOrthographic: false,
-        projectionLabel: 'Перспектива',
-        projectionTitle: 'Перспектива',
-        gridVisible: true,
-        gridLabel: 'Сетка',
-        displayLabel: 'Отображение',
-        displayMode: 'shaded',
-        shadedLabel: 'Заливка',
-        edgesLabel: 'Рёбра',
-        xrayLabel: 'Рентген',
-      },
-    )
-    const fitBtn = viewerSlots.nodes.find(
-      n => n.tag === 'button' && n.props['aria-label'] === 'Вписать',
-    )
+    const viewerSlots = mountForma(viewerToolbarUi, {
+      toolbarClass: 'viewer-toolbar with-dock',
+      fitLabel: 'Вписать',
+      resetLabel: 'Сбросить вид',
+      canPreviousView: true,
+      previousViewLabel: 'Предыдущий вид',
+      previousViewTitle: 'Предыдущий вид',
+      isOrthographic: false,
+      projectionLabel: 'Перспектива',
+      projectionTitle: 'Перспектива',
+      gridVisible: true,
+      gridLabel: 'Сетка',
+      displayLabel: 'Отображение',
+      displayMode: 'shaded',
+      shadedLabel: 'Заливка',
+      edgesLabel: 'Рёбра',
+      xrayLabel: 'Рентген',
+    })
+    const fitBtn = viewerSlots.nodes.find(n => n.tag === 'button' && n.props['aria-label'] === 'Вписать')
     expect(fitBtn).toBeDefined()
     fitBtn!.props.onClick({} as Event)
     expect(viewerSlots.onAction).toHaveBeenCalledWith('fitView', [], expect.anything())
@@ -241,9 +234,7 @@ describe('Forma UI engine & open-scad-viewer declarative .ui regions', () => {
       isolateTitle: 'Изолировать',
       deselectLabel: 'Снять выделение',
     })
-    const hud = sel.nodes.find(
-      n => n.tag === 'div' && String(n.props.class ?? '').includes('selection-hud'),
-    )
+    const hud = sel.nodes.find(n => n.tag === 'div' && String(n.props.class ?? '').includes('selection-hud'))
     expect(hud).toBeDefined()
     expect(textContent(hud!)).toContain('Выбрано: Объект 1 / 2')
     sel.unmount()
@@ -263,9 +254,7 @@ describe('Forma UI engine & open-scad-viewer declarative .ui regions', () => {
       cancelLabel: 'Отмена',
       hintLabel: 'Орбита: перетаскивание',
     })
-    const statusbar = status.nodes.find(
-      n => n.tag === 'footer' && String(n.props.class ?? '').includes('statusbar'),
-    )
+    const statusbar = status.nodes.find(n => n.tag === 'footer' && String(n.props.class ?? '').includes('statusbar'))
     expect(statusbar).toBeDefined()
     expect(textContent(statusbar!)).toContain('Manifold · Forma')
     status.unmount()
@@ -273,59 +262,164 @@ describe('Forma UI engine & open-scad-viewer declarative .ui regions', () => {
 })
 
 it('keeps live mode state, conditional actions and application slots', async () => {
-  const state = reactive({ workspaceMode: 'solid', modes: [{id:'solid',label:'Solid'}, {id:'mesh',label:'Mesh'}], editorOpen:false, workspaceConflict:false })
-  const root = new TestNode('root'), actions = vi.fn()
-  const app = renderer.createApp({render:()=>h(FormaRegion,{source:topbarUi,state,onAction:actions},{fileMenu:()=>h('mark',{id:'file-slot'},'File menu'),settingsMenu:()=>h('mark',{id:'settings-slot'},'Settings')})})
+  const state = reactive({
+    workspaceMode: 'solid',
+    modes: [
+      { id: 'solid', label: 'Solid' },
+      { id: 'mesh', label: 'Mesh' },
+    ],
+    editorOpen: false,
+    workspaceConflict: false,
+  })
+  const root = new TestNode('root'),
+    actions = vi.fn()
+  const app = renderer.createApp({
+    render: () =>
+      h(
+        FormaRegion,
+        { source: topbarUi, state, onAction: actions },
+        {
+          fileMenu: () => h('mark', { id: 'file-slot' }, 'File menu'),
+          settingsMenu: () => h('mark', { id: 'settings-slot' }, 'Settings'),
+        },
+      ),
+  })
   app.mount(root)
-  const modes=()=>allNodes(root).filter(n=>n.tag==='button'&&String(n.props.class).includes('forma-seg-btn'))
+  const modes = () => allNodes(root).filter(n => n.tag === 'button' && String(n.props.class).includes('forma-seg-btn'))
   try {
-    expect(modes().map(n=>n.props['aria-pressed'])).toEqual([true,false])
-    expect(allNodes(root).filter(n=>n.tag==='mark')).toHaveLength(2)
-    state.workspaceMode='mesh';state.editorOpen=true;await nextTick()
-    expect(modes().map(n=>n.props['aria-pressed'])).toEqual([false,true])
-    expect(allNodes(root).find(n=>String(n.props.class).includes('source-toggle'))!.props['aria-pressed']).toBe(true)
-    state.modes.push({id:'code',label:'Code'});await nextTick();modes()[2].props.onClick({})
-    expect(actions).toHaveBeenLastCalledWith('openWorkspaceMode',['code'],expect.anything())
-  } finally {app.unmount()}
+    expect(modes().map(n => n.props['aria-pressed'])).toEqual([true, false])
+    expect(allNodes(root).filter(n => n.tag === 'mark')).toHaveLength(2)
+    state.workspaceMode = 'mesh'
+    state.editorOpen = true
+    await nextTick()
+    expect(modes().map(n => n.props['aria-pressed'])).toEqual([false, true])
+    expect(allNodes(root).find(n => String(n.props.class).includes('source-toggle'))!.props['aria-pressed']).toBe(true)
+    state.modes.push({ id: 'code', label: 'Code' })
+    await nextTick()
+    modes()[2].props.onClick({})
+    expect(actions).toHaveBeenLastCalledWith('openWorkspaceMode', ['code'], expect.anything())
+  } finally {
+    app.unmount()
+  }
 })
 
 it('uses full comparison tokens and unary precedence for live control conditions', () => {
-  const source=`component Conditions { Row {
+  const source = `component Conditions { Row {
     Button { text: "strict"; active: state.n === 2; }
     Button { text: "different"; active: state.name !== "old"; }
     Button { text: "range"; active: state.n >= 2 && state.n <= 3; }
     Button { text: "negation"; disabled: !state.selected && !state.isolated; }
     Button { text: "alternative"; active: state.n == 2 || state.n != 2; }
   } }`
-  for (const selected of [false,true]) for (const isolated of [false,true]) {
-    const v=mountForma(source,{n:2,name:'new',selected,isolated})
-    try {const buttons=v.nodes.filter(n=>n.tag==='button');expect(buttons.slice(0,3).map(n=>String(n.props.class).includes('active'))).toEqual([true,true,true]);expect(buttons[3].props.disabled).toBe(!selected&&!isolated);expect(String(buttons[4].props.class)).toContain('active')}finally{v.unmount()}
-  }
+  for (const selected of [false, true])
+    for (const isolated of [false, true]) {
+      const v = mountForma(source, { n: 2, name: 'new', selected, isolated })
+      try {
+        const buttons = v.nodes.filter(n => n.tag === 'button')
+        expect(buttons.slice(0, 3).map(n => String(n.props.class).includes('active'))).toEqual([true, true, true])
+        expect(buttons[3].props.disabled).toBe(!selected && !isolated)
+        expect(String(buttons[4].props.class)).toContain('active')
+      } finally {
+        v.unmount()
+      }
+    }
 })
 
 it('shows actual compute results and preserves computation cancellation and errors', () => {
-  const busy=mountForma(computeInspectorUi,{panelTitle:'Geometry',computeBusy:true,canRunCompute:false,computeButtonLabel:'Compute',cancelLabel:'Cancel',hasResult:false})
-  try {expect(textContent(busy.root)).not.toContain('14 912');expect(textContent(busy.root)).not.toContain('100%');const buttons=busy.nodes.filter(n=>n.tag==='button');expect(buttons[0].props.disabled).toBe(true);buttons[1].props.onClick({});expect(busy.onAction).toHaveBeenCalledWith('cancelGeometryAnalysis',[],expect.anything())}finally{busy.unmount()}
-  const result=mountForma(computeInspectorUi,{hasResult:true,areaPrefix:'Area: ',areaValue:'42',backendSummary:'CPU fallback',timingSummary:'CPU 2 ms',showFallback:true,fallbackNote:'GPU unavailable',computeError:'Check failed'})
-  try {expect(textContent(result.root)).toContain('Area: 42');expect(textContent(result.root)).toContain('CPU fallback');expect(textContent(result.nodes.find(n=>n.props.role==='alert')!)).toBe('Check failed')}finally{result.unmount()}
+  const busy = mountForma(computeInspectorUi, {
+    panelTitle: 'Geometry',
+    computeBusy: true,
+    canRunCompute: false,
+    computeButtonLabel: 'Compute',
+    cancelLabel: 'Cancel',
+    hasResult: false,
+  })
+  try {
+    expect(textContent(busy.root)).not.toContain('14 912')
+    expect(textContent(busy.root)).not.toContain('100%')
+    const buttons = busy.nodes.filter(n => n.tag === 'button')
+    expect(buttons[0].props.disabled).toBe(true)
+    buttons[1].props.onClick({})
+    expect(busy.onAction).toHaveBeenCalledWith('cancelGeometryAnalysis', [], expect.anything())
+  } finally {
+    busy.unmount()
+  }
+  const result = mountForma(computeInspectorUi, {
+    hasResult: true,
+    areaPrefix: 'Area: ',
+    areaValue: '42',
+    backendSummary: 'CPU fallback',
+    timingSummary: 'CPU 2 ms',
+    showFallback: true,
+    fallbackNote: 'GPU unavailable',
+    computeError: 'Check failed',
+  })
+  try {
+    expect(textContent(result.root)).toContain('Area: 42')
+    expect(textContent(result.root)).toContain('CPU fallback')
+    expect(textContent(result.nodes.find(n => n.props.role === 'alert')!)).toBe('Check failed')
+  } finally {
+    result.unmount()
+  }
 })
 
 it('retains all workspace primitive and Boolean actions in the default slot', () => {
-  const v=mountForma(workspaceActionBarUi,{})
-  try {for (const b of v.nodes.filter(n=>n.tag==='button')) b.props.onClick({});expect(v.onAction.mock.calls.map(c=>c.slice(0,2))).toEqual([['insertPrimitive',['cube']],['insertPrimitive',['cylinder']],['insertPrimitive',['sphere']],['applyBoolean',['difference']]])}finally{v.unmount()}
+  const v = mountForma(workspaceActionBarUi, {})
+  try {
+    for (const b of v.nodes.filter(n => n.tag === 'button')) b.props.onClick({})
+    expect(v.onAction.mock.calls.map(c => c.slice(0, 2))).toEqual([
+      ['insertPrimitive', ['cube']],
+      ['insertPrimitive', ['cylinder']],
+      ['insertPrimitive', ['sphere']],
+      ['applyBoolean', ['difference']],
+    ])
+  } finally {
+    v.unmount()
+  }
 })
 
 it('retains draft conflict choices and save retry actions', () => {
-  const v=mountForma(topbarUi,{modes:[],workspaceConflict:true,conflictWarning:'Conflict',exportDraftLabel:'Export draft',useIndexedLabel:'Use saved',restoreDraftLabel:'Keep local',persistenceError:true,unsavedDraftLabel:'Retry save'})
+  const v = mountForma(topbarUi, {
+    modes: [],
+    workspaceConflict: true,
+    conflictWarning: 'Conflict',
+    exportDraftLabel: 'Export draft',
+    useIndexedLabel: 'Use saved',
+    restoreDraftLabel: 'Keep local',
+    persistenceError: true,
+    unsavedDraftLabel: 'Retry save',
+  })
   try {
-    for(const label of ['Export draft','Use saved','Keep local','Retry save'])v.nodes.find(n=>n.tag==='button'&&textContent(n)===label)!.props.onClick({})
-    expect(v.onAction.mock.calls.map(c=>c.slice(0,2))).toEqual([['saveSource',[]],['resolveConflict',[false]],['resolveConflict',[true]],['retryPersistence',[]]])
-  } finally {v.unmount()}
+    for (const label of ['Export draft', 'Use saved', 'Keep local', 'Retry save'])
+      v.nodes.find(n => n.tag === 'button' && textContent(n) === label)!.props.onClick({})
+    expect(v.onAction.mock.calls.map(c => c.slice(0, 2))).toEqual([
+      ['saveSource', []],
+      ['resolveConflict', [false]],
+      ['resolveConflict', [true]],
+      ['retryPersistence', []],
+    ])
+  } finally {
+    v.unmount()
+  }
 })
 
 it('renders actual conversion progress and dispatches cancellation', () => {
-  const v=mountForma(statusbarUi,{conversionPending:true,conversionLabel:'Exporting',conversionValue:1,conversionMax:3,cancelLabel:'Stop'})
-  try {const p=v.nodes.find(n=>n.tag==='progress')!;expect(p.props.value).toBe(1);expect(p.props.max).toBe(3);v.nodes.find(n=>n.tag==='button'&&textContent(n)==='Stop')!.props.onClick({});expect(v.onAction).toHaveBeenCalledWith('cancelConversion',[],expect.anything())}finally{v.unmount()}
+  const v = mountForma(statusbarUi, {
+    conversionPending: true,
+    conversionLabel: 'Exporting',
+    conversionValue: 1,
+    conversionMax: 3,
+    cancelLabel: 'Stop',
+  })
+  try {
+    const p = v.nodes.find(n => n.tag === 'progress')!
+    expect(p.props.value).toBe(1)
+    expect(p.props.max).toBe(3)
+    v.nodes.find(n => n.tag === 'button' && textContent(n) === 'Stop')!.props.onClick({})
+    expect(v.onAction).toHaveBeenCalledWith('cancelConversion', [], expect.anything())
+  } finally {
+    v.unmount()
+  }
 })
 
 it('updates Svet signals glitch-free and drives SceneOutliner + CustomizerPanel UX enhancements', async () => {
@@ -373,9 +467,7 @@ it('updates Svet signals glitch-free and drives SceneOutliner + CustomizerPanel 
   const customizerRoot = new TestNode('root')
   const onChange = vi.fn()
   const state = reactive({
-    parameters: [
-      { name: 'width', label: 'Width', value: 20, valueStart: 0, valueEnd: 2, min: 5, max: 50, step: 1 },
-    ],
+    parameters: [{ name: 'width', label: 'Width', value: 20, valueStart: 0, valueEnd: 2, min: 5, max: 50, step: 1 }],
   })
   const customizerApp = renderer.createApp({
     render: () =>
@@ -393,9 +485,7 @@ it('updates Svet signals glitch-free and drives SceneOutliner + CustomizerPanel 
     state.parameters = [{ ...state.parameters[0], value: 35 }]
     await nextTick()
     expect(onChange).toHaveBeenCalledWith('width', 35)
-    const resetBtn = allNodes(customizerRoot).find(
-      n => n.tag === 'button' && n.props['aria-label'] === 'Reset width',
-    )
+    const resetBtn = allNodes(customizerRoot).find(n => n.tag === 'button' && n.props['aria-label'] === 'Reset width')
     expect(resetBtn).toBeDefined()
     resetBtn!.props.onClick({ preventDefault() {} })
     expect(onChange).toHaveBeenLastCalledWith('width', 20)

@@ -106,8 +106,13 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
       await conversionTask.run(
         { kind: 'meshConvert', fileName: file.name, input, target, options: {} },
         result => {
-          downloadBlob(new Blob([result.data.slice().buffer as ArrayBuffer], { type: result.mimeType }), result.fileName)
-          showNotice(`${translate('converted')}: ${result.source.format.toUpperCase()} → ${result.format.toUpperCase()}`)
+          downloadBlob(
+            new Blob([result.data.slice().buffer as ArrayBuffer], { type: result.mimeType }),
+            result.fileName,
+          )
+          showNotice(
+            `${translate('converted')}: ${result.source.format.toUpperCase()} → ${result.format.toUpperCase()}`,
+          )
         },
         caught => showNotice(caught instanceof Error ? caught.message : 'Conversion failed'),
       )
@@ -150,7 +155,8 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
 
   async function exportScene(target: MeshExportFormat, sourceExtension: RegExp) {
     if (disposed || conversionPending.value || !canExport.value) return
-    const mesh = sceneMeshes.value, sourceName = fileName.value
+    const mesh = sceneMeshes.value,
+      sourceName = fileName.value
     conversionOperation.value = 'export'
     await conversionTask.run(
       {

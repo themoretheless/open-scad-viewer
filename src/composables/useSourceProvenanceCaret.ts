@@ -23,16 +23,8 @@ export interface UseSourceProvenanceCaretOptions {
 }
 
 export function useSourceProvenanceCaret(options: UseSourceProvenanceCaretOptions) {
-  const {
-    code,
-    editor,
-    selectedEditorName,
-    sceneMeshes,
-    sourceMatchesEditor,
-    getRenderer,
-    showNotice,
-    translate,
-  } = options
+  const { code, editor, selectedEditorName, sceneMeshes, sourceMatchesEditor, getRenderer, showNotice, translate } =
+    options
 
   // Flat provenance span index for caret lookups: built lazily on the first query after a
   // scene publication and invalidated by the sceneMeshes array identity, replacing the
@@ -106,9 +98,7 @@ export function useSourceProvenanceCaret(options: UseSourceProvenanceCaretOption
       const text = editor.getText()
       const selected = text.slice(start, end)
       selectedEditorName.value =
-        /^\$?[A-Za-z_][\w$]*$/.test(selected) &&
-        !/[\w$]/.test(text[start - 1] ?? '') &&
-        !/[\w$]/.test(text[end] ?? '')
+        /^\$?[A-Za-z_][\w$]*$/.test(selected) && !/[\w$]/.test(text[start - 1] ?? '') && !/[\w$]/.test(text[end] ?? '')
           ? selected
           : ''
     }

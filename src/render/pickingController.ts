@@ -5,20 +5,9 @@ import type { NativePickingCache } from './nativePickingCache'
 import { selectedCornerInKernel } from '../kernel/geometry/viewport'
 import type { MeshProvenanceRun } from '../core/mesh'
 import type { PickHit, SelectionMode } from './rendererContracts'
-import {
-  normalizeDepthCandidates,
-  type DepthCandidate,
-} from './selectionCycling'
-import {
-  querySceneAabbIndex,
-  type SceneAabbIndex,
-} from './sceneAabbIndex'
-import {
-  MAX_DEPTH_CANDIDATES,
-  MAX_DEPTH_CONTINUATIONS,
-  type Bounds,
-  type GMesh,
-} from './types'
+import { normalizeDepthCandidates, type DepthCandidate } from './selectionCycling'
+import { querySceneAabbIndex, type SceneAabbIndex } from './sceneAabbIndex'
+import { MAX_DEPTH_CANDIDATES, MAX_DEPTH_CONTINUATIONS, type Bounds, type GMesh } from './types'
 
 export function sourceForTriangle(mesh: GMesh, triangleIndex: number): MeshProvenanceRun | null {
   let low = 0
@@ -68,19 +57,16 @@ export function isSectionClipped(
   sectionNormal: Vec3,
   sectionOffset: number,
 ): boolean {
-  return sectionEnabled && (
-    point[0]! * sectionNormal[0]
-    + point[1]! * sectionNormal[1]
-    + point[2]! * sectionNormal[2]
-  ) < sectionOffset
+  return (
+    sectionEnabled &&
+    point[0]! * sectionNormal[0] + point[1]! * sectionNormal[1] + point[2]! * sectionNormal[2] < sectionOffset
+  )
 }
 
 export function selectionCandidateKey(hit: PickHit, selectionMode: SelectionMode): string {
   if (selectionMode === 'object') return `o:${hit.meshIndex}`
   if (selectionMode === 'face') {
-    return hit.faceId === null
-      ? `f:${hit.meshIndex}:t${hit.triangleIndex}`
-      : `f:${hit.meshIndex}:${hit.faceId}`
+    return hit.faceId === null ? `f:${hit.meshIndex}:t${hit.triangleIndex}` : `f:${hit.meshIndex}:${hit.faceId}`
   }
   // Flat-shaded meshes may duplicate a geometric vertex for each face. A
   // world-space key avoids multiple visually identical point-cycle stops.
@@ -129,11 +115,10 @@ export function findHitCandidatesForRay(
     box?: PickHit
   }
   const frontier: HitCursor[] = []
-  const cursorBefore = (a: HitCursor, b: HitCursor) => a.hit.t < b.hit.t
-    || (a.hit.t === b.hit.t && (
-      a.meshIndex < b.meshIndex
-      || (a.meshIndex === b.meshIndex && a.hit.triangleIndex < b.hit.triangleIndex)
-    ))
+  const cursorBefore = (a: HitCursor, b: HitCursor) =>
+    a.hit.t < b.hit.t ||
+    (a.hit.t === b.hit.t &&
+      (a.meshIndex < b.meshIndex || (a.meshIndex === b.meshIndex && a.hit.triangleIndex < b.hit.triangleIndex)))
   const insertFrontier = (cursor: HitCursor) => {
     frontier.push(cursor)
     let child = frontier.length - 1
@@ -177,13 +162,28 @@ export function findHitCandidatesForRay(
       if (box) {
         const hit = { t: box.t, triangleIndex: -1, worldPoint: box.point } as unknown as MeshBvhHit
         const pick = boxPickHit(index, mesh, box.point, box.normal)
-        insertFrontier({ meshIndex: index, mesh, hit, excludedTriangles: new Uint32Array(0), excludedCount: 0, box: pick })
+        insertFrontier({
+          meshIndex: index,
+          mesh,
+          hit,
+          excludedTriangles: new Uint32Array(0),
+          excludedCount: 0,
+          box: pick,
+        })
       }
       return true
     }
-    const hit = ctx.nativePicking.query(mesh.vb, mesh.vertices, mesh.indices, mesh.bvh.vertexStride, mesh.bvh.leafSize, ray, {
-      localFromWorld: mesh.inverseTransform,
-    })
+    const hit = ctx.nativePicking.query(
+      mesh.vb,
+      mesh.vertices,
+      mesh.indices,
+      mesh.bvh.vertexStride,
+      mesh.bvh.leafSize,
+      ray,
+      {
+        localFromWorld: mesh.inverseTransform,
+      },
+    )
     if (hit) insertFrontier({ meshIndex: index, mesh, hit, excludedTriangles: new Uint32Array(8), excludedCount: 0 })
     return true
   }
@@ -198,19 +198,15 @@ export function findHitCandidatesForRay(
     // bodies while preserving deterministic depth cycling for larger limits.
     while (!frontier.length && boundsCursor < boundsCandidates.length) addNextBoundsCandidate()
     while (
-      frontier.length
-      && boundsCursor < boundsCandidates.length
-      && boundsCandidates[boundsCursor]!.distance <= frontier[0]!.hit.t
-    ) addNextBoundsCandidate()
+      frontier.length &&
+      boundsCursor < boundsCandidates.length &&
+      boundsCandidates[boundsCursor]!.distance <= frontier[0]!.hit.t
+    )
+      addNextBoundsCandidate()
     if (!frontier.length) break
 
     const cursor = takeNearest()
-    const clipped = isSectionClipped(
-      cursor.hit.worldPoint,
-      ctx.sectionEnabled,
-      ctx.sectionNormal,
-      ctx.sectionOffset,
-    )
+    const clipped = isSectionClipped(cursor.hit.worldPoint, ctx.sectionEnabled, ctx.sectionNormal, ctx.sectionOffset)
     if (!clipped) {
       const { meshIndex, mesh, hit } = cursor
       const value = cursor.box ?? pickHitFromBvh(meshIndex, mesh, hit, ctx.selectionMode)
@@ -232,11 +228,19 @@ export function findHitCandidatesForRay(
       cursor.excludedTriangles = grown
     }
     cursor.excludedTriangles[cursor.excludedCount++] = cursor.hit.triangleIndex
-    const next = ctx.nativePicking.query(cursor.mesh.vb, cursor.mesh.vertices, cursor.mesh.indices, cursor.mesh.bvh.vertexStride, cursor.mesh.bvh.leafSize, ray, {
-      minT: cursor.hit.t,
-      excludedTriangles: cursor.excludedTriangles.subarray(0, cursor.excludedCount),
-      localFromWorld: cursor.mesh.inverseTransform,
-    })
+    const next = ctx.nativePicking.query(
+      cursor.mesh.vb,
+      cursor.mesh.vertices,
+      cursor.mesh.indices,
+      cursor.mesh.bvh.vertexStride,
+      cursor.mesh.bvh.leafSize,
+      ray,
+      {
+        minT: cursor.hit.t,
+        excludedTriangles: cursor.excludedTriangles.subarray(0, cursor.excludedCount),
+        localFromWorld: cursor.mesh.inverseTransform,
+      },
+    )
     if (next) insertFrontier({ ...cursor, hit: next })
   }
   return normalizeDepthCandidates(candidates, limit)

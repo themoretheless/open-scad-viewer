@@ -39,7 +39,9 @@ import {
 import { lowerOpenSCADToSemanticProgramUnchecked } from '../src/language/semantic/openscadSemanticLowerer'
 import { OpenSCADParseError } from '../src/language/openscadErrors'
 
-function clone<T>(value: T): T { return structuredClone(value) }
+function clone<T>(value: T): T {
+  return structuredClone(value)
+}
 
 const PRESERVING = Object.freeze({ tag: 'representation-preserving' as const })
 function valueType(
@@ -111,17 +113,19 @@ function oneNodeProgram(
         composition: 'parent-times-local',
       },
       operations: [op],
-      occurrences: [{
-        id: 0,
-        occurrenceId,
-        operation: 0,
-        parent: null,
-        staticParent: null,
-        dynamicSlots: [],
-        node: 0,
-        outputOrdinal: 0,
-        sceneEntityId: deriveSemanticSceneEntityId(occurrenceId, 0),
-      }],
+      occurrences: [
+        {
+          id: 0,
+          occurrenceId,
+          operation: 0,
+          parent: null,
+          staticParent: null,
+          dynamicSlots: [],
+          node: 0,
+          outputOrdinal: 0,
+          sceneEntityId: deriveSemanticSceneEntityId(occurrenceId, 0),
+        },
+      ],
       nodes: [node],
       execution: {
         version: 'semantic-execution-v2',
@@ -129,7 +133,10 @@ function oneNodeProgram(
         discardedEffects: [],
         terminal: null,
       },
-      result: { tag: 'single', item: { node: 0, producerOccurrence: 0, identityOccurrence: 0, color: [0.25, 0.5, 0.75, 1] } },
+      result: {
+        tag: 'single',
+        item: { node: 0, producerOccurrence: 0, identityOccurrence: 0, color: [0.25, 0.5, 0.75, 1] },
+      },
       declaredCapabilities: languageContract === 'openscad-viewer/brep-1' ? ['geometry.brep'] : [],
       capabilityClosure: [],
       diagnosticTemplates: [],
@@ -141,25 +148,46 @@ function oneNodeProgram(
 }
 
 function legacyBoxProgram(source = 'cube([1, 2, 3]);'): SemanticProgramV1 {
-  return oneNodeProgram(source, 'legacy/current', {
-    id: 0, kind: 'box', valueType: valueType('legacy/current', 'solid-set', 'd3'), size: [1, 2, 3], center: false,
-  }, 'cube')
+  return oneNodeProgram(
+    source,
+    'legacy/current',
+    {
+      id: 0,
+      kind: 'box',
+      valueType: valueType('legacy/current', 'solid-set', 'd3'),
+      size: [1, 2, 3],
+      center: false,
+    },
+    'cube',
+  )
 }
 
 function brepSphereProgram(): SemanticProgramV1 {
   const source = '// @language openscad-viewer/brep-1\n// @requires geometry.brep\nsphere(2);'
-  const program = clone(oneNodeProgram(source, 'openscad-viewer/brep-1', {
-    id: 0, kind: 'sphere-analytic', valueType: valueType('openscad-viewer/brep-1', 'solid', 'd3'), radius: 2,
-  }, 'sphere')) as any
+  const program = clone(
+    oneNodeProgram(
+      source,
+      'openscad-viewer/brep-1',
+      {
+        id: 0,
+        kind: 'sphere-analytic',
+        valueType: valueType('openscad-viewer/brep-1', 'solid', 'd3'),
+        radius: 2,
+      },
+      'sphere',
+    ),
+  ) as any
   const start = source.indexOf('sphere')
   program.provenance[0].span = { start, end: source.length }
-  program.tessellationIntents = [{
-    occurrence: 0,
-    chordTolerance: 0.05,
-    angularToleranceDegrees: 5,
-    minSegments: 8,
-    maxSegments: 128,
-  }]
+  program.tessellationIntents = [
+    {
+      occurrence: 0,
+      chordTolerance: 0.05,
+      angularToleranceDegrees: 5,
+      minSegments: 8,
+      maxSegments: 128,
+    },
+  ]
   return finalize(program)
 }
 
@@ -174,9 +202,10 @@ function addIndependentNode(
   program.core.nodes.push(node)
   program.core.execution.evaluationOrder.push(nodeId)
   const operationId = program.core.operations.length
-  const ordinal = program.core.operations.filter((candidate: SemanticStaticOperation) => (
-    candidate.parent === null && candidate.category === 'geometry' && candidate.name === name
-  )).length
+  const ordinal = program.core.operations.filter(
+    (candidate: SemanticStaticOperation) =>
+      candidate.parent === null && candidate.category === 'geometry' && candidate.name === name,
+  ).length
   const op = operation(operationId, name, ordinal)
   program.core.operations.push(op)
   const occurrenceIndex = program.core.occurrences.length
@@ -197,15 +226,24 @@ function addIndependentNode(
     span: { ...program.provenance[0].span },
     label: `${name}()`,
   })
-  const prior = program.core.result.tag === 'single'
-    ? [program.core.result.item]
-    : program.core.result.tag === 'multi' ? program.core.result.items : []
-  program.core.result = { tag: 'multi', items: [...prior, {
-    node: nodeId,
-    producerOccurrence: occurrenceIndex,
-    identityOccurrence: occurrenceIndex,
-    color,
-  }] }
+  const prior =
+    program.core.result.tag === 'single'
+      ? [program.core.result.item]
+      : program.core.result.tag === 'multi'
+        ? program.core.result.items
+        : []
+  program.core.result = {
+    tag: 'multi',
+    items: [
+      ...prior,
+      {
+        node: nodeId,
+        producerOccurrence: occurrenceIndex,
+        identityOccurrence: occurrenceIndex,
+        color,
+      },
+    ],
+  }
   program.core.capabilityClosure = [...deriveSemanticCapabilityClosure(program.core)]
   return nodeId
 }
@@ -226,7 +264,9 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
   })
 
   it('rejects extras, unknown required features, noncanonical floats and ill-formed Unicode', () => {
-    expect(() => normalizeSemanticProgram({ ...legacyBoxProgram(), engine: 'brep' })).toThrow(/unknown or missing fields/)
+    expect(() => normalizeSemanticProgram({ ...legacyBoxProgram(), engine: 'brep' })).toThrow(
+      /unknown or missing fields/,
+    )
     const extraNode = clone(legacyBoxProgram()) as any
     extraNode.core.nodes[0].provider = 'manifold'
     expect(() => normalizeSemanticProgram(extraNode)).toThrow(/unknown or missing fields/)
@@ -249,9 +289,13 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
     expect(() => normalizeSemanticProgram(program)).toThrow(/operation ID does not match/)
 
     const occurrence = clone(legacyBoxProgram()) as any
-    occurrence.core.occurrences[0].dynamicSlots = [{
-      name: 'i', value: { tag: 'number', value: 1 }, duplicateOrdinal: 0,
-    }]
+    occurrence.core.occurrences[0].dynamicSlots = [
+      {
+        name: 'i',
+        value: { tag: 'number', value: 1 },
+        duplicateOrdinal: 0,
+      },
+    ]
     expect(() => normalizeSemanticProgram(occurrence)).toThrow(/occurrence ID does not match/)
 
     const entity = clone(legacyBoxProgram()) as any
@@ -275,7 +319,13 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
   it('enforces backward typed DAG references, no implicit coercion and canonical postorder', () => {
     const forward = clone(legacyBoxProgram()) as any
     forward.core.nodes = [
-      { id: 0, kind: 'transform', valueType: valueType('legacy/current', 'solid-set', 'd3'), input: 1, matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] },
+      {
+        id: 0,
+        kind: 'transform',
+        valueType: valueType('legacy/current', 'solid-set', 'd3'),
+        input: 1,
+        matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+      },
       { id: 1, kind: 'box', valueType: valueType('legacy/current', 'solid-set', 'd3'), size: [1, 1, 1], center: false },
     ]
     expect(() => normalizeSemanticProgram(forward)).toThrow(/earlier node/)
@@ -284,7 +334,12 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
     expect(() => normalizeSemanticProgram(projected)).not.toThrow()
 
     const inputProducer = projected.core.occurrences.findIndex((occurrence: any) => occurrence.node === 0)
-    projected.core.result.item = { node: 0, producerOccurrence: inputProducer, identityOccurrence: inputProducer, color: [1, 1, 1, 1] }
+    projected.core.result.item = {
+      node: 0,
+      producerOccurrence: inputProducer,
+      identityOccurrence: inputProducer,
+      color: [1, 1, 1, 1],
+    }
     expect(() => normalizeSemanticProgram(projected)).toThrow(/reachable/)
   })
 
@@ -294,12 +349,19 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
       ...clone(legacyBoxProgram(emptySource)),
       core: {
         ...clone(legacyBoxProgram(emptySource)).core,
-        operations: [], occurrences: [], nodes: [],
+        operations: [],
+        occurrences: [],
+        nodes: [],
         execution: {
-          version: 'semantic-execution-v2', evaluationOrder: [], discardedEffects: [], terminal: null,
+          version: 'semantic-execution-v2',
+          evaluationOrder: [],
+          discardedEffects: [],
+          terminal: null,
         },
         result: { tag: 'empty', type: 'never' },
-        declaredCapabilities: [], capabilityClosure: [], diagnosticTemplates: [],
+        declaredCapabilities: [],
+        capabilityClosure: [],
+        diagnosticTemplates: [],
       },
       provenance: [],
     } as any)
@@ -332,28 +394,34 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
     dependency.core.execution.evaluationOrder = [2, 0, 1]
     expect(() => normalizeSemanticProgram(dependency)).toThrow(/before one of its inputs/)
 
-    const effect = clone(lowerOpenSCADToSemanticProgram(
-      'difference(){if(false)cube(1);cube(1);sphere(1);}',
-    ).program) as any
-    expect(effect.core.execution.discardedEffects).toMatchObject([{
-      tag: 'legacy-difference-cutters', root: 2,
-    }])
+    const effect = clone(
+      lowerOpenSCADToSemanticProgram('difference(){if(false)cube(1);cube(1);sphere(1);}').program,
+    ) as any
+    expect(effect.core.execution.discardedEffects).toMatchObject([
+      {
+        tag: 'legacy-difference-cutters',
+        root: 2,
+      },
+    ])
     const forgedRoot = clone(effect) as any
     forgedRoot.core.execution.discardedEffects[0].root = 0
     expect(() => normalizeSemanticProgram(forgedRoot)).toThrow(/discarded|cutter effect|effect/)
 
     const brepEffect = clone(brepSphereProgram()) as any
-    brepEffect.core.execution.discardedEffects = [{
-      tag: 'legacy-difference-cutters', root: 0, ownerOccurrence: 0,
-    }]
+    brepEffect.core.execution.discardedEffects = [
+      {
+        tag: 'legacy-difference-cutters',
+        root: 0,
+        ownerOccurrence: 0,
+      },
+    ]
     expect(() => normalizeSemanticProgram(brepEffect)).toThrow(/forbidden for brep-1/)
   })
 
   it('captures a deterministic language terminal behind an executable kernel prefix', () => {
-    const artifact = lowerOpenSCADToSemanticProgram(
-      'cube(1); assert(false, "after kernel");',
-      { captureTerminalFailure: true },
-    )
+    const artifact = lowerOpenSCADToSemanticProgram('cube(1); assert(false, "after kernel");', {
+      captureTerminalFailure: true,
+    })
     expect(artifact.terminalError).toBeInstanceOf(OpenSCADParseError)
     expect(artifact.program.core.result).toEqual({ tag: 'empty', type: 'never' })
     expect(artifact.program.core.execution.terminal).toMatchObject({
@@ -370,36 +438,36 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
     wrongTemplate.core.diagnosticTemplates[0].severity = 'warning'
     expect(() => normalizeSemanticProgram(wrongTemplate)).toThrow(/error diagnostic template/)
 
-    expect(() => lowerOpenSCADToSemanticProgram(
-      'cube(1); assert(false, "after kernel");',
-    )).toThrow(/Assertion 'false' failed: after kernel/)
+    expect(() => lowerOpenSCADToSemanticProgram('cube(1); assert(false, "after kernel");')).toThrow(
+      /Assertion 'false' failed: after kernel/,
+    )
   })
 
   it('replays an already-reduced difference base before a terminal cutter descendant', () => {
     const source = 'difference(){group(){cube(1);sphere(1);} assert(false,"x") cube(1);}'
     const artifact = lowerOpenSCADToSemanticProgram(source, { captureTerminalFailure: true })
-    expect(artifact.program.core.nodes.map(node => node.kind)).toEqual([
-      'box', 'sphere-polygonal', 'boolean',
-    ])
+    expect(artifact.program.core.nodes.map(node => node.kind)).toEqual(['box', 'sphere-polygonal', 'boolean'])
     expect(artifact.program.core.execution.evaluationOrder).toEqual([0, 1, 2])
-    expect(artifact.program.core.execution.terminal?.prefixFrontier).toEqual([{
-      root: 2,
-      ownerOccurrence: null,
-    }])
+    expect(artifact.program.core.execution.terminal?.prefixFrontier).toEqual([
+      {
+        root: 2,
+        ownerOccurrence: null,
+      },
+    ])
     expect(() => normalizeSemanticProgram(artifact.program, source)).not.toThrow()
   })
 
   it('aggregates repeated runtime activations into one authored difference base bucket', () => {
     const source = 'difference(){for(i=[0:2]) cube(i+1); assert(false,"x") sphere(1);}'
     const artifact = lowerOpenSCADToSemanticProgram(source, { captureTerminalFailure: true })
-    expect(artifact.program.core.nodes.map(node => node.kind)).toEqual([
-      'box', 'box', 'box', 'boolean',
-    ])
+    expect(artifact.program.core.nodes.map(node => node.kind)).toEqual(['box', 'box', 'box', 'boolean'])
     expect(artifact.program.core.execution.evaluationOrder).toEqual([0, 1, 2, 3])
-    expect(artifact.program.core.execution.terminal?.prefixFrontier).toEqual([{
-      root: 3,
-      ownerOccurrence: null,
-    }])
+    expect(artifact.program.core.execution.terminal?.prefixFrontier).toEqual([
+      {
+        root: 3,
+        ownerOccurrence: null,
+      },
+    ])
     expect(() => normalizeSemanticProgram(artifact.program, source)).not.toThrow()
   })
 
@@ -407,8 +475,9 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
     const source = 'text("nope");'
     const artifact = lowerOpenSCADToSemanticProgram(source, { captureTerminalFailure: true })
     const terminal = artifact.program.core.execution.terminal!
-    expect(artifact.program.core.operations[artifact.program.core.occurrences[terminal.occurrence].operation].name)
-      .toBe('text')
+    expect(
+      artifact.program.core.operations[artifact.program.core.occurrences[terminal.occurrence].operation].name,
+    ).toBe('text')
     expect(() => normalizeSemanticProgram(artifact.program, source)).not.toThrow()
   })
 
@@ -416,13 +485,22 @@ describe('SemanticProgram SPC1/SPE1 schema', () => {
     expect(() => normalizeSemanticProgram(brepSphereProgram())).not.toThrow()
     const polygonalBrep = clone(brepSphereProgram()) as any
     polygonalBrep.core.nodes[0] = {
-      id: 0, kind: 'sphere-polygonal', valueType: valueType('openscad-viewer/brep-1', 'solid', 'd3'), radius: 2, radialSegments: 32,
+      id: 0,
+      kind: 'sphere-polygonal',
+      valueType: valueType('openscad-viewer/brep-1', 'solid', 'd3'),
+      radius: 2,
+      radialSegments: 32,
     }
     polygonalBrep.core.capabilityClosure = [...deriveSemanticCapabilityClosure(polygonalBrep.core)]
     expect(() => normalizeSemanticProgram(polygonalBrep)).toThrow(/brep-1 topology requires analytic/)
 
     const analyticLegacy = clone(legacyBoxProgram()) as any
-    analyticLegacy.core.nodes[0] = { id: 0, kind: 'sphere-analytic', valueType: valueType('legacy/current', 'solid-set', 'd3'), radius: 1 }
+    analyticLegacy.core.nodes[0] = {
+      id: 0,
+      kind: 'sphere-analytic',
+      valueType: valueType('legacy/current', 'solid-set', 'd3'),
+      radius: 1,
+    }
     analyticLegacy.core.capabilityClosure = [...deriveSemanticCapabilityClosure(analyticLegacy.core)]
     expect(() => normalizeSemanticProgram(analyticLegacy)).toThrow(/legacy\/current requires materialized/)
   })
@@ -515,9 +593,13 @@ describe('SemanticProgram canonical codec and hash domains', () => {
     expect(semanticProgramHash(second)).toBe(semanticProgramHash(first))
     expect(semanticTessellationPolicyHash(second)).not.toBe(semanticTessellationPolicyHash(first))
 
-    second.core.occurrences[0].dynamicSlots = [{
-      name: 'variant', value: { tag: 'number', value: 1 }, duplicateOrdinal: 0,
-    }]
+    second.core.occurrences[0].dynamicSlots = [
+      {
+        name: 'variant',
+        value: { tag: 'number', value: 1 },
+        duplicateOrdinal: 0,
+      },
+    ]
     second.core.occurrences[0].occurrenceId = deriveSemanticOccurrenceId(
       null,
       null,
@@ -541,13 +623,15 @@ describe('SemanticProgram canonical codec and hash domains', () => {
       envelopeBytesSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
       canonicalBytes: expect.any(Number),
     })
-    expect(new Set([
-      attestation.sourceHash,
-      attestation.programHash,
-      attestation.tessellationPolicyHash,
-      attestation.coreBytesSha256,
-      attestation.envelopeBytesSha256,
-    ]).size).toBe(5)
+    expect(
+      new Set([
+        attestation.sourceHash,
+        attestation.programHash,
+        attestation.tessellationPolicyHash,
+        attestation.coreBytesSha256,
+        attestation.envelopeBytesSha256,
+      ]).size,
+    ).toBe(5)
   })
 
   it('rejects corruption, noncanonical binary64 and seeded random bytes', () => {
@@ -598,8 +682,14 @@ describe('OpenSCAD exact-source semantic lowerer', () => {
     ['if(false) cube(1); else sphere(1);', ['sphere-polygonal']],
     ['module solid(x){ translate([x,0,0]) cube(1); } solid(2);', ['box', 'transform']],
     ['module wrap(){ translate([1,0,0]) children(); } wrap() cube(1);', ['box', 'transform']],
-    ['module wrap(x){ translate([x,0,0]) children(); } wrap(1) cube(1); wrap(1) sphere(1);', ['box', 'transform', 'sphere-polygonal', 'transform']],
-    ['module wrap(){ union(){ children(0); children(1); } } wrap(){ cube(1); sphere(1); }', ['box', 'sphere-polygonal', 'boolean']],
+    [
+      'module wrap(x){ translate([x,0,0]) children(); } wrap(1) cube(1); wrap(1) sphere(1);',
+      ['box', 'transform', 'sphere-polygonal', 'transform'],
+    ],
+    [
+      'module wrap(){ union(){ children(0); children(1); } } wrap(){ cube(1); sphere(1); }',
+      ['box', 'sphere-polygonal', 'boolean'],
+    ],
     ['module rec(n){ if(n <= 0) children(); else rec(n - 1) cube(1); } rec(2) sphere(1);', ['box']],
   ])('lowers legacy source deterministically: %s', (source, expectedKinds) => {
     const first = lowerOpenSCADToSemanticProgram(source)
@@ -615,7 +705,8 @@ describe('OpenSCAD exact-source semantic lowerer', () => {
   })
 
   it('pins recursive nested children failure in legacy while brep-1 uses the corrected continuation', () => {
-    const body = 'module inner(){ translate([1,0,0]) children(); } module outer(){ inner() children(); } outer() cube(1);'
+    const body =
+      'module inner(){ translate([1,0,0]) children(); } module outer(){ inner() children(); } outer() cube(1);'
     expect(() => lowerOpenSCADToSemanticProgram(body)).toThrow(/Evaluation exceeds 128 nested calls/)
     const brep = lowerOpenSCADToSemanticProgram(
       `// @language openscad-viewer/brep-1\n// @requires geometry.brep\n${body}`,
@@ -624,28 +715,21 @@ describe('OpenSCAD exact-source semantic lowerer', () => {
   })
 
   it.each([
-    [
-      'out-of-range nested child',
-      'module m(){children();} module n(){m() children(9);} n(){cube(1);sphere(1);}',
-      [],
-    ],
-    [
-      'selected non-children sibling',
-      'module m(){children();}m(){children(1);cube(1);}',
-      ['box', 'box'],
-    ],
+    ['out-of-range nested child', 'module m(){children();} module n(){m() children(9);} n(){cube(1);sphere(1);}', []],
+    ['selected non-children sibling', 'module m(){children();}m(){children(1);cube(1);}', ['box', 'box']],
   ])('matches finite legacy nested children selection: %s', (_name, source, expectedKinds) => {
-    expect(lowerOpenSCADToSemanticProgram(source).program.core.nodes.map(node => node.kind))
-      .toEqual(expectedKinds)
+    expect(lowerOpenSCADToSemanticProgram(source).program.core.nodes.map(node => node.kind)).toEqual(expectedKinds)
   })
 
   it('keeps B-rep analytic geometry in SPC1 and tessellation policy outside the core hash', () => {
     const source = '// @language openscad-viewer/brep-1\n// @requires geometry.brep\nsphere(2);'
     const lowered = lowerOpenSCADToSemanticProgram(source)
-    expect(lowered.program.core.nodes).toMatchObject([{
-      kind: 'sphere-analytic',
-      valueType: { geometryKind: 'solid', space: 'd3', representation: 'analytic-brep' },
-    }])
+    expect(lowered.program.core.nodes).toMatchObject([
+      {
+        kind: 'sphere-analytic',
+        valueType: { geometryKind: 'solid', space: 'd3', representation: 'analytic-brep' },
+      },
+    ])
     expect(lowered.program.tessellationIntents).toHaveLength(1)
     expect(lowered.program.core.capabilityClosure).toContain('construct.sphere.analytic')
     expect(lowered.program.core.capabilityClosure).toContain('geometry.brep')
@@ -656,7 +740,11 @@ describe('OpenSCAD exact-source semantic lowerer', () => {
       'linear_extrude(height=2){ square(1); translate([2,0,0]) square(1); }',
     )
     expect(extruded.program.core.nodes.map(node => node.kind)).toEqual([
-      'rectangle', 'rectangle', 'transform', 'boolean', 'linear-extrude',
+      'rectangle',
+      'rectangle',
+      'transform',
+      'boolean',
+      'linear-extrude',
     ])
     expect((extruded.program.core.nodes[3] as any).operation).toBe('union')
 
@@ -671,7 +759,9 @@ describe('OpenSCAD exact-source semantic lowerer', () => {
       'difference(){ group(){ cube(); sphere(1); } group(){ translate([1,0,0]) cube(); sphere(0.5); } }',
     )
     expect(partitioned.program.core.nodes.at(-1)).toMatchObject({
-      kind: 'boolean', operation: 'difference', inputs: expect.any(Array),
+      kind: 'boolean',
+      operation: 'difference',
+      inputs: expect.any(Array),
     })
   })
 })
@@ -681,11 +771,7 @@ describe('SemanticProgram executable backend seam', () => {
 
   function sessionBackend(implementation: {
     validatePayload(carrierKey: SemanticCarrierKey, payload: unknown): boolean
-    evaluate(
-      node: SemanticNode,
-      inputs: readonly any[],
-      context: any,
-    ): any
+    evaluate(node: SemanticNode, inputs: readonly any[], context: any): any
   }): SemanticProgramBackend<StringPayloadFamily> {
     return {
       begin() {
@@ -693,8 +779,9 @@ describe('SemanticProgram executable backend seam', () => {
         let closePromise: Promise<any> | undefined
         return {
           validatePayload(carrierKey, payload, lease) {
-            return leases.has(lease) && leases.get(lease) === payload
-              && implementation.validatePayload(carrierKey, payload)
+            return (
+              leases.has(lease) && leases.get(lease) === payload && implementation.validatePayload(carrierKey, payload)
+            )
           },
           async evaluate(node, inputs, context) {
             const returned = await implementation.evaluate(node, inputs, context)
@@ -702,8 +789,14 @@ describe('SemanticProgram executable backend seam', () => {
               const tag = Object.getOwnPropertyDescriptor(returned, 'tag')
               const payload = Object.getOwnPropertyDescriptor(returned, 'payload')
               const existingLease = Object.getOwnPropertyDescriptor(returned, 'lease')
-              if (tag && 'value' in tag && (tag.value === 'value' || tag.value === 'materialized-empty')
-                && payload && 'value' in payload && existingLease === undefined) {
+              if (
+                tag &&
+                'value' in tag &&
+                (tag.value === 'value' || tag.value === 'materialized-empty') &&
+                payload &&
+                'value' in payload &&
+                existingLease === undefined
+              ) {
                 const lease = Object.freeze({}) as SemanticBackendPayloadLease
                 leases.set(lease, payload.value)
                 return { ...returned, lease }
@@ -711,7 +804,9 @@ describe('SemanticProgram executable backend seam', () => {
             }
             return returned
           },
-          async releasePayload(lease) { leases.delete(lease) },
+          async releasePayload(lease) {
+            leases.delete(lease)
+          },
           close(outcome) {
             if (closePromise) return closePromise
             closePromise = Promise.resolve().then(() => {
@@ -726,9 +821,10 @@ describe('SemanticProgram executable backend seam', () => {
                 tag: 'committed' as const,
                 resultLease: {
                   dispose() {
-                    if (!disposePromise) disposePromise = Promise.resolve().then(() => {
-                      for (const lease of retained) leases.delete(lease)
-                    })
+                    if (!disposePromise)
+                      disposePromise = Promise.resolve().then(() => {
+                        for (const lease of retained) leases.delete(lease)
+                      })
                     return disposePromise
                   },
                 },
@@ -806,11 +902,12 @@ describe('SemanticProgram executable backend seam', () => {
             return entries.get(lease) === payload
           },
           evaluate(node, inputs, context) {
-            const pending = Promise.resolve().then(() => implementation(
-              node, inputs, context, allocate,
-            ))
+            const pending = Promise.resolve().then(() => implementation(node, inputs, context, allocate))
             inFlight.add(pending)
-            pending.then(() => inFlight.delete(pending), () => inFlight.delete(pending))
+            pending.then(
+              () => inFlight.delete(pending),
+              () => inFlight.delete(pending),
+            )
             return pending
           },
           releasePayload: release,
@@ -861,7 +958,7 @@ describe('SemanticProgram executable backend seam', () => {
         tag: 'value',
         valueType: node.valueType,
         evidence: { tag: 'representation-preserving' },
-        payload: `${node.kind}(${inputs.map(input => input.tag === 'value' ? input.payload : 'empty').join(',')})`,
+        payload: `${node.kind}(${inputs.map(input => (input.tag === 'value' ? input.payload : 'empty')).join(',')})`,
       } as any
     },
   })
@@ -887,124 +984,184 @@ describe('SemanticProgram executable backend seam', () => {
   it('keeps execution limits, deadlines and cancellation outside programHash', async () => {
     const artifact = lowerOpenSCADToSemanticProgram('cube([1, 2, 3]);')
     const hash = semanticProgramHash(artifact.program)
-    await expect(executeSemanticProgram(artifact, tracingBackend, { maxNodes: 0 })).rejects.toMatchObject({ code: 'E_SEMANTIC_BUDGET' })
-    await expect(executeSemanticProgram(artifact, tracingBackend, { now: () => 10, deadlineAt: 10 })).rejects.toMatchObject({ code: 'E_SEMANTIC_DEADLINE' })
-    await expect(executeSemanticProgram(artifact, tracingBackend, { shouldAbort: () => true })).rejects.toMatchObject({ code: 'E_SEMANTIC_ABORTED' })
+    await expect(executeSemanticProgram(artifact, tracingBackend, { maxNodes: 0 })).rejects.toMatchObject({
+      code: 'E_SEMANTIC_BUDGET',
+    })
+    await expect(
+      executeSemanticProgram(artifact, tracingBackend, { now: () => 10, deadlineAt: 10 }),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_DEADLINE' })
+    await expect(executeSemanticProgram(artifact, tracingBackend, { shouldAbort: () => true })).rejects.toMatchObject({
+      code: 'E_SEMANTIC_ABORTED',
+    })
     expect(semanticProgramHash(artifact.program)).toBe(hash)
   })
 
   it('rejects a backend value-type lie', async () => {
-    await expect(executeSemanticProgram(lowerOpenSCADToSemanticProgram('cube([1, 2, 3]);'), sessionBackend({
-      validatePayload: (_carrierKey, payload) => typeof payload === 'string',
-      evaluate: () => ({
-        tag: 'value',
-        valueType: valueType('legacy/current', 'region', 'd2'),
-        evidence: { tag: 'representation-preserving' },
-        payload: 'wrong',
-      }),
-    }))).rejects.toBeInstanceOf(SemanticProgramExecutionError)
+    await expect(
+      executeSemanticProgram(
+        lowerOpenSCADToSemanticProgram('cube([1, 2, 3]);'),
+        sessionBackend({
+          validatePayload: (_carrierKey, payload) => typeof payload === 'string',
+          evaluate: () => ({
+            tag: 'value',
+            valueType: valueType('legacy/current', 'region', 'd2'),
+            evidence: { tag: 'representation-preserving' },
+            payload: 'wrong',
+          }),
+        }),
+      ),
+    ).rejects.toBeInstanceOf(SemanticProgramExecutionError)
   })
 
   it('validates exact runtime records without depending on object insertion order', async () => {
     const artifact = lowerOpenSCADToSemanticProgram('cube(1);')
-    const accepted = await executeSemanticProgram(artifact, sessionBackend({
-      validatePayload: (_carrierKey, payload) => typeof payload === 'string',
-      evaluate(node) {
-        return {
-          tag: 'value' as const,
-          valueType: {
+    const accepted = await executeSemanticProgram(
+      artifact,
+      sessionBackend({
+        validatePayload: (_carrierKey, payload) => typeof payload === 'string',
+        evaluate(node) {
+          return {
+            tag: 'value' as const,
+            valueType: {
+              evidence: { tag: 'representation-preserving' as const },
+              representation: node.valueType.representation,
+              space: node.valueType.space,
+              geometryKind: node.valueType.geometryKind,
+            },
             evidence: { tag: 'representation-preserving' as const },
-            representation: node.valueType.representation,
-            space: node.valueType.space,
-            geometryKind: node.valueType.geometryKind,
-          },
-          evidence: { tag: 'representation-preserving' as const },
-          payload: 'box',
-        }
-      },
-    }))
+            payload: 'box',
+          }
+        },
+      }),
+    )
     expect(accepted.outputs[0].value.tag).toBe('value')
     await accepted.dispose()
 
-    await expect(executeSemanticProgram(artifact, sessionBackend({
-      validatePayload: () => true,
-      evaluate: node => ({
-        tag: 'value',
-        valueType: { ...node.valueType, smuggled: undefined },
-        evidence: { tag: 'representation-preserving' },
-        payload: 'box',
-      } as any),
-    }))).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_TYPE' })
+    await expect(
+      executeSemanticProgram(
+        artifact,
+        sessionBackend({
+          validatePayload: () => true,
+          evaluate: node =>
+            ({
+              tag: 'value',
+              valueType: { ...node.valueType, smuggled: undefined },
+              evidence: { tag: 'representation-preserving' },
+              payload: 'box',
+            }) as any,
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_TYPE' })
 
     let getterReads = 0
-    await expect(executeSemanticProgram(artifact, sessionBackend({
-      validatePayload: () => true,
-      evaluate(node) {
-        const value: Record<string, unknown> = {
-          valueType: node.valueType,
-          evidence: { tag: 'representation-preserving' },
-          payload: 'box',
-        }
-        Object.defineProperty(value, 'tag', { enumerable: true, get: () => { getterReads++; return 'value' } })
-        return value as any
-      },
-    }))).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_TYPE' })
+    await expect(
+      executeSemanticProgram(
+        artifact,
+        sessionBackend({
+          validatePayload: () => true,
+          evaluate(node) {
+            const value: Record<string, unknown> = {
+              valueType: node.valueType,
+              evidence: { tag: 'representation-preserving' },
+              payload: 'box',
+            }
+            Object.defineProperty(value, 'tag', {
+              enumerable: true,
+              get: () => {
+                getterReads++
+                return 'value'
+              },
+            })
+            return value as any
+          },
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_TYPE' })
     expect(getterReads).toBe(0)
 
-    await expect(executeSemanticProgram(artifact, sessionBackend({
-      validatePayload: () => true,
-      evaluate: node => ({
-        tag: 'value', valueType: node.valueType,
-        evidence: { tag: 'representation-preserving' }, payload: null,
-      } as any),
-    }))).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_TYPE' })
+    await expect(
+      executeSemanticProgram(
+        artifact,
+        sessionBackend({
+          validatePayload: () => true,
+          evaluate: node =>
+            ({
+              tag: 'value',
+              valueType: node.valueType,
+              evidence: { tag: 'representation-preserving' },
+              payload: null,
+            }) as any,
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_TYPE' })
   })
 
   it('applies provider-independent typed-empty reductions and postconditions', async () => {
     const transformed = lowerOpenSCADToSemanticProgram('translate([1, 0, 0]) polygon([[0,0], [1,0], [0,1]]);')
     const calls: string[] = []
-    const transformedResult = await executeSemanticProgram(transformed, sessionBackend({
-      validatePayload: (_carrierKey, payload) => typeof payload === 'string',
-      evaluate(node) {
-        calls.push(node.kind)
-        if (node.kind === 'polygon') return {
-          tag: 'empty' as const, valueType: node.valueType,
-          evidence: { tag: 'representation-preserving' as const },
-        }
-        throw new Error('empty transform must be reduced before the backend')
-      },
-    }))
+    const transformedResult = await executeSemanticProgram(
+      transformed,
+      sessionBackend({
+        validatePayload: (_carrierKey, payload) => typeof payload === 'string',
+        evaluate(node) {
+          calls.push(node.kind)
+          if (node.kind === 'polygon')
+            return {
+              tag: 'empty' as const,
+              valueType: node.valueType,
+              evidence: { tag: 'representation-preserving' as const },
+            }
+          throw new Error('empty transform must be reduced before the backend')
+        },
+      }),
+    )
     expect(calls).toEqual(['polygon'])
     expect(transformedResult.outputs[0].value.tag).toBe('empty')
     await transformedResult.dispose()
 
-    const union = lowerOpenSCADToSemanticProgram('union(){ polygon([[0,0],[1,0],[0,1]]); polygon([[0,0],[2,0],[0,2]]); }')
+    const union = lowerOpenSCADToSemanticProgram(
+      'union(){ polygon([[0,0],[1,0],[0,1]]); polygon([[0,0],[2,0],[0,2]]); }',
+    )
     const seenInputs: number[][] = []
-    const unionResult = await executeSemanticProgram(union, sessionBackend({
-      validatePayload: (_carrierKey, payload) => typeof payload === 'string',
-      evaluate(node, inputs, context) {
-        if (node.id === 0) return { tag: 'empty', valueType: node.valueType, evidence: PRESERVING }
-        if (node.id === 1) return { tag: 'value', valueType: node.valueType, evidence: PRESERVING, payload: 'region' }
-        seenInputs.push([...context.inputNodeIndices])
-        expect(inputs).toHaveLength(1)
-        return { tag: 'value', valueType: node.valueType, evidence: PRESERVING, payload: 'union' }
-      },
-    }))
+    const unionResult = await executeSemanticProgram(
+      union,
+      sessionBackend({
+        validatePayload: (_carrierKey, payload) => typeof payload === 'string',
+        evaluate(node, inputs, context) {
+          if (node.id === 0) return { tag: 'empty', valueType: node.valueType, evidence: PRESERVING }
+          if (node.id === 1) return { tag: 'value', valueType: node.valueType, evidence: PRESERVING, payload: 'region' }
+          seenInputs.push([...context.inputNodeIndices])
+          expect(inputs).toHaveLength(1)
+          return { tag: 'value', valueType: node.valueType, evidence: PRESERVING, payload: 'union' }
+        },
+      }),
+    )
     expect(seenInputs).toEqual([[1]])
     expect(unionResult.outputs[0].value).toMatchObject({ tag: 'value', payload: 'union' })
     await unionResult.dispose()
 
-    await expect(executeSemanticProgram(lowerOpenSCADToSemanticProgram('cube(1);'), sessionBackend({
-      validatePayload: () => true,
-      evaluate: node => ({ tag: 'empty', valueType: node.valueType, evidence: PRESERVING }),
-    }))).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_TYPE' })
+    await expect(
+      executeSemanticProgram(
+        lowerOpenSCADToSemanticProgram('cube(1);'),
+        sessionBackend({
+          validatePayload: () => true,
+          evaluate: node => ({ tag: 'empty', valueType: node.valueType, evidence: PRESERVING }),
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_TYPE' })
 
-    await expect(executeSemanticProgram(lowerOpenSCADToSemanticProgram('union(){ cube(1); sphere(1); }'), sessionBackend({
-      validatePayload: (_carrierKey, payload) => typeof payload === 'string',
-      evaluate: node => node.kind === 'boolean'
-        ? { tag: 'empty', valueType: node.valueType, evidence: PRESERVING }
-        : { tag: 'value', valueType: node.valueType, evidence: PRESERVING, payload: node.kind },
-    }))).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_TYPE' })
+    await expect(
+      executeSemanticProgram(
+        lowerOpenSCADToSemanticProgram('union(){ cube(1); sphere(1); }'),
+        sessionBackend({
+          validatePayload: (_carrierKey, payload) => typeof payload === 'string',
+          evaluate: node =>
+            node.kind === 'boolean'
+              ? { tag: 'empty', valueType: node.valueType, evidence: PRESERVING }
+              : { tag: 'value', valueType: node.valueType, evidence: PRESERVING, payload: node.kind },
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_TYPE' })
   })
 
   it('admits leased materialized emptiness only for the legacy runtime contract', async () => {
@@ -1024,28 +1181,45 @@ describe('SemanticProgram executable backend seam', () => {
     expect(legacy.outputs[0].value.tag).toBe('materialized-empty')
     await legacy.dispose()
 
-    await expect(executeSemanticProgram(lowerOpenSCADToSemanticProgram(
-      '// @language openscad-viewer/brep-1\n// @requires geometry.brep\ncube(1);',
-    ), materializedBackend)).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_TYPE' })
+    await expect(
+      executeSemanticProgram(
+        lowerOpenSCADToSemanticProgram('// @language openscad-viewer/brep-1\n// @requires geometry.brep\ncube(1);'),
+        materializedBackend,
+      ),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_TYPE' })
   })
 
   it('enforces finite clocks and interrupts a non-settling backend deadline', async () => {
     const artifact = lowerOpenSCADToSemanticProgram('cube(1);')
-    await expect(executeSemanticProgram(artifact, tracingBackend, {
-      deadlineAt: 1,
-      now: () => Number.NaN,
-    })).rejects.toMatchObject({ code: 'E_SEMANTIC_DEADLINE' })
+    await expect(
+      executeSemanticProgram(artifact, tracingBackend, {
+        deadlineAt: 1,
+        now: () => Number.NaN,
+      }),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_DEADLINE' })
 
     let backendSawAbort = false
-    await expect(executeSemanticProgram(artifact, sessionBackend({
-      validatePayload: () => true,
-      evaluate(_node, _inputs, context) {
-        context.signal.addEventListener('abort', () => { backendSawAbort = true }, { once: true })
-        return new Promise(() => {})
-      },
-    }), {
-      deadlineAt: performance.now() + 15,
-    })).rejects.toMatchObject({ code: 'E_SEMANTIC_DEADLINE' })
+    await expect(
+      executeSemanticProgram(
+        artifact,
+        sessionBackend({
+          validatePayload: () => true,
+          evaluate(_node, _inputs, context) {
+            context.signal.addEventListener(
+              'abort',
+              () => {
+                backendSawAbort = true
+              },
+              { once: true },
+            )
+            return new Promise(() => {})
+          },
+        }),
+        {
+          deadlineAt: performance.now() + 15,
+        },
+      ),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_DEADLINE' })
     expect(backendSawAbort).toBe(true)
   })
 
@@ -1053,43 +1227,67 @@ describe('SemanticProgram executable backend seam', () => {
     const artifact = lowerOpenSCADToSemanticProgram('cube(1);')
     let evaluateCalls = 0
     const beforeStartSamples = [0, 0, 10]
-    await expect(executeSemanticProgram(artifact, sessionBackend({
-      validatePayload: () => true,
-      evaluate(node) {
-        evaluateCalls++
-        return { tag: 'value', valueType: node.valueType, evidence: PRESERVING, payload: 'box' }
-      },
-    }), {
-      deadlineAt: 10,
-      now: () => beforeStartSamples.shift() ?? 10,
-    })).rejects.toMatchObject({ code: 'E_SEMANTIC_DEADLINE' })
+    await expect(
+      executeSemanticProgram(
+        artifact,
+        sessionBackend({
+          validatePayload: () => true,
+          evaluate(node) {
+            evaluateCalls++
+            return { tag: 'value', valueType: node.valueType, evidence: PRESERVING, payload: 'box' }
+          },
+        }),
+        {
+          deadlineAt: 10,
+          now: () => beforeStartSamples.shift() ?? 10,
+        },
+      ),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_DEADLINE' })
     expect(evaluateCalls).toBe(0)
 
     let payloadChecks = 0
     const afterPayloadSamples = [0, 0, 0, 0, 10]
-    await expect(executeSemanticProgram(artifact, sessionBackend({
-      validatePayload: () => { payloadChecks++; return true },
-      evaluate: node => ({
-        tag: 'value', valueType: node.valueType, evidence: PRESERVING, payload: 'box',
-      }),
-    }), {
-      deadlineAt: 10,
-      now: () => afterPayloadSamples.shift() ?? 10,
-    })).rejects.toMatchObject({ code: 'E_SEMANTIC_DEADLINE' })
+    await expect(
+      executeSemanticProgram(
+        artifact,
+        sessionBackend({
+          validatePayload: () => {
+            payloadChecks++
+            return true
+          },
+          evaluate: node => ({
+            tag: 'value',
+            valueType: node.valueType,
+            evidence: PRESERVING,
+            payload: 'box',
+          }),
+        }),
+        {
+          deadlineAt: 10,
+          now: () => afterPayloadSamples.shift() ?? 10,
+        },
+      ),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_DEADLINE' })
     expect(payloadChecks).toBe(1)
   })
 
   it('transfers only root leases and disposes them exactly once', async () => {
-    const counted = countedBackend((node, inputs, _context, allocate) => allocate(
-      node,
-      `${node.kind}(${inputs.map(input => input.tag === 'value' ? input.payload : 'empty').join(',')})`,
-    ))
+    const counted = countedBackend((node, inputs, _context, allocate) =>
+      allocate(
+        node,
+        `${node.kind}(${inputs.map(input => (input.tag === 'value' ? input.payload : 'empty')).join(',')})`,
+      ),
+    )
     const result = await executeSemanticProgram(
       lowerOpenSCADToSemanticProgram('translate([1, 2, 3]) cube(1);'),
       counted.backend,
     )
     expect(counted.state).toMatchObject({
-      beginCalls: 1, closeCalls: 1, allocated: 2, released: 1, disposeCalls: 0,
+      beginCalls: 1,
+      closeCalls: 1,
+      allocated: 2,
+      released: 1,
+      disposeCalls: 0,
     })
     expect(counted.state.live.size).toBe(1)
     expect(counted.state.outcomes[0]).toMatchObject({ tag: 'commit' })
@@ -1111,16 +1309,21 @@ describe('SemanticProgram executable backend seam', () => {
       if (node.id === 1) throw new Error('allocated then threw')
       return value
     })
-    await expect(executeSemanticProgram(
-      lowerOpenSCADToSemanticProgram('translate([1, 0, 0]) cube(1);'),
-      counted.backend,
-    )).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_FAILURE', node: 1 })
+    await expect(
+      executeSemanticProgram(lowerOpenSCADToSemanticProgram('translate([1, 0, 0]) cube(1);'), counted.backend),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_FAILURE', node: 1 })
     expect(counted.state).toMatchObject({
-      beginCalls: 1, closeCalls: 1, allocated: 2, released: 2, disposeCalls: 0,
+      beginCalls: 1,
+      closeCalls: 1,
+      allocated: 2,
+      released: 2,
+      disposeCalls: 0,
     })
     expect(counted.state.live.size).toBe(0)
     expect(counted.state.outcomes[0]).toMatchObject({
-      tag: 'failure', code: 'E_SEMANTIC_BACKEND_FAILURE', node: 1,
+      tag: 'failure',
+      code: 'E_SEMANTIC_BACKEND_FAILURE',
+      node: 1,
     })
   })
 
@@ -1129,10 +1332,9 @@ describe('SemanticProgram executable backend seam', () => {
       const registered = allocate(node, 'box')
       return { ...registered, lease: Object.freeze({}) as SemanticBackendPayloadLease }
     })
-    await expect(executeSemanticProgram(
-      lowerOpenSCADToSemanticProgram('cube(1);'),
-      counted.backend,
-    )).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_TYPE', node: 0 })
+    await expect(
+      executeSemanticProgram(lowerOpenSCADToSemanticProgram('cube(1);'), counted.backend),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_TYPE', node: 0 })
     expect(counted.state).toMatchObject({ allocated: 1, released: 1, closeCalls: 1 })
     expect(counted.state.live.size).toBe(0)
   })
@@ -1150,8 +1352,11 @@ describe('SemanticProgram executable backend seam', () => {
           evaluate(node) {
             calls++
             return {
-              tag: 'value', valueType: node.valueType, evidence: PRESERVING,
-              payload: `value-${calls}`, lease,
+              tag: 'value',
+              valueType: node.valueType,
+              evidence: PRESERVING,
+              payload: `value-${calls}`,
+              lease,
             } as any
           },
           async releasePayload(candidate) {
@@ -1165,26 +1370,29 @@ describe('SemanticProgram executable backend seam', () => {
         }
       },
     }
-    await expect(executeSemanticProgram(
-      lowerOpenSCADToSemanticProgram('translate([1, 0, 0]) cube(1);'),
-      backend,
-    )).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_TYPE', node: 1 })
+    await expect(
+      executeSemanticProgram(lowerOpenSCADToSemanticProgram('translate([1, 0, 0]) cube(1);'), backend),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_TYPE', node: 1 })
     expect(released).toBe(1)
     expect(live.size).toBe(0)
   })
 
   it('closes leases when progress callbacks fail and commits empty without inventing leases', async () => {
     const failed = countedBackend((node, _inputs, _context, allocate) => allocate(node, node.kind))
-    await expect(executeSemanticProgram(
-      lowerOpenSCADToSemanticProgram('translate([1, 0, 0]) cube(1);'),
-      failed.backend,
-      { onNode: () => { throw new Error('UI callback failed') } },
-    )).rejects.toMatchObject({ code: 'E_SEMANTIC_CALLBACK', node: 0 })
+    await expect(
+      executeSemanticProgram(lowerOpenSCADToSemanticProgram('translate([1, 0, 0]) cube(1);'), failed.backend, {
+        onNode: () => {
+          throw new Error('UI callback failed')
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_CALLBACK', node: 0 })
     expect(failed.state).toMatchObject({ allocated: 1, released: 1, closeCalls: 1 })
     expect(failed.state.live.size).toBe(0)
 
     const empty = countedBackend(node => ({
-      tag: 'empty', valueType: node.valueType, evidence: PRESERVING,
+      tag: 'empty',
+      valueType: node.valueType,
+      evidence: PRESERVING,
     }))
     const result = await executeSemanticProgram(
       lowerOpenSCADToSemanticProgram('translate([1, 0, 0]) polygon([[0,0],[1,0],[0,1]]);'),
@@ -1200,18 +1408,25 @@ describe('SemanticProgram executable backend seam', () => {
 
   it('quiescent close waits for a value that settles after deadline and releases it', async () => {
     let signalObserved = false
-    const counted = countedBackend((node, _inputs, context, allocate) => new Promise(resolve => {
-      context.signal.addEventListener('abort', () => {
-        signalObserved = true
-        setTimeout(() => resolve(allocate(node, 'late-box')), 5)
-      }, { once: true })
-    }))
+    const counted = countedBackend(
+      (node, _inputs, context, allocate) =>
+        new Promise(resolve => {
+          context.signal.addEventListener(
+            'abort',
+            () => {
+              signalObserved = true
+              setTimeout(() => resolve(allocate(node, 'late-box')), 5)
+            },
+            { once: true },
+          )
+        }),
+    )
     const started = performance.now()
-    await expect(executeSemanticProgram(
-      lowerOpenSCADToSemanticProgram('cube(1);'),
-      counted.backend,
-      { deadlineAt: performance.now() + 10 },
-    )).rejects.toMatchObject({ code: 'E_SEMANTIC_DEADLINE', node: 0 })
+    await expect(
+      executeSemanticProgram(lowerOpenSCADToSemanticProgram('cube(1);'), counted.backend, {
+        deadlineAt: performance.now() + 10,
+      }),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_DEADLINE', node: 0 })
     expect(performance.now() - started).toBeGreaterThanOrEqual(10)
     expect(signalObserved).toBe(true)
     expect(counted.state).toMatchObject({ allocated: 1, released: 1, closeCalls: 1 })
@@ -1221,65 +1436,73 @@ describe('SemanticProgram executable backend seam', () => {
   it('does not begin before trust, budget, or control checks succeed', async () => {
     const counted = countedBackend((node, _inputs, _context, allocate) => allocate(node, 'box'))
     const artifact = lowerOpenSCADToSemanticProgram('cube(1);')
-    await expect(executeSemanticProgram(artifact, counted.backend, { maxNodes: 0 }))
-      .rejects.toMatchObject({ code: 'E_SEMANTIC_BUDGET' })
-    await expect(executeSemanticProgram(artifact, counted.backend, { shouldAbort: () => true }))
-      .rejects.toMatchObject({ code: 'E_SEMANTIC_ABORTED' })
-    await expect(executeSemanticProgram({ ...artifact } as any, counted.backend))
-      .rejects.toThrow(/artifact minted/)
+    await expect(executeSemanticProgram(artifact, counted.backend, { maxNodes: 0 })).rejects.toMatchObject({
+      code: 'E_SEMANTIC_BUDGET',
+    })
+    await expect(executeSemanticProgram(artifact, counted.backend, { shouldAbort: () => true })).rejects.toMatchObject({
+      code: 'E_SEMANTIC_ABORTED',
+    })
+    await expect(executeSemanticProgram({ ...artifact } as any, counted.backend)).rejects.toThrow(/artifact minted/)
     expect(counted.state.beginCalls).toBe(0)
     expect(counted.state.closeCalls).toBe(0)
   })
 
   it('treats begin and commit-close failures as typed terminal failures', async () => {
     let providerLive = 0
-    await expect(executeSemanticProgram(lowerOpenSCADToSemanticProgram('cube(1);'), {
-      begin() {
-        providerLive++
-        providerLive--
-        throw new Error('atomic begin failed after internal cleanup')
-      },
-    })).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_BEGIN', node: null })
+    await expect(
+      executeSemanticProgram(lowerOpenSCADToSemanticProgram('cube(1);'), {
+        begin() {
+          providerLive++
+          providerLive--
+          throw new Error('atomic begin failed after internal cleanup')
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_BEGIN', node: null })
     expect(providerLive).toBe(0)
 
     let publishedLive = 0
     let publishedCloseCalls = 0
-    await expect(executeSemanticProgram(lowerOpenSCADToSemanticProgram('cube(1);'), {
-      begin() {
-        publishedLive++
-        const session: Record<string, unknown> = {
-          validatePayload: () => true,
-          releasePayload: async () => {},
-          close: async () => {
-            publishedCloseCalls++
-            publishedLive = 0
-            return { tag: 'closed' }
-          },
-        }
-        Object.defineProperty(session, 'evaluate', {
-          enumerable: true,
-          get: () => { throw new Error('invalid evaluate accessor') },
-        })
-        return session as any
-      },
-    })).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_FAILURE', node: null })
+    await expect(
+      executeSemanticProgram(lowerOpenSCADToSemanticProgram('cube(1);'), {
+        begin() {
+          publishedLive++
+          const session: Record<string, unknown> = {
+            validatePayload: () => true,
+            releasePayload: async () => {},
+            close: async () => {
+              publishedCloseCalls++
+              publishedLive = 0
+              return { tag: 'closed' }
+            },
+          }
+          Object.defineProperty(session, 'evaluate', {
+            enumerable: true,
+            get: () => {
+              throw new Error('invalid evaluate accessor')
+            },
+          })
+          return session as any
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_FAILURE', node: null })
     expect(publishedCloseCalls).toBe(1)
     expect(publishedLive).toBe(0)
 
-    const counted = countedBackend(
-      (node, _inputs, _context, allocate) => allocate(node, 'box'),
-      { closeReject: true },
-    )
-    await expect(executeSemanticProgram(
-      lowerOpenSCADToSemanticProgram('cube(1);'),
-      counted.backend,
-    )).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_CLOSE', node: null })
+    const counted = countedBackend((node, _inputs, _context, allocate) => allocate(node, 'box'), { closeReject: true })
+    await expect(
+      executeSemanticProgram(lowerOpenSCADToSemanticProgram('cube(1);'), counted.backend),
+    ).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_CLOSE', node: null })
     expect(counted.state.live.size).toBe(0)
     expect(counted.state).toMatchObject({ allocated: 1, released: 1, closeCalls: 1 })
 
-    const failedClose = countedBackend(() => { throw new Error('primary evaluation failure') }, {
-      closeReject: true,
-    })
+    const failedClose = countedBackend(
+      () => {
+        throw new Error('primary evaluation failure')
+      },
+      {
+        closeReject: true,
+      },
+    )
     let primary: unknown
     try {
       await executeSemanticProgram(lowerOpenSCADToSemanticProgram('cube(1);'), failedClose.backend)
@@ -1305,8 +1528,11 @@ describe('SemanticProgram executable backend seam', () => {
           evaluate(node) {
             live = 1
             return {
-              tag: 'value', valueType: node.valueType, evidence: PRESERVING,
-              payload: 'box', lease,
+              tag: 'value',
+              valueType: node.valueType,
+              evidence: PRESERVING,
+              payload: 'box',
+              lease,
             } as any
           },
           async releasePayload() {},
@@ -1330,23 +1556,18 @@ describe('SemanticProgram executable backend seam', () => {
         }
       },
     }
-    await expect(executeSemanticProgram(
-      lowerOpenSCADToSemanticProgram('cube(1);'),
-      backend,
-    )).rejects.toMatchObject({ code: 'E_SEMANTIC_BACKEND_CLOSE' })
+    await expect(executeSemanticProgram(lowerOpenSCADToSemanticProgram('cube(1);'), backend)).rejects.toMatchObject({
+      code: 'E_SEMANTIC_BACKEND_CLOSE',
+    })
     expect(disposeCalls).toBe(1)
     expect(live).toBe(0)
   })
 
   it('memoizes a rejected result disposal without a second free attempt', async () => {
-    const counted = countedBackend(
-      (node, _inputs, _context, allocate) => allocate(node, 'box'),
-      { disposeReject: true },
-    )
-    const result = await executeSemanticProgram(
-      lowerOpenSCADToSemanticProgram('cube(1);'),
-      counted.backend,
-    )
+    const counted = countedBackend((node, _inputs, _context, allocate) => allocate(node, 'box'), {
+      disposeReject: true,
+    })
+    const result = await executeSemanticProgram(lowerOpenSCADToSemanticProgram('cube(1);'), counted.backend)
     const first = result.dispose()
     const second = result.dispose()
     expect(first).toBe(second)
@@ -1363,8 +1584,9 @@ describe('SemanticProgram executable backend seam', () => {
     expect(Object.isFrozen(artifact.program.core.nodes[0])).toBe(true)
     await expect(executeSemanticProgram({ ...artifact } as any, tracingBackend)).rejects.toThrow(/artifact minted/)
     const other = lowerOpenSCADToSemanticProgram('sphere(1);')
-    await expect(executeSemanticProgram({ ...artifact, program: other.program } as any, tracingBackend))
-      .rejects.toThrow(/artifact minted/)
+    await expect(
+      executeSemanticProgram({ ...artifact, program: other.program } as any, tracingBackend),
+    ).rejects.toThrow(/artifact minted/)
 
     const unchecked = lowerOpenSCADToSemanticProgramUnchecked('cube(1);')
     expect(() => requireTrustedSemanticLowering(unchecked)).toThrow(/artifact minted/)

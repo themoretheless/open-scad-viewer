@@ -18,23 +18,27 @@ export const SPINNER_SAFE_DEFAULTS = {
   helix: 35,
 }
 
-const schema = z.object({
-  inner_radius: z.number().finite().min(10).max(80).default(30.845),
-  outer_radius: z.number().finite().min(11).max(100).default(32),
-  hole: z.number().finite().min(0).max(100).default(44),
-  gap: z.number().finite().min(0).max(0.6).default(0.05),
-  height: z.number().finite().min(2).max(30).default(10),
-  helix: z.number().finite().min(0).max(45).default(35),
-}).strict()
+const schema = z
+  .object({
+    inner_radius: z.number().finite().min(10).max(80).default(30.845),
+    outer_radius: z.number().finite().min(11).max(100).default(32),
+    hole: z.number().finite().min(0).max(100).default(44),
+    gap: z.number().finite().min(0).max(0.6).default(0.05),
+    height: z.number().finite().min(2).max(30).default(10),
+    helix: z.number().finite().min(0).max(45).default(35),
+  })
+  .strict()
 
-const safeSchema = z.object({
-  hole: z.number().finite().min(10).max(100).default(38),
-  inner_rim: z.number().finite().min(0.4).max(20).default(0.6),
-  outer_rim: z.number().finite().min(0.4).max(20).default(0.6),
-  gap: z.number().finite().min(0).max(0.6).default(0.25),
-  height: z.number().finite().min(2).max(30).default(6),
-  helix: z.number().finite().min(0).max(45).default(35),
-}).strict()
+const safeSchema = z
+  .object({
+    hole: z.number().finite().min(10).max(100).default(38),
+    inner_rim: z.number().finite().min(0.4).max(20).default(0.6),
+    outer_rim: z.number().finite().min(0.4).max(20).default(0.6),
+    gap: z.number().finite().min(0).max(0.6).default(0.25),
+    height: z.number().finite().min(2).max(30).default(6),
+    helix: z.number().finite().min(0).max(45).default(35),
+  })
+  .strict()
 
 /**
  * Generates a parametric Rush/1 herringbone planetary spinner (sun = 32 teeth,
@@ -45,8 +49,8 @@ export function generateSpinner(input: unknown = SPINNER_DEFAULTS): string {
   const gearScale = p.inner_radius / 30.845
   const gearModule = 1.5 * gearScale
   const clearance = 0.1 * gearScale
-  const ringRim = p.outer_radius - (gearModule * 40 / 2 + gearModule + clearance)
-  const maxHole = 2 * (gearModule * 32 / 2 - gearModule - clearance) - gearModule / 2
+  const ringRim = p.outer_radius - ((gearModule * 40) / 2 + gearModule + clearance)
+  const maxHole = 2 * ((gearModule * 32) / 2 - gearModule - clearance) - gearModule / 2
 
   if (p.outer_radius <= p.inner_radius) {
     throw Error('Наружный радиус должен быть больше внутреннего / outer_radius must be greater than inner_radius')
@@ -55,10 +59,14 @@ export function generateSpinner(input: unknown = SPINNER_DEFAULTS): string {
     throw Error('Зазор слишком велик для выбранного размера зубьев / Gap exceeds tooth allowance')
   }
   if (ringRim < gearModule / 4) {
-    throw Error('Недостаточная толщина наружного кольца: увеличьте наружный радиус или уменьшите внутренний / Ring rim is too thin: increase outer_radius or reduce inner_radius')
+    throw Error(
+      'Недостаточная толщина наружного кольца: увеличьте наружный радиус или уменьшите внутренний / Ring rim is too thin: increase outer_radius or reduce inner_radius',
+    )
   }
   if (p.hole > maxHole) {
-    throw Error('Центральное отверстие выходит за корень солнечной шестерни: уменьшите отверстие или увеличьте внутренний радиус / Center hole exceeds sun gear root diameter')
+    throw Error(
+      'Центральное отверстие выходит за корень солнечной шестерни: уменьшите отверстие или увеличьте внутренний радиус / Center hole exceeds sun gear root diameter',
+    )
   }
 
   return `// @rush/1
@@ -196,7 +204,7 @@ export function computeSpinnerParameterSuggestions(
     const currentInnerRim = sunRootRadius - hole / 2
     const currentOuterRim = outerRadius - ringRootRadius
     const gap = num('gap')
-    const maxSafeGap = round2(Math.max(0.02, 0.30 * gearScale))
+    const maxSafeGap = round2(Math.max(0.02, 0.3 * gearScale))
     const recGap = round2(Math.min(maxSafeGap, Math.max(0.04, 0.12 * gearScale)))
 
     if (gap !== undefined && gap > maxSafeGap) {
@@ -214,7 +222,9 @@ export function computeSpinnerParameterSuggestions(
       if (gap !== undefined && gap > maxSafeGap) changes.gap = recGap
       if (Math.abs(outerRadius - targetOuter) >= 0.1 || Math.abs(hole - targetHole) >= 0.1) {
         suggestions.push({
-          title: `Подогнать под бортики 2.5 мм (${Object.entries(changes).map(([k, v]) => `${k} → ${v} мм`).join(', ')})`,
+          title: `Подогнать под бортики 2.5 мм (${Object.entries(changes)
+            .map(([k, v]) => `${k} → ${v} мм`)
+            .join(', ')})`,
           description: `При inner_radius = ${innerRadius} мм корень венца = ${round2(ringRootRadius)} мм, корень солнца = ${round2(sunRootRadius)} мм`,
           changes,
         })
@@ -251,7 +261,10 @@ export function computeSpinnerParameterSuggestions(
       const targetInnerForOuter = round2((targetRingRoot / 31.6) * 30.845)
       const targetSunRoot = 22.4 * (targetInnerForOuter / 30.845)
       const targetHoleForOuter = round2(Math.max(10, 2 * (targetSunRoot - 2.5)))
-      if (targetInnerForOuter >= 10 && (Math.abs(innerRadius - targetInnerForOuter) >= 0.1 || Math.abs(hole - targetHoleForOuter) >= 0.1)) {
+      if (
+        targetInnerForOuter >= 10 &&
+        (Math.abs(innerRadius - targetInnerForOuter) >= 0.1 || Math.abs(hole - targetHoleForOuter) >= 0.1)
+      ) {
         suggestions.push({
           title: `Пересчитать внутренний радиус и отверстие под outer_radius = ${outerRadius} мм (inner_radius → ${targetInnerForOuter}, hole → ${targetHoleForOuter})`,
           description: `Сохраняет бортики 2.5 мм при наружном диаметре ${round2(outerRadius * 2)} мм`,
@@ -269,7 +282,7 @@ export function computeSpinnerParameterSuggestions(
     const gearScale = sunRootRadius / 22.4
     const ringRootRadius = 31.6 * gearScale
     const outerDiameter = round2(2 * (ringRootRadius + outerRim))
-    const maxSafeGap = round2(Math.max(0.05, 0.60 * gearScale))
+    const maxSafeGap = round2(Math.max(0.05, 0.6 * gearScale))
     const gap = num('gap')
 
     if (gap !== undefined && gap > maxSafeGap) {
@@ -284,7 +297,9 @@ export function computeSpinnerParameterSuggestions(
       const changes: Record<string, number> = { outer_rim: innerRim }
       if (gap !== undefined && gap > maxSafeGap) changes.gap = maxSafeGap
       suggestions.push({
-        title: `Сделать наружный бортик таким же: ${Object.entries(changes).map(([k, v]) => `${k} → ${v} мм`).join(', ')}`,
+        title: `Сделать наружный бортик таким же: ${Object.entries(changes)
+          .map(([k, v]) => `${k} → ${v} мм`)
+          .join(', ')}`,
         description: `Симметричные бортики по ${innerRim} мм (наружный диаметр станет ${round2(2 * (ringRootRadius + innerRim))} мм)`,
         changes,
       })
@@ -297,14 +312,19 @@ export function computeSpinnerParameterSuggestions(
     } else if (changedName === 'hole') {
       const scaledRim = round2(Math.max(0.4, Math.min(8, (hole / 38) * 0.6)))
       const scaledGearScale = (hole / 2 + scaledRim) / 22.4
-      const scaledMaxSafeGap = round2(Math.max(0.05, 0.60 * scaledGearScale))
+      const scaledMaxSafeGap = round2(Math.max(0.05, 0.6 * scaledGearScale))
       const changes: Record<string, number> = {}
       if (Math.abs(innerRim - scaledRim) >= 0.15) changes.inner_rim = scaledRim
       if (Math.abs(outerRim - scaledRim) >= 0.15) changes.outer_rim = scaledRim
       if (gap !== undefined && gap > scaledMaxSafeGap) changes.gap = scaledMaxSafeGap
-      if (Object.keys(changes).length > 0 && !(Object.keys(changes).length === 1 && 'gap' in changes && gap !== undefined && gap > maxSafeGap)) {
+      if (
+        Object.keys(changes).length > 0 &&
+        !(Object.keys(changes).length === 1 && 'gap' in changes && gap !== undefined && gap > maxSafeGap)
+      ) {
         suggestions.push({
-          title: `Подогнать бортики под hole = ${hole} мм (${Object.entries(changes).map(([k, v]) => `${k} → ${v} мм`).join(', ')})`,
+          title: `Подогнать бортики под hole = ${hole} мм (${Object.entries(changes)
+            .map(([k, v]) => `${k} → ${v} мм`)
+            .join(', ')})`,
           description: `Текущий наружный диаметр спиннера: ${outerDiameter} мм (модуль зуба ${round2(1.5 * gearScale)} мм, допустимый gap до ${maxSafeGap} мм)`,
           changes,
         })
@@ -314,4 +334,3 @@ export function computeSpinnerParameterSuggestions(
 
   return suggestions
 }
-

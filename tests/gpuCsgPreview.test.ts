@@ -245,12 +245,20 @@ describe('gpuCsgPreview WebGPU pipelines and renderer', () => {
           desc,
           bindGroups: [],
           drawCalls: 0,
-          setPipeline: (p: any) => { currentPass.pipeline = p },
-          setBindGroup: (idx: number, bg: any) => { currentPass.bindGroups[idx] = bg },
+          setPipeline: (p: any) => {
+            currentPass.pipeline = p
+          },
+          setBindGroup: (idx: number, bg: any) => {
+            currentPass.bindGroups[idx] = bg
+          },
           setVertexBuffer: () => undefined,
           setIndexBuffer: () => undefined,
-          setStencilReference: (ref: number) => { currentPass.stencilRef = ref },
-          drawIndexed: () => { currentPass.drawCalls++ },
+          setStencilReference: (ref: number) => {
+            currentPass.stencilRef = ref
+          },
+          drawIndexed: () => {
+            currentPass.drawCalls++
+          },
           end: () => undefined,
         }
         passes.push(currentPass)

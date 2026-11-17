@@ -108,14 +108,6 @@ export {
   type DefineComponent,
 } from './svet-vnode'
 
-export {
-  createRenderer,
-  type RendererOptions,
-  type SvetApp,
-} from './svet-renderer'
+export { createRenderer, type RendererOptions, type SvetApp } from './svet-renderer'
 
-export {
-  createApp,
-  createSSRApp,
-  renderToString,
-} from './svet-dom'
+export { createApp, createSSRApp, renderToString } from './svet-dom'

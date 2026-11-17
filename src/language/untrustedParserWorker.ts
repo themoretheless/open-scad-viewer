@@ -38,7 +38,11 @@ export interface UntrustedParserRunOptions {
 }
 
 export class UntrustedParserWorkerError extends Error {
-  constructor(readonly code: string, message: string, name = 'UntrustedParserWorkerError') {
+  constructor(
+    readonly code: string,
+    message: string,
+    name = 'UntrustedParserWorkerError',
+  ) {
     super(message)
     this.name = name
   }
@@ -65,8 +69,11 @@ export class UntrustedParserWorkerClient {
     }
     this.cancel()
     let worker: UntrustedParserPort
-    try { worker = this.worker ??= this.factory() }
-    catch { return Promise.reject(new UntrustedParserWorkerError('PARSER_STARTUP', 'Could not start parser worker')) }
+    try {
+      worker = this.worker ??= this.factory()
+    } catch {
+      return Promise.reject(new UntrustedParserWorkerError('PARSER_STARTUP', 'Could not start parser worker'))
+    }
     const id = this.nextId++
     return new Promise((resolve, reject) => {
       let settled = false
@@ -80,29 +87,48 @@ export class UntrustedParserWorkerClient {
         worker.onerror = null
         worker.onmessageerror = null
         if (this.active === fail) this.active = null
-        if (discard) { if (this.worker === worker) this.worker = null; worker.terminate() }
-        if (error) reject(error); else resolve(result!)
+        if (discard) {
+          if (this.worker === worker) this.worker = null
+          worker.terminate()
+        }
+        if (error) reject(error)
+        else resolve(result!)
       }
       const fail = (error: Error, discard = true) => finish(error, undefined, discard)
       const abort = () => fail(cancelled())
       worker.onmessage = event => {
         const data = event.data as UntrustedParserResponse | null
         if (!data || data.version !== 1 || data.id !== id) {
-          fail(new UntrustedParserWorkerError('PARSER_PROTOCOL', 'Invalid parser worker response')); return
+          fail(new UntrustedParserWorkerError('PARSER_PROTOCOL', 'Invalid parser worker response'))
+          return
         }
         if (data.ok) finish(undefined, data.result as UntrustedParserResult<K>)
         else fail(new UntrustedParserWorkerError(data.error.code, data.error.message, data.error.name), false)
       }
-      worker.onerror = event => fail(new UntrustedParserWorkerError('PARSER_CRASH', event.message || 'Parser worker failed'))
-      worker.onmessageerror = () => fail(new UntrustedParserWorkerError('PARSER_TRANSPORT', 'Parser response could not be received'))
+      worker.onerror = event =>
+        fail(new UntrustedParserWorkerError('PARSER_CRASH', event.message || 'Parser worker failed'))
+      worker.onmessageerror = () =>
+        fail(new UntrustedParserWorkerError('PARSER_TRANSPORT', 'Parser response could not be received'))
       this.active = () => fail(cancelled())
       options.signal?.addEventListener('abort', abort, { once: true })
-      timer = setTimeout(() => fail(new UntrustedParserWorkerError('PARSER_TIMEOUT', 'Parser operation exceeded its time limit')), timeoutMs)
-      try { worker.postMessage({ version: 1, id, job }) }
-      catch { fail(new UntrustedParserWorkerError('PARSER_TRANSPORT', 'Parser request could not be sent')) }
+      timer = setTimeout(
+        () => fail(new UntrustedParserWorkerError('PARSER_TIMEOUT', 'Parser operation exceeded its time limit')),
+        timeoutMs,
+      )
+      try {
+        worker.postMessage({ version: 1, id, job })
+      } catch {
+        fail(new UntrustedParserWorkerError('PARSER_TRANSPORT', 'Parser request could not be sent'))
+      }
     })
   }
 
-  cancel(): void { this.active?.() }
-  dispose(): void { this.cancel(); this.worker?.terminate(); this.worker = null }
+  cancel(): void {
+    this.active?.()
+  }
+  dispose(): void {
+    this.cancel()
+    this.worker?.terminate()
+    this.worker = null
+  }
 }

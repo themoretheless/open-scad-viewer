@@ -1,6 +1,12 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { SPINNER_DEFAULTS, SPINNER_SAFE_DEFAULTS, computeSpinnerParameterSuggestions, generateSpinner, generateSpinnerSafe } from '../src/app/spinnerGenerator'
+import {
+  SPINNER_DEFAULTS,
+  SPINNER_SAFE_DEFAULTS,
+  computeSpinnerParameterSuggestions,
+  generateSpinner,
+  generateSpinnerSafe,
+} from '../src/app/spinnerGenerator'
 import { compileRushFrontend } from '../src/language/rushFrontend'
 import { parseOpenSCAD } from '../src/language/openscadParser'
 import { exportMesh } from '../src/exchange/meshConvert'
@@ -17,7 +23,9 @@ describe('spinner generator', () => {
     expect(compiled.customizer).toHaveLength(6)
     const parsed = await parseOpenSCAD(source)
     expect(parsed.meshes).toHaveLength(20)
-    const scaled = await parseOpenSCAD(generateSpinner({ ...SPINNER_DEFAULTS, inner_radius: 35, outer_radius: 38, hole: 38 }))
+    const scaled = await parseOpenSCAD(
+      generateSpinner({ ...SPINNER_DEFAULTS, inner_radius: 35, outer_radius: 38, hole: 38 }),
+    )
     expect(scaled.meshes).toHaveLength(20)
     const safeSource = generateSpinnerSafe(SPINNER_SAFE_DEFAULTS)
     expect(compileRushFrontend(safeSource).customizer).toHaveLength(6)

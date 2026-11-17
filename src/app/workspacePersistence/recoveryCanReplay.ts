@@ -12,12 +12,13 @@ export function recoveryCanReplay(
   // journal that explicitly branched from a now-missing head is ambiguous and
   // must not be replayed as if that head had never existed.
   if (!indexed) return recovery.base.status !== 'found'
-  if (recovery.base.status !== 'found'
-    || !workspaceDocumentsEqual(indexed, recovery.base.snapshot)) return false
+  if (recovery.base.status !== 'found' || !workspaceDocumentsEqual(indexed, recovery.base.snapshot)) return false
   const base = recovery.base.snapshot
-  return recovery.snapshot.documentId === base.documentId
-    && recovery.snapshot.mutation > base.mutation
-    && recovery.snapshot.revision >= base.revision
+  return (
+    recovery.snapshot.documentId === base.documentId &&
+    recovery.snapshot.mutation > base.mutation &&
+    recovery.snapshot.revision >= base.revision
+  )
 }
 
 export function fallbackWriterId(): string {
@@ -37,8 +38,12 @@ export function distinctRecoveries(entries: StoredRecovery[]): StoredRecovery[] 
 }
 
 export function newestRecovery(entries: StoredRecovery[]): StoredRecovery | null {
-  return [...entries].sort((left, right) =>
-    right.record.snapshot.updatedAt - left.record.snapshot.updatedAt
-    || right.record.snapshot.mutation - left.record.snapshot.mutation
-    || right.key.localeCompare(left.key))[0] ?? null
+  return (
+    [...entries].sort(
+      (left, right) =>
+        right.record.snapshot.updatedAt - left.record.snapshot.updatedAt ||
+        right.record.snapshot.mutation - left.record.snapshot.mutation ||
+        right.key.localeCompare(left.key),
+    )[0] ?? null
+  )
 }

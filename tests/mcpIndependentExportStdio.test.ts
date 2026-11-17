@@ -75,9 +75,7 @@ class IndependentExportStdioClient {
     const response = new Promise<JsonRpcResponse>((resolveResponse, rejectResponse) => {
       const timeout = setTimeout(() => {
         this.waiters.delete(id)
-        rejectResponse(new Error(
-          `Timed out waiting for ${method}\nstderr:\n${this.stderrLines.join('\n')}`,
-        ))
+        rejectResponse(new Error(`Timed out waiting for ${method}\nstderr:\n${this.stderrLines.join('\n')}`))
       }, 30_000)
       this.waiters.set(id, value => {
         clearTimeout(timeout)
@@ -122,12 +120,14 @@ class IndependentExportStdioClient {
 }
 
 afterEach(async () => {
-  await Promise.all([...liveChildren].map(async child => {
-    if (child.exitCode === null && child.signalCode === null) child.kill()
-    if (child.exitCode === null && child.signalCode === null) {
-      await new Promise<void>(resolveClose => child.once('close', () => resolveClose()))
-    }
-  }))
+  await Promise.all(
+    [...liveChildren].map(async child => {
+      if (child.exitCode === null && child.signalCode === null) child.kill()
+      if (child.exitCode === null && child.signalCode === null) {
+        await new Promise<void>(resolveClose => child.once('close', () => resolveClose()))
+      }
+    }),
+  )
 })
 
 function result(response: JsonRpcResponse): Record<string, unknown> {
@@ -145,25 +145,31 @@ function toolContent(response: JsonRpcResponse): Record<string, unknown> {
 describe('independent OpenSCAD export over actual MCP stdio', () => {
   it('lists the tool and serves an integrity-matched session resource', async () => {
     const client = new IndependentExportStdioClient()
-    expect((await client.request('initialize', {
-      protocolVersion: '2025-11-25',
-      capabilities: {},
-      clientInfo: { name: 'independent-export-stdio', version: '1.0.0' },
-    })).error).toBeUndefined()
+    expect(
+      (
+        await client.request('initialize', {
+          protocolVersion: '2025-11-25',
+          capabilities: {},
+          clientInfo: { name: 'independent-export-stdio', version: '1.0.0' },
+        })
+      ).error,
+    ).toBeUndefined()
     await client.notify('notifications/initialized')
 
     const tools = result(await client.request('tools/list')) as { tools: Array<{ name: string }> }
     expect(tools.tools).toContainEqual(expect.objectContaining({ name: 'openscad_independent_export' }))
 
-    const exported = toolContent(await client.request('tools/call', {
-      name: 'openscad_independent_export',
-      arguments: {
-        source: 'cube([1, 2, 3]);',
-        format: 'stl',
-        file_name: 'stdio-cube',
-        max_bytes: 4096,
-      },
-    })) as {
+    const exported = toolContent(
+      await client.request('tools/call', {
+        name: 'openscad_independent_export',
+        arguments: {
+          source: 'cube([1, 2, 3]);',
+          format: 'stl',
+          file_name: 'stdio-cube',
+          max_bytes: 4096,
+        },
+      }),
+    ) as {
       export: { engine: { upstream_runtime_used: boolean }; quality: string; metrics: { volume: number } }
       artifact: { resource_uri: string; id: string; sha256: string; byte_length: number }
     }
@@ -174,9 +180,11 @@ describe('independent OpenSCAD export over actual MCP stdio', () => {
     })
     expect(exported.artifact.resource_uri).toBe(`openscad://independent-artifacts/${exported.artifact.id}`)
 
-    const resource = result(await client.request('resources/read', {
-      uri: exported.artifact.resource_uri,
-    })) as { contents: Array<{ blob: string; mimeType: string }> }
+    const resource = result(
+      await client.request('resources/read', {
+        uri: exported.artifact.resource_uri,
+      }),
+    ) as { contents: Array<{ blob: string; mimeType: string }> }
     const bytes = Buffer.from(resource.contents[0].blob, 'base64')
     const digest = createHash('sha256').update(bytes).digest('hex')
     expect(resource.contents[0].mimeType).toBe('model/stl')
@@ -189,9 +197,11 @@ describe('independent OpenSCAD export over actual MCP stdio', () => {
     const templates = result(await client.request('resources/templates/list')) as {
       resourceTemplates: Array<{ uriTemplate: string }>
     }
-    expect(templates.resourceTemplates).toContainEqual(expect.objectContaining({
-      uriTemplate: 'openscad://independent-artifacts/{sha256}',
-    }))
+    expect(templates.resourceTemplates).toContainEqual(
+      expect.objectContaining({
+        uriTemplate: 'openscad://independent-artifacts/{sha256}',
+      }),
+    )
     expect(client.invalidStdoutLines).toEqual([])
     expect(await client.close()).toEqual({ code: 0, signal: null })
   }, 45_000)

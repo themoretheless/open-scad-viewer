@@ -4,7 +4,7 @@
  * importers stay small; the parsers live in `meshImport.ts`.
  */
 export const MESH_IMPORT_FORMATS = ['stl', 'obj', 'ply', 'off', 'amf', '3mf'] as const
-export type MeshImportFormat = typeof MESH_IMPORT_FORMATS[number]
+export type MeshImportFormat = (typeof MESH_IMPORT_FORMATS)[number]
 
 export const MESH_IMPORT_MAX_BYTES = 20_000_000
 
@@ -27,13 +27,15 @@ const MESH_IMPORT_MIME_TYPES: Readonly<Record<MeshImportFormat, readonly string[
 })
 
 /** `accept` attribute value for file inputs that take any importable mesh. */
-export const MESH_IMPORT_ACCEPT = MESH_IMPORT_FORMATS
-  .flatMap(format => [...MESH_IMPORT_EXTENSIONS[format].map(extension => `.${extension}`), ...MESH_IMPORT_MIME_TYPES[format]])
+export const MESH_IMPORT_ACCEPT = MESH_IMPORT_FORMATS.flatMap(format => [
+  ...MESH_IMPORT_EXTENSIONS[format].map(extension => `.${extension}`),
+  ...MESH_IMPORT_MIME_TYPES[format],
+])
   .filter((value, index, all) => all.indexOf(value) === index)
   .join(',')
 
 export const MESH_EXPORT_FORMATS = ['stl', 'stl_binary', '3mf', 'obj', 'ply', 'off', 'amf'] as const
-export type MeshExportFormat = typeof MESH_EXPORT_FORMATS[number]
+export type MeshExportFormat = (typeof MESH_EXPORT_FORMATS)[number]
 
 /** Human-readable labels shared by the UI and MCP descriptions. */
 export const MESH_FORMAT_LABELS: Readonly<Record<MeshExportFormat | MeshImportFormat, string>> = Object.freeze({
@@ -87,7 +89,10 @@ export function stripMeshExtension(fileName: string): string {
 
 /** Derive a safe download name without loading the conversion pipeline. */
 export function convertedMeshFileName(inputName: string, extension: string): string {
-  const base = stripMeshExtension(inputName).replace(/[/\\\0]/gu, '_').trim() || 'mesh'
+  const base =
+    stripMeshExtension(inputName)
+      .replace(/[/\\\0]/gu, '_')
+      .trim() || 'mesh'
   return `${base}.${extension}`
 }
 

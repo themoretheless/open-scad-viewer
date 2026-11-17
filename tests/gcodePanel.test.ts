@@ -2,13 +2,31 @@ import { createRenderer, h, nextTick, shallowReactive } from 'svet'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import GcodePanel from '../src/features/GcodePanel.svt'
 import type { MeshData } from '../src/core/mesh'
-import { checkGcodePreviewJob, GCODE_PREVIEW_MAX_BYTES, type GcodePreviewDocument } from '../src/fabrication/gcodePreviewProtocol'
+import {
+  checkGcodePreviewJob,
+  GCODE_PREVIEW_MAX_BYTES,
+  type GcodePreviewDocument,
+} from '../src/fabrication/gcodePreviewProtocol'
 import { PrintReadinessError } from '../src/fabrication/printReadiness'
 
-const service = vi.hoisted(() => ({ run: vi.fn(), cancel: vi.fn(), dispose: vi.fn(), download: vi.fn(), draw: vi.fn(), health: vi.fn(), discover: vi.fn(), send: vi.fn() }))
-vi.mock('../src/fabrication/gcodePreviewWorker', () => ({ createGcodePreviewWorker: () => ({ run: service.run, cancel: service.cancel, dispose: service.dispose }) }))
+const service = vi.hoisted(() => ({
+  run: vi.fn(),
+  cancel: vi.fn(),
+  dispose: vi.fn(),
+  download: vi.fn(),
+  draw: vi.fn(),
+  health: vi.fn(),
+  discover: vi.fn(),
+  send: vi.fn(),
+}))
+vi.mock('../src/fabrication/gcodePreviewWorker', () => ({
+  createGcodePreviewWorker: () => ({ run: service.run, cancel: service.cancel, dispose: service.dispose }),
+}))
 vi.mock('../src/kernel/cadDrawing', () => ({ downloadCad: service.download }))
-vi.mock('../src/fabrication/gcodePreviewGeometry', async importOriginal => ({ ...await importOriginal<object>(), drawGcodeLayer: service.draw }))
+vi.mock('../src/fabrication/gcodePreviewGeometry', async importOriginal => ({
+  ...(await importOriginal<object>()),
+  drawGcodeLayer: service.draw,
+}))
 vi.mock('../src/fabrication/printerCompanion', () => ({
   PRINTER_COMPANION_DEFAULT_URL: 'http://127.0.0.1:17890',
   companionHealth: (...args: unknown[]) => service.health(...args),
@@ -24,18 +42,45 @@ class Node {
   text = ''
   value: any = ''
   constructor(public tag: string) {}
-  get tagName() { return this.tag.toUpperCase() }
-  getRootNode() { return { activeElement: null } }
+  get tagName() {
+    return this.tag.toUpperCase()
+  }
+  getRootNode() {
+    return { activeElement: null }
+  }
   addEventListener() {}
   removeEventListener() {}
 }
 const renderer = createRenderer<Node, Node>({
-  createElement: tag => new Node(tag), createText: text => { const node = new Node('#text'); node.text = text; return node }, createComment: () => new Node('#comment'),
-  setText: (node, text) => { node.text = text }, setElementText: (node, text) => { node.children = []; node.text = text },
-  parentNode: node => node.parent, nextSibling: node => node.parent?.children[node.parent.children.indexOf(node) + 1] ?? null,
-  patchProp: (node, key, _old, value) => { node.props[key] = value; if (key === 'value') node.value = value },
-  insert: (node, parent, anchor) => { if (node.parent) node.parent.children = node.parent.children.filter(child => child !== node); node.parent = parent; const index = anchor ? parent.children.indexOf(anchor) : -1; index < 0 ? parent.children.push(node) : parent.children.splice(index, 0, node) },
-  remove: node => { if (node.parent) node.parent.children = node.parent.children.filter(child => child !== node) },
+  createElement: tag => new Node(tag),
+  createText: text => {
+    const node = new Node('#text')
+    node.text = text
+    return node
+  },
+  createComment: () => new Node('#comment'),
+  setText: (node, text) => {
+    node.text = text
+  },
+  setElementText: (node, text) => {
+    node.children = []
+    node.text = text
+  },
+  parentNode: node => node.parent,
+  nextSibling: node => node.parent?.children[node.parent.children.indexOf(node) + 1] ?? null,
+  patchProp: (node, key, _old, value) => {
+    node.props[key] = value
+    if (key === 'value') node.value = value
+  },
+  insert: (node, parent, anchor) => {
+    if (node.parent) node.parent.children = node.parent.children.filter(child => child !== node)
+    node.parent = parent
+    const index = anchor ? parent.children.indexOf(anchor) : -1
+    index < 0 ? parent.children.push(node) : parent.children.splice(index, 0, node)
+  },
+  remove: node => {
+    if (node.parent) node.parent.children = node.parent.children.filter(child => child !== node)
+  },
   setScopeId: () => {},
   insertStaticContent: (content, parent, anchor) => {
     const node = new Node('#static')
@@ -48,46 +93,108 @@ const renderer = createRenderer<Node, Node>({
   },
 })
 const result = (): GcodePreviewDocument => ({
-  dialect: 'open-scad-viewer/print-preview 2', gcode: '; validated preview',
-  preview: { layers: 2, extrusionMm: 2, depositedVolumeMm3: 4, travelDistanceMm: 3, printDistanceMm: 10, estimatedTimeS: 60,
-    bounds: { min: [2, 3, .2], max: [7, 3, .4] }, moves: [
-      { x: 2, y: 3, z: .2, e: 0, extruded: false, feedrateMmS: 100, layerIndex: 0 },
-      { x: 7, y: 3, z: .2, e: 1, extruded: true, feedrateMmS: 50, layerIndex: 0 },
-      { x: 2, y: 3, z: .4, e: 1, extruded: false, feedrateMmS: 100, layerIndex: 1 },
-      { x: 7, y: 3, z: .4, e: 2, extruded: true, feedrateMmS: 50, layerIndex: 1 },
-    ] },
+  dialect: 'open-scad-viewer/print-preview 2',
+  gcode: '; validated preview',
+  preview: {
+    layers: 2,
+    extrusionMm: 2,
+    depositedVolumeMm3: 4,
+    travelDistanceMm: 3,
+    printDistanceMm: 10,
+    estimatedTimeS: 60,
+    bounds: { min: [2, 3, 0.2], max: [7, 3, 0.4] },
+    moves: [
+      { x: 2, y: 3, z: 0.2, e: 0, extruded: false, feedrateMmS: 100, layerIndex: 0 },
+      { x: 7, y: 3, z: 0.2, e: 1, extruded: true, feedrateMmS: 50, layerIndex: 0 },
+      { x: 2, y: 3, z: 0.4, e: 1, extruded: false, feedrateMmS: 100, layerIndex: 1 },
+      { x: 7, y: 3, z: 0.4, e: 2, extruded: true, feedrateMmS: 50, layerIndex: 1 },
+    ],
+  },
 })
-const jobResult = (): GcodePreviewDocument => ({ ...result(), dialect: 'open-scad-viewer/print-job 1', gcode: '; job', gcode3mfBase64: 'UEsDBBQAAAA=' })
+const jobResult = (): GcodePreviewDocument => ({
+  ...result(),
+  dialect: 'open-scad-viewer/print-job 1',
+  gcode: '; job',
+  gcode3mfBase64: 'UEsDBBQAAAA=',
+})
 function mesh(z = 12): MeshData {
-  return { vertices: new Float32Array([0, 0, 0, 0, 0, 1, 5, 0, 0, 0, 0, 1, 0, 5, 2, 0, 0, 1]), indices: new Uint32Array([0, 1, 2]), transform: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, z, 0, 0, 0, 1]) } as MeshData
+  return {
+    vertices: new Float32Array([0, 0, 0, 0, 0, 1, 5, 0, 0, 0, 0, 1, 0, 5, 2, 0, 0, 1]),
+    indices: new Uint32Array([0, 1, 2]),
+    transform: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, z, 0, 0, 0, 1]),
+  } as MeshData
 }
 const unmounts: Array<() => void> = []
 beforeEach(() => {
   vi.clearAllMocks()
-  service.run.mockReset().mockImplementation(async job => { checkGcodePreviewJob(job); return result() })
+  service.run.mockReset().mockImplementation(async job => {
+    checkGcodePreviewJob(job)
+    return result()
+  })
   service.health.mockReset().mockResolvedValue(false)
   service.discover.mockReset().mockResolvedValue([])
   service.send.mockReset().mockResolvedValue({ remoteName: 'part.gcode', verified: false })
   vi.stubGlobal('Document', class {})
   vi.stubGlobal('ShadowRoot', class {})
-  vi.stubGlobal('document', { activeElement: null, createElement: () => ({ click() {}, set href(_v: string) {}, set download(_v: string) {} }) })
+  vi.stubGlobal('document', {
+    activeElement: null,
+    createElement: () => ({ click() {}, set href(_v: string) {}, set download(_v: string) {} }),
+  })
   vi.stubGlobal('URL', { createObjectURL: () => 'blob:mock', revokeObjectURL() {} })
   vi.stubGlobal('atob', (value: string) => Buffer.from(value, 'base64').toString('binary'))
 })
-afterEach(() => { unmounts.splice(0).forEach(unmount => unmount()); vi.unstubAllGlobals() })
+afterEach(() => {
+  unmounts.splice(0).forEach(unmount => unmount())
+  vi.unstubAllGlobals()
+})
 
 async function mount(overrides: Record<string, unknown> = {}) {
-  const props = shallowReactive({ meshes: [mesh(), mesh(-5)], selection: [0], ready: true, source: 'cube(5);', locale: 'en', ...overrides })
-  const root = new Node('root'), app = renderer.createApp({ setup: () => () => h(GcodePanel, props) })
-  const unmount = () => { app.unmount(); const index = unmounts.indexOf(unmount); if (index >= 0) unmounts.splice(index, 1) }
-  app.mount(root); unmounts.push(unmount); await nextTick()
+  const props = shallowReactive({
+    meshes: [mesh(), mesh(-5)],
+    selection: [0],
+    ready: true,
+    source: 'cube(5);',
+    locale: 'en',
+    ...overrides,
+  })
+  const root = new Node('root'),
+    app = renderer.createApp({ setup: () => () => h(GcodePanel, props) })
+  const unmount = () => {
+    app.unmount()
+    const index = unmounts.indexOf(unmount)
+    if (index >= 0) unmounts.splice(index, 1)
+  }
+  app.mount(root)
+  unmounts.push(unmount)
+  await nextTick()
   const all = (node: Node = root): Node[] => [node, ...node.children.flatMap(all)]
   const text = (node: Node = root): string => node.text + node.children.map(child => text(child)).join('')
-  const button = (name: string) => { const node = all().find(node => node.tag === 'button' && text(node) === name); expect(node, `button ${name}`).toBeDefined(); return node! }
-  const input = (label: string) => { const node = all().find(node => node.props['aria-label'] === label); expect(node, `input ${label}`).toBeDefined(); return node! }
-  const edit = async (label: string, value: unknown) => { input(label).props['onUpdate:modelValue'](value); await nextTick() }
-  const click = async (name: string) => { const node = button(name); expect(node.props.disabled).toBeFalsy(); await node.props.onClick({}); await nextTick() }
-  const upload = async (file: unknown) => { const target = { files: [file], value: 'selected' }; await input('Open preview G-code').props.onChange({ target }); await nextTick(); expect(target.value).toBe('') }
+  const button = (name: string) => {
+    const node = all().find(node => node.tag === 'button' && text(node) === name)
+    expect(node, `button ${name}`).toBeDefined()
+    return node!
+  }
+  const input = (label: string) => {
+    const node = all().find(node => node.props['aria-label'] === label)
+    expect(node, `input ${label}`).toBeDefined()
+    return node!
+  }
+  const edit = async (label: string, value: unknown) => {
+    input(label).props['onUpdate:modelValue'](value)
+    await nextTick()
+  }
+  const click = async (name: string) => {
+    const node = button(name)
+    expect(node.props.disabled).toBeFalsy()
+    await node.props.onClick({})
+    await nextTick()
+  }
+  const upload = async (file: unknown) => {
+    const target = { files: [file], value: 'selected' }
+    await input('Open preview G-code').props.onChange({ target })
+    await nextTick()
+    expect(target.value).toBe('')
+  }
   return { all, text, button, input, edit, click, upload, props, unmount }
 }
 
@@ -95,16 +202,29 @@ it('uses the single selected body’s transformed range, exposes all settings, p
   const ui = await mount({ selection: [1] })
   expect(ui.input('Z min, mm').value).toBe(-5)
   expect(ui.input('Z max, mm').value).toBe(-3)
-  await ui.edit('Line width, mm', .6)
+  await ui.edit('Line width, mm', 0.6)
   await ui.edit('Wall count', 3)
   await ui.edit('Infill spacing, mm', 4)
   await ui.edit('Print speed, mm/s', 70)
   await ui.edit('Travel speed, mm/s', 180)
   await ui.edit('Filament diameter, mm', 2.85)
-  await ui.edit('Layer height, mm', .3)
+  await ui.edit('Layer height, mm', 0.3)
   await ui.click('Generate toolpaths')
-  expect(service.run).toHaveBeenCalledWith({ kind: 'slice', mesh: ui.props.meshes[1], zMin: -5, zMax: -3,
-    settings: { layerHeightMm: .3, lineWidthMm: .6, wallCount: 3, infillSpacingMm: 4, feedrateMmS: 70, travelFeedrateMmS: 180, filamentDiameterMm: 2.85 } })
+  expect(service.run).toHaveBeenCalledWith({
+    kind: 'slice',
+    mesh: ui.props.meshes[1],
+    zMin: -5,
+    zMax: -3,
+    settings: {
+      layerHeightMm: 0.3,
+      lineWidthMm: 0.6,
+      wallCount: 3,
+      infillSpacingMm: 4,
+      feedrateMmS: 70,
+      travelFeedrateMmS: 180,
+      filamentDiameterMm: 2.85,
+    },
+  })
   expect(ui.text()).toContain('open-scad-viewer/print-preview 2')
   expect(ui.text()).toContain('localhost companion')
   expect(ui.all().some(node => node.tag === 'canvas')).toBe(true)
@@ -120,10 +240,14 @@ it('requires a current build and exactly one valid body', async () => {
   const ui = await mount({ selection: [0, 1] })
   expect(ui.button('Generate toolpaths').props.disabled).toBe(true)
   expect(ui.text()).toContain('Select exactly one body')
-  ui.props.selection = [0]; ui.props.ready = false; await nextTick()
+  ui.props.selection = [0]
+  ui.props.ready = false
+  await nextTick()
   expect(ui.text()).toContain('Build the current source first')
   expect(ui.button('Generate toolpaths').props.disabled).toBe(true)
-  ui.props.ready = true; ui.props.selection = [99]; await nextTick()
+  ui.props.ready = true
+  ui.props.selection = [99]
+  await nextTick()
   expect(ui.button('Generate toolpaths').props.disabled).toBe(true)
   expect(service.run).not.toHaveBeenCalled()
 })
@@ -131,18 +255,21 @@ it('requires a current build and exactly one valid body', async () => {
 it('invalidates a result on settings, source, selection and positioned mesh changes', async () => {
   const ui = await mount()
   await ui.click('Generate toolpaths')
-  await ui.edit('Layer height, mm', .4)
+  await ui.edit('Layer height, mm', 0.4)
   expect(ui.all().some(node => node.tag === 'canvas')).toBe(false)
   expect(ui.text()).toContain('Settings changed')
   await ui.click('Generate toolpaths')
-  ui.props.source = 'cube(6);'; await nextTick()
+  ui.props.source = 'cube(6);'
+  await nextTick()
   expect(ui.text()).toContain('Model changed')
   expect(ui.all().some(node => node.tag === 'canvas')).toBe(false)
-  ui.props.meshes = [mesh(40)]; await nextTick()
+  ui.props.meshes = [mesh(40)]
+  await nextTick()
   expect(ui.input('Z min, mm').value).toBe(40)
   expect(ui.input('Z max, mm').value).toBe(42)
   await ui.click('Generate toolpaths')
-  ui.props.selection = []; await nextTick()
+  ui.props.selection = []
+  await nextTick()
   expect(ui.all().some(node => node.tag === 'canvas')).toBe(false)
   expect(ui.button('Generate toolpaths').props.disabled).toBe(true)
 })
@@ -150,16 +277,32 @@ it('invalidates a result on settings, source, selection and positioned mesh chan
 it('discards delayed success after cancellation or edits and leaves a fresh generation usable', async () => {
   const ui = await mount()
   let finish!: (document: GcodePreviewDocument) => void
-  service.run.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
-  const pending = ui.button('Generate toolpaths').props.onClick(); await nextTick()
+  service.run.mockImplementationOnce(
+    () =>
+      new Promise(resolve => {
+        finish = resolve
+      }),
+  )
+  const pending = ui.button('Generate toolpaths').props.onClick()
+  await nextTick()
   expect(ui.text()).toContain('Processing toolpaths')
   await ui.click('Cancel processing')
-  finish(result()); await pending; await nextTick()
+  finish(result())
+  await pending
+  await nextTick()
   expect(ui.all().some(node => node.tag === 'canvas')).toBe(false)
-  service.run.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
-  const stale = ui.button('Generate toolpaths').props.onClick(); await nextTick()
+  service.run.mockImplementationOnce(
+    () =>
+      new Promise(resolve => {
+        finish = resolve
+      }),
+  )
+  const stale = ui.button('Generate toolpaths').props.onClick()
+  await nextTick()
   await ui.edit('Z max, mm', 13)
-  finish(result()); await stale; await nextTick()
+  finish(result())
+  await stale
+  await nextTick()
   expect(ui.all().some(node => node.tag === 'canvas')).toBe(false)
   await ui.click('Generate toolpaths')
   expect(ui.all().some(node => node.tag === 'canvas')).toBe(true)
@@ -186,9 +329,15 @@ it.each([
   ['Собрать print job', 'job'],
 ] as const)('shows a localized print-readiness refusal without creating a result: %s', async (button, kind) => {
   const ui = await mount({ locale: 'ru' })
-  service.run.mockRejectedValueOnce(new PrintReadinessError('PRINT_NOT_WATERTIGHT', {
-    boundaryEdges: 3, nonManifoldEdges: 0, nonManifoldVertices: 0, degenerateTriangles: 0, isolatedVertices: 0,
-  }))
+  service.run.mockRejectedValueOnce(
+    new PrintReadinessError('PRINT_NOT_WATERTIGHT', {
+      boundaryEdges: 3,
+      nonManifoldEdges: 0,
+      nonManifoldVertices: 0,
+      degenerateTriangles: 0,
+      isolatedVertices: 0,
+    }),
+  )
   await ui.click(button)
   expect(service.run).toHaveBeenCalledWith(expect.objectContaining({ kind }))
   expect(ui.text()).toContain('Печать заблокирована')
@@ -213,9 +362,26 @@ it('opens its own preview dialect without a selected model and rejects oversized
 it('does not start stale file parsing after the owner cancels while reading', async () => {
   const ui = await mount()
   let read!: (value: string) => void
-  const upload = ui.input('Open preview G-code').props.onChange({ target: { files: [{ name: 'saved.gcode', size: 10, text: () => new Promise(resolve => { read = resolve }) }], value: 'file' } })
-  await nextTick(); await ui.click('Cancel processing')
-  read('; saved'); await upload; await nextTick()
+  const upload = ui.input('Open preview G-code').props.onChange({
+    target: {
+      files: [
+        {
+          name: 'saved.gcode',
+          size: 10,
+          text: () =>
+            new Promise(resolve => {
+              read = resolve
+            }),
+        },
+      ],
+      value: 'file',
+    },
+  })
+  await nextTick()
+  await ui.click('Cancel processing')
+  read('; saved')
+  await upload
+  await nextTick()
   expect(service.run).not.toHaveBeenCalled()
   expect(ui.all().some(node => node.tag === 'canvas')).toBe(false)
 })
@@ -223,18 +389,36 @@ it('does not start stale file parsing after the owner cancels while reading', as
 it('cancels work when the section closes and disposes its worker when the CAD panel unmounts', async () => {
   const ui = await mount()
   let finish!: (document: GcodePreviewDocument) => void
-  service.run.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
-  const pending = ui.button('Generate toolpaths').props.onClick(); await nextTick()
-  ui.all().find(node => node.tag === 'details')!.props.onToggle({ target: { open: false } })
+  service.run.mockImplementationOnce(
+    () =>
+      new Promise(resolve => {
+        finish = resolve
+      }),
+  )
+  const pending = ui.button('Generate toolpaths').props.onClick()
+  await nextTick()
+  ui.all()
+    .find(node => node.tag === 'details')!
+    .props.onToggle({ target: { open: false } })
   await nextTick()
   expect(ui.text()).toContain('Processing cancelled.')
-  finish(result()); await pending; await nextTick()
+  finish(result())
+  await pending
+  await nextTick()
   expect(ui.all().some(node => node.tag === 'canvas')).toBe(false)
-  service.run.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
-  const closing = ui.button('Generate toolpaths').props.onClick(); await nextTick()
+  service.run.mockImplementationOnce(
+    () =>
+      new Promise(resolve => {
+        finish = resolve
+      }),
+  )
+  const closing = ui.button('Generate toolpaths').props.onClick()
+  await nextTick()
   ui.unmount()
   expect(service.dispose).toHaveBeenCalledOnce()
-  finish(result()); await closing; await nextTick()
+  finish(result())
+  await closing
+  await nextTick()
   expect(service.draw).not.toHaveBeenCalled()
 })
 
@@ -263,16 +447,26 @@ it('disables Send without companion and sends via localhost after a print job', 
 
 it('sends the chosen firmware flavor with print jobs and shows it in the result', async () => {
   const ui = await mount()
-  await ui.input('Firmware flavor (job)').props.onChange({ target: { value: 'klipper' } }); await nextTick()
+  await ui.input('Firmware flavor (job)').props.onChange({ target: { value: 'klipper' } })
+  await nextTick()
   service.run.mockResolvedValueOnce({ ...jobResult(), flavor: 'klipper' })
   await ui.click('Generate print job')
-  expect(service.run).toHaveBeenCalledWith(expect.objectContaining({ kind: 'job', settings: expect.objectContaining({ flavor: 'klipper' }) }))
+  expect(service.run).toHaveBeenCalledWith(
+    expect.objectContaining({ kind: 'job', settings: expect.objectContaining({ flavor: 'klipper' }) }),
+  )
   expect(ui.text()).toContain('open-scad-viewer/print-job 1 · klipper')
 })
 
 it('opens foreign slicer files tolerantly and labels the detected generator and firmware', async () => {
   const ui = await mount({ meshes: [], selection: [], ready: false })
-  service.run.mockResolvedValueOnce({ ...result(), dialect: 'PrusaSlicer G-code (tolerant preview)', gcode: '; generated by PrusaSlicer', native: false, generator: 'PrusaSlicer', flavor: 'marlin2' })
+  service.run.mockResolvedValueOnce({
+    ...result(),
+    dialect: 'PrusaSlicer G-code (tolerant preview)',
+    gcode: '; generated by PrusaSlicer',
+    native: false,
+    generator: 'PrusaSlicer',
+    flavor: 'marlin2',
+  })
   await ui.upload({ name: 'part.gcode', size: 30, text: async () => '; generated by PrusaSlicer' })
   expect(ui.text()).toContain('Foreign file: PrusaSlicer · firmware: marlin2')
   expect(ui.text()).toContain('Unknown commands were skipped')

@@ -11,9 +11,11 @@ export interface CameraState {
 export type CameraHistorySnapshot = readonly CameraState[]
 
 function finiteCameraState(state: CameraState) {
-  return [state.yaw, state.pitch, state.distance, ...state.target].every(Number.isFinite)
-    && state.distance > 0
-    && (state.projection === 'perspective' || state.projection === 'orthographic')
+  return (
+    [state.yaw, state.pitch, state.distance, ...state.target].every(Number.isFinite) &&
+    state.distance > 0 &&
+    (state.projection === 'perspective' || state.projection === 'orthographic')
+  )
 }
 
 function cloneCameraState(state: CameraState): CameraState {
@@ -29,10 +31,12 @@ function cloneCameraState(state: CameraState): CameraState {
 export function cameraStatesEqual(a: CameraState, b: CameraState, epsilon = 1e-8) {
   if (a.projection !== b.projection) return false
   const scale = Math.max(1, Math.abs(a.distance), Math.abs(b.distance))
-  return Math.abs(a.yaw - b.yaw) <= epsilon
-    && Math.abs(a.pitch - b.pitch) <= epsilon
-    && Math.abs(a.distance - b.distance) <= epsilon * scale
-    && a.target.every((value, axis) => Math.abs(value - b.target[axis]!) <= epsilon * scale)
+  return (
+    Math.abs(a.yaw - b.yaw) <= epsilon &&
+    Math.abs(a.pitch - b.pitch) <= epsilon &&
+    Math.abs(a.distance - b.distance) <= epsilon * scale &&
+    a.target.every((value, axis) => Math.abs(value - b.target[axis]!) <= epsilon * scale)
+  )
 }
 
 /** Bounded, deduplicated snapshots captured before committed camera actions. */
@@ -40,18 +44,30 @@ export class CameraHistory {
   private entries: CameraState[] = []
   private redoStack: CameraState[] = []
 
-  constructor(readonly limit = 32, readonly epsilon = 1e-8) {
+  constructor(
+    readonly limit = 32,
+    readonly epsilon = 1e-8,
+  ) {
     if (!Number.isInteger(limit) || limit < 1) throw new RangeError('Camera history limit must be a positive integer')
-    if (!Number.isFinite(epsilon) || epsilon < 0) throw new RangeError('Camera history epsilon must be a non-negative finite number')
+    if (!Number.isFinite(epsilon) || epsilon < 0)
+      throw new RangeError('Camera history epsilon must be a non-negative finite number')
   }
 
-  get size() { return this.entries.length }
+  get size() {
+    return this.entries.length
+  }
 
-  get redoSize() { return this.redoStack.length }
+  get redoSize() {
+    return this.redoStack.length
+  }
 
-  canUndo(): boolean { return this.entries.length > 0 }
+  canUndo(): boolean {
+    return this.entries.length > 0
+  }
 
-  canRedo(): boolean { return this.redoStack.length > 0 }
+  canRedo(): boolean {
+    return this.redoStack.length > 0
+  }
 
   snapshot(): CameraState[] {
     return this.entries.map(cloneCameraState)

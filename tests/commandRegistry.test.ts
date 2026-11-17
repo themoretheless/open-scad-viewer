@@ -11,10 +11,7 @@ import {
   type CommandId,
 } from '../src/app/commandRegistry'
 
-function key(
-  value: string,
-  options: Partial<Parameters<typeof normalizeKeyboardEvent>[0]> = {},
-) {
+function key(value: string, options: Partial<Parameters<typeof normalizeKeyboardEvent>[0]> = {}) {
   return { key: value, code: '', ...options }
 }
 
@@ -22,16 +19,49 @@ describe('command registry', () => {
   it('is the unique typed inventory for every current palette and keyboard command', () => {
     const ids = COMMAND_REGISTRY.map(command => command.id)
     expect(new Set(ids).size).toBe(ids.length)
-    expect(ids).toEqual(expect.arrayContaining([
-      'render', 'open', 'save', 'find', 'replace', 'export-stl', 'export-obj', 'convert-mesh', 'share',
-      'focus', 'fit', 'isolate', 'deselect', 'previous-view', 'projection',
-      'grid', 'shaded', 'edges', 'xray', 'select-point', 'select-face',
-      'select-object', 'measure', 'section', 'sidebar', 'iso', 'front',
-      'right', 'top', 'back', 'left', 'bottom', 'theme',
-      'command-palette', 'cancel-measure', 'flip-section', 'hide-selected',
-      'cycle-selection-mode',
-      'shortcut-help',
-    ] satisfies CommandId[]))
+    expect(ids).toEqual(
+      expect.arrayContaining([
+        'render',
+        'open',
+        'save',
+        'find',
+        'replace',
+        'export-stl',
+        'export-obj',
+        'convert-mesh',
+        'share',
+        'focus',
+        'fit',
+        'isolate',
+        'deselect',
+        'previous-view',
+        'projection',
+        'grid',
+        'shaded',
+        'edges',
+        'xray',
+        'select-point',
+        'select-face',
+        'select-object',
+        'measure',
+        'section',
+        'sidebar',
+        'iso',
+        'front',
+        'right',
+        'top',
+        'back',
+        'left',
+        'bottom',
+        'theme',
+        'command-palette',
+        'cancel-measure',
+        'flip-section',
+        'hide-selected',
+        'cycle-selection-mode',
+        'shortcut-help',
+      ] satisfies CommandId[]),
+    )
   })
 
   it('derives complete grouped shortcut help from routed command metadata', () => {
@@ -41,7 +71,12 @@ describe('command registry', () => {
     expect(rows.map(row => row.id).sort()).toEqual(displayed.map(command => command.id).sort())
     expect(new Set(rows.map(row => row.id)).size).toBe(rows.length)
     expect(groups.map(group => group.id)).toEqual([
-      'workspace', 'editor', 'navigation', 'selection', 'inspection', 'display',
+      'workspace',
+      'editor',
+      'navigation',
+      'selection',
+      'inspection',
+      'display',
     ])
     expect(rows.find(row => row.id === 'shortcut-help')).toMatchObject({ shortcuts: ['?'] })
   })
@@ -55,12 +90,19 @@ describe('command registry', () => {
 
   it('builds localized palette descriptors with dynamic state and MRU ranks', () => {
     const translated: Record<string, string> = {
-      projection: 'Projection', orthographic: 'Orthographic', perspective: 'Perspective',
-      isolate: 'Isolate', unisolate: 'Show all', exportStl: 'Export STL',
+      projection: 'Projection',
+      orthographic: 'Orthographic',
+      perspective: 'Perspective',
+      isolate: 'Isolate',
+      unisolate: 'Show all',
+      exportStl: 'Export STL',
     }
     const russian: Record<string, string> = {
-      orthographic: 'Ортография', perspective: 'Перспектива',
-      isolate: 'Изолировать', unisolate: 'Показать всё', exportStl: 'Экспорт STL',
+      orthographic: 'Ортография',
+      perspective: 'Перспектива',
+      isolate: 'Изолировать',
+      unisolate: 'Показать всё',
+      exportStl: 'Экспорт STL',
     }
     const resolveEnglish = (labelKey: string) => translated[labelKey] ?? `en:${labelKey}`
     const resolveRussian = (labelKey: string) => russian[labelKey] ?? `ru:${labelKey}`
@@ -83,9 +125,7 @@ describe('command registry', () => {
       mruRank: 1,
       keywords: ['camera', 'projection'],
     })
-    expect(projection?.aliases).toEqual([
-      'Perspective', 'Перспектива', 'Orthographic', 'Ортография',
-    ])
+    expect(projection?.aliases).toEqual(['Perspective', 'Перспектива', 'Orthographic', 'Ортография'])
     expect(commands.find(command => command.id === 'grid')?.mruRank).toBe(0)
     expect(commands.find(command => command.id === 'export-stl')).toMatchObject({
       enabled: false,
@@ -98,7 +138,10 @@ describe('command registry', () => {
 describe('keyboard command routing', () => {
   it('normalizes letter casing, legacy Escape, and the platform primary modifier', () => {
     expect(normalizeKeyboardEvent(key('S', { ctrlKey: true }))).toMatchObject({
-      key: 's', primary: true, ctrl: true, meta: false,
+      key: 's',
+      primary: true,
+      ctrl: true,
+      meta: false,
     })
     expect(normalizeKeyboardEvent(key('Esc', { metaKey: true })).key).toBe('escape')
     expect(resolveKeyboardCommand(key('K', { metaKey: true }), 'global')).toBe('command-palette')
@@ -119,16 +162,22 @@ describe('keyboard command routing', () => {
 
   it('resolves intentional overlap by exact modifiers and runtime precedence', () => {
     expect(resolveKeyboardCommand(key('f', { code: 'KeyF' }), 'viewport')).toBe('focus')
-    expect(resolveKeyboardCommand(key('F', { code: 'KeyF', shiftKey: true }), 'viewport', {
-      isEnabled: id => id === 'flip-section' || id === 'focus',
-    })).toBe('flip-section')
+    expect(
+      resolveKeyboardCommand(key('F', { code: 'KeyF', shiftKey: true }), 'viewport', {
+        isEnabled: id => id === 'flip-section' || id === 'focus',
+      }),
+    ).toBe('flip-section')
 
-    expect(resolveKeyboardCommand(key('Escape'), 'viewport', {
-      isEnabled: id => id === 'cancel-measure' || id === 'deselect',
-    })).toBe('cancel-measure')
-    expect(resolveKeyboardCommand(key('Escape'), 'viewport', {
-      isEnabled: id => id === 'deselect',
-    })).toBe('deselect')
+    expect(
+      resolveKeyboardCommand(key('Escape'), 'viewport', {
+        isEnabled: id => id === 'cancel-measure' || id === 'deselect',
+      }),
+    ).toBe('cancel-measure')
+    expect(
+      resolveKeyboardCommand(key('Escape'), 'viewport', {
+        isEnabled: id => id === 'deselect',
+      }),
+    ).toBe('deselect')
   })
 
   it('routes the existing editor, viewport, and global shortcuts', () => {
@@ -139,7 +188,9 @@ describe('keyboard command routing', () => {
     expect(resolveKeyboardCommand(key('h', { metaKey: true }), 'editor')).toBeNull()
     expect(resolveKeyboardCommand(key('s', { metaKey: true }), 'editor')).toBe('save')
     expect(resolveKeyboardCommand(key('=', { code: 'Equal', ctrlKey: true }), 'viewport')).toBe('measure')
-    expect(resolveKeyboardCommand(key('=', { code: 'Equal', ctrlKey: true, target: { tagName: 'TEXTAREA' } }), 'editor')).toBeNull()
+    expect(
+      resolveKeyboardCommand(key('=', { code: 'Equal', ctrlKey: true, target: { tagName: 'TEXTAREA' } }), 'editor'),
+    ).toBeNull()
     expect(resolveKeyboardCommand(key('b', { ctrlKey: true, shiftKey: true }), 'global')).toBe('sidebar')
     expect(resolveKeyboardCommand(key('?', { code: 'Slash', shiftKey: true }), 'global')).toBe('shortcut-help')
     expect(resolveKeyboardCommand(key('[', { code: 'BracketLeft' }), 'viewport')).toBe('previous-view')
@@ -170,7 +221,8 @@ describe('keyboard command routing', () => {
     expect(resolveKeyboardCommand(key('F1', { ctrlKey: true }), 'editor')).toBeNull()
     const commands = buildPaletteDescriptors({ resolveLabel: label => label })
     expect(commands.find(command => command.id === 'function-reference')).toMatchObject({
-      label: 'functionReference', shortcut: 'F1',
+      label: 'functionReference',
+      shortcut: 'F1',
     })
   })
 

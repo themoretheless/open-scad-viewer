@@ -40,72 +40,130 @@ export interface NurbsCurveEvaluation {
   derivative_side: NurbsDerivativeSide
 }
 
-
-export function validateNurbsCurve(curve: NurbsCurve): void { callNurbsRust('curve_validate', { curve }) }
-export function nurbsBasisDerivatives(degree: number, knots: number[], controlCount: number, u: number, periodic = false): NurbsBasisEvaluation {
+export function validateNurbsCurve(curve: NurbsCurve): void {
+  callNurbsRust('curve_validate', { curve })
+}
+export function nurbsBasisDerivatives(
+  degree: number,
+  knots: number[],
+  controlCount: number,
+  u: number,
+  periodic = false,
+): NurbsBasisEvaluation {
   return callNurbsRust('basis', { degree, knots, controlCount, u, periodic })
 }
-export function evaluateNurbsCurve(curve: NurbsCurve, u: number): NurbsCurveEvaluation { return callNurbsRust('curve_evaluate', { curve, u }) }
-export function evaluateNurbsCurvePoints(curve: NurbsCurve, parameters: readonly number[]): number[][] { return callNurbsRust('curve_evaluate_points', { curve, parameters }) }
-export function sampleNurbsCurve(curve: NurbsCurve, segments: number, includeEnd = true): number[][] { return callNurbsRust('curve_sample', { curve, segments, includeEnd }) }
-export function insertNurbsKnot(curve: NurbsCurve, u: number, count = 1): NurbsCurve { return callNurbsRust('curve_insert', { curve, u, count }) }
+export function evaluateNurbsCurve(curve: NurbsCurve, u: number): NurbsCurveEvaluation {
+  return callNurbsRust('curve_evaluate', { curve, u })
+}
+export function evaluateNurbsCurvePoints(curve: NurbsCurve, parameters: readonly number[]): number[][] {
+  return callNurbsRust('curve_evaluate_points', { curve, parameters })
+}
+export function sampleNurbsCurve(curve: NurbsCurve, segments: number, includeEnd = true): number[][] {
+  return callNurbsRust('curve_sample', { curve, segments, includeEnd })
+}
+export function insertNurbsKnot(curve: NurbsCurve, u: number, count = 1): NurbsCurve {
+  return callNurbsRust('curve_insert', { curve, u, count })
+}
 export interface NurbsPointTrimResult {
-  curve:NurbsCurve
-  parameter:number
-  parameterInterval:[number,number]
-  point:number[]
-  distanceUpperMm:number
-  keptDomain:[number,number]
-  projection:import('./nurbsFoundation').NurbsProjectionCertificate
+  curve: NurbsCurve
+  parameter: number
+  parameterInterval: [number, number]
+  point: number[]
+  distanceUpperMm: number
+  keptDomain: [number, number]
+  projection: import('./nurbsFoundation').NurbsProjectionCertificate
 }
-export type NurbsScreenProjection = [[number,number,number,number],[number,number,number,number]]
+export type NurbsScreenProjection = [[number, number, number, number], [number, number, number, number]]
 /** Projection-certificate distances use CSS pixels; the returned point and curve stay in model coordinates. */
-export function trimNurbsCurveAtScreenPoint(curve:NurbsCurve,point:[number,number],matrix:NurbsScreenProjection,keep:'start'|'end',radius:number):Omit<NurbsPointTrimResult,'distanceUpperMm'>&{distanceUpperPx:number;projectionSpace:'css-pixels'} {
-  return callNurbsRust('curve_trim_screen_point',{curve,point,matrix,keep,radius})
+export function trimNurbsCurveAtScreenPoint(
+  curve: NurbsCurve,
+  point: [number, number],
+  matrix: NurbsScreenProjection,
+  keep: 'start' | 'end',
+  radius: number,
+): Omit<NurbsPointTrimResult, 'distanceUpperMm'> & { distanceUpperPx: number; projectionSpace: 'css-pixels' } {
+  return callNurbsRust('curve_trim_screen_point', { curve, point, matrix, keep, radius })
 }
-export function trimNurbsCurveAtPoint(curve:NurbsCurve,point:number[],keep:'start'|'end',maxDistance:number):NurbsPointTrimResult {
-  return callNurbsRust('curve_trim_point',{curve,point,keep,maxDistance})
+export function trimNurbsCurveAtPoint(
+  curve: NurbsCurve,
+  point: number[],
+  keep: 'start' | 'end',
+  maxDistance: number,
+): NurbsPointTrimResult {
+  return callNurbsRust('curve_trim_point', { curve, point, keep, maxDistance })
 }
-export function trimNurbsCurve(curve: NurbsCurve, a: number, b: number): NurbsCurve { return callNurbsRust('curve_trim', { curve, a, b }) }
-export function splitNurbsCurve(curve: NurbsCurve, u: number): [NurbsCurve, NurbsCurve] { return callNurbsRust('curve_split', { curve, u }) }
-export function reverseNurbsCurve(curve: NurbsCurve): NurbsCurve { return callNurbsRust('curve_reverse', { curve }) }
-export function decomposeNurbsCurve(curve: NurbsCurve): { curve: NurbsCurve; domain: [number, number] }[] { return callNurbsRust('curve_decompose', { curve }) }
+export function trimNurbsCurve(curve: NurbsCurve, a: number, b: number): NurbsCurve {
+  return callNurbsRust('curve_trim', { curve, a, b })
+}
+export function splitNurbsCurve(curve: NurbsCurve, u: number): [NurbsCurve, NurbsCurve] {
+  return callNurbsRust('curve_split', { curve, u })
+}
+export function reverseNurbsCurve(curve: NurbsCurve): NurbsCurve {
+  return callNurbsRust('curve_reverse', { curve })
+}
+export function decomposeNurbsCurve(curve: NurbsCurve): { curve: NurbsCurve; domain: [number, number] }[] {
+  return callNurbsRust('curve_decompose', { curve })
+}
 /** Conditional parameterwise original-span/retained-Bezier error. Ownership
  * and complete wall/cap coverage are separate; exhaustion has no partial bound. */
 export interface NurbsDecompositionAudit {
- errorUpper:number|null;products:number;reason:string|null
- method:'original-span-bernstein-decomposition';continuousBound:false
+  errorUpper: number | null
+  products: number
+  reason: string | null
+  method: 'original-span-bernstein-decomposition'
+  continuousBound: false
 }
-export function inspectNurbsDecomposition(curve:NurbsCurve,span:number,retained:NurbsCurve,maxProducts=10000):NurbsDecompositionAudit {
- return callNurbsRust('curve_decomposition_audit',{curve,span,retained,maxProducts})
+export function inspectNurbsDecomposition(
+  curve: NurbsCurve,
+  span: number,
+  retained: NurbsCurve,
+  maxProducts = 10000,
+): NurbsDecompositionAudit {
+  return callNurbsRust('curve_decomposition_audit', { curve, span, retained, maxProducts })
 }
-export interface NurbsDecompositionBatchAudit extends NurbsDecompositionAudit {pairsInspected:number}
+export interface NurbsDecompositionBatchAudit extends NurbsDecompositionAudit {
+  pairsInspected: number
+}
 /** Complete maximum under one shared product budget. A refused final span
  * invalidates the aggregate; previously proved bounds are not returned. */
-export function inspectNurbsDecompositionBatch(pairs:{curve:NurbsCurve;span:number;retained:NurbsCurve}[],maxProducts=100000):NurbsDecompositionBatchAudit {
- return callNurbsRust('curve_decomposition_batch_audit',{pairs,maxProducts})
+export function inspectNurbsDecompositionBatch(
+  pairs: { curve: NurbsCurve; span: number; retained: NurbsCurve }[],
+  maxProducts = 100000,
+): NurbsDecompositionBatchAudit {
+  return callNurbsRust('curve_decomposition_batch_audit', { pairs, maxProducts })
 }
-export function elevateNurbsCurve(curve: NurbsCurve, degree: number): NurbsCurve { return callNurbsRust('curve_elevate', { curve, degree }) }
-export function nurbsCurveBounds(curve: NurbsCurve): { min: number[]; max: number[] } { return callNurbsRust('curve_bounds', { curve }) }
+export function elevateNurbsCurve(curve: NurbsCurve, degree: number): NurbsCurve {
+  return callNurbsRust('curve_elevate', { curve, degree })
+}
+export function nurbsCurveBounds(curve: NurbsCurve): { min: number[]; max: number[] } {
+  return callNurbsRust('curve_bounds', { curve })
+}
 
 /** Global distance interval on the original curves; convergence does not imply a unique pair. */
 export interface NurbsCurveDistance {
-  method:'interval-de-boor-pair-subdivision'
-  distanceIntervalMm:[number,number]
-  parameters:[number,number]
-  points:[number[],number[]]
-  pointEnclosures:[Array<[number,number]>,Array<[number,number]>]
-  converged:boolean
-  reason:'tolerance'|'work-limit'|'precision-limit'
-  cells:number
-  maxCells:number
-  toleranceMm:number
+  method: 'interval-de-boor-pair-subdivision'
+  distanceIntervalMm: [number, number]
+  parameters: [number, number]
+  points: [number[], number[]]
+  pointEnclosures: [Array<[number, number]>, Array<[number, number]>]
+  converged: boolean
+  reason: 'tolerance' | 'work-limit' | 'precision-limit'
+  cells: number
+  maxCells: number
+  toleranceMm: number
 }
-export function measureNurbsCurveDistance(a:NurbsCurve,b:NurbsCurve,toleranceMm=0.001,maxCells=10000):NurbsCurveDistance {
-  return callNurbsRust('curve_distance',{a,b,toleranceMm,maxCells})
+export function measureNurbsCurveDistance(
+  a: NurbsCurve,
+  b: NurbsCurve,
+  toleranceMm = 0.001,
+  maxCells = 10000,
+): NurbsCurveDistance {
+  return callNurbsRust('curve_distance', { a, b, toleranceMm, maxCells })
 }
 
-export function transformNurbsCurve(curve:NurbsCurve,matrix:number[][]):NurbsCurve {return callNurbsRust("curve_affine",{curve,matrix})}
+export function transformNurbsCurve(curve: NurbsCurve, matrix: number[][]): NurbsCurve {
+  return callNurbsRust('curve_affine', { curve, matrix })
+}
 
 /** Curvature summary at parameter `u` along a NURBS curve. */
 export interface NurbsCurveCurvature {
@@ -204,11 +262,7 @@ export function closestPointOnNurbsCurve(
   const [uMin, uMax] = firstEv.domain
   const span = Math.max(0, uMax - uMin)
 
-  const toPoint3 = (p: readonly number[]): [number, number, number] => [
-    p[0] ?? 0,
-    p[1] ?? 0,
-    p[2] ?? 0,
-  ]
+  const toPoint3 = (p: readonly number[]): [number, number, number] => [p[0] ?? 0, p[1] ?? 0, p[2] ?? 0]
   const distSq3 = (a: [number, number, number], b: [number, number, number]): number => {
     const dx = a[0] - b[0]
     const dy = a[1] - b[1]
@@ -363,11 +417,7 @@ export function subdivideNurbsCurvePolylineAdaptive(
   const depthLimit = Math.max(1, Math.min(18, Math.floor(maxDepth)))
   const firstEv = evaluateNurbsCurve(curve, curve.knots[curve.degree] ?? 0)
   const [uMin, uMax] = firstEv.domain
-  const toPoint3 = (p: readonly number[]): [number, number, number] => [
-    p[0] ?? 0,
-    p[1] ?? 0,
-    p[2] ?? 0,
-  ]
+  const toPoint3 = (p: readonly number[]): [number, number, number] => [p[0] ?? 0, p[1] ?? 0, p[2] ?? 0]
   const pStart = toPoint3(evaluateNurbsCurve(curve, uMin).point)
   const pEnd = toPoint3(evaluateNurbsCurve(curve, uMax).point)
   if (Math.abs(uMax - uMin) <= 1e-15) {

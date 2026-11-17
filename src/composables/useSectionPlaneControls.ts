@@ -19,16 +19,8 @@ export interface UseSectionPlaneControlsOptions {
 }
 
 export function useSectionPlaneControls(options: UseSectionPlaneControlsOptions) {
-  const {
-    gpuOk,
-    sceneMeshes,
-    meshVisibility,
-    isolated,
-    selectedMesh,
-    sceneState,
-    sceneController,
-    getRenderer,
-  } = options
+  const { gpuOk, sceneMeshes, meshVisibility, isolated, selectedMesh, sceneState, sceneController, getRenderer } =
+    options
 
   const sectionEnabled = computed(() => sceneState.value.section.enabled)
   const sectionAxis = computed(() => sceneState.value.section.axis)
@@ -57,8 +49,8 @@ export function useSectionPlaneControls(options: UseSectionPlaneControlsOptions)
     return { min, max, step: Math.max(0.001, span / 500) }
   })
 
-  const sectionAvailable = computed(() =>
-    gpuOk.value && sceneMeshes.value.some((_, index) => isSectionMeshVisible(index)),
+  const sectionAvailable = computed(
+    () => gpuOk.value && sceneMeshes.value.some((_, index) => isSectionMeshVisible(index)),
   )
 
   function applySection() {

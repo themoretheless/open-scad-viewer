@@ -54,7 +54,7 @@ export class MainSolidWorkerPool {
 
   constructor(
     private readonly portFactory: () => MainSolidPort,
-    poolSize?: number
+    poolSize?: number,
   ) {
     const caps = detectHardwareConcurrency(8)
     this.poolSize = Math.max(1, poolSize ?? Math.min(4, caps.recommendedWorkers))
@@ -79,7 +79,7 @@ export class MainSolidWorkerPool {
    */
   run<K extends MainSolidJob['kind']>(
     job: Extract<MainSolidJob, { kind: K }>,
-    options: MainSolidPoolRunOptions = {}
+    options: MainSolidPoolRunOptions = {},
   ): Promise<MainSolidResults[K]> {
     if (this.closed) {
       return Promise.reject(new MainSolidWorkerError('CAD_DISPOSED', 'CAD worker pool is closed'))
@@ -149,7 +149,7 @@ export class MainSolidWorkerPool {
    */
   runBatch<K extends MainSolidJob['kind']>(
     jobs: readonly Extract<MainSolidJob, { kind: K }>[],
-    options: MainSolidPoolRunOptions = {}
+    options: MainSolidPoolRunOptions = {},
   ): Promise<MainSolidResults[K][]> {
     return Promise.all(jobs.map(job => this.run(job, options)))
   }
@@ -242,7 +242,7 @@ export class MainSolidWorkerPool {
             }
             task.reject(error)
             this.pump()
-          }
+          },
         )
     }
   }

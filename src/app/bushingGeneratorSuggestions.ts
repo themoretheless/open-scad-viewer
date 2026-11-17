@@ -40,39 +40,41 @@ export const BUSHING_DEFAULTS = {
   segments: 36,
 }
 
-export const bushingSchema = z.object({
-  thread_mode: z.number().int().min(0).max(3).default(3),
-  auto_thread_std: z.boolean().default(true),
-  fdm_thread_angle: z.boolean().default(true),
-  length: z.number().finite().min(4).max(300).default(40),
-  thread_section_length: z.number().finite().min(2).max(120).default(10),
-  inner_diameter: z.number().finite().min(1.6).max(200).default(12),
-  inner_pitch: z.number().finite().min(0.25).max(10).default(1.5),
-  inner_starts: z.number().int().min(1).max(4).default(1),
-  inner_left_handed: z.boolean().default(false),
-  inner_thread_depth: z.number().finite().min(0).max(200).default(0),
-  outer_diameter: z.number().finite().min(3).max(250).default(22),
-  outer_pitch: z.number().finite().min(0.25).max(10).default(1.5),
-  outer_starts: z.number().int().min(1).max(4).default(1),
-  outer_left_handed: z.boolean().default(false),
-  outer_shape: z.number().int().min(0).max(4).default(0),
-  wrench_flat_depth: z.number().finite().min(0.2).max(30).default(1.2),
-  knurl_count: z.number().int().min(4).max(64).default(16),
-  knurl_depth: z.number().finite().min(0.1).max(5).default(0.5),
-  flange: z.boolean().default(false),
-  flange_diameter: z.number().finite().min(4).max(300).default(30),
-  flange_thickness: z.number().finite().min(0.8).max(80).default(3),
-  flange_shape: z.number().int().min(0).max(2).default(0),
-  flange_holes: z.number().int().min(0).max(12).default(0),
-  flange_hole_diameter: z.number().finite().min(1).max(30).default(3.2),
-  blind_bottom: z.number().finite().min(0).max(100).default(0),
-  chamfer: z.number().finite().min(0).max(10).default(0.8),
-  clearance: z.number().finite().min(0).max(1.5).default(0.22),
-  cross_hole_diameter: z.number().finite().min(0).max(80).default(0),
-  cross_hole_z: z.number().finite().min(0).max(200).default(0),
-  split_slot_width: z.number().finite().min(0).max(40).default(0),
-  segments: z.number().int().min(16).max(72).default(36),
-}).strict()
+export const bushingSchema = z
+  .object({
+    thread_mode: z.number().int().min(0).max(3).default(3),
+    auto_thread_std: z.boolean().default(true),
+    fdm_thread_angle: z.boolean().default(true),
+    length: z.number().finite().min(4).max(300).default(40),
+    thread_section_length: z.number().finite().min(2).max(120).default(10),
+    inner_diameter: z.number().finite().min(1.6).max(200).default(12),
+    inner_pitch: z.number().finite().min(0.25).max(10).default(1.5),
+    inner_starts: z.number().int().min(1).max(4).default(1),
+    inner_left_handed: z.boolean().default(false),
+    inner_thread_depth: z.number().finite().min(0).max(200).default(0),
+    outer_diameter: z.number().finite().min(3).max(250).default(22),
+    outer_pitch: z.number().finite().min(0.25).max(10).default(1.5),
+    outer_starts: z.number().int().min(1).max(4).default(1),
+    outer_left_handed: z.boolean().default(false),
+    outer_shape: z.number().int().min(0).max(4).default(0),
+    wrench_flat_depth: z.number().finite().min(0.2).max(30).default(1.2),
+    knurl_count: z.number().int().min(4).max(64).default(16),
+    knurl_depth: z.number().finite().min(0.1).max(5).default(0.5),
+    flange: z.boolean().default(false),
+    flange_diameter: z.number().finite().min(4).max(300).default(30),
+    flange_thickness: z.number().finite().min(0.8).max(80).default(3),
+    flange_shape: z.number().int().min(0).max(2).default(0),
+    flange_holes: z.number().int().min(0).max(12).default(0),
+    flange_hole_diameter: z.number().finite().min(1).max(30).default(3.2),
+    blind_bottom: z.number().finite().min(0).max(100).default(0),
+    chamfer: z.number().finite().min(0).max(10).default(0.8),
+    clearance: z.number().finite().min(0).max(1.5).default(0.22),
+    cross_hole_diameter: z.number().finite().min(0).max(80).default(0),
+    cross_hole_z: z.number().finite().min(0).max(200).default(0),
+    split_slot_width: z.number().finite().min(0).max(40).default(0),
+    segments: z.number().int().min(16).max(72).default(36),
+  })
+  .strict()
 
 export type BushingOptions = z.infer<typeof bushingSchema>
 
@@ -110,10 +112,14 @@ export function validateBushingParameters(p: BushingOptions): void {
     }
   } else {
     if (hasInnerThread && p.inner_diameter < 2 * effInPitch) {
-      throw Error('Внутренний диаметр должен быть минимум вдвое больше шага внутренней резьбы / inner_diameter must be at least 2 * inner_pitch')
+      throw Error(
+        'Внутренний диаметр должен быть минимум вдвое больше шага внутренней резьбы / inner_diameter must be at least 2 * inner_pitch',
+      )
     }
     if (hasOuterThread && p.outer_diameter < 2 * effOutPitch) {
-      throw Error('Наружный диаметр должен быть минимум вдвое больше шага наружной резьбы / outer_diameter must be at least 2 * outer_pitch')
+      throw Error(
+        'Наружный диаметр должен быть минимум вдвое больше шага наружной резьбы / outer_diameter must be at least 2 * outer_pitch',
+      )
     }
 
     const rInnerMax = p.inner_diameter / 2 + effClearance / 2
@@ -135,39 +141,55 @@ export function validateBushingParameters(p: BushingOptions): void {
   }
 
   if (p.blind_bottom > 0 && p.blind_bottom >= p.length - 1) {
-    throw Error('Толщина глухого дна должна оставлять минимум 1 мм глубины канала / blind_bottom must leave at least 1 mm of cavity depth')
+    throw Error(
+      'Толщина глухого дна должна оставлять минимум 1 мм глубины канала / blind_bottom must leave at least 1 mm of cavity depth',
+    )
   }
   if (!isTubeMaleFemale && p.inner_thread_depth > 0 && p.inner_thread_depth > p.length - p.blind_bottom) {
-    throw Error('Глубина внутренней резьбы превышает доступную длину канала / inner_thread_depth exceeds available cavity length')
+    throw Error(
+      'Глубина внутренней резьбы превышает доступную длину канала / inner_thread_depth exceeds available cavity length',
+    )
   }
 
   if (p.flange) {
     if (p.flange_thickness >= p.length - 0.5) {
-      throw Error('Толщина буртика должна быть меньше общей длины втулки / flange_thickness must be less than total bushing length')
+      throw Error(
+        'Толщина буртика должна быть меньше общей длины втулки / flange_thickness must be less than total bushing length',
+      )
     }
     if (p.flange_diameter <= p.outer_diameter + 0.4) {
-      throw Error('Диаметр буртика должен быть больше наружного диаметра втулки / flange_diameter must be greater than outer_diameter')
+      throw Error(
+        'Диаметр буртика должен быть больше наружного диаметра втулки / flange_diameter must be greater than outer_diameter',
+      )
     }
     if (p.flange_holes > 0) {
       const rimSpan = (p.flange_diameter - p.outer_diameter) / 2
       if (p.flange_hole_diameter > rimSpan - 0.8) {
-        throw Error('Крепёжные отверстия не помещаются на поле буртика: увеличьте диаметр буртика или уменьшите диаметр отверстий / Flange holes do not fit on the flange rim: increase flange_diameter or reduce flange_hole_diameter')
+        throw Error(
+          'Крепёжные отверстия не помещаются на поле буртика: увеличьте диаметр буртика или уменьшите диаметр отверстий / Flange holes do not fit on the flange rim: increase flange_diameter or reduce flange_hole_diameter',
+        )
       }
     }
   }
 
   if (p.cross_hole_diameter > 0) {
     if (p.cross_hole_diameter >= p.length - 1 || p.cross_hole_diameter >= p.outer_diameter * 0.75) {
-      throw Error('Диаметр поперечного отверстия слишком велик для габаритов втулки / cross_hole_diameter is too large for the bushing dimensions')
+      throw Error(
+        'Диаметр поперечного отверстия слишком велик для габаритов втулки / cross_hole_diameter is too large for the bushing dimensions',
+      )
     }
     const zCenter = p.cross_hole_z > 0 ? p.cross_hole_z : p.flange ? (p.length + p.flange_thickness) / 2 : p.length / 2
     if (zCenter - p.cross_hole_diameter / 2 < 0.4 || zCenter + p.cross_hole_diameter / 2 > p.length - 0.4) {
-      throw Error('Поперечное отверстие выходит за торцы втулки: скорректируйте высоту или диаметр отверстия / Cross-hole extends beyond bushing ends: adjust cross_hole_z or cross_hole_diameter')
+      throw Error(
+        'Поперечное отверстие выходит за торцы втулки: скорректируйте высоту или диаметр отверстия / Cross-hole extends beyond bushing ends: adjust cross_hole_z or cross_hole_diameter',
+      )
     }
   }
 
   if (p.split_slot_width > 0 && p.split_slot_width >= p.inner_diameter * 0.85) {
-    throw Error('Ширина продольного разреза слишком велика относительно внутреннего отверстия / split_slot_width is too wide relative to inner_diameter')
+    throw Error(
+      'Ширина продольного разреза слишком велика относительно внутреннего отверстия / split_slot_width is too wide relative to inner_diameter',
+    )
   }
 }
 
@@ -227,7 +249,9 @@ export function computeBushingParameterSuggestions(
       if (Math.abs(clearance - recClearance) > 0.02) changes.clearance = recClearance
       if (flange && flangeD <= targetOuterD + 2) changes.flange_diameter = round2(targetOuterD + 6)
       if (Object.keys(changes).length > 0) {
-        const summary = Object.entries(changes).map(([k, v]) => `${k} = ${v} мм`).join(', ')
+        const summary = Object.entries(changes)
+          .map(([k, v]) => `${k} = ${v} мм`)
+          .join(', ')
         suggestions.push({
           title: `Подобрать стенку и стандарт резьбы под 3D-печать (${summary})`,
           description: `Для трубки «мама-папа» с внутренним каналом ${innerD} мм рекомендуется согласовать наружный диаметр, шаг и зазор FDM:`,
@@ -256,7 +280,9 @@ export function computeBushingParameterSuggestions(
     }
     if (flange && targetFlangeD !== flangeD) changes.flange_diameter = targetFlangeD
     if (Object.keys(changes).length > 0) {
-      const summary = Object.entries(changes).map(([k, v]) => `${k} = ${v} мм`).join(', ')
+      const summary = Object.entries(changes)
+        .map(([k, v]) => `${k} = ${v} мм`)
+        .join(', ')
       suggestions.push({
         title: `Подобрать сопряжённые размеры (${summary})`,
         description: `Для внутреннего диаметра ${innerD} мм можно автоматически обновить наружный диаметр, шаг резьбы и буртик для сохранения прочной стенки:`,

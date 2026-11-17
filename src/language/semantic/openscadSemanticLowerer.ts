@@ -25,17 +25,17 @@ import {
 } from '../openscadCompiler'
 import { OpenSCADParseError } from '../openscadErrors'
 import { OpenScadStableScope } from '../openScadStableScope'
+import { createStableExpressionEvaluators } from '../openScadStableExpressionEval'
 import {
-  createStableExpressionEvaluators,
-} from '../openScadStableExpressionEval'
-import { canonicalNumber, finiteNumber, resolveStableVariable, stableWarning } from './openscadSemanticLowerer/semanticValueType'
+  canonicalNumber,
+  finiteNumber,
+  resolveStableVariable,
+  stableWarning,
+} from './openscadSemanticLowerer/semanticValueType'
 import { evalBuiltin, evalExpression } from './openscadSemanticLowerer/evalExpression'
 export { lowerOpenSCADToSemanticProgramUnchecked } from './openscadSemanticLowerer/lowerOpenSCADToSemanticProgramUnchecked'
 
-export {
-  type SemanticLoweringReport,
-  type SemanticLoweringSuccess,
-} from './semanticProgramTrust'
+export { type SemanticLoweringReport, type SemanticLoweringSuccess } from './semanticProgramTrust'
 
 export const MAX_SHAPES = 1_000
 export const MAX_EXTRUDE_SLICES = 512
@@ -61,7 +61,9 @@ export interface RegisteredOperations {
   readonly expansionByCall: Map<CallNode, number>
 }
 
-interface EvaluationBudget { ops: number }
+interface EvaluationBudget {
+  ops: number
+}
 
 interface SemanticRuntimeCheckpoint {
   readonly nodes: number
@@ -152,19 +154,34 @@ export class StableBuiltinValueError extends Error {
 }
 
 const PALETTE: readonly RGBA[] = Object.freeze([
-  [0.26, 0.52, 0.96, 1], [0.96, 0.52, 0.26, 1],
-  [0.26, 0.86, 0.56, 1], [0.86, 0.26, 0.66, 1],
-  [0.96, 0.86, 0.26, 1], [0.46, 0.76, 0.86, 1],
-  [0.76, 0.56, 0.96, 1], [0.56, 0.86, 0.36, 1],
+  [0.26, 0.52, 0.96, 1],
+  [0.96, 0.52, 0.26, 1],
+  [0.26, 0.86, 0.56, 1],
+  [0.86, 0.26, 0.66, 1],
+  [0.96, 0.86, 0.26, 1],
+  [0.46, 0.76, 0.86, 1],
+  [0.76, 0.56, 0.96, 1],
+  [0.56, 0.86, 0.36, 1],
 ])
 
 export const CSS_COLORS: Readonly<Record<string, RGBA>> = Object.freeze({
-  red: [1, 0, 0, 1], green: [0, 0.5, 0, 1], blue: [0, 0, 1, 1],
-  yellow: [1, 1, 0, 1], cyan: [0, 1, 1, 1], magenta: [1, 0, 1, 1],
-  white: [1, 1, 1, 1], black: [0, 0, 0, 1], orange: [1, 0.65, 0, 1],
-  gray: [0.5, 0.5, 0.5, 1], grey: [0.5, 0.5, 0.5, 1],
-  pink: [1, 0.75, 0.8, 1], purple: [0.5, 0, 0.5, 1], brown: [0.65, 0.16, 0.16, 1],
-  lime: [0, 1, 0, 1], navy: [0, 0, 0.5, 1], teal: [0, 0.5, 0.5, 1],
+  red: [1, 0, 0, 1],
+  green: [0, 0.5, 0, 1],
+  blue: [0, 0, 1, 1],
+  yellow: [1, 1, 0, 1],
+  cyan: [0, 1, 1, 1],
+  magenta: [1, 0, 1, 1],
+  white: [1, 1, 1, 1],
+  black: [0, 0, 0, 1],
+  orange: [1, 0.65, 0, 1],
+  gray: [0.5, 0.5, 0.5, 1],
+  grey: [0.5, 0.5, 0.5, 1],
+  pink: [1, 0.75, 0.8, 1],
+  purple: [0.5, 0, 0.5, 1],
+  brown: [0.65, 0.16, 0.16, 1],
+  lime: [0, 1, 0, 1],
+  navy: [0, 0, 0.5, 1],
+  teal: [0, 0.5, 0.5, 1],
 })
 
 export class SemanticProgramBuilder {
@@ -240,9 +257,10 @@ export class SemanticProgramBuilder {
       this.registered.operations.map(operation => [operation.operationId, operation.id] as const),
     )
     for (const template of source.diagnosticTemplates.slice(0, checkpoint.templates)) {
-      const operation = template.operation === null
-        ? null
-        : operationById.get(source.registered.operations[template.operation]!.operationId) ?? null
+      const operation =
+        template.operation === null
+          ? null
+          : (operationById.get(source.registered.operations[template.operation]!.operationId) ?? null)
       this.diagnosticTemplates.push({
         ...template,
         id: this.diagnosticTemplates.length,
@@ -278,9 +296,8 @@ export class SemanticProgramBuilder {
   }
 
   invocationOperation(operation: number, parent: number | null, slots: readonly SemanticDynamicSlot[] = []): number {
-    const authoredSlots = slots.length === 0
-      ? [{ name: '$evaluation', value: { tag: 'undefined' } as const, duplicateOrdinal: 0 }]
-      : slots
+    const authoredSlots =
+      slots.length === 0 ? [{ name: '$evaluation', value: { tag: 'undefined' } as const, duplicateOrdinal: 0 }] : slots
     const normalizedSlots = authoredSlots.map((slot, slotIndex) => {
       const valueKey = JSON.stringify(slot.value)
       const key = `${String(parent)}|${operation}|${slotIndex}|${slot.name.length}:${slot.name}${valueKey.length}:${valueKey}`
@@ -366,28 +383,31 @@ export class SemanticProgramBuilder {
     const childrenSegment = childrenOperation.structuralPath.at(-1)
     const expansionSegment = expansionOperation.structuralPath.at(-1)
     const bodySegment = callerBodyOperation.structuralPath.at(-1)
-    const detachedContinuationExpansion = expansionOperation.name === '$expansion'
-      && expansionOperation.category === 'control'
-      && expansionSegment?.kind === 'control'
-      && expansionSegment.name === '$expansion'
-      && expansionOperation.parent === childrenOccurrence.operation
-      && childrenOperation.name === 'children'
-      && staticParent === parent
+    const detachedContinuationExpansion =
+      expansionOperation.name === '$expansion' &&
+      expansionOperation.category === 'control' &&
+      expansionSegment?.kind === 'control' &&
+      expansionSegment.name === '$expansion' &&
+      expansionOperation.parent === childrenOccurrence.operation &&
+      childrenOperation.name === 'children' &&
+      staticParent === parent
     if (detachedContinuationExpansion) return true
-    if (expansionOperation.name !== '$expansion'
-      || expansionOperation.category !== 'control'
-      || expansionSegment?.kind !== 'control'
-      || expansionSegment.name !== '$expansion'
-      || expansionOperation.parent !== callerBodyOccurrence.operation
-      || callerBodyOperation.name !== '$body'
-      || callerBodyOperation.category !== 'control'
-      || bodySegment?.kind !== 'body'
-      || bodySegment.name !== '$body'
-      || childrenOperation.name !== 'children'
-      || childrenOperation.category !== 'control'
-      || childrenSegment?.kind !== 'control'
-      || childrenSegment.name !== 'children'
-    ) return false
+    if (
+      expansionOperation.name !== '$expansion' ||
+      expansionOperation.category !== 'control' ||
+      expansionSegment?.kind !== 'control' ||
+      expansionSegment.name !== '$expansion' ||
+      expansionOperation.parent !== callerBodyOccurrence.operation ||
+      callerBodyOperation.name !== '$body' ||
+      callerBodyOperation.category !== 'control' ||
+      bodySegment?.kind !== 'body' ||
+      bodySegment.name !== '$body' ||
+      childrenOperation.name !== 'children' ||
+      childrenOperation.category !== 'control' ||
+      childrenSegment?.kind !== 'control' ||
+      childrenSegment.name !== 'children'
+    )
+      return false
 
     let staticChildCount = 0
     let soleStaticChild = -1
@@ -398,14 +418,18 @@ export class SemanticProgramBuilder {
     }
     if (staticChildCount !== 1 || soleStaticChild !== operation) return false
 
-    const sameSlots = (left: readonly SemanticDynamicSlot[], right: readonly SemanticDynamicSlot[]) => (
-      left.length === right.length
-      && left.every((slot, index) => slot.name === right[index]!.name
-        && JSON.stringify(slot.value) === JSON.stringify(right[index]!.value))
+    const sameSlots = (left: readonly SemanticDynamicSlot[], right: readonly SemanticDynamicSlot[]) =>
+      left.length === right.length &&
+      left.every(
+        (slot, index) =>
+          slot.name === right[index]!.name && JSON.stringify(slot.value) === JSON.stringify(right[index]!.value),
+      )
+    if (
+      childrenOccurrence.dynamicSlots.length !== 1 ||
+      childrenOccurrence.dynamicSlots[0]!.name !== '$index' ||
+      !sameSlots(childrenOccurrence.dynamicSlots, slots)
     )
-    if (childrenOccurrence.dynamicSlots.length !== 1
-      || childrenOccurrence.dynamicSlots[0]!.name !== '$index'
-      || !sameSlots(childrenOccurrence.dynamicSlots, slots)) return false
+      return false
 
     let cursor = childrenOccurrence.parent
     let definitionOccurrence: SemanticOccurrence | null = null
@@ -414,15 +438,17 @@ export class SemanticProgramBuilder {
       const candidateOperation = operations[candidate.operation]!
       const candidatePath = candidateOperation.structuralPath
       const childrenPath = childrenOperation.structuralPath
-      const lexicallyContainsChildren = candidatePath.length < childrenPath.length
-        && candidatePath.every((segment, index) => {
+      const lexicallyContainsChildren =
+        candidatePath.length < childrenPath.length &&
+        candidatePath.every((segment, index) => {
           const childSegment = childrenPath[index]!
-          return segment.kind === childSegment.kind
-            && segment.name === childSegment.name
-            && segment.ordinal === childSegment.ordinal
+          return (
+            segment.kind === childSegment.kind &&
+            segment.name === childSegment.name &&
+            segment.ordinal === childSegment.ordinal
+          )
         })
-      if (candidateOperation.structuralPath.at(-1)?.kind === 'module'
-        && lexicallyContainsChildren) {
+      if (candidateOperation.structuralPath.at(-1)?.kind === 'module' && lexicallyContainsChildren) {
         definitionOccurrence = candidate
         break
       }
@@ -436,12 +462,13 @@ export class SemanticProgramBuilder {
     const definitionOperation = operations[definitionOccurrence.operation]!
     const definitionPath = definitionOperation.structuralPath
     const childrenPath = childrenOperation.structuralPath
-    const lexicallyContainsChildren = definitionPath.length < childrenPath.length
-      && definitionPath.every((segment, index) => {
+    const lexicallyContainsChildren =
+      definitionPath.length < childrenPath.length &&
+      definitionPath.every((segment, index) => {
         const candidate = childrenPath[index]!
-        return segment.kind === candidate.kind
-          && segment.name === candidate.name
-          && segment.ordinal === candidate.ordinal
+        return (
+          segment.kind === candidate.kind && segment.name === candidate.name && segment.ordinal === candidate.ordinal
+        )
       })
     let definitionRuntimeChildren = 0
     let soleDefinitionRuntimeChild = -1
@@ -453,17 +480,19 @@ export class SemanticProgramBuilder {
       }
       if (candidate.parent === parent) expansionRuntimeChildren++
     }
-    return callerBodyOperation.parent === callerOccurrence.operation
-      && callerOperation.category === 'module'
-      && callerOperation.structuralPath.at(-1)?.kind === 'call'
-      && definitionOperation.category === 'module'
-      && definitionOperation.structuralPath.at(-1)?.kind === 'module'
-      && callerOperation.name === definitionOperation.name
-      && sameSlots(callerOccurrence.dynamicSlots, definitionOccurrence.dynamicSlots)
-      && lexicallyContainsChildren
-      && definitionRuntimeChildren === 1
-      && soleDefinitionRuntimeChild === definitionOccurrence.id
-      && expansionRuntimeChildren === 0
+    return (
+      callerBodyOperation.parent === callerOccurrence.operation &&
+      callerOperation.category === 'module' &&
+      callerOperation.structuralPath.at(-1)?.kind === 'call' &&
+      definitionOperation.category === 'module' &&
+      definitionOperation.structuralPath.at(-1)?.kind === 'module' &&
+      callerOperation.name === definitionOperation.name &&
+      sameSlots(callerOccurrence.dynamicSlots, definitionOccurrence.dynamicSlots) &&
+      lexicallyContainsChildren &&
+      definitionRuntimeChildren === 1 &&
+      soleDefinitionRuntimeChild === definitionOccurrence.id &&
+      expansionRuntimeChildren === 0
+    )
   }
 
   produce(
@@ -479,9 +508,7 @@ export class SemanticProgramBuilder {
     const expectedOrdinal = this.outputCounts.get(baseOccurrence) ?? 0
     const outputOrdinal = expectedOrdinal
     this.outputCounts.set(baseOccurrence, expectedOrdinal + 1)
-    const producer = expectedOrdinal === 0
-      ? baseOccurrence
-      : this.occurrences.length
+    const producer = expectedOrdinal === 0 ? baseOccurrence : this.occurrences.length
     const outputRow: SemanticOccurrence = {
       ...base,
       id: producer,
@@ -547,10 +574,7 @@ export class SemanticProgramBuilder {
     if (!dedupe || !this.warnings.includes(message)) this.warnings.push(message)
   }
 
-  terminal(
-    error: OpenSCADParseError | LegacyBindingCompatibilityError,
-    occurrence: number,
-  ): number {
+  terminal(error: OpenSCADParseError | LegacyBindingCompatibilityError, occurrence: number): number {
     const id = this.diagnosticTemplates.length
     const detail = error instanceof OpenSCADParseError ? error.detail : error.message
     this.diagnosticTemplates.push({
@@ -572,9 +596,7 @@ export class SemanticProgramBuilder {
     this.diagnostics.push({
       template: id,
       message: error.message,
-      span: error instanceof OpenSCADParseError
-        ? { start: error.start, end: error.end }
-        : null,
+      span: error instanceof OpenSCADParseError ? { start: error.start, end: error.end } : null,
     })
     return id
   }
@@ -609,12 +631,7 @@ export interface EvaluatedStableCompatibilityArguments {
   readonly evaluated: ReadonlyMap<ExpressionArgument, Value>
 }
 
-export const IDENTITY_MATRIX: SemanticMatrix4 = [
-  1, 0, 0, 0,
-  0, 1, 0, 0,
-  0, 0, 1, 0,
-  0, 0, 0, 1,
-]
+export const IDENTITY_MATRIX: SemanticMatrix4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
 
 export interface SemanticReducedShape {
   readonly node: number

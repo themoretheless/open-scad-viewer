@@ -1,5 +1,5 @@
-import type {MeshData} from '../core/mesh'
-import {SurfaceGroupContentCache} from './surfaceGroupContentCache'
+import type { MeshData } from '../core/mesh'
+import { SurfaceGroupContentCache } from './surfaceGroupContentCache'
 
 export interface SelectionSurfacePublisherOptions {
   /** Clone cached ids when the result crosses a transferable ownership boundary. */
@@ -29,6 +29,6 @@ export function createSelectionSurfacePublisher(
       ids = byIndices.get(mesh.indices) ?? compute()
       byIndices.set(mesh.indices, ids)
     }
-    return {...mesh, faceIds: cloneResult ? ids.slice() : ids, faceIdsInferred: true}
+    return { ...mesh, faceIds: cloneResult ? ids.slice() : ids, faceIdsInferred: true }
   }
 }

@@ -19,7 +19,6 @@ export interface TrussPcgOptions {
 import TRUSS_PCG_WGSL from '../../crates/compute-core/shaders/truss_pcg.wgsl?raw'
 export { TRUSS_PCG_WGSL }
 
-
 export interface CsrStiffnessMatrix {
   numDofs: number
   rowPtr: Uint32Array
@@ -71,7 +70,7 @@ export function assembleTrussCsr(model: TrussModel): CsrStiffnessMatrix {
     const d0 = dx * invLen
     const d1 = dy * invLen
     const d2 = dz * invLen
-    const kAxial = (mem.youngMpa * mem.areaMm2) * invLen
+    const kAxial = mem.youngMpa * mem.areaMm2 * invLen
     const baseA = na * 3
     const baseB = nb * 3
 
@@ -104,9 +103,18 @@ export function assembleTrussCsr(model: TrussModel): CsrStiffnessMatrix {
       freeMask[base + 2] = 1
       freeDofs += 3
     } else {
-      if (!r[0]) { freeMask[base] = 1; freeDofs++ }
-      if (!r[1]) { freeMask[base + 1] = 1; freeDofs++ }
-      if (!r[2]) { freeMask[base + 2] = 1; freeDofs++ }
+      if (!r[0]) {
+        freeMask[base] = 1
+        freeDofs++
+      }
+      if (!r[1]) {
+        freeMask[base + 1] = 1
+        freeDofs++
+      }
+      if (!r[2]) {
+        freeMask[base + 2] = 1
+        freeDofs++
+      }
     }
   }
 
@@ -127,11 +135,11 @@ export function assembleTrussCsr(model: TrussModel): CsrStiffnessMatrix {
     const map = rowMaps[r]
     if (!map || map.size === 0) continue
     const rowCols = colIdx.subarray(writePos, writePos + map.size)
-        let k = 0
-        for (const c of map.keys()) {
-          rowCols[k++] = c
-        }
-        rowCols.sort()
+    let k = 0
+    for (const c of map.keys()) {
+      rowCols[k++] = c
+    }
+    rowCols.sort()
     for (let i = 0; i < rowCols.length; i++) {
       const c = rowCols[i]!
       const v = map.get(c)!
@@ -210,16 +218,9 @@ function acquirePcgScratch(numDofs: number): {
 /**
  * Solves a 3D linear truss system via Jacobi-Preconditioned Conjugate Gradient (PCG).
  */
-export function referenceSolveTrussPcg(
-  model: TrussModel,
-  opts: TrussPcgOptions = {}
-): TrussResponse {
+export function referenceSolveTrussPcg(model: TrussModel, opts: TrussPcgOptions = {}): TrussResponse {
   const numNodes = model.nodesMm.length
-  if (
-    numNodes === 0 ||
-    model.restrained.length !== numNodes ||
-    model.forcesN.length !== numNodes
-  ) {
+  if (numNodes === 0 || model.restrained.length !== numNodes || model.forcesN.length !== numNodes) {
     throw new Error('Invalid truss model dimensions')
   }
 
@@ -363,11 +364,7 @@ export function referenceSolveTrussPcg(
     const invLen = 1 / len
     const ua = displacementsMm[na]!
     const ub = displacementsMm[nb]!
-    const elong =
-      (dx * (ub[0] - ua[0]) +
-        dy * (ub[1] - ua[1]) +
-        dz * (ub[2] - ua[2])) *
-      invLen
+    const elong = (dx * (ub[0] - ua[0]) + dy * (ub[1] - ua[1]) + dz * (ub[2] - ua[2])) * invLen
     const force = mem.youngMpa * mem.areaMm2 * invLen * elong
     axialForcesN[m] = force
     axialStressesMpa[m] = force / mem.areaMm2
@@ -388,10 +385,7 @@ export function referenceSolveTrussPcg(
  * Solves a 3D truss model and accelerates member axial force/stress post-processing on WebGPU Compute.
  * Falls back to exact double-precision CPU Jacobi-PCG when WebGPU is unavailable.
  */
-export async function runGpuTrussSolver(
-  model: TrussModel,
-  opts: TrussPcgOptions = {}
-): Promise<TrussResponse> {
+export async function runGpuTrussSolver(model: TrussModel, opts: TrussPcgOptions = {}): Promise<TrussResponse> {
   const cpuResp = referenceSolveTrussPcg(model, opts)
 
   if (typeof navigator === 'undefined' || !navigator.gpu || model.members.length === 0) {

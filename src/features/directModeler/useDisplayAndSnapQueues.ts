@@ -106,12 +106,21 @@ export function useDisplayAndSnapQueues(options: UseDisplayAndSnapQueuesOptions)
     topologyRequest = topologyWorker
       .run({ kind: 'topology', mesh: body.mesh })
       .then(result => {
-        if (generation !== topologyGeneration || options.document.value !== source || options.selectedBody.value !== body) return null
+        if (
+          generation !== topologyGeneration ||
+          options.document.value !== source ||
+          options.selectedBody.value !== body
+        )
+          return null
         topology.value = result
         return result
       })
       .catch(() => {
-        if (generation === topologyGeneration && options.document.value === source && options.selectedBody.value === body) {
+        if (
+          generation === topologyGeneration &&
+          options.document.value === source &&
+          options.selectedBody.value === body
+        ) {
           topologyBody = undefined
           topologyRequest = null
           topologyRetryVisible.value = true
@@ -174,7 +183,9 @@ export function useDisplayAndSnapQueues(options: UseDisplayAndSnapQueuesOptions)
   })
   function profileLoops(sketch: DirectSketch): Point2[][] {
     void profileDisplayVersion.value
-    return sketch.retainedProfile ? profileDisplayQueue.get({ id: sketch.id, profile: sketch.retainedProfile }) ?? [] : [sketch.points]
+    return sketch.retainedProfile
+      ? (profileDisplayQueue.get({ id: sketch.id, profile: sketch.retainedProfile }) ?? [])
+      : [sketch.points]
   }
 
   const surfaceDisplayWorker = createSolidPreviewWorker()
@@ -314,7 +325,10 @@ export function useDisplayAndSnapQueues(options: UseDisplayAndSnapQueuesOptions)
     surfaceDisplayErrors.value = []
     if (!options.props.open || !options.kernelReady.value) return
     const generation = surfaceDisplayGeneration
-    const items = [...(options.document.value.surfaces ?? []), ...(options.getAdvancedPreviewDocument()?.surfaces ?? [])]
+    const items = [
+      ...(options.document.value.surfaces ?? []),
+      ...(options.getAdvancedPreviewDocument()?.surfaces ?? []),
+    ]
     surfaceDisplayPending.value = items.length > 0
     const result = await surfaceDisplayQueue.prepare(items)
     if (generation !== surfaceDisplayGeneration) return

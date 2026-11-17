@@ -1,4 +1,4 @@
-import {assertVerifiedWasmModule, snapshotWasmIdentity, type WasmArtifactIdentity} from './wasmArtifact'
+import { assertVerifiedWasmModule, snapshotWasmIdentity, type WasmArtifactIdentity } from './wasmArtifact'
 
 export type OptionalWasmCompiler = (url: string, identity?: WasmArtifactIdentity) => Promise<WebAssembly.Module | null>
 
@@ -10,7 +10,10 @@ export function setOptionalWasmCompiler(compiler: OptionalWasmCompiler | undefin
   optionalCompiler = compiler
 }
 
-export async function compileOptionalWasm(url: string, expected?: WasmArtifactIdentity): Promise<WebAssembly.Module | null> {
+export async function compileOptionalWasm(
+  url: string,
+  expected?: WasmArtifactIdentity,
+): Promise<WebAssembly.Module | null> {
   if (!optionalCompiler) return null
   const identity = expected ? snapshotWasmIdentity(expected) : undefined
   const module = await (identity ? optionalCompiler(url, identity) : optionalCompiler(url))

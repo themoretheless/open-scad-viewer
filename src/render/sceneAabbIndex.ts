@@ -46,10 +46,18 @@ function center(item: BvhItem, axis: number): number {
 
 function buildNode(items: BvhItem[], leafSize: number, counter: { count: number }): BvhNode {
   counter.count++
-  let min0 = Infinity, min1 = Infinity, min2 = Infinity
-  let max0 = -Infinity, max1 = -Infinity, max2 = -Infinity
-  let cmin0 = Infinity, cmin1 = Infinity, cmin2 = Infinity
-  let cmax0 = -Infinity, cmax1 = -Infinity, cmax2 = -Infinity
+  let min0 = Infinity,
+    min1 = Infinity,
+    min2 = Infinity
+  let max0 = -Infinity,
+    max1 = -Infinity,
+    max2 = -Infinity
+  let cmin0 = Infinity,
+    cmin1 = Infinity,
+    cmin2 = Infinity
+  let cmax0 = -Infinity,
+    cmax1 = -Infinity,
+    cmax2 = -Infinity
   for (let i = 0; i < items.length; i++) {
     const it = items[i]!
     if (it.min[0]! < min0) min0 = it.min[0]!
@@ -79,8 +87,13 @@ function buildNode(items: BvhItem[], leafSize: number, counter: { count: number 
   const span2 = cmax2 - cmin2
   let axis = 0
   let bestSpan = span0
-  if (span1 > bestSpan) { axis = 1; bestSpan = span1 }
-  if (span2 > bestSpan) { axis = 2 }
+  if (span1 > bestSpan) {
+    axis = 1
+    bestSpan = span1
+  }
+  if (span2 > bestSpan) {
+    axis = 2
+  }
   items.sort((a, b) => {
     const ca = center(a, axis)
     const cb = center(b, axis)
@@ -181,15 +194,27 @@ export function disposeSceneAabbIndex(index: SceneAabbIndex): void {
 }
 
 /** Query the retained hierarchy directly in f64 with zero WASM/codec overhead. */
-export function querySceneAabbIndex(index: SceneAabbIndex, ray: Ray3, maximumDistance = Infinity): SceneAabbCandidate[] {
+export function querySceneAabbIndex(
+  index: SceneAabbIndex,
+  ray: Ray3,
+  maximumDistance = Infinity,
+): SceneAabbCandidate[] {
   if (disposed.has(index)) throw new Error('Scene picking index has been disposed')
   const tree = activeTrees.get(index)
   if (tree === undefined) return []
-  const ox = ray.origin[0], oy = ray.origin[1], oz = ray.origin[2]
-  const dx = ray.direction[0], dy = ray.direction[1], dz = ray.direction[2]
+  const ox = ray.origin[0],
+    oy = ray.origin[1],
+    oz = ray.origin[2]
+  const dx = ray.direction[0],
+    dy = ray.direction[1],
+    dz = ray.direction[2]
   if (
-    !Number.isFinite(ox) || !Number.isFinite(oy) || !Number.isFinite(oz) ||
-    !Number.isFinite(dx) || !Number.isFinite(dy) || !Number.isFinite(dz)
+    !Number.isFinite(ox) ||
+    !Number.isFinite(oy) ||
+    !Number.isFinite(oz) ||
+    !Number.isFinite(dx) ||
+    !Number.isFinite(dy) ||
+    !Number.isFinite(dz)
   ) {
     return []
   }

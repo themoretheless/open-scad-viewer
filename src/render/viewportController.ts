@@ -1,16 +1,5 @@
-import {
-  CameraHistory,
-  cameraStatesEqual,
-  type CameraHistorySnapshot,
-  type CameraState,
-} from './cameraHistory'
-import {
-  ISO_PITCH,
-  ISO_YAW,
-  standardViewForCamera,
-  type ProjectionMode,
-  type StandardView,
-} from './viewportModel'
+import { CameraHistory, cameraStatesEqual, type CameraHistorySnapshot, type CameraState } from './cameraHistory'
+import { ISO_PITCH, ISO_YAW, standardViewForCamera, type ProjectionMode, type StandardView } from './viewportModel'
 
 export interface ViewportState {
   readonly camera: CameraState
@@ -71,9 +60,13 @@ export class ViewportController {
     })
   }
 
-  get state(): ViewportState { return this.snapshot }
+  get state(): ViewportState {
+    return this.snapshot
+  }
 
-  get isRecovering(): boolean { return this.activeRecoveryToken !== null }
+  get isRecovering(): boolean {
+    return this.activeRecoveryToken !== null
+  }
 
   subscribe(listener: ViewportListener): () => void {
     this.listeners.add(listener)
@@ -221,20 +214,22 @@ export class ViewportController {
       camera: patch.camera ? cloneCamera(patch.camera) : this.snapshot.camera,
       standardView: patch.standardView ?? this.snapshot.standardView,
       activeView: patch.activeView ?? this.snapshot.activeView,
-      projectionBeforeFaceSnap: patch.projectionBeforeFaceSnap === undefined
-        ? this.snapshot.projectionBeforeFaceSnap
-        : patch.projectionBeforeFaceSnap,
+      projectionBeforeFaceSnap:
+        patch.projectionBeforeFaceSnap === undefined
+          ? this.snapshot.projectionBeforeFaceSnap
+          : patch.projectionBeforeFaceSnap,
       canGoBack: patch.canGoBack ?? this.snapshot.canGoBack,
       recoveryRevision: patch.recoveryRevision ?? this.snapshot.recoveryRevision,
     })
     if (
-      next.standardView === this.snapshot.standardView
-      && next.activeView === this.snapshot.activeView
-      && next.projectionBeforeFaceSnap === this.snapshot.projectionBeforeFaceSnap
-      && next.canGoBack === this.snapshot.canGoBack
-      && next.recoveryRevision === this.snapshot.recoveryRevision
-      && cameraStatesEqual(next.camera, this.snapshot.camera)
-    ) return this.snapshot
+      next.standardView === this.snapshot.standardView &&
+      next.activeView === this.snapshot.activeView &&
+      next.projectionBeforeFaceSnap === this.snapshot.projectionBeforeFaceSnap &&
+      next.canGoBack === this.snapshot.canGoBack &&
+      next.recoveryRevision === this.snapshot.recoveryRevision &&
+      cameraStatesEqual(next.camera, this.snapshot.camera)
+    )
+      return this.snapshot
     this.snapshot = next
     for (const listener of this.listeners) listener(next)
     return next

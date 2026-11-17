@@ -22,11 +22,23 @@ export class BuildPerformanceHistory {
   private edit: { revision: number; at: number } | null = null
   private nextToken = 1
 
-  edited(revision: number, at: number) { this.edit = { revision, at } }
+  edited(revision: number, at: number) {
+    this.edit = { revision, at }
+  }
 
-  record(sample: Omit<BuildPerformanceSample, 'token' | 'editToSubmitMs' | 'publicationToSubmitMs'>, publishedAt: number): number {
+  record(
+    sample: Omit<BuildPerformanceSample, 'token' | 'editToSubmitMs' | 'publicationToSubmitMs'>,
+    publishedAt: number,
+  ): number {
     const token = this.nextToken++
-    this.samples.push({ ...sample, phases: { ...sample.phases }, upload: sample.upload && { ...sample.upload }, token, editToSubmitMs: null, publicationToSubmitMs: null })
+    this.samples.push({
+      ...sample,
+      phases: { ...sample.phases },
+      upload: sample.upload && { ...sample.upload },
+      token,
+      editToSubmitMs: null,
+      publicationToSubmitMs: null,
+    })
     // Only the latest published scene can reach its first submission now.
     this.pending.clear()
     this.pending.set(token, { publishedAt, editedAt: this.edit?.revision === sample.revision ? this.edit.at : null })
@@ -46,6 +58,10 @@ export class BuildPerformanceHistory {
   }
 
   snapshot(): BuildPerformanceSample[] {
-    return this.samples.map(sample => ({ ...sample, phases: { ...sample.phases }, upload: sample.upload && { ...sample.upload } }))
+    return this.samples.map(sample => ({
+      ...sample,
+      phases: { ...sample.phases },
+      upload: sample.upload && { ...sample.upload },
+    }))
   }
 }

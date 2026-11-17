@@ -88,10 +88,7 @@ import {
 } from './results/profileAndCurve'
 
 type ResultValidatorMap = {
-  [K in MainSolidExpectation['kind']]: (
-    job: Extract<MainSolidExpectation, { kind: K }>,
-    value: unknown,
-  ) => boolean
+  [K in MainSolidExpectation['kind']]: (job: Extract<MainSolidExpectation, { kind: K }>, value: unknown) => boolean
 }
 
 const PRE_OBJECT_KINDS = new Set<MainSolidExpectation['kind']>([
@@ -101,8 +98,7 @@ const PRE_OBJECT_KINDS = new Set<MainSolidExpectation['kind']>([
   'profileBridgeChords',
 ])
 
-const directDocumentEntry = (_job: unknown, value: unknown): boolean =>
-  validDirectDocument(value)
+const directDocumentEntry = (_job: unknown, value: unknown): boolean => validDirectDocument(value)
 
 const RESULT_VALIDATORS: ResultValidatorMap = {
   isolatedSsContact: (_, value) => validIsolatedSsContactReport(value),
@@ -113,18 +109,11 @@ const RESULT_VALIDATORS: ResultValidatorMap = {
   expressionShellInspect: validExpressionInspection,
   sourceBodyRestore: validSourceBody,
   profileBridgeChords: validProfileBridgeChordReport,
-  frozenGraphBodyDisplay: (job, value) =>
-    validFrozenGraphDisplay(value, job.expected, job.segments),
+  frozenGraphBodyDisplay: (job, value) => validFrozenGraphDisplay(value, job.expected, job.segments),
   frozenGraphBodyRestore: (job, value) => validFrozenGraphBody(value, job.expected),
   sourceGraphG2Preview: (job, value) => validSourceGraphG2Preview(value, job.options),
   g2RunoutSurface: (job, value) =>
-    validG2RunoutResult(
-      value,
-      job.maxCells,
-      job.maxExactWork,
-      job.maxPatches,
-      job.tolerances,
-    ),
+    validG2RunoutResult(value, job.maxCells, job.maxExactWork, job.maxPatches, job.tolerances),
   minkowski3d: (job, value) => validMinkowskiResult(job, value, validDirectDocument),
   animationFrames: (_job, value) => validAnimationFramesResult(value),
   animationSample: (_job, value) => validAnimationSampleResult(value),
@@ -150,8 +139,7 @@ const RESULT_VALIDATORS: ResultValidatorMap = {
   faceDistance: validFaceDistanceResult,
   surfaceDistance: validSurfaceDistanceResult,
   curveDistance: validCurveDistanceResult,
-  sketchSnaps: (job, value) =>
-    validSketchSnapGeometry(value, job.maxPoints, job.maxSegments, job.maxCircles),
+  sketchSnaps: (job, value) => validSketchSnapGeometry(value, job.maxPoints, job.maxSegments, job.maxCircles),
   bodySnaps: (job, value) => validBodySnapGeometry(value, job.maxPoints, job.maxSegments),
   faceSketch: (_job, value) => validFaceSketchResult(value),
   bodyEdges: validBodyEdgesResult,
@@ -188,12 +176,10 @@ const RESULT_VALIDATORS: ResultValidatorMap = {
   latticeGraph: (_job, value) => isNominalLatticeGraph(value),
   structuralSections: validStructuralSectionsResult,
   trussField: (job, value) => isTrussFieldMeshes(value, job.members),
-  trussScreening: (job, value) =>
-    isAxialScreeningRows(value, job.members, job.responses),
+  trussScreening: (job, value) => isAxialScreeningRows(value, job.members, job.responses),
   printStrengthProfile: (job, value) => isValidatedPrintProfile(value, job.profile),
   thermalStrength: (_job, value) => isThermalStrengthResult(value),
-  trussTopology: (job, value) =>
-    isTrussTopologyResponse(value, job.nodes, job.members, job.cases),
+  trussTopology: (job, value) => isTrussTopologyResponse(value, job.nodes, job.members, job.cases),
   structuralProfiles: (_job, value) => isStructuralProfileCatalog(value),
   truss: validTrussResult,
   inspect: (_job, value) => validInspectResult(value),
@@ -217,7 +203,6 @@ const RESULT_VALIDATORS: ResultValidatorMap = {
 export function mainSolidResult(job: MainSolidExpectation, value: unknown): boolean {
   if (!PRE_OBJECT_KINDS.has(job.kind) && !isObjectRecord(value)) return false
   const validator = RESULT_VALIDATORS[job.kind] as
-    | ((expectation: MainSolidExpectation, candidate: unknown) => boolean)
-    | undefined
+    ((expectation: MainSolidExpectation, candidate: unknown) => boolean) | undefined
   return typeof validator === 'function' ? validator(job, value) : false
 }

@@ -1,10 +1,10 @@
-import type {PhotoCalibrationGroup, PhotoMeasuredInput} from './calibration'
-import {encodeBinary, type BinaryTripleHints} from '../../core/valueBinaryCodec'
-import {decodePacked, writeLinear} from '../../kernel/wasmHost'
-import type {WgslVariant} from '../../render/webgpuFeatures'
+import type { PhotoCalibrationGroup, PhotoMeasuredInput } from './calibration'
+import { encodeBinary, type BinaryTripleHints } from '../../core/valueBinaryCodec'
+import { decodePacked, writeLinear } from '../../kernel/wasmHost'
+import type { WgslVariant } from '../../render/webgpuFeatures'
 
 /** Geometry fields written by the Rust adapter as numeric triples decode into flat typed arrays. */
-const SURFACE_TRIPLES: BinaryTripleHints = {positions: 'f64', colors: 'u8', triangles: 'u32'}
+const SURFACE_TRIPLES: BinaryTripleHints = { positions: 'f64', colors: 'u8', triangles: 'u32' }
 
 export interface PhotoPixels {
   width: number
@@ -47,7 +47,7 @@ export interface PhotoCalibrationProvenance {
   group?: PhotoCalibrationGroup
   sourceSize?: [number, number]
   inputSize: [number, number]
-  output: {width: number; height: number; focal: number; cx: number; cy: number}
+  output: { width: number; height: number; focal: number; cx: number; cy: number }
   zoom?: number
   outputFovDegrees?: [number, number]
   resampled: boolean
@@ -120,8 +120,15 @@ interface Exports extends WebAssembly.Exports {
   photo_alloc(size: number): number
   photo_free(pointer: number, size: number): void
   photo_add(width: number, height: number, focal: number, pointer: number, size: number): bigint
-  photo_add_calibrated(width: number, height: number, focal: number, pointer: number, size: number,
-    calibrationPointer: number, calibrationSize: number): bigint
+  photo_add_calibrated(
+    width: number,
+    height: number,
+    focal: number,
+    pointer: number,
+    size: number,
+    calibrationPointer: number,
+    calibrationSize: number,
+  ): bigint
   photo_dense(resolution: number, preset: number): bigint
   photo_dense_prepare(resolution: number, preset: number): bigint
   photo_dense_finish(pointer: number, size: number): bigint
@@ -130,7 +137,7 @@ interface Exports extends WebAssembly.Exports {
   photo_run(action: number, resolution: number): bigint
 }
 
-type Response<T> = {ok: true; value: T} | {ok: false; message: string}
+type Response<T> = { ok: true; value: T } | { ok: false; message: string }
 
 /** Owns a single WASM instance. The Worker owns its lifetime and cancellation. */
 export class PhotogrammetryKernel {
@@ -152,10 +159,17 @@ export class PhotogrammetryKernel {
   }
 
   add(image: PhotoPixels): number {
-    const {width, height, focal, rgb} = image
-    if (!Number.isInteger(width) || !Number.isInteger(height)
-      || width < 48 || height < 48 || width > 2048 || height > 2048
-      || rgb.length !== width * height * 3 || !Number.isFinite(focal)) {
+    const { width, height, focal, rgb } = image
+    if (
+      !Number.isInteger(width) ||
+      !Number.isInteger(height) ||
+      width < 48 ||
+      height < 48 ||
+      width > 2048 ||
+      height > 2048 ||
+      rgb.length !== width * height * 3 ||
+      !Number.isFinite(focal)
+    ) {
       throw new Error('Invalid photo dimensions')
     }
     const metadata = image.calibration ? encodeBinary(image.calibration) : undefined
@@ -209,9 +223,15 @@ export class PhotogrammetryKernel {
    * Browser WebGPU sweep, stage 1: returns the packed shader payload and WGSL
    * text, or null when the request is ineligible for the GPU path.
    */
-  densePrepare(resolution: number, preset: PhotoDensePreset = 'baseline'): {payload: Uint8Array, wgsl: string, wgslVariants?: WgslVariant[] | undefined} | null {
-    const presetCode = preset === 'accurate' ? 3 : preset === 'slanted-plane' ? 1 : preset === 'dual-scale-volume' ? 2 : 0
-    const decoded = decodePacked<Response<{ptr: number, len: number, wgsl: string, wgslVariants?: WgslVariant[]} | null>>(
+  densePrepare(
+    resolution: number,
+    preset: PhotoDensePreset = 'baseline',
+  ): { payload: Uint8Array; wgsl: string; wgslVariants?: WgslVariant[] | undefined } | null {
+    const presetCode =
+      preset === 'accurate' ? 3 : preset === 'slanted-plane' ? 1 : preset === 'dual-scale-volume' ? 2 : 0
+    const decoded = decodePacked<
+      Response<{ ptr: number; len: number; wgsl: string; wgslVariants?: WgslVariant[] } | null>
+    >(
       this.wasm.memory,
       (pointer, size) => this.wasm.photo_free(pointer, size),
       this.wasm.photo_dense_prepare(resolution, presetCode),
@@ -224,7 +244,7 @@ export class PhotogrammetryKernel {
     const payload = new Uint8Array(payloadSize)
     payload.set(new Uint8Array(this.wasm.memory.buffer, payloadPointer, payloadSize))
     this.wasm.photo_free(payloadPointer, payloadSize)
-    return {payload, wgsl: decoded.value.wgsl, wgslVariants: decoded.value.wgslVariants}
+    return { payload, wgsl: decoded.value.wgsl, wgslVariants: decoded.value.wgslVariants }
   }
 
   /** Stage 2: uploads host-computed scores (ownership moves to the kernel). */
@@ -241,8 +261,8 @@ export class PhotogrammetryKernel {
    * and WGSL text, or null when ineligible for the GPU path (caller then uses
    * the plain sparse()).
    */
-  sparsePrepare(): {payload: Uint8Array, wgsl: string} | null {
-    const decoded = decodePacked<Response<{ptr: number, len: number, wgsl: string} | null>>(
+  sparsePrepare(): { payload: Uint8Array; wgsl: string } | null {
+    const decoded = decodePacked<Response<{ ptr: number; len: number; wgsl: string } | null>>(
       this.wasm.memory,
       (pointer, size) => this.wasm.photo_free(pointer, size),
       this.wasm.photo_sparse_prepare(),
@@ -255,7 +275,7 @@ export class PhotogrammetryKernel {
     const payload = new Uint8Array(payloadSize)
     payload.set(new Uint8Array(this.wasm.memory.buffer, payloadPointer, payloadSize))
     this.wasm.photo_free(payloadPointer, payloadSize)
-    return {payload, wgsl: decoded.value.wgsl}
+    return { payload, wgsl: decoded.value.wgsl }
   }
 
   /** Stage 2: uploads the browser-matched pair bytes (ownership moves to the kernel). */

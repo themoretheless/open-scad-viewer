@@ -12,12 +12,7 @@
 
 import { SCENE_STRUCT } from './generated/sources'
 
-export {
-  SCENE_STRUCT,
-  OBJ_STRUCT,
-  SECTION_CLIP_WGSL,
-  SECTION_CAP_WGSL,
-} from './generated/sources'
+export { SCENE_STRUCT, OBJ_STRUCT, SECTION_CLIP_WGSL, SECTION_CAP_WGSL } from './generated/sources'
 export { SCENE_UNIFORM_LAYOUT, OBJECT_UNIFORM_LAYOUT } from './generated/layouts'
 
 /**

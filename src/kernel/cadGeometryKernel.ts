@@ -15,27 +15,90 @@ interface OwnedGeometry {
 }
 
 function isOwnedGeometry(value: unknown): value is OwnedGeometry {
-  return value !== null && typeof value === 'object'
-    && typeof (value as Partial<OwnedGeometry>).delete === 'function'
-    && typeof (value as Partial<OwnedGeometry>).isDeleted === 'function'
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    typeof (value as Partial<OwnedGeometry>).delete === 'function' &&
+    typeof (value as Partial<OwnedGeometry>).isDeleted === 'function'
+  )
 }
 
 const MANIFOLD_FACTORIES = [
-  'cube', 'cylinder', 'sphere', 'tetrahedron', 'extrude', 'revolve', 'compose',
-  'union', 'difference', 'intersection', 'levelSet', 'smooth', 'ofMesh', 'hull',
+  'cube',
+  'cylinder',
+  'sphere',
+  'tetrahedron',
+  'extrude',
+  'revolve',
+  'compose',
+  'union',
+  'difference',
+  'intersection',
+  'levelSet',
+  'smooth',
+  'ofMesh',
+  'hull',
 ]
 const MANIFOLD_METHODS = [
-  'add', 'subtract', 'intersect', 'decompose', 'warp', 'warpBatch', 'transform',
-  'translate', 'rotate', 'scale', 'mirror', 'calculateCurvature', 'calculateNormals',
-  'smoothByNormals', 'smoothOut', 'refine', 'refineToLength', 'refineToTolerance',
-  'setProperties', 'setTolerance', 'simplify', 'asOriginal', 'trimByPlane', 'split',
-  'splitByPlane', 'slice', 'project', 'hull', 'minkowskiSum', 'minkowskiDifference',
+  'add',
+  'subtract',
+  'intersect',
+  'decompose',
+  'warp',
+  'warpBatch',
+  'transform',
+  'translate',
+  'rotate',
+  'scale',
+  'mirror',
+  'calculateCurvature',
+  'calculateNormals',
+  'smoothByNormals',
+  'smoothOut',
+  'refine',
+  'refineToLength',
+  'refineToTolerance',
+  'setProperties',
+  'setTolerance',
+  'simplify',
+  'asOriginal',
+  'trimByPlane',
+  'split',
+  'splitByPlane',
+  'slice',
+  'project',
+  'hull',
+  'minkowskiSum',
+  'minkowskiDifference',
   'withContext',
 ]
-const CROSS_SECTION_FACTORIES = ['square', 'circle', 'union', 'difference', 'intersection', 'compose', 'ofPolygons', 'hull']
+const CROSS_SECTION_FACTORIES = [
+  'square',
+  'circle',
+  'union',
+  'difference',
+  'intersection',
+  'compose',
+  'ofPolygons',
+  'hull',
+]
 const CROSS_SECTION_METHODS = [
-  'add', 'subtract', 'intersect', 'rectClip', 'decompose', 'transform', 'translate',
-  'rotate', 'scale', 'mirror', 'simplify', 'offset', 'hull', 'warp', 'extrude', 'revolve',
+  'add',
+  'subtract',
+  'intersect',
+  'rectClip',
+  'decompose',
+  'transform',
+  'translate',
+  'rotate',
+  'scale',
+  'mirror',
+  'simplify',
+  'offset',
+  'hull',
+  'warp',
+  'extrude',
+  'revolve',
 ]
 
 let instrumentedRawCadSolid: typeof CadSolid | undefined
@@ -95,8 +158,11 @@ function ownModuleGeometry(module: CadToplevel): () => void {
       return geometry
     } catch (error) {
       owned.delete(geometry)
-      try { if (!geometry.isDeleted()) geometry.delete() }
-      catch (cleanupError) { throw new AggregateError([error, cleanupError], 'Invalid solid cleanup failed') }
+      try {
+        if (!geometry.isDeleted()) geometry.delete()
+      } catch (cleanupError) {
+        throw new AggregateError([error, cleanupError], 'Invalid solid cleanup failed')
+      }
       throw error
     }
   }
@@ -116,7 +182,9 @@ function ownModuleGeometry(module: CadToplevel): () => void {
       try {
         const item = pending[index]!
         if (!item.isDeleted()) item.delete()
-      } catch (error) { errors.push(error) }
+      } catch (error) {
+        errors.push(error)
+      }
     }
     if (errors.length) throw new AggregateError(errors, 'CAD geometry cleanup failed')
   }

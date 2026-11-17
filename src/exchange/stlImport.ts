@@ -1,5 +1,5 @@
-import {decodeMeshBytesInKernel,renderTriangleSoupInKernel} from '../kernel/geometry/meshImportKernel'
-import {GeometryKernelError} from '../kernel/geometry/kernel'
+import { decodeMeshBytesInKernel, renderTriangleSoupInKernel } from '../kernel/geometry/meshImportKernel'
+import { GeometryKernelError } from '../kernel/geometry/kernel'
 import type { MeshData, SceneEntityId } from '../core/mesh'
 import { geometryAssetId } from '../core/scene'
 import { buildMeshBvh } from '../kernel/meshBvh'
@@ -19,7 +19,10 @@ export type StlImportErrorCode =
   | 'empty-mesh'
 
 export class StlImportError extends Error {
-  constructor(readonly code: StlImportErrorCode, message: string) {
+  constructor(
+    readonly code: StlImportErrorCode,
+    message: string,
+  ) {
     super(message)
     this.name = 'StlImportError'
   }
@@ -34,17 +37,25 @@ export interface ImportedStl {
 
 /** Strict binary decoding is owned by mesh-io. */
 export function parseBinaryStl(buffer: ArrayBuffer): ImportedStl {
- const positions = Float32Array.from(stlNative<number[]>('stl_decode_binary', {bytes: new Uint8Array(buffer)}))
- return Object.freeze({triangleCount: positions.length / 9, positions})
+  const positions = Float32Array.from(stlNative<number[]>('stl_decode_binary', { bytes: new Uint8Array(buffer) }))
+  return Object.freeze({ triangleCount: positions.length / 9, positions })
 }
 function stlNative<T>(op: string, payload: Record<string, unknown>): T {
- try { return (op==='stl_decode_binary' ? decodeMeshBytesInKernel('binary-stl',payload.bytes as Uint8Array).positions : renderTriangleSoupInKernel(payload.positions as Float32Array)) as T }
- catch (error) {
-  if (error instanceof GeometryKernelError && error.code.startsWith('STL_')) {
-   throw new StlImportError(error.code.slice(4).toLowerCase().replaceAll('_', '-') as StlImportErrorCode, error.message)
+  try {
+    return (
+      op === 'stl_decode_binary'
+        ? decodeMeshBytesInKernel('binary-stl', payload.bytes as Uint8Array).positions
+        : renderTriangleSoupInKernel(payload.positions as Float32Array)
+    ) as T
+  } catch (error) {
+    if (error instanceof GeometryKernelError && error.code.startsWith('STL_')) {
+      throw new StlImportError(
+        error.code.slice(4).toLowerCase().replaceAll('_', '-') as StlImportErrorCode,
+        error.message,
+      )
+    }
+    throw error
   }
-  throw error
- }
 }
 
 /** Convert decoded STL geometry into the complete eager scene-mesh contract. */
@@ -52,10 +63,12 @@ export function importedStlToMeshData(
   imported: ImportedStl,
   color: [number, number, number, number] = [0.7, 0.7, 0.72, 1],
 ): MeshData {
-  if (!Number.isSafeInteger(imported.triangleCount)
-    || imported.triangleCount <= 0
-    || imported.triangleCount > MAX_STL_IMPORT_TRIANGLES
-    || imported.positions.length !== imported.triangleCount * 9) {
+  if (
+    !Number.isSafeInteger(imported.triangleCount) ||
+    imported.triangleCount <= 0 ||
+    imported.triangleCount > MAX_STL_IMPORT_TRIANGLES ||
+    imported.positions.length !== imported.triangleCount * 9
+  ) {
     throw new StlImportError('invalid-size', 'Decoded STL triangle storage is inconsistent')
   }
   const pos = imported.positions
@@ -64,17 +77,32 @@ export function importedStlToMeshData(
       throw new StlImportError('non-finite-coordinate', 'Decoded STL contains a non-finite coordinate')
     }
   }
-  if (color.length < 4 || !Number.isFinite(color[0]) || color[0] < 0 || color[0] > 1
-    || !Number.isFinite(color[1]) || color[1] < 0 || color[1] > 1
-    || !Number.isFinite(color[2]) || color[2] < 0 || color[2] > 1
-    || !Number.isFinite(color[3]) || color[3] < 0 || color[3] > 1) {
+  if (
+    color.length < 4 ||
+    !Number.isFinite(color[0]) ||
+    color[0] < 0 ||
+    color[0] > 1 ||
+    !Number.isFinite(color[1]) ||
+    color[1] < 0 ||
+    color[1] > 1 ||
+    !Number.isFinite(color[2]) ||
+    color[2] < 0 ||
+    color[2] > 1 ||
+    !Number.isFinite(color[3]) ||
+    color[3] < 0 ||
+    color[3] > 1
+  ) {
     throw new RangeError('STL mesh color channels must be finite values in [0, 1]')
   }
 
-  const rendered = stlNative<{vertices: number[]; indices: number[]; faceIds: number[]; discarded: number}>(
-    'mesh_soup_render', {positions: imported.positions})
-  const vertices = Float32Array.from(rendered.vertices), indices = Uint32Array.from(rendered.indices)
-  const faceIds = Uint32Array.from(rendered.faceIds), validTriangles = faceIds.length
+  const rendered = stlNative<{ vertices: number[]; indices: number[]; faceIds: number[]; discarded: number }>(
+    'mesh_soup_render',
+    { positions: imported.positions },
+  )
+  const vertices = Float32Array.from(rendered.vertices),
+    indices = Uint32Array.from(rendered.indices)
+  const faceIds = Uint32Array.from(rendered.faceIds),
+    validTriangles = faceIds.length
 
   const semanticEdges = extractSemanticEdges(vertices, indices)
   const assetId = geometryAssetId(vertices, indices)

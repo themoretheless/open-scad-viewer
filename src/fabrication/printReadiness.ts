@@ -10,7 +10,7 @@ export const PRINT_READINESS_ERROR_CODES = [
   'PRINT_CHECK_FAILED',
 ] as const
 
-export type PrintReadinessErrorCode = typeof PRINT_READINESS_ERROR_CODES[number]
+export type PrintReadinessErrorCode = (typeof PRINT_READINESS_ERROR_CODES)[number]
 
 export interface PrintReadinessErrorDetails {
   boundaryEdges?: number
@@ -33,8 +33,10 @@ export function isPrintReadinessErrorCode(value: unknown): value is PrintReadine
 }
 
 function listed(values: Array<[string, string, number | undefined]>, locale: string): string {
-  return values.filter(([, , count]) => (count ?? 0) > 0)
-    .map(([en, ru, count]) => `${locale === 'ru' ? ru : en}: ${count}`).join(locale === 'ru' ? '；' : '; ')
+  return values
+    .filter(([, , count]) => (count ?? 0) > 0)
+    .map(([en, ru, count]) => `${locale === 'ru' ? ru : en}: ${count}`)
+    .join(locale === 'ru' ? '；' : '; ')
 }
 
 /** Stable machine code + structured evidence; the worker envelope preserves both. */
@@ -49,16 +51,23 @@ export class PrintReadinessError extends Error {
   }
 }
 
-export function formatPrintReadiness(code: PrintReadinessErrorCode, details: PrintReadinessErrorDetails, locale: string): string {
+export function formatPrintReadiness(
+  code: PrintReadinessErrorCode,
+  details: PrintReadinessErrorDetails,
+  locale: string,
+): string {
   const ru = locale === 'ru'
   if (code === 'PRINT_NOT_WATERTIGHT') {
-    const defects = listed([
-      ['boundary edges', 'граничные рёбра', details.boundaryEdges],
-      ['non-manifold edges', 'немногообразные рёбра', details.nonManifoldEdges],
-      ['pinched vertices', 'ущемлённые вершины', details.nonManifoldVertices],
-      ['degenerate triangles', 'вырожденные треугольники', details.degenerateTriangles],
-      ['isolated vertices', 'изолированные вершины', details.isolatedVertices],
-    ], locale)
+    const defects = listed(
+      [
+        ['boundary edges', 'граничные рёбра', details.boundaryEdges],
+        ['non-manifold edges', 'немногообразные рёбра', details.nonManifoldEdges],
+        ['pinched vertices', 'ущемлённые вершины', details.nonManifoldVertices],
+        ['degenerate triangles', 'вырожденные треугольники', details.degenerateTriangles],
+        ['isolated vertices', 'изолированные вершины', details.isolatedVertices],
+      ],
+      locale,
+    )
     return ru
       ? `Печать заблокирована: меш не является замкнутым многообразием${defects ? ` (${defects})` : ''}. Почините меш и повторите проверку.`
       : `3D printing blocked: the mesh is not a watertight manifold${defects ? ` (${defects})` : ''}. Repair the mesh and try again.`
@@ -115,7 +124,9 @@ export function assertPrintReady(mesh: PolygonMesh, options: SolidIntersectionOp
   try {
     intersections = inspectSolidIntersections(mesh, options)
   } catch (reason) {
-    throw new PrintReadinessError('PRINT_CHECK_FAILED', { reason: reason instanceof Error ? reason.message : String(reason) })
+    throw new PrintReadinessError('PRINT_CHECK_FAILED', {
+      reason: reason instanceof Error ? reason.message : String(reason),
+    })
   }
   if (intersections.contacts.length) {
     throw new PrintReadinessError('PRINT_SELF_INTERSECTIONS', {

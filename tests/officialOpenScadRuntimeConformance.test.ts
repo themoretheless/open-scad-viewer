@@ -2,10 +2,7 @@ import { existsSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import {
-  InMemoryTransport,
-  type JSONRPCMessage,
-} from '@modelcontextprotocol/server'
+import { InMemoryTransport, type JSONRPCMessage } from '@modelcontextprotocol/server'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
   OPENSCAD_2021_01_CONTRACT,
@@ -47,10 +44,26 @@ function filesForSmoke(smoke: OpenScadSmokeCase): OfficialOpenScadProjectFileInp
 
 function binaryTetrahedronStl(): Uint8Array {
   const triangles = [
-    [[0, 0, 0], [0, 1, 0], [1, 0, 0]],
-    [[0, 0, 0], [1, 0, 0], [0, 0, 1]],
-    [[0, 0, 0], [0, 0, 1], [0, 1, 0]],
-    [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+    [
+      [0, 0, 0],
+      [0, 1, 0],
+      [1, 0, 0],
+    ],
+    [
+      [0, 0, 0],
+      [1, 0, 0],
+      [0, 0, 1],
+    ],
+    [
+      [0, 0, 0],
+      [0, 0, 1],
+      [0, 1, 0],
+    ],
+    [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+    ],
   ] as const
   const buffer = new ArrayBuffer(84 + triangles.length * 50)
   const view = new DataView(buffer)
@@ -78,8 +91,8 @@ async function connectedOfficialMcp(runtime: OfficialOpenScadRuntimeSupervisor) 
   const pending = new Map<number, (value: Record<string, unknown>) => void>()
   let nextId = 1
   clientTransport.onmessage = message => {
-    if (!('id' in message) || typeof message.id !== 'number'
-      || (!('result' in message) && !('error' in message))) return
+    if (!('id' in message) || typeof message.id !== 'number' || (!('result' in message) && !('error' in message)))
+      return
     const resolveResponse = pending.get(message.id)
     if (!resolveResponse) return
     pending.delete(message.id)
@@ -127,9 +140,11 @@ async function connectedOfficialMcp(runtime: OfficialOpenScadRuntimeSupervisor) 
 }
 
 function projectFilesToWire(files: readonly OfficialOpenScadProjectFileInput[]) {
-  return files.map(file => typeof file.data === 'string'
-    ? { path: file.path, text: file.data }
-    : { path: file.path, data_base64: Buffer.from(file.data).toString('base64') })
+  return files.map(file =>
+    typeof file.data === 'string'
+      ? { path: file.path, text: file.data }
+      : { path: file.path, data_base64: Buffer.from(file.data).toString('base64') },
+  )
 }
 
 describeWithRuntime('official OpenSCAD 2021.01 runtime conformance', () => {
@@ -155,7 +170,7 @@ describeWithRuntime('official OpenSCAD 2021.01 runtime conformance', () => {
     files: readonly OfficialOpenScadProjectFileInput[] = [],
     format: OfficialOpenScadExportFormat = 'stl',
   ) => {
-    const called = await mcp.request('tools/call', {
+    const called = (await mcp.request('tools/call', {
       name: 'openscad_official_export',
       arguments: {
         source,
@@ -164,7 +179,7 @@ describeWithRuntime('official OpenSCAD 2021.01 runtime conformance', () => {
         hard_warnings: true,
         timeout_ms: 120_000,
       },
-    }) as {
+    })) as {
       isError?: boolean
       structuredContent?: {
         export: {
@@ -198,10 +213,14 @@ describeWithRuntime('official OpenSCAD 2021.01 runtime conformance', () => {
       })
       expect(result.export.runtime_version, entry.name).toBe('2026.09.01')
       expect(result.artifact.byte_length, entry.name).toBeGreaterThan(84)
-      expect([...result.export.logs.stdout, ...result.export.logs.stderr].some(line => line.startsWith('ECHO:')), entry.name)
-        .toBe(true)
-      expect([...result.export.logs.stdout, ...result.export.logs.stderr].some(line => /^(?:WARNING|ERROR):/.test(line)), entry.name)
-        .toBe(false)
+      expect(
+        [...result.export.logs.stdout, ...result.export.logs.stderr].some(line => line.startsWith('ECHO:')),
+        entry.name,
+      ).toBe(true)
+      expect(
+        [...result.export.logs.stdout, ...result.export.logs.stderr].some(line => /^(?:WARNING|ERROR):/.test(line)),
+        entry.name,
+      ).toBe(false)
     }
   }, 600_000)
 
@@ -212,8 +231,10 @@ describeWithRuntime('official OpenSCAD 2021.01 runtime conformance', () => {
       expect(result.export.language_contract.id, entry.name).toBe(OPENSCAD_2021_01_CONTRACT.id)
       expect(result.export.runtime_version, entry.name).toBe('2026.09.01')
       expect(result.artifact.byte_length, entry.name).toBeGreaterThan(84)
-      expect([...result.export.logs.stdout, ...result.export.logs.stderr].some(line => /^(?:WARNING|ERROR):/.test(line)), entry.name)
-        .toBe(false)
+      expect(
+        [...result.export.logs.stdout, ...result.export.logs.stderr].some(line => /^(?:WARNING|ERROR):/.test(line)),
+        entry.name,
+      ).toBe(false)
     }
   }, 600_000)
 
@@ -235,10 +256,14 @@ translate([3, 0, 0]) import("assets/tetra.stl");
     ])
 
     expect(result.artifact.byte_length).toBeGreaterThan(84)
-    expect([...result.export.logs.stdout, ...result.export.logs.stderr]).toContainEqual(expect.stringContaining('ECHO:'))
-    expect([...result.export.logs.stdout, ...result.export.logs.stderr].some(line => /^(?:WARNING|ERROR):/.test(line))).toBe(false)
+    expect([...result.export.logs.stdout, ...result.export.logs.stderr]).toContainEqual(
+      expect.stringContaining('ECHO:'),
+    )
+    expect(
+      [...result.export.logs.stdout, ...result.export.logs.stderr].some(line => /^(?:WARNING|ERROR):/.test(line)),
+    ).toBe(false)
 
-    const resource = await mcp.request('resources/read', { uri: result.artifact.resource_uri }) as {
+    const resource = (await mcp.request('resources/read', { uri: result.artifact.resource_uri })) as {
       contents?: Array<{ blob?: string; mimeType?: string }>
     }
     expect(resource.contents?.[0]).toMatchObject({ mimeType: 'model/stl', blob: expect.any(String) })
@@ -257,7 +282,7 @@ translate([3, 0, 0]) import("assets/tetra.stl");
       })
       expect(result.artifact.byte_length, format).toBeGreaterThan(0)
 
-      const resource = await mcp.request('resources/read', { uri: result.artifact.resource_uri }) as {
+      const resource = (await mcp.request('resources/read', { uri: result.artifact.resource_uri })) as {
         contents?: Array<{ blob?: string; mimeType?: string }>
       }
       expect(resource.contents?.[0]?.mimeType).toBe(officialOpenScadMimeType(format))

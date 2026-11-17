@@ -28,7 +28,10 @@ describe('reusable transparency ordering', () => {
   it('matches reference sorting across camera, visibility, and center changes', async () => {
     const { TransparentSortBuffer } = await import('../src/render/transparentOrdering')
     const buffer = new TransparentSortBuffer()
-    const objects = Array.from({ length: 200 }, (_, index) => ({ index, center: [Math.sin(index) * 10, Math.cos(index) * 10, index % 7] as [number, number, number] }))
+    const objects = Array.from({ length: 200 }, (_, index) => ({
+      index,
+      center: [Math.sin(index) * 10, Math.cos(index) * 10, index % 7] as [number, number, number],
+    }))
     for (let frame = 0; frame < 20; frame++) {
       const visible = objects.filter(o => (o.index + frame) % 3 !== 0)
       objects[0].center[2] = frame
@@ -45,11 +48,15 @@ describe('reusable transparency ordering', () => {
     const { TransparentSortBuffer } = await import('../src/render/transparentOrdering')
     const buffer = new TransparentSortBuffer()
     const center = [0, 0, -5] as const
-    buffer.add(9, center); buffer.add(2, center)
+    buffer.add(9, center)
+    buffer.add(2, center)
     const first = [...buffer.sort([0, 0, 0], 0, 0, 0)]
     expect(first.map(o => o.index)).toEqual([2, 9])
-    buffer.begin(); buffer.add(9, center); buffer.add(2, center)
+    buffer.begin()
+    buffer.add(9, center)
+    buffer.add(2, center)
     const second = buffer.sort([1, 2, 3], 0, 0, 0)
-    expect(second[0]).toBe(first[0]); expect(second[1]).toBe(first[1])
+    expect(second[0]).toBe(first[0])
+    expect(second[1]).toBe(first[1])
   })
 })

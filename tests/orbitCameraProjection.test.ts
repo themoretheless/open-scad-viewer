@@ -2,8 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { computePanUpdate } from '../src/render/cameraGestures'
 import { computeOrbitCameraFrame } from '../src/render/orbitCameraProjection'
 import {
-  invert, lookAt, multiply, perspective, transformPoint, unprojectRay,
-  type Aabb3, type Vec3,
+  invert,
+  lookAt,
+  multiply,
+  perspective,
+  transformPoint,
+  unprojectRay,
+  type Aabb3,
+  type Vec3,
 } from '../src/kernel/geometry/math3d'
 import type { ProjectionMode } from '../src/render/viewportModel'
 import reference from './fixtures/orbit-camera-reference-v1.json'
@@ -24,13 +30,13 @@ const base = {
 it('matches 72 frozen pre-migration orbit camera frames', () => {
   expect(reference.cases).toHaveLength(72)
   for (const entry of reference.cases) {
-    const actual = computeOrbitCameraFrame({ ...entry.options,
+    const actual = computeOrbitCameraFrame({
+      ...entry.options,
       target: entry.options.target as Vec3,
       projection: entry.options.projection as ProjectionMode,
       bounds: entry.options.bounds as Aabb3,
     })
-    for (const key of ['eyeDistance', 'near', 'far'] as const)
-      expect(actual[key]).toBeCloseTo(entry.expected[key], 10)
+    for (const key of ['eyeDistance', 'near', 'far'] as const) expect(actual[key]).toBeCloseTo(entry.expected[key], 10)
     for (let i = 0; i < 3; i++) expect(actual.eye[i]).toBeCloseTo(entry.expected.eye[i], 10)
     // f32 GPU storage permits a last-bit difference between native and JS
     // trigonometric implementations; no expected values are regenerated.
@@ -75,35 +81,41 @@ function corners(bounds: Aabb3): Vec3[] {
 }
 
 describe('close orbit zoom', () => {
-  it.each(['orthographic', 'perspective'] as const)('keeps a whole spinner in front of the %s depth planes at every zoom and angle', projection => {
-    for (const distance of [100, 30, 5, 0.01]) {
-      for (const yaw of [0, Math.PI / 4, 2.7]) {
-        for (const pitch of [-Math.PI / 2, -0.4, 0, Math.PI / 4, Math.PI / 2]) {
-          const frame = computeOrbitCameraFrame({ ...base, distance, yaw, pitch, projection })
-          for (const corner of corners(spinner)) {
-            const matrix = frame.viewProjection
-            const w = matrix[12] * corner[0] + matrix[13] * corner[1] + matrix[14] * corner[2] + matrix[15]
-            expect(w).toBeGreaterThan(0)
-            const depth = transformPoint(matrix, corner)[2]
-            expect(depth).toBeGreaterThan(0)
-            expect(depth).toBeLessThan(1)
+  it.each(['orthographic', 'perspective'] as const)(
+    'keeps a whole spinner in front of the %s depth planes at every zoom and angle',
+    projection => {
+      for (const distance of [100, 30, 5, 0.01]) {
+        for (const yaw of [0, Math.PI / 4, 2.7]) {
+          for (const pitch of [-Math.PI / 2, -0.4, 0, Math.PI / 4, Math.PI / 2]) {
+            const frame = computeOrbitCameraFrame({ ...base, distance, yaw, pitch, projection })
+            for (const corner of corners(spinner)) {
+              const matrix = frame.viewProjection
+              const w = matrix[12] * corner[0] + matrix[13] * corner[1] + matrix[14] * corner[2] + matrix[15]
+              expect(w).toBeGreaterThan(0)
+              const depth = transformPoint(matrix, corner)[2]
+              expect(depth).toBeGreaterThan(0)
+              expect(depth).toBeLessThan(1)
+            }
           }
         }
       }
-    }
-  })
+    },
+  )
 
-  it.each(['orthographic', 'perspective'] as const)('continues to magnify in %s after the eye stops at the model', projection => {
-    const wide = computeOrbitCameraFrame({ ...base, distance: 2, projection })
-    const close = computeOrbitCameraFrame({ ...base, distance: 1, projection })
-    expect(close.eyeDistance).toBe(wide.eyeDistance)
-    expect(close.eye).toEqual(wide.eye)
-    const point: Vec3 = [3, 3, 5]
-    const a = transformPoint(wide.viewProjection, point)
-    const b = transformPoint(close.viewProjection, point)
-    expect(b[0]).toBeCloseTo(a[0] * 2, 5)
-    expect(b[1]).toBeCloseTo(a[1] * 2, 5)
-  })
+  it.each(['orthographic', 'perspective'] as const)(
+    'continues to magnify in %s after the eye stops at the model',
+    projection => {
+      const wide = computeOrbitCameraFrame({ ...base, distance: 2, projection })
+      const close = computeOrbitCameraFrame({ ...base, distance: 1, projection })
+      expect(close.eyeDistance).toBe(wide.eyeDistance)
+      expect(close.eye).toEqual(wide.eye)
+      const point: Vec3 = [3, 3, 5]
+      const a = transformPoint(wide.viewProjection, point)
+      const b = transformPoint(close.viewProjection, point)
+      expect(b[0]).toBeCloseTo(a[0] * 2, 5)
+      expect(b[1]).toBeCloseTo(a[1] * 2, 5)
+    },
+  )
 
   it('retains the original perspective projection at normal viewing distances', () => {
     const frame = computeOrbitCameraFrame(base)
@@ -115,33 +127,44 @@ describe('close orbit zoom', () => {
     expect(Array.from(frame.viewProjection)).toEqual(Array.from(expected))
   })
 
-  it.each(['orthographic', 'perspective'] as const)('preserves pan scale and picking rays in %s at close zoom', projection => {
-    const state = { yaw: base.yaw, pitch: base.pitch, dist: 0.2, tx: 0, ty: 0, tz: 5 }
-    const moved = computePanUpdate(state, 30, -20, 800)
-    const target: Vec3 = [moved.tx, moved.ty, moved.tz]
-    const frame = computeOrbitCameraFrame({ ...base, distance: state.dist, target, projection })
-    const projected = transformPoint(frame.viewProjection, base.target)
-    expect(projected[0]).toBeCloseTo(2 * 30 / (800 * base.aspect), 4)
-    expect(projected[1]).toBeCloseTo(2 * 20 / 800, 4)
+  it.each(['orthographic', 'perspective'] as const)(
+    'preserves pan scale and picking rays in %s at close zoom',
+    projection => {
+      const state = { yaw: base.yaw, pitch: base.pitch, dist: 0.2, tx: 0, ty: 0, tz: 5 }
+      const moved = computePanUpdate(state, 30, -20, 800)
+      const target: Vec3 = [moved.tx, moved.ty, moved.tz]
+      const frame = computeOrbitCameraFrame({ ...base, distance: state.dist, target, projection })
+      const projected = transformPoint(frame.viewProjection, base.target)
+      expect(projected[0]).toBeCloseTo((2 * 30) / (800 * base.aspect), 4)
+      expect(projected[1]).toBeCloseTo((2 * 20) / 800, 4)
 
-    const ray = unprojectRay(invert(frame.viewProjection), projected[0], projected[1])
-    expect(ray).not.toBeNull()
-    const delta = base.target.map((value, axis) => value - ray!.origin[axis])
-    const along = delta.reduce((sum, value, axis) => sum + value * ray!.direction[axis], 0)
-    const error = Math.hypot(...delta.map((value, axis) => value - along * ray!.direction[axis]))
-    expect(along).toBeGreaterThan(0)
-    expect(error).toBeLessThan(0.001)
-  })
+      const ray = unprojectRay(invert(frame.viewProjection), projected[0], projected[1])
+      expect(ray).not.toBeNull()
+      const delta = base.target.map((value, axis) => value - ray!.origin[axis])
+      const along = delta.reduce((sum, value, axis) => sum + value * ray!.direction[axis], 0)
+      const error = Math.hypot(...delta.map((value, axis) => value - along * ray!.direction[axis]))
+      expect(along).toBeGreaterThan(0)
+      expect(error).toBeLessThan(0.001)
+    },
+  )
 
-  it.each(['orthographic', 'perspective'] as const)('protects translated, panned and very thin models in %s', projection => {
-    const bounds: Aabb3 = { min: [960, -240, 14.999], max: [1040, -160, 15.001] }
-    const frame = computeOrbitCameraFrame({
-      ...base, projection, bounds, distance: 0.01, target: [990, -190, 12], pitch: Math.PI / 2,
-    })
-    for (const corner of corners(bounds)) {
-      const depth = transformPoint(frame.viewProjection, corner)[2]
-      expect(depth).toBeGreaterThan(0)
-      expect(depth).toBeLessThan(1)
-    }
-  })
+  it.each(['orthographic', 'perspective'] as const)(
+    'protects translated, panned and very thin models in %s',
+    projection => {
+      const bounds: Aabb3 = { min: [960, -240, 14.999], max: [1040, -160, 15.001] }
+      const frame = computeOrbitCameraFrame({
+        ...base,
+        projection,
+        bounds,
+        distance: 0.01,
+        target: [990, -190, 12],
+        pitch: Math.PI / 2,
+      })
+      for (const corner of corners(bounds)) {
+        const depth = transformPoint(frame.viewProjection, corner)[2]
+        expect(depth).toBeGreaterThan(0)
+        expect(depth).toBeLessThan(1)
+      }
+    },
+  )
 })

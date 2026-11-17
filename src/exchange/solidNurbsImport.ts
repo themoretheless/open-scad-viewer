@@ -10,7 +10,7 @@ import type { SolidDocumentWithNurbs, SolidNurbsCurve, SolidNurbsSurface } from 
 
 export function importRushGraphNurbs(document: unknown): Pick<SolidDocumentWithNurbs, 'curves' | 'surfaces'> {
   const built = buildOwnNurbs(document, { action: 'build', display: { segments: 16, subdivisionLevels: 1 } })
-  const definitions = built.report.definitions as Record<string, ({ kind: string } & Record<string, unknown>)>
+  const definitions = built.report.definitions as Record<string, { kind: string } & Record<string, unknown>>
   const curves: SolidNurbsCurve[] = []
   const surfaces: SolidNurbsSurface[] = []
   for (const [nodeId, definition] of Object.entries(definitions)) {

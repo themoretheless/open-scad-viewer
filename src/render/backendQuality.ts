@@ -23,7 +23,7 @@ export function backendQuality(webGpuReady: boolean, displayMode: DisplayMode): 
     backend: 'webgpu-interactive' as const,
     geometryBuilds: 'full' as const,
     interactiveViewport: true,
-    transparency: displayMode === 'xray' ? 'object-sorted-alpha' as const : 'opaque-depth' as const,
+    transparency: displayMode === 'xray' ? ('object-sorted-alpha' as const) : ('opaque-depth' as const),
   })
 }
 

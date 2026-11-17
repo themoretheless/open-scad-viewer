@@ -1,27 +1,41 @@
-import {afterEach, expect, it, vi} from 'vitest'
-import {HeadlessGeometryService} from '../src/mcp/geometryService'
-import {GeometryBuildEngine, geometryExecutionForError} from '../src/kernel/geometryBuildEngine'
-import {ACTIVE_GEOMETRY_MANIFEST_VERSIONS,GEOMETRY_MANIFEST_ARCHIVE} from '../src/core/geometryExecution'
+import { afterEach, expect, it, vi } from 'vitest'
+import { HeadlessGeometryService } from '../src/mcp/geometryService'
+import { GeometryBuildEngine, geometryExecutionForError } from '../src/kernel/geometryBuildEngine'
+import { ACTIVE_GEOMETRY_MANIFEST_VERSIONS, GEOMETRY_MANIFEST_ARCHIVE } from '../src/core/geometryExecution'
 
 function fixture(warm: () => Promise<void>) {
   const manifest = GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh]
-  const build = vi.fn(async (_source: string) => ({meshes: [], warnings: [], volume: 0, surfaceArea: 0,
-    quality: 'full' as const, reduced: false,
-    timings: {parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0}}))
-  const provider = {engineClass: 'mesh' as const, engineKey: manifest.engineKey,
-    kernelFingerprint: manifest.kernelFingerprint, capabilityManifestVersion: manifest.capabilityManifestVersion,
-    warm: vi.fn(warm), build}
+  const build = vi.fn(async (_source: string) => ({
+    meshes: [],
+    warnings: [],
+    volume: 0,
+    surfaceArea: 0,
+    quality: 'full' as const,
+    reduced: false,
+    timings: { parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: 0, analyzeMs: 0 },
+  }))
+  const provider = {
+    engineClass: 'mesh' as const,
+    engineKey: manifest.engineKey,
+    kernelFingerprint: manifest.kernelFingerprint,
+    capabilityManifestVersion: manifest.capabilityManifestVersion,
+    warm: vi.fn(warm),
+    build,
+  }
   const engine = new GeometryBuildEngine([provider])
-  return {provider, engine, service: new HeadlessGeometryService(engine)}
+  return { provider, engine, service: new HeadlessGeometryService(engine) }
 }
 
-afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers() })
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.useRealTimers()
+})
 
 it('initializes the injected provider before its normal readiness check', async () => {
   vi.useFakeTimers()
-  const {provider, service} = fixture(() => new Promise(resolve => setTimeout(resolve, 350)))
+  const { provider, service } = fixture(() => new Promise(resolve => setTimeout(resolve, 350)))
   const result = service.compile('cube(1);')
-  const assertion = expect(result).resolves.toMatchObject({analysis: {execution: {evidence: 'runtime'}}})
+  const assertion = expect(result).resolves.toMatchObject({ analysis: { execution: { evidence: 'runtime' } } })
   await Promise.all([assertion, vi.advanceTimersByTimeAsync(351)])
   expect(provider.warm).toHaveBeenCalledTimes(1)
   expect(provider.build).toHaveBeenCalledTimes(1)
@@ -30,7 +44,7 @@ it('initializes the injected provider before its normal readiness check', async 
 
 it('waits for the same warmup after a short capabilities probe times out', async () => {
   vi.useFakeTimers()
-  const {engine, provider, service} = fixture(() => new Promise(resolve => setTimeout(resolve, 400)))
+  const { engine, provider, service } = fixture(() => new Promise(resolve => setTimeout(resolve, 400)))
   const probe = engine.capabilities()
   await vi.advanceTimersByTimeAsync(251)
   expect((await probe).engines[0].availability).toBe('unavailable')
@@ -43,7 +57,7 @@ it('waits for the same warmup after a short capabilities probe times out', async
 
 it('cancels one startup waiter without cancelling shared warmup or building its source', async () => {
   vi.useFakeTimers()
-  const {provider, service} = fixture(() => new Promise(resolve => setTimeout(resolve, 350)))
+  const { provider, service } = fixture(() => new Promise(resolve => setTimeout(resolve, 350)))
   const controller = new AbortController()
   const remove = vi.spyOn(controller.signal, 'removeEventListener')
   const cancelled = service.compile('cube(1);', 'full', controller.signal).catch(error => error)
@@ -65,13 +79,18 @@ it('cancels one startup waiter without cancelling shared warmup or building its 
 it('bounds hung initialization and does not restart the deadline on subsequent requests', async () => {
   vi.useFakeTimers()
   let rejectWarm!: (error: Error) => void
-  const {provider, service} = fixture(() => new Promise((_resolve, reject) => { rejectWarm = reject }))
+  const { provider, service } = fixture(
+    () =>
+      new Promise((_resolve, reject) => {
+        rejectWarm = reject
+      }),
+  )
   const result = service.compile('cube(1);').catch(error => error)
   await vi.advanceTimersByTimeAsync(4999)
   expect(provider.build).not.toHaveBeenCalled()
   await vi.advanceTimersByTimeAsync(1)
   expect((await result).reason).toContain('initialization check exceeded 5000 ms')
-  await expect(service.compile('cube(2);')).rejects.toMatchObject({availabilityCause: 'readiness-timeout'})
+  await expect(service.compile('cube(2);')).rejects.toMatchObject({ availabilityCause: 'readiness-timeout' })
   expect(provider.warm).toHaveBeenCalledTimes(1)
   expect(vi.getTimerCount()).toBe(0)
   rejectWarm(new Error('late failure'))
@@ -81,16 +100,20 @@ it('bounds hung initialization and does not restart the deadline on subsequent r
 })
 
 it('rejects revoked providers before initialization', async () => {
-  const {provider} = fixture(async () => undefined)
-  const engine = new GeometryBuildEngine([provider], {revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].manifestDigest]})
-  await expect(new HeadlessGeometryService(engine).compile('cube(1);')).rejects.toMatchObject({availabilityCause: 'revoked'})
+  const { provider } = fixture(async () => undefined)
+  const engine = new GeometryBuildEngine([provider], {
+    revokedManifestDigests: [GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh].manifestDigest],
+  })
+  await expect(new HeadlessGeometryService(engine).compile('cube(1);')).rejects.toMatchObject({
+    availabilityCause: 'revoked',
+  })
   expect(provider.warm).not.toHaveBeenCalled()
   expect(provider.build).not.toHaveBeenCalled()
 })
 
 it('does not let a concurrent short probe erase the initialization timeout', async () => {
   vi.useFakeTimers()
-  const {engine, provider, service} = fixture(() => new Promise(() => undefined))
+  const { engine, provider, service } = fixture(() => new Promise(() => undefined))
   const initialization = service.compile('cube(1);').catch(error => error)
   await vi.advanceTimersByTimeAsync(4750)
   const probe = engine.capabilities()
@@ -98,9 +121,11 @@ it('does not let a concurrent short probe erase the initialization timeout', asy
   expect((await initialization).reason).toContain('initialization check exceeded 5000 ms')
   expect((await probe).engines[0].unavailableReason).toContain('initialization check exceeded 5000 ms')
   let repeatError: unknown
-  void service.compile('cube(2);').catch(error => { repeatError = error })
+  void service.compile('cube(2);').catch(error => {
+    repeatError = error
+  })
   await vi.advanceTimersByTimeAsync(0)
-  expect(repeatError).toMatchObject({availabilityCause: 'readiness-timeout'})
+  expect(repeatError).toMatchObject({ availabilityCause: 'readiness-timeout' })
   expect(provider.warm).toHaveBeenCalledTimes(1)
   expect(vi.getTimerCount()).toBe(0)
 })

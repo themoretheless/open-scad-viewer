@@ -12,17 +12,25 @@ export interface VirtualSourceFile {
 function validateSegment(segment: string) {
   if (!segment || segment === '.') return false
   if (segment === '..') throw new Error('Virtual paths may not traverse above their project root')
-  if (segment.length > MAX_VIRTUAL_SEGMENT_LENGTH || /[\u0000-\u001f\u007f]/.test(segment)) throw new Error('Virtual path segment is invalid')
+  if (segment.length > MAX_VIRTUAL_SEGMENT_LENGTH || /[\u0000-\u001f\u007f]/.test(segment))
+    throw new Error('Virtual path segment is invalid')
   return true
 }
 
 /** Canonical project-relative POSIX path; host filesystem access is impossible. */
 export function normalizeVirtualPath(path: string): string {
-  if (typeof path !== 'string' || !path || path.length > MAX_VIRTUAL_PATH_LENGTH) throw new Error('Invalid virtual path')
+  if (typeof path !== 'string' || !path || path.length > MAX_VIRTUAL_PATH_LENGTH)
+    throw new Error('Invalid virtual path')
   if (!wellFormed(path)) throw new Error('Virtual paths must contain well-formed Unicode')
   path = path.normalize('NFC')
-  if (path.startsWith('/') || path.endsWith('/') || path.includes('//') || path.includes('\\')
-    || /^[A-Za-z][A-Za-z0-9+.-]*:/.test(path)) throw new Error('Virtual paths must be project-relative POSIX paths')
+  if (
+    path.startsWith('/') ||
+    path.endsWith('/') ||
+    path.includes('//') ||
+    path.includes('\\') ||
+    /^[A-Za-z][A-Za-z0-9+.-]*:/.test(path)
+  )
+    throw new Error('Virtual paths must be project-relative POSIX paths')
   const segments: string[] = []
   for (const segment of path.split('/')) if (validateSegment(segment)) segments.push(segment)
   if (!segments.length) throw new Error('Invalid virtual path')
@@ -36,8 +44,13 @@ export function resolveVirtualPath(importer: string, specifier: string): string 
   from.pop()
   if (!wellFormed(specifier)) throw new Error('Virtual dependencies must contain well-formed Unicode')
   specifier = specifier.normalize('NFC')
-  if (specifier.startsWith('/') || specifier.endsWith('/') || specifier.includes('//')
-    || specifier.includes('\\') || /^[A-Za-z][A-Za-z0-9+.-]*:/.test(specifier)) {
+  if (
+    specifier.startsWith('/') ||
+    specifier.endsWith('/') ||
+    specifier.includes('//') ||
+    specifier.includes('\\') ||
+    /^[A-Za-z][A-Za-z0-9+.-]*:/.test(specifier)
+  ) {
     throw new Error('Virtual dependencies cannot access host or absolute paths')
   }
   const resolved = [...from]
@@ -66,12 +79,15 @@ export class VirtualFileSystem {
       if (typeof file.source !== 'string') throw new Error(`Invalid source for ${path}`)
       if (!wellFormed(file.source)) throw new Error(`Source for ${path} must contain well-formed Unicode`)
       sourceBytes += new TextEncoder().encode(file.source).byteLength
-      if (sourceBytes > MAX_PROJECT_SOURCE_BYTES) throw new Error(`Project exceeds ${MAX_PROJECT_SOURCE_BYTES} UTF-8 bytes`)
+      if (sourceBytes > MAX_PROJECT_SOURCE_BYTES)
+        throw new Error(`Project exceeds ${MAX_PROJECT_SOURCE_BYTES} UTF-8 bytes`)
       this.files.set(path, file.source)
     }
   }
 
-  read(path: string): string | null { return this.files.get(normalizeVirtualPath(path)) ?? null }
+  read(path: string): string | null {
+    return this.files.get(normalizeVirtualPath(path)) ?? null
+  }
 
   resolve(importer: string, specifier: string): VirtualSourceFile | null {
     const path = resolveVirtualPath(importer, specifier)
@@ -79,5 +95,7 @@ export class VirtualFileSystem {
     return source === undefined ? null : { path, source }
   }
 
-  list(): string[] { return [...this.files.keys()].sort() }
+  list(): string[] {
+    return [...this.files.keys()].sort()
+  }
 }

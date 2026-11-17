@@ -51,9 +51,7 @@ const ADVANCED_FACE_RE = /\bADVANCED_FACE\s*\(/i
  */
 export function importAnalyticStep(text: string): AnalyticStepImport {
   if (FACETED_BREP_RE.test(text) && !ADVANCED_FACE_RE.test(text)) {
-    throw new Error(
-      'Analytic STEP importer refuses FACETED_BREP; use importFacetedStep from cadStep.ts',
-    )
+    throw new Error('Analytic STEP importer refuses FACETED_BREP; use importFacetedStep from cadStep.ts')
   }
   return callGeometryRust('brep_nurbs_import_step', { text })
 }
@@ -69,9 +67,7 @@ export function exportAnalyticStepV2(model: NurbsBrep): AnalyticStepExportV2 {
  */
 export function importAnalyticStepV2(text: string): AnalyticStepImportV2 {
   if (FACETED_BREP_RE.test(text) && !ADVANCED_FACE_RE.test(text)) {
-    throw new Error(
-      'Analytic STEP importer refuses FACETED_BREP; use importFacetedStep from cadStep.ts',
-    )
+    throw new Error('Analytic STEP importer refuses FACETED_BREP; use importFacetedStep from cadStep.ts')
   }
   return callGeometryRust('brep_nurbs_import_step_v2', { text })
 }

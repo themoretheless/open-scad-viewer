@@ -17,7 +17,11 @@ export function setStorageFailureHandler(handler: StorageFailureHandler | null) 
 }
 /** Raw string read; never throws (private mode / disabled storage safe). */
 export function storageGet(key: string): string | null {
-  try { return localStorage.getItem(key) } catch { return null }
+  try {
+    return localStorage.getItem(key)
+  } catch {
+    return null
+  }
 }
 
 /**

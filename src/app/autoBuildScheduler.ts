@@ -45,14 +45,21 @@ export class AutoBuildScheduler {
     this.options.edit?.()
     this.dirty = true
     this.deferredFull = false
-    if (immediate) { this.arm(0); return }
+    if (immediate) {
+      this.arm(0)
+      return
+    }
     if (this.dragging) {
       // Further pointer events keep the existing deadline instead of postponing forever.
-      if (!this.building && this.timer === null) this.arm(Math.max(0, this.lastPreviewAt + this.delays.dragMs - this.now()))
+      if (!this.building && this.timer === null)
+        this.arm(Math.max(0, this.lastPreviewAt + this.delays.dragMs - this.now()))
     } else this.arm(this.delays.textMs)
   }
 
-  beginGesture() { this.options.edit?.(); this.dragging = true }
+  beginGesture() {
+    this.options.edit?.()
+    this.dragging = true
+  }
 
   setBuilding(building: boolean) {
     this.building = building
@@ -87,7 +94,10 @@ export class AutoBuildScheduler {
     this.deferredFull = false
   }
 
-  cancel() { this.cancelPending(); this.dragging = false }
+  cancel() {
+    this.cancelPending()
+    this.dragging = false
+  }
 
   private run(quality: GeometryQuality) {
     this.cancelPending()

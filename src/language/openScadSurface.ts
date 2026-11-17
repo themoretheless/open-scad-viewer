@@ -1,7 +1,12 @@
 import type { CallNode } from './openscadCompiler'
 import { OpenSCADParseError } from './openscadErrors'
 export { parseOpenScadSurfaceDat } from './openScadSurface/parseOpenScadSurfaceDat'
-export { decodeOpenScadSurfacePng, prepareOpenScadSurfaceAssets, loadOpenScadSurfaceHeightMap, triangulateOpenScadSurface } from './openScadSurface/decodeOpenScadSurfacePng'
+export {
+  decodeOpenScadSurfacePng,
+  prepareOpenScadSurfaceAssets,
+  loadOpenScadSurfaceHeightMap,
+  triangulateOpenScadSurface,
+} from './openScadSurface/decodeOpenScadSurfacePng'
 
 export const OPENSCAD_SURFACE_MAX_DIMENSION = 4_096
 export const OPENSCAD_SURFACE_MAX_PIXELS = 250_000
@@ -23,7 +28,7 @@ export const OPENSCAD_SURFACE_ERROR_CODES = Object.freeze([
   'E_SURFACE_NON_MANIFOLD',
 ] as const)
 
-export type OpenScadSurfaceErrorCode = typeof OPENSCAD_SURFACE_ERROR_CODES[number]
+export type OpenScadSurfaceErrorCode = (typeof OPENSCAD_SURFACE_ERROR_CODES)[number]
 
 export interface OpenScadSurfaceErrorDetails {
   readonly sourcePath: string
@@ -52,7 +57,10 @@ export class OpenScadSurfaceError extends OpenSCADParseError {
 
 export class OpenScadSurfaceDataError extends Error {
   constructor(
-    readonly code: Exclude<OpenScadSurfaceErrorCode, 'E_SURFACE_PROJECT_REQUIRED' | 'E_SURFACE_FILE_REQUIRED' | 'E_SURFACE_PATH_INVALID' | 'E_SURFACE_NON_MANIFOLD'>,
+    readonly code: Exclude<
+      OpenScadSurfaceErrorCode,
+      'E_SURFACE_PROJECT_REQUIRED' | 'E_SURFACE_FILE_REQUIRED' | 'E_SURFACE_PATH_INVALID' | 'E_SURFACE_NON_MANIFOLD'
+    >,
     message: string,
     readonly limit?: number,
     readonly actual?: number,

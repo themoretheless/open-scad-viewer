@@ -97,11 +97,7 @@ function finiteInteger(value: number | undefined, fallback: number, min: number,
  * clamping and the empty-mesh fast path. Construction is O(n log n) and does
  * not mutate its inputs.
  */
-export function buildMeshBvh(
-  vertices: Float32Array,
-  indices: Uint32Array,
-  options: BuildMeshBvhOptions = {},
-): MeshBvh {
+export function buildMeshBvh(vertices: Float32Array, indices: Uint32Array, options: BuildMeshBvhOptions = {}): MeshBvh {
   const vertexStride = finiteInteger(options.vertexStride, DEFAULT_VERTEX_STRIDE, 3, 256)
   const leafSize = finiteInteger(options.leafSize, DEFAULT_LEAF_SIZE, 1, MAX_LEAF_SIZE)
   const triangleCount = Math.floor(indices.length / 3)

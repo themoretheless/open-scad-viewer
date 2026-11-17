@@ -1,45 +1,30 @@
 // framePassEncoder: encodeAndSubmitFrame.
 import { invert } from '../../kernel/geometry/math3d'
 
-import type {
-  ShadingModel,
-} from '../rendererContracts'
+import type { ShadingModel } from '../rendererContracts'
 
 import { resolveMeshShaderId } from '../rendererContracts'
 
-
-
-
-
 import { isTransparentAlpha } from '../backendQuality'
 
-import {
-  SCENE_UNIFORM_LAYOUT,
-} from '../shaders'
+import { SCENE_UNIFORM_LAYOUT } from '../shaders'
 
-import {
-  DEEP_DEPTH,
-  TRANSPARENT_DEPTH,
-  type PipelineFlavor,
-} from '../pipelineFactory'
-
+import { DEEP_DEPTH, TRANSPARENT_DEPTH, type PipelineFlavor } from '../pipelineFactory'
 
 import { fillSceneUniforms } from '../uniformFill'
 
-
-
-import {
-  NO_GHOST_MESHES,
-  type GMesh,
-  type OverlaySlot,
-} from '../types'
+import { NO_GHOST_MESHES, type GMesh, type OverlaySlot } from '../types'
 
 import { sortEdgeDraws, sortOpaqueDraws } from '../drawSorting'
 import { EncodeFramePassContext, groupByShadingModel, setObjectStyleImmediate } from './groupByShadingModel'
 
-
 /** Line-list overlay (position + RGBA) drawn with the selection overlay pipeline. */
-function drawLineSlot(pass: GPURenderPassEncoder, pipeline: GPURenderPipeline, sceneBG: GPUBindGroup, slot: OverlaySlot) {
+function drawLineSlot(
+  pass: GPURenderPassEncoder,
+  pipeline: GPURenderPipeline,
+  sceneBG: GPUBindGroup,
+  slot: OverlaySlot,
+) {
   if (!slot.buffer || !slot.count) return
   pass.setPipeline(pipeline)
   pass.setBindGroup(0, sceneBG)
@@ -48,20 +33,7 @@ function drawLineSlot(pass: GPURenderPassEncoder, pipeline: GPURenderPipeline, s
 }
 
 export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
-  const {
-    canvas,
-    dev,
-    ctx,
-    fmt,
-    depth,
-    sceneUB,
-    sceneBG,
-    pipelines,
-    textures,
-    eye,
-    viewProjection,
-    meshes,
-  } = frame
+  const { canvas, dev, ctx, fmt, depth, sceneUB, sceneBG, pipelines, textures, eye, viewProjection, meshes } = frame
 
   const getRenderPipeline = (id: string, flavor: PipelineFlavor = {}): GPURenderPipeline =>
     pipelines.getRenderPipeline(dev, id, flavor)
@@ -87,8 +59,11 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
   const sd = frame.sceneUniformScratch
   // Shadow tail: light VP + (enabled, texel, bias, strength). Enabled 0 keeps
   // every sampling shader on the pixel-identical unshadowed path.
-  const shadowActive = textures.shadowsEnabled && !!frame.bounds
-    && !!textures.shadowTexture && textures.shadowTexture !== textures.shadowDummyTexture
+  const shadowActive =
+    textures.shadowsEnabled &&
+    !!frame.bounds &&
+    !!textures.shadowTexture &&
+    textures.shadowTexture !== textures.shadowDummyTexture
   fillSceneUniforms(sd, {
     viewProjection,
     inverseVP: invert(viewProjection),
@@ -128,7 +103,11 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
   for (let index = 0; index < meshes.length; index++) {
     const mesh = meshes[index]!
     if (mesh.displayBox) continue
-    if (!frame.isMeshVisible(index) || (!mesh.morph && !frame.viewFrustum.intersects(mesh.worldBounds.center, mesh.worldBounds.radius))) continue
+    if (
+      !frame.isMeshVisible(index) ||
+      (!mesh.morph && !frame.viewFrustum.intersects(mesh.worldBounds.center, mesh.worldBounds.radius))
+    )
+      continue
     if (isTransparentAlpha(mesh.alpha)) {
       if (useWboit) frame.transparentDraws.push(mesh)
       else frame.transparentSort.add(index, mesh.worldBounds.center)
@@ -148,17 +127,22 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
     let vpChanged = !frame.shadowMapVPValid
     if (!vpChanged) {
       for (let i = 0; i < 16; i++) {
-        if (sd[vpOffset + i] !== frame.shadowMapVP[i]) { vpChanged = true; break }
+        if (sd[vpOffset + i] !== frame.shadowMapVP[i]) {
+          vpChanged = true
+          break
+        }
       }
     }
-    const shadowStale = vpChanged || frame.shadowMapRenderedEpoch !== frame.shadowMapEpoch
-      || hasMorph || frame.geometryFade !== null
+    const shadowStale =
+      vpChanged || frame.shadowMapRenderedEpoch !== frame.shadowMapEpoch || hasMorph || frame.geometryFade !== null
     if (shadowStale) {
       const shadowPass = enc.beginRenderPass({
         colorAttachments: [],
         depthStencilAttachment: {
           view: textures.shadowTexture!.createView(),
-          depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'store',
+          depthClearValue: 1,
+          depthLoadOp: 'clear',
+          depthStoreOp: 'store',
         },
       })
       shadowPass.setPipeline(getRenderPipeline('meshShadow'))
@@ -196,19 +180,24 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
 
   const depthView = frame.depthView ?? depth.createView()
   const pass = enc.beginRenderPass({
-    colorAttachments: [{
-      view: ctx.getCurrentTexture().createView(),
-      clearValue: {
-        r: frame.backgroundColor[0],
-        g: frame.backgroundColor[1],
-        b: frame.backgroundColor[2],
-        a: 1,
+    colorAttachments: [
+      {
+        view: ctx.getCurrentTexture().createView(),
+        clearValue: {
+          r: frame.backgroundColor[0],
+          g: frame.backgroundColor[1],
+          b: frame.backgroundColor[2],
+          a: 1,
+        },
+        loadOp: isCsgActive ? 'load' : 'clear',
+        storeOp: 'store',
       },
-      loadOp: isCsgActive ? 'load' : 'clear', storeOp: 'store',
-    }],
+    ],
     depthStencilAttachment: {
       view: depthView,
-      depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'store',
+      depthClearValue: 1,
+      depthLoadOp: 'clear',
+      depthStoreOp: 'store',
     },
   })
 
@@ -235,29 +224,73 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
   if (!isCsgActive) {
     const customOpaque = frame.opaqueDraws.some(mesh => mesh.shadingModel !== 'phong')
     let meshIndex: Map<GMesh, number> | null = null
-    const indexOf = (mesh: GMesh) => (meshIndex ??= new Map(meshes.map((entry, index) => [entry, index]))).get(mesh) ?? -1
+    const indexOf = (mesh: GMesh) =>
+      (meshIndex ??= new Map(meshes.map((entry, index) => [entry, index]))).get(mesh) ?? -1
     // Shared assets draw as instance-step batches; morph/LOD/material entities
     // stay per-entity (`perEntity`) and go through the bundle below.
-    const instanced = frame.instancing === true && !customOpaque && !transitioning && frame.instancedOpaque.prepare(dev, frame.opaqueDraws, indexOf)
+    const instanced =
+      frame.instancing === true &&
+      !customOpaque &&
+      !transitioning &&
+      frame.instancedOpaque.prepare(dev, frame.opaqueDraws, indexOf)
     if (!instanced) frame.instancedOpaque.reset()
     if (instanced) {
       const shadowBG = textures.shadowBG ?? undefined
       frame.instancedOpaque.encode(pass, getRenderPipeline('mesh', { variant: 'instanceStep' }), sceneBG, shadowBG)
       const rest = frame.instancedOpaque.perEntity as GMesh[]
-      if (rest.length) frame.opaqueBundle.draw(pass, dev, fmt, getRenderPipeline('mesh'), sceneBG, rest, false, shadowBG)
-    } else if (!customOpaque && (transitioning || !frame.opaqueInstances.draw(pass, dev, pipelines.instanceBGL, getRenderPipeline('mesh', { variant: 'instanced' }), sceneBG, frame.opaqueDraws, false, textures.shadowBG ?? undefined))) {
-      frame.opaqueBundle.draw(pass, dev, fmt, getRenderPipeline('mesh'), sceneBG, frame.opaqueDraws, false, textures.shadowBG ?? undefined)
+      if (rest.length)
+        frame.opaqueBundle.draw(pass, dev, fmt, getRenderPipeline('mesh'), sceneBG, rest, false, shadowBG)
+    } else if (
+      !customOpaque &&
+      (transitioning ||
+        !frame.opaqueInstances.draw(
+          pass,
+          dev,
+          pipelines.instanceBGL,
+          getRenderPipeline('mesh', { variant: 'instanced' }),
+          sceneBG,
+          frame.opaqueDraws,
+          false,
+          textures.shadowBG ?? undefined,
+        ))
+    ) {
+      frame.opaqueBundle.draw(
+        pass,
+        dev,
+        fmt,
+        getRenderPipeline('mesh'),
+        sceneBG,
+        frame.opaqueDraws,
+        false,
+        textures.shadowBG ?? undefined,
+      )
     } else if (customOpaque) {
       for (const group of groupByShadingModel(frame.opaqueDraws)) {
         const shaderId = resolveMeshShaderId(group[0]!.shadingModel)
-        frame.opaqueBundle.draw(pass, dev, fmt, getRenderPipeline(shaderId), sceneBG, group,
-          false, extraBindGroupForShader(shaderId))
+        frame.opaqueBundle.draw(
+          pass,
+          dev,
+          fmt,
+          getRenderPipeline(shaderId),
+          sceneBG,
+          group,
+          false,
+          extraBindGroupForShader(shaderId),
+        )
       }
     }
 
     if (frame.sectionEnabled && frame.displayMode !== 'xray' && frame.opaqueDraws.length) {
-      frame.sectionCapBundle.draw(pass, dev, fmt, getRenderPipeline('meshSectionCap'), sceneBG, frame.opaqueDraws,
-        false, extraBindGroupForShader('meshSectionCap'))
+      frame.sectionCapBundle.draw(
+        pass,
+        dev,
+        fmt,
+        getRenderPipeline('meshSectionCap'),
+        sceneBG,
+        frame.opaqueDraws,
+        false,
+        extraBindGroupForShader('meshSectionCap'),
+      )
     }
 
     if (!useWboit) {
@@ -270,9 +303,23 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
       ghostMeshes.forEach((mesh, index) => frame.transparentSort.add(meshes.length + index, mesh.worldBounds.center))
       const transparentOrder = frame.transparentSort.sort(eye, frame.tx, frame.ty, frame.tz)
       frame.transparentDraws.length = 0
-      for (const { index } of transparentOrder) frame.transparentDraws.push(index < meshes.length ? meshes[index]! : ghostMeshes[index - meshes.length]!)
+      for (const { index } of transparentOrder)
+        frame.transparentDraws.push(index < meshes.length ? meshes[index]! : ghostMeshes[index - meshes.length]!)
       const customTransparent = frame.transparentDraws.some(mesh => mesh.shadingModel !== 'phong')
-      if (!customTransparent && (transitioning || !frame.transparentInstances.draw(pass, dev, pipelines.instanceBGL, getRenderPipeline('mesh', { variant: 'instanced', blend: 'alpha', depth: TRANSPARENT_DEPTH }), sceneBG, frame.transparentDraws, false, textures.shadowBG ?? undefined))) {
+      if (
+        !customTransparent &&
+        (transitioning ||
+          !frame.transparentInstances.draw(
+            pass,
+            dev,
+            pipelines.instanceBGL,
+            getRenderPipeline('mesh', { variant: 'instanced', blend: 'alpha', depth: TRANSPARENT_DEPTH }),
+            sceneBG,
+            frame.transparentDraws,
+            false,
+            textures.shadowBG ?? undefined,
+          ))
+      ) {
         for (const g of frame.transparentDraws) {
           pass.setBindGroup(1, g.bg)
           setObjectStyleImmediate(pass, g, pipelines.immediateObjectStyle, frame.styleScratch)
@@ -287,14 +334,17 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
           if (g.shadingModel !== activeModel) {
             activeModel = g.shadingModel
             const shaderId = resolveMeshShaderId(activeModel)
-            pass.setPipeline(activeModel === 'phong'
-              ? meshTransparentPipeline()
-              : getRenderPipeline(shaderId, { blend: 'alpha', depth: TRANSPARENT_DEPTH }))
+            pass.setPipeline(
+              activeModel === 'phong'
+                ? meshTransparentPipeline()
+                : getRenderPipeline(shaderId, { blend: 'alpha', depth: TRANSPARENT_DEPTH }),
+            )
             const extraGroup = extraBindGroupForShader(shaderId)
             if (extraGroup) pass.setBindGroup(2, extraGroup)
           }
           pass.setBindGroup(1, g.bg)
-          if (activeModel === 'phong') setObjectStyleImmediate(pass, g, pipelines.immediateObjectStyle, frame.styleScratch)
+          if (activeModel === 'phong')
+            setObjectStyleImmediate(pass, g, pipelines.immediateObjectStyle, frame.styleScratch)
           pass.setVertexBuffer(0, g.vb)
           pass.setVertexBuffer(1, g.morphSlot!)
           pass.setIndexBuffer(g.ib, 'uint32')
@@ -304,10 +354,8 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
     }
   }
 
-  const deepSelectedIndex = frame.selectionMode === 'object'
-    && (frame.selectedHit?.cycleIndex ?? 0) > 0
-    ? frame.selected
-    : null
+  const deepSelectedIndex =
+    frame.selectionMode === 'object' && (frame.selectedHit?.cycleIndex ?? 0) > 0 ? frame.selected : null
   if (deepSelectedIndex !== null) {
     const selectedMesh = meshes[deepSelectedIndex]
     if (frame.isMeshVisible(deepSelectedIndex) && selectedMesh) {
@@ -324,14 +372,26 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
     }
   }
 
-  if (!frame.geometryFade && !frame.geometryGhosts.length && !hasMorph && frame.sourceFaceSlot.buffer && frame.sourceFaceSlot.count) {
+  if (
+    !frame.geometryFade &&
+    !frame.geometryGhosts.length &&
+    !hasMorph &&
+    frame.sourceFaceSlot.buffer &&
+    frame.sourceFaceSlot.count
+  ) {
     pass.setPipeline(getRenderPipeline('selectionOverlay'))
     pass.setBindGroup(0, sceneBG)
     pass.setVertexBuffer(0, frame.sourceFaceSlot.buffer)
     pass.draw(frame.sourceFaceSlot.count)
   }
 
-  if (!frame.geometryFade && !frame.geometryGhosts.length && !hasMorph && frame.selectionFaceSlot.buffer && frame.selectionFaceSlot.count) {
+  if (
+    !frame.geometryFade &&
+    !frame.geometryGhosts.length &&
+    !hasMorph &&
+    frame.selectionFaceSlot.buffer &&
+    frame.selectionFaceSlot.count
+  ) {
     pass.setPipeline(getRenderPipeline('selectionOverlay'))
     pass.setBindGroup(0, sceneBG)
     pass.setVertexBuffer(0, frame.selectionFaceSlot.buffer)
@@ -339,7 +399,19 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
   }
 
   const edgeGroup = extraBindGroupForShader('edge')
-  if (transitioning || !frame.edgeInstances.draw(pass, dev, pipelines.instanceBGL, getRenderPipeline('edge', { variant: 'instanced' }), sceneBG, frame.edgeDraws, true, edgeGroup)) {
+  if (
+    transitioning ||
+    !frame.edgeInstances.draw(
+      pass,
+      dev,
+      pipelines.instanceBGL,
+      getRenderPipeline('edge', { variant: 'instanced' }),
+      sceneBG,
+      frame.edgeDraws,
+      true,
+      edgeGroup,
+    )
+  ) {
     frame.edgeBundle.draw(pass, dev, fmt, getRenderPipeline('edge'), sceneBG, frame.edgeDraws, true, edgeGroup)
   }
 
@@ -365,7 +437,12 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
   if (overlaysStable) drawLineSlot(pass, lineList, sceneBG, frame.sourceLineSlot)
   if (overlaysStable) drawLineSlot(pass, lineList, sceneBG, frame.selectionLineSlot)
   if (overlaysStable && frame.deepSelectionLineSlot.buffer && frame.deepSelectionLineSlot.count) {
-    drawLineSlot(pass, getRenderPipeline('selectionOverlay', { topology: 'line-list', depth: DEEP_DEPTH }), sceneBG, frame.deepSelectionLineSlot)
+    drawLineSlot(
+      pass,
+      getRenderPipeline('selectionOverlay', { topology: 'line-list', depth: DEEP_DEPTH }),
+      sceneBG,
+      frame.deepSelectionLineSlot,
+    )
   }
 
   pass.end()

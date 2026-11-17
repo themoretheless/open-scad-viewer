@@ -1,11 +1,20 @@
-import {describe, expect, it} from 'vitest'
-import {PhotogrammetryKernel, type PhotoPixels} from '../src/app/photogrammetry/kernel'
-import {compilePhotogrammetryKernel} from '../src/app/photogrammetry/module'
-import {parsePhotoCalibration, photoCalibrationExampleJson, type PhotoCalibrationGroup} from '../src/app/photogrammetry/calibration'
+import { describe, expect, it } from 'vitest'
+import { PhotogrammetryKernel, type PhotoPixels } from '../src/app/photogrammetry/kernel'
+import { compilePhotogrammetryKernel } from '../src/app/photogrammetry/module'
+import {
+  parsePhotoCalibration,
+  photoCalibrationExampleJson,
+  type PhotoCalibrationGroup,
+} from '../src/app/photogrammetry/calibration'
 
 function pixels(group?: PhotoCalibrationGroup): PhotoPixels {
-  return {width: 320, height: 240, focal: 250, rgb: new Uint8Array(320 * 240 * 3).fill(128),
-    ...(group ? {calibration: {group, sourceWidth: 320, sourceHeight: 240}} : {})}
+  return {
+    width: 320,
+    height: 240,
+    focal: 250,
+    rgb: new Uint8Array(320 * 240 * 3).fill(128),
+    ...(group ? { calibration: { group, sourceWidth: 320, sourceHeight: 240 } } : {}),
+  }
 }
 
 describe('actual generated WASM calibration boundary', () => {
@@ -25,7 +34,9 @@ describe('actual generated WASM calibration boundary', () => {
       // Uniform images intentionally fail feature reconstruction; measurements survive.
       expect(() => kernel.sparse()).toThrow()
       expect(kernel.report()!.calibrations).toEqual(report.calibrations)
-    } finally { kernel.clear() }
+    } finally {
+      kernel.clear()
+    }
     expect(kernel.report()).toBeNull()
   })
 
@@ -35,13 +46,15 @@ describe('actual generated WASM calibration boundary', () => {
     try {
       kernel.add(pixels(group))
       const before = kernel.report()
-      expect(() => kernel.add(pixels({...group, fx: group.fx + 1}))).toThrow('conflicting')
-      const wrongSize = pixels({...group, id: 'wrong-size'})
+      expect(() => kernel.add(pixels({ ...group, fx: group.fx + 1 }))).toThrow('conflicting')
+      const wrongSize = pixels({ ...group, id: 'wrong-size' })
       wrongSize.calibration!.sourceWidth = 640
       expect(() => kernel.add(wrongSize)).toThrow('oriented original')
-      expect(() => kernel.add(pixels({...group, id: 'too-large', source: 'x'.repeat(20_000)}))).toThrow('16 KiB')
+      expect(() => kernel.add(pixels({ ...group, id: 'too-large', source: 'x'.repeat(20_000) }))).toThrow('16 KiB')
       expect(kernel.report()).toEqual(before)
-      expect(kernel.add(pixels({...group, id: 'recovered'}))).toBe(2)
-    } finally { kernel.clear() }
+      expect(kernel.add(pixels({ ...group, id: 'recovered' }))).toBe(2)
+    } finally {
+      kernel.clear()
+    }
   })
 })

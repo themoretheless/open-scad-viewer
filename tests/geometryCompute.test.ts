@@ -8,7 +8,10 @@ const input = (): SurfaceInput => ({
 })
 
 describe('world surface-area compute pilot', () => {
-  afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers() })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+  })
 
   it('handles nonuniform scale, reflection and huge translations without subtracting translated points', async () => {
     const mesh = input()
@@ -33,18 +36,30 @@ describe('world surface-area compute pilot', () => {
 
   it('publishes a verified GPU result and falls back on disagreement or execution failure', async () => {
     const signal = new AbortController().signal
-    const verified = await analyzeSurfaceArea(input(), signal, { id: 'webgpu-compute', surfaceArea: async () => 3.00001 })
+    const verified = await analyzeSurfaceArea(input(), signal, {
+      id: 'webgpu-compute',
+      surfaceArea: async () => 3.00001,
+    })
     expect(verified.backend).toBe('webgpu-compute')
     expect(verified.fallback).toBeNull()
     const wrong = await analyzeSurfaceArea(input(), signal, { id: 'webgpu-compute', surfaceArea: async () => 6 })
     expect(wrong).toMatchObject({ backend: 'cpu', area: 3, fallback: 'verification-failed' })
-    const failed = await analyzeSurfaceArea(input(), signal, { id: 'webgpu-compute', surfaceArea: async () => { throw new Error('device lost') } })
+    const failed = await analyzeSurfaceArea(input(), signal, {
+      id: 'webgpu-compute',
+      surfaceArea: async () => {
+        throw new Error('device lost')
+      },
+    })
     expect(failed).toMatchObject({ backend: 'cpu', area: 3, fallback: 'gpu-failed' })
   })
 
   it('uses CPU when WebGPU is unavailable and never publishes on cancellation', async () => {
     vi.stubGlobal('navigator', {})
-    expect(await analyzeSurfaceArea(input(), new AbortController().signal)).toMatchObject({ backend: 'cpu', area: 3, fallback: 'unavailable' })
+    expect(await analyzeSurfaceArea(input(), new AbortController().signal)).toMatchObject({
+      backend: 'cpu',
+      area: 3,
+      fallback: 'unavailable',
+    })
     const controller = new AbortController()
     controller.abort()
     await expect(analyzeSurfaceArea(input(), controller.signal)).rejects.toThrow()
@@ -52,7 +67,12 @@ describe('world surface-area compute pilot', () => {
 
   it('destroys a device arriving after cancellation without submitting work', async () => {
     let resolveDevice!: (device: GPUDevice) => void
-    const requested = vi.fn(() => new Promise<GPUDevice>(resolve => { resolveDevice = resolve }))
+    const requested = vi.fn(
+      () =>
+        new Promise<GPUDevice>(resolve => {
+          resolveDevice = resolve
+        }),
+    )
     vi.stubGlobal('navigator', { gpu: { requestAdapter: async () => ({ requestDevice: requested }) } })
     const controller = new AbortController()
     const pending = webgpuSurfaceArea(input(), controller.signal)
@@ -86,5 +106,7 @@ it('retains compensated area across native batches and cancels between them', as
   const timer = setTimeout(() => controller.abort(), 0)
   try {
     await expect(cpuSurfaceArea(mesh, controller.signal)).rejects.toThrow()
-  } finally { clearTimeout(timer) }
+  } finally {
+    clearTimeout(timer)
+  }
 })

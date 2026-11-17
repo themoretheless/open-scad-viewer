@@ -27,8 +27,8 @@ export function referenceRefineSubdivision(cage: SubdivisionCage, levels = 2): S
     throw new Error('Invalid control cage or budget exceeded')
   }
 
-  let currentVertices = cage.vertices.map((p) => [p[0]!, p[1]!, p[2]!])
-  let currentFaces = cage.faces.map((f) => [...f])
+  let currentVertices = cage.vertices.map(p => [p[0]!, p[1]!, p[2]!])
+  let currentFaces = cage.faces.map(f => [...f])
   let faceIds = cage.faces.map((_, idx) => idx)
 
   for (let step = 0; step < levels; step++) {
@@ -60,13 +60,14 @@ export function referenceRefineSubdivision(cage: SubdivisionCage, levels = 2): S
       }
     }
 
-
     // 1. Face points
     const facePoints: [number, number, number][] = new Array(currentFaces.length)
     for (let fi = 0; fi < currentFaces.length; fi++) {
       const f = currentFaces[fi]!
       const inv = 1 / f.length
-      let sx = 0, sy = 0, sz = 0
+      let sx = 0,
+        sy = 0,
+        sz = 0
       for (let i = 0; i < f.length; i++) {
         const p = currentVertices[f[i]!]!
         sx += p[0]! * inv
@@ -85,9 +86,7 @@ export function referenceRefineSubdivision(cage: SubdivisionCage, levels = 2): S
     }
 
     // 2. Updated vertex points
-    const nextVertices: number[][] = new Array(
-      currentVertices.length + edgeList.length + currentFaces.length
-    )
+    const nextVertices: number[][] = new Array(currentVertices.length + edgeList.length + currentFaces.length)
 
     for (let v = 0; v < currentVertices.length; v++) {
       const p = currentVertices[v]!
@@ -110,7 +109,9 @@ export function referenceRefineSubdivision(cage: SubdivisionCage, levels = 2): S
         ]
       } else {
         const fSet = new Set<number>()
-        let rx = 0, ry = 0, rz = 0
+        let rx = 0,
+          ry = 0,
+          rz = 0
         const n = adj.length
         const invN = 1 / n
         for (let i = 0; i < n; i++) {
@@ -124,7 +125,9 @@ export function referenceRefineSubdivision(cage: SubdivisionCage, levels = 2): S
             fSet.add(e.faces[j]!)
           }
         }
-        let fx = 0, fy = 0, fz = 0
+        let fx = 0,
+          fy = 0,
+          fz = 0
         const invF = 1 / fSet.size
         for (const fi of fSet) {
           const fp = facePoints[fi]!
@@ -155,11 +158,7 @@ export function referenceRefineSubdivision(cage: SubdivisionCage, levels = 2): S
           (pa[2]! + pb[2]! + fp0[2] + fp1[2]) * 0.25,
         ]
       } else {
-        nextVertices[edgeOffset + ei] = [
-          (pa[0]! + pb[0]!) * 0.5,
-          (pa[1]! + pb[1]!) * 0.5,
-          (pa[2]! + pb[2]!) * 0.5,
-        ]
+        nextVertices[edgeOffset + ei] = [(pa[0]! + pb[0]!) * 0.5, (pa[1]! + pb[1]!) * 0.5, (pa[2]! + pb[2]!) * 0.5]
       }
     }
 

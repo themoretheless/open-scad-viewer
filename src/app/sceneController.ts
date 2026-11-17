@@ -70,7 +70,9 @@ export class SceneController<THit = unknown> {
   })
   private readonly listeners = new Set<SceneStateListener<THit>>()
 
-  get state(): SceneState<THit> { return this.snapshot }
+  get state(): SceneState<THit> {
+    return this.snapshot
+  }
 
   subscribe(listener: SceneStateListener<THit>): () => void {
     this.listeners.add(listener)
@@ -82,13 +84,14 @@ export class SceneController<THit = unknown> {
     const requestedVisibility = patch.visibility === undefined ? this.snapshot.visibility : [...patch.visibility]
     const visibility = Array.from({ length: meshes.length }, (_, index) => requestedVisibility[index] !== false)
     const candidate = patch.selectedIndex === undefined ? this.snapshot.selectedIndex : patch.selectedIndex
-    const selectedIndex = candidate !== null
-      && Number.isInteger(candidate)
-      && candidate >= 0
-      && candidate < meshes.length
-      && visibility[candidate] !== false
-      ? candidate
-      : null
+    const selectedIndex =
+      candidate !== null &&
+      Number.isInteger(candidate) &&
+      candidate >= 0 &&
+      candidate < meshes.length &&
+      visibility[candidate] !== false
+        ? candidate
+        : null
     const requestedHit = patch.selectedHit === undefined ? this.snapshot.selectedHit : patch.selectedHit
     const selectedHit = selectedIndex === null ? null : visibleHit(requestedHit, visibility)
     const requestedIsolation = patch.isolated === undefined ? this.snapshot.isolated : patch.isolated
@@ -118,7 +121,9 @@ export class SceneController<THit = unknown> {
     return next
   }
 
-  publish(patch: Required<Pick<SceneStatePatch<THit>, 'meshes' | 'visibility' | 'selectedIndex' | 'isolated'>>): SceneState<THit> {
+  publish(
+    patch: Required<Pick<SceneStatePatch<THit>, 'meshes' | 'visibility' | 'selectedIndex' | 'isolated'>>,
+  ): SceneState<THit> {
     return this.update({ ...patch, selectedHit: null, hoveredHit: null })
   }
 
@@ -144,24 +149,26 @@ export class SceneController<THit = unknown> {
 
   setVisibility(index: number, visible: boolean): SceneState<THit> {
     if (!Number.isInteger(index) || index < 0 || index >= this.snapshot.meshes.length) return this.snapshot
-    const visibility = this.snapshot.visibility.map((value, candidate) => candidate === index ? visible : value)
+    const visibility = this.snapshot.visibility.map((value, candidate) => (candidate === index ? visible : value))
     return this.update({ visibility })
   }
 
   private sameState(candidate: SceneState<THit>) {
-    return candidate.meshes.length === this.snapshot.meshes.length
-      && candidate.meshes.every((mesh, index) => mesh === this.snapshot.meshes[index])
-      && candidate.visibility.every((visible, index) => visible === this.snapshot.visibility[index])
-      && candidate.selectedIndex === this.snapshot.selectedIndex
-      && candidate.selectedHit === this.snapshot.selectedHit
-      && candidate.isolated === this.snapshot.isolated
-      && candidate.hoveredHit === this.snapshot.hoveredHit
-      && candidate.measurement === this.snapshot.measurement
-      && candidate.measureActive === this.snapshot.measureActive
-      && candidate.section.enabled === this.snapshot.section.enabled
-      && candidate.section.axis === this.snapshot.section.axis
-      && candidate.section.offset === this.snapshot.section.offset
-      && candidate.section.flip === this.snapshot.section.flip
-      && candidate.section.initialized === this.snapshot.section.initialized
+    return (
+      candidate.meshes.length === this.snapshot.meshes.length &&
+      candidate.meshes.every((mesh, index) => mesh === this.snapshot.meshes[index]) &&
+      candidate.visibility.every((visible, index) => visible === this.snapshot.visibility[index]) &&
+      candidate.selectedIndex === this.snapshot.selectedIndex &&
+      candidate.selectedHit === this.snapshot.selectedHit &&
+      candidate.isolated === this.snapshot.isolated &&
+      candidate.hoveredHit === this.snapshot.hoveredHit &&
+      candidate.measurement === this.snapshot.measurement &&
+      candidate.measureActive === this.snapshot.measureActive &&
+      candidate.section.enabled === this.snapshot.section.enabled &&
+      candidate.section.axis === this.snapshot.section.axis &&
+      candidate.section.offset === this.snapshot.section.offset &&
+      candidate.section.flip === this.snapshot.section.flip &&
+      candidate.section.initialized === this.snapshot.section.initialized
+    )
   }
 }

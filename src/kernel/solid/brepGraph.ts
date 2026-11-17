@@ -1,4 +1,4 @@
-import {callGeometryRust} from '../geometry/kernel'
+import { callGeometryRust } from '../geometry/kernel'
 /**
  * The one place that knows how an exact solid is spelled as `rush/nurbs-1` nodes.
  *
@@ -20,7 +20,6 @@ export type BrepValue = { kind: 'node'; id: string } | { kind: 'inexact'; operat
 export type BrepProfile = { kind: 'profile'; loops: string[][] }
 
 export type Matrix4 = [number[], number[], number[], number[]]
-
 
 export interface BrepGearNodeSpec {
   module: number
@@ -63,10 +62,7 @@ export type BooleanOperation = 'union' | 'intersection' | 'difference' | 'xor'
 export const inexact = (operation: string): BrepValue => ({ kind: 'inexact', operation })
 
 /** Propagates the first refusal among the inputs, otherwise applies `build`. */
-export function requireExact(
-  inputs: readonly BrepValue[],
-  build: (ids: string[]) => BrepValue,
-): BrepValue {
+export function requireExact(inputs: readonly BrepValue[], build: (ids: string[]) => BrepValue): BrepValue {
   const ids: string[] = []
   for (const input of inputs) {
     if (input.kind === 'inexact') return input
@@ -76,7 +72,7 @@ export function requireExact(
 }
 
 const nativeMatrix = (operation: string, vector: number[]) =>
-  callGeometryRust<Matrix4 | null>('affine_matrix', {operation, vector})
+  callGeometryRust<Matrix4 | null>('affine_matrix', { operation, vector })
 
 export const translationMatrix = (x: number, y: number, z: number): Matrix4 => nativeMatrix('translate', [x, y, z])!
 export const scaleMatrix = (x: number, y: number, z: number): Matrix4 => nativeMatrix('scale', [x, y, z])!
@@ -98,15 +94,19 @@ export function createBrepGraphBuilder(): BrepGraphBuilder {
   }
   const node = (spec: Omit<BrepNode, 'id'>): BrepValue => ({ kind: 'node', id: add(spec) })
 
-  const curve = (
-    degree: number,
-    knots: number[],
-    controlPoints: number[][],
-    weights: number[],
-  ): string => add({ op: 'curve', degree, knots, control_points: controlPoints, weights, periodic: false })
+  const curve = (degree: number, knots: number[], controlPoints: number[][], weights: number[]): string =>
+    add({ op: 'curve', degree, knots, control_points: controlPoints, weights, periodic: false })
 
   const line = (from: readonly [number, number], to: readonly [number, number]): string =>
-    curve(1, [0, 0, 1, 1], [[from[0], from[1], 0], [to[0], to[1], 0]], [1, 1])
+    curve(
+      1,
+      [0, 0, 1, 1],
+      [
+        [from[0], from[1], 0],
+        [to[0], to[1], 0],
+      ],
+      [1, 1],
+    )
 
   const polylineLoop = (ring: readonly (readonly [number, number])[]): string[] =>
     ring.map((from, index) => line(from, ring[(index + 1) % ring.length]!))
@@ -122,36 +122,44 @@ export function createBrepGraphBuilder(): BrepGraphBuilder {
     torus: (majorRadius, minorRadius) =>
       node({ op: 'brep_torus', major_radius: majorRadius, minor_radius: minorRadius }),
 
-    cylinder: (radiusBottom, radiusTop, height) => (radiusBottom === radiusTop
-      ? node({ op: 'brep_cylinder', radius: radiusBottom, height })
-      : node({ op: 'brep_frustum', bottom_radius: radiusBottom, top_radius: radiusTop, height })),
+    cylinder: (radiusBottom, radiusTop, height) =>
+      radiusBottom === radiusTop
+        ? node({ op: 'brep_cylinder', radius: radiusBottom, height })
+        : node({ op: 'brep_frustum', bottom_radius: radiusBottom, top_radius: radiusTop, height }),
 
-    transform: (input, matrix) => requireExact([input], ([id]) =>
-      node({ op: 'transform', input: id, matrix: matrix.map(row => [...row]) })),
+    transform: (input, matrix) =>
+      requireExact([input], ([id]) => node({ op: 'transform', input: id, matrix: matrix.map(row => [...row]) })),
 
-    boolean: (operation, inputs) => (inputs.length
-      ? requireExact(inputs, ids => ids.slice(1).reduce<BrepValue>(
-        (left, right) => requireExact([left], ([id]) =>
-          node({ op: 'brep_boolean', inputs: [id, right], operation })),
-        { kind: 'node', id: ids[0]! },
-      ))
-      : inexact('empty boolean')),
+    boolean: (operation, inputs) =>
+      inputs.length
+        ? requireExact(inputs, ids =>
+            ids
+              .slice(1)
+              .reduce<BrepValue>(
+                (left, right) =>
+                  requireExact([left], ([id]) => node({ op: 'brep_boolean', inputs: [id, right], operation })),
+                { kind: 'node', id: ids[0]! },
+              ),
+          )
+        : inexact('empty boolean'),
 
     extrudeLoops: (profile, zMin, zMax) =>
       node({ op: 'brep_extrude_curves', loops: profile.loops.map(loop => [...loop]), z_min: zMin, z_max: zMax }),
 
-    revolve: (input, angleDegrees) => requireExact([input], ([id]) =>
-      node({ op: 'brep_revolve', input: id, angle: angleDegrees })),
+    revolve: (input, angleDegrees) =>
+      requireExact([input], ([id]) => node({ op: 'brep_revolve', input: id, angle: angleDegrees })),
 
     polylineLoop,
 
     rectangleLoop(size, center) {
-      const ring = callGeometryRust<[number, number][]>('planar_rectangle_corners', {size, center})
+      const ring = callGeometryRust<[number, number][]>('planar_rectangle_corners', { size, center })
       return polylineLoop(ring)
     },
 
     circleLoop(radius) {
-      const arcs = callGeometryRust<{degree: number; knots: number[]; controlPoints: number[][]; weights: number[]}[]>('nurbs_circle_quadrants', {radius})
+      const arcs = callGeometryRust<
+        { degree: number; knots: number[]; controlPoints: number[][]; weights: number[] }[]
+      >('nurbs_circle_quadrants', { radius })
       return arcs.map(arc => curve(arc.degree, arc.knots, arc.controlPoints, arc.weights))
     },
   }

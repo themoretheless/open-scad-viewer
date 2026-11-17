@@ -10,11 +10,7 @@
  * 3. Supports OffscreenCanvas WebGPU context initialization inside Web Workers.
  */
 
-import {
-  getGpuMemoryArchitectureProfile,
-  type GpuMemoryArchitecture,
-  type GpuMemoryArchitectureProfile,
-} from './types'
+import { getGpuMemoryArchitectureProfile, type GpuMemoryArchitecture, type GpuMemoryArchitectureProfile } from './types'
 
 export { getGpuMemoryArchitectureProfile, type GpuMemoryArchitecture, type GpuMemoryArchitectureProfile }
 
@@ -46,12 +42,7 @@ export function detectGpuMemoryArchitecture(
   const vendor = (adapterInfo?.vendor ?? '').toLowerCase()
   const arch = (adapterInfo?.architecture ?? '').toLowerCase()
   const desc = (adapterInfo?.description ?? '').toLowerCase()
-  if (
-    vendor.includes('apple') ||
-    arch.includes('apple') ||
-    arch.includes('metal') ||
-    desc.includes('apple m')
-  ) {
+  if (vendor.includes('apple') || arch.includes('apple') || arch.includes('metal') || desc.includes('apple m')) {
     return 'uma'
   }
   return 'duma'
@@ -73,9 +64,7 @@ export function createAndUploadBufferByArchitecture(
 ): GPUBuffer {
   const byteSize = alignByteSize(data.byteLength, 16)
   if (architecture === 'uma') {
-    const umaUsage = device.features?.has('mappable-primary-buffers')
-      ? usage | BUFFER_USAGE.MAP_WRITE
-      : usage
+    const umaUsage = device.features?.has('mappable-primary-buffers') ? usage | BUFFER_USAGE.MAP_WRITE : usage
     const buffer = device.createBuffer({
       size: byteSize,
       usage: umaUsage,
@@ -93,13 +82,7 @@ export function createAndUploadBufferByArchitecture(
     usage: usage | BUFFER_USAGE.COPY_DST,
     mappedAtCreation: false,
   })
-  device.queue.writeBuffer(
-    buffer,
-    0,
-    data.buffer as ArrayBuffer,
-    data.byteOffset,
-    data.byteLength,
-  )
+  device.queue.writeBuffer(buffer, 0, data.buffer as ArrayBuffer, data.byteOffset, data.byteLength)
   return buffer
 }
 
@@ -155,36 +138,24 @@ export function createZeroCopyMeshBuffers(
   device: GPUDevice,
   maxVertices: number,
   maxIndices: number,
-  vertexStrideFloats = 8
+  vertexStrideFloats = 8,
 ): ZeroCopyMeshBuffers {
   const vertexByteSize = alignByteSize(maxVertices * vertexStrideFloats * 4, 16)
   const indexByteSize = alignByteSize(maxIndices * 4, 16)
 
   const vertexBuffer = device.createBuffer({
     size: vertexByteSize,
-    usage:
-      BUFFER_USAGE.STORAGE |
-      BUFFER_USAGE.VERTEX |
-      BUFFER_USAGE.COPY_SRC |
-      BUFFER_USAGE.COPY_DST,
+    usage: BUFFER_USAGE.STORAGE | BUFFER_USAGE.VERTEX | BUFFER_USAGE.COPY_SRC | BUFFER_USAGE.COPY_DST,
   })
 
   const indexBuffer = device.createBuffer({
     size: indexByteSize,
-    usage:
-      BUFFER_USAGE.STORAGE |
-      BUFFER_USAGE.INDEX |
-      BUFFER_USAGE.COPY_SRC |
-      BUFFER_USAGE.COPY_DST,
+    usage: BUFFER_USAGE.STORAGE | BUFFER_USAGE.INDEX | BUFFER_USAGE.COPY_SRC | BUFFER_USAGE.COPY_DST,
   })
 
   const indirectDrawBuffer = device.createBuffer({
     size: 32, // 5 x u32 = 20 bytes, padded to 32 bytes
-    usage:
-      BUFFER_USAGE.STORAGE |
-      BUFFER_USAGE.INDIRECT |
-      BUFFER_USAGE.COPY_SRC |
-      BUFFER_USAGE.COPY_DST,
+    usage: BUFFER_USAGE.STORAGE | BUFFER_USAGE.INDIRECT | BUFFER_USAGE.COPY_SRC | BUFFER_USAGE.COPY_DST,
   })
 
   return {
@@ -218,7 +189,7 @@ export function dispatchComputeToZeroCopyMesh(
   bindGroup: GPUBindGroup,
   workgroups: [number, number, number],
   targetBuffers: ZeroCopyMeshBuffers,
-  drawArgs?: IndirectIndexedDrawArgs
+  drawArgs?: IndirectIndexedDrawArgs,
 ): void {
   if (drawArgs) {
     const packed = packIndirectIndexedArgs(drawArgs)
@@ -238,9 +209,7 @@ export function dispatchComputeToZeroCopyMesh(
  */
 export function supportsOffscreenWebGpu(): boolean {
   return (
-    typeof OffscreenCanvas !== 'undefined' &&
-    typeof navigator !== 'undefined' &&
-    typeof navigator.gpu !== 'undefined'
+    typeof OffscreenCanvas !== 'undefined' && typeof navigator !== 'undefined' && typeof navigator.gpu !== 'undefined'
   )
 }
 
@@ -294,7 +263,6 @@ export class GpuBufferArena {
     bucket.push(buffer)
     this.activeCount = Math.max(0, this.activeCount - 1)
   }
-
 
   getStats(): { allocatedBytes: number; activeBuffers: number; pooledBuffers: number } {
     let pooled = 0

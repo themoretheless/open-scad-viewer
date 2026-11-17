@@ -107,7 +107,10 @@ export const EXAMPLE_CATALOG: readonly ExampleCatalogEntry[] = Object.freeze([
   {
     id: 'brep-enclosure',
     title: { ru: 'B-rep: корпус с карманом', en: 'B-rep pocket enclosure' },
-    description: { ru: 'Круглый корпус, глухой карман и боковой выступ. Дно 2 мм; рациональные дуги сохраняются.', en: 'Round enclosure, blind pocket and side boss. A 2 mm floor with retained rational arcs.' },
+    description: {
+      ru: 'Круглый корпус, глухой карман и боковой выступ. Дно 2 мм; рациональные дуги сохраняются.',
+      en: 'Round enclosure, blind pocket and side boss. A 2 mm floor with retained rational arcs.',
+    },
     tags: ['brep', 'nurbs', 'cad', 'boolean', 'advanced'],
     source: EXAMPLE_SOURCES['brep-enclosure'],
   },
@@ -128,7 +131,10 @@ export const EXAMPLE_CATALOG: readonly ExampleCatalogEntry[] = Object.freeze([
   {
     id: 'house',
     title: { ru: 'Дом с модулями', en: 'Modular house' },
-    description: { ru: 'Переменные, модуль окна и составная модель.', en: 'Variables, a window module and a composed model.' },
+    description: {
+      ru: 'Переменные, модуль окна и составная модель.',
+      en: 'Variables, a window module and a composed model.',
+    },
     tags: ['modules', 'variables', 'architecture'],
     source: EXAMPLE_SOURCES.house,
   },

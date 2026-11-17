@@ -12,37 +12,50 @@ export interface CustomizerParameter {
   options?: CustomizerValue[]
 }
 
-const ASSIGNMENT = /(^|\n)([ \t]*)([A-Za-z_$][A-Za-z0-9_$]*)([ \t]*=[ \t]*)(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|true|false|"(?:\\.|[^"\\])*")[ \t]*;([^\n]*)/g
+const ASSIGNMENT =
+  /(^|\n)([ \t]*)([A-Za-z_$][A-Za-z0-9_$]*)([ \t]*=[ \t]*)(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|true|false|"(?:\\.|[^"\\])*")[ \t]*;([^\n]*)/g
 
 function decodeLiteral(raw: string): CustomizerValue {
   if (raw === 'true') return true
   if (raw === 'false') return false
   if (raw.startsWith('"')) {
-    try { return JSON.parse(raw) as string }
-    catch { return raw.slice(1, -1) }
+    try {
+      return JSON.parse(raw) as string
+    } catch {
+      return raw.slice(1, -1)
+    }
   }
   const value = Number(raw)
   if (!Number.isFinite(value)) throw new RangeError('Customizer numeric literals must be finite')
   return value
 }
 
-function parseMetadata(raw: string, value: CustomizerValue): Pick<CustomizerParameter, 'min' | 'max' | 'step' | 'options'> {
+function parseMetadata(
+  raw: string,
+  value: CustomizerValue,
+): Pick<CustomizerParameter, 'min' | 'max' | 'step' | 'options'> {
   const comment = raw.match(/\/\/\s*\[([^\]]+)\]/)?.[1]?.trim()
   if (!comment) return {}
   if (typeof value === 'number') {
     const range = comment.split(':').map(Number)
     if ((range.length === 2 || range.length === 3) && range.every(Number.isFinite)) {
-      const min = range[0]!, middle = range[1]!, last = range[2]
+      const min = range[0]!,
+        middle = range[1]!,
+        last = range[2]
       const max = range.length === 2 ? middle : last!
       const step = range.length === 3 ? middle : undefined
       if (max >= min && (step === undefined || step > 0)) return { min, max, step }
     }
   }
-  const options = comment.split(',').map(part => part.trim()).filter(Boolean).map(part => {
-    if (/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(part)) return Number(part)
-    if (part === 'true' || part === 'false') return part === 'true'
-    return part.replace(/^"|"$/g, '')
-  })
+  const options = comment
+    .split(',')
+    .map(part => part.trim())
+    .filter(Boolean)
+    .map(part => {
+      if (/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(part)) return Number(part)
+      if (part === 'true' || part === 'false') return part === 'true'
+      return part.replace(/^"|"$/g, '')
+    })
   return options.length ? { options } : {}
 }
 
@@ -138,9 +151,7 @@ function isValidCustomizerValue(value: unknown): value is CustomizerValue {
 }
 
 /** Serialize named OpenSCAD Customizer parameter presets into canonical JSON format. */
-export function exportCustomizerPresetsJson(
-  presets: Record<string, Record<string, CustomizerValue>>,
-): string {
+export function exportCustomizerPresetsJson(presets: Record<string, Record<string, CustomizerValue>>): string {
   const parameterSets: Record<string, Record<string, CustomizerValue>> = {}
   for (const [presetName, values] of Object.entries(presets)) {
     const trimmedName = presetName.trim()
@@ -158,9 +169,7 @@ export function exportCustomizerPresetsJson(
 }
 
 /** Parse OpenSCAD Customizer presets from either `{ parameterSets: ... }` or a flat preset record JSON. */
-export function importCustomizerPresetsJson(
-  jsonText: string,
-): Record<string, Record<string, CustomizerValue>> {
+export function importCustomizerPresetsJson(jsonText: string): Record<string, Record<string, CustomizerValue>> {
   if (jsonText.length > 1048576) {
     throw new Error('Customizer presets JSON exceeds 1 MiB.')
   }
@@ -194,10 +203,7 @@ export function importCustomizerPresetsJson(
 }
 
 /** Apply a named parameter preset record to OpenSCAD source code in one pass from end to start. */
-export function applyCustomizerPresetToSource(
-  source: string,
-  presetValues: Record<string, CustomizerValue>,
-): string {
+export function applyCustomizerPresetToSource(source: string, presetValues: Record<string, CustomizerValue>): string {
   const parameters = extractCustomizerParameters(source)
   const matching = parameters
     .filter(param => Object.prototype.hasOwnProperty.call(presetValues, param.name))

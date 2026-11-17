@@ -31,7 +31,9 @@ export function extendedBevel(
   kind: 'fillet' | 'chamfer',
 ): DirectBody {
   if (body.brep) {
-    throw new Error(`Mesh ${kind} cannot be claimed as analytic-${kind} for B-rep bodies; refuse localMeshBevel fallback`)
+    throw new Error(
+      `Mesh ${kind} cannot be claimed as analytic-${kind} for B-rep bodies; refuse localMeshBevel fallback`,
+    )
   }
   const mesh = normalizePolygonMesh(
     callGeometryRust<PolygonMesh>('cad_extended_bevel', {

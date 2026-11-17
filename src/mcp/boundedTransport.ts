@@ -43,31 +43,40 @@ function admissibleRequestId(requestId: RequestId): boolean {
 }
 
 function cancelledRequestId(message: JSONRPCMessage): RequestId | null {
-  if (!('method' in message) || message.method !== 'notifications/cancelled'
-    || !('params' in message) || !message.params || typeof message.params !== 'object'
-    || !('requestId' in message.params)) return null
+  if (
+    !('method' in message) ||
+    message.method !== 'notifications/cancelled' ||
+    !('params' in message) ||
+    !message.params ||
+    typeof message.params !== 'object' ||
+    !('requestId' in message.params)
+  )
+    return null
   const id = message.params.requestId
   if (typeof id !== 'string' && typeof id !== 'number') return null
   return admissibleRequestId(id) ? id : null
 }
 
 function inboundRequestId(message: JSONRPCMessage): RequestId | null {
-  return 'method' in message && 'id' in message && message.id !== undefined
-    ? message.id
-    : null
+  return 'method' in message && 'id' in message && message.id !== undefined ? message.id : null
 }
 
 function outboundResponseId(message: JSONRPCMessage): RequestId | null {
-  return 'id' in message && message.id !== undefined && ('result' in message || 'error' in message)
-    ? message.id
-    : null
+  return 'id' in message && message.id !== undefined && ('result' in message || 'error' in message) ? message.id : null
 }
 
 function acknowledgedSubscriptionId(message: JSONRPCMessage): RequestId | null {
-  if (!('method' in message) || message.method !== 'notifications/subscriptions/acknowledged'
-    || !('params' in message) || !message.params || typeof message.params !== 'object'
-    || !('_meta' in message.params) || !message.params._meta
-    || typeof message.params._meta !== 'object') return null
+  if (
+    !('method' in message) ||
+    message.method !== 'notifications/subscriptions/acknowledged' ||
+    !('params' in message) ||
+    !message.params ||
+    typeof message.params !== 'object' ||
+    !('_meta' in message.params) ||
+    !message.params._meta ||
+    typeof message.params._meta !== 'object'
+  )
+    return null
   const id = message.params._meta['io.modelcontextprotocol/subscriptionId']
   return typeof id === 'string' || typeof id === 'number' ? id : null
 }
@@ -165,8 +174,12 @@ export class BoundedTransport implements Transport {
     const sent = this.enqueue(message, options)
     const finish = (succeeded: boolean) => {
       this.pendingOutbound--
-      if (succeeded && subscriptionId !== null && settledRequest?.kind === 'subscription'
-        && !settledRequest.cancelForwarded) {
+      if (
+        succeeded &&
+        subscriptionId !== null &&
+        settledRequest?.kind === 'subscription' &&
+        !settledRequest.cancelForwarded
+      ) {
         this.activeSubscriptions.add(subscriptionId)
       }
       if (settledId !== null && this.activeRequests.get(settledId) === settledRequest) {
@@ -239,9 +252,11 @@ export class BoundedTransport implements Transport {
           retry_after_ms: TRANSPORT_BUSY_RETRY_AFTER_MS,
         },
       },
-    }).catch(error => this.onerror?.(error)).finally(() => {
-      this.pendingControl--
     })
+      .catch(error => this.onerror?.(error))
+      .finally(() => {
+        this.pendingControl--
+      })
   }
 
   private receive<T extends JSONRPCMessage>(message: T, extra?: MessageExtraInfo): void {
@@ -265,9 +280,7 @@ export class BoundedTransport implements Transport {
     }
     const method = 'method' in message ? message.method : ''
     this.activeRequests.set(requestId, {
-      kind: method === 'initialize'
-        ? 'initialize'
-        : method === 'subscriptions/listen' ? 'subscription' : 'request',
+      kind: method === 'initialize' ? 'initialize' : method === 'subscriptions/listen' ? 'subscription' : 'request',
       handlerSettled: false,
       cancelled: false,
       cancelForwarded: false,

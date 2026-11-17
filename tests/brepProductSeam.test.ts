@@ -43,15 +43,12 @@ describe('B-rep product seam', () => {
       'certified-brep-tessellation/1',
       'certified-mass-properties/1',
       'step-interchange/3',
-    ]) expect(brepCapability(id)?.maturity, id).toBe('Qualified')
+    ])
+      expect(brepCapability(id)?.maturity, id).toBe('Qualified')
     expect(brepCapability('authorized-heal-gap-le1/1')?.maturity).toBe('Unavailable')
     expect(brepCapability('authorized-heal-gap-le1/2')?.maturity).toBe('Qualified')
-    expect(() => assertBrepCapabilityAllowsTopology('step-interchange/3')).toThrow(
-      /does not permit topology change/,
-    )
-    expect(() => assertBrepCapabilityAllowsTopology('nurbs-ss-bezier-le3/1')).toThrow(
-      /does not permit topology change/,
-    )
+    expect(() => assertBrepCapabilityAllowsTopology('step-interchange/3')).toThrow(/does not permit topology change/)
+    expect(() => assertBrepCapabilityAllowsTopology('nurbs-ss-bezier-le3/1')).toThrow(/does not permit topology change/)
     expect(() => assertBrepCapabilityAllowsTopology('analytic-boolean/1')).not.toThrow()
     expect(() => assertBrepCapabilityAllowsTopology('nurbs-boolean-bezier-le3/1')).toThrow(
       /Unavailable; refuse topology change/,

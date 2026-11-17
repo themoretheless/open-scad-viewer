@@ -16,4 +16,3 @@ export class BrepSemanticBackendError extends Error {
     this.name = 'BrepSemanticBackendError'
   }
 }
-

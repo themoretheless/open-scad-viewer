@@ -1,9 +1,5 @@
-import {callGeometryRust} from './geometry/kernel'
-import type {
-  MeshData,
-  MeshProvenanceRun,
-  MeshTopologyDiagnostics,
-} from '../core/mesh'
+import { callGeometryRust } from './geometry/kernel'
+import type { MeshData, MeshProvenanceRun, MeshTopologyDiagnostics } from '../core/mesh'
 import { type Aabb3, type Vec3 } from './geometry/math3d'
 
 const VERTEX_STRIDE = 6
@@ -83,8 +79,9 @@ export function matchMeshesByProvenance(
   for (const [entityId, replacementIndices] of replacementByEntity) {
     const previousIndices = previousByEntity.get(entityId)
     const group = positionalEntityGroup(entityId)
-    const positionalIdentityIsSafe = options.sameSourceSnapshot
-      || (previousByPositionalGroup.get(group) === 1 && replacementByPositionalGroup.get(group) === 1)
+    const positionalIdentityIsSafe =
+      options.sameSourceSnapshot ||
+      (previousByPositionalGroup.get(group) === 1 && replacementByPositionalGroup.get(group) === 1)
     if (positionalIdentityIsSafe && replacementIndices.length === 1 && previousIndices?.length === 1) {
       matches[replacementIndices[0]!] = previousIndices[0]!
     }
@@ -149,10 +146,7 @@ function meshProvenanceKey(mesh: MeshData): string {
 }
 
 /** Resolve a triangle to its compact Manifold/OpenSCAD provenance run. */
-export function resolveProvenance(
-  mesh: MeshData,
-  triangleIndex: number,
-): MeshProvenanceRun | null {
+export function resolveProvenance(mesh: MeshData, triangleIndex: number): MeshProvenanceRun | null {
   const triangleCount = Math.floor(mesh.indices.length / 3)
   if (!Number.isInteger(triangleIndex) || triangleIndex < 0 || triangleIndex >= triangleCount) {
     return null
@@ -168,8 +162,17 @@ export function resolveProvenance(
 
 /** Build the object-level facts displayed by an Inspect panel. */
 export function inspectMesh(mesh: MeshData, index: number): MeshInspection {
-  const geometry=callGeometryRust<Pick<MeshInspection,'bounds'|'dimensions'|'center'>>('mesh_display_inspect',{vertexBits:new Uint32Array(mesh.vertices.buffer,mesh.vertices.byteOffset,mesh.vertices.length),transform:mesh.transform})
-  return {index,vertices:Math.floor(mesh.vertices.length/VERTEX_STRIDE),triangles:Math.floor(mesh.indices.length/3),...geometry,topology:(mesh as MeshWithTopology).topology??null}
+  const geometry = callGeometryRust<Pick<MeshInspection, 'bounds' | 'dimensions' | 'center'>>('mesh_display_inspect', {
+    vertexBits: new Uint32Array(mesh.vertices.buffer, mesh.vertices.byteOffset, mesh.vertices.length),
+    transform: mesh.transform,
+  })
+  return {
+    index,
+    vertices: Math.floor(mesh.vertices.length / VERTEX_STRIDE),
+    triangles: Math.floor(mesh.indices.length / 3),
+    ...geometry,
+    topology: (mesh as MeshWithTopology).topology ?? null,
+  }
 }
 
 /** Interpolate a triangle hit into world space using BVH barycentric weights. */
@@ -178,12 +181,23 @@ export function computeHitWorldPoint(
   triangleIndex: number,
   barycentric: readonly [number, number, number],
 ): Vec3 | null {
-  return callGeometryRust('mesh_hit_point',{vertexBits:new Uint32Array(mesh.vertices.buffer,mesh.vertices.byteOffset,mesh.vertices.length),indices:mesh.indices,transform:mesh.transform,triangleIndex,barycentric})
+  return callGeometryRust('mesh_hit_point', {
+    vertexBits: new Uint32Array(mesh.vertices.buffer, mesh.vertices.byteOffset, mesh.vertices.length),
+    indices: mesh.indices,
+    transform: mesh.transform,
+    triangleIndex,
+    barycentric,
+  })
 }
 
 /** Compute a flat, unit-length world-space normal for the hit triangle. */
 export function computeHitNormal(mesh: MeshData, triangleIndex: number): Vec3 | null {
-  return callGeometryRust('mesh_hit_normal',{vertexBits:new Uint32Array(mesh.vertices.buffer,mesh.vertices.byteOffset,mesh.vertices.length),indices:mesh.indices,transform:mesh.transform,triangleIndex})
+  return callGeometryRust('mesh_hit_normal', {
+    vertexBits: new Uint32Array(mesh.vertices.buffer, mesh.vertices.byteOffset, mesh.vertices.length),
+    indices: mesh.indices,
+    transform: mesh.transform,
+    triangleIndex,
+  })
 }
 
 /** Summarize an exact two-point measurement in world coordinates. */
@@ -191,7 +205,7 @@ export function summarizeMeasurement(start: Vec3, end: Vec3): MeasurementSummary
   if (![...start, ...end].every(Number.isFinite)) {
     throw new RangeError('Measurement points must contain finite coordinates')
   }
-  return callGeometryRust('mesh_measure',{start,end})
+  return callGeometryRust('mesh_measure', { start, end })
 }
 
 export interface MeshManifoldDiagnostics {
@@ -216,14 +230,25 @@ function writeWorldTriangle(
 ): boolean {
   const base = triangleIndex * 3
   if (base + 2 >= indices.length) return false
-  const m0 = transform[0]!, m1 = transform[1]!, m2 = transform[2]!, m3 = transform[3]!
-  const m4 = transform[4]!, m5 = transform[5]!, m6 = transform[6]!, m7 = transform[7]!
-  const m8 = transform[8]!, m9 = transform[9]!, m10 = transform[10]!, m11 = transform[11]!
+  const m0 = transform[0]!,
+    m1 = transform[1]!,
+    m2 = transform[2]!,
+    m3 = transform[3]!
+  const m4 = transform[4]!,
+    m5 = transform[5]!,
+    m6 = transform[6]!,
+    m7 = transform[7]!
+  const m8 = transform[8]!,
+    m9 = transform[9]!,
+    m10 = transform[10]!,
+    m11 = transform[11]!
 
   for (let k = 0; k < 3; k++) {
     const vIdx = indices[base + k]! * VERTEX_STRIDE
     if (vIdx + 2 >= vertices.length) return false
-    const vx = vertices[vIdx]!, vy = vertices[vIdx + 1]!, vz = vertices[vIdx + 2]!
+    const vx = vertices[vIdx]!,
+      vy = vertices[vIdx + 1]!,
+      vz = vertices[vIdx + 2]!
     const wx = m0 * vx + m1 * vy + m2 * vz + m3
     const wy = m4 * vx + m5 * vy + m6 * vz + m7
     const wz = m8 * vx + m9 * vy + m10 * vz + m11
@@ -277,12 +302,22 @@ export function inspectMeshManifoldDiagnostics(
       degenerateTriangleCount++
       continue
     }
-    const ax = SCRATCH_WORLD_PTS[0]!, ay = SCRATCH_WORLD_PTS[1]!, az = SCRATCH_WORLD_PTS[2]!
-    const bx = SCRATCH_WORLD_PTS[3]!, by = SCRATCH_WORLD_PTS[4]!, bz = SCRATCH_WORLD_PTS[5]!
-    const cx = SCRATCH_WORLD_PTS[6]!, cy = SCRATCH_WORLD_PTS[7]!, cz = SCRATCH_WORLD_PTS[8]!
+    const ax = SCRATCH_WORLD_PTS[0]!,
+      ay = SCRATCH_WORLD_PTS[1]!,
+      az = SCRATCH_WORLD_PTS[2]!
+    const bx = SCRATCH_WORLD_PTS[3]!,
+      by = SCRATCH_WORLD_PTS[4]!,
+      bz = SCRATCH_WORLD_PTS[5]!
+    const cx = SCRATCH_WORLD_PTS[6]!,
+      cy = SCRATCH_WORLD_PTS[7]!,
+      cz = SCRATCH_WORLD_PTS[8]!
 
-    const abx = bx - ax, aby = by - ay, abz = bz - az
-    const acx = cx - ax, acy = cy - ay, acz = cz - az
+    const abx = bx - ax,
+      aby = by - ay,
+      abz = bz - az
+    const acx = cx - ax,
+      acy = cy - ay,
+      acz = cz - az
     const nx = aby * acz - abz * acy
     const ny = abz * acx - abx * acz
     const nz = abx * acy - aby * acx
@@ -314,10 +349,7 @@ export function inspectMeshManifoldDiagnostics(
   const uniqueEdgeCount = edgeCounts.size
   const eulerCharacteristic = uniqueVertexCount - uniqueEdgeCount + validFaceCount
   const isWatertight =
-    validFaceCount > 0 &&
-    degenerateTriangleCount === 0 &&
-    boundaryEdgeCount === 0 &&
-    nonManifoldEdgeCount === 0
+    validFaceCount > 0 && degenerateTriangleCount === 0 && boundaryEdgeCount === 0 && nonManifoldEdgeCount === 0
 
   return {
     uniqueVertexCount,
@@ -403,13 +435,25 @@ export function computeMeshTriangleQualitySummary(mesh: {
       continue
     }
 
-    const ax = vertices[i0]!, ay = vertices[i0 + 1]!, az = vertices[i0 + 2]!
-    const bx = vertices[i1]!, by = vertices[i1 + 1]!, bz = vertices[i1 + 2]!
-    const cx = vertices[i2]!, cy = vertices[i2 + 1]!, cz = vertices[i2 + 2]!
+    const ax = vertices[i0]!,
+      ay = vertices[i0 + 1]!,
+      az = vertices[i0 + 2]!
+    const bx = vertices[i1]!,
+      by = vertices[i1 + 1]!,
+      bz = vertices[i1 + 2]!
+    const cx = vertices[i2]!,
+      cy = vertices[i2 + 1]!,
+      cz = vertices[i2 + 2]!
 
-    const abx = bx - ax, aby = by - ay, abz = bz - az
-    const bcx = cx - bx, bcy = cy - by, bcz = cz - bz
-    const cax = ax - cx, cay = ay - cy, caz = az - cz
+    const abx = bx - ax,
+      aby = by - ay,
+      abz = bz - az
+    const bcx = cx - bx,
+      bcy = cy - by,
+      bcz = cz - bz
+    const cax = ax - cx,
+      cay = ay - cy,
+      caz = az - cz
 
     const e0Sq = abx * abx + aby * aby + abz * abz
     const e1Sq = bcx * bcx + bcy * bcy + bcz * bcz
@@ -417,7 +461,9 @@ export function computeMeshTriangleQualitySummary(mesh: {
     const maxEdgeSq = Math.max(e0Sq, e1Sq, e2Sq)
 
     // Cross product AB x (-CA) = AB x AC
-    const acx = -cax, acy = -cay, acz = -caz
+    const acx = -cax,
+      acy = -cay,
+      acz = -caz
     const nx = aby * acz - abz * acy
     const ny = abz * acx - abx * acz
     const nz = abx * acy - aby * acx
@@ -434,7 +480,7 @@ export function computeMeshTriangleQualitySummary(mesh: {
     if (area > maxAreaMm2) maxAreaMm2 = area
 
     // L_max / h_min = L_max / (2 * area / L_max) = L_max^2 / (2 * area)
-    const aspectRatio = ( EQUILATERAL_ALTITUDE_FACTOR * maxEdgeSq ) / doubleArea
+    const aspectRatio = (EQUILATERAL_ALTITUDE_FACTOR * maxEdgeSq) / doubleArea
     if (aspectRatio < minAspectRatio) minAspectRatio = aspectRatio
     if (aspectRatio > maxAspectRatio) maxAspectRatio = aspectRatio
     sumAspectRatio += aspectRatio
@@ -452,4 +498,3 @@ export function computeMeshTriangleQualitySummary(mesh: {
     totalAreaMm2,
   }
 }
-

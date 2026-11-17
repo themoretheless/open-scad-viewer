@@ -41,9 +41,17 @@ export function createManifoldMetricsReport(rows: readonly ManifoldMetricsReport
 }
 
 const CSV_COLUMNS = [
-  'bodyId', 'bodyName', 'vertexCount', 'triangleCount', 'edgeCount',
-  'signedVolumeMm3', 'surfaceAreaMm2', 'eulerCharacteristic',
-  'componentCount', 'watertight', 'componentGenera',
+  'bodyId',
+  'bodyName',
+  'vertexCount',
+  'triangleCount',
+  'edgeCount',
+  'signedVolumeMm3',
+  'surfaceAreaMm2',
+  'eulerCharacteristic',
+  'componentCount',
+  'watertight',
+  'componentGenera',
 ] as const
 
 function csvCell(value: string | number | boolean): string {
@@ -60,12 +68,26 @@ export function serializeManifoldMetricsReport(
   if (format === 'json') return `${JSON.stringify(report, null, 2)}\n`
   const lines = [CSV_COLUMNS.join(',')]
   for (const body of report.bodies) {
-    const componentGenera = body.components.map(component => component.genus === null ? 'null' : component.genus).join(';')
-    lines.push([
-      body.id, body.name, body.vertexCount, body.triangleCount, body.edgeCount,
-      body.signedVolumeMm3, body.surfaceAreaMm2, body.eulerCharacteristic,
-      body.componentCount, body.watertight, componentGenera,
-    ].map(csvCell).join(','))
+    const componentGenera = body.components
+      .map(component => (component.genus === null ? 'null' : component.genus))
+      .join(';')
+    lines.push(
+      [
+        body.id,
+        body.name,
+        body.vertexCount,
+        body.triangleCount,
+        body.edgeCount,
+        body.signedVolumeMm3,
+        body.surfaceAreaMm2,
+        body.eulerCharacteristic,
+        body.componentCount,
+        body.watertight,
+        componentGenera,
+      ]
+        .map(csvCell)
+        .join(','),
+    )
   }
   return `${lines.join('\r\n')}\r\n`
 }

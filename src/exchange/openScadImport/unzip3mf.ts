@@ -1,4 +1,13 @@
-import { IDENTITY_4, OPC_RELATIONSHIPS_NAMESPACE, OPENSCAD_IMPORT_MAX_PROJECT_ZIP_EXPANDED_BYTES, OPENSCAD_IMPORT_MAX_ZIP_ENTRIES, OPENSCAD_IMPORT_MAX_ZIP_EXPANDED_BYTES, OpenScadImportDataError, THREE_MF_START_PART_RELATIONSHIP, UTF8_FATAL } from '../openScadImport'
+import {
+  IDENTITY_4,
+  OPC_RELATIONSHIPS_NAMESPACE,
+  OPENSCAD_IMPORT_MAX_PROJECT_ZIP_EXPANDED_BYTES,
+  OPENSCAD_IMPORT_MAX_ZIP_ENTRIES,
+  OPENSCAD_IMPORT_MAX_ZIP_EXPANDED_BYTES,
+  OpenScadImportDataError,
+  THREE_MF_START_PART_RELATIONSHIP,
+  UTF8_FATAL,
+} from '../openScadImport'
 import type { Matrix4, OpenScadImportPreparationBudget, XmlElement, ZipCentralEntry } from '../openScadImport'
 import type { OpenScadProjectFile } from '../../language/openScadProject'
 import { attributeNs, childElementsNs, parseXml, requiredAttributeNs } from './parseXml'
@@ -36,25 +45,26 @@ export async function unzip3mf(
     const diskStart16 = view.getUint16(cursor + 34, true)
     const localOffset32 = view.getUint32(cursor + 42, true)
     const next = cursor + 46 + nameLength + extraLength + entryComment
-    if (next > directoryEnd) return dataError('E_IMPORT_INVALID_DATA', '3MF ZIP central directory entry is truncated.', '3mf')
-    const zip64Values = zip64EntryValues(
-      bytes,
-      cursor + 46 + nameLength,
-      extraLength,
-      {
-        uncompressedSize: uncompressedSize32 === 0xffffffff,
-        compressedSize: compressedSize32 === 0xffffffff,
-        localOffset: localOffset32 === 0xffffffff,
-        diskStart: diskStart16 === 0xffff,
-      },
-    )
+    if (next > directoryEnd)
+      return dataError('E_IMPORT_INVALID_DATA', '3MF ZIP central directory entry is truncated.', '3mf')
+    const zip64Values = zip64EntryValues(bytes, cursor + 46 + nameLength, extraLength, {
+      uncompressedSize: uncompressedSize32 === 0xffffffff,
+      compressedSize: compressedSize32 === 0xffffffff,
+      localOffset: localOffset32 === 0xffffffff,
+      diskStart: diskStart16 === 0xffff,
+    })
     const compressedSize = compressedSize32 === 0xffffffff ? zip64Values.compressedSize! : compressedSize32
     const uncompressedSize = uncompressedSize32 === 0xffffffff ? zip64Values.uncompressedSize! : uncompressedSize32
     const localOffset = localOffset32 === 0xffffffff ? zip64Values.localOffset! : localOffset32
     const diskStart = diskStart16 === 0xffff ? zip64Values.diskStart! : diskStart16
-    if (diskStart !== 0) return dataError('E_IMPORT_UNSUPPORTED_FEATURE', 'Multi-disk 3MF ZIP entries are unsupported.', '3mf')
+    if (diskStart !== 0)
+      return dataError('E_IMPORT_UNSUPPORTED_FEATURE', 'Multi-disk 3MF ZIP entries are unsupported.', '3mf')
     if ((flags & 1) !== 0 || (flags & ~0x080e) !== 0 || (method !== 0 && method !== 8)) {
-      return dataError('E_IMPORT_UNSUPPORTED_FEATURE', '3MF ZIP entry uses encryption, flags, or compression not permitted by this importer.', '3mf')
+      return dataError(
+        'E_IMPORT_UNSUPPORTED_FEATURE',
+        '3MF ZIP entry uses encryption, flags, or compression not permitted by this importer.',
+        '3mf',
+      )
     }
     const encodedName = bytes.subarray(cursor + 46, cursor + 46 + nameLength)
     let decodedName: string
@@ -86,7 +96,8 @@ export async function unzip3mf(
     entries.push({ path, directory, flags, method, crc, compressedSize, uncompressedSize, localOffset })
     cursor = next
   }
-  if (cursor !== directoryEnd) return dataError('E_IMPORT_INVALID_DATA', '3MF ZIP central directory has trailing data.', '3mf')
+  if (cursor !== directoryEnd)
+    return dataError('E_IMPORT_INVALID_DATA', '3MF ZIP central directory has trailing data.', '3mf')
   if (projectBudget !== undefined) {
     const total = projectBudget.zipExpandedBytes + expanded
     if (!Number.isSafeInteger(total) || total > OPENSCAD_IMPORT_MAX_PROJECT_ZIP_EXPANDED_BYTES) {
@@ -113,7 +124,11 @@ export async function unzip3mf(
     const dataStart = entry.localOffset + 30 + nameLength + extraLength
     const dataEnd = dataStart + entry.compressedSize
     if (localFlags !== entry.flags || localMethod !== entry.method || dataEnd > directoryOffset) {
-      return dataError('E_IMPORT_INVALID_DATA', `3MF ZIP local entry ${entry.path} disagrees with its directory record.`, '3mf')
+      return dataError(
+        'E_IMPORT_INVALID_DATA',
+        `3MF ZIP local entry ${entry.path} disagrees with its directory record.`,
+        '3mf',
+      )
     }
     let localName: string
     try {
@@ -125,9 +140,7 @@ export async function unzip3mf(
       return dataError('E_IMPORT_INVALID_DATA', `3MF ZIP local entry name does not match ${entry.path}.`, '3mf')
     }
     const compressed = bytes.subarray(dataStart, dataEnd)
-    const data = entry.method === 0
-      ? new Uint8Array(compressed)
-      : await inflateRaw(compressed, entry.uncompressedSize)
+    const data = entry.method === 0 ? new Uint8Array(compressed) : await inflateRaw(compressed, entry.uncompressedSize)
     if (data.byteLength !== entry.uncompressedSize || crc32(data) !== entry.crc) {
       return dataError('E_IMPORT_INVALID_DATA', `3MF ZIP entry ${entry.path} failed size or CRC verification.`, '3mf')
     }
@@ -166,8 +179,10 @@ export async function gunzipAmf(
       if (done) break
       length += value.byteLength
       const projectLength = (projectBudget?.zipExpandedBytes ?? 0) + length
-      if (length > OPENSCAD_IMPORT_MAX_ZIP_EXPANDED_BYTES
-        || projectLength > OPENSCAD_IMPORT_MAX_PROJECT_ZIP_EXPANDED_BYTES) {
+      if (
+        length > OPENSCAD_IMPORT_MAX_ZIP_EXPANDED_BYTES ||
+        projectLength > OPENSCAD_IMPORT_MAX_PROJECT_ZIP_EXPANDED_BYTES
+      ) {
         await reader.cancel()
         return dataError(
           'E_IMPORT_LIMIT',
@@ -213,8 +228,7 @@ export async function decodeOpenScadAmfText(
   if (bytes.byteLength >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b) {
     return decodeAmfUtf8(await gunzipAmf(bytes, projectBudget))
   }
-  if (bytes.byteLength >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4b
-    && bytes[2] === 0x03 && bytes[3] === 0x04) {
+  if (bytes.byteLength >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04) {
     let files: ReadonlyMap<string, Uint8Array>
     try {
       files = await unzip3mf(bytes, projectBudget)
@@ -259,11 +273,15 @@ export function modelPathFromPackage(files: ReadonlyMap<string, Uint8Array>): st
   if (root.localName !== 'relationships' || root.namespaceUri !== OPC_RELATIONSHIPS_NAMESPACE) {
     return dataError('E_IMPORT_INVALID_DATA', '3MF root relationships part has the wrong XML namespace.', '3mf')
   }
-  const startParts = childElementsNs(root, 'relationship', OPC_RELATIONSHIPS_NAMESPACE).filter(relationship => (
-    attributeNs(relationship, 'type', null) === THREE_MF_START_PART_RELATIONSHIP
-  ))
+  const startParts = childElementsNs(root, 'relationship', OPC_RELATIONSHIPS_NAMESPACE).filter(
+    relationship => attributeNs(relationship, 'type', null) === THREE_MF_START_PART_RELATIONSHIP,
+  )
   if (startParts.length !== 1) {
-    return dataError('E_IMPORT_INVALID_DATA', '3MF package must contain exactly one official StartPart relationship.', '3mf')
+    return dataError(
+      'E_IMPORT_INVALID_DATA',
+      '3MF package must contain exactly one official StartPart relationship.',
+      '3mf',
+    )
   }
   const relationship = startParts[0]!
   const targetMode = attributeNs(relationship, 'targetmode', null)?.trim().toLowerCase()
@@ -314,9 +332,21 @@ export function parse3mfTransform(value: string | undefined, scale: number): Mat
   const numbers = tokens.map(token => finiteNumber(token, '3MF transform', '3mf'))
   // 3MF serializes a row-vector 4x3 affine matrix; convert to our column-vector 4x4 form.
   return [
-    numbers[0]!, numbers[3]!, numbers[6]!, numbers[9]! * scale,
-    numbers[1]!, numbers[4]!, numbers[7]!, numbers[10]! * scale,
-    numbers[2]!, numbers[5]!, numbers[8]!, numbers[11]! * scale,
-    0, 0, 0, 1,
+    numbers[0]!,
+    numbers[3]!,
+    numbers[6]!,
+    numbers[9]! * scale,
+    numbers[1]!,
+    numbers[4]!,
+    numbers[7]!,
+    numbers[10]! * scale,
+    numbers[2]!,
+    numbers[5]!,
+    numbers[8]!,
+    numbers[11]! * scale,
+    0,
+    0,
+    0,
+    1,
   ]
 }

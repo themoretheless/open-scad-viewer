@@ -1,4 +1,4 @@
-import {callGeometryRust} from './geometry/kernel'
+import { callGeometryRust } from './geometry/kernel'
 
 export type TrussVector = [number, number, number]
 export interface TrussMember {
@@ -21,7 +21,7 @@ export interface TrussNodalWrench {
   /** Moment about originMm in global XYZ, in N mm (not N m). */
   momentNmm: TrussVector
 }
-export type TrussWrenchModel = Omit<TrussModel, 'forcesN'> & {loads:TrussNodalWrench[]}
+export type TrussWrenchModel = Omit<TrussModel, 'forcesN'> & { loads: TrussNodalWrench[] }
 export type TrussInput = TrussModel | TrussWrenchModel
 export interface TrussResponse {
   displacementsMm: TrussVector[]
@@ -64,7 +64,7 @@ export interface TrussBucklingResponse {
  * stability calculation. Requires the geometry runtime.
  */
 export function solveTrussBuckling(model: TrussModel, modes: number): TrussBucklingResponse {
-  return callGeometryRust<TrussBucklingResponse>('truss_buckling', {...model, modes})
+  return callGeometryRust<TrussBucklingResponse>('truss_buckling', { ...model, modes })
 }
 
 /** How member mass is distributed: half per end ('lumped') or the isotropic
@@ -97,7 +97,7 @@ export function solveTrussModal(
   massModel: TrussMassModel,
   modes: number,
 ): TrussModalResponse {
-  return callGeometryRust<TrussModalResponse>('truss_modal', {...structure, densitiesTMm3, massModel, modes})
+  return callGeometryRust<TrussModalResponse>('truss_modal', { ...structure, densitiesTMm3, massModel, modes })
 }
 
 /** Tuning of the corotational nonlinear solve. */
@@ -136,19 +136,13 @@ export interface TrussNonlinearResponse {
  * a load-controlled limit point. Linear elastic material; no buckling or
  * strength check. Requires the geometry runtime.
  */
-export function solveTrussNonlinear(
-  model: TrussModel,
-  options: TrussNonlinearOptions,
-): TrussNonlinearResponse {
-  return callGeometryRust<TrussNonlinearResponse>('truss_nonlinear', {...model, ...options})
+export function solveTrussNonlinear(model: TrussModel, options: TrussNonlinearOptions): TrussNonlinearResponse {
+  return callGeometryRust<TrussNonlinearResponse>('truss_nonlinear', { ...model, ...options })
 }
 
 /** One weighted topology load case: per-node forces, or explicit wrenches
  * with the same schema as `solveTruss` (`loads`). */
-export type TrussTopologyLoadCase = {weight: number} & (
-  | {forcesN: TrussVector[]}
-  | {loads: TrussNodalWrench[]}
-)
+export type TrussTopologyLoadCase = { weight: number } & ({ forcesN: TrussVector[] } | { loads: TrussNodalWrench[] })
 export interface TrussTopologyOptions {
   /** Target material fraction of the ground-structure volume, (0, 1]. Default 0.5. */
   volumeFraction?: number

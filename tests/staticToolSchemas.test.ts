@@ -1,10 +1,15 @@
-import { InMemoryTransport, McpServer, type JSONRPCMessage, type StandardSchemaWithJSON } from '@modelcontextprotocol/server'
+import {
+  InMemoryTransport,
+  McpServer,
+  type JSONRPCMessage,
+  type StandardSchemaWithJSON,
+} from '@modelcontextprotocol/server'
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod/v4'
 import { createStaticToolRegistration } from '../src/mcp/staticToolSchemas'
 import { rushGraphSchema } from '../src/language/rushGraph'
 
-type Response = {id: number; result?: Record<string, unknown>; error?: unknown}
+type Response = { id: number; result?: Record<string, unknown>; error?: unknown }
 
 function checkLocalReferences(root: Record<string, unknown>) {
   let references = 0
@@ -33,28 +38,52 @@ describe('static MCP tool schemas', () => {
     const conversions = vi.fn()
     const handler = vi.fn()
     const document = {
-      language: 'rush/ir-1', units: 'mm', parameters: [], root: 'shape',
-      nodes: [{id: 'shape', op: 'sphere', radius: {
-        op: 'match', input: {op: 'list', items: [2]}, arms: [
-          {pattern: {kind: 'list', prefix: [{kind: 'type', name: 'int', pattern: {kind: 'bind', name: 'n'}}], suffix: []}, body: {local: 'n'}},
-          {pattern: {kind: 'wildcard'}, body: 1},
-        ],
-      }}],
+      language: 'rush/ir-1',
+      units: 'mm',
+      parameters: [],
+      root: 'shape',
+      nodes: [
+        {
+          id: 'shape',
+          op: 'sphere',
+          radius: {
+            op: 'match',
+            input: { op: 'list', items: [2] },
+            arms: [
+              {
+                pattern: {
+                  kind: 'list',
+                  prefix: [{ kind: 'type', name: 'int', pattern: { kind: 'bind', name: 'n' } }],
+                  suffix: [],
+                },
+                body: { local: 'n' },
+              },
+              { pattern: { kind: 'wildcard' }, body: 1 },
+            ],
+          },
+        },
+      ],
     }
     for (let instance = 0; instance < 2; instance++) {
       // Each stateless request reconstructs the Zod wrapper, as our HTTP server does.
-      const original = z.object({document: rushGraphSchema}).strict()
+      const original = z.object({ document: rushGraphSchema }).strict()
       const standard = original['~standard']
       const schema: StandardSchemaWithJSON<z.input<typeof original>, z.output<typeof original>> = {
-        '~standard': {...standard, jsonSchema: {...standard.jsonSchema, input: options => {
-          conversions()
-          return standard.jsonSchema.input(options)
-        }}},
+        '~standard': {
+          ...standard,
+          jsonSchema: {
+            ...standard.jsonSchema,
+            input: options => {
+              conversions()
+              return standard.jsonSchema.input(options)
+            },
+          },
+        },
       }
-      const server = new McpServer({name: 'schema-test', version: '1'})
-      registration(server).registerTool('shape', {inputSchema: schema}, async input => {
+      const server = new McpServer({ name: 'schema-test', version: '1' })
+      registration(server).registerTool('shape', { inputSchema: schema }, async input => {
         handler(input)
-        return {content: [], structuredContent: {segments: input.document.segments}}
+        return { content: [], structuredContent: { segments: input.document.segments } }
       })
       const [client, transport] = InMemoryTransport.createLinkedPair()
       const pending = new Map<number, (response: Response) => void>()
@@ -68,7 +97,7 @@ describe('static MCP tool schemas', () => {
       const request = async (method: string, params: Record<string, unknown> = {}) => {
         const next = ++id
         const result = new Promise<Response>(resolve => pending.set(next, resolve))
-        await client.send({jsonrpc: '2.0', id: next, method, params} as JSONRPCMessage)
+        await client.send({ jsonrpc: '2.0', id: next, method, params } as JSONRPCMessage)
         const response = await result
         expect(response.error).toBeUndefined()
         return response.result!
@@ -76,19 +105,23 @@ describe('static MCP tool schemas', () => {
       await client.start()
       await server.connect(transport)
       try {
-        await request('initialize', {protocolVersion: '2025-11-25', capabilities: {}, clientInfo: {name: 'test', version: '1'}})
-        await client.send({jsonrpc: '2.0', method: 'notifications/initialized'})
+        await request('initialize', {
+          protocolVersion: '2025-11-25',
+          capabilities: {},
+          clientInfo: { name: 'test', version: '1' },
+        })
+        await client.send({ jsonrpc: '2.0', method: 'notifications/initialized' })
         for (let listing = 0; listing < 24; listing++) {
           const result = await request('tools/list')
-          const tools = result.tools as Array<{inputSchema: Record<string, unknown>}>
+          const tools = result.tools as Array<{ inputSchema: Record<string, unknown> }>
           expect(tools).toHaveLength(1)
           if (listing === 0) checkLocalReferences(tools[0]!.inputSchema)
         }
-        const valid = await request('tools/call', {name: 'shape', arguments: {document}})
-        expect(valid.structuredContent).toEqual({segments: 48})
+        const valid = await request('tools/call', { name: 'shape', arguments: { document } })
+        expect(valid.structuredContent).toEqual({ segments: 48 })
         const malformed = structuredClone(document)
         malformed.nodes[0]!.radius.arms[0]!.pattern.kind = 'unknown'
-        const invalid = await request('tools/call', {name: 'shape', arguments: {document: malformed}})
+        const invalid = await request('tools/call', { name: 'shape', arguments: { document: malformed } })
         expect(invalid.isError).toBe(true)
       } finally {
         await server.close()

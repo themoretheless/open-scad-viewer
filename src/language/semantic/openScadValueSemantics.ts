@@ -1,9 +1,4 @@
-import {
-  TT,
-  type FunctionValue,
-  type RangeValue,
-  type Value,
-} from '../openscadCompiler'
+import { TT, type FunctionValue, type RangeValue, type Value } from '../openscadCompiler'
 import { nextUp } from '../../core/float'
 
 export interface OpenScadValueSemanticsContext {
@@ -13,13 +8,11 @@ export interface OpenScadValueSemanticsContext {
 }
 
 export function isOpenScadRange(value: Value): value is RangeValue {
-  return !Array.isArray(value) && typeof value === 'object' && value !== null
-    && value.kind === 'range-value'
+  return !Array.isArray(value) && typeof value === 'object' && value !== null && value.kind === 'range-value'
 }
 
 export function isOpenScadFunction(value: Value): value is FunctionValue {
-  return !Array.isArray(value) && typeof value === 'object' && value !== null
-    && value.kind === 'function-value'
+  return !Array.isArray(value) && typeof value === 'object' && value !== null && value.kind === 'function-value'
 }
 
 export function openScadTruthy(value: Value): boolean {
@@ -33,10 +26,7 @@ export function openScadTruthy(value: Value): boolean {
   return true
 }
 
-export function materializeOpenScadRange(
-  range: RangeValue,
-  context: OpenScadValueSemanticsContext,
-): Value[] {
+export function materializeOpenScadRange(range: RangeValue, context: OpenScadValueSemanticsContext): Value[] {
   const output: Value[] = []
   if (range.step === 0 || ![range.start, range.step, range.end].every(Number.isFinite)) {
     context.warn('Invalid range bounds produce an empty range')
@@ -58,26 +48,21 @@ export function materializeOpenScadRange(
   return register(output, 'range', context)
 }
 
-export function openScadUnary(
-  operator: TT,
-  value: Value,
-  context: OpenScadValueSemanticsContext,
-): Value {
+export function openScadUnary(operator: TT, value: Value, context: OpenScadValueSemanticsContext): Value {
   if (operator === TT.Not) return !openScadTruthy(value)
   if (typeof value === 'number') return operator === TT.Minus ? -value : value
   if (Array.isArray(value)) {
-    return register(value.map(item => openScadUnary(operator, item, context)), 'unary vector', context)
+    return register(
+      value.map(item => openScadUnary(operator, item, context)),
+      'unary vector',
+      context,
+    )
   }
   context.warn(`Undefined unary operation (${token(operator)}${openScadType(value)})`)
   return undefined
 }
 
-export function openScadBinary(
-  operator: TT,
-  left: Value,
-  right: Value,
-  context: OpenScadValueSemanticsContext,
-): Value {
+export function openScadBinary(operator: TT, left: Value, right: Value, context: OpenScadValueSemanticsContext): Value {
   if (operator === TT.EqEq) return openScadDeepEqual(left, right)
   if (operator === TT.NotEq) return !openScadDeepEqual(left, right)
   if (operator === TT.And) return openScadTruthy(left) && openScadTruthy(right)
@@ -100,10 +85,11 @@ export function openScadBinary(
     }
     if (Array.isArray(left) && Array.isArray(right)) {
       const length = Math.min(left.length, right.length)
-      return register(Array.from(
-        { length },
-        (_, index) => openScadBinary(operator, left[index], right[index], context),
-      ), 'vector arithmetic', context)
+      return register(
+        Array.from({ length }, (_, index) => openScadBinary(operator, left[index], right[index], context)),
+        'vector arithmetic',
+        context,
+      )
     }
     return undefinedOperation(operator, left, right, context)
   }
@@ -113,10 +99,18 @@ export function openScadBinary(
   if (operator === TT.Slash) {
     if (typeof left === 'number' && typeof right === 'number') return left / right
     if (Array.isArray(left) && typeof right === 'number') {
-      return register(left.map(item => openScadBinary(operator, item, right, context)), 'vector division', context)
+      return register(
+        left.map(item => openScadBinary(operator, item, right, context)),
+        'vector division',
+        context,
+      )
     }
     if (typeof left === 'number' && Array.isArray(right)) {
-      return register(right.map(item => openScadBinary(operator, left, item, context)), 'vector division', context)
+      return register(
+        right.map(item => openScadBinary(operator, left, item, context)),
+        'vector division',
+        context,
+      )
     }
     return undefinedOperation(operator, left, right, context)
   }
@@ -131,11 +125,7 @@ export function openScadBinary(
   return undefinedOperation(operator, left, right, context)
 }
 
-export function openScadIndex(
-  value: Value,
-  indexValue: Value,
-  context: OpenScadValueSemanticsContext,
-): Value {
+export function openScadIndex(value: Value, indexValue: Value, context: OpenScadValueSemanticsContext): Value {
   if (typeof indexValue !== 'number' || !Number.isFinite(indexValue)) {
     context.warn(`Undefined index ${formatOpenScadValue(indexValue)}`)
     return undefined
@@ -155,11 +145,7 @@ export function openScadIndex(
   return undefined
 }
 
-export function openScadMember(
-  value: Value,
-  member: string,
-  context: OpenScadValueSemanticsContext,
-): Value {
+export function openScadMember(value: Value, member: string, context: OpenScadValueSemanticsContext): Value {
   if (Array.isArray(value)) {
     const index = ({ x: 0, y: 1, z: 2 } as const)[member as 'x' | 'y' | 'z']
     if (index !== undefined) return value[index]
@@ -170,19 +156,19 @@ export function openScadMember(
 
 export function openScadDeepEqual(left: Value, right: Value): boolean {
   if (Array.isArray(left) || Array.isArray(right)) {
-    return Array.isArray(left) && Array.isArray(right)
-      && left.length === right.length
-      && left.every((value, index) => openScadDeepEqual(value, right[index]))
+    return (
+      Array.isArray(left) &&
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every((value, index) => openScadDeepEqual(value, right[index]))
+    )
   }
   if (isOpenScadRange(left) || isOpenScadRange(right)) {
     if (!isOpenScadRange(left) || !isOpenScadRange(right)) return false
     const leftCount = rangeItemCount(left)
     const rightCount = rangeItemCount(right)
     if (leftCount === 0) return rightCount === 0
-    return rightCount !== 0
-      && left.start === right.start
-      && left.step === right.step
-      && leftCount === rightCount
+    return rightCount !== 0 && left.start === right.start && left.step === right.step && leftCount === rightCount
   }
   return left === right
 }
@@ -214,11 +200,7 @@ export function openScadType(value: Value): string {
   return typeof value
 }
 
-function register(
-  values: Value[],
-  label: string,
-  context: OpenScadValueSemanticsContext,
-): Value[] {
+function register(values: Value[], label: string, context: OpenScadValueSemanticsContext): Value[] {
   return context.registerArray?.(values, label) ?? values
 }
 
@@ -230,16 +212,18 @@ function numericMatrix(value: Value): value is number[][] {
   return Array.isArray(value) && value.length > 0 && value.every(numericVector)
 }
 
-function scaleVector(
-  value: Value[],
-  scalar: number,
-  context: OpenScadValueSemanticsContext,
-): Value[] {
-  return register(value.map(item => Array.isArray(item)
-    ? scaleVector(item, scalar, context)
-    : typeof item === 'number'
-      ? item * scalar
-      : undefinedOperation(TT.Star, item, scalar, context)), 'scaled vector', context)
+function scaleVector(value: Value[], scalar: number, context: OpenScadValueSemanticsContext): Value[] {
+  return register(
+    value.map(item =>
+      Array.isArray(item)
+        ? scaleVector(item, scalar, context)
+        : typeof item === 'number'
+          ? item * scalar
+          : undefinedOperation(TT.Star, item, scalar, context),
+    ),
+    'scaled vector',
+    context,
+  )
 }
 
 function dot(left: readonly number[], right: readonly number[]): number | undefined {
@@ -249,11 +233,7 @@ function dot(left: readonly number[], right: readonly number[]): number | undefi
   return result
 }
 
-function multiply(
-  left: Value,
-  right: Value,
-  context: OpenScadValueSemanticsContext,
-): Value {
+function multiply(left: Value, right: Value, context: OpenScadValueSemanticsContext): Value {
   if (typeof left === 'number' && typeof right === 'number') return left * right
   if (typeof left === 'number' && Array.isArray(right)) return scaleVector(right, left, context)
   if (Array.isArray(left) && typeof right === 'number') return scaleVector(left, right, context)
@@ -270,7 +250,11 @@ function multiply(
       context.warn('matrix*vector requires matching dimensions')
       return undefined
     }
-    return register(left.map(row => dot(row, right)!), 'matrix-vector product', context)
+    return register(
+      left.map(row => dot(row, right)!),
+      'matrix-vector product',
+      context,
+    )
   }
 
   if (numericVector(left) && numericMatrix(right)) {
@@ -278,30 +262,42 @@ function multiply(
       context.warn('vector*matrix requires matching rectangular dimensions')
       return undefined
     }
-    return register(Array.from({ length: right[0]!.length }, (_, column) => {
-      let value = 0
-      for (let row = 0; row < left.length; row++) value += left[row]! * right[row]![column]!
-      return value
-    }), 'vector-matrix product', context)
+    return register(
+      Array.from({ length: right[0]!.length }, (_, column) => {
+        let value = 0
+        for (let row = 0; row < left.length; row++) value += left[row]! * right[row]![column]!
+        return value
+      }),
+      'vector-matrix product',
+      context,
+    )
   }
 
   if (numericMatrix(left) && numericMatrix(right)) {
     const shared = left[0]!.length
-    if (left.some(row => row.length !== shared)
-      || right.length !== shared
-      || right.some(row => row.length !== right[0]!.length)) {
+    if (
+      left.some(row => row.length !== shared) ||
+      right.length !== shared ||
+      right.some(row => row.length !== right[0]!.length)
+    ) {
       context.warn('matrix*matrix requires matching rectangular dimensions')
       return undefined
     }
-    return register(left.map(row => register(
-      Array.from({ length: right[0]!.length }, (_, column) => {
-        let value = 0
-        for (let index = 0; index < shared; index++) value += row[index]! * right[index]![column]!
-        return value
-      }),
-      'matrix product row',
+    return register(
+      left.map(row =>
+        register(
+          Array.from({ length: right[0]!.length }, (_, column) => {
+            let value = 0
+            for (let index = 0; index < shared; index++) value += row[index]! * right[index]![column]!
+            return value
+          }),
+          'matrix product row',
+          context,
+        ),
+      ),
+      'matrix product',
       context,
-    )), 'matrix product', context)
+    )
   }
 
   return undefinedOperation(TT.Star, left, right, context)
@@ -357,16 +353,20 @@ function undefinedOperation(
 }
 
 function token(operator: TT): string {
-  return ({
-    [TT.Plus]: '+',
-    [TT.Minus]: '-',
-    [TT.Star]: '*',
-    [TT.Slash]: '/',
-    [TT.Percent]: '%',
-    [TT.Caret]: '^',
-    [TT.Lt]: '<',
-    [TT.Gt]: '>',
-    [TT.LtEq]: '<=',
-    [TT.GtEq]: '>=',
-  } as Partial<Record<TT, string>>)[operator] ?? TT[operator]
+  return (
+    (
+      {
+        [TT.Plus]: '+',
+        [TT.Minus]: '-',
+        [TT.Star]: '*',
+        [TT.Slash]: '/',
+        [TT.Percent]: '%',
+        [TT.Caret]: '^',
+        [TT.Lt]: '<',
+        [TT.Gt]: '>',
+        [TT.LtEq]: '<=',
+        [TT.GtEq]: '>=',
+      } as Partial<Record<TT, string>>
+    )[operator] ?? TT[operator]
+  )
 }

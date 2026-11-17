@@ -3,9 +3,8 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const root = resolve(import.meta.dirname, '..')
-const readJson = (path: string): Record<string, unknown> => (
+const readJson = (path: string): Record<string, unknown> =>
   JSON.parse(readFileSync(resolve(root, path), 'utf8')) as Record<string, unknown>
-)
 
 type Row = {
   id: string
@@ -16,11 +15,7 @@ type Row = {
   dependencies: string[]
 }
 
-const validateSchema = (
-  value: unknown,
-  schema: Record<string, unknown>,
-  path = '$',
-): string[] => {
+const validateSchema = (value: unknown, schema: Record<string, unknown>, path = '$'): string[] => {
   const errors: string[] = []
   if ('const' in schema && value !== schema.const) errors.push(`${path} must equal schema const`)
   if (Array.isArray(schema.enum) && !schema.enum.includes(value)) errors.push(`${path} is outside enum`)
@@ -57,7 +52,7 @@ const validateSchema = (
     if (typeof schema.minLength === 'number' && value.length < schema.minLength) {
       errors.push(`${path} is too short`)
     }
-    if (typeof schema.pattern === 'string' && !(new RegExp(schema.pattern).test(value))) {
+    if (typeof schema.pattern === 'string' && !new RegExp(schema.pattern).test(value)) {
       errors.push(`${path} does not match pattern`)
     }
   } else if (schema.type === 'boolean' && typeof value !== 'boolean') {
@@ -111,8 +106,14 @@ describe('B-rep Foundation v2 dependency gate', () => {
         requiredMaturity: string
       }>
       if (plan.schemaVersion === 2) {
-        expect(planDependencies.map(item => item.capability), row.id).toEqual(row.dependencies)
-        expect(planDependencies.every(item => item.requiredMaturity === 'Qualified'), row.id).toBe(true)
+        expect(
+          planDependencies.map(item => item.capability),
+          row.id,
+        ).toEqual(row.dependencies)
+        expect(
+          planDependencies.every(item => item.requiredMaturity === 'Qualified'),
+          row.id,
+        ).toBe(true)
       } else {
         expect(row.dependencies, row.id).toEqual([])
       }
@@ -138,32 +139,36 @@ describe('B-rep Foundation v2 dependency gate', () => {
   })
 
   it('transitively stales every dependent after false-Complete reset', () => {
-    expect(transitiveDependents(rows, 'numeric-evidence-curved-brep/1')).toEqual(new Set([
-      'numeric-evidence-curved-brep/1',
-      'boundary-correspondence/1',
-      'exact-sew/1',
-      'global-solid-audit/1',
-      'persistent-naming/1',
-      'authorized-heal-gap-le1/1',
-      'nurbs-boolean-bezier-le3/2',
-      'analytic-multi-edge-fillet/1',
-      'exact-parallel-frame-sweep/1',
-      'certified-brep-tessellation/1',
-      'certified-mass-properties/1',
-      'step-interchange/2',
-    ]))
-    expect(transitiveDependents(rows, 'exact-sew/1')).toEqual(new Set([
-      'exact-sew/1',
-      'global-solid-audit/1',
-      'persistent-naming/1',
-      'authorized-heal-gap-le1/1',
-      'nurbs-boolean-bezier-le3/2',
-      'step-interchange/2',
-      'analytic-multi-edge-fillet/1',
-      'exact-parallel-frame-sweep/1',
-      'certified-brep-tessellation/1',
-      'certified-mass-properties/1',
-    ]))
+    expect(transitiveDependents(rows, 'numeric-evidence-curved-brep/1')).toEqual(
+      new Set([
+        'numeric-evidence-curved-brep/1',
+        'boundary-correspondence/1',
+        'exact-sew/1',
+        'global-solid-audit/1',
+        'persistent-naming/1',
+        'authorized-heal-gap-le1/1',
+        'nurbs-boolean-bezier-le3/2',
+        'analytic-multi-edge-fillet/1',
+        'exact-parallel-frame-sweep/1',
+        'certified-brep-tessellation/1',
+        'certified-mass-properties/1',
+        'step-interchange/2',
+      ]),
+    )
+    expect(transitiveDependents(rows, 'exact-sew/1')).toEqual(
+      new Set([
+        'exact-sew/1',
+        'global-solid-audit/1',
+        'persistent-naming/1',
+        'authorized-heal-gap-le1/1',
+        'nurbs-boolean-bezier-le3/2',
+        'step-interchange/2',
+        'analytic-multi-edge-fillet/1',
+        'exact-parallel-frame-sweep/1',
+        'certified-brep-tessellation/1',
+        'certified-mass-properties/1',
+      ]),
+    )
   })
 
   it('keeps all dependency-aware plans and evidence honest and schema-valid', () => {
@@ -184,7 +189,9 @@ describe('B-rep Foundation v2 dependency gate', () => {
         expect(plan.lifecycle).toEqual({ status: 'qualified', qualificationClaim: 'qualified' })
         expect((plan.evidence as { state: string }).state).toBe('qualified')
         expect(evidence).toMatchObject({
-          capability: row.id, maturity: 'Qualified', state: 'qualified',
+          capability: row.id,
+          maturity: 'Qualified',
+          state: 'qualified',
           attestation: { fabricatedRuns: false },
         })
         expect((evidence.runs as unknown[]).length).toBe(3)
@@ -197,8 +204,11 @@ describe('B-rep Foundation v2 dependency gate', () => {
         })
         expect((plan.evidence as { state: string }).state).toBe('not-executed')
         expect(evidence).toMatchObject({
-          capability: row.id, maturity: 'Unavailable', state: 'not-executed',
-          runs: [], attestation: { fabricatedRuns: false },
+          capability: row.id,
+          maturity: 'Unavailable',
+          state: 'not-executed',
+          runs: [],
+          attestation: { fabricatedRuns: false },
         })
         expect((evidence.unresolvedRows as unknown[]).length).toBeGreaterThan(0)
       }

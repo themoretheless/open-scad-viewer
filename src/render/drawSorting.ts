@@ -77,7 +77,7 @@ export function sameTypedArray(left: Float32Array | Uint32Array, right: Float32A
   if (verifiedEqualPairs.get(left)?.has(right)) return true
   for (let index = 0; index < left.length; index++) if (left[index] !== right[index]) return false
   let verified = verifiedEqualPairs.get(left)
-  if (!verified) verifiedEqualPairs.set(left, verified = new WeakSet())
+  if (!verified) verifiedEqualPairs.set(left, (verified = new WeakSet()))
   verified.add(right)
   return true
 }
@@ -94,7 +94,10 @@ export function extractPositions(vertices: Float32Array): Float32Array {
 }
 
 /** Local positions a morph displays at `now`, for chaining a new morph mid-flight. */
-export function blendMorphPositions(morph: { from: Float32Array; target: Float32Array; started: number }, now: number): Float32Array {
+export function blendMorphPositions(
+  morph: { from: Float32Array; target: Float32Array; started: number },
+  now: number,
+): Float32Array {
   const t = Math.min(1, Math.max(0, (now - morph.started) / 180))
   const eased = t * t * (3 - 2 * t)
   const target = morph.target

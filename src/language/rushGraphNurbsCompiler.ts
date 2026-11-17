@@ -3,7 +3,14 @@ import { sha256Hex } from '../core/sha256'
 import type { RushGraphNurbsCompilation } from './rushGraphNurbs'
 
 export class RushGraphNurbsError extends Error {
-  constructor(readonly code: string, readonly path: string, message: string) { super(message); this.name = 'RushGraphNurbsError' }
+  constructor(
+    readonly code: string,
+    readonly path: string,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'RushGraphNurbsError'
+  }
 }
 
 export function compileRushGraphNurbs(input: unknown): RushGraphNurbsCompilation {
@@ -14,6 +21,14 @@ export function compileRushGraphNurbs(input: unknown): RushGraphNurbsCompilation
 
 export function hashNurbsDocument(document: unknown): string {
   // Preserve this format's existing ordering and encoding, distinct from Rush IR/1.
-  const canonical = (v: unknown): string => Array.isArray(v) ? `[${v.map(canonical).join(',')}]` : v && typeof v === 'object' ? `{${Object.entries(v).sort(([a], [b]) => a.localeCompare(b)).map(([k, x]) => JSON.stringify(k) + ':' + canonical(x)).join(',')}}` : JSON.stringify(v)
+  const canonical = (v: unknown): string =>
+    Array.isArray(v)
+      ? `[${v.map(canonical).join(',')}]`
+      : v && typeof v === 'object'
+        ? `{${Object.entries(v)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([k, x]) => JSON.stringify(k) + ':' + canonical(x))
+            .join(',')}}`
+        : JSON.stringify(v)
   return sha256Hex(canonical(document))
 }

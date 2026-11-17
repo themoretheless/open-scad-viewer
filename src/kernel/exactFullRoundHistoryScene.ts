@@ -4,8 +4,14 @@
 import type { MeshData } from '../core/mesh'
 import { geometryAssetId } from '../core/scene'
 import { createExactFullRoundSnapshot, restoreExactFullRoundSnapshot } from './exactFullRoundSnapshot'
-import { createExactFullRoundHistory, restoreExactFullRoundHistory, editExactFullRoundHistory,
-  currentExactFullRoundArtifact, type ExactHistoryBudget, type ExactFullRoundHistoryEdit } from './exactFullRoundHistory'
+import {
+  createExactFullRoundHistory,
+  restoreExactFullRoundHistory,
+  editExactFullRoundHistory,
+  currentExactFullRoundArtifact,
+  type ExactHistoryBudget,
+  type ExactFullRoundHistoryEdit,
+} from './exactFullRoundHistory'
 import { prepareExactFullRoundDisplay } from './geometry/brepExactDisplay'
 import { buildMeshBvh } from './meshBvh'
 import { extractSemanticEdges } from './meshTopology'
@@ -13,7 +19,9 @@ import { extractSemanticEdges } from './meshTopology'
 const DOCUMENT = 'exact-full-round-history-document/1'
 /** The source program remains attribution. It is not attestation of the edited body. */
 export function editExactFullRoundSceneMesh(
-  previous: MeshData, edit: ExactFullRoundHistoryEdit, segments: number,
+  previous: MeshData,
+  edit: ExactFullRoundHistoryEdit,
+  segments: number,
   budget?: ExactHistoryBudget,
 ): MeshData {
   const snapshot = previous.nativeGeometry
@@ -23,8 +31,12 @@ export function editExactFullRoundSceneMesh(
   // A single source attribution can be retained. Multiple triangle-dependent
   // runs require a real lineage remap, which this feature does not invent.
   const sourceRun = previous.provenance[0]
-  if (previous.provenance.length !== 1 || !sourceRun || sourceRun.triangleStart !== 0
-    || sourceRun.triangleEnd !== previous.indices.length / 3) {
+  if (
+    previous.provenance.length !== 1 ||
+    !sourceRun ||
+    sourceRun.triangleStart !== 0 ||
+    sourceRun.triangleEnd !== previous.indices.length / 3
+  ) {
     throw new Error('Exact history edit requires one complete source attribution')
   }
   const restored = restoreExactFullRoundSnapshot(snapshot)
@@ -33,7 +45,8 @@ export function editExactFullRoundSceneMesh(
   if (stored && (Object.keys(document).length !== 3 || !('history' in document) || !('sourceDocument' in document))) {
     throw new Error('Invalid exact history scene document')
   }
-  const history = stored ? restoreExactFullRoundHistory(document.history, budget)
+  const history = stored
+    ? restoreExactFullRoundHistory(document.history, budget)
     : createExactFullRoundHistory(restored.artifact, budget)
   // A valid history of a different body cannot authorize this snapshot.
   // Both values have been independently reconstructed by native proof.
@@ -47,18 +60,32 @@ export function editExactFullRoundSceneMesh(
     throw new Error('Exact history edit did not produce an admitted closed display')
   }
   const nativeGeometry = createExactFullRoundSnapshot(snapshot.nodeId, artifact, {
-    encoding: DOCUMENT, history: next.document, sourceDocument: stored ? document.sourceDocument : document,
+    encoding: DOCUMENT,
+    history: next.document,
+    sourceDocument: stored ? document.sourceDocument : document,
   })
-  const vertices = new Float32Array(display.displayVertices), indices = new Uint32Array(display.displayIndices)
+  const vertices = new Float32Array(display.displayVertices),
+    indices = new Uint32Array(display.displayIndices)
   const edges = extractSemanticEdges(vertices, indices)
   return {
-    ...previous, nativeGeometry, vertices, indices,
-    geometryAssetId: geometryAssetId(vertices, indices), bvh: buildMeshBvh(vertices, indices),
-    edgeIndices: edges.indices, faceIds: new Uint32Array(display.faceIds), faceIdsAuthoritative: true,
-    faceIdsInferred: false, transform: new Float32Array(previous.transform),
+    ...previous,
+    nativeGeometry,
+    vertices,
+    indices,
+    geometryAssetId: geometryAssetId(vertices, indices),
+    bvh: buildMeshBvh(vertices, indices),
+    edgeIndices: edges.indices,
+    faceIds: new Uint32Array(display.faceIds),
+    faceIdsAuthoritative: true,
+    faceIdsInferred: false,
+    transform: new Float32Array(previous.transform),
     color: [...previous.color],
     provenance: [{ ...sourceRun, triangleStart: 0, triangleEnd: indices.length / 3 }],
-    topology: { boundary: display.report.boundaryEdges, nonManifold: display.report.nonManifoldEdges,
-      degenerate: display.report.degenerateTriangles, crease: edges.diagnostics.crease },
+    topology: {
+      boundary: display.report.boundaryEdges,
+      nonManifold: display.report.nonManifoldEdges,
+      degenerate: display.report.degenerateTriangles,
+      crease: edges.diagnostics.crease,
+    },
   }
 }

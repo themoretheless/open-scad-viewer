@@ -13,8 +13,12 @@ export function assertExampleCatalog(entries: readonly ExampleCatalogEntry[]): v
       throw new TypeError(`Invalid or duplicate example id: ${entry.id}`)
     }
     if (!entry.source || entry.source.length > 250_000) throw new RangeError(`Invalid example source: ${entry.id}`)
-    if (!entry.title.ru.trim() || !entry.title.en.trim()
-      || !entry.description.ru.trim() || !entry.description.en.trim()) {
+    if (
+      !entry.title.ru.trim() ||
+      !entry.title.en.trim() ||
+      !entry.description.ru.trim() ||
+      !entry.description.en.trim()
+    ) {
       throw new TypeError(`Example ${entry.id} is missing localized metadata`)
     }
     if (entry.tags.length > 16 || entry.tags.some(tag => !/^[a-z0-9-]{1,32}$/.test(tag))) {
@@ -35,7 +39,8 @@ export function filterExampleCatalog(
   const tokens = normalized.split(/\s+/u)
   return entries.filter(entry => {
     const haystack = [entry.title[locale], entry.description[locale], entry.id, ...entry.tags]
-      .join('\n').toLocaleLowerCase(locale)
+      .join('\n')
+      .toLocaleLowerCase(locale)
     return tokens.every(token => haystack.includes(token))
   })
 }

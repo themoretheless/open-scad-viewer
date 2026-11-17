@@ -1,4 +1,4 @@
-import {GeometryKernelError,kernelRuntime} from './kernel'
+import { GeometryKernelError, kernelRuntime } from './kernel'
 
 export function copyBuffer(wasm: ReturnType<typeof kernelRuntime>['exports'], bytes: Uint8Array): number {
   const ptr = wasm.abi_alloc(bytes.byteLength)
@@ -6,4 +6,3 @@ export function copyBuffer(wasm: ReturnType<typeof kernelRuntime>['exports'], by
   new Uint8Array(kernelRuntime().memory.buffer, ptr, bytes.byteLength).set(bytes)
   return ptr
 }
-

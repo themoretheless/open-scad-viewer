@@ -1,6 +1,6 @@
-import {sha256Hex} from '../core/sha256'
-import {ownNurbsDisplayMesh} from '../language/rushFrontendScene'
-import {tessellateNurbsPatches} from '../kernel/geometry/reconstruction'
+import { sha256Hex } from '../core/sha256'
+import { ownNurbsDisplayMesh } from '../language/rushFrontendScene'
+import { tessellateNurbsPatches } from '../kernel/geometry/reconstruction'
 import {
   defaultGeometryBuildEngine,
   geometryExecutionForError,
@@ -13,10 +13,10 @@ import { isExactSolidRequest } from '../kernel/solid/exactSolidProtocol'
 import { meshTransferables } from '../core/mesh'
 import { geometrySceneFromMeshes, geometrySceneTransferables } from '../core/scene'
 import type { GeometryEvaluationResult } from '../core/build'
-import {createSelectionSurfacePublisher} from '../app/selectionSurfacePublisher'
-import {surfaceGroupsInKernel} from '../kernel/geometry/meshAnalysis'
-import {warmGeometryKernel} from '../kernel/geometry/kernel'
-import {latestKernelJobProgress} from '../kernel/geometry/kernelJobs'
+import { createSelectionSurfacePublisher } from '../app/selectionSurfacePublisher'
+import { surfaceGroupsInKernel } from '../kernel/geometry/meshAnalysis'
+import { warmGeometryKernel } from '../kernel/geometry/kernel'
+import { latestKernelJobProgress } from '../kernel/geometry/kernelJobs'
 import type { GeometryExecutionDescriptor } from '../core/geometryExecution'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
@@ -34,7 +34,7 @@ interface ActiveJob {
   request: GeometryBuildRequest
   startedAt: number
   cancelled: GeometryCancelReason | null
-  previewWait?:({nodeId:string;sections:number;release:()=>void}) | undefined
+  previewWait?: { nodeId: string; sections: number; release: () => void } | undefined
   initialization: AbortController
 }
 
@@ -64,10 +64,7 @@ type GeometryJobEventPayload = DistributiveOmit<
   'protocolVersion' | 'documentRevision' | 'jobId' | 'quality' | 'sourceSha256'
 >
 
-function jobEvent<T extends GeometryJobEventPayload>(
-  request: GeometryBuildRequest,
-  event: T,
-): GeometryWorkerWireEvent {
+function jobEvent<T extends GeometryJobEventPayload>(request: GeometryBuildRequest, event: T): GeometryWorkerWireEvent {
   return {
     protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
     documentRevision: request.documentRevision,
@@ -170,10 +167,7 @@ function terminalState(
   return null
 }
 
-async function runBuild(
-  request: GeometryBuildRequest,
-  planned: GeometryExecutionDescriptor,
-) {
+async function runBuild(request: GeometryBuildRequest, planned: GeometryExecutionDescriptor) {
   const job: ActiveJob = {
     request,
     startedAt: performance.now(),
@@ -198,12 +192,19 @@ async function runBuild(
   try {
     // Cold WASM compilation belongs to initialization, not provider readiness.
     // Cancel only this wait; shared warmup can serve the next admitted job.
-    await defaultGeometryBuildEngine.initializeSource(request.source, {
-      quality: request.quality,
-      purpose: request.quality,
-    }, job.initialization.signal)
+    await defaultGeometryBuildEngine.initializeSource(
+      request.source,
+      {
+        quality: request.quality,
+        purpose: request.quality,
+      },
+      job.initialization.signal,
+    )
     const initializationTerminal = terminalState(job, phase, planned)
-    if (initializationTerminal) { postEvent(initializationTerminal); return }
+    if (initializationTerminal) {
+      postEvent(initializationTerminal)
+      return
+    }
     phase = 'compiling'
     postEvent(jobEvent(request, { status: 'progress', phase, progress: null }))
     // The parser's top-level statement loop yields to the event loop
@@ -213,49 +214,109 @@ async function runBuild(
     // superseded/cancelled build cooperatively: the warm worker (and its
     // cached WASM) survives. A single pairwise Boolean is one step and cannot
     // be split; BuildCoordinator's grace timer remains the hard boundary.
-    const built = await defaultGeometryBuildEngine.buildSource(request.source, {
-      quality: request.quality,
-      purpose: request.quality,
-    }, {
-      shouldAbort: () => job.cancelled !== null || staleReplacement(request) !== undefined,
-      onSweepPreview:async(nodeId,preview)=>{
-        if(job.cancelled!==null||staleReplacement(request)!==undefined)return
-        const data=tessellateNurbsPatches({patches:preview.patches,faceIds:preview.patches.map((_,i)=>i)},4)
-        const {mesh}=ownNurbsDisplayMesh(data,`entity:sweep-preview/${sha256Hex(nodeId)}`)
-        mesh.faceIdsAuthoritative=false
-        const event=jobEvent(request,{status:'sweep-preview',phase:'compiling',nodeId,
-          sections:preview.report.sections,accepted:preview.report.accepted,
-          ...(!('phaseResolved' in preview.report)?{continuousBound:preview.report.continuousBound,...(preview.report.continuousErrorUpper!=null?{continuousErrorUpper:preview.report.continuousErrorUpper}:{}),...(preview.report.knownProfileErrorUpper!=null?{knownProfileErrorUpper:preview.report.knownProfileErrorUpper}:{})}:{}),
-          ...('phaseResolved' in preview.report?{phaseResolved:preview.report.phaseResolved,frameTransportCertified:preview.report.frameTransportCertified,certifiedErrorUpper:preview.report.certifiedErrorUpper,endpointContourErrorUpper:preview.report.endpointContourErrorUpper,profileRegularityCertified:preview.report.profileRegularityCertified,wallRegularityCertified:preview.report.wallRegularityCertified,...(preview.report.continuousErrorUpper!=null?{continuousErrorUpper:preview.report.continuousErrorUpper}:{})}:{}),
-          sampledControlDeviation:preview.report.sampledControlDeviation,budget:preview.report.budget,meshes:[mesh]})
-        if(!isGeometryWorkerEvent(event))throw new Error('Sweep preview exceeds worker payload contract')
-        let acknowledged:Promise<void>|undefined
-        if(request.acknowledgeSweepPreviews)acknowledged=new Promise<void>((resolve,reject)=>{
-          const timer=setTimeout(()=>reject(new Error('Sweep preview acknowledgement timed out')),5000)
-          job.previewWait={nodeId,sections:preview.report.sections,release:()=>{clearTimeout(timer);resolve()}}
-        })
-        try{
-          postEvent(event,meshTransferables([mesh]))
-          if(acknowledged)await acknowledged
-        }finally{job.previewWait?.release();job.previewWait=undefined}
+    const built = await defaultGeometryBuildEngine.buildSource(
+      request.source,
+      {
+        quality: request.quality,
+        purpose: request.quality,
       },
-      onYield: () => {
-        // Throttled liveness heartbeat: the build is alive (just heavy). The
-        // main thread can distinguish honest long builds from a wedged worker
-        // instead of killing them at a fixed timeout.
-        const now = performance.now()
-        if (now - lastHeartbeat >= HEARTBEAT_THROTTLE_MS) {
-          lastHeartbeat = now
-          // Long Booleans run as kernel start/step/cancel jobs; this hook
-          // runs between their steps, after queued cancel messages had a turn.
-          const kernelJob = latestKernelJobProgress()
-          postEvent(jobEvent(request, {
-            status: 'progress', phase: 'compiling', progress: null,
-            ...(kernelJob ? {kernelJob: {kind: kernelJob.kind, done: kernelJob.done, total: kernelJob.total, steps: kernelJob.steps}} : {}),
-          }))
-        }
+      {
+        shouldAbort: () => job.cancelled !== null || staleReplacement(request) !== undefined,
+        onSweepPreview: async (nodeId, preview) => {
+          if (job.cancelled !== null || staleReplacement(request) !== undefined) return
+          const data = tessellateNurbsPatches(
+            { patches: preview.patches, faceIds: preview.patches.map((_, i) => i) },
+            4,
+          )
+          const { mesh } = ownNurbsDisplayMesh(data, `entity:sweep-preview/${sha256Hex(nodeId)}`)
+          mesh.faceIdsAuthoritative = false
+          const event = jobEvent(request, {
+            status: 'sweep-preview',
+            phase: 'compiling',
+            nodeId,
+            sections: preview.report.sections,
+            accepted: preview.report.accepted,
+            ...(!('phaseResolved' in preview.report)
+              ? {
+                  continuousBound: preview.report.continuousBound,
+                  ...(preview.report.continuousErrorUpper != null
+                    ? { continuousErrorUpper: preview.report.continuousErrorUpper }
+                    : {}),
+                  ...(preview.report.knownProfileErrorUpper != null
+                    ? { knownProfileErrorUpper: preview.report.knownProfileErrorUpper }
+                    : {}),
+                }
+              : {}),
+            ...('phaseResolved' in preview.report
+              ? {
+                  phaseResolved: preview.report.phaseResolved,
+                  frameTransportCertified: preview.report.frameTransportCertified,
+                  certifiedErrorUpper: preview.report.certifiedErrorUpper,
+                  endpointContourErrorUpper: preview.report.endpointContourErrorUpper,
+                  profileRegularityCertified: preview.report.profileRegularityCertified,
+                  wallRegularityCertified: preview.report.wallRegularityCertified,
+                  ...(preview.report.continuousErrorUpper != null
+                    ? { continuousErrorUpper: preview.report.continuousErrorUpper }
+                    : {}),
+                }
+              : {}),
+            sampledControlDeviation: preview.report.sampledControlDeviation,
+            budget: preview.report.budget,
+            meshes: [mesh],
+          })
+          if (!isGeometryWorkerEvent(event)) throw new Error('Sweep preview exceeds worker payload contract')
+          let acknowledged: Promise<void> | undefined
+          if (request.acknowledgeSweepPreviews)
+            acknowledged = new Promise<void>((resolve, reject) => {
+              const timer = setTimeout(() => reject(new Error('Sweep preview acknowledgement timed out')), 5000)
+              job.previewWait = {
+                nodeId,
+                sections: preview.report.sections,
+                release: () => {
+                  clearTimeout(timer)
+                  resolve()
+                },
+              }
+            })
+          try {
+            postEvent(event, meshTransferables([mesh]))
+            if (acknowledged) await acknowledged
+          } finally {
+            job.previewWait?.release()
+            job.previewWait = undefined
+          }
+        },
+        onYield: () => {
+          // Throttled liveness heartbeat: the build is alive (just heavy). The
+          // main thread can distinguish honest long builds from a wedged worker
+          // instead of killing them at a fixed timeout.
+          const now = performance.now()
+          if (now - lastHeartbeat >= HEARTBEAT_THROTTLE_MS) {
+            lastHeartbeat = now
+            // Long Booleans run as kernel start/step/cancel jobs; this hook
+            // runs between their steps, after queued cancel messages had a turn.
+            const kernelJob = latestKernelJobProgress()
+            postEvent(
+              jobEvent(request, {
+                status: 'progress',
+                phase: 'compiling',
+                progress: null,
+                ...(kernelJob
+                  ? {
+                      kernelJob: {
+                        kind: kernelJob.kind,
+                        done: kernelJob.done,
+                        total: kernelJob.total,
+                        steps: kernelJob.steps,
+                      },
+                    }
+                  : {}),
+              }),
+            )
+          }
+        },
       },
-    })
+    )
     completedExecution = built.execution
     const result = built.result
     const terminal = terminalState(job, 'compiling', built.execution)
@@ -269,7 +330,10 @@ async function runBuild(
     if (request.selectionSurfaces) {
       await warmGeometryKernel()
       const terminal = terminalState(job, 'serializing', built.execution)
-      if (terminal) { postEvent(terminal); return }
+      if (terminal) {
+        postEvent(terminal)
+        return
+      }
       const meshes: typeof result.meshes = []
       let sliceStarted = performance.now()
       for (const mesh of result.meshes) {
@@ -279,11 +343,14 @@ async function runBuild(
           // including after the final mesh, before publishing any buffers.
           await new Promise<void>(resolve => setTimeout(resolve, 0))
           const terminal = terminalState(job, 'serializing', built.execution)
-          if (terminal) { postEvent(terminal); return }
+          if (terminal) {
+            postEvent(terminal)
+            return
+          }
           sliceStarted = performance.now()
           if (sliceStarted - lastHeartbeat >= HEARTBEAT_THROTTLE_MS) {
             lastHeartbeat = sliceStarted
-            postEvent(jobEvent(request, {status: 'progress', phase: 'serializing', progress: null}))
+            postEvent(jobEvent(request, { status: 'progress', phase: 'serializing', progress: null }))
           }
         }
       }
@@ -301,13 +368,15 @@ async function runBuild(
     // 256-code-unit limit must never cross the boundary as an invalid success
     // (and must never be truncated or replaced with a synthetic alias).
     if (!isGeometryWorkerEvent(response)) {
-      postEvent(jobEvent(request, {
-        status: 'failed',
-        phase: 'serializing',
-        execution: built.execution,
-        error: UNPUBLISHABLE_RESULT_ERROR,
-        durationMs: elapsed(job),
-      }))
+      postEvent(
+        jobEvent(request, {
+          status: 'failed',
+          phase: 'serializing',
+          execution: built.execution,
+          error: UNPUBLISHABLE_RESULT_ERROR,
+          durationMs: elapsed(job),
+        }),
+      )
       return
     }
     postEvent(response, response.status === 'succeeded' ? geometrySceneTransferables(response.scene) : [])
@@ -322,27 +391,31 @@ async function runBuild(
       // shouldAbort only returns true when the job was cancelled or
       // superseded, so terminalState above covers this in practice. Guard the
       // race anyway: an aborted evaluation must never surface as a build error.
-      postEvent(jobEvent(request, {
-        status: 'cancelled',
-        phase,
-        ...(attachedExecution ? { execution: attachedExecution } : {}),
-        reason: 'superseded',
-        durationMs: elapsed(job),
-      }))
+      postEvent(
+        jobEvent(request, {
+          status: 'cancelled',
+          phase,
+          ...(attachedExecution ? { execution: attachedExecution } : {}),
+          reason: 'superseded',
+          durationMs: elapsed(job),
+        }),
+      )
       return
     }
-    const execution = attachedExecution
-      ?? (error instanceof GeometryEngineUnavailableError
-      || error instanceof GeometryCapabilityUnavailableError
-      ? error.execution
-      : undefined)
-    postEvent(jobEvent(request, {
-      status: 'failed',
-      phase,
-      ...(execution ? { execution } : {}),
-      error: serializedBuildError(error),
-      durationMs: elapsed(job),
-    }))
+    const execution =
+      attachedExecution ??
+      (error instanceof GeometryEngineUnavailableError || error instanceof GeometryCapabilityUnavailableError
+        ? error.execution
+        : undefined)
+    postEvent(
+      jobEvent(request, {
+        status: 'failed',
+        phase,
+        ...(execution ? { execution } : {}),
+        error: serializedBuildError(error),
+        durationMs: elapsed(job),
+      }),
+    )
   } finally {
     activeJobs.delete(request.jobId)
   }
@@ -366,12 +439,14 @@ function acceptBuild(request: GeometryBuildRequest) {
       purpose: request.quality,
     })
   } catch (error) {
-    postEvent(jobEvent(request, {
-      status: 'failed',
-      phase: 'queued',
-      error: serializedBuildError(error),
-      durationMs: performance.now() - startedAt,
-    }))
+    postEvent(
+      jobEvent(request, {
+        status: 'failed',
+        phase: 'queued',
+        error: serializedBuildError(error),
+        durationMs: performance.now() - startedAt,
+      }),
+    )
     return
   }
   if (request.documentRevision > latestDocumentRevision) {
@@ -409,10 +484,14 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
     void import('../kernel/solid/exactSolidRuntime')
       .then(({ runExactSolidRequest }) => runExactSolidRequest(event.data))
       .then(response => self.postMessage(response))
-      .catch(() => self.postMessage({
-        kind: 'exact-solid', version: 1, ok: false,
-        error: { name: 'Error', message: 'Could not load exact-solid processing.' },
-      }))
+      .catch(() =>
+        self.postMessage({
+          kind: 'exact-solid',
+          version: 1,
+          ok: false,
+          error: { name: 'Error', message: 'Could not load exact-solid processing.' },
+        }),
+      )
     return
   }
   // Validation happens before any lifecycle state changes, so a malformed ID
@@ -420,10 +499,21 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
   // succeeded/failed/stale/cancelled terminal unless the worker is replaced.
   if (isGeometryWorkerRequest(event.data)) {
     if (event.data.type === 'build') acceptBuild(event.data)
-    else if(event.data.type==='cancel')cancelBuild(event.data)
+    else if (event.data.type === 'cancel') cancelBuild(event.data)
     else {
-      const ack=event.data,job=activeJobs.get(ack.jobId),wait=job?.previewWait
-      if(job&&wait&&job.request.documentRevision===ack.documentRevision&&job.request.sourceSha256===ack.sourceSha256&&job.request.quality===ack.quality&&wait.nodeId===ack.nodeId&&wait.sections===ack.sections)wait.release()
+      const ack = event.data,
+        job = activeJobs.get(ack.jobId),
+        wait = job?.previewWait
+      if (
+        job &&
+        wait &&
+        job.request.documentRevision === ack.documentRevision &&
+        job.request.sourceSha256 === ack.sourceSha256 &&
+        job.request.quality === ack.quality &&
+        wait.nodeId === ack.nodeId &&
+        wait.sections === ack.sections
+      )
+        wait.release()
     }
   }
 })

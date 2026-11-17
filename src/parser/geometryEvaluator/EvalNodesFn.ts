@@ -1,10 +1,7 @@
 // geometryEvaluator: EvalNodesFn.
 import type { CadKernelHandle } from '../../kernel/cadKernelOps'
 
-
-
 import type { CallNode, Statement, Value } from '../../language/openscadCompiler'
-
 
 import {
   resolveOpenScadFragments,
@@ -23,28 +20,15 @@ import {
   type OpenScadStablePrimitiveContext,
 } from '../../language/semantic/openScadStablePrimitiveSemantics'
 
-import {
-  type OpenScadStableTransformContext,
-} from '../../language/semantic/openScadStableTransformSemantics'
+import { type OpenScadStableTransformContext } from '../../language/semantic/openScadStableTransformSemantics'
 
-import {
-  type OpenScadStableGeometryContext,
-} from '../../language/semantic/openScadStableGeometrySemantics'
+import { type OpenScadStableGeometryContext } from '../../language/semantic/openScadStableGeometrySemantics'
 
-import {
-  evaluationError,
-} from '../../language/openScadStableExpressionEval'
+import { evaluationError } from '../../language/openScadStableExpressionEval'
 
 import { nextColor, type RGBA } from '../../language/openscadColors'
 
-
-import {
-  type EvalContext,
-  type Shape,
-  type Vec2,
-  type Vec3,
-} from '.././types'
-
+import { type EvalContext, type Shape, type Vec2, type Vec3 } from '.././types'
 
 import {
   currentEntityId,
@@ -55,12 +39,9 @@ import {
   warn,
 } from '.././expressionEvaluator'
 
-
-
 export type EvalNodesFn = (nodes: readonly Statement[], parent: EvalContext, scoped?: boolean) => Promise<Shape[]>
 
 export type EvalPreparedNodesFn = (nodes: readonly Statement[], ctx: EvalContext) => Promise<Shape[]>
-
 
 export function requireStableProfile(ctx: EvalContext, node: CallNode): void {
   if (ctx.languageProfile !== 'openscad/stable-2021.01') {
@@ -68,16 +49,13 @@ export function requireStableProfile(ctx: EvalContext, node: CallNode): void {
   }
 }
 
-
 export function stableModuleSemanticsContext(ctx: EvalContext): OpenScadStableModuleSemanticsContext {
   return { warn: warning => warn(ctx, warning.message) }
 }
 
-
 export function stableGeometrySemanticsContext(ctx: EvalContext): OpenScadStableGeometryContext {
   return { warn: warning => warn(ctx, warning.message) }
 }
-
 
 export function stablePrimitiveSemanticsContext(ctx: EvalContext): OpenScadStablePrimitiveContext {
   return {
@@ -86,7 +64,6 @@ export function stablePrimitiveSemanticsContext(ctx: EvalContext): OpenScadStabl
   }
 }
 
-
 export function stableTransformSemanticsContext(ctx: EvalContext): OpenScadStableTransformContext {
   return {
     checkParameterRanges: true,
@@ -94,19 +71,16 @@ export function stableTransformSemanticsContext(ctx: EvalContext): OpenScadStabl
   }
 }
 
-
-export function stableFragmentInput(
-  node: CallNode,
-  ctx: EvalContext,
-  radius: number,
-): OpenScadFragmentResolutionInput {
+export function stableFragmentInput(node: CallNode, ctx: EvalContext, radius: number): OpenScadFragmentResolutionInput {
   const special = (name: '$fn' | '$fa' | '$fs'): { present: boolean; value: Value } => {
     const local = node.args[name]
     if (local !== undefined) return { present: true, value: evalExpression(local, ctx) }
     const resolved = resolveStableVariable(name, ctx)
     return { present: resolved.found, value: resolved.value }
   }
-  const fn = special('$fn'), fa = special('$fa'), fs = special('$fs')
+  const fn = special('$fn'),
+    fa = special('$fa'),
+    fs = special('$fs')
   return {
     radius,
     quality: ctx.quality,
@@ -115,7 +89,6 @@ export function stableFragmentInput(
     ...(fs.present ? { fs: fs.value } : {}),
   }
 }
-
 
 export function stableFragmentInputFromEvaluated(
   evaluated: ReadonlyMap<string, Value>,
@@ -127,7 +100,9 @@ export function stableFragmentInputFromEvaluated(
     const resolved = resolveStableVariable(name, ctx)
     return { present: resolved.found, value: resolved.value }
   }
-  const fn = special('$fn'), fa = special('$fa'), fs = special('$fs')
+  const fn = special('$fn'),
+    fa = special('$fa'),
+    fs = special('$fs')
   return {
     radius,
     quality: ctx.quality,
@@ -136,7 +111,6 @@ export function stableFragmentInputFromEvaluated(
     ...(fs.present ? { fs: fs.value } : {}),
   }
 }
-
 
 export function stableSegmentsFromEvaluated(
   evaluated: ReadonlyMap<string, Value>,
@@ -150,7 +124,6 @@ export function stableSegmentsFromEvaluated(
   if (resolution.reduced) ctx.reduced.value = true
   return resolution.fragments
 }
-
 
 export function stableEmptyShape(dimension: 2 | 3, color: RGBA, ctx: EvalContext): Shape {
   if (dimension === 3) {
@@ -169,61 +142,58 @@ export function stableEmptyShape(dimension: 2 | 3, color: RGBA, ctx: EvalContext
   }
 }
 
-
 export function warnIgnoredPrimitiveChildren(node: CallNode, ctx: EvalContext): void {
   if (node.children.length > 0) warn(ctx, `${node.name}() ignores child geometry`)
 }
 
-
 export function makeStableCube(node: CallNode, ctx: EvalContext): Shape[] {
   const values = evaluateStableBuiltinModuleArguments(node, ['size', 'center'], [], ctx)
-  const plan = resolveOpenScadCube({
-    size: values.get('size'),
-    center: values.get('center'),
-  }, stablePrimitiveSemanticsContext(ctx))
+  const plan = resolveOpenScadCube(
+    {
+      size: values.get('size'),
+      center: values.get('center'),
+    },
+    stablePrimitiveSemanticsContext(ctx),
+  )
   warnIgnoredPrimitiveChildren(node, ctx)
   if (plan.reduced) ctx.reduced.value = true
   const color = nextColor()
   if (plan.empty) return [stableEmptyShape(3, color, ctx)]
-  return [trackedSolid(
-    ctx.kernel.box([...plan.dimensions] as Vec3, plan.center),
-    color,
-    node,
-    ctx,
-  )]
+  return [trackedSolid(ctx.kernel.box([...plan.dimensions] as Vec3, plan.center), color, node, ctx)]
 }
-
 
 export function makeStableSquare(node: CallNode, ctx: EvalContext): Shape[] {
   const values = evaluateStableBuiltinModuleArguments(node, ['size', 'center'], [], ctx)
-  const plan = resolveOpenScadSquare({
-    size: values.get('size'),
-    center: values.get('center'),
-  }, stablePrimitiveSemanticsContext(ctx))
+  const plan = resolveOpenScadSquare(
+    {
+      size: values.get('size'),
+      center: values.get('center'),
+    },
+    stablePrimitiveSemanticsContext(ctx),
+  )
   warnIgnoredPrimitiveChildren(node, ctx)
   if (plan.reduced) ctx.reduced.value = true
   const color = nextColor()
   if (plan.empty) return [stableEmptyShape(2, color, ctx)]
-  return [{
-    dimension: 2,
-    geometry: ctx.kernel.rectangle([...plan.dimensions] as Vec2, plan.center),
-    color,
-    entityId: currentEntityId(ctx),
-  }]
+  return [
+    {
+      dimension: 2,
+      geometry: ctx.kernel.rectangle([...plan.dimensions] as Vec2, plan.center),
+      color,
+      entityId: currentEntityId(ctx),
+    },
+  ]
 }
 
-
 export function makeStableSphere(node: CallNode, ctx: EvalContext): Shape[] {
-  const values = evaluateStableBuiltinModuleArguments(
-    node,
-    ['r'],
-    ['d', '$fn', '$fa', '$fs'],
-    ctx,
+  const values = evaluateStableBuiltinModuleArguments(node, ['r'], ['d', '$fn', '$fa', '$fs'], ctx)
+  const plan = resolveOpenScadSphere(
+    {
+      r: values.get('r'),
+      d: values.get('d'),
+    },
+    stablePrimitiveSemanticsContext(ctx),
   )
-  const plan = resolveOpenScadSphere({
-    r: values.get('r'),
-    d: values.get('d'),
-  }, stablePrimitiveSemanticsContext(ctx))
   warnIgnoredPrimitiveChildren(node, ctx)
   if (plan.reduced) ctx.reduced.value = true
   const color = nextColor()
@@ -232,31 +202,29 @@ export function makeStableSphere(node: CallNode, ctx: EvalContext): Shape[] {
   return [trackedSolid(ctx.kernel.sphere(plan.radius, fragments), color, node, ctx)]
 }
 
-
 export function makeStableCircle(node: CallNode, ctx: EvalContext): Shape[] {
-  const values = evaluateStableBuiltinModuleArguments(
-    node,
-    ['r'],
-    ['d', '$fn', '$fa', '$fs'],
-    ctx,
+  const values = evaluateStableBuiltinModuleArguments(node, ['r'], ['d', '$fn', '$fa', '$fs'], ctx)
+  const plan = resolveOpenScadCircle(
+    {
+      r: values.get('r'),
+      d: values.get('d'),
+    },
+    stablePrimitiveSemanticsContext(ctx),
   )
-  const plan = resolveOpenScadCircle({
-    r: values.get('r'),
-    d: values.get('d'),
-  }, stablePrimitiveSemanticsContext(ctx))
   warnIgnoredPrimitiveChildren(node, ctx)
   if (plan.reduced) ctx.reduced.value = true
   const color = nextColor()
   if (plan.empty) return [stableEmptyShape(2, color, ctx)]
   const fragments = stableSegmentsFromEvaluated(values, ctx, plan.fragmentRadius)
-  return [{
-    dimension: 2,
-    geometry: ctx.kernel.circle(plan.radius, fragments),
-    color,
-    entityId: currentEntityId(ctx),
-  }]
+  return [
+    {
+      dimension: 2,
+      geometry: ctx.kernel.circle(plan.radius, fragments),
+      color,
+      entityId: currentEntityId(ctx),
+    },
+  ]
 }
-
 
 export function makeStableCylinder(node: CallNode, ctx: EvalContext): Shape[] {
   const values = evaluateStableBuiltinModuleArguments(
@@ -265,16 +233,19 @@ export function makeStableCylinder(node: CallNode, ctx: EvalContext): Shape[] {
     ['r', 'd', 'd1', 'd2', '$fn', '$fa', '$fs'],
     ctx,
   )
-  const plan = resolveOpenScadCylinder({
-    h: values.get('h'),
-    r: values.get('r'),
-    d: values.get('d'),
-    r1: values.get('r1'),
-    r2: values.get('r2'),
-    d1: values.get('d1'),
-    d2: values.get('d2'),
-    center: values.get('center'),
-  }, stablePrimitiveSemanticsContext(ctx))
+  const plan = resolveOpenScadCylinder(
+    {
+      h: values.get('h'),
+      r: values.get('r'),
+      d: values.get('d'),
+      r1: values.get('r1'),
+      r2: values.get('r2'),
+      d1: values.get('d1'),
+      d2: values.get('d2'),
+      center: values.get('center'),
+    },
+    stablePrimitiveSemanticsContext(ctx),
+  )
   warnIgnoredPrimitiveChildren(node, ctx)
   if (plan.reduced) ctx.reduced.value = true
   const color = nextColor()
@@ -282,36 +253,25 @@ export function makeStableCylinder(node: CallNode, ctx: EvalContext): Shape[] {
   const fragments = stableSegmentsFromEvaluated(values, ctx, plan.fragmentRadius)
   let geometry: CadKernelHandle
   if (plan.radius1 > 0) {
-    geometry = ctx.kernel.cylinder(
-      plan.height,
-      plan.radius1,
-      plan.radius2,
-      fragments,
-      plan.center,
-    )
+    geometry = ctx.kernel.cylinder(plan.height, plan.radius1, plan.radius2, fragments, plan.center)
   } else {
-    geometry = ctx.kernel.mirrorZ(
-      ctx.kernel.cylinder(plan.height, plan.radius2, 0, fragments, plan.center),
-    )
+    geometry = ctx.kernel.mirrorZ(ctx.kernel.cylinder(plan.height, plan.radius2, 0, fragments, plan.center))
     if (!plan.center) geometry = ctx.kernel.translateZ(geometry, plan.height)
   }
   return [trackedSolid(geometry, color, node, ctx)]
 }
 
-
 export function makeStablePolyhedron(node: CallNode, ctx: EvalContext): Shape[] {
-  const values = evaluateStableBuiltinModuleArguments(
-    node,
-    ['points', 'faces', 'convexity'],
-    ['triangles'],
-    ctx,
+  const values = evaluateStableBuiltinModuleArguments(node, ['points', 'faces', 'convexity'], ['triangles'], ctx)
+  const plan = resolveOpenScadPolyhedron(
+    {
+      points: values.get('points'),
+      faces: values.get('faces'),
+      triangles: values.get('triangles'),
+      convexity: values.get('convexity'),
+    },
+    stablePrimitiveSemanticsContext(ctx),
   )
-  const plan = resolveOpenScadPolyhedron({
-    points: values.get('points'),
-    faces: values.get('faces'),
-    triangles: values.get('triangles'),
-    convexity: values.get('convexity'),
-  }, stablePrimitiveSemanticsContext(ctx))
   warnIgnoredPrimitiveChildren(node, ctx)
   if (plan.reduced) ctx.reduced.value = true
   const color = nextColor()
@@ -335,39 +295,39 @@ export function makeStablePolyhedron(node: CallNode, ctx: EvalContext): Shape[] 
   }
 }
 
-
 export function makeStablePolygon(node: CallNode, ctx: EvalContext): Shape[] {
-  const values = evaluateStableBuiltinModuleArguments(
-    node,
-    ['points', 'paths', 'convexity'],
-    [],
-    ctx,
+  const values = evaluateStableBuiltinModuleArguments(node, ['points', 'paths', 'convexity'], [], ctx)
+  const plan = resolveOpenScadPolygon(
+    {
+      points: values.get('points'),
+      paths: values.get('paths'),
+      convexity: values.get('convexity'),
+    },
+    stablePrimitiveSemanticsContext(ctx),
   )
-  const plan = resolveOpenScadPolygon({
-    points: values.get('points'),
-    paths: values.get('paths'),
-    convexity: values.get('convexity'),
-  }, stablePrimitiveSemanticsContext(ctx))
   warnIgnoredPrimitiveChildren(node, ctx)
   if (plan.reduced) ctx.reduced.value = true
   const color = nextColor()
-  if (plan.empty || plan.outlines.some(outline =>
-    outline.some(point => !Number.isFinite(point[0]) || !Number.isFinite(point[1])))) {
+  if (
+    plan.empty ||
+    plan.outlines.some(outline => outline.some(point => !Number.isFinite(point[0]) || !Number.isFinite(point[1])))
+  ) {
     if (!plan.empty) warn(ctx, 'polygon() produced no usable finite outlines')
     return [stableEmptyShape(2, color, ctx)]
   }
 
   try {
-    const polygons = plan.outlines.map(outline =>
-      outline.map(point => [point[0], point[1]] as Vec2))
+    const polygons = plan.outlines.map(outline => outline.map(point => [point[0], point[1]] as Vec2))
     const geometry = ctx.kernel.polygon(polygons, 'EvenOdd')
     if (ctx.kernel.isEmpty(geometry)) warn(ctx, 'polygon() outlines produced an empty cross-section')
-    return [{
-      dimension: 2,
-      geometry,
-      color,
-      entityId: currentEntityId(ctx),
-    }]
+    return [
+      {
+        dimension: 2,
+        geometry,
+        color,
+        entityId: currentEntityId(ctx),
+      },
+    ]
   } catch {
     warn(ctx, 'polygon() outlines did not produce a valid cross-section')
     return [stableEmptyShape(2, color, ctx)]

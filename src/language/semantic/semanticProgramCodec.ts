@@ -3,11 +3,20 @@ import {
   SEMANTIC_PROGRAM_LIMITS,
   type SemanticTessellationIntent,
 } from '../../core/semanticProgram'
-import {
-  SemanticProgramValidationError,
-} from './semanticProgramValidator'
+import { SemanticProgramValidationError } from './semanticProgramValidator'
 import { compareBytes, encodeSemanticProgramCore } from './semanticProgramCodec/isSemanticProgramCodecOwnedGraph'
-export { isSemanticProgramCodecOwnedGraph, encodeSemanticProgram, encodeSemanticProgramCore, semanticProgramHash, encodeSemanticTessellationPolicy, semanticTessellationPolicyHash, attestSemanticProgram, decodeSemanticProgram, decodeSemanticProgramCore, decodeSemanticTessellationPolicy } from './semanticProgramCodec/isSemanticProgramCodecOwnedGraph'
+export {
+  isSemanticProgramCodecOwnedGraph,
+  encodeSemanticProgram,
+  encodeSemanticProgramCore,
+  semanticProgramHash,
+  encodeSemanticTessellationPolicy,
+  semanticTessellationPolicyHash,
+  attestSemanticProgram,
+  decodeSemanticProgram,
+  decodeSemanticProgramCore,
+  decodeSemanticTessellationPolicy,
+} from './semanticProgramCodec/isSemanticProgramCodecOwnedGraph'
 
 export const SEMANTIC_PROGRAM_BINARY_FORMAT = 'semantic-program-binary-v1' as const
 export const SEMANTIC_PROGRAM_BINARY_MAX_BYTES = 64 * 1024 * 1024
@@ -48,7 +57,8 @@ export class ByteWriter implements BinaryWriter {
   private length = 0
 
   private reserve(length: number): void {
-    if (this.length + length > SEMANTIC_PROGRAM_BINARY_MAX_BYTES) throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', '$binary', 'canonical binary exceeds its byte limit')
+    if (this.length + length > SEMANTIC_PROGRAM_BINARY_MAX_BYTES)
+      throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', '$binary', 'canonical binary exceeds its byte limit')
   }
 
   byte(value: number): void {
@@ -63,13 +73,15 @@ export class ByteWriter implements BinaryWriter {
   }
 
   u16(value: number): void {
-    if (!Number.isSafeInteger(value) || value < 0 || value > 0xffff) throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', '$binary', 'value exceeds u16')
+    if (!Number.isSafeInteger(value) || value < 0 || value > 0xffff)
+      throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', '$binary', 'value exceeds u16')
     this.byte((value >>> 8) & 0xff)
     this.byte(value & 0xff)
   }
 
   u32(value: number): void {
-    if (!Number.isSafeInteger(value) || value < 0 || value > 0xffff_ffff) throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', '$binary', 'value exceeds u32')
+    if (!Number.isSafeInteger(value) || value < 0 || value > 0xffff_ffff)
+      throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', '$binary', 'value exceeds u32')
     this.byte((value >>> 24) & 0xff)
     this.byte((value >>> 16) & 0xff)
     this.byte((value >>> 8) & 0xff)
@@ -155,7 +167,9 @@ export class CanonicalBodyComparator implements BinaryWriter {
   }
 }
 
-export interface EncodingBudget { stringBytes: number }
+export interface EncodingBudget {
+  stringBytes: number
+}
 
 /** Backward-compatible API name; the identity bytes are exactly SPC1 core. */
 export const encodeSemanticProgramIdentity = encodeSemanticProgramCore
@@ -184,16 +198,21 @@ export class ByteReader {
   private stringBytes = 0
 
   constructor(private readonly bytes: Uint8Array) {}
-  get remaining(): number { return this.bytes.length - this.offset }
+  get remaining(): number {
+    return this.bytes.length - this.offset
+  }
 
   raw(length: number, path: string): Uint8Array {
-    if (!Number.isSafeInteger(length) || length < 0 || length > this.remaining) throw new SemanticProgramValidationError('E_SEMANTIC_BYTES', path, 'truncated binary payload')
+    if (!Number.isSafeInteger(length) || length < 0 || length > this.remaining)
+      throw new SemanticProgramValidationError('E_SEMANTIC_BYTES', path, 'truncated binary payload')
     const output = this.bytes.subarray(this.offset, this.offset + length)
     this.offset += length
     return output
   }
 
-  byte(path: string): number { return this.raw(1, path)[0]! }
+  byte(path: string): number {
+    return this.raw(1, path)[0]!
+  }
   u16(path: string): number {
     const bytes = this.raw(2, path)
     return new DataView(bytes.buffer, bytes.byteOffset, 2).getUint16(0, false)
@@ -205,15 +224,26 @@ export class ByteReader {
   f64(path: string): number {
     const bytes = this.raw(8, path)
     const value = new DataView(bytes.buffer, bytes.byteOffset, 8).getFloat64(0, true)
-    if (!Number.isFinite(value) || Object.is(value, -0)) throw new SemanticProgramValidationError('E_SEMANTIC_NUMBER', path, 'noncanonical binary64 encoding')
+    if (!Number.isFinite(value) || Object.is(value, -0))
+      throw new SemanticProgramValidationError('E_SEMANTIC_NUMBER', path, 'noncanonical binary64 encoding')
     return value
   }
 
   stringBody(path: string): { value: string; bytes: Uint8Array } {
     const length = this.u32(`${path}.length`)
-    if (length > SEMANTIC_PROGRAM_LIMITS.stringCodeUnits * 4) throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', path, 'individual string exceeds its UTF-8 byte limit')
+    if (length > SEMANTIC_PROGRAM_LIMITS.stringCodeUnits * 4)
+      throw new SemanticProgramValidationError(
+        'E_SEMANTIC_LIMIT',
+        path,
+        'individual string exceeds its UTF-8 byte limit',
+      )
     this.stringBytes += length
-    if (this.stringBytes > SEMANTIC_PROGRAM_BINARY_MAX_STRING_BYTES) throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', path, 'aggregate string bytes exceed the decode budget')
+    if (this.stringBytes > SEMANTIC_PROGRAM_BINARY_MAX_STRING_BYTES)
+      throw new SemanticProgramValidationError(
+        'E_SEMANTIC_LIMIT',
+        path,
+        'aggregate string bytes exceed the decode budget',
+      )
     const bytes = this.raw(length, path)
     let value: string
     try {
@@ -221,35 +251,58 @@ export class ByteReader {
     } catch {
       throw new SemanticProgramValidationError('E_SEMANTIC_BYTES', path, 'invalid or truncated UTF-8')
     }
-    if (compareBytes(bytes, new TextEncoder().encode(value)) !== 0) throw new SemanticProgramValidationError('E_SEMANTIC_BYTES', path, 'non-shortest UTF-8')
+    if (compareBytes(bytes, new TextEncoder().encode(value)) !== 0)
+      throw new SemanticProgramValidationError('E_SEMANTIC_BYTES', path, 'non-shortest UTF-8')
     return { value, bytes }
   }
 
   value(path = '$', depth = 0): unknown {
-    if (++this.values > SEMANTIC_PROGRAM_LIMITS.snapshotValues) throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', path, 'binary value budget exceeded')
-    if (depth > SEMANTIC_PROGRAM_LIMITS.snapshotDepth) throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', path, 'binary depth exceeded')
+    if (++this.values > SEMANTIC_PROGRAM_LIMITS.snapshotValues)
+      throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', path, 'binary value budget exceeded')
+    if (depth > SEMANTIC_PROGRAM_LIMITS.snapshotDepth)
+      throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', path, 'binary depth exceeded')
     const tag = this.byte(`${path}.tag`)
     switch (tag) {
-      case Tag.Null: return null
-      case Tag.False: return false
-      case Tag.True: return true
-      case Tag.Number: return this.f64(path)
-      case Tag.String: return this.stringBody(path).value
+      case Tag.Null:
+        return null
+      case Tag.False:
+        return false
+      case Tag.True:
+        return true
+      case Tag.Number:
+        return this.f64(path)
+      case Tag.String:
+        return this.stringBody(path).value
       case Tag.Array: {
         const length = this.u32(`${path}.length`)
-        if (length > SEMANTIC_PROGRAM_LIMITS.snapshotValues || length > this.remaining) throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', path, 'array count exceeds available bytes or value budget')
+        if (length > SEMANTIC_PROGRAM_LIMITS.snapshotValues || length > this.remaining)
+          throw new SemanticProgramValidationError(
+            'E_SEMANTIC_LIMIT',
+            path,
+            'array count exceeds available bytes or value budget',
+          )
         const output: unknown[] = []
         for (let index = 0; index < length; index++) output.push(this.value(`${path}[${index}]`, depth + 1))
         return output
       }
       case Tag.Object: {
         const length = this.u32(`${path}.length`)
-        if (length > SEMANTIC_PROGRAM_LIMITS.snapshotValues || length > Math.floor(this.remaining / 5)) throw new SemanticProgramValidationError('E_SEMANTIC_LIMIT', path, 'object count exceeds available bytes or value budget')
+        if (length > SEMANTIC_PROGRAM_LIMITS.snapshotValues || length > Math.floor(this.remaining / 5))
+          throw new SemanticProgramValidationError(
+            'E_SEMANTIC_LIMIT',
+            path,
+            'object count exceeds available bytes or value budget',
+          )
         const output: Record<string, unknown> = Object.create(null)
         let previous: Uint8Array | null = null
         for (let index = 0; index < length; index++) {
           const key = this.stringBody(`${path}.key[${index}]`)
-          if (previous !== null && compareBytes(previous, key.bytes) >= 0) throw new SemanticProgramValidationError('E_SEMANTIC_ORDER', path, 'object keys are duplicate or not in canonical UTF-8 byte order')
+          if (previous !== null && compareBytes(previous, key.bytes) >= 0)
+            throw new SemanticProgramValidationError(
+              'E_SEMANTIC_ORDER',
+              path,
+              'object keys are duplicate or not in canonical UTF-8 byte order',
+            )
           previous = key.bytes
           Object.defineProperty(output, key.value, {
             value: this.value(`${path}.${key.value}`, depth + 1),

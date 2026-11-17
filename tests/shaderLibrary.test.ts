@@ -37,13 +37,18 @@ const OBJECT_SHADERS: Array<[string, string, 'V' | 'EdgeV']> = [
   ['deepMesh', DEEP_MESH_WGSL, 'V'],
   ['edge', EDGE_WGSL, 'EdgeV'],
 ]
-const ALL_SHADERS = [...OBJECT_SHADERS.map(([name, code]) => [name, code] as const),
+const ALL_SHADERS = [
+  ...OBJECT_SHADERS.map(([name, code]) => [name, code] as const),
   ['meshSectionCap', MESH_SECTION_CAP_WGSL],
-  ['line', LINE_WGSL], ['grid', GRID_WGSL], ['selectionOverlay', SELECTION_OVERLAY_WGSL]] as const
+  ['line', LINE_WGSL],
+  ['grid', GRID_WGSL],
+  ['selectionOverlay', SELECTION_OVERLAY_WGSL],
+] as const
 
 function balanced(code: string, open: string, close: string) {
-  return (code.match(new RegExp(`\\${open}`, 'g')) ?? []).length
-    === (code.match(new RegExp(`\\${close}`, 'g')) ?? []).length
+  return (
+    (code.match(new RegExp(`\\${open}`, 'g')) ?? []).length === (code.match(new RegExp(`\\${close}`, 'g')) ?? []).length
+  )
 }
 
 describe('shader library modules', () => {
@@ -66,7 +71,9 @@ describe('shader library modules', () => {
     // Struct equality across modules: the scene uniform buffer is shared.
     // line/selectionOverlay keep the short legacy struct (they never read
     // past `options`); everything else shares the themed struct.
-    const sceneLines = new Set(ALL_SHADERS.map(([, code]) => code.split('\n').find(line => line.startsWith('struct Scene'))))
+    const sceneLines = new Set(
+      ALL_SHADERS.map(([, code]) => code.split('\n').find(line => line.startsWith('struct Scene'))),
+    )
     expect(sceneLines.size).toBe(2) // short legacy Scene + themed Scene
     expect(sceneStruct().length).toBeGreaterThan(SCENE_STRUCT.length - 1)
     expect(sceneStruct()).toBe(SCENE_STRUCT)
@@ -85,7 +92,9 @@ describe('shader library modules', () => {
     expect(MESH_SECTION_CAP_WGSL).toContain(SCENE_STRUCT)
     expect(MESH_SECTION_CAP_WGSL).toContain(OBJ_STRUCT)
     expect(MESH_SECTION_CAP_WGSL).toContain('mix(fromPos, pos, ob.morph.x)')
-    expect(MESH_SECTION_CAP_WGSL).toContain('if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) >= sc.section.w) { discard; }')
+    expect(MESH_SECTION_CAP_WGSL).toContain(
+      'if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) >= sc.section.w) { discard; }',
+    )
     expect(MESH_SECTION_CAP_WGSL).toContain('return vec4f(sc.capColor, 1.0);')
     expect(MESH_SECTION_CAP_WGSL).not.toContain(SECTION_CLIP_WGSL)
   })
@@ -150,8 +159,9 @@ describe('shader library modules', () => {
       const pcfEnd = code.indexOf('return select(1.0, mix(1.0, sum / 9.0, sc.shadowParams.w), inb);')
       const pcf = code.slice(pcfStart, pcfEnd)
       const returns = pcf.split('\n').filter(line => line.includes('return'))
-      expect(returns.filter(line => !line.includes('select('))).toEqual(
-        ['  if (sc.shadowParams.x < 0.5) { return 1.0; }'])
+      expect(returns.filter(line => !line.includes('select('))).toEqual([
+        '  if (sc.shadowParams.x < 0.5) { return 1.0; }',
+      ])
     }
     for (const code of [MESH_WGSL, MESH_PBR_WGSL, MESH_MATCAP_WGSL, MESH_TOON_WGSL]) {
       const call = code.indexOf('let shadow = shadowFactor(v.w);')
@@ -268,7 +278,11 @@ describe('shader registry', () => {
       ['grid', GRID_WGSL, 'grid', false],
       ['selectionOverlay', SELECTION_OVERLAY_WGSL, 'overlay', false],
     ]
-    expect(listShaders().map(spec => spec.id).sort()).toEqual(expected.map(([id]) => id).sort())
+    expect(
+      listShaders()
+        .map(spec => spec.id)
+        .sort(),
+    ).toEqual(expected.map(([id]) => id).sort())
     for (const [id, source, kind, supportsVariants] of expected) {
       const spec = getShader(id)
       expect(spec.source).toBe(source)
@@ -281,12 +295,20 @@ describe('shader registry', () => {
   })
 
   it('registry descriptors pin the pipeline defaults the renderer used to hand-wire', () => {
-    expect(getShader('mesh')).toMatchObject({ blend: 'none', topology: 'triangle-list', vertexLayout: 'mesh',
-      depth: { writeEnabled: true, compare: 'less' } })
+    expect(getShader('mesh')).toMatchObject({
+      blend: 'none',
+      topology: 'triangle-list',
+      vertexLayout: 'mesh',
+      depth: { writeEnabled: true, compare: 'less' },
+    })
     // Alternate mesh shading models share the mesh pipeline defaults.
     for (const id of ['meshPbr', 'meshMatcap', 'meshToon', 'meshUnlit']) {
-      expect(getShader(id)).toMatchObject({ blend: 'none', topology: 'triangle-list', vertexLayout: 'mesh',
-        depth: { writeEnabled: true, compare: 'less' } })
+      expect(getShader(id)).toMatchObject({
+        blend: 'none',
+        topology: 'triangle-list',
+        vertexLayout: 'mesh',
+        depth: { writeEnabled: true, compare: 'less' },
+      })
     }
     // Only meshMatcap binds the renderer-wide capture texture at group(2).
     expect(getShader('meshMatcap').usesMatcapBinding).toBe(true)
@@ -312,16 +334,37 @@ describe('shader registry', () => {
     expect(getShader('meshShadow').supportsVariants).toBe(false)
     // Section cap: same depth/blend as the opaque surface pass, but front-face
     // culling so only clipped back faces fill the cut surface.
-    expect(getShader('meshSectionCap')).toMatchObject({ blend: 'none', topology: 'triangle-list', vertexLayout: 'mesh',
-      cullMode: 'front', depth: { writeEnabled: true, compare: 'less' } })
-    expect(getShader('deepMesh')).toMatchObject({ blend: 'alpha', topology: 'triangle-list', vertexLayout: 'mesh',
-      depth: { writeEnabled: false, compare: 'always' } })
-    expect(getShader('edge')).toMatchObject({ blend: 'alpha', topology: 'line-list', vertexLayout: 'edge',
-      depth: { writeEnabled: false, compare: 'less-equal' } })
-    expect(getShader('line')).toMatchObject({ blend: 'alpha', topology: 'line-list', vertexLayout: 'line',
-      depth: { writeEnabled: true, compare: 'less' } })
-    expect(getShader('grid')).toMatchObject({ blend: 'alpha', topology: 'triangle-list', vertexLayout: 'grid',
-      depth: { writeEnabled: true, compare: 'less' } })
+    expect(getShader('meshSectionCap')).toMatchObject({
+      blend: 'none',
+      topology: 'triangle-list',
+      vertexLayout: 'mesh',
+      cullMode: 'front',
+      depth: { writeEnabled: true, compare: 'less' },
+    })
+    expect(getShader('deepMesh')).toMatchObject({
+      blend: 'alpha',
+      topology: 'triangle-list',
+      vertexLayout: 'mesh',
+      depth: { writeEnabled: false, compare: 'always' },
+    })
+    expect(getShader('edge')).toMatchObject({
+      blend: 'alpha',
+      topology: 'line-list',
+      vertexLayout: 'edge',
+      depth: { writeEnabled: false, compare: 'less-equal' },
+    })
+    expect(getShader('line')).toMatchObject({
+      blend: 'alpha',
+      topology: 'line-list',
+      vertexLayout: 'line',
+      depth: { writeEnabled: true, compare: 'less' },
+    })
+    expect(getShader('grid')).toMatchObject({
+      blend: 'alpha',
+      topology: 'triangle-list',
+      vertexLayout: 'grid',
+      depth: { writeEnabled: true, compare: 'less' },
+    })
     // Shadow binding flags: the four lit surface shaders + grid sample it;
     // meshShadow is the depth-only writer (no fragment, depth32float target).
     for (const id of ['mesh', 'meshPbr', 'meshMatcap', 'meshToon', 'grid']) {
@@ -330,13 +373,19 @@ describe('shader registry', () => {
     for (const id of ['meshUnlit', 'meshSectionCap', 'deepMesh', 'edge', 'line', 'selectionOverlay', 'meshShadow']) {
       expect(getShader(id).usesShadowBinding ?? false).toBe(false)
     }
-    expect(getShader('meshShadow')).toMatchObject({ depthOnly: true, vertexLayout: 'mesh',
-      depth: { writeEnabled: true, compare: 'less' } })
-    expect(getShader('selectionOverlay')).toMatchObject({ blend: 'alpha', topology: 'triangle-list', vertexLayout: 'line',
-      depth: { writeEnabled: false, compare: 'less-equal' } })
+    expect(getShader('meshShadow')).toMatchObject({
+      depthOnly: true,
+      vertexLayout: 'mesh',
+      depth: { writeEnabled: true, compare: 'less' },
+    })
+    expect(getShader('selectionOverlay')).toMatchObject({
+      blend: 'alpha',
+      topology: 'triangle-list',
+      vertexLayout: 'line',
+      depth: { writeEnabled: false, compare: 'less-equal' },
+    })
   })
 })
-
 
 describe('shader variants', () => {
   it('immediate variant serves style from the immediate address space', () => {
@@ -350,7 +399,8 @@ describe('shader variants', () => {
   })
 
   it.each(OBJECT_SHADERS.map(([name, code, output]) => [name, code, output] as const))(
-    'instanced variant of %s reads per-instance records from storage', (_name, code, output) => {
+    'instanced variant of %s reads per-instance records from storage',
+    (_name, code, output) => {
       const variant = instancedObjectShader(code, output)
       expect(variant).toContain('var<storage, read> objects: array<Obj>;')
       expect(variant).toContain('@builtin(instance_index) instance: u32')
@@ -360,7 +410,8 @@ describe('shader variants', () => {
       // Exactly one vertex output location 2 (the flat instance id) and no leftover uniform Obj.
       expect(variant.split('var<uniform> ob: Obj;').length - 1).toBe(0)
       expect(variant).toContain(`return ${output}(instance, `)
-    })
+    },
+  )
 
   it('variants throw when the source drifts from the contract', () => {
     expect(() => immediateObjectShader('fn nope() {}')).toThrow('missing object uniform')

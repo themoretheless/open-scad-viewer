@@ -1,6 +1,6 @@
-import type {PhotoMeasuredInput} from './calibration'
-import type {PhotoDensePreset, PhotoDenseDiagnostics, PhotoDiagnostics} from './kernel'
-import type {PhotoTimings} from './workerProtocol'
+import type { PhotoMeasuredInput } from './calibration'
+import type { PhotoDensePreset, PhotoDenseDiagnostics, PhotoDiagnostics } from './kernel'
+import type { PhotoTimings } from './workerProtocol'
 
 export interface PhotoReportInput {
   image: number
@@ -13,7 +13,7 @@ export interface PhotoReportInput {
   calibration?: PhotoMeasuredInput
 }
 export interface PhotoRunReport {
-  settings: {dense: boolean; resolution: number; maxImageSide: number; densePreset?: PhotoDensePreset}
+  settings: { dense: boolean; resolution: number; maxImageSide: number; densePreset?: PhotoDensePreset }
   inputs: readonly PhotoReportInput[]
   sparse: PhotoDiagnostics | null
   dense: PhotoDenseDiagnostics | null
@@ -22,7 +22,7 @@ export interface PhotoRunReport {
 
 /** Metadata-only record: originals and pixel buffers are never included in this download. */
 export function photoReportJson(report: PhotoRunReport): string {
-  return JSON.stringify({format: 'open-scad-viewer/photo-report', version: 1, ...report}, null, 2) + '\n'
+  return JSON.stringify({ format: 'open-scad-viewer/photo-report', version: 1, ...report }, null, 2) + '\n'
 }
 
 export function photoRegistrationReason(reason: string, russian: boolean): string {
@@ -31,7 +31,10 @@ export function photoRegistrationReason(reason: string, russian: boolean): strin
     cancelled: ['Обработка отменена', 'Processing cancelled'],
     invalid_options: ['Некорректные настройки', 'Invalid settings'],
     invalid_image: ['Некорректные данные снимка', 'Invalid image data'],
-    insufficient_consistent_observations: ['Мало точек после проверки геометрии', 'Too few geometrically consistent observations'],
+    insufficient_consistent_observations: [
+      'Мало точек после проверки геометрии',
+      'Too few geometrically consistent observations',
+    ],
     insufficient_features: ['Мало различимых деталей', 'Too few distinctive features'],
     initialization_failed: ['Не удалось выбрать начальную пару', 'Initial pair could not be reconstructed'],
     insufficient_correspondences: ['Мало связей с точками 3D', 'Too few 2D–3D correspondences'],

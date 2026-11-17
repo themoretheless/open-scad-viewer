@@ -15,7 +15,15 @@ export interface GMesh {
    * position attribute toward `from` (vertex slot 1) by `ob.morph.x`, so the
    * CPU never rewrites vertex buffers per frame.
    */
-  morph?: ({ from: Float32Array; target: Float32Array; started: number; matrix?: ((t: number) => Mat4) | undefined; currentMatrix?: Mat4 | undefined }) | undefined
+  morph?:
+    | {
+        from: Float32Array
+        target: Float32Array
+        started: number
+        matrix?: ((t: number) => Mat4) | undefined
+        currentMatrix?: Mat4 | undefined
+      }
+    | undefined
   /** GPU copy of `morph.from` (positions only, stride 3); capacity-grown. */
   morphVB: GPUBuffer | null
   morphVBCapacity: number
@@ -24,13 +32,21 @@ export interface GMesh {
   nativeGeometry?: MeshData['nativeGeometry'] | undefined
   faceIdsAuthoritative?: boolean | undefined
   assetId?: GeometryAssetId | undefined
-  vb: GPUBuffer; ib: GPUBuffer; ic: number
-  ub: GPUBuffer; bg: GPUBindGroup
-  edgeIB: GPUBuffer | null; edgeIC: number
-  vertices: Float32Array; indices: Uint32Array
-  edgeIndices: Uint32Array; faceIds: Uint32Array; bvh: MeshBvh
+  vb: GPUBuffer
+  ib: GPUBuffer
+  ic: number
+  ub: GPUBuffer
+  bg: GPUBindGroup
+  edgeIB: GPUBuffer | null
+  edgeIC: number
+  vertices: Float32Array
+  indices: Uint32Array
+  edgeIndices: Uint32Array
+  faceIds: Uint32Array
+  bvh: MeshBvh
   provenance: MeshProvenanceRun[]
-  transform: Mat4; inverseTransform: Mat4
+  transform: Mat4
+  inverseTransform: Mat4
   color: [number, number, number, number]
   alpha: number
   localBounds: Aabb3
@@ -117,9 +133,7 @@ export interface GpuMemoryArchitectureProfile {
   preferredReadbackStrategy: 'shared_coherent_map_read' | 'dma_copy_to_staging_then_map'
 }
 
-export function getGpuMemoryArchitectureProfile(
-  architecture: GpuMemoryArchitecture,
-): GpuMemoryArchitectureProfile {
+export function getGpuMemoryArchitectureProfile(architecture: GpuMemoryArchitecture): GpuMemoryArchitectureProfile {
   if (architecture === 'uma') {
     return {
       architecture: 'uma',

@@ -37,9 +37,7 @@ export interface BrepRecording {
   resolve(handle: CadKernelHandle): { id: string } | { inexact: string }
 }
 
-export function createBrepRecordingKernelOps(
-  base: CadKernelOps,
-): { ops: CadKernelOps; recording: BrepRecording } {
+export function createBrepRecordingKernelOps(base: CadKernelOps): { ops: CadKernelOps; recording: BrepRecording } {
   const graph = createBrepGraphBuilder()
   const records = new WeakMap<CadKernelHandle, BrepValue | BrepProfile>()
 
@@ -65,8 +63,12 @@ export function createBrepRecordingKernelOps(
   const ops: CadKernelOps = {
     implementationKey: base.implementationKey,
 
-    empty2() { return tag(base.empty2(), refuse('empty 2D geometry')) },
-    empty3() { return tag(base.empty3(), refuse('empty geometry')) },
+    empty2() {
+      return tag(base.empty2(), refuse('empty 2D geometry'))
+    },
+    empty3() {
+      return tag(base.empty3(), refuse('empty geometry'))
+    },
 
     box(size, center) {
       const [x, y, z] = size
@@ -81,28 +83,29 @@ export function createBrepRecordingKernelOps(
     },
 
     gear(spec, segments) {
-      return tag(base.gear(spec, segments), graph.gear({
-        module: spec.module,
-        teeth: spec.teeth,
-        height: spec.height,
-        pressure_angle: spec.pressureAngle,
-        helix_angle: spec.helixAngle,
-        herringbone: spec.herringbone,
-        bore: spec.bore,
-        internal: spec.internal,
-        rim_width: spec.rimWidth,
-        clearance: spec.clearance,
-        backlash: spec.backlash,
-      }))
+      return tag(
+        base.gear(spec, segments),
+        graph.gear({
+          module: spec.module,
+          teeth: spec.teeth,
+          height: spec.height,
+          pressure_angle: spec.pressureAngle,
+          helix_angle: spec.helixAngle,
+          herringbone: spec.herringbone,
+          bore: spec.bore,
+          internal: spec.internal,
+          rim_width: spec.rimWidth,
+          clearance: spec.clearance,
+          backlash: spec.backlash,
+        }),
+      )
     },
 
     cylinder(height, radiusBottom, radiusTop, radialSegments, center) {
       const result = base.cylinder(height, radiusBottom, radiusTop, radialSegments, center)
       const solid = graph.cylinder(radiusBottom, radiusTop, height)
       // Both kernels place the base at z = 0; only OpenSCAD's `center` shifts it.
-      return tag(result, center
-        ? graph.transform(solid, translationMatrix(0, 0, -height / 2))
-        : solid)
+      return tag(result, center ? graph.transform(solid, translationMatrix(0, 0, -height / 2)) : solid)
     },
 
     rectangle(size, center) {
@@ -131,9 +134,7 @@ export function createBrepRecordingKernelOps(
       // A twisted or tapered extrusion is no longer a straight prism.
       if (twistDegrees !== 0) return tag(result, refuse('linear_extrude with twist'))
       if (scale[0] !== 1 || scale[1] !== 1) return tag(result, refuse('linear_extrude with scale'))
-      return tag(result, graph.extrudeLoops(
-        record, center ? -height / 2 : 0, center ? height / 2 : height,
-      ))
+      return tag(result, graph.extrudeLoops(record, center ? -height / 2 : 0, center ? height / 2 : height))
     },
 
     rotateExtrude(input, radialSegments, angleDegrees) {
@@ -147,15 +148,14 @@ export function createBrepRecordingKernelOps(
     },
 
     translate(input, offset) {
-      return derive(base.translate(input, offset), [input], ([value]) => graph.transform(
-        value!, translationMatrix(offset[0] ?? 0, offset[1] ?? 0, offset[2] ?? 0),
-      ))
+      return derive(base.translate(input, offset), [input], ([value]) =>
+        graph.transform(value!, translationMatrix(offset[0] ?? 0, offset[1] ?? 0, offset[2] ?? 0)),
+      )
     },
 
     scale(input, factors) {
       const [x, y, z] = [factors[0] ?? 1, factors[1] ?? factors[0] ?? 1, factors[2] ?? factors[0] ?? 1]
-      return derive(base.scale(input, factors), [input], ([value]) =>
-        graph.transform(value!, scaleMatrix(x, y, z)))
+      return derive(base.scale(input, factors), [input], ([value]) => graph.transform(value!, scaleMatrix(x, y, z)))
     },
 
     rotate(input, angles) {
@@ -166,61 +166,101 @@ export function createBrepRecordingKernelOps(
 
     mirror(input, normal) {
       const matrix = mirrorMatrix(normal[0] ?? 0, normal[1] ?? 0, normal[2] ?? 0)
-      return derive(base.mirror(input, normal), [input], ([value]) => (matrix === null
-        ? refuse('mirror about a degenerate plane')
-        : graph.transform(value!, matrix)))
+      return derive(base.mirror(input, normal), [input], ([value]) =>
+        matrix === null ? refuse('mirror about a degenerate plane') : graph.transform(value!, matrix),
+      )
     },
 
     transform3(input, matrix) {
       // The kernel matrix is a column-major 4x4; the graph wants rows.
       const rows = [0, 1, 2].map(row => [0, 1, 2, 3].map(column => matrix[column * 4 + row] ?? 0))
       return derive(base.transform3(input, matrix), [input], ([value]) =>
-        graph.transform(value!, [...rows, [0, 0, 0, 1]] as [number[], number[], number[], number[]]))
+        graph.transform(value!, [...rows, [0, 0, 0, 1]] as [number[], number[], number[], number[]]),
+      )
     },
 
     transform3Projective(input, matrix) {
       // Projective transforms keep the authored homogeneous fourth row.
-      const rows = [0, 1, 2, 3].map(row => [0, 1, 2, 3].map(column => matrix[column * 4 + row] ?? (row === column ? 1 : 0)))
+      const rows = [0, 1, 2, 3].map(row =>
+        [0, 1, 2, 3].map(column => matrix[column * 4 + row] ?? (row === column ? 1 : 0)),
+      )
       return derive(base.transform3Projective(input, matrix), [input], ([value]) =>
-        graph.transform(value!, rows as [number[], number[], number[], number[]]))
+        graph.transform(value!, rows as [number[], number[], number[], number[]]),
+      )
     },
 
     translateZ(input, distance) {
       return derive(base.translateZ(input, distance), [input], ([value]) =>
-        graph.transform(value!, translationMatrix(0, 0, distance)))
+        graph.transform(value!, translationMatrix(0, 0, distance)),
+      )
     },
 
     mirrorZ(input) {
-      return derive(base.mirrorZ(input), [input], ([value]) =>
-        graph.transform(value!, scaleMatrix(1, 1, -1)))
+      return derive(base.mirrorZ(input), [input], ([value]) => graph.transform(value!, scaleMatrix(1, 1, -1)))
     },
 
-    asOriginal(input) { return tag(base.asOriginal(input), solidOf(input)) },
+    asOriginal(input) {
+      return tag(base.asOriginal(input), solidOf(input))
+    },
 
     // No exact analogue. The mark travels with the handle and is reported by name
     // if this geometry reaches the Solid output.
-    polyhedron(vertices, triangles) { return tag(base.polyhedron(vertices, triangles), refuse('polyhedron')) },
-    ofMesh(vertProperties, triVerts) { return tag(base.ofMesh(vertProperties, triVerts), refuse('imported mesh')) },
-    hull2(inputs) { return tag(base.hull2(inputs), refuse('hull')) },
-    hull3(inputs) { return tag(base.hull3(inputs), refuse('hull')) },
-    projection(input, cut) { return tag(base.projection(input, cut), refuse('projection')) },
+    polyhedron(vertices, triangles) {
+      return tag(base.polyhedron(vertices, triangles), refuse('polyhedron'))
+    },
+    ofMesh(vertProperties, triVerts) {
+      return tag(base.ofMesh(vertProperties, triVerts), refuse('imported mesh'))
+    },
+    hull2(inputs) {
+      return tag(base.hull2(inputs), refuse('hull'))
+    },
+    hull3(inputs) {
+      return tag(base.hull3(inputs), refuse('hull'))
+    },
+    projection(input, cut) {
+      return tag(base.projection(input, cut), refuse('projection'))
+    },
     offset(input, distance, join, miterLimit, circularSegments) {
       return tag(base.offset(input, distance, join, miterLimit, circularSegments), refuse('offset'))
     },
-    minkowskiSum2(inputs) { return tag(base.minkowskiSum2(inputs), refuse('minkowski')) },
-    minkowskiSum3(left, right) { return tag(base.minkowskiSum3(left, right), refuse('minkowski')) },
-    boolean2(operation, inputs) { return tag(base.boolean2(operation, inputs), refuse(`2D ${operation}`)) },
-    transform2(input, matrix) { return tag(base.transform2(input, matrix), refuse('2D transform')) },
+    minkowskiSum2(inputs) {
+      return tag(base.minkowskiSum2(inputs), refuse('minkowski'))
+    },
+    minkowskiSum3(left, right) {
+      return tag(base.minkowskiSum3(left, right), refuse('minkowski'))
+    },
+    boolean2(operation, inputs) {
+      return tag(base.boolean2(operation, inputs), refuse(`2D ${operation}`))
+    },
+    transform2(input, matrix) {
+      return tag(base.transform2(input, matrix), refuse('2D transform'))
+    },
 
     // Queries and lifetime: the polygon track answers these unchanged.
-    polygons(input) { return base.polygons(input) },
-    bounds(input) { return base.bounds(input) },
-    firstVertex3(input) { return base.firstVertex3(input) },
-    isEmpty(input) { return base.isEmpty(input) },
-    originalId(input) { return base.originalId(input) },
-    analyzeSolid(input) { return base.analyzeSolid(input) },
-    analyzeSolidCooperatively(input, checkpoint) { return base.analyzeSolidCooperatively(input, checkpoint) },
-    delete(input) { base.delete(input) },
+    polygons(input) {
+      return base.polygons(input)
+    },
+    bounds(input) {
+      return base.bounds(input)
+    },
+    firstVertex3(input) {
+      return base.firstVertex3(input)
+    },
+    isEmpty(input) {
+      return base.isEmpty(input)
+    },
+    originalId(input) {
+      return base.originalId(input)
+    },
+    analyzeSolid(input) {
+      return base.analyzeSolid(input)
+    },
+    analyzeSolidCooperatively(input, checkpoint) {
+      return base.analyzeSolidCooperatively(input, checkpoint)
+    },
+    delete(input) {
+      base.delete(input)
+    },
   }
 
   return {

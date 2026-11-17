@@ -1,7 +1,26 @@
 import { DXF_QUERY_GRID_RESOLUTION } from '../openScadImport'
-import type { DxfQueryPathLine, OpenScadDxfDimensionQueryOptions, OpenScadDxfLineSegmentMetadata, OpenScadDxfQueryOptions, OpenScadDxfQueryResult, OpenScadImportForcedAsset, OpenScadImportGeometry, OpenScadImportLoadOptions, OpenScadImportPoint2, PreparedOpenScadImportAssets } from '../openScadImport'
+import type {
+  DxfQueryPathLine,
+  OpenScadDxfDimensionQueryOptions,
+  OpenScadDxfLineSegmentMetadata,
+  OpenScadDxfQueryOptions,
+  OpenScadDxfQueryResult,
+  OpenScadImportForcedAsset,
+  OpenScadImportGeometry,
+  OpenScadImportLoadOptions,
+  OpenScadImportPoint2,
+  PreparedOpenScadImportAssets,
+} from '../openScadImport'
 import { OpenScadProject, resolveOpenScadProjectPath } from '../../language/openScadProject'
-import { dxfQueryDiagnostic, dxfQueryResult, loadPreparedOpenScadImport, prepareOpenScadImportAssets, resolveDxfQueryTransform, resolvePreparedDxfQueryMetadata, transformDxfDimensionCoordinates } from './prepareOpenScadImportAssets'
+import {
+  dxfQueryDiagnostic,
+  dxfQueryResult,
+  loadPreparedOpenScadImport,
+  prepareOpenScadImportAssets,
+  resolveDxfQueryTransform,
+  resolvePreparedDxfQueryMetadata,
+  transformDxfDimensionCoordinates,
+} from './prepareOpenScadImportAssets'
 
 /** Evaluate OpenSCAD 2021.01 dxf_dim() against a prepared, bounded project asset. */
 export function queryPreparedOpenScadDxfDimension(
@@ -16,18 +35,20 @@ export function queryPreparedOpenScadDxfDimension(
   const resolved = resolvePreparedDxfQueryMetadata(project, prepared, sourcePath, specifier)
   if ('severity' in resolved) return dxfQueryResult<number>(undefined, [...diagnostics, resolved])
   const name = typeof options.name === 'string' ? options.name : ''
-  const dimension = resolved.metadata.dimensions.find(candidate => (
-    (transform.layer === '' || candidate.layer === transform.layer)
-    && (name === '' || candidate.name === name)
-  ))
+  const dimension = resolved.metadata.dimensions.find(
+    candidate =>
+      (transform.layer === '' || candidate.layer === transform.layer) && (name === '' || candidate.name === name),
+  )
   if (dimension === undefined) {
-    diagnostics.push(dxfQueryDiagnostic(
-      'OPENSCAD_DXF_DIMENSION_NOT_FOUND',
-      `No matching DXF dimension was found in ${resolved.assetPath}.`,
-      sourcePath,
-      specifier,
-      { assetPath: resolved.assetPath, layer: transform.layer, name },
-    ))
+    diagnostics.push(
+      dxfQueryDiagnostic(
+        'OPENSCAD_DXF_DIMENSION_NOT_FOUND',
+        `No matching DXF dimension was found in ${resolved.assetPath}.`,
+        sourcePath,
+        specifier,
+        { assetPath: resolved.assetPath, layer: transform.layer, name },
+      ),
+    )
     return dxfQueryResult<number>(undefined, diagnostics)
   }
 
@@ -35,21 +56,15 @@ export function queryPreparedOpenScadDxfDimension(
   const type = dimension.type & 7
   let value: number | undefined
   if (type === 0) {
-    const radians = dimension.angle * Math.PI / 180
+    const radians = (dimension.angle * Math.PI) / 180
     const x = points[4]![0] - points[3]![0]
     const y = points[4]![1] - points[3]![1]
     value = Math.abs(x * Math.cos(radians) + y * Math.sin(radians))
   } else if (type === 1) {
     value = Math.hypot(points[4]![0] - points[3]![0], points[4]![1] - points[3]![1])
   } else if (type === 2) {
-    const first = Math.atan2(
-      points[0]![0] - points[5]![0],
-      points[0]![1] - points[5]![1],
-    ) * 180 / Math.PI
-    const second = Math.atan2(
-      points[4]![0] - points[3]![0],
-      points[4]![1] - points[3]![1],
-    ) * 180 / Math.PI
+    const first = (Math.atan2(points[0]![0] - points[5]![0], points[0]![1] - points[5]![1]) * 180) / Math.PI
+    const second = (Math.atan2(points[4]![0] - points[3]![0], points[4]![1] - points[3]![1]) * 180) / Math.PI
     value = Math.abs(first - second)
   } else if (type === 3 || type === 4) {
     value = Math.hypot(points[5]![0] - points[0]![0], points[5]![1] - points[0]![1])
@@ -57,13 +72,15 @@ export function queryPreparedOpenScadDxfDimension(
     value = (dimension.type & 64) !== 0 ? points[3]![0] : points[3]![1]
   }
   if (value === undefined) {
-    diagnostics.push(dxfQueryDiagnostic(
-      'OPENSCAD_DXF_DIMENSION_TYPE_UNSUPPORTED',
-      `DXF dimension ${name || '<first>'} uses unsupported type ${type}.`,
-      sourcePath,
-      specifier,
-      { assetPath: resolved.assetPath, layer: transform.layer, name },
-    ))
+    diagnostics.push(
+      dxfQueryDiagnostic(
+        'OPENSCAD_DXF_DIMENSION_TYPE_UNSUPPORTED',
+        `DXF dimension ${name || '<first>'} uses unsupported type ${type}.`,
+        sourcePath,
+        specifier,
+        { assetPath: resolved.assetPath, layer: transform.layer, name },
+      ),
+    )
   }
   return dxfQueryResult(value, diagnostics)
 }
@@ -94,10 +111,8 @@ export function buildDxfQueryPaths(
 ): readonly (readonly OpenScadImportPoint2[])[] {
   const grid = new Map<string, number[]>()
   const keyOf = (x: number, y: number): string => `${x},${y}`
-  const gridKeyForPoint = (point: OpenScadImportPoint2): string => keyOf(
-    roundLikeCpp(point[0] / DXF_QUERY_GRID_RESOLUTION),
-    roundLikeCpp(point[1] / DXF_QUERY_GRID_RESOLUTION),
-  )
+  const gridKeyForPoint = (point: OpenScadImportPoint2): string =>
+    keyOf(roundLikeCpp(point[0] / DXF_QUERY_GRID_RESOLUTION), roundLikeCpp(point[1] / DXF_QUERY_GRID_RESOLUTION))
   const align = (point: OpenScadImportPoint2): OpenScadImportPoint2 => {
     const transformed = transformDxfQueryPoint(point, origin, scale)
     let ix = roundLikeCpp(transformed[0] / DXF_QUERY_GRID_RESOLUTION)
@@ -121,9 +136,10 @@ export function buildDxfQueryPaths(
     // Converting a non-finite double to int64_t is implementation-defined in
     // the original C++; retaining the value gives this adapter deterministic
     // warning-free behavior for the same otherwise-degenerate query.
-    const aligned: OpenScadImportPoint2 = Number.isFinite(ix) && Number.isFinite(iy)
-      ? [ix * DXF_QUERY_GRID_RESOLUTION, iy * DXF_QUERY_GRID_RESOLUTION]
-      : transformed
+    const aligned: OpenScadImportPoint2 =
+      Number.isFinite(ix) && Number.isFinite(iy)
+        ? [ix * DXF_QUERY_GRID_RESOLUTION, iy * DXF_QUERY_GRID_RESOLUTION]
+        : transformed
     const key = keyOf(ix, iy)
     if (!grid.has(key)) grid.set(key, [])
     return aligned
@@ -237,24 +253,32 @@ export function queryPreparedOpenScadDxfCross(
   if (paths.length >= 2) {
     const [firstStart, firstEnd] = paths[0]!
     const [secondStart, secondEnd] = paths[1]!
-    const denominator = (secondEnd[1] - secondStart[1]) * (firstEnd[0] - firstStart[0])
-      - (secondEnd[0] - secondStart[0]) * (firstEnd[1] - firstStart[1])
+    const denominator =
+      (secondEnd[1] - secondStart[1]) * (firstEnd[0] - firstStart[0]) -
+      (secondEnd[0] - secondStart[0]) * (firstEnd[1] - firstStart[1])
     if (denominator !== 0) {
-      const amount = ((secondEnd[0] - secondStart[0]) * (firstStart[1] - secondStart[1])
-        - (secondEnd[1] - secondStart[1]) * (firstStart[0] - secondStart[0])) / denominator
-      return dxfQueryResult(Object.freeze([
-        firstStart[0] + amount * (firstEnd[0] - firstStart[0]),
-        firstStart[1] + amount * (firstEnd[1] - firstStart[1]),
-      ] as const), diagnostics)
+      const amount =
+        ((secondEnd[0] - secondStart[0]) * (firstStart[1] - secondStart[1]) -
+          (secondEnd[1] - secondStart[1]) * (firstStart[0] - secondStart[0])) /
+        denominator
+      return dxfQueryResult(
+        Object.freeze([
+          firstStart[0] + amount * (firstEnd[0] - firstStart[0]),
+          firstStart[1] + amount * (firstEnd[1] - firstStart[1]),
+        ] as const),
+        diagnostics,
+      )
     }
   }
-  diagnostics.push(dxfQueryDiagnostic(
-    'OPENSCAD_DXF_CROSS_NOT_FOUND',
-    `The first two eligible DXF paths in ${resolved.assetPath} do not define a cross.`,
-    sourcePath,
-    specifier,
-    { assetPath: resolved.assetPath, layer: transform.layer },
-  ))
+  diagnostics.push(
+    dxfQueryDiagnostic(
+      'OPENSCAD_DXF_CROSS_NOT_FOUND',
+      `The first two eligible DXF paths in ${resolved.assetPath} do not define a cross.`,
+      sourcePath,
+      specifier,
+      { assetPath: resolved.assetPath, layer: transform.layer },
+    ),
+  )
   return dxfQueryResult<readonly [number, number]>(undefined, diagnostics)
 }
 
@@ -268,17 +292,16 @@ export async function loadOpenScadImport(
   let forcedAssets: readonly OpenScadImportForcedAsset[] | undefined
   if (options.forcedFormat !== undefined) {
     try {
-      forcedAssets = [{
-        path: resolveOpenScadProjectPath(sourcePath, specifier),
-        format: options.forcedFormat,
-      }]
+      forcedAssets = [
+        {
+          path: resolveOpenScadProjectPath(sourcePath, specifier),
+          format: options.forcedFormat,
+        },
+      ]
     } catch {
       // loadPreparedOpenScadImport owns the contextual path diagnostic.
     }
   }
-  const prepared = await prepareOpenScadImportAssets(
-    project,
-    forcedAssets === undefined ? {} : { forcedAssets },
-  )
+  const prepared = await prepareOpenScadImportAssets(project, forcedAssets === undefined ? {} : { forcedAssets })
   return loadPreparedOpenScadImport(project, prepared, sourcePath, specifier, options)
 }

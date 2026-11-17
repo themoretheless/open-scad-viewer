@@ -1,7 +1,12 @@
 import type { SourceOperationId } from '../core/mesh'
 import type { LanguageDiagnosticCode } from '../core/languageContract'
 import { OpenSCADParseError } from './openscadErrors'
-export { hasOpenScadViewportModifier, finalizeOpenScadProgram, parseOpenScadProjectSource, compileOpenSCAD } from './openscadCompiler/hasOpenScadViewportModifier'
+export {
+  hasOpenScadViewportModifier,
+  finalizeOpenScadProgram,
+  parseOpenScadProjectSource,
+  compileOpenSCAD,
+} from './openscadCompiler/hasOpenScadViewportModifier'
 
 const MAX_AST_NODES = 25_000
 const MAX_EXPRESSION_DEPTH = 256
@@ -11,7 +16,7 @@ export const OPENSCAD_LANGUAGE_PROFILES = Object.freeze([
   'openscad-viewer-subset@1',
   'openscad/stable-2021.01',
 ] as const)
-export type OpenScadLanguageProfile = typeof OPENSCAD_LANGUAGE_PROFILES[number]
+export type OpenScadLanguageProfile = (typeof OPENSCAD_LANGUAGE_PROFILES)[number]
 export interface CompileOpenScadOptions {
   readonly languageProfile?: OpenScadLanguageProfile | undefined
 }
@@ -47,15 +52,49 @@ export interface RangeValue {
 export type Value = ScalarValue | Value[] | FunctionValue | RangeValue
 
 export enum TT {
-  Num, Str, Ident,
-  LParen, RParen, LBrace, RBrace, LBracket, RBracket,
-  Comma, Semi, Eq, Plus, Minus, Star, Slash, Percent, Caret,
-  Hash, Dollar, Dot, Colon, Question,
-  Lt, Gt, LtEq, GtEq, EqEq, NotEq, Not, And, Or,
-  Eof, DirectivePath,
+  Num,
+  Str,
+  Ident,
+  LParen,
+  RParen,
+  LBrace,
+  RBrace,
+  LBracket,
+  RBracket,
+  Comma,
+  Semi,
+  Eq,
+  Plus,
+  Minus,
+  Star,
+  Slash,
+  Percent,
+  Caret,
+  Hash,
+  Dollar,
+  Dot,
+  Colon,
+  Question,
+  Lt,
+  Gt,
+  LtEq,
+  GtEq,
+  EqEq,
+  NotEq,
+  Not,
+  And,
+  Or,
+  Eof,
+  DirectivePath,
 }
 
-export interface Token { t: TT; v: string; p: number; end: number; closed?: boolean }
+export interface Token {
+  t: TT
+  v: string
+  p: number
+  end: number
+  closed?: boolean
+}
 
 export interface LetExpression {
   readonly kind: 'let'
@@ -135,13 +174,13 @@ export type Expr =
   | { kind: 'ternary'; test: Expr; yes: Expr; no: Expr; p: number }
   | { kind: 'function'; params: FunctionParam[]; body: Expr; p: number }
   | {
-    kind: 'call'
-    /** Fast-path name for an identifier callee; null for a computed callee. */
-    name: string | null
-    callee: Expr
-    args: ExpressionArgument[]
-    p: number
-  }
+      kind: 'call'
+      /** Fast-path name for an identifier callee; null for a computed callee. */
+      name: string | null
+      callee: Expr
+      args: ExpressionArgument[]
+      p: number
+    }
   | { kind: 'index'; value: Expr; index: Expr; p: number }
   | { kind: 'member'; value: Expr; name: string; p: number }
   | LetExpression
@@ -156,13 +195,8 @@ export interface ExpressionArgument {
   readonly end: number
 }
 
-export const OPENSCAD_VIEWPORT_MODIFIER_KINDS = Object.freeze([
-  'disable',
-  'highlight',
-  'background',
-  'root',
-] as const)
-export type OpenScadViewportModifierKind = typeof OPENSCAD_VIEWPORT_MODIFIER_KINDS[number]
+export const OPENSCAD_VIEWPORT_MODIFIER_KINDS = Object.freeze(['disable', 'highlight', 'background', 'root'] as const)
+export type OpenScadViewportModifierKind = (typeof OPENSCAD_VIEWPORT_MODIFIER_KINDS)[number]
 
 /**
  * One authored viewport-modifier token.  The ordered token list is retained
@@ -197,8 +231,17 @@ export interface CallNode {
   operationId?: SourceOperationId
 }
 
-export interface AssignNode { type: 'assign'; name: string; value: Expr; p: number; end: number }
-export interface ModuleParam { name: string; defaultValue?: Expr | undefined }
+export interface AssignNode {
+  type: 'assign'
+  name: string
+  value: Expr
+  p: number
+  end: number
+}
+export interface ModuleParam {
+  name: string
+  defaultValue?: Expr | undefined
+}
 export type FunctionParam = ModuleParam
 export interface ModuleNode {
   type: 'module'
@@ -257,13 +300,21 @@ export class Parser {
     return result
   }
 
-  private peek(offset = 0) { return this.tokens[this.pos + offset] ?? this.tokens[this.tokens.length - 1]! }
+  private peek(offset = 0) {
+    return this.tokens[this.pos + offset] ?? this.tokens[this.tokens.length - 1]!
+  }
   private advance() {
     const token = this.tokens[this.pos++]!
     this.lastTokenEnd = token.end
     return token
   }
-  private match(type: TT) { if (this.peek().t === type) { this.advance(); return true } return false }
+  private match(type: TT) {
+    if (this.peek().t === type) {
+      this.advance()
+      return true
+    }
+    return false
+  }
   private expect(type: TT, message?: string) {
     const token = this.advance()
     if (token.t !== type) this.fail(token, message ?? `Expected ${TT[type]}, got ${token.v || TT[token.t]}`)
@@ -274,7 +325,8 @@ export class Parser {
   }
   private countNode() {
     this.nodes++
-    if (this.nodes > MAX_AST_NODES) this.fail(this.peek(), `Model exceeds the ${MAX_AST_NODES.toLocaleString('en-US')} syntax node limit`)
+    if (this.nodes > MAX_AST_NODES)
+      this.fail(this.peek(), `Model exceeds the ${MAX_AST_NODES.toLocaleString('en-US')} syntax node limit`)
   }
   private expressionNode<T extends Expr>(node: T): T {
     this.countNode()
@@ -285,7 +337,11 @@ export class Parser {
       throw new OpenSCADParseError(this.source, position, `Expression exceeds ${MAX_EXPRESSION_DEPTH} nested levels`)
     }
     this.expressionDepth++
-    try { return parse() } finally { this.expressionDepth-- }
+    try {
+      return parse()
+    } finally {
+      this.expressionDepth--
+    }
   }
 
   private statement(): Statement[] {
@@ -321,16 +377,22 @@ export class Parser {
       const modifier = this.advance()
       if (this.languageProfile === 'openscad-viewer-subset@1') {
         if (modifier.t === TT.Star) disabled = true
-        else this.fail(modifier, `Viewport modifier ${modifier.v} is not supported by ${'openscad-viewer-subset@1'}`, 'E_FEATURE_VIEWPORT_MODIFIER')
+        else
+          this.fail(
+            modifier,
+            `Viewport modifier ${modifier.v} is not supported by ${'openscad-viewer-subset@1'}`,
+            'E_FEATURE_VIEWPORT_MODIFIER',
+          )
         continue
       }
-      const kind: OpenScadViewportModifierKind = modifier.t === TT.Star
-        ? 'disable'
-        : modifier.t === TT.Hash
-          ? 'highlight'
-          : modifier.t === TT.Percent
-            ? 'background'
-            : 'root'
+      const kind: OpenScadViewportModifierKind =
+        modifier.t === TT.Star
+          ? 'disable'
+          : modifier.t === TT.Hash
+            ? 'highlight'
+            : modifier.t === TT.Percent
+              ? 'background'
+              : 'root'
       viewportModifiers.push({
         kind,
         token: modifier.v as OpenScadViewportModifier['token'],
@@ -343,15 +405,10 @@ export class Parser {
     if (this.peek().v === 'module') node = this.moduleDefinition()
     else if (this.peek().v === 'function') {
       if (this.languageProfile === 'openscad-viewer-subset@1') {
-        this.fail(
-          this.peek(),
-          'function is not supported by openscad-viewer-subset@1',
-          'E_FEATURE_USER_FUNCTION',
-        )
+        this.fail(this.peek(), 'function is not supported by openscad-viewer-subset@1', 'E_FEATURE_USER_FUNCTION')
       }
       node = this.functionDefinition()
-    }
-    else if (this.peek().v === 'include' || this.peek().v === 'use') {
+    } else if (this.peek().v === 'include' || this.peek().v === 'use') {
       const feature = this.peek().v
       if (this.languageProfile === 'openscad-viewer-subset@1') {
         const code = feature === 'include' ? 'E_FEATURE_INCLUDE' : 'E_FEATURE_USE'
@@ -371,9 +428,7 @@ export class Parser {
       node = { ...node, viewportModifiers }
     }
     this.countNode()
-    return this.languageProfile === 'openscad-viewer-subset@1' && disabled
-      ? []
-      : [node as Statement]
+    return this.languageProfile === 'openscad-viewer-subset@1' && disabled ? [] : [node as Statement]
   }
 
   private assignment(): AssignNode {
@@ -386,10 +441,7 @@ export class Parser {
 
   private directive(): DirectiveNode {
     const keyword = this.advance()
-    const path = this.expect(
-      TT.DirectivePath,
-      `Expected <path> after ${keyword.v}`,
-    )
+    const path = this.expect(TT.DirectivePath, `Expected <path> after ${keyword.v}`)
     if (path.closed !== true) this.fail(path, `Unterminated ${keyword.v} path`)
     if (path.v.length === 0) this.fail(path, `${keyword.v} path cannot be empty`)
     if (/[\r\n]/u.test(path.v)) this.fail(path, `${keyword.v} path cannot contain a line break`)
@@ -493,7 +545,18 @@ export class Parser {
       this.advance()
       alternative = this.body(true)
     }
-    return { type: 'call', name: name.v, callArguments, args, argKinds, argSpans, children, alternative, p: name.p, end: this.lastTokenEnd }
+    return {
+      type: 'call',
+      name: name.v,
+      callArguments,
+      args,
+      argKinds,
+      argSpans,
+      children,
+      alternative,
+      p: name.p,
+      end: this.lastTokenEnd,
+    }
   }
 
   private body(required: boolean): Statement[] {
@@ -517,16 +580,14 @@ export class Parser {
         const keyword = this.peek().v
         if (keyword === 'function') {
           if (this.languageProfile === 'openscad-viewer-subset@1') {
-            this.fail(
-              this.peek(),
-              'function is not supported by openscad-viewer-subset@1',
-              'E_FEATURE_USER_FUNCTION',
-            )
+            this.fail(this.peek(), 'function is not supported by openscad-viewer-subset@1', 'E_FEATURE_USER_FUNCTION')
           }
           return this.anonymousFunctionExpression()
         }
-        if (this.languageProfile === 'openscad/stable-2021.01'
-          && (keyword === 'let' || keyword === 'assert' || keyword === 'echo')) {
+        if (
+          this.languageProfile === 'openscad/stable-2021.01' &&
+          (keyword === 'let' || keyword === 'assert' || keyword === 'echo')
+        ) {
           return this.wrapperExpression(keyword)
         }
       }
@@ -562,8 +623,8 @@ export class Parser {
     const token = this.peek()
     if ([TT.Num, TT.Str, TT.LParen, TT.LBracket, TT.Plus, TT.Minus, TT.Not].includes(token.t)) return true
     if (token.t !== TT.Ident) return false
-    if (this.languageProfile === 'openscad/stable-2021.01'
-      && ['else', 'for', 'if', 'each'].includes(token.v)) return false
+    if (this.languageProfile === 'openscad/stable-2021.01' && ['else', 'for', 'if', 'each'].includes(token.v))
+      return false
     return true
   }
 
@@ -575,12 +636,12 @@ export class Parser {
     return this.expressionNode({ kind: 'ternary', test, yes, no: this.expression(), p: test.p })
   }
 
-  private binaryOr(): Expr { return this.binary(() => this.binaryAnd(), [TT.Or]) }
+  private binaryOr(): Expr {
+    return this.binary(() => this.binaryAnd(), [TT.Or])
+  }
   private binaryAnd(): Expr {
     return this.binary(
-      () => this.languageProfile === 'openscad/stable-2021.01'
-        ? this.equality()
-        : this.legacyComparison(),
+      () => (this.languageProfile === 'openscad/stable-2021.01' ? this.equality() : this.legacyComparison()),
       [TT.And],
     )
   }
@@ -588,14 +649,18 @@ export class Parser {
   private legacyComparison(): Expr {
     return this.binary(() => this.additive(), [TT.Lt, TT.Gt, TT.LtEq, TT.GtEq, TT.EqEq, TT.NotEq])
   }
-  private equality(): Expr { return this.binary(() => this.comparison(), [TT.EqEq, TT.NotEq]) }
-  private comparison(): Expr { return this.binary(() => this.additive(), [TT.Lt, TT.Gt, TT.LtEq, TT.GtEq]) }
-  private additive(): Expr { return this.binary(() => this.multiplicative(), [TT.Plus, TT.Minus]) }
+  private equality(): Expr {
+    return this.binary(() => this.comparison(), [TT.EqEq, TT.NotEq])
+  }
+  private comparison(): Expr {
+    return this.binary(() => this.additive(), [TT.Lt, TT.Gt, TT.LtEq, TT.GtEq])
+  }
+  private additive(): Expr {
+    return this.binary(() => this.multiplicative(), [TT.Plus, TT.Minus])
+  }
   private multiplicative(): Expr {
     return this.binary(
-      () => this.languageProfile === 'openscad/stable-2021.01'
-        ? this.fullUnary()
-        : this.legacyPower(),
+      () => (this.languageProfile === 'openscad/stable-2021.01' ? this.fullUnary() : this.legacyPower()),
       [TT.Star, TT.Slash, TT.Percent],
     )
   }
@@ -605,7 +670,9 @@ export class Parser {
     const left = this.legacyUnary()
     if (!this.match(TT.Caret)) return left
     return this.expressionNode({
-      kind: 'binary', op: TT.Caret, left,
+      kind: 'binary',
+      op: TT.Caret,
+      left,
       right: this.descendExpression(this.peek().p, () => this.legacyPower()),
       p: left.p,
     })
@@ -624,7 +691,8 @@ export class Parser {
     if ([TT.Plus, TT.Minus, TT.Not].includes(this.peek().t)) {
       const op = this.advance()
       return this.expressionNode({
-        kind: 'unary', op: op.t,
+        kind: 'unary',
+        op: op.t,
         value: this.descendExpression(op.p, () => this.legacyUnary()),
         p: op.p,
       })
@@ -637,7 +705,8 @@ export class Parser {
     if ([TT.Plus, TT.Minus, TT.Not].includes(this.peek().t)) {
       const op = this.advance()
       return this.expressionNode({
-        kind: 'unary', op: op.t,
+        kind: 'unary',
+        op: op.t,
         value: this.descendExpression(op.p, () => this.fullUnary()),
         p: op.p,
       })
@@ -649,7 +718,9 @@ export class Parser {
     const left = this.postfix()
     if (!this.match(TT.Caret)) return left
     return this.expressionNode({
-      kind: 'binary', op: TT.Caret, left,
+      kind: 'binary',
+      op: TT.Caret,
+      left,
       // Going through unary permits `2 ^ -2` and keeps `2 ^ 3 ^ 2`
       // right-associative, matching the pinned OpenSCAD grammar.
       right: this.descendExpression(this.peek().p, () => this.fullUnary()),
@@ -728,7 +799,8 @@ export class Parser {
     }
     if (this.match(TT.LBracket)) return this.vectorOrRange(token.p)
     if (this.match(TT.Ident)) {
-      if (token.v === 'true' || token.v === 'false') return this.expressionNode({ kind: 'literal', value: token.v === 'true', p: token.p })
+      if (token.v === 'true' || token.v === 'false')
+        return this.expressionNode({ kind: 'literal', value: token.v === 'true', p: token.p })
       if (token.v === 'undef') return this.expressionNode({ kind: 'literal', value: undefined, p: token.p })
       if (token.v === 'function' && this.peek().t === TT.LParen) {
         if (this.languageProfile === 'openscad-viewer-subset@1') {
@@ -751,15 +823,19 @@ export class Parser {
 
   private vectorOrRange(p: number): Expr {
     if (this.match(TT.RBracket)) return this.expressionNode({ kind: 'vector', items: [], p })
-    const first = this.languageProfile === 'openscad/stable-2021.01' && this.isListComprehensionStart()
-      ? this.listComprehension()
-      : this.expression()
+    const first =
+      this.languageProfile === 'openscad/stable-2021.01' && this.isListComprehensionStart()
+        ? this.listComprehension()
+        : this.expression()
     if (this.match(TT.Colon)) {
       if (this.isListComprehension(first)) this.fail(this.peek(), 'A list comprehension cannot start a range')
       const second = this.expression()
       let step: Expr | undefined
       let end = second
-      if (this.match(TT.Colon)) { step = second; end = this.expression() }
+      if (this.match(TT.Colon)) {
+        step = second
+        end = this.expression()
+      }
       this.expect(TT.RBracket, 'Expected ] after range')
       return this.expressionNode({ kind: 'range', start: first, step, end, p })
     }
@@ -777,11 +853,13 @@ export class Parser {
   }
 
   private isListComprehension(value: Expr): value is ListComprehensionExpression {
-    return value.kind === 'lc-for'
-      || value.kind === 'lc-for-c'
-      || value.kind === 'lc-if'
-      || value.kind === 'lc-let'
-      || value.kind === 'lc-each'
+    return (
+      value.kind === 'lc-for' ||
+      value.kind === 'lc-for-c' ||
+      value.kind === 'lc-if' ||
+      value.kind === 'lc-let' ||
+      value.kind === 'lc-each'
+    )
   }
 
   private isListComprehensionStart(index = this.pos, recursion = 0): boolean {
@@ -798,8 +876,7 @@ export class Parser {
 
   private isListComprehensionParenthesizedStart(index: number, recursion: number): boolean {
     if (this.isListComprehensionStart(index, recursion)) return true
-    return this.tokens[index]?.t === TT.LParen
-      && this.isListComprehensionParenthesizedStart(index + 1, recursion + 1)
+    return this.tokens[index]?.t === TT.LParen && this.isListComprehensionParenthesizedStart(index + 1, recursion + 1)
   }
 
   private matchingRightParen(openIndex: number): number | undefined {

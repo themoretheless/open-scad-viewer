@@ -31,7 +31,10 @@ export function encodeBinary(value: unknown): Uint8Array {
   let view = useShared ? sharedView : new DataView(data.buffer)
   let offset = 4
   let nodes = 0
-  data[0] = 77; data[1] = 71; data[2] = 86; data[3] = 49
+  data[0] = 77
+  data[1] = 71
+  data[2] = 86
+  data[3] = 49
 
   const reserve = (n: number) => {
     if (n > LIMIT - offset) throw new Error('Binary size limit')
@@ -75,9 +78,18 @@ export function encodeBinary(value: unknown): Uint8Array {
   }
   const put = (v: unknown, depth: number, key = false) => {
     if (depth > 128 || ++nodes > 4_000_000) throw new Error('Binary nesting or item limit')
-    if (v === null) { byte(0); return }
-    if (v === false) { byte(1); return }
-    if (v === true) { byte(2); return }
+    if (v === null) {
+      byte(0)
+      return
+    }
+    if (v === false) {
+      byte(1)
+      return
+    }
+    if (v === true) {
+      byte(2)
+      return
+    }
     if (typeof v === 'number') {
       putNumber(v)
       return
@@ -239,7 +251,8 @@ export function decodeBinary(data: Uint8Array, hints?: BinaryTripleHints): unkno
       const n =
         tag === 3
           ? view.getFloat64(offset, true)
-          : view.getUint32(offset, true) + (tag === 7 ? view.getUint32(offset + 4, true) : view.getInt32(offset + 4, true)) * 4294967296
+          : view.getUint32(offset, true) +
+            (tag === 7 ? view.getUint32(offset + 4, true) : view.getInt32(offset + 4, true)) * 4294967296
       offset += 8
       if (!Number.isFinite(n) || (tag !== 3 && !Number.isSafeInteger(n))) throw new Error('Invalid binary number')
       return n

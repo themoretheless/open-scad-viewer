@@ -1,14 +1,7 @@
 // framePassEncoder: groupByShadingModel.
 import { invert, type Mat4, type Vec3 } from '../../kernel/geometry/math3d'
 
-import type {
-  DisplayMode,
-  PickHit,
-  RenderTheme,
-  SelectionMode,
-  ShadingModel,
-} from '../rendererContracts'
-
+import type { DisplayMode, PickHit, RenderTheme, SelectionMode, ShadingModel } from '../rendererContracts'
 
 import type { TransparentSortBuffer } from '../transparentOrdering'
 
@@ -19,30 +12,17 @@ import type { ViewFrustum } from '../viewFrustum'
 import type { MeshInstances } from '../../kernel/meshInstances'
 import type { InstancedOpaquePass } from '../instancedOpaquePass'
 
+import { OBJECT_UNIFORM_LAYOUT } from '../shaders'
 
-import {
-  OBJECT_UNIFORM_LAYOUT,
-} from '../shaders'
-
-import {
-  type PipelineFactory,
-} from '../pipelineFactory'
+import { type PipelineFactory } from '../pipelineFactory'
 
 import type { TextureResources } from '../textureResources'
-
 
 import { GpuCsgRenderer, type GpuCsgTree } from '../gpuCsgPreview'
 
 import type { GpuWboitRenderer } from '../gpuWboit'
 
-import {
-  type Bounds,
-  type GMesh,
-  type OverlaySlot,
-} from '../types'
-
-
-
+import { type Bounds, type GMesh, type OverlaySlot } from '../types'
 
 /**
  * Groups draws by shading model, preserving first-seen order. Used only when
@@ -58,7 +38,6 @@ export function groupByShadingModel(draws: readonly GMesh[]): GMesh[][] {
   return [...groups.values()]
 }
 
-
 export function setObjectStyleImmediate(
   pass: GPURenderPassEncoder,
   mesh: GMesh,
@@ -72,7 +51,6 @@ export function setObjectStyleImmediate(
   styleScratch[3] = mesh.styleHovered
   pass.setImmediates(0, styleScratch)
 }
-
 
 export interface AdvanceGeometryAnimationContext {
   readonly dev: GPUDevice | null
@@ -90,7 +68,6 @@ export interface AdvanceGeometryAnimationContext {
   readonly destroyMeshes: (meshes: GMesh[]) => void
   readonly clearDrawCaches: () => void
 }
-
 
 export function advanceSceneGeometryAnimation(
   ctx: AdvanceGeometryAnimationContext,
@@ -149,13 +126,19 @@ export function advanceSceneGeometryAnimation(
       // the stale blend state is inert: mix(dummy, pos, 1) = pos.
       mesh.morph = undefined
       mesh.morphSlot = ctx.morphDummyVB
-      ctx.morphScratch[0] = 1; ctx.morphScratch[1] = 0; ctx.morphScratch[2] = 0; ctx.morphScratch[3] = 0
+      ctx.morphScratch[0] = 1
+      ctx.morphScratch[1] = 0
+      ctx.morphScratch[2] = 0
+      ctx.morphScratch[3] = 0
       ctx.dev?.queue.writeBuffer(mesh.ub, OBJECT_UNIFORM_LAYOUT.morphByteOffset, ctx.morphScratch)
       morphFinished = true
     } else {
       // The vertex shader interpolates from the morph source; only the
       // blend weight travels to the GPU each frame.
-      ctx.morphScratch[0] = eased; ctx.morphScratch[1] = 0; ctx.morphScratch[2] = 0; ctx.morphScratch[3] = 0
+      ctx.morphScratch[0] = eased
+      ctx.morphScratch[1] = 0
+      ctx.morphScratch[2] = 0
+      ctx.morphScratch[3] = 0
       ctx.dev?.queue.writeBuffer(mesh.ub, OBJECT_UNIFORM_LAYOUT.morphByteOffset, ctx.morphScratch)
       active = true
     }
@@ -169,7 +152,6 @@ export function advanceSceneGeometryAnimation(
   }
   return active
 }
-
 
 export interface EncodeFramePassContext {
   readonly canvas: HTMLCanvasElement

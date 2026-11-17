@@ -199,9 +199,9 @@ export async function runGpuCompute(job: GpuComputeJob): Promise<Float32Array[]>
   const device = context.device
   const scratch: GPUBuffer[] = []
   try {
-    const layoutKey = job.dispatches[0]!.buffers
-      .map(b => `${b.binding}:${b.uniform ? 'u' : b.output ? 's' : 'ro'}`)
-      .join(',')
+    const layoutKey = job.dispatches[0]!.buffers.map(
+      b => `${b.binding}:${b.uniform ? 'u' : b.output ? 's' : 'ro'}`,
+    ).join(',')
     const pipelineKey = `${job.entryPoint}:${layoutKey}:${getWgslId(wgsl)}`
     let cached = context.pipelines.get(pipelineKey)
     if (!cached) {

@@ -13,16 +13,49 @@ const MATH_NS = 'http://www.w3.org/1998/Math/MathML'
 const XLINK_NS = 'http://www.w3.org/1999/xlink'
 
 const BOOLEAN_ATTRS = new Set([
-  'itemscope', 'allowfullscreen', 'formnovalidate', 'ismap', 'nomodule',
-  'novalidate', 'readonly', 'async', 'autofocus', 'autoplay', 'controls',
-  'default', 'defer', 'disabled', 'hidden', 'inert', 'loop', 'open',
-  'required', 'reversed', 'scoped', 'seamless', 'checked', 'muted',
-  'multiple', 'selected',
+  'itemscope',
+  'allowfullscreen',
+  'formnovalidate',
+  'ismap',
+  'nomodule',
+  'novalidate',
+  'readonly',
+  'async',
+  'autofocus',
+  'autoplay',
+  'controls',
+  'default',
+  'defer',
+  'disabled',
+  'hidden',
+  'inert',
+  'loop',
+  'open',
+  'required',
+  'reversed',
+  'scoped',
+  'seamless',
+  'checked',
+  'muted',
+  'multiple',
+  'selected',
 ])
 
 const VOID_TAGS = new Set([
-  'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
-  'link', 'meta', 'param', 'source', 'track', 'wbr',
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr',
 ])
 
 function patchStyle(el: HTMLElement | SVGElement, prev: any, next: any): void {
@@ -99,7 +132,10 @@ function shouldSetAsProp(el: any, key: string, _value: any, isSVG: boolean): boo
   if (key === 'spellcheck' || key === 'draggable' || key === 'translate' || key === 'form') return false
   if (key === 'list' && el.tagName === 'INPUT') return false
   if (key === 'type' && el.tagName === 'TEXTAREA') return false
-  if ((key === 'width' || key === 'height') && (el.tagName === 'IMG' || el.tagName === 'VIDEO' || el.tagName === 'CANVAS' || el.tagName === 'SOURCE')) {
+  if (
+    (key === 'width' || key === 'height') &&
+    (el.tagName === 'IMG' || el.tagName === 'VIDEO' || el.tagName === 'CANVAS' || el.tagName === 'SOURCE')
+  ) {
     return false
   }
   if (key.includes('-') || key.startsWith('aria-') || key.startsWith('data-')) return false
@@ -185,7 +221,9 @@ const domRendererOptions: RendererOptions<any, any> = {
       } else {
         try {
           el[key] = nextValue
-        } catch { /* ignore read-only DOM prop */ }
+        } catch {
+          /* ignore read-only DOM prop */
+        }
       }
     } else {
       if (isSVG && key.startsWith('xlink:')) {
@@ -217,11 +255,7 @@ export function createSSRApp(rootComponent: any, rootProps: Record<string, any> 
 }
 
 function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
 class SSRNode {
@@ -235,12 +269,20 @@ class SSRNode {
   selected: boolean | undefined = undefined
   scopeIds: string[] = []
   constructor(public tag: string) {}
-  get tagName() { return this.tag.toUpperCase() }
-  get options() { return this.children.filter(c => c.tag === 'option') }
+  get tagName() {
+    return this.tag.toUpperCase()
+  }
+  get options() {
+    return this.children.filter(c => c.tag === 'option')
+  }
   addEventListener() {}
   removeEventListener() {}
-  setAttribute(k: string, v: any) { this.props[k] = v }
-  removeAttribute(k: string) { delete this.props[k] }
+  setAttribute(k: string, v: any) {
+    this.props[k] = v
+  }
+  removeAttribute(k: string) {
+    delete this.props[k]
+  }
 }
 
 function serializeSSRNode(node: SSRNode): string {
@@ -320,12 +362,25 @@ function serializeSSRNode(node: SSRNode): string {
 export async function renderToString(input: SvetApp | SvetVNode): Promise<string> {
   const ssrRenderer = createRenderer<SSRNode, SSRNode>({
     createElement: tag => new SSRNode(tag),
-    createText: text => { const n = new SSRNode('#text'); n.text = text; return n },
-    createComment: text => { const n = new SSRNode('#comment'); n.text = text; return n },
-    setText: (n, t) => { n.text = t },
-    setElementText: (n, t) => { n.children = []; n.text = t },
+    createText: text => {
+      const n = new SSRNode('#text')
+      n.text = text
+      return n
+    },
+    createComment: text => {
+      const n = new SSRNode('#comment')
+      n.text = text
+      return n
+    },
+    setText: (n, t) => {
+      n.text = t
+    },
+    setElementText: (n, t) => {
+      n.children = []
+      n.text = t
+    },
     parentNode: n => n.parent,
-    nextSibling: n => n.parent ? (n.parent.children[n.parent.children.indexOf(n) + 1] ?? null) : null,
+    nextSibling: n => (n.parent ? (n.parent.children[n.parent.children.indexOf(n) + 1] ?? null) : null),
     patchProp: (n, k, _prev, v) => {
       n.props[k] = v
       if (k === 'value') n.value = v

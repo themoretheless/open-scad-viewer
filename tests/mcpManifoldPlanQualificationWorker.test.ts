@@ -13,7 +13,9 @@ const port = vi.hoisted(() => {
   let closes = 0
   return {
     posted,
-    get closes() { return closes },
+    get closes() {
+      return closes
+    },
     reset() {
       messageListener = undefined
       posted.length = 0
@@ -78,15 +80,16 @@ describe('MCP Manifold-plan qualification Node worker', () => {
 
     port.dispatch(request)
 
-    await vi.waitFor(() => expect(port.posted.at(-1)).toMatchObject({
-      status: 'failed',
-      error: {
-        name: 'DataCloneError',
-        message: 'fixture structured clone failed',
-      },
-    }))
-    expect(port.posted.map(value => (value as { status?: unknown }).status))
-      .toEqual(['started', 'failed'])
+    await vi.waitFor(() =>
+      expect(port.posted.at(-1)).toMatchObject({
+        status: 'failed',
+        error: {
+          name: 'DataCloneError',
+          message: 'fixture structured clone failed',
+        },
+      }),
+    )
+    expect(port.posted.map(value => (value as { status?: unknown }).status)).toEqual(['started', 'failed'])
     expect(port.closes).toBe(1)
   })
 })

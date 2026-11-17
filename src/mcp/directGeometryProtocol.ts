@@ -7,18 +7,26 @@ import {
   type GeometryExecutionDescriptor,
 } from '../core/geometryExecution'
 import type { LanguageDiagnosticCode } from '../core/languageContract'
-import {
-  type GeometryBuildResult,
-  type GeometryEngineAvailabilityCause,
-} from '../kernel/geometryBuildEngine'
-export { isDirectGeometryBuildRequest, isDirectGeometryCapabilitiesRequest, isDirectGeometryRequest, isDirectGeometryCancel, isDirectGeometryStarted, isDirectGeometryCapabilities, isDirectGeometryTerminal, isDirectGeometryNodeTerminal } from './directGeometryProtocol/isDirectGeometryBuildRequest'
-export { serializeDirectGeometryError, directGeometryExecutionForError, reconstructDirectGeometryRemoteError } from './directGeometryProtocol/serializeDirectGeometryError'
+import { type GeometryBuildResult, type GeometryEngineAvailabilityCause } from '../kernel/geometryBuildEngine'
+export {
+  isDirectGeometryBuildRequest,
+  isDirectGeometryCapabilitiesRequest,
+  isDirectGeometryRequest,
+  isDirectGeometryCancel,
+  isDirectGeometryStarted,
+  isDirectGeometryCapabilities,
+  isDirectGeometryTerminal,
+  isDirectGeometryNodeTerminal,
+} from './directGeometryProtocol/isDirectGeometryBuildRequest'
+export {
+  serializeDirectGeometryError,
+  directGeometryExecutionForError,
+  reconstructDirectGeometryRemoteError,
+} from './directGeometryProtocol/serializeDirectGeometryError'
 
 export const DIRECT_GEOMETRY_PROTOCOL_VERSION = 1 as const
 
-const currentMeshManifest = GEOMETRY_MANIFEST_ARCHIVE[
-  ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh
-]
+const currentMeshManifest = GEOMETRY_MANIFEST_ARCHIVE[ACTIVE_GEOMETRY_MANIFEST_VERSIONS.mesh]
 
 /**
  * The identity is the current immutable package snapshot of the legacy direct
@@ -130,44 +138,94 @@ export interface DirectGeometryFailure extends DirectGeometryEventEnvelope {
 }
 
 export type DirectGeometryTerminal =
-  | DirectGeometryBuildSuccess
-  | DirectGeometryCapabilitiesSuccess
-  | DirectGeometryFailure
+  DirectGeometryBuildSuccess | DirectGeometryCapabilitiesSuccess | DirectGeometryFailure
 
 export const BUILD_REQUEST_KEYS = Object.freeze([
-  'protocolVersion', 'type', 'workerEpoch', 'jobId', 'source', 'sourceSha256',
-  'quality', 'purpose', 'identity',
+  'protocolVersion',
+  'type',
+  'workerEpoch',
+  'jobId',
+  'source',
+  'sourceSha256',
+  'quality',
+  'purpose',
+  'identity',
 ])
 export const CAPABILITIES_REQUEST_KEYS = Object.freeze([
-  'protocolVersion', 'type', 'workerEpoch', 'jobId', 'sourceSha256', 'quality',
-  'purpose', 'identity',
+  'protocolVersion',
+  'type',
+  'workerEpoch',
+  'jobId',
+  'sourceSha256',
+  'quality',
+  'purpose',
+  'identity',
 ])
 export const CANCEL_KEYS = Object.freeze([
-  'protocolVersion', 'type', 'workerEpoch', 'jobId', 'sourceSha256', 'quality',
-  'purpose', 'reason', 'identity',
+  'protocolVersion',
+  'type',
+  'workerEpoch',
+  'jobId',
+  'sourceSha256',
+  'quality',
+  'purpose',
+  'reason',
+  'identity',
 ])
 export const EVENT_KEYS = Object.freeze([
-  'protocolVersion', 'workerEpoch', 'jobId', 'sourceSha256', 'quality', 'purpose',
-  'identity', 'status', 'kind',
+  'protocolVersion',
+  'workerEpoch',
+  'jobId',
+  'sourceSha256',
+  'quality',
+  'purpose',
+  'identity',
+  'status',
+  'kind',
 ])
 export const ERROR_KEYS = Object.freeze([
-  'category', 'name', 'message', 'code', 'line', 'column', 'start', 'end',
-  'reportedContract', 'availabilityCause', 'missingCapabilities',
+  'category',
+  'name',
+  'message',
+  'code',
+  'line',
+  'column',
+  'start',
+  'end',
+  'reportedContract',
+  'availabilityCause',
+  'missingCapabilities',
 ])
 export const EXECUTION_KEYS = Object.freeze([
-  'languageContract', 'requiredCapabilities', 'engineClass', 'engineKey',
-  'kernelFingerprint', 'semanticProgramVersion', 'capabilityManifestVersion',
-  'manifestDigest', 'purpose', 'quality', 'representation', 'evidence',
-  'effectiveLimits', 'automaticFallback',
+  'languageContract',
+  'requiredCapabilities',
+  'engineClass',
+  'engineKey',
+  'kernelFingerprint',
+  'semanticProgramVersion',
+  'capabilityManifestVersion',
+  'manifestDigest',
+  'purpose',
+  'quality',
+  'representation',
+  'evidence',
+  'effectiveLimits',
+  'automaticFallback',
 ])
 export const IDENTITY_KEYS = Object.freeze(Object.keys(DIRECT_GEOMETRY_IDENTITY))
 export const PURPOSES = new Set<GeometryBuildPurpose>(['preview', 'full', 'analysis', 'export'])
 export const AVAILABILITY_CAUSES = new Set<GeometryEngineAvailabilityCause>([
-  'not-deployed', 'provider-missing', 'readiness-timeout', 'readiness-failed',
-  'revoked', 'quarantined',
+  'not-deployed',
+  'provider-missing',
+  'readiness-timeout',
+  'readiness-failed',
+  'revoked',
+  'quarantined',
 ])
 export const LANGUAGE_DIAGNOSTIC_CODES = new Set<LanguageDiagnosticCode>([
-  'E_FEATURE_INCLUDE', 'E_FEATURE_USE', 'E_FEATURE_USER_FUNCTION',
+  'E_FEATURE_INCLUDE',
+  'E_FEATURE_USE',
+  'E_FEATURE_USER_FUNCTION',
   'E_FEATURE_VIEWPORT_MODIFIER',
 ])
 export const MAX_ERROR_MESSAGE_CHARACTERS = 4_096

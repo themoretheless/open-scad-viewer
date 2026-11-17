@@ -70,9 +70,7 @@ export function useWorkspacePersistenceLifecycle(
     translate,
   } = options
 
-  const workspacePersistenceStatus = ref<'saved' | 'saving' | 'error'>(
-    initialWorkspaceDurable ? 'saved' : 'error',
-  )
+  const workspacePersistenceStatus = ref<'saved' | 'saving' | 'error'>(initialWorkspaceDurable ? 'saved' : 'error')
   const workspaceConflict = ref(workspacePersistence.hasConflict)
   const savingBrowser = ref(false)
   const storageFailureDetail = ref('')
@@ -202,8 +200,7 @@ export function useWorkspacePersistenceLifecycle(
           replaceSharedRecoveryHash(code.value)
         }
       }
-      workspacePersistenceStatus.value =
-        durableWorkspaceGeneration >= workspaceEditGeneration ? 'saved' : 'saving'
+      workspacePersistenceStatus.value = durableWorkspaceGeneration >= workspaceEditGeneration ? 'saved' : 'saving'
     } else {
       workspacePersistenceStatus.value = 'error'
       reportStorageFailure()
@@ -312,19 +309,13 @@ export function useWorkspacePersistenceLifecycle(
   }
 
   function handleBeforeUnload(event: BeforeUnloadEvent) {
-    if (
-      durableWorkspaceGeneration >= workspaceEditGeneration &&
-      workspacePersistenceStatus.value !== 'error'
-    )
-      return
+    if (durableWorkspaceGeneration >= workspaceEditGeneration && workspacePersistenceStatus.value !== 'error') return
     event.preventDefault()
     event.returnValue = ''
   }
 
   function updateBeforeUnloadGuard() {
-    const needed =
-      durableWorkspaceGeneration < workspaceEditGeneration ||
-      workspacePersistenceStatus.value === 'error'
+    const needed = durableWorkspaceGeneration < workspaceEditGeneration || workspacePersistenceStatus.value === 'error'
     if (needed && !beforeUnloadAttached) {
       window.addEventListener('beforeunload', handleBeforeUnload)
       beforeUnloadAttached = true

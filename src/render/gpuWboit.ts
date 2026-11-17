@@ -18,7 +18,7 @@ const STAGE_FRAGMENT = typeof GPUShaderStage !== 'undefined' ? GPUShaderStage.FR
 export const WBOIT_ACCUM_FORMAT: GPUTextureFormat = 'rgba16float'
 export const WBOIT_REVEAL_FORMAT: GPUTextureFormat = 'r8unorm'
 
-export const WBOIT_COMPOSITE_WGSL = /* wgsl */`
+export const WBOIT_COMPOSITE_WGSL = /* wgsl */ `
 @group(0) @binding(0) var accumTexture: texture_2d<f32>;
 @group(0) @binding(1) var revealTexture: texture_2d<f32>;
 
@@ -64,7 +64,7 @@ export function toWboitShader(source: string): string {
     throw new Error('Shader source does not match expected @fragment fn fs(v: V) -> @location(0) vec4f contract')
   }
 
-  const prefix = /* wgsl */`
+  const prefix = /* wgsl */ `
 struct WboitOutput {
   @location(0) accum: vec4f,
   @location(1) reveal: vec4f,
@@ -80,7 +80,7 @@ fn fs_color(v: V) -> vec4f {
 
   let replaced = source.replace(targetSignature, prefix)
 
-  const suffix = /* wgsl */`
+  const suffix = /* wgsl */ `
 
 @fragment fn fs(v: V) -> WboitOutput {
   let c = fs_color(v);
@@ -196,13 +196,15 @@ export class GpuWboitRenderer {
       fragment: {
         module,
         entryPoint: 'fs_composite',
-        targets: [{
-          format: targetFormat,
-          blend: {
-            color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+        targets: [
+          {
+            format: targetFormat,
+            blend: {
+              color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+              alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+            },
           },
-        }],
+        ],
       },
     })
     this.compositePipelineFormat = targetFormat
@@ -216,7 +218,7 @@ export class GpuWboitRenderer {
     device: GPUDevice,
     shaderId: string,
     layout: GPUPipelineLayout,
-    vertexLayouts: GPUVertexBufferLayout[]
+    vertexLayouts: GPUVertexBufferLayout[],
   ): GPURenderPipeline {
     let pipeline = this.wboitPipelineCache.get(shaderId)
     if (pipeline) return pipeline
@@ -272,10 +274,7 @@ export class GpuWboitRenderer {
   /**
    * Begins the offscreen accumulation pass for transparent geometry.
    */
-  beginWboitPass(
-    encoder: GPUCommandEncoder,
-    depthView: GPUTextureView
-  ): GPURenderPassEncoder {
+  beginWboitPass(encoder: GPUCommandEncoder, depthView: GPUTextureView): GPURenderPassEncoder {
     if (!this.textures) throw new Error('WBOIT textures must be initialized before beginWboitPass')
 
     return encoder.beginRenderPass({
@@ -309,7 +308,7 @@ export class GpuWboitRenderer {
     device: GPUDevice,
     encoder: GPUCommandEncoder,
     targetView: GPUTextureView,
-    targetFormat: GPUTextureFormat
+    targetFormat: GPUTextureFormat,
   ): void {
     const pipeline = this.getCompositePipeline(device, targetFormat)
     const bindGroup = this.getCompositeBindGroup(device)
@@ -332,8 +331,16 @@ export class GpuWboitRenderer {
 
   destroyTextures(): void {
     if (this.textures) {
-      try { this.textures.accumTexture.destroy() } catch { /* ignore */ }
-      try { this.textures.revealTexture.destroy() } catch { /* ignore */ }
+      try {
+        this.textures.accumTexture.destroy()
+      } catch {
+        /* ignore */
+      }
+      try {
+        this.textures.revealTexture.destroy()
+      } catch {
+        /* ignore */
+      }
       this.textures = null
       this.compositeBG = null
     }

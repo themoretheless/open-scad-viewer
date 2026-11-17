@@ -11,15 +11,20 @@
  * the `immediate_address_space` instead of the Obj uniform.
  */
 export function immediateObjectShader(source: string) {
-  if (!source.includes('var<uniform> ob: Obj;')) throw new Error('Immediate shader contract changed: missing object uniform')
-  return `requires immediate_address_space;\nvar<immediate> im_style: vec4f;\nfn objectStyle() -> vec4f { return im_style; }\n`
-    + source.replaceAll('ob.style', 'objectStyle()')
+  if (!source.includes('var<uniform> ob: Obj;'))
+    throw new Error('Immediate shader contract changed: missing object uniform')
+  return (
+    `requires immediate_address_space;\nvar<immediate> im_style: vec4f;\nfn objectStyle() -> vec4f { return im_style; }\n` +
+    source.replaceAll('ob.style', 'objectStyle()')
+  )
 }
 
 export function supportsImmediateAddressSpace() {
-  return typeof navigator !== 'undefined'
-    && !!navigator.gpu
-    && navigator.gpu.wgslLanguageFeatures?.has('immediate_address_space') === true
+  return (
+    typeof navigator !== 'undefined' &&
+    !!navigator.gpu &&
+    navigator.gpu.wgslLanguageFeatures?.has('immediate_address_space') === true
+  )
 }
 
 /**
@@ -34,7 +39,10 @@ export function instancedObjectShader(source: string, output: 'V' | 'EdgeV') {
     ['@vertex fn vs(', '@vertex fn vs(@builtin(instance_index) instance: u32, '],
     [` -> ${output} {`, ` -> ${output} {\n  let ob = objects[instance];`],
     [`return ${output}(`, `return ${output}(instance, `],
-    [`@fragment fn fs(v: ${output}) -> @location(0) vec4f {`, `@fragment fn fs(v: ${output}) -> @location(0) vec4f {\n  let ob = objects[v.instance];`],
+    [
+      `@fragment fn fs(v: ${output}) -> @location(0) vec4f {`,
+      `@fragment fn fs(v: ${output}) -> @location(0) vec4f {\n  let ob = objects[v.instance];`,
+    ],
   ]
   for (const [from, to] of replacements) {
     if (source.split(from).length !== 2) throw new Error(`Instanced shader contract changed: ${from}`)
@@ -59,11 +67,20 @@ export function instancedObjectShader(source: string, output: 'V' | 'EdgeV') {
 export function instanceStepObjectShader(source: string) {
   const replacements: Array<[string, string]> = [
     ['@group(1) @binding(0) var<uniform> ob: Obj;', INSTANCE_STEP_PRELUDE],
-    ['struct V {', 'struct V { @location(2) @interpolate(flat) icolor: vec4f, @location(3) @interpolate(flat) istyle: vec4f,'],
-    ['@location(2) fromPos: vec3f) -> V {', 'inst: InstanceIn) -> V {\n  let ob = instanceObj(mat4x4f(inst.m0, inst.m1, inst.m2, inst.m3), inst.color, inst.style);'],
+    [
+      'struct V {',
+      'struct V { @location(2) @interpolate(flat) icolor: vec4f, @location(3) @interpolate(flat) istyle: vec4f,',
+    ],
+    [
+      '@location(2) fromPos: vec3f) -> V {',
+      'inst: InstanceIn) -> V {\n  let ob = instanceObj(mat4x4f(inst.m0, inst.m1, inst.m2, inst.m3), inst.color, inst.style);',
+    ],
     ['mix(fromPos, pos, ob.morph.x)', 'pos'],
     ['return V(', 'return V(ob.color, ob.style, '],
-    ['@fragment fn fs(v: V) -> @location(0) vec4f {', '@fragment fn fs(v: V) -> @location(0) vec4f {\n  let ob = instanceObj(mat4x4f(), v.icolor, v.istyle);'],
+    [
+      '@fragment fn fs(v: V) -> @location(0) vec4f {',
+      '@fragment fn fs(v: V) -> @location(0) vec4f {\n  let ob = instanceObj(mat4x4f(), v.icolor, v.istyle);',
+    ],
   ]
   for (const [from, to] of replacements) {
     if (source.split(from).length !== 2) throw new Error(`Instance-step shader contract changed: ${from}`)

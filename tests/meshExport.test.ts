@@ -76,10 +76,7 @@ describe('mesh export', () => {
     const mesh = triangleMesh()
     mesh.transform = identity()
     mesh.vertices = new Float32Array([
-      0, 0, 0, 0, 0, 1,
-      1e-11, 0, 0, 0, 0, 1,
-      0, 1e-11, 0, 0, 0, 1,
-      999, 999, 999, 0, 0, 1,
+      0, 0, 0, 0, 0, 1, 1e-11, 0, 0, 0, 0, 1, 0, 1e-11, 0, 0, 0, 1, 999, 999, 999, 0, 0, 1,
     ])
     expect(new DataView(buildBinaryStl([mesh]).buffer).getUint32(80, true)).toBe(1)
     const obj = buildObj([mesh])

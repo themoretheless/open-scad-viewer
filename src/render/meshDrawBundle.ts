@@ -33,9 +33,16 @@ export class MeshDrawBundle {
     this.extraGroup = null
   }
 
-  draw(pass: GPURenderPassEncoder, device: GPUDevice, format: GPUTextureFormat,
-    pipeline: GPURenderPipeline, scene: GPUBindGroup, meshes: readonly BundleMesh[], edges = false,
-    extraGroup?: GPUBindGroup) {
+  draw(
+    pass: GPURenderPassEncoder,
+    device: GPUDevice,
+    format: GPUTextureFormat,
+    pipeline: GPURenderPipeline,
+    scene: GPUBindGroup,
+    meshes: readonly BundleMesh[],
+    edges = false,
+    extraGroup?: GPUBindGroup,
+  ) {
     const encode = (encoder: GPURenderPassEncoder | GPURenderBundleEncoder) => {
       encoder.setPipeline(pipeline)
       encoder.setBindGroup(0, scene)
@@ -54,13 +61,19 @@ export class MeshDrawBundle {
       if (meshes.length) encode(pass)
       return
     }
-    let changed = !this.bundle || this.pipeline !== pipeline || this.scene !== scene
-      || this.extraGroup !== (extraGroup ?? null) || this.meshes.length !== meshes.length
+    let changed =
+      !this.bundle ||
+      this.pipeline !== pipeline ||
+      this.scene !== scene ||
+      this.extraGroup !== (extraGroup ?? null) ||
+      this.meshes.length !== meshes.length
     for (let i = 0; !changed && i < meshes.length; i++) {
       const mesh = meshes[i]!
-      changed = this.meshes[i] !== mesh || this.indices[i] !== (edges ? mesh.edgeIB : mesh.ib)
-        || this.morphSlots[i] !== mesh.morphSlot
-        || this.counts[i] !== (edges ? mesh.edgeIC : mesh.ic)
+      changed =
+        this.meshes[i] !== mesh ||
+        this.indices[i] !== (edges ? mesh.edgeIB : mesh.ib) ||
+        this.morphSlots[i] !== mesh.morphSlot ||
+        this.counts[i] !== (edges ? mesh.edgeIC : mesh.ic)
     }
     if (changed) {
       const encoder = device.createRenderBundleEncoder({ colorFormats: [format], depthStencilFormat: 'depth24plus' })

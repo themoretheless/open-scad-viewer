@@ -41,7 +41,7 @@ function buildSubdivUniform(
   center: [number, number, number] = [0, 0, 0],
   radius = 1,
   disp: [number, number, number] = [0, 0, 0],
-  strength = 0
+  strength = 0,
 ): ArrayBuffer {
   subdivUniformView.setUint32(0, mode, true)
   subdivUniformView.setUint32(4, numItems, true)
@@ -62,17 +62,14 @@ function buildSubdivUniform(
  * Refines a Catmull–Clark control cage on WebGPU Compute across `levels` iterations.
  * Falls back to deterministic CPU refinement when WebGPU is unavailable.
  */
-export async function runGpuSubdivisionRefine(
-  cage: SubdivisionCage,
-  levels = 2
-): Promise<SubdivisionRefined> {
+export async function runGpuSubdivisionRefine(cage: SubdivisionCage, levels = 2): Promise<SubdivisionRefined> {
   if (typeof navigator === 'undefined' || !navigator.gpu || levels === 0) {
     return referenceRefineSubdivision(cage, levels)
   }
 
   try {
-    let currentVertices = cage.vertices.map((p) => [p[0]!, p[1]!, p[2]!])
-    let currentFaces = cage.faces.map((f) => [...f])
+    let currentVertices = cage.vertices.map(p => [p[0]!, p[1]!, p[2]!])
+    let currentFaces = cage.faces.map(f => [...f])
     let faceIds = cage.faces.map((_, idx) => idx)
 
     for (let step = 0; step < levels; step++) {
@@ -142,7 +139,7 @@ export async function runGpuSubdivisionRefine(
         edgeMeta[ei * 4 + 0] = e.a
         edgeMeta[ei * 4 + 1] = e.b
         edgeMeta[ei * 4 + 2] = e.faces[0] ?? 0
-        edgeMeta[ei * 4 + 3] = e.faces.length === 2 ? e.faces[1]! : 0xFFFFFFFF
+        edgeMeta[ei * 4 + 3] = e.faces.length === 2 ? e.faces[1]! : 0xffffffff
       }
       const edgeOutBytes = numE * 3 * 4
       const edgeRes = await runGpuCompute({
@@ -196,8 +193,8 @@ export async function runGpuSubdivisionRefine(
         vertMeta[v * 6 + 1] = nbrs.length
         vertMeta[v * 6 + 2] = faceOff
         vertMeta[v * 6 + 3] = fSet.size
-        vertMeta[v * 6 + 4] = boundary.length === 2 ? boundary[0]! : 0xFFFFFFFF
-        vertMeta[v * 6 + 5] = boundary.length === 2 ? boundary[1]! : 0xFFFFFFFF
+        vertMeta[v * 6 + 4] = boundary.length === 2 ? boundary[0]! : 0xffffffff
+        vertMeta[v * 6 + 5] = boundary.length === 2 ? boundary[1]! : 0xffffffff
       }
 
       const vertOutBytes = numV * 3 * 4
@@ -268,10 +265,7 @@ export async function runGpuSubdivisionRefine(
 /**
  * Applies a localized smoothstep brush displacement to a subdivision control cage.
  */
-export function referenceBrushSubdivision(
-  cage: SubdivisionCage,
-  brush: GeometryBrush
-): SubdivisionCage {
+export function referenceBrushSubdivision(cage: SubdivisionCage, brush: GeometryBrush): SubdivisionCage {
   const [cx = Number.NaN, cy = Number.NaN, cz = Number.NaN] = brush.center
   const [dx = Number.NaN, dy = Number.NaN, dz = Number.NaN] = brush.displacement
   const r = brush.radius
@@ -281,9 +275,13 @@ export function referenceBrushSubdivision(
 
   const rSq = r * r
   const invR = 1 / r
-  const nextVertices = cage.vertices.map((p) => {
-    const px = p[0]!, py = p[1]!, pz = p[2]!
-    const vx = px - cx, vy = py - cy, vz = pz - cz
+  const nextVertices = cage.vertices.map(p => {
+    const px = p[0]!,
+      py = p[1]!,
+      pz = p[2]!
+    const vx = px - cx,
+      vy = py - cy,
+      vz = pz - cz
     const distSq = vx * vx + vy * vy + vz * vz
     if (distSq >= rSq) return [px, py, pz]
     const dist = Math.sqrt(distSq)
@@ -294,17 +292,14 @@ export function referenceBrushSubdivision(
 
   return {
     vertices: nextVertices,
-    faces: cage.faces.map((f) => [...f]),
+    faces: cage.faces.map(f => [...f]),
   }
 }
 
 /**
  * Applies a brush displacement on WebGPU Compute with CPU fallback.
  */
-export async function runGpuBrushSubdivision(
-  cage: SubdivisionCage,
-  brush: GeometryBrush
-): Promise<SubdivisionCage> {
+export async function runGpuBrushSubdivision(cage: SubdivisionCage, brush: GeometryBrush): Promise<SubdivisionCage> {
   if (typeof navigator === 'undefined' || !navigator.gpu) {
     return referenceBrushSubdivision(cage, brush)
   }
@@ -335,7 +330,7 @@ export async function runGpuBrushSubdivision(
                 [brush.center[0]!, brush.center[1]!, brush.center[2]!],
                 brush.radius,
                 [brush.displacement[0]!, brush.displacement[1]!, brush.displacement[2]!],
-                1
+                1,
               ),
               uniform: true,
             },
@@ -358,7 +353,7 @@ export async function runGpuBrushSubdivision(
       }
       return {
         vertices,
-        faces: cage.faces.map((f) => [...f]),
+        faces: cage.faces.map(f => [...f]),
       }
     }
   } catch {

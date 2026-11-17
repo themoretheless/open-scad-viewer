@@ -20,10 +20,13 @@ function meshBounds(meshes: readonly MeshData[]) {
 
 describe('direct evaluator stable module slice', () => {
   it('resizes 3D children from their aggregate bounds and honors auto axes', async () => {
-    const result = await parseOpenSCAD(`
+    const result = await parseOpenSCAD(
+      `
       resize(newsize = [10, 0, 0], auto = [true, true, false])
         cube([5, 4, 1]);
-    `, stableProfile)
+    `,
+      stableProfile,
+    )
 
     expect(result.meshes).toHaveLength(1)
     expect(meshBounds(result.meshes).size).toEqual([10, 8, 1])
@@ -31,44 +34,44 @@ describe('direct evaluator stable module slice', () => {
   })
 
   it('uses the largest requested resize factor for auto axes, including shrink', async () => {
-    const result = await parseOpenSCAD(
-      'resize([2, 0, 0], auto = true) cube([4, 8, 12]);',
-      stableProfile,
-    )
+    const result = await parseOpenSCAD('resize([2, 0, 0], auto = true) cube([4, 8, 12]);', stableProfile)
 
     expect(meshBounds(result.meshes).size).toEqual([2, 4, 6])
     expect(result.volume).toBeCloseTo(48, 6)
   })
 
   it('resizes 2D geometry before extrusion', async () => {
-    const result = await parseOpenSCAD(
-      'linear_extrude(height = 2) resize([4, 6]) square([2, 3]);',
-      stableProfile,
-    )
+    const result = await parseOpenSCAD('linear_extrude(height = 2) resize([4, 6]) square([2, 3]);', stableProfile)
 
     expect(meshBounds(result.meshes).size).toEqual([4, 6, 2])
     expect(result.volume).toBeCloseTo(48, 6)
   })
 
   it('rejects mixed-dimensional resize children with a positioned error', async () => {
-    const failure = parseOpenSCAD(`
+    const failure = parseOpenSCAD(
+      `
       resize([2, 2, 2]) {
         cube(1);
         square(1);
       }
-    `, stableProfile)
+    `,
+      stableProfile,
+    )
 
     await expect(failure).rejects.toBeInstanceOf(OpenSCADParseError)
     await expect(failure).rejects.toThrow('resize() cannot mix 2D and 3D children')
   })
 
   it('computes a real 3D Minkowski sum', async () => {
-    const result = await parseOpenSCAD(`
+    const result = await parseOpenSCAD(
+      `
       minkowski() {
         cube(1);
         cube(1);
       }
-    `, stableProfile)
+    `,
+      stableProfile,
+    )
 
     expect(result.meshes).toHaveLength(1)
     expect(meshBounds(result.meshes)).toMatchObject({
@@ -80,30 +83,31 @@ describe('direct evaluator stable module slice', () => {
   })
 
   it('computes 2D Minkowski inputs and rejects mixed dimensions explicitly', async () => {
-    const planar = await parseOpenSCAD(`
+    const planar = await parseOpenSCAD(
+      `
       linear_extrude(1)
         minkowski() {
           square(1);
           translate([2, 3]) square([3, 4]);
         }
-    `, stableProfile)
+    `,
+      stableProfile,
+    )
 
     expect(meshBounds(planar.meshes)).toMatchObject({
-      min: [2, 3, 0], max: [6, 8, 1], size: [4, 5, 1],
+      min: [2, 3, 0],
+      max: [6, 8, 1],
+      size: [4, 5, 1],
     })
     expect(planar.volume).toBeCloseTo(20, 6)
 
-    await expect(parseOpenSCAD(
-      'minkowski() { cube(1); square(1); }',
-      stableProfile,
-    )).rejects.toThrow('minkowski() cannot mix 2D and 3D children')
+    await expect(parseOpenSCAD('minkowski() { cube(1); square(1); }', stableProfile)).rejects.toThrow(
+      'minkowski() cannot mix 2D and 3D children',
+    )
   })
 
   it('intersects every 3D intersection_for iteration', async () => {
-    const result = await parseOpenSCAD(
-      'intersection_for(i = [0:1]) translate([i * 0.5, 0, 0]) cube(1);',
-      stableProfile,
-    )
+    const result = await parseOpenSCAD('intersection_for(i = [0:1]) translate([i * 0.5, 0, 0]) cube(1);', stableProfile)
 
     expect(result.meshes).toHaveLength(1)
     expect(meshBounds(result.meshes)).toMatchObject({
@@ -115,39 +119,31 @@ describe('direct evaluator stable module slice', () => {
   })
 
   it('intersects 2D intersection_for iterations before extrusion', async () => {
-    const result = await parseOpenSCAD(`
+    const result = await parseOpenSCAD(
+      `
       linear_extrude(height = 2)
         intersection_for(i = [0:1])
           translate([i * 0.5, 0]) square(1);
-    `, stableProfile)
+    `,
+      stableProfile,
+    )
 
     expect(meshBounds(result.meshes).size).toEqual([0.5, 1, 2])
     expect(result.volume).toBeCloseTo(1, 6)
   })
 
   it('accepts a scalar intersection_for iterator and reports dimension errors', async () => {
-    const scalar = await parseOpenSCAD(
-      'intersection_for(i = 1) cube(1);',
-      stableProfile,
-    )
+    const scalar = await parseOpenSCAD('intersection_for(i = 1) cube(1);', stableProfile)
     expect(scalar.meshes).toHaveLength(1)
     expect(scalar.volume).toBeCloseTo(1, 6)
 
-    const mixed = await parseOpenSCAD(
-      'intersection_for(i = [0:1]) if (i) cube(1); else square(1);',
-      stableProfile,
-    )
+    const mixed = await parseOpenSCAD('intersection_for(i = [0:1]) if (i) cube(1); else square(1);', stableProfile)
     expect(mixed.meshes).toEqual([])
-    expect(mixed.warnings).toContain(
-      'intersection_for() ignored child geometry with a different dimension',
-    )
+    expect(mixed.warnings).toContain('intersection_for() ignored child geometry with a different dimension')
   })
 
   it('emits OpenSCAD-formatted echo effects without changing child geometry', async () => {
-    const result = await parseOpenSCAD(
-      'echo("size", n = 2, values = [1, true, undef]) cube(1);',
-      stableProfile,
-    )
+    const result = await parseOpenSCAD('echo("size", n = 2, values = [1, true, undef]) cube(1);', stableProfile)
 
     expect(result.warnings).toEqual(['ECHO: "size", n = 2, values = [1, true, undef]'])
     expect(result.meshes).toHaveLength(1)

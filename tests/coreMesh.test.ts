@@ -62,12 +62,13 @@ function moduleSpecifiersFromSource(source: string, fileName = 'boundary.ts'): s
   const visit = (node: ts.Node) => {
     if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
       addStringLiteral(node.moduleSpecifier)
-    } else if (ts.isImportEqualsDeclaration(node)
-      && ts.isExternalModuleReference(node.moduleReference)) {
+    } else if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference)) {
       addStringLiteral(node.moduleReference.expression)
-    } else if (ts.isCallExpression(node)
-      && (node.expression.kind === ts.SyntaxKind.ImportKeyword
-        || (ts.isIdentifier(node.expression) && node.expression.text === 'require'))) {
+    } else if (
+      ts.isCallExpression(node) &&
+      (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        (ts.isIdentifier(node.expression) && node.expression.text === 'require'))
+    ) {
       addStringLiteral(node.arguments[0])
     }
     ts.forEachChild(node, visit)
@@ -79,8 +80,9 @@ function moduleSpecifiersFromSource(source: string, fileName = 'boundary.ts'): s
 function moduleSpecifiers(path: string): string[] {
   const source = readFileSync(path, 'utf8')
   if (!path.endsWith('.svt')) return moduleSpecifiersFromSource(source, path)
-  return [...source.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)]
-    .flatMap((match, index) => moduleSpecifiersFromSource(match[1], `${path}.${index}.ts`))
+  return [...source.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].flatMap((match, index) =>
+    moduleSpecifiersFromSource(match[1], `${path}.${index}.ts`),
+  )
 }
 
 function isParserModule(specifier: string): boolean {
@@ -103,23 +105,26 @@ function sourcePath(root: string, path: string): string {
 
 function isWithin(root: string, candidate: string): boolean {
   const pathFromRoot = relative(root, candidate)
-  return pathFromRoot === ''
-    || (!isAbsolute(pathFromRoot) && pathFromRoot !== '..' && !pathFromRoot.startsWith(`..${sep}`))
+  return (
+    pathFromRoot === '' || (!isAbsolute(pathFromRoot) && pathFromRoot !== '..' && !pathFromRoot.startsWith(`..${sep}`))
+  )
 }
 
 function isForbiddenBrowserImport(importer: string, specifier: string, mcpRoot: string): boolean {
   const withoutQuery = specifier.replace(/[?#].*$/, '')
   if (withoutQuery.startsWith('node:')) return true
   if (withoutQuery === '@duckdb/node-api' || withoutQuery.startsWith('@duckdb/node-api/')) return true
-  if (withoutQuery === '@modelcontextprotocol/server'
-    || withoutQuery.startsWith('@modelcontextprotocol/server/')) return true
+  if (withoutQuery === '@modelcontextprotocol/server' || withoutQuery.startsWith('@modelcontextprotocol/server/'))
+    return true
   if (withoutQuery.startsWith('.')) {
     return isWithin(mcpRoot, resolve(dirname(importer), withoutQuery))
   }
-  return withoutQuery === 'src/mcp'
-    || withoutQuery.startsWith('src/mcp/')
-    || withoutQuery === '/src/mcp'
-    || withoutQuery.startsWith('/src/mcp/')
+  return (
+    withoutQuery === 'src/mcp' ||
+    withoutQuery.startsWith('src/mcp/') ||
+    withoutQuery === '/src/mcp' ||
+    withoutQuery.startsWith('/src/mcp/')
+  )
 }
 
 describe('core mesh publication', () => {
@@ -170,9 +175,11 @@ describe('core mesh publication', () => {
       .map(path => sourcePath(sourceRoot, path))
       .sort()
     const coreServiceImports = sourceFiles(join(sourceRoot, 'core'))
-      .flatMap(path => moduleSpecifiers(path)
-        .filter(isServiceModule)
-        .map(specifier => `${sourcePath(sourceRoot, path)} -> ${specifier}`))
+      .flatMap(path =>
+        moduleSpecifiers(path)
+          .filter(isServiceModule)
+          .map(specifier => `${sourcePath(sourceRoot, path)} -> ${specifier}`),
+      )
       .sort()
 
     expect(parserConsumers).toEqual([
@@ -189,15 +196,19 @@ describe('core mesh publication', () => {
     const mcpRoot = join(sourceRoot, 'mcp')
     const violations = sourceFiles(sourceRoot)
       .filter(path => !isWithin(mcpRoot, path))
-      .flatMap(path => moduleSpecifiers(path)
-        .filter(specifier => isForbiddenBrowserImport(path, specifier, mcpRoot))
-        .map(specifier => `${sourcePath(sourceRoot, path)} -> ${specifier}`))
+      .flatMap(path =>
+        moduleSpecifiers(path)
+          .filter(specifier => isForbiddenBrowserImport(path, specifier, mcpRoot))
+          .map(specifier => `${sourcePath(sourceRoot, path)} -> ${specifier}`),
+      )
       .sort()
 
     expect(isForbiddenBrowserImport(join(sourceRoot, 'main.ts'), './mcp/createServer', mcpRoot)).toBe(true)
     expect(isForbiddenBrowserImport(join(sourceRoot, 'main.ts'), 'node:fs', mcpRoot)).toBe(true)
     expect(isForbiddenBrowserImport(join(sourceRoot, 'main.ts'), '@duckdb/node-api', mcpRoot)).toBe(true)
-    expect(isForbiddenBrowserImport(join(sourceRoot, 'main.ts'), '@modelcontextprotocol/server/stdio', mcpRoot)).toBe(true)
+    expect(isForbiddenBrowserImport(join(sourceRoot, 'main.ts'), '@modelcontextprotocol/server/stdio', mcpRoot)).toBe(
+      true,
+    )
     expect(violations).toEqual([])
   })
 })

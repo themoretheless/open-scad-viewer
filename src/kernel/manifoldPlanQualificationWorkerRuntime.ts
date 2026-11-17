@@ -85,9 +85,7 @@ export function manifoldPlanQualificationWorkerRuntime(
       lane.close()
       return
     }
-    const transfer = publishable.status === 'succeeded'
-      ? meshTransferables(publishable.result.meshes)
-      : []
+    const transfer = publishable.status === 'succeeded' ? meshTransferables(publishable.result.meshes) : []
     if (lane.cloneFailureErrorMessage === null) {
       // A failed post must remain recoverable by evaluate()'s catch path.
       // Claim the terminal only after the port accepted the message.
@@ -99,11 +97,14 @@ export function manifoldPlanQualificationWorkerRuntime(
         terminalPosted = true
       } catch (error) {
         if (publishable.status !== 'succeeded') throw error
-        lane.post({
-          ...terminalEnvelope(active!),
-          status: 'failed',
-          error: protocolError(lane.cloneFailureErrorMessage, 'QUALIFICATION_RESULT_CLONE_FAILED'),
-        }, [])
+        lane.post(
+          {
+            ...terminalEnvelope(active!),
+            status: 'failed',
+            error: protocolError(lane.cloneFailureErrorMessage, 'QUALIFICATION_RESULT_CLONE_FAILED'),
+          },
+          [],
+        )
         terminalPosted = true
       }
     }

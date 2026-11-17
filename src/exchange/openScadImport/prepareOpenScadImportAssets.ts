@@ -1,6 +1,34 @@
-import { LEGACY_FORMAT_SET, OPENSCAD_2021_LEGACY_IMPORT_FORMATS, OpenScadImportDataError, OpenScadImportError } from '../openScadImport'
-import type { OpenScad2021LegacyImportFormat, OpenScadDxfDimensionMetadata, OpenScadDxfQueryDiagnostic, OpenScadDxfQueryDiagnosticCode, OpenScadDxfQueryMetadata, OpenScadDxfQueryOptions, OpenScadDxfQueryResult, OpenScadImportFormat, OpenScadImportGeometry, OpenScadImportLoadOptions, OpenScadImportPoint2, OpenScadImportPreparationBudget, OpenScadImportPreparationOptions, PreparedOpenScadImportAssets, ResolvedDxfQueryMetadata, ResolvedDxfQueryTransform } from '../openScadImport'
-import { OPENSCAD_PROJECT_MAX_FILES, OpenScadProject, OpenScadProjectError, normalizeOpenScadProjectPath, resolveOpenScadProjectPath } from '../../language/openScadProject'
+import {
+  LEGACY_FORMAT_SET,
+  OPENSCAD_2021_LEGACY_IMPORT_FORMATS,
+  OpenScadImportDataError,
+  OpenScadImportError,
+} from '../openScadImport'
+import type {
+  OpenScad2021LegacyImportFormat,
+  OpenScadDxfDimensionMetadata,
+  OpenScadDxfQueryDiagnostic,
+  OpenScadDxfQueryDiagnosticCode,
+  OpenScadDxfQueryMetadata,
+  OpenScadDxfQueryOptions,
+  OpenScadDxfQueryResult,
+  OpenScadImportFormat,
+  OpenScadImportGeometry,
+  OpenScadImportLoadOptions,
+  OpenScadImportPoint2,
+  OpenScadImportPreparationBudget,
+  OpenScadImportPreparationOptions,
+  PreparedOpenScadImportAssets,
+  ResolvedDxfQueryMetadata,
+  ResolvedDxfQueryTransform,
+} from '../openScadImport'
+import {
+  OPENSCAD_PROJECT_MAX_FILES,
+  OpenScadProject,
+  OpenScadProjectError,
+  normalizeOpenScadProjectPath,
+  resolveOpenScadProjectPath,
+} from '../../language/openScadProject'
 import type { OpenScadProjectFile } from '../../language/openScadProject'
 import { cloneGeometry, dataError, formatOfPath, geometry3D } from './parseOpenScadStl'
 import { forcedImportAssetKey, prepareOpenScadImportAsset, svgProjectOptions } from './parseOpenScadDxfQueryMetadata'
@@ -88,36 +116,53 @@ export function validateImportOptions(
   sourcePath: string,
   specifier: string,
   assetPath: string,
-): Required<Pick<OpenScadImportLoadOptions, 'origin' | 'scale' | 'center' | 'dpi'>> & Pick<OpenScadImportLoadOptions, 'layer'> {
+): Required<Pick<OpenScadImportLoadOptions, 'origin' | 'scale' | 'center' | 'dpi'>> &
+  Pick<OpenScadImportLoadOptions, 'layer'> {
   const origin = options.origin ?? [0, 0]
   const scale = options.scale ?? 1
   const dpi = options.dpi ?? 72
   if (!Array.isArray(origin) || origin.length !== 2 || !origin.every(Number.isFinite)) {
     throw new OpenScadImportError('E_IMPORT_ARGUMENT_INVALID', 'import() origin must contain two finite numbers.', {
-      sourcePath, specifier, assetPath,
+      sourcePath,
+      specifier,
+      assetPath,
     })
   }
   if (typeof scale !== 'number' || !Number.isFinite(scale) || !(scale > 0)) {
     throw new OpenScadImportError('E_IMPORT_ARGUMENT_INVALID', 'import() scale must be a positive finite number.', {
-      sourcePath, specifier, assetPath,
+      sourcePath,
+      specifier,
+      assetPath,
     })
   }
   if (typeof dpi !== 'number' || !Number.isFinite(dpi) || !(dpi > 0)) {
     throw new OpenScadImportError('E_IMPORT_ARGUMENT_INVALID', 'import() dpi must be a positive finite number.', {
-      sourcePath, specifier, assetPath,
+      sourcePath,
+      specifier,
+      assetPath,
     })
   }
   if (options.layer !== undefined && typeof options.layer !== 'string') {
     throw new OpenScadImportError('E_IMPORT_ARGUMENT_INVALID', 'import() layer must be a string.', {
-      sourcePath, specifier, assetPath,
+      sourcePath,
+      specifier,
+      assetPath,
     })
   }
   if (options.center !== undefined && typeof options.center !== 'boolean') {
     throw new OpenScadImportError('E_IMPORT_ARGUMENT_INVALID', 'import() center must be boolean.', {
-      sourcePath, specifier, assetPath,
+      sourcePath,
+      specifier,
+      assetPath,
     })
   }
-  return { origin: [origin[0], origin[1]], scale, center: options.center ?? false, dpi, ...(options.layer !== undefined ? { layer: options.layer } : {}) }
+  return {
+    origin: [origin[0], origin[1]],
+    scale,
+    center: options.center ?? false,
+    dpi,
+    ...(options.layer !== undefined ? { layer: options.layer } : {}),
+  }
 }
 
 export function transformLoadedGeometry(
@@ -125,29 +170,47 @@ export function transformLoadedGeometry(
   options: ReturnType<typeof validateImportOptions>,
 ): OpenScadImportGeometry {
   if (source.dimension === 2) {
-    const selected = source.format === 'dxf' && options.layer
-      ? source.regions.filter(region => region.layer === options.layer)
-      : source.regions
-    if (selected.length === 0) return dataError('E_IMPORT_EMPTY', `${source.format.toUpperCase()} layer contains no filled geometry.`, source.format)
+    const selected =
+      source.format === 'dxf' && options.layer
+        ? source.regions.filter(region => region.layer === options.layer)
+        : source.regions
+    if (selected.length === 0)
+      return dataError(
+        'E_IMPORT_EMPTY',
+        `${source.format.toUpperCase()} layer contains no filled geometry.`,
+        source.format,
+      )
     const applyDxfOptions = source.format === 'dxf'
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+    let minX = Infinity,
+      maxX = -Infinity,
+      minY = Infinity,
+      maxY = -Infinity
     const regions = selected.map(region => ({
       ...region,
-      contours: region.contours.map(contour => contour.map(point => {
-        const x = applyDxfOptions ? (point[0] - options.origin[0]) * options.scale : point[0]
-        const y = applyDxfOptions ? (point[1] - options.origin[1]) * options.scale : point[1]
-        minX = Math.min(minX, x); maxX = Math.max(maxX, x)
-        minY = Math.min(minY, y); maxY = Math.max(maxY, y)
-        return [x, y] as const
-      })),
+      contours: region.contours.map(contour =>
+        contour.map(point => {
+          const x = applyDxfOptions ? (point[0] - options.origin[0]) * options.scale : point[0]
+          const y = applyDxfOptions ? (point[1] - options.origin[1]) * options.scale : point[1]
+          minX = Math.min(minX, x)
+          maxX = Math.max(maxX, x)
+          minY = Math.min(minY, y)
+          maxY = Math.max(maxY, y)
+          return [x, y] as const
+        }),
+      ),
     }))
     if (options.center) {
       const centerX = (minX + maxX) / 2
       const centerY = (minY + maxY) / 2
-      return geometry2D(source.format, regions.map(region => ({
-        ...region,
-        contours: region.contours.map(contour => contour.map(point => [point[0] - centerX, point[1] - centerY] as const)),
-      })))
+      return geometry2D(
+        source.format,
+        regions.map(region => ({
+          ...region,
+          contours: region.contours.map(contour =>
+            contour.map(point => [point[0] - centerX, point[1] - centerY] as const),
+          ),
+        })),
+      )
     }
     return geometry2D(source.format, regions)
   }
@@ -155,14 +218,26 @@ export function transformLoadedGeometry(
     return cloneGeometry(source)
   }
   const srcVertices = source.vertices
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity
+  let minX = Infinity,
+    maxX = -Infinity,
+    minY = Infinity,
+    maxY = -Infinity,
+    minZ = Infinity,
+    maxZ = -Infinity
   for (let offset = 0; offset < srcVertices.length; offset += 3) {
-    const x = srcVertices[offset]!, y = srcVertices[offset + 1]!, z = srcVertices[offset + 2]!
-    if (x < minX) minX = x; if (x > maxX) maxX = x
-    if (y < minY) minY = y; if (y > maxY) maxY = y
-    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z
+    const x = srcVertices[offset]!,
+      y = srcVertices[offset + 1]!,
+      z = srcVertices[offset + 2]!
+    if (x < minX) minX = x
+    if (x > maxX) maxX = x
+    if (y < minY) minY = y
+    if (y > maxY) maxY = y
+    if (z < minZ) minZ = z
+    if (z > maxZ) maxZ = z
   }
-  const centerX = (minX + maxX) / 2, centerY = (minY + maxY) / 2, centerZ = (minZ + maxZ) / 2
+  const centerX = (minX + maxX) / 2,
+    centerY = (minY + maxY) / 2,
+    centerZ = (minZ + maxZ) / 2
   const vertices = new Float64Array(srcVertices.length)
   for (let offset = 0; offset < srcVertices.length; offset += 3) {
     vertices[offset] = srcVertices[offset]! - centerX
@@ -211,7 +286,10 @@ export function resolveImportAsset(
   const file = project.read(assetPath)
   if (file === null) {
     throw new OpenScadImportError('E_IMPORT_FILE_MISSING', `Imported project asset ${assetPath} is missing.`, {
-      sourcePath, specifier, assetPath, format,
+      sourcePath,
+      specifier,
+      assetPath,
+      format,
     })
   }
   return { assetPath, file, format }
@@ -225,17 +303,13 @@ export function loadPreparedOpenScadImport(
   specifier: string,
   options: OpenScadImportLoadOptions = {},
 ): OpenScadImportGeometry {
-  const { assetPath, file, format } = resolveImportAsset(
-    project,
-    sourcePath,
-    specifier,
-    options.forcedFormat,
-  )
+  const { assetPath, file, format } = resolveImportAsset(project, sourcePath, specifier, options.forcedFormat)
   const validated = validateImportOptions(options, sourcePath, specifier, assetPath)
-  let decoded = options.forcedFormat === undefined
-    ? prepared.assets.get(assetPath)
-    : prepared.forcedAssets.get(forcedImportAssetKey(assetPath, options.forcedFormat))
-      ?? (formatOfPath(assetPath) === options.forcedFormat ? prepared.assets.get(assetPath) : undefined)
+  let decoded =
+    options.forcedFormat === undefined
+      ? prepared.assets.get(assetPath)
+      : (prepared.forcedAssets.get(forcedImportAssetKey(assetPath, options.forcedFormat)) ??
+        (formatOfPath(assetPath) === options.forcedFormat ? prepared.assets.get(assetPath) : undefined))
   if (format === 'svg' && validated.dpi !== 72) {
     try {
       decoded = parseOpenScadSvg(file, validated.dpi, svgProjectOptions(project))
@@ -246,7 +320,10 @@ export function loadPreparedOpenScadImport(
   }
   if (decoded === undefined) {
     throw new OpenScadImportError('E_IMPORT_INVALID_DATA', `Imported project asset ${assetPath} was not prepared.`, {
-      sourcePath, specifier, assetPath, format,
+      sourcePath,
+      specifier,
+      assetPath,
+      format,
     })
   }
   if (decoded instanceof OpenScadImportDataError) {
@@ -335,24 +412,27 @@ export function resolveDxfQueryTransform(
   let origin: readonly [number, number] = [0, 0]
   if (options.origin !== undefined) {
     const supplied: unknown = options.origin
-    if (Array.isArray(supplied) && supplied.length === 2
-      && supplied.every(value => typeof value === 'number')) {
+    if (Array.isArray(supplied) && supplied.length === 2 && supplied.every(value => typeof value === 'number')) {
       origin = [supplied[0] as number, supplied[1] as number]
       if (!origin.every(Number.isFinite)) {
-        diagnostics.push(dxfQueryDiagnostic(
-          'OPENSCAD_DXF_QUERY_INVALID_ORIGIN',
-          'DXF query origin contains a non-finite coordinate; 2021.01 arithmetic is preserved.',
-          sourcePath,
-          specifier,
-        ))
+        diagnostics.push(
+          dxfQueryDiagnostic(
+            'OPENSCAD_DXF_QUERY_INVALID_ORIGIN',
+            'DXF query origin contains a non-finite coordinate; 2021.01 arithmetic is preserved.',
+            sourcePath,
+            specifier,
+          ),
+        )
       }
     } else {
-      diagnostics.push(dxfQueryDiagnostic(
-        'OPENSCAD_DXF_QUERY_INVALID_ORIGIN',
-        'DXF query origin was not a two-number vector; [0, 0] is used.',
-        sourcePath,
-        specifier,
-      ))
+      diagnostics.push(
+        dxfQueryDiagnostic(
+          'OPENSCAD_DXF_QUERY_INVALID_ORIGIN',
+          'DXF query origin was not a two-number vector; [0, 0] is used.',
+          sourcePath,
+          specifier,
+        ),
+      )
     }
   }
   // The 2021.01 implementation silently keeps the default when getDouble()

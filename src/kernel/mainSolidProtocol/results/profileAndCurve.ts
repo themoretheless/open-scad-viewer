@@ -1,11 +1,6 @@
 import { validCurveOffsetDiagnostics } from '../../curveOffsetDiagnostics'
 import { validateProfileIntersectionReport } from '../../geometry/profileIntersections'
-import {
-  finite,
-  vector,
-  type MainSolidExpectation,
-  type MainSolidResults,
-} from '../../mainSolidProtocol'
+import { finite, vector, type MainSolidExpectation, type MainSolidResults } from '../../mainSolidProtocol'
 import type { NurbsCurve } from '../../nurbsCurve'
 import { arrayOf } from '../mainSolidExpectation'
 import { isNonnegativeFinite, validDirectDocument } from './predicates'
@@ -20,9 +15,7 @@ export function validFaceSketchResult(value: unknown): boolean {
     vector(v.normal) &&
     Array.isArray(v.outline) &&
     v.outline.length > 0 &&
-    v.outline.every(
-      loop => Array.isArray(loop) && loop.length >= 3 && loop.every(p => arrayOf(p, 2, finite)),
-    )
+    v.outline.every(loop => Array.isArray(loop) && loop.length >= 3 && loop.every(p => arrayOf(p, 2, finite)))
   )
 }
 
@@ -108,8 +101,7 @@ export function validTrimmedCurveOffsetResult(
     return false
   }
   const used = new Set<string>()
-  const equalCoords = (a: number[], b: number[]) =>
-    a.length === b.length && a.every((x, i) => x === b[i])
+  const equalCoords = (a: number[], b: number[]) => a.length === b.length && a.every((x, i) => x === b[i])
   return v.loopIds.every(ids => {
     if (!Array.isArray(ids) || !ids.length || ids.length > 128) return false
     const curves: NurbsCurve[] = []
@@ -174,9 +166,7 @@ export function validCurveOffsetResult(value: unknown): boolean {
               : role.kind === 'bevel' && finite(role.sourceKnot))
           )
         }))) &&
-    (r.cells.length
-      ? validCurveOffsetDiagnostics(r.chainDiagnostics, r.cells.length)
-      : r.chainDiagnostics === null)
+    (r.cells.length ? validCurveOffsetDiagnostics(r.chainDiagnostics, r.cells.length) : r.chainDiagnostics === null)
   )
 }
 
@@ -223,10 +213,7 @@ export function validProfilePrepareResult(
       } catch {
         return false
       }
-    } else if (
-      typeof r.intersectionDiagnosticError !== 'string' ||
-      !r.intersectionDiagnosticError
-    ) {
+    } else if (typeof r.intersectionDiagnosticError !== 'string' || !r.intersectionDiagnosticError) {
       return false
     }
   } else if (
@@ -309,13 +296,10 @@ export function validProfilePrepareResult(
         (!r.profile ||
           (Array.isArray(r.profile.loops) &&
             r.profile.loops.every(Array.isArray) &&
-            r.curveSources.length ===
-              r.profile.loops.reduce((n, loop) => n + loop.length, 0))))) &&
+            r.curveSources.length === r.profile.loops.reduce((n, loop) => n + loop.length, 0))))) &&
     (!r.segmentDefect ||
       (['intersection', 'overlap', 'degenerate', 'unproven'].includes(r.segmentDefect.kind) &&
         Array.isArray(r.segmentDefect.segments) &&
-        r.segmentDefect.segments.every(
-          s => Number.isInteger(s.index) && s.index >= 0 && point2d(s.a) && point2d(s.b),
-        )))
+        r.segmentDefect.segments.every(s => Number.isInteger(s.index) && s.index >= 0 && point2d(s.a) && point2d(s.b))))
   )
 }

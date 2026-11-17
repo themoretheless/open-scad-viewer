@@ -83,18 +83,10 @@ export function extractSemanticEdges(
   const creaseAngle = clamp(requestedCreaseAngle, 0, 180)
   // Computed here so the classification constant keeps the exact JavaScript
   // Math.cos result; the kernel compares against it verbatim.
-  const creaseDotThreshold = Math.cos(creaseAngle * Math.PI / 180)
+  const creaseDotThreshold = Math.cos((creaseAngle * Math.PI) / 180)
 
-  return extractSemanticEdgesInKernel(
-    vertices,
-    triangleIndices,
-    mergeFrom,
-    mergeTo,
-    weldCoincident,
-    creaseDotThreshold,
-  )
+  return extractSemanticEdgesInKernel(vertices, triangleIndices, mergeFrom, mergeTo, weldCoincident, creaseDotThreshold)
 }
-
 
 function validateIndices(indices: Uint32Array, vertexCount: number) {
   for (let i = 0; i < indices.length; i++) {
@@ -118,8 +110,13 @@ export async function extractSemanticEdgesGpu(
   triangleIndices: Uint32Array,
   options: SemanticEdgeOptions = {},
 ): Promise<SemanticEdgesResult> {
-  if (typeof navigator !== 'undefined' && navigator.gpu
-    && options.mergeFromVert === undefined && options.mergeToVert === undefined && !(options.weldCoincidentVertices ?? true)) {
+  if (
+    typeof navigator !== 'undefined' &&
+    navigator.gpu &&
+    options.mergeFromVert === undefined &&
+    options.mergeToVert === undefined &&
+    !(options.weldCoincidentVertices ?? true)
+  ) {
     const requestedCreaseAngle = options.creaseAngleDegrees ?? DEFAULT_CREASE_ANGLE_DEGREES
     if (
       vertices.length % VERTEX_STRIDE === 0 &&

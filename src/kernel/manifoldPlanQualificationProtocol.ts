@@ -1,8 +1,5 @@
 import type { GeometryEvaluationResult, GeometryQuality } from '../core/build'
-import {
-  GEOMETRY_MANIFEST_ARCHIVE,
-  MAX_GEOMETRY_SOURCE_CHARACTERS,
-} from '../core/geometryExecution'
+import { GEOMETRY_MANIFEST_ARCHIVE, MAX_GEOMETRY_SOURCE_CHARACTERS } from '../core/geometryExecution'
 import { sha256Hex } from '../core/sha256'
 import { isGeometryEvaluationResultPayload } from './geometryWorkerProtocol'
 import { isWellFormedUnicode as wellFormed } from '../core/unicode'
@@ -41,8 +38,7 @@ export const MCP_MANIFOLD_PLAN_QUALIFICATION_IDENTITY = Object.freeze({
   automaticFallback: false as const,
 })
 
-export type McpManifoldPlanQualificationIdentity =
-  typeof MCP_MANIFOLD_PLAN_QUALIFICATION_IDENTITY
+export type McpManifoldPlanQualificationIdentity = typeof MCP_MANIFOLD_PLAN_QUALIFICATION_IDENTITY
 
 export interface McpManifoldPlanQualificationRequest {
   readonly protocolVersion: typeof MCP_MANIFOLD_PLAN_QUALIFICATION_PROTOCOL_VERSION
@@ -66,8 +62,7 @@ export interface McpManifoldPlanQualificationCancel {
 }
 
 export type McpManifoldPlanQualificationCommand =
-  | McpManifoldPlanQualificationRequest
-  | McpManifoldPlanQualificationCancel
+  McpManifoldPlanQualificationRequest | McpManifoldPlanQualificationCancel
 
 export interface McpManifoldPlanQualificationError {
   readonly name: string
@@ -87,37 +82,43 @@ interface McpManifoldPlanQualificationTerminalEnvelope {
   readonly identity: McpManifoldPlanQualificationIdentity
 }
 
-export interface McpManifoldPlanQualificationStarted
-  extends McpManifoldPlanQualificationTerminalEnvelope {
+export interface McpManifoldPlanQualificationStarted extends McpManifoldPlanQualificationTerminalEnvelope {
   readonly status: 'started'
 }
 
-export interface McpManifoldPlanQualificationSuccess
-  extends McpManifoldPlanQualificationTerminalEnvelope {
+export interface McpManifoldPlanQualificationSuccess extends McpManifoldPlanQualificationTerminalEnvelope {
   readonly status: 'succeeded'
   readonly result: GeometryEvaluationResult
 }
 
-export interface McpManifoldPlanQualificationFailure
-  extends McpManifoldPlanQualificationTerminalEnvelope {
+export interface McpManifoldPlanQualificationFailure extends McpManifoldPlanQualificationTerminalEnvelope {
   readonly status: 'failed'
   readonly error: McpManifoldPlanQualificationError
 }
 
 export type McpManifoldPlanQualificationTerminal =
-  | McpManifoldPlanQualificationSuccess
-  | McpManifoldPlanQualificationFailure
+  McpManifoldPlanQualificationSuccess | McpManifoldPlanQualificationFailure
 
 const REQUEST_KEYS = Object.freeze([
-  'protocolVersion', 'type', 'workerEpoch', 'jobId', 'source', 'sourceSha256',
-  'quality', 'identity',
+  'protocolVersion',
+  'type',
+  'workerEpoch',
+  'jobId',
+  'source',
+  'sourceSha256',
+  'quality',
+  'identity',
 ])
 const CANCEL_KEYS = Object.freeze([
-  'protocolVersion', 'type', 'workerEpoch', 'jobId', 'sourceSha256', 'reason', 'identity',
+  'protocolVersion',
+  'type',
+  'workerEpoch',
+  'jobId',
+  'sourceSha256',
+  'reason',
+  'identity',
 ])
-const TERMINAL_KEYS = Object.freeze([
-  'protocolVersion', 'workerEpoch', 'jobId', 'sourceSha256', 'identity', 'status',
-])
+const TERMINAL_KEYS = Object.freeze(['protocolVersion', 'workerEpoch', 'jobId', 'sourceSha256', 'identity', 'status'])
 const IDENTITY_KEYS = Object.freeze(Object.keys(MCP_MANIFOLD_PLAN_QUALIFICATION_IDENTITY))
 const ERROR_KEYS = Object.freeze(['name', 'message', 'code', 'line', 'column', 'start', 'end'])
 const MAX_ERROR_MESSAGE_CHARACTERS = 250_512
@@ -125,11 +126,12 @@ const MAX_ERROR_MESSAGE_CHARACTERS = 250_512
 function isIdentity(value: unknown): value is McpManifoldPlanQualificationIdentity {
   const candidate = record(value)
   if (candidate === null || !exactDataKeys(candidate, IDENTITY_KEYS)) return false
-  return IDENTITY_KEYS.every(key => (
-    Object.is(candidate[key], MCP_MANIFOLD_PLAN_QUALIFICATION_IDENTITY[
-      key as keyof McpManifoldPlanQualificationIdentity
-    ])
-  ))
+  return IDENTITY_KEYS.every(key =>
+    Object.is(
+      candidate[key],
+      MCP_MANIFOLD_PLAN_QUALIFICATION_IDENTITY[key as keyof McpManifoldPlanQualificationIdentity],
+    ),
+  )
 }
 
 function nullableInteger(value: unknown, positive = false): boolean {
@@ -138,25 +140,29 @@ function nullableInteger(value: unknown, positive = false): boolean {
 
 function isFailure(value: unknown, sourceLength: number): value is McpManifoldPlanQualificationError {
   const candidate = record(value)
-  if (candidate === null
-    || !exactDataKeys(candidate, ERROR_KEYS)
-    || typeof candidate.name !== 'string'
-    || candidate.name.length === 0
-    || candidate.name.length > 128
-    || !wellFormed(candidate.name)
-    || typeof candidate.message !== 'string'
-    || candidate.message.length > MAX_ERROR_MESSAGE_CHARACTERS
-    || !wellFormed(candidate.message)
-    || !(candidate.code === null
-      || (typeof candidate.code === 'string' && candidate.code.length <= 80 && wellFormed(candidate.code)))
-    || !nullableInteger(candidate.line, true)
-    || !nullableInteger(candidate.column, true)
-    || !nullableInteger(candidate.start)
-    || !nullableInteger(candidate.end)) return false
+  if (
+    candidate === null ||
+    !exactDataKeys(candidate, ERROR_KEYS) ||
+    typeof candidate.name !== 'string' ||
+    candidate.name.length === 0 ||
+    candidate.name.length > 128 ||
+    !wellFormed(candidate.name) ||
+    typeof candidate.message !== 'string' ||
+    candidate.message.length > MAX_ERROR_MESSAGE_CHARACTERS ||
+    !wellFormed(candidate.message) ||
+    !(
+      candidate.code === null ||
+      (typeof candidate.code === 'string' && candidate.code.length <= 80 && wellFormed(candidate.code))
+    ) ||
+    !nullableInteger(candidate.line, true) ||
+    !nullableInteger(candidate.column, true) ||
+    !nullableInteger(candidate.start) ||
+    !nullableInteger(candidate.end)
+  )
+    return false
   const start = candidate.start as number | null
   const end = candidate.end as number | null
-  return (start === null) === (end === null)
-    && (start === null || (end! >= start && end! <= sourceLength))
+  return (start === null) === (end === null) && (start === null || (end! >= start && end! <= sourceLength))
 }
 
 /**
@@ -171,8 +177,7 @@ function isWithinQualificationIpcLimits(value: unknown): boolean {
   const result = record(ownData(terminal, 'result'))
   if (result === null) return false
   const meshes = ownData(result, 'meshes')
-  if (!Array.isArray(meshes)
-    || meshes.length > MCP_MANIFOLD_PLAN_QUALIFICATION_IPC_LIMITS.meshes) return false
+  if (!Array.isArray(meshes) || meshes.length > MCP_MANIFOLD_PLAN_QUALIFICATION_IPC_LIMITS.meshes) return false
 
   let triangles = 0
   let bytes = 0
@@ -187,41 +192,49 @@ function isWithinQualificationIpcLimits(value: unknown): boolean {
     const bvh = record(ownData(mesh, 'bvh'))
     if (bvh === null) return false
     const views = [
-      ownData(mesh, 'vertices'), indices, ownData(mesh, 'edgeIndices'),
-      ownData(mesh, 'faceIds'), ownData(mesh, 'transform'), ownData(bvh, 'bounds'),
-      ownData(bvh, 'nodes'), ownData(bvh, 'triangles'),
+      ownData(mesh, 'vertices'),
+      indices,
+      ownData(mesh, 'edgeIndices'),
+      ownData(mesh, 'faceIds'),
+      ownData(mesh, 'transform'),
+      ownData(bvh, 'bounds'),
+      ownData(bvh, 'nodes'),
+      ownData(bvh, 'triangles'),
     ]
     for (const view of views) {
       if (!ArrayBuffer.isView(view)) return false
       bytes += view.byteLength
     }
-    if (triangles > MCP_MANIFOLD_PLAN_QUALIFICATION_IPC_LIMITS.triangles
-      || bytes > MCP_MANIFOLD_PLAN_QUALIFICATION_IPC_LIMITS.bytes) return false
+    if (
+      triangles > MCP_MANIFOLD_PLAN_QUALIFICATION_IPC_LIMITS.triangles ||
+      bytes > MCP_MANIFOLD_PLAN_QUALIFICATION_IPC_LIMITS.bytes
+    )
+      return false
   }
   return true
 }
 
-export function isMcpManifoldPlanQualificationRequest(
-  value: unknown,
-): value is McpManifoldPlanQualificationRequest {
+export function isMcpManifoldPlanQualificationRequest(value: unknown): value is McpManifoldPlanQualificationRequest {
   try {
     const candidate = record(value)
-    return candidate !== null
-      && exactDataKeys(candidate, REQUEST_KEYS)
-      && candidate.protocolVersion === MCP_MANIFOLD_PLAN_QUALIFICATION_PROTOCOL_VERSION
-      && candidate.type === 'evaluate'
-      && nonNegativeSafeInteger(candidate.workerEpoch)
-      && candidate.workerEpoch > 0
-      && nonNegativeSafeInteger(candidate.jobId)
-      && candidate.jobId > 0
-      && typeof candidate.source === 'string'
-      && candidate.source.length <= MAX_GEOMETRY_SOURCE_CHARACTERS
-      && wellFormed(candidate.source)
-      && typeof candidate.sourceSha256 === 'string'
-      && /^[a-f0-9]{64}$/.test(candidate.sourceSha256)
-      && sha256Hex(candidate.source) === candidate.sourceSha256
-      && (candidate.quality === 'preview' || candidate.quality === 'full')
-      && isIdentity(candidate.identity)
+    return (
+      candidate !== null &&
+      exactDataKeys(candidate, REQUEST_KEYS) &&
+      candidate.protocolVersion === MCP_MANIFOLD_PLAN_QUALIFICATION_PROTOCOL_VERSION &&
+      candidate.type === 'evaluate' &&
+      nonNegativeSafeInteger(candidate.workerEpoch) &&
+      candidate.workerEpoch > 0 &&
+      nonNegativeSafeInteger(candidate.jobId) &&
+      candidate.jobId > 0 &&
+      typeof candidate.source === 'string' &&
+      candidate.source.length <= MAX_GEOMETRY_SOURCE_CHARACTERS &&
+      wellFormed(candidate.source) &&
+      typeof candidate.sourceSha256 === 'string' &&
+      /^[a-f0-9]{64}$/.test(candidate.sourceSha256) &&
+      sha256Hex(candidate.source) === candidate.sourceSha256 &&
+      (candidate.quality === 'preview' || candidate.quality === 'full') &&
+      isIdentity(candidate.identity)
+    )
   } catch {
     return false
   }
@@ -233,15 +246,17 @@ export function isMcpManifoldPlanQualificationCancel(
 ): value is McpManifoldPlanQualificationCancel {
   try {
     const candidate = record(value)
-    return candidate !== null
-      && exactDataKeys(candidate, CANCEL_KEYS)
-      && candidate.protocolVersion === MCP_MANIFOLD_PLAN_QUALIFICATION_PROTOCOL_VERSION
-      && candidate.type === 'cancel'
-      && candidate.workerEpoch === request.workerEpoch
-      && candidate.jobId === request.jobId
-      && candidate.sourceSha256 === request.sourceSha256
-      && (candidate.reason === 'cancelled' || candidate.reason === 'deadline')
-      && isIdentity(candidate.identity)
+    return (
+      candidate !== null &&
+      exactDataKeys(candidate, CANCEL_KEYS) &&
+      candidate.protocolVersion === MCP_MANIFOLD_PLAN_QUALIFICATION_PROTOCOL_VERSION &&
+      candidate.type === 'cancel' &&
+      candidate.workerEpoch === request.workerEpoch &&
+      candidate.jobId === request.jobId &&
+      candidate.sourceSha256 === request.sourceSha256 &&
+      (candidate.reason === 'cancelled' || candidate.reason === 'deadline') &&
+      isIdentity(candidate.identity)
+    )
   } catch {
     return false
   }
@@ -253,16 +268,18 @@ export function isMcpManifoldPlanQualificationTerminal(
 ): value is McpManifoldPlanQualificationTerminal {
   try {
     const candidate = record(value)
-    if (candidate === null
-      || !exactDataKeys(candidate, [...TERMINAL_KEYS, candidate.status === 'succeeded' ? 'result' : 'error'])
-      || candidate.protocolVersion !== MCP_MANIFOLD_PLAN_QUALIFICATION_PROTOCOL_VERSION
-      || candidate.workerEpoch !== request.workerEpoch
-      || candidate.jobId !== request.jobId
-      || candidate.sourceSha256 !== request.sourceSha256
-      || !isIdentity(candidate.identity)) return false
+    if (
+      candidate === null ||
+      !exactDataKeys(candidate, [...TERMINAL_KEYS, candidate.status === 'succeeded' ? 'result' : 'error']) ||
+      candidate.protocolVersion !== MCP_MANIFOLD_PLAN_QUALIFICATION_PROTOCOL_VERSION ||
+      candidate.workerEpoch !== request.workerEpoch ||
+      candidate.jobId !== request.jobId ||
+      candidate.sourceSha256 !== request.sourceSha256 ||
+      !isIdentity(candidate.identity)
+    )
+      return false
     if (candidate.status === 'succeeded') {
-      return isGeometryEvaluationResultPayload(candidate.result)
-        && candidate.result.quality === request.quality
+      return isGeometryEvaluationResultPayload(candidate.result) && candidate.result.quality === request.quality
     }
     return candidate.status === 'failed' && isFailure(candidate.error, request.source.length)
   } catch {
@@ -275,8 +292,7 @@ export function isMcpManifoldPlanQualificationNodeTerminal(
   value: unknown,
   request: McpManifoldPlanQualificationRequest,
 ): value is McpManifoldPlanQualificationTerminal {
-  return isWithinQualificationIpcLimits(value)
-    && isMcpManifoldPlanQualificationTerminal(value, request)
+  return isWithinQualificationIpcLimits(value) && isMcpManifoldPlanQualificationTerminal(value, request)
 }
 
 export function isMcpManifoldPlanQualificationStarted(
@@ -285,14 +301,16 @@ export function isMcpManifoldPlanQualificationStarted(
 ): value is McpManifoldPlanQualificationStarted {
   try {
     const candidate = record(value)
-    return candidate !== null
-      && exactDataKeys(candidate, TERMINAL_KEYS)
-      && candidate.protocolVersion === MCP_MANIFOLD_PLAN_QUALIFICATION_PROTOCOL_VERSION
-      && candidate.workerEpoch === request.workerEpoch
-      && candidate.jobId === request.jobId
-      && candidate.sourceSha256 === request.sourceSha256
-      && candidate.status === 'started'
-      && isIdentity(candidate.identity)
+    return (
+      candidate !== null &&
+      exactDataKeys(candidate, TERMINAL_KEYS) &&
+      candidate.protocolVersion === MCP_MANIFOLD_PLAN_QUALIFICATION_PROTOCOL_VERSION &&
+      candidate.workerEpoch === request.workerEpoch &&
+      candidate.jobId === request.jobId &&
+      candidate.sourceSha256 === request.sourceSha256 &&
+      candidate.status === 'started' &&
+      isIdentity(candidate.identity)
+    )
   } catch {
     return false
   }
@@ -312,24 +330,17 @@ function optionalInteger(value: unknown, positive = false): number | null {
   return nonNegativeSafeInteger(value) && (!positive || value > 0) ? value : null
 }
 
-export function serializeMcpManifoldPlanQualificationError(
-  error: unknown,
-): McpManifoldPlanQualificationError {
-  const object = error !== null && (typeof error === 'object' || typeof error === 'function')
-    ? error as object
-    : null
+export function serializeMcpManifoldPlanQualificationError(error: unknown): McpManifoldPlanQualificationError {
+  const object = error !== null && (typeof error === 'object' || typeof error === 'function') ? (error as object) : null
   const nameValue = object === null ? undefined : inheritedData(object, 'name')
   const messageValue = object === null ? undefined : inheritedData(object, 'message')
   const codeValue = object === null ? undefined : inheritedData(object, 'code')
-  const name = typeof nameValue === 'string' && wellFormed(nameValue)
-    ? truncateWellFormed(nameValue, 128)
-    : 'Error'
-  const message = typeof messageValue === 'string' && wellFormed(messageValue)
-    ? truncateWellFormed(messageValue, MAX_ERROR_MESSAGE_CHARACTERS)
-    : 'The qualification child rejected with an unserializable error'
-  const code = typeof codeValue === 'string' && wellFormed(codeValue)
-    ? truncateWellFormed(codeValue, 80)
-    : null
+  const name = typeof nameValue === 'string' && wellFormed(nameValue) ? truncateWellFormed(nameValue, 128) : 'Error'
+  const message =
+    typeof messageValue === 'string' && wellFormed(messageValue)
+      ? truncateWellFormed(messageValue, MAX_ERROR_MESSAGE_CHARACTERS)
+      : 'The qualification child rejected with an unserializable error'
+  const code = typeof codeValue === 'string' && wellFormed(codeValue) ? truncateWellFormed(codeValue, 80) : null
   const start = optionalInteger(object === null ? undefined : inheritedData(object, 'start'))
   const endValue = optionalInteger(object === null ? undefined : inheritedData(object, 'end'))
   const end = start !== null && endValue !== null && endValue >= start ? endValue : start

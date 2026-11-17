@@ -4,10 +4,7 @@ import type { CallNode, Value } from '../../language/openscadCompiler'
 
 import { formatOpenScadValue } from '../../language/semantic/openScadValueSemantics'
 
-
-import {
-  resolveOpenScadProjectPath,
-} from '../../language/openScadProject'
+import { resolveOpenScadProjectPath } from '../../language/openScadProject'
 
 import {
   loadPreparedOpenScadImport,
@@ -15,25 +12,13 @@ import {
   OpenScadImportPositionedError,
 } from '../../exchange/openScadImport'
 
-
-
 import { nextColor } from '../../language/openscadColors'
 
-import {
-  type EvalContext,
-  type Shape,
-  type Vec2,
-} from '.././types'
+import { type EvalContext, type Shape, type Vec2 } from '.././types'
 
-
-import {
-  compatibilityString,
-  currentEntityId,
-  warn,
-} from '.././expressionEvaluator'
+import { compatibilityString, currentEntityId, warn } from '.././expressionEvaluator'
 
 import { importCallError } from './surfaceCallSource'
-
 
 export function compatibilityDxfProfile(
   node: CallNode,
@@ -56,8 +41,11 @@ export function compatibilityDxfProfile(
   const rawOrigin = values.get('origin')
   let origin: readonly [number, number] | undefined
   if (rawOrigin !== undefined) {
-    if (Array.isArray(rawOrigin) && rawOrigin.length === 2
-      && rawOrigin.every(value => typeof value === 'number' && Number.isFinite(value))) {
+    if (
+      Array.isArray(rawOrigin) &&
+      rawOrigin.length === 2 &&
+      rawOrigin.every(value => typeof value === 'number' && Number.isFinite(value))
+    ) {
       origin = [rawOrigin[0] as number, rawOrigin[1] as number]
     } else {
       warn(ctx, `${node.name}(..., origin=${formatOpenScadValue(rawOrigin)}) could not be converted`)
@@ -67,44 +55,38 @@ export function compatibilityDxfProfile(
   const importer = node.sourcePath ?? ctx.project.entrypoint
   let assetPath: string | undefined
   try {
-    const loaded = loadPreparedOpenScadImport(
-      ctx.project,
-      ctx.importAssets,
-      importer,
-      fileValue,
-      {
-        forcedFormat: 'dxf',
-        layer,
-        ...(origin === undefined ? {} : { origin }),
-        scale: importScale,
-      },
-    )
+    const loaded = loadPreparedOpenScadImport(ctx.project, ctx.importAssets, importer, fileValue, {
+      forcedFormat: 'dxf',
+      layer,
+      ...(origin === undefined ? {} : { origin }),
+      scale: importScale,
+    })
     assetPath = resolveOpenScadProjectPath(importer, fileValue)
     if (loaded.dimension !== 2) {
-      return importCallError(
-        node,
-        ctx,
-        'E_IMPORT_INVALID_DATA',
-        `${node.name}() file mode requires 2D DXF geometry.`,
-        { specifier: fileValue, assetPath, format: 'dxf' },
-      )
+      return importCallError(node, ctx, 'E_IMPORT_INVALID_DATA', `${node.name}() file mode requires 2D DXF geometry.`, {
+        specifier: fileValue,
+        assetPath,
+        format: 'dxf',
+      })
     }
-    const sections = loaded.regions.map(region => ctx.kernel.polygon(
-      region.contours.map(contour => contour.map(point => [point[0], point[1]] as Vec2)),
-      region.fillRule === 'evenodd' ? 'EvenOdd' : 'NonZero',
-    ))
+    const sections = loaded.regions.map(region =>
+      ctx.kernel.polygon(
+        region.contours.map(contour => contour.map(point => [point[0], point[1]] as Vec2)),
+        region.fillRule === 'evenodd' ? 'EvenOdd' : 'NonZero',
+      ),
+    )
     if (sections.length === 0) return []
     const [onlySection] = sections
-    const geometry = sections.length === 1 && onlySection
-      ? onlySection
-      : ctx.kernel.boolean2('union', sections)
+    const geometry = sections.length === 1 && onlySection ? onlySection : ctx.kernel.boolean2('union', sections)
     if (ctx.kernel.isEmpty(geometry)) return []
-    return [{
-      dimension: 2,
-      geometry,
-      color: nextColor(),
-      entityId: currentEntityId(ctx),
-    }]
+    return [
+      {
+        dimension: 2,
+        geometry,
+        color: nextColor(),
+        entityId: currentEntityId(ctx),
+      },
+    ]
   } catch (error) {
     if (error instanceof OpenScadImportPositionedError) throw error
     if (error instanceof OpenScadImportError) {

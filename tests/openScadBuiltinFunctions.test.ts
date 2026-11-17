@@ -16,8 +16,12 @@ function context(overrides: Partial<OpenScadBuiltinFunctionContext> = {}) {
   const registeredStrings: Array<{ value: string; label: string }> = []
   const warnings: string[] = []
   const value: OpenScadBuiltinFunctionContext = {
-    error(message): never { throw new TypeError(message) },
-    warning(message) { warnings.push(message) },
+    error(message): never {
+      throw new TypeError(message)
+    },
+    warning(message) {
+      warnings.push(message)
+    },
     registerArray(items, label) {
       const copy = [...items]
       registeredArrays.push({ items: copy, label })
@@ -125,8 +129,17 @@ describe('shared OpenSCAD 2021.01 built-in functions', () => {
 
   it('uses the injected random stream when unseeded and a repeatable local stream when seeded', () => {
     expect(evaluate('rands', [0, 8, 3], context({ random: () => 0.25 }).value)).toEqual([2, 2, 2])
-    expect(evaluate('rands', [4, 4, 3], context({ random: () => { throw new Error('must not run') } }).value))
-      .toEqual([4, 4, 4])
+    expect(
+      evaluate(
+        'rands',
+        [4, 4, 3],
+        context({
+          random: () => {
+            throw new Error('must not run')
+          },
+        }).value,
+      ),
+    ).toEqual([4, 4, 4])
 
     const first = evaluate('rands', [-1, 1, 5, 17])
     const repeated = evaluate('rands', [-1, 1, 5, 17])
@@ -141,8 +154,9 @@ describe('shared OpenSCAD 2021.01 built-in functions', () => {
 
   it('matches 2021.01 rands repairs, silent type rejection and non-finite seed hashing', () => {
     const repaired = context()
-    expect(evaluate('rands', [Number.NaN, 2, Number.POSITIVE_INFINITY, 17], repaired.value))
-      .toEqual([expect.any(Number)])
+    expect(evaluate('rands', [Number.NaN, 2, Number.POSITIVE_INFINITY, 17], repaired.value)).toEqual([
+      expect.any(Number),
+    ])
     expect(repaired.warnings).toEqual([
       'rands() range minimum is non-finite; using a bounded minimum',
       'rands() result count is non-finite; using one result',
@@ -151,14 +165,10 @@ describe('shared OpenSCAD 2021.01 built-in functions', () => {
     expect(evaluate('rands', ['0', 1, 2])).toBeUndefined()
     expect(evaluate('rands', [0, 1, 2, 'seed'])).toBeUndefined()
     expect(evaluate('rands', [0, 1, 3, Number.NaN])).toEqual([
-      0.5928446165166826,
-      0.8442657442565983,
-      0.8579456199898299,
+      0.5928446165166826, 0.8442657442565983, 0.8579456199898299,
     ])
     expect(evaluate('rands', [0, 1, 3, Number.POSITIVE_INFINITY])).toEqual([
-      0.07767170663409012,
-      0.9976615881433353,
-      0.38583915294608456,
+      0.07767170663409012, 0.9976615881433353, 0.38583915294608456,
     ])
   })
 
@@ -178,41 +188,97 @@ describe('shared OpenSCAD 2021.01 built-in functions', () => {
 
   it('handles Unicode strings, shallow concatenation, lookup interpolation and search result shapes', () => {
     const state = context()
-    expect(evaluate('str', ['Open', 'SCAD', 2021, true, [1, 'x']], state.value))
-      .toBe('OpenSCAD2021true[1, "x"]')
-    expect(evaluate('str', [{ kind: 'range-value', start: 0, step: 1, end: 2 }], state.value))
-      .toBe('[0 : 1 : 2]')
+    expect(evaluate('str', ['Open', 'SCAD', 2021, true, [1, 'x']], state.value)).toBe('OpenSCAD2021true[1, "x"]')
+    expect(evaluate('str', [{ kind: 'range-value', start: 0, step: 1, end: 2 }], state.value)).toBe('[0 : 1 : 2]')
     expect(evaluate('chr', [65, [0x1f0a1, 1051]], state.value)).toBe('A🂡Л')
     expect(evaluate('ord', ['🂡'], state.value)).toBe(0x1f0a1)
     expect(evaluate('ord', [''], state.value)).toBeUndefined()
     expect(evaluate('concat', [[1, 2], 3, [4]], state.value)).toEqual([1, 2, 3, 4])
-    expect(evaluate('lookup', [0.5, [[0, 0], [1, 10]]], state.value)).toBe(5)
-    expect(evaluate('lookup', [-1, [[0, 2], [1, 10]]], state.value)).toBe(2)
-    expect(evaluate('lookup', [2, [[0, 2], [1, 10]]], state.value)).toBe(10)
+    expect(
+      evaluate(
+        'lookup',
+        [
+          0.5,
+          [
+            [0, 0],
+            [1, 10],
+          ],
+        ],
+        state.value,
+      ),
+    ).toBe(5)
+    expect(
+      evaluate(
+        'lookup',
+        [
+          -1,
+          [
+            [0, 2],
+            [1, 10],
+          ],
+        ],
+        state.value,
+      ),
+    ).toBe(2)
+    expect(
+      evaluate(
+        'lookup',
+        [
+          2,
+          [
+            [0, 2],
+            [1, 10],
+          ],
+        ],
+        state.value,
+      ),
+    ).toBe(10)
     expect(evaluate('search', ['a', 'abcdabcd'], state.value)).toEqual([0])
     expect(evaluate('search', ['🂡a', 'a🂡a', 0], state.value)).toEqual([[1], [0, 2]])
-    expect(evaluate('search', ['ab', [['a', 1], ['b', 2], ['a', 3]], 0], state.value))
-      .toEqual([[0, 2], [1]])
+    expect(
+      evaluate(
+        'search',
+        [
+          'ab',
+          [
+            ['a', 1],
+            ['b', 2],
+            ['a', 3],
+          ],
+          0,
+        ],
+        state.value,
+      ),
+    ).toEqual([[0, 2], [1]])
     expect(evaluate('search', ['z', [['a', 1]]], state.value)).toEqual([])
-    expect(evaluate('search', [3, [['a', 1], ['b', 3], ['c', 3]], 0, 1], state.value))
-      .toEqual([1, 2])
+    expect(
+      evaluate(
+        'search',
+        [
+          3,
+          [
+            ['a', 1],
+            ['b', 3],
+            ['c', 3],
+          ],
+          0,
+          1,
+        ],
+        state.value,
+      ),
+    ).toEqual([1, 2])
     expect(evaluate('search', [['a', 'c'], [['a'], ['b'], ['c']], 1, 0], state.value)).toEqual([0, 2])
     expect(evaluate('search', [['z'], [['a']], 1, 0], state.value)).toEqual([[]])
 
-    expect(state.registeredStrings.map(entry => entry.label)).toEqual([
-      'str() result',
-      'str() result',
-      'chr() result',
-    ])
+    expect(state.registeredStrings.map(entry => entry.label)).toEqual(['str() result', 'str() result', 'chr() result'])
     expect(state.registeredArrays.some(entry => entry.label === 'concat() result')).toBe(true)
     expect(state.registeredArrays.some(entry => entry.label === 'search() result')).toBe(true)
   })
 
   it('uses canonical six-digit str formatting and source-shaped function values', () => {
-    const assignment = compileOpenSCAD(
-      'f = function(x = 1, y) x + y * 2;',
-      { languageProfile: 'openscad/stable-2021.01' },
-    )[0] as AssignNode
+    const assignment = compileOpenSCAD('f = function(x = 1, y) x + y * 2;', {
+      languageProfile: 'openscad/stable-2021.01',
+    })[0] as AssignNode
     const expression = assignment.value
     if (expression.kind !== 'function') throw new Error('Expected a function expression fixture')
     const fn: FunctionValue = {
@@ -223,25 +289,23 @@ describe('shared OpenSCAD 2021.01 built-in functions', () => {
       closure: new Map(),
     }
 
-    expect(evaluate('str', [1_234_567, 1e-6, 999_999.5, -0, Infinity, -Infinity, Number.NaN]))
-      .toBe('1.23457e+61e-61e+60inf-infnan')
+    expect(evaluate('str', [1_234_567, 1e-6, 999_999.5, -0, Infinity, -Infinity, Number.NaN])).toBe(
+      '1.23457e+61e-61e+60inf-infnan',
+    )
     expect(evaluate('str', [fn])).toBe('function(x = 1, y) (x + (y * 2))')
     expect(evaluate('str', [[fn]])).toBe('[function(x = 1, y) (x + (y * 2))]')
   })
 
   it('implements chr range expansion and ord Unicode boundaries without spurious zero-arity failure', () => {
     const state = context()
-    expect(evaluate('chr', [
-      { kind: 'range-value', start: 65, step: 1, end: 67 },
-      0,
-      -1,
-      0xd800,
-      0x10ffff,
-      0x110000,
-    ], state.value)).toBe(`ABC${String.fromCodePoint(0x10ffff)}`)
-    expect(evaluate('chr', [
-      { kind: 'range-value', start: 65, step: 0, end: 65 },
-    ], state.value)).toBe('')
+    expect(
+      evaluate(
+        'chr',
+        [{ kind: 'range-value', start: 65, step: 1, end: 67 }, 0, -1, 0xd800, 0x10ffff, 0x110000],
+        state.value,
+      ),
+    ).toBe(`ABC${String.fromCodePoint(0x10ffff)}`)
+    expect(evaluate('chr', [{ kind: 'range-value', start: 65, step: 0, end: 65 }], state.value)).toBe('')
     expect(evaluate('ord', [], state.value)).toBeUndefined()
     expect(state.warnings).toEqual([])
     expect(evaluate('ord', ['😀x'], state.value)).toBe(0x1f600)
@@ -249,16 +313,30 @@ describe('shared OpenSCAD 2021.01 built-in functions', () => {
 
     const tooLarge = context()
     expect(evaluate('chr', [{ kind: 'range-value', start: 1, step: 1, end: 10_000 }], tooLarge.value)).toBe('')
-    expect(tooLarge.warnings).toEqual([
-      'chr() range exceeds the 10,000-item character limit',
-    ])
+    expect(tooLarge.warnings).toEqual(['chr() range exceeds the 10,000-item character limit'])
   })
 
   it('keeps lookup first-row validity, skips later malformed rows and accepts numeric non-finites', () => {
     expect(evaluate('lookup', [0.5, [['bad'], [0, 0], [1, 10]]])).toBeUndefined()
     expect(evaluate('lookup', [0.5, [[0, 0], ['bad'], [1, 10]]])).toBe(5)
-    expect(evaluate('lookup', [0.5, [[0, 0, 99], [1, 10]]])).toBeUndefined()
-    expect(evaluate('lookup', [0.5, [[0, Number.POSITIVE_INFINITY], [1, 10]]])).toBe(Infinity)
+    expect(
+      evaluate('lookup', [
+        0.5,
+        [
+          [0, 0, 99],
+          [1, 10],
+        ],
+      ]),
+    ).toBeUndefined()
+    expect(
+      evaluate('lookup', [
+        0.5,
+        [
+          [0, Number.POSITIVE_INFINITY],
+          [1, 10],
+        ],
+      ]),
+    ).toBe(Infinity)
     expect(evaluate('lookup', [0.5, 'not-a-table'])).toBeUndefined()
   })
 
@@ -267,7 +345,17 @@ describe('shared OpenSCAD 2021.01 built-in functions', () => {
     expect(evaluate('search', ['a', 'aba', 'all'])).toEqual([[0, 2]])
     expect(evaluate('search', ['a', 'aba', 1.9])).toEqual([0])
     expect(evaluate('search', ['a', 'aba', 1, 0, 99])).toEqual([0])
-    expect(evaluate('search', [2, [[1, 2], [2, 1]], 1, -1])).toEqual([])
+    expect(
+      evaluate('search', [
+        2,
+        [
+          [1, 2],
+          [2, 1],
+        ],
+        1,
+        -1,
+      ]),
+    ).toEqual([])
     expect(evaluate('search', [[[1, 2]], [[1, 2]], 1, 0])).toEqual([0])
     expect(evaluate('search', [['missing'], [[1], [2]], 1, 0])).toEqual([[]])
     expect(evaluate('search', ['ab', [[1], ['b']], 0, 0])).toEqual([[], [1]])
@@ -282,8 +370,26 @@ describe('shared OpenSCAD 2021.01 built-in functions', () => {
     expect(evaluate('version', [], state.value)).toEqual([2021, 1, 0])
     expect(evaluate('version_num', [], state.value)).toBe(20210100)
     expect(evaluate('version_num', [[2021, 1]], state.value)).toBe(20210100)
-    expect(evaluate('cross', [[1, 0], [0, 1]], state.value)).toBe(1)
-    expect(evaluate('cross', [[1, 0, 0], [0, 1, 0]], state.value)).toEqual([0, 0, 1])
+    expect(
+      evaluate(
+        'cross',
+        [
+          [1, 0],
+          [0, 1],
+        ],
+        state.value,
+      ),
+    ).toBe(1)
+    expect(
+      evaluate(
+        'cross',
+        [
+          [1, 0, 0],
+          [0, 1, 0],
+        ],
+        state.value,
+      ),
+    ).toEqual([0, 0, 1])
     expect(evaluate('parent_module', [0], state.value)).toBe('current')
     expect(evaluate('parent_module', [], state.value)).toBe('parent')
     expect(evaluate('parent_module', [99], state.value)).toBeUndefined()
@@ -307,8 +413,18 @@ describe('shared OpenSCAD 2021.01 built-in functions', () => {
     expect(evaluate('version_num', ['2021.01'])).toBeUndefined()
     expect(evaluate('norm', [1])).toBeUndefined()
     expect(evaluate('norm', [[1e308, 1e308]])).toBe(Infinity)
-    expect(evaluate('cross', [['not-a-number', 1], [2, 3]])).toBe(-2)
-    expect(() => evaluate('cross', [['not-a-number', 1, 2], [2, 3, 4]])).toThrow('must be a number')
+    expect(
+      evaluate('cross', [
+        ['not-a-number', 1],
+        [2, 3],
+      ]),
+    ).toBe(-2)
+    expect(() =>
+      evaluate('cross', [
+        ['not-a-number', 1, 2],
+        [2, 3, 4],
+      ]),
+    ).toThrow('must be a number')
   })
 
   it('truncates parent_module indices and reports repairable stack-domain failures through warning', () => {
@@ -332,15 +448,29 @@ describe('shared OpenSCAD 2021.01 built-in functions', () => {
     expect(() => evaluate('rands', [0, 1, 1_000_001], state.value)).toThrow('exceeds 1,000,000 items')
 
     const bounded = context({
-      registerArray: (_items, label) => { throw new RangeError(`${label} exceeded host budget`) },
+      registerArray: (_items, label) => {
+        throw new RangeError(`${label} exceeded host budget`)
+      },
     })
     expect(() => evaluate('concat', [[1], [2]], bounded.value)).toThrow('concat() result exceeded host budget')
   })
 
   it('keeps fixed-arity and conversion failures soft-failable for every strict built-in family', () => {
     const unaryNumbers = [
-      'abs', 'sign', 'sin', 'cos', 'asin', 'acos', 'tan', 'atan',
-      'round', 'ceil', 'floor', 'sqrt', 'exp', 'ln',
+      'abs',
+      'sign',
+      'sin',
+      'cos',
+      'asin',
+      'acos',
+      'tan',
+      'atan',
+      'round',
+      'ceil',
+      'floor',
+      'sqrt',
+      'exp',
+      'ln',
     ] as const
     for (const name of unaryNumbers) {
       expect(() => evaluate(name, []), `${name} arity`).toThrow(`${name}() expects 1 argument`)

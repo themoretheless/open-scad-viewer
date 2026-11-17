@@ -23,10 +23,13 @@ export interface PublicToolError {
 }
 
 export class ModelNotFoundError extends Error {
-  constructor(readonly modelId: string, readonly revision?: number) {
-    super(revision === undefined
-      ? `Model ${modelId} was not found`
-      : `Model ${modelId} revision ${revision} was not found`)
+  constructor(
+    readonly modelId: string,
+    readonly revision?: number,
+  ) {
+    super(
+      revision === undefined ? `Model ${modelId} was not found` : `Model ${modelId} revision ${revision} was not found`,
+    )
     this.name = 'ModelNotFoundError'
   }
 }

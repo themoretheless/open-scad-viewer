@@ -52,18 +52,29 @@ export function analyzeExchangeCorpusFile(
   sha256: string,
 ): ExchangeCorpusFileResult {
   try {
-    const stats = format === 'step'
-      ? buildStepRawArtifact(new TextDecoder().decode(bytes)).stats
-      : format === 'iges'
-        ? preflightIgesInput(new TextDecoder().decode(bytes))
-        : preflightStlInput(bytes)
+    const stats =
+      format === 'step'
+        ? buildStepRawArtifact(new TextDecoder().decode(bytes)).stats
+        : format === 'iges'
+          ? preflightIgesInput(new TextDecoder().decode(bytes))
+          : preflightStlInput(bytes)
     return {
-      path, sha256, format, bytes: bytes.byteLength, status: 'admitted',
-      entities: stats.entities, faces: stats.faces, controlPoints: stats.controlPoints,
+      path,
+      sha256,
+      format,
+      bytes: bytes.byteLength,
+      status: 'admitted',
+      entities: stats.entities,
+      faces: stats.faces,
+      controlPoints: stats.controlPoints,
     }
   } catch (error) {
     return {
-      path, sha256, format, bytes: bytes.byteLength, status: 'refused',
+      path,
+      sha256,
+      format,
+      bytes: bytes.byteLength,
+      status: 'refused',
       errorCode: error instanceof ParserInputError ? error.code : 'invalid-input',
       message: error instanceof Error ? error.message : String(error),
     }
@@ -81,8 +92,12 @@ export function createExchangeCorpusReport(sources: readonly ExchangeCorpusSourc
     sources,
     totals: {
       sources: sources.length,
-      downloadedSources: sources.filter(source => source.availability === 'local' || source.availability === 'downloaded').length,
-      unavailableSources: sources.filter(source => source.availability === 'not-downloaded' || source.availability === 'unavailable').length,
+      downloadedSources: sources.filter(
+        source => source.availability === 'local' || source.availability === 'downloaded',
+      ).length,
+      unavailableSources: sources.filter(
+        source => source.availability === 'not-downloaded' || source.availability === 'unavailable',
+      ).length,
       files: files.length,
       admitted: files.filter(file => file.status === 'admitted').length,
       refused: files.filter(file => file.status === 'refused').length,

@@ -5,12 +5,27 @@ import { parseOpenScadSvg, loadOpenScadImport, OpenScadImportDataError } from '.
 import { OpenScadProject } from '../src/language/openScadProject'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 
-const wrap = (body: string, size = 40) => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}mm" height="${size}mm" viewBox="0 0 ${size} ${size}">${body}</svg>`
-const area = (rings: readonly (readonly (readonly [number, number])[])[]) => Math.abs(rings.reduce((sum, ring) => sum + ring.reduce((s, a, i) => {
-  const b = ring[(i + 1) % ring.length]
-  return s + (a[0] * b[1] - b[0] * a[1]) / 2
-}, 0), 0))
-const sourceFile = (source: string) => ({ kind: 'source' as const, path: 'art.svg', source, byteLength: new TextEncoder().encode(source).length, sha256: '' })
+const wrap = (body: string, size = 40) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${size}mm" height="${size}mm" viewBox="0 0 ${size} ${size}">${body}</svg>`
+const area = (rings: readonly (readonly (readonly [number, number])[])[]) =>
+  Math.abs(
+    rings.reduce(
+      (sum, ring) =>
+        sum +
+        ring.reduce((s, a, i) => {
+          const b = ring[(i + 1) % ring.length]
+          return s + (a[0] * b[1] - b[0] * a[1]) / 2
+        }, 0),
+      0,
+    ),
+  )
+const sourceFile = (source: string) => ({
+  kind: 'source' as const,
+  path: 'art.svg',
+  source,
+  byteLength: new TextEncoder().encode(source).length,
+  sha256: '',
+})
 
 describe('static SVG document support', () => {
   it('resolves CSS cascade, reuse, inherited paint and transforms into real geometry', async () => {
@@ -30,13 +45,27 @@ describe('static SVG document support', () => {
     const source = wrap(`<defs><clipPath id="clip"><rect width="20" height="40"/></clipPath></defs>
       <g clip-path="url(#clip)"><path fill-rule="evenodd" d="M0 0H40V40H0Z M10 10H30V30H10Z"/></g>`)
     expect(area(await svgContours(source))).toBeCloseTo(600, 3)
-    const nested = wrap('<svg x="25%" y="25%" width="50%" height="50%" viewBox="0 0 10 10"><rect width="100%" height="100%"/></svg>')
+    const nested = wrap(
+      '<svg x="25%" y="25%" width="50%" height="50%" viewBox="0 0 10 10"><rect width="100%" height="100%"/></svg>',
+    )
     expect(area(await svgContours(nested))).toBeCloseTo(400, 3)
   })
 
   it('creates proper dash gaps and cap geometry, with adaptive curve accuracy', async () => {
-    expect(area(await svgContours(wrap('<path d="M0 10H40" fill="none" stroke="black" stroke-width="2" stroke-dasharray="5 5"/>')))).toBeCloseTo(40, 3)
-    expect(area(await svgContours(wrap('<path d="M10 10H20" fill="none" stroke="black" stroke-width="2" stroke-linecap="square"/>')))).toBeCloseTo(24, 3)
+    expect(
+      area(
+        await svgContours(
+          wrap('<path d="M0 10H40" fill="none" stroke="black" stroke-width="2" stroke-dasharray="5 5"/>'),
+        ),
+      ),
+    ).toBeCloseTo(40, 3)
+    expect(
+      area(
+        await svgContours(
+          wrap('<path d="M10 10H20" fill="none" stroke="black" stroke-width="2" stroke-linecap="square"/>'),
+        ),
+      ),
+    ).toBeCloseTo(24, 3)
     const circle = wrap('<circle cx="20" cy="20" r="15"/>')
     const coarse = await svgContours(circle, { tolerance: 0.5 })
     const fine = await svgContours(circle, { tolerance: 0.001 })
@@ -51,7 +80,9 @@ describe('static SVG document support', () => {
     expect(preview.svg).not.toMatch(/<text[ >]/)
     expect(area(await svgContours(source))).toBeGreaterThan(30)
     const font = new Uint8Array(readFileSync(new URL('./fixtures/Basic-Regular.ttf', import.meta.url)))
-    const custom = await svgPreview(wrap('<text x="2" y="20" font-family="Basic" font-size="12">TEST</text>'), { fonts: [font] })
+    const custom = await svgPreview(wrap('<text x="2" y="20" font-family="Basic" font-size="12">TEST</text>'), {
+      fonts: [font],
+    })
     expect(area(await svgContours(custom.svg))).toBeGreaterThan(20)
   })
 
@@ -85,11 +116,14 @@ describe('static SVG document support', () => {
     const source = '<svg width="96" height="96"><rect width="96" height="48"/></svg>'
     expect(area(await svgContours(source))).toBeCloseTo(25.4 * 12.7, 3)
     const legacy = parseOpenScadSvg(sourceFile(source))
-    expect(area(legacy.regions.flatMap(r => r.contours))).toBeCloseTo((96 * 25.4 / 72) * (48 * 25.4 / 72), 3)
-    const project = new OpenScadProject({ entrypoint: 'main.scad', files: [
-      { kind: 'source', path: 'main.scad', source: 'linear_extrude(2) import("art.svg",dpi=96);' },
-      { kind: 'source', path: 'art.svg', source },
-    ] })
+    expect(area(legacy.regions.flatMap(r => r.contours))).toBeCloseTo(((96 * 25.4) / 72) * ((48 * 25.4) / 72), 3)
+    const project = new OpenScadProject({
+      entrypoint: 'main.scad',
+      files: [
+        { kind: 'source', path: 'main.scad', source: 'linear_extrude(2) import("art.svg",dpi=96);' },
+        { kind: 'source', path: 'art.svg', source },
+      ],
+    })
     const imported = await loadOpenScadImport(project, 'main.scad', 'art.svg', { dpi: 96, center: true })
     expect(imported.dimension).toBe(2)
     if (imported.dimension === 2) expect(area(imported.regions.flatMap(r => r.contours))).toBeCloseTo(25.4 * 12.7, 3)

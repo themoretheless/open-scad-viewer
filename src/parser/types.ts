@@ -164,8 +164,18 @@ export interface PassedCallChildren {
   readonly continuation?: Statement[] | PassedCallChildren | undefined
 }
 
-export interface Shape2D { dimension: 2; geometry: CadKernelHandle; color: RGBA; entityId: SceneEntityId }
-export interface Shape3D { dimension: 3; geometry: CadKernelHandle; color: RGBA; entityId: SceneEntityId }
+export interface Shape2D {
+  dimension: 2
+  geometry: CadKernelHandle
+  color: RGBA
+  entityId: SceneEntityId
+}
+export interface Shape3D {
+  dimension: 3
+  geometry: CadKernelHandle
+  color: RGBA
+  entityId: SceneEntityId
+}
 export type Shape = Shape2D | Shape3D
 
 export class StableViewportRootSelection {

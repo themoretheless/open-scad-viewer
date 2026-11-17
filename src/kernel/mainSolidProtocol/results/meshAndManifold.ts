@@ -85,9 +85,7 @@ export function validSurfaceBoundaryResult(
 export function validManifoldMetricsResult(value: unknown): boolean {
   const v = value as KernelManifoldMetrics
   return (
-    [v.vertexCount, v.triangleCount, v.edgeCount, v.componentCount].every(
-      isSafeNonnegativeCount,
-    ) &&
+    [v.vertexCount, v.triangleCount, v.edgeCount, v.componentCount].every(isSafeNonnegativeCount) &&
     isSafeIntegerValue(v.eulerCharacteristic) &&
     finite(v.signedVolume) &&
     isNonnegativeFinite(v.surfaceArea) &&
@@ -96,9 +94,7 @@ export function validManifoldMetricsResult(value: unknown): boolean {
     v.components.length === v.componentCount &&
     v.components.every(
       c =>
-        [c.vertexCount, c.triangleCount, c.edgeCount, c.boundaryEdges].every(
-          isSafeNonnegativeCount,
-        ) &&
+        [c.vertexCount, c.triangleCount, c.edgeCount, c.boundaryEdges].every(isSafeNonnegativeCount) &&
         isSafeIntegerValue(c.eulerCharacteristic) &&
         (c.genus === null || isSafeNonnegativeCount(c.genus)) &&
         finite(c.signedVolume) &&
@@ -117,11 +113,7 @@ export function validMeshManifoldResult(
     entries.length === job.objects.length &&
     entries.every((entry, index) => {
       const object = job.objects[index]
-      return (
-        !!object &&
-        entry?.id === object.id &&
-        validManifoldReport(entry.report, object.vertices, object.triangles)
-      )
+      return !!object && entry?.id === object.id && validManifoldReport(entry.report, object.vertices, object.triangles)
     })
   )
 }
@@ -233,12 +225,9 @@ export function validMeshConvertResult(
     source.fileName === job.fileName &&
     source.byteLength === job.byteLength &&
     (MESH_IMPORT_FORMATS as readonly string[]).includes(source.format) &&
-    [
-      source.triangleCount,
-      source.vertexCount,
-      source.sourceVertexCount,
-      source.degenerateTriangles,
-    ].every(isSafeNonnegativeCount)
+    [source.triangleCount, source.vertexCount, source.sourceVertexCount, source.degenerateTriangles].every(
+      isSafeNonnegativeCount,
+    )
   )
 }
 
@@ -284,16 +273,11 @@ export function validDisplayMeshResult(
     (m.uv === undefined || numericSequenceOf(m.uv, vertices * 2, finite)) &&
     arrayOf(v.normals, count, vector) &&
     (v.closed == null || arrayOf(v.closed, count, x => typeof x === 'boolean')) &&
-    (v.workClosed == null ||
-      arrayOf(v.workClosed, job.triangles, x => typeof x === 'boolean')) &&
+    (v.workClosed == null || arrayOf(v.workClosed, job.triangles, x => typeof x === 'boolean')) &&
     (v.map === null
       ? count === job.triangles
       : count <= 4000 &&
-        arrayOf(
-          v.map,
-          count,
-          i => Number.isSafeInteger(i) && Number(i) >= 0 && Number(i) < job.triangles,
-        ))
+        arrayOf(v.map, count, i => Number.isSafeInteger(i) && Number(i) >= 0 && Number(i) < job.triangles))
   )
 }
 
@@ -323,11 +307,7 @@ export function validMeshContactsResult(
     !v.contacts.every(
       (c, i) =>
         !!c &&
-        arrayOf(
-          c.triangles,
-          2,
-          t => Number.isInteger(t) && Number(t) >= 0 && Number(t) < job.triangles,
-        ) &&
+        arrayOf(c.triangles, 2, t => Number.isInteger(t) && Number(t) >= 0 && Number(t) < job.triangles) &&
         c.triangles[0]! < c.triangles[1]! &&
         vector(c.point) &&
         finite(c.toleranceMm) &&
@@ -337,8 +317,7 @@ export function validMeshContactsResult(
         c.sharedVertices <= 3 &&
         (i === 0 ||
           v.contacts[i - 1]!.triangles[0]! < c.triangles[0]! ||
-          (v.contacts[i - 1]!.triangles[0] === c.triangles[0] &&
-            v.contacts[i - 1]!.triangles[1]! < c.triangles[1]!)),
+          (v.contacts[i - 1]!.triangles[0] === c.triangles[0] && v.contacts[i - 1]!.triangles[1]! < c.triangles[1]!)),
     )
   ) {
     return false

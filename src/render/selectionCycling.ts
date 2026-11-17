@@ -70,11 +70,12 @@ export function chooseDepthCandidate<T>(
   const radius = Math.max(0, options.radiusPx ?? 4)
   const timeout = Math.max(0, options.timeoutMs ?? 1_500)
   const signature = candidates.map(candidate => candidate.key).join('\u001f')
-  const canContinue = previous !== null
-    && previous.signature === signature
-    && timestamp >= previous.timestamp
-    && timestamp - previous.timestamp <= timeout
-    && Math.hypot(x - previous.x, y - previous.y) <= radius
+  const canContinue =
+    previous !== null &&
+    previous.signature === signature &&
+    timestamp >= previous.timestamp &&
+    timestamp - previous.timestamp <= timeout &&
+    Math.hypot(x - previous.x, y - previous.y) <= radius
   const index = canContinue ? (previous.index + 1) % candidates.length : 0
   const state: DepthCycleState = {
     x: canContinue ? previous.x : x,

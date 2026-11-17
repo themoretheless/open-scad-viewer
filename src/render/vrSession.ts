@@ -54,18 +54,27 @@ export class VrPresentation {
   private session: VrSession | null = null
   private disposed = false
   private cleanup: (() => void) | null = null
-  constructor(private readonly changed: (active: boolean) => void, private readonly failed: (error: unknown) => void) {}
+  constructor(
+    private readonly changed: (active: boolean) => void,
+    private readonly failed: (error: unknown) => void,
+  ) {}
 
   async start(system: VrSystem, meshes: readonly VrMesh[]): Promise<void> {
     if (this.disposed || this.session) return
     // Called directly from the click handler: preserve transient user activation.
     const session = await system.requestSession('immersive-vr')
-    if (this.disposed) { await session.end(); return }
+    if (this.disposed) {
+      await session.end()
+      return
+    }
     this.session = session
     const canvas = document.createElement('canvas')
     let gl: XrGl | null = null
-    const buffers: WebGLBuffer[] = [], shaders: WebGLShader[] = []
-    let program: WebGLProgram | null = null, frameId = 0, ended = false
+    const buffers: WebGLBuffer[] = [],
+      shaders: WebGLShader[] = []
+    let program: WebGLProgram | null = null,
+      frameId = 0,
+      ended = false
     const clean = () => {
       if (ended) return
       ended = true
@@ -84,7 +93,9 @@ export class VrPresentation {
       this.changed(false)
     }
     let anchor: Float32Array | null = null
-    const recenter = () => { anchor = null }
+    const recenter = () => {
+      anchor = null
+    }
     const lost = (event: Event) => {
       event.preventDefault()
       this.failed(new Error('VR graphics context lost'))
@@ -99,19 +110,25 @@ export class VrPresentation {
       if (!gl) throw new Error('WebGL2 unavailable')
       await gl.makeXRCompatible()
       if (ended || this.disposed) return
-      const Layer = (globalThis as unknown as { XRWebGLLayer: new (session: VrSession, gl: XrGl) => VrLayer }).XRWebGLLayer
+      const Layer = (globalThis as unknown as { XRWebGLLayer: new (session: VrSession, gl: XrGl) => VrLayer })
+        .XRWebGLLayer
       const layer = new Layer(session, gl)
       session.updateRenderState({ baseLayer: layer, depthNear: 0.01, depthFar: 100 })
       const space = await session.requestReferenceSpace('local')
       if (ended || this.disposed) return
       program = gl.createProgram()
       if (!program) throw new Error('VR shader allocation failed')
-      for (const [type, source] of [[gl.VERTEX_SHADER, vertexShader], [gl.FRAGMENT_SHADER, fragmentShader]] as const) {
+      for (const [type, source] of [
+        [gl.VERTEX_SHADER, vertexShader],
+        [gl.FRAGMENT_SHADER, fragmentShader],
+      ] as const) {
         const shader = gl.createShader(type)
         if (!shader) throw new Error('VR shader allocation failed')
         shaders.push(shader)
-        gl.shaderSource(shader, source); gl.compileShader(shader)
-        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader) ?? 'VR shader failed')
+        gl.shaderSource(shader, source)
+        gl.compileShader(shader)
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
+          throw new Error(gl.getShaderInfoLog(shader) ?? 'VR shader failed')
         gl.attachShader(program, shader)
       }
       gl.linkProgram(program)
@@ -130,10 +147,15 @@ export class VrPresentation {
           const buffer = gl!.createBuffer()
           if (!buffer) throw new Error('VR buffer allocation failed')
           buffers.push(buffer)
-          gl!.bindBuffer(target, buffer); gl!.bufferData(target, data, gl!.STATIC_DRAW)
+          gl!.bindBuffer(target, buffer)
+          gl!.bufferData(target, data, gl!.STATIC_DRAW)
           return buffer
         }
-        return { mesh, vertices: upload(gl!.ARRAY_BUFFER, mesh.positions), indices: upload(gl!.ELEMENT_ARRAY_BUFFER, mesh.indices) }
+        return {
+          mesh,
+          vertices: upload(gl!.ARRAY_BUFFER, mesh.positions),
+          indices: upload(gl!.ELEMENT_ARRAY_BUFFER, mesh.indices),
+        }
       })
       gl.enable(gl.DEPTH_TEST)
       gl.clearColor(0.035, 0.045, 0.07, 1)
@@ -174,13 +196,21 @@ export class VrPresentation {
       frameId = session.requestAnimationFrame(frame)
       this.changed(true)
     } catch (error) {
-      try { await session.end() } finally { clean() }
+      try {
+        await session.end()
+      } finally {
+        clean()
+      }
       throw error
     }
   }
 
   async stop(): Promise<void> {
-    try { await this.session?.end() } finally { this.cleanup?.() }
+    try {
+      await this.session?.end()
+    } finally {
+      this.cleanup?.()
+    }
   }
   dispose(): void {
     this.disposed = true

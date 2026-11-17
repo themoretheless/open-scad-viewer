@@ -1,11 +1,41 @@
 import { TT } from '../openscadCompiler'
-import type { Expr, ExpressionArgument, FunctionValue, ListComprehensionExpression, Statement, Value } from '../openscadCompiler'
+import type {
+  Expr,
+  ExpressionArgument,
+  FunctionValue,
+  ListComprehensionExpression,
+  Statement,
+  Value,
+} from '../openscadCompiler'
 import { MAX_EVAL_DEPTH, MAX_EVAL_OPS, MAX_RANGE_ITEMS } from '../openScadStableExpressionEval'
-import type { StableExpressionEvalContext, StableExpressionEvalHost, StableExpressionEvaluators, StableFunctionValue } from '../openScadStableExpressionEval'
+import type {
+  StableExpressionEvalContext,
+  StableExpressionEvalHost,
+  StableExpressionEvaluators,
+  StableFunctionValue,
+} from '../openScadStableExpressionEval'
 import { OpenScadStableScope } from '../openScadStableScope'
-import { formatOpenScadValue, isOpenScadRange, materializeOpenScadRange, openScadBinary, openScadTruthy } from '../semantic/openScadValueSemantics'
+import {
+  formatOpenScadValue,
+  isOpenScadRange,
+  materializeOpenScadRange,
+  openScadBinary,
+  openScadTruthy,
+} from '../semantic/openScadValueSemantics'
 import type { OpenScadValueSemanticsContext } from '../semantic/openScadValueSemantics'
-import { appendComprehensionValues, compactDiagnosticText, deepEqual, evaluationError, isFunctionValue, isListComprehensionExpression, isStableProfile, overlayDynamicVariables, registerArrayValue, stableOverlayContext, truthy } from './isStableProfile'
+import {
+  appendComprehensionValues,
+  compactDiagnosticText,
+  deepEqual,
+  evaluationError,
+  isFunctionValue,
+  isListComprehensionExpression,
+  isStableProfile,
+  overlayDynamicVariables,
+  registerArrayValue,
+  stableOverlayContext,
+  truthy,
+} from './isStableProfile'
 
 export function createStableExpressionEvaluators<C extends StableExpressionEvalContext>(
   host: StableExpressionEvalHost<C>,
@@ -28,12 +58,17 @@ export function createStableExpressionEvaluators<C extends StableExpressionEvalC
       const resolved = scope.resolveLocalVariable(
         name,
         Number.POSITIVE_INFINITY,
-        (expression, site) => host.evalExpression(expression, {
-          ...ctx,
-          env: site.env,
-          stableScope: site.scope,
-          scopeVisibleBefore: site.visibleBefore,
-        }, 0),
+        (expression, site) =>
+          host.evalExpression(
+            expression,
+            {
+              ...ctx,
+              env: site.env,
+              stableScope: site.scope,
+              scopeVisibleBefore: site.visibleBefore,
+            },
+            0,
+          ),
         message => host.scopeWarn(ctx, statements[0]?.p ?? 0, message),
       )
       if (resolved.found) scope.env.set(name, resolved.value)
@@ -55,7 +90,11 @@ export function createStableExpressionEvaluators<C extends StableExpressionEvalC
         continue
       }
       if (assigned.has(argument.name)) {
-        host.warn(ctx, argument.p, `Ignoring duplicate variable assignment ${argument.name} = ${formatOpenScadValue(value)}`)
+        host.warn(
+          ctx,
+          argument.p,
+          `Ignoring duplicate variable assignment ${argument.name} = ${formatOpenScadValue(value)}`,
+        )
         continue
       }
       assigned.add(argument.name)
@@ -78,19 +117,13 @@ export function createStableExpressionEvaluators<C extends StableExpressionEvalC
     return isListComprehensionExpression(expr) && Array.isArray(value) ? value : [value]
   }
 
-  const evalListComprehension = (
-    expr: ListComprehensionExpression,
-    ctx: C,
-    depth: number,
-  ): Value[] => {
+  const evalListComprehension = (expr: ListComprehensionExpression, ctx: C, depth: number): Value[] => {
     const output: Value[] = []
     switch (expr.kind) {
       case 'lc-each':
         return stableIterable(host.evalExpression(expr.value, ctx, depth + 1), ctx, expr.p)
       case 'lc-if': {
-        const selected = openScadTruthy(host.evalExpression(expr.condition, ctx, depth + 1))
-          ? expr.yes
-          : expr.no
+        const selected = openScadTruthy(host.evalExpression(expr.condition, ctx, depth + 1)) ? expr.yes : expr.no
         return selected === undefined ? output : evalComprehensionElement(selected, ctx, depth + 1)
       }
       case 'lc-let': {
@@ -120,7 +153,11 @@ export function createStableExpressionEvaluators<C extends StableExpressionEvalC
           }
           for (const value of iterable) {
             if (++ctx.budget.ops > MAX_EVAL_OPS) {
-              evaluationError(ctx, expr.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString('en-US')} evaluation step limit`)
+              evaluationError(
+                ctx,
+                expr.p,
+                `Model exceeds the ${MAX_EVAL_OPS.toLocaleString('en-US')} evaluation step limit`,
+              )
             }
             const env = new Map(iterationContext.env)
             env.set(binding.name, value)
@@ -138,14 +175,13 @@ export function createStableExpressionEvaluators<C extends StableExpressionEvalC
         iterationContext = stableOverlayContext(ctx, iterationContext.env)
         while (openScadTruthy(host.evalExpression(expr.condition, iterationContext, depth + 1))) {
           if (++ctx.budget.ops > MAX_EVAL_OPS) {
-            evaluationError(ctx, expr.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString('en-US')} evaluation step limit`)
+            evaluationError(
+              ctx,
+              expr.p,
+              `Model exceeds the ${MAX_EVAL_OPS.toLocaleString('en-US')} evaluation step limit`,
+            )
           }
-          appendComprehensionValues(
-            output,
-            evalComprehensionElement(expr.body, iterationContext, depth + 1),
-            expr,
-            ctx,
-          )
+          appendComprehensionValues(output, evalComprehensionElement(expr.body, iterationContext, depth + 1), expr, ctx)
           iterationContext = stableOverlayContext(
             iterationContext,
             evaluateSequentialBindings(expr.update, iterationContext, depth + 1),
@@ -181,20 +217,12 @@ export function createStableExpressionEvaluators<C extends StableExpressionEvalC
     return resolved
   }
 
-  const evalAssertExpression = (
-    expr: Extract<Expr, { kind: 'assert' }>,
-    ctx: C,
-    depth: number,
-  ): Value => {
+  const evalAssertExpression = (expr: Extract<Expr, { kind: 'assert' }>, ctx: C, depth: number): Value => {
     const resolved = resolveStableExpressionArguments(expr.args, ['condition', 'message'], ctx)
     const conditionArgument = resolved.get('condition')
     const messageArgument = resolved.get('message')
-    const condition = conditionArgument
-      ? host.evalExpression(conditionArgument.value, ctx, depth + 1)
-      : undefined
-    const message = messageArgument
-      ? host.evalExpression(messageArgument.value, ctx, depth + 1)
-      : undefined
+    const condition = conditionArgument ? host.evalExpression(conditionArgument.value, ctx, depth + 1) : undefined
+    const message = messageArgument ? host.evalExpression(messageArgument.value, ctx, depth + 1) : undefined
     if (!openScadTruthy(condition)) {
       const conditionText = conditionArgument
         ? compactDiagnosticText(ctx.source.slice(conditionArgument.p, conditionArgument.end))
@@ -205,11 +233,7 @@ export function createStableExpressionEvaluators<C extends StableExpressionEvalC
     return expr.body === undefined ? undefined : host.evalExpression(expr.body, ctx, depth + 1)
   }
 
-  const evalEchoExpression = (
-    expr: Extract<Expr, { kind: 'echo' }>,
-    ctx: C,
-    depth: number,
-  ): Value => {
+  const evalEchoExpression = (expr: Extract<Expr, { kind: 'echo' }>, ctx: C, depth: number): Value => {
     const values = expr.args.map(argument => {
       const value = formatOpenScadValue(host.evalExpression(argument.value, ctx, depth + 1))
       return argument.name === undefined ? value : `${argument.name} = ${value}`
@@ -218,11 +242,7 @@ export function createStableExpressionEvaluators<C extends StableExpressionEvalC
     return expr.body === undefined ? undefined : host.evalExpression(expr.body, ctx, depth + 1)
   }
 
-  const evalBinaryExpression = (
-    expr: Extract<Expr, { kind: 'binary' }>,
-    ctx: C,
-    depth: number,
-  ): Value => {
+  const evalBinaryExpression = (expr: Extract<Expr, { kind: 'binary' }>, ctx: C, depth: number): Value => {
     const evaluate = (child: Expr) => host.evalExpression(child, ctx, depth + 1)
     if (isStableProfile(ctx)) {
       const left = evaluate(expr.left)
@@ -259,9 +279,7 @@ export function createStableExpressionEvaluators<C extends StableExpressionEvalC
 
   const evalFunctionCall = (expr: Extract<Expr, { kind: 'call' }>, ctx: C, depth: number): Value => {
     if (expr.name !== null) {
-      const declaration = isStableProfile(ctx)
-        ? ctx.stableScope?.functionDeclaration(expr.name)
-        : undefined
+      const declaration = isStableProfile(ctx) ? ctx.stableScope?.functionDeclaration(expr.name) : undefined
       const definition = declaration?.node ?? ctx.functions.get(expr.name)
       if (definition && (!isStableProfile(ctx) || declaration !== undefined)) {
         const value: FunctionValue = {
@@ -272,9 +290,7 @@ export function createStableExpressionEvaluators<C extends StableExpressionEvalC
           closure: new Map(declaration?.scope.env ?? ctx.env),
         }
         return invokeUserFunction(
-          declaration === undefined
-            ? value
-            : { ...value, lexicalScope: declaration.scope } as StableFunctionValue,
+          declaration === undefined ? value : ({ ...value, lexicalScope: declaration.scope } as StableFunctionValue),
           expr.args,
           ctx,
           depth,
@@ -293,12 +309,7 @@ export function createStableExpressionEvaluators<C extends StableExpressionEvalC
     return invokeUserFunction(callee, expr.args, ctx, depth)
   }
 
-  const invokeUserFunction = (
-    fn: FunctionValue,
-    args: readonly ExpressionArgument[],
-    ctx: C,
-    depth: number,
-  ): Value => {
+  const invokeUserFunction = (fn: FunctionValue, args: readonly ExpressionArgument[], ctx: C, depth: number): Value => {
     if (ctx.functionStack.length >= MAX_EVAL_DEPTH) {
       evaluationError(ctx, args[0]?.p ?? fn.body.p, `Evaluation exceeds ${MAX_EVAL_DEPTH} nested function calls`)
     }
@@ -330,27 +341,37 @@ export function createStableExpressionEvaluators<C extends StableExpressionEvalC
         const supplied = resolved.get(parameter.name)
         if (supplied !== undefined) parameterValues.set(parameter.name, callerValues.get(supplied))
         else if (parameter.defaultValue !== undefined) {
-          parameterValues.set(parameter.name, host.evalExpression(
-            parameter.defaultValue,
-            { ...definitionContext, env: new Map(definitionEnv) },
-            depth + 1,
-          ))
+          parameterValues.set(
+            parameter.name,
+            host.evalExpression(
+              parameter.defaultValue,
+              { ...definitionContext, env: new Map(definitionEnv) },
+              depth + 1,
+            ),
+          )
         } else parameterValues.set(parameter.name, undefined)
       }
       for (const [name, value] of parameterValues) env.set(name, value)
-      return host.evalExpression(fn.body, {
-        ...stableOverlayContext(definitionContext, env),
-        functionStack: [...ctx.functionStack, fn.name ?? '<anonymous>'],
-      }, depth + 1)
+      return host.evalExpression(
+        fn.body,
+        {
+          ...stableOverlayContext(definitionContext, env),
+          functionStack: [...ctx.functionStack, fn.name ?? '<anonymous>'],
+        },
+        depth + 1,
+      )
     }
     const positional = args.filter(argument => argument.name === undefined)
-    const named = new Map(args.filter(argument => argument.name !== undefined)
-      .map(argument => [argument.name!, argument] as const))
+    const named = new Map(
+      args.filter(argument => argument.name !== undefined).map(argument => [argument.name!, argument] as const),
+    )
     const parameterNames = new Set(fn.params.map(parameter => parameter.name))
     for (const name of named.keys()) {
-      if (!parameterNames.has(name)) evaluationError(ctx, args.find(argument => argument.name === name)?.p ?? fn.body.p, `Unknown argument ${name}`)
+      if (!parameterNames.has(name))
+        evaluationError(ctx, args.find(argument => argument.name === name)?.p ?? fn.body.p, `Unknown argument ${name}`)
     }
-    if (positional.length > fn.params.length) evaluationError(ctx, positional[fn.params.length]?.p ?? fn.body.p, 'Too many function arguments')
+    if (positional.length > fn.params.length)
+      evaluationError(ctx, positional[fn.params.length]?.p ?? fn.body.p, 'Too many function arguments')
 
     const callerValues = new Map<ExpressionArgument, Value>()
     for (const argument of args) callerValues.set(argument, host.evalExpression(argument.value, ctx, depth + 1))
@@ -359,14 +380,19 @@ export function createStableExpressionEvaluators<C extends StableExpressionEvalC
       const parameter = fn.params[index]!
       const supplied = named.get(parameter.name) ?? positional[index]
       if (supplied) env.set(parameter.name, callerValues.get(supplied))
-      else if (parameter.defaultValue) env.set(parameter.name, host.evalExpression(parameter.defaultValue, { ...ctx, env }, depth + 1))
+      else if (parameter.defaultValue)
+        env.set(parameter.name, host.evalExpression(parameter.defaultValue, { ...ctx, env }, depth + 1))
       else env.set(parameter.name, undefined)
     }
-    return host.evalExpression(fn.body, {
-      ...ctx,
-      env,
-      functionStack: [...ctx.functionStack, fn.name ?? '<anonymous>'],
-    }, depth + 1)
+    return host.evalExpression(
+      fn.body,
+      {
+        ...ctx,
+        env,
+        functionStack: [...ctx.functionStack, fn.name ?? '<anonymous>'],
+      },
+      depth + 1,
+    )
   }
 
   return {

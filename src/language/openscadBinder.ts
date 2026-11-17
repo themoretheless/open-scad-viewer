@@ -1,4 +1,4 @@
-import {OPENSCAD_BUILTIN_MODULE_NAMES} from './openScadBuiltinFunctions/moduleNames'
+import { OPENSCAD_BUILTIN_MODULE_NAMES } from './openScadBuiltinFunctions/moduleNames'
 /**
  * Name binding for a compiled OpenSCAD operation IR.
  *
@@ -18,9 +18,9 @@ import {
   type Statement,
 } from './openscadCompiler'
 
-export {OPENSCAD_BUILTIN_MODULE_NAMES} from './openScadBuiltinFunctions/moduleNames'
+export { OPENSCAD_BUILTIN_MODULE_NAMES } from './openScadBuiltinFunctions/moduleNames'
 
-export type OpenScadBuiltinModuleName = typeof OPENSCAD_BUILTIN_MODULE_NAMES[number]
+export type OpenScadBuiltinModuleName = (typeof OPENSCAD_BUILTIN_MODULE_NAMES)[number]
 
 export type BoundCallKind = 'builtin-module' | 'user-module' | 'unresolved'
 export type BoundFunctionKind = 'builtin-function' | 'user-function' | 'unresolved'
@@ -100,12 +100,14 @@ function collectModules(nodes: readonly Statement[], modules: Map<string, Module
   for (const node of nodes) {
     if (node.type === 'module') {
       if (modules.has(node.name)) {
-        diagnostics.push(Object.freeze({
-          severity: 'warning',
-          p: node.p,
-          end: node.end,
-          message: `Module ${node.name}() is redefined; the later definition is used`,
-        }))
+        diagnostics.push(
+          Object.freeze({
+            severity: 'warning',
+            p: node.p,
+            end: node.end,
+            message: `Module ${node.name}() is redefined; the later definition is used`,
+          }),
+        )
       }
       modules.set(node.name, node)
     }
@@ -116,16 +118,22 @@ function collectModules(nodes: readonly Statement[], modules: Map<string, Module
   }
 }
 
-function collectFunctions(nodes: readonly Statement[], functions: Map<string, FunctionNode>, diagnostics: BindDiagnostic[]) {
+function collectFunctions(
+  nodes: readonly Statement[],
+  functions: Map<string, FunctionNode>,
+  diagnostics: BindDiagnostic[],
+) {
   for (const node of nodes) {
     if (node.type === 'function') {
       if (functions.has(node.name)) {
-        diagnostics.push(Object.freeze({
-          severity: 'warning',
-          p: node.p,
-          end: node.end,
-          message: `Function ${node.name}() is redefined; the later definition is used`,
-        }))
+        diagnostics.push(
+          Object.freeze({
+            severity: 'warning',
+            p: node.p,
+            end: node.end,
+            message: `Function ${node.name}() is redefined; the later definition is used`,
+          }),
+        )
       }
       functions.set(node.name, node)
     }
@@ -179,16 +187,18 @@ function visitExpression(
         break
       case 'call':
         if (expr.name !== null) {
-          functionRefs.push(Object.freeze({
-            name: expr.name,
-            kind: BUILTIN_FUNCTIONS.has(expr.name)
-              ? 'builtin-function'
-              : functions.has(expr.name)
-                ? 'user-function'
-                : 'unresolved',
-            p: expr.p,
-            end: expr.p,
-          }))
+          functionRefs.push(
+            Object.freeze({
+              name: expr.name,
+              kind: BUILTIN_FUNCTIONS.has(expr.name)
+                ? 'builtin-function'
+                : functions.has(expr.name)
+                  ? 'user-function'
+                  : 'unresolved',
+              p: expr.p,
+              end: expr.p,
+            }),
+          )
         }
         for (let index = expr.args.length - 1; index >= 0; index--) stack.push(expr.args[index]!.value)
         stack.push(expr.callee)
@@ -262,20 +272,24 @@ function visitStatements(
       : modules.has(node.name)
         ? 'user-module'
         : 'unresolved'
-    calls.push(Object.freeze({
-      operationId: node.operationId ?? `op:legacy-offset-${node.p}`,
-      name: node.name,
-      kind,
-      p: node.p,
-      end: node.end,
-    }))
-    if (kind === 'unresolved') {
-      diagnostics.push(Object.freeze({
-        severity: 'warning',
+    calls.push(
+      Object.freeze({
+        operationId: node.operationId ?? `op:legacy-offset-${node.p}`,
+        name: node.name,
+        kind,
         p: node.p,
         end: node.end,
-        message: `Unresolved module ${node.name}()`,
-      }))
+      }),
+    )
+    if (kind === 'unresolved') {
+      diagnostics.push(
+        Object.freeze({
+          severity: 'warning',
+          p: node.p,
+          end: node.end,
+          message: `Unresolved module ${node.name}()`,
+        }),
+      )
     }
     visitArguments(node.callArguments, node.args, functions, functionRefs)
     visitStatements(node.children, modules, functions, calls, functionRefs, diagnostics)
@@ -291,10 +305,7 @@ function freezeBound(bound: BoundProgram): BoundProgram {
 }
 
 /** Bind names on an already-compiled, immutable operation IR. */
-export function bindOpenScad(
-  program: readonly Statement[],
-  options: BindOpenScadOptions = {},
-): BoundProgram {
+export function bindOpenScad(program: readonly Statement[], options: BindOpenScadOptions = {}): BoundProgram {
   const languageProfile = options.languageProfile ?? 'openscad-viewer-subset@1'
   const diagnostics: BindDiagnostic[] = []
   const modules = new Map<string, ModuleNode>()
@@ -312,9 +323,7 @@ export function bindOpenScad(
     calls,
     functionRefs,
     diagnostics,
-    cacheKey: options.source === undefined
-      ? ''
-      : bindProgramCacheKey(options.source, languageProfile),
+    cacheKey: options.source === undefined ? '' : bindProgramCacheKey(options.source, languageProfile),
   })
 }
 

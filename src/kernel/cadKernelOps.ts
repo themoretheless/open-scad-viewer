@@ -1,6 +1,10 @@
 import { bendCadMesh } from './geometry/bend'
 import { tessellateBrepGear, type BrepGearSpec } from './geometry/brep'
-import { analyzeSolidCooperativelyInKernel, analyzeSolidInKernel, type KernelSolidAnalysis } from './geometry/meshAnalysis'
+import {
+  analyzeSolidCooperativelyInKernel,
+  analyzeSolidInKernel,
+  type KernelSolidAnalysis,
+} from './geometry/meshAnalysis'
 import Module, {
   type CrossSection,
   type ErrorStatus,
@@ -67,10 +71,7 @@ export interface CadKernelOps {
   ): CadKernelHandle
   rectangle(size: readonly [number, number], center: boolean): CadKernelHandle
   circle(radius: number, radialSegments: number): CadKernelHandle
-  polygon(
-    rings: readonly (readonly (readonly [number, number])[])[],
-    fillRule?: 'EvenOdd' | 'NonZero',
-  ): CadKernelHandle
+  polygon(rings: readonly (readonly (readonly [number, number])[])[], fillRule?: 'EvenOdd' | 'NonZero'): CadKernelHandle
   ofMesh(vertProperties: Float32Array | Float64Array, triVerts: Uint32Array): CadKernelHandle
   /** Involute gear: the exact NURBS body tessellated at `segments` per edge. */
   gear(spec: BrepGearSpec, segments: number): CadKernelHandle
@@ -82,14 +83,8 @@ export interface CadKernelOps {
   transform3(input: CadKernelHandle, matrix: readonly number[]): CadKernelHandle
   transform3Projective(input: CadKernelHandle, matrix: readonly number[]): CadKernelHandle
   bend3?(input: CadKernelHandle, radius: number, center: number, reverse: boolean, step: number): CadKernelHandle
-  boolean2(
-    operation: 'union' | 'intersection' | 'difference',
-    inputs: readonly CadKernelHandle[],
-  ): CadKernelHandle
-  boolean3(
-    operation: 'union' | 'intersection' | 'difference',
-    inputs: readonly CadKernelHandle[],
-  ): CadKernelHandle
+  boolean2(operation: 'union' | 'intersection' | 'difference', inputs: readonly CadKernelHandle[]): CadKernelHandle
+  boolean3(operation: 'union' | 'intersection' | 'difference', inputs: readonly CadKernelHandle[]): CadKernelHandle
   /**
    * Optional cooperative Boolean: the same result as `boolean3`, evaluated as a
    * kernel start/step/cancel job that awaits `checkpoint` between pairwise
@@ -110,11 +105,7 @@ export interface CadKernelOps {
     scale: readonly [number, number],
     center: boolean,
   ): CadKernelHandle
-  rotateExtrude(
-    input: CadKernelHandle,
-    radialSegments: number,
-    angleDegrees: number,
-  ): CadKernelHandle
+  rotateExtrude(input: CadKernelHandle, radialSegments: number, angleDegrees: number): CadKernelHandle
   projection(input: CadKernelHandle, cut: boolean): CadKernelHandle
   offset(
     input: CadKernelHandle,
@@ -138,14 +129,9 @@ export interface CadKernelOps {
   delete(input: CadKernelHandle): void
 }
 
-function ownedHandle(
-  value: CadKernelHandle,
-  expectedDimension?: 2 | 3,
-): OwnedCadKernelHandle {
+function ownedHandle(value: CadKernelHandle, expectedDimension?: 2 | 3): OwnedCadKernelHandle {
   const handle = value as Partial<OwnedCadKernelHandle>
-  if (handle[CAD_KERNEL_HANDLE] !== true
-    || handle.geometry === undefined
-    || handle.deleted !== false) {
+  if (handle[CAD_KERNEL_HANDLE] !== true || handle.geometry === undefined || handle.deleted !== false) {
     throw new TypeError('Foreign or deleted CAD kernel handle')
   }
   if (expectedDimension !== undefined && handle.dimension !== expectedDimension) {
@@ -203,16 +189,9 @@ function matrix4(value: readonly number[]): Mat4 {
   return [...value] as Mat4
 }
 
-export function createCadKernelOps(
-  wasm: CadToplevel,
-  rawCadSolidConstructor: typeof CadSolid,
-): CadKernelOps {
-  const geometry2 = (value: CadKernelHandle): CrossSection => (
-    ownedHandle(value, 2).geometry as CrossSection
-  )
-  const geometry3 = (value: CadKernelHandle): CadSolid => (
-    ownedHandle(value, 3).geometry as CadSolid
-  )
+export function createCadKernelOps(wasm: CadToplevel, rawCadSolidConstructor: typeof CadSolid): CadKernelOps {
+  const geometry2 = (value: CadKernelHandle): CrossSection => ownedHandle(value, 2).geometry as CrossSection
+  const geometry3 = (value: CadKernelHandle): CadSolid => ownedHandle(value, 3).geometry as CadSolid
   const geometries2 = (values: readonly CadKernelHandle[]) => values.map(geometry2)
   const geometries3 = (values: readonly CadKernelHandle[]) => values.map(geometry3)
 
@@ -231,9 +210,7 @@ export function createCadKernelOps(
       return handle(3, wasm.CadSolid.sphere(radius, radialSegments))
     },
     cylinder(height, radiusBottom, radiusTop, radialSegments, center) {
-      return handle(3, wasm.CadSolid.cylinder(
-        height, radiusBottom, radiusTop, radialSegments, center,
-      ))
+      return handle(3, wasm.CadSolid.cylinder(height, radiusBottom, radiusTop, radialSegments, center))
     },
     polyhedron(vertices, triangles) {
       const vertexData = new Float64Array(vertices.length * 3)
@@ -349,15 +326,14 @@ export function createCadKernelOps(
       if (input.dimension === 2) {
         return handle(2, geometry2(input).scale([factors[0] ?? 1, factors[1] ?? factors[0] ?? 1]))
       }
-      return handle(3, geometry3(input).scale([
-        factors[0] ?? 1,
-        factors[1] ?? factors[0] ?? 1,
-        factors[2] ?? factors[0] ?? 1,
-      ]))
+      return handle(
+        3,
+        geometry3(input).scale([factors[0] ?? 1, factors[1] ?? factors[0] ?? 1, factors[2] ?? factors[0] ?? 1]),
+      )
     },
     rotate(input, angles) {
       if (input.dimension === 2) {
-        const degrees = typeof angles === 'number' ? angles : angles[2] ?? 0
+        const degrees = typeof angles === 'number' ? angles : (angles[2] ?? 0)
         return handle(2, geometry2(input).rotate(degrees))
       }
       const vector = typeof angles === 'number' ? [0, 0, angles] : angles
@@ -378,9 +354,9 @@ export function createCadKernelOps(
     transform3Projective(input, matrix) {
       return handle(3, geometry3(input).transformProjective(matrix4(matrix)))
     },
-    bend3(input,radius,center,reverse,step) {
-      const bent=bendCadMesh(geometry3(input).handle,radius,center,reverse,step)
-      return ops.ofMesh(bent.positions,bent.indices)
+    bend3(input, radius, center, reverse, step) {
+      const bent = bendCadMesh(geometry3(input).handle, radius, center, reverse, step)
+      return ops.ofMesh(bent.positions, bent.indices)
     },
     boolean2(operation, inputs) {
       const sections = geometries2(inputs)
@@ -405,14 +381,10 @@ export function createCadKernelOps(
       return handle(3, wasm.CadSolid.hull(geometries3(inputs)))
     },
     linearExtrude(input, height, slices, twistDegrees, scale, center) {
-      return handle(3, wasm.CadSolid.extrude(
-        geometry2(input), height, slices, twistDegrees, vec2(scale), center,
-      ))
+      return handle(3, wasm.CadSolid.extrude(geometry2(input), height, slices, twistDegrees, vec2(scale), center))
     },
     rotateExtrude(input, radialSegments, angleDegrees) {
-      return handle(3, wasm.CadSolid.revolve(
-        geometry2(input), radialSegments, angleDegrees,
-      ))
+      return handle(3, wasm.CadSolid.revolve(geometry2(input), radialSegments, angleDegrees))
     },
     projection(input, cut) {
       const solid = geometry3(input)
@@ -429,7 +401,9 @@ export function createCadKernelOps(
       return handle(3, geometry3(left).minkowskiSum(geometry3(right)))
     },
     polygons(input) {
-      return geometry2(input).toPolygons().map(ring => ring.map(point => [point[0], point[1]] as [number, number]))
+      return geometry2(input)
+        .toPolygons()
+        .map(ring => ring.map(point => [point[0], point[1]] as [number, number]))
     },
     bounds(input) {
       if (input.dimension === 2) {
@@ -465,7 +439,7 @@ export function createCadKernelOps(
       const volume = solid.volume()
       const surfaceArea = solid.surfaceArea()
       const { mesh, bvh, semanticEdges } = analyzeSolidInKernel(solid.handle)
-      return solidAnalysis(solid, volume, surfaceArea, {mesh, bvh, semanticEdges})
+      return solidAnalysis(solid, volume, surfaceArea, { mesh, bvh, semanticEdges })
     },
     async analyzeSolidCooperatively(input, checkpoint) {
       const solid = geometry3(input)
@@ -491,7 +465,12 @@ export async function loadCadKernelOps(): Promise<CadKernelOps> {
   return createCadKernelOps(module, rawCadSolidConstructor)
 }
 
-function solidAnalysis(solid: CadSolid, volume: number, surfaceArea: number, {mesh, bvh, semanticEdges}: KernelSolidAnalysis): CadKernelSolidAnalysis {
+function solidAnalysis(
+  solid: CadSolid,
+  volume: number,
+  surfaceArea: number,
+  { mesh, bvh, semanticEdges }: KernelSolidAnalysis,
+): CadKernelSolidAnalysis {
   return Object.freeze({
     volume,
     surfaceArea,

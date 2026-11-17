@@ -69,7 +69,6 @@ export function buildMeshEdgeAdjacency(indices: Uint32Array): Uint32Array {
   return buf.slice(0, ptr)
 }
 
-
 const semanticEdgesUniformBuffer = new ArrayBuffer(32)
 const semanticEdgesUniformView = new DataView(semanticEdgesUniformBuffer)
 
@@ -79,7 +78,7 @@ function buildParamsUniform(
   threshold: number,
   strideFloats: number,
   posOffset: number,
-  maxOutputEdges: number
+  maxOutputEdges: number,
 ): ArrayBuffer {
   semanticEdgesUniformView.setUint32(0, totalEdges, true)
   semanticEdgesUniformView.setUint32(4, totalTriangles, true)
@@ -100,7 +99,7 @@ function buildParamsUniform(
 export async function runGpuSemanticEdges(
   vertices: Float32Array,
   indices: Uint32Array,
-  opts: SemanticEdgesOptions = {}
+  opts: SemanticEdgesOptions = {},
 ): Promise<SemanticEdgesResult> {
   const edgeAdjacency = buildMeshEdgeAdjacency(indices)
   const totalEdges = edgeAdjacency.length / 4
@@ -119,17 +118,10 @@ export async function runGpuSemanticEdges(
   }
 
   try {
-    const uniformData = buildParamsUniform(
-      totalEdges,
-      totalTriangles,
-      threshold,
-      strideFloats,
-      posOffset,
-      maxEdges
-    )
+    const uniformData = buildParamsUniform(totalEdges, totalTriangles, threshold, strideFloats, posOffset, maxEdges)
 
-const COUNTER_INIT = new Uint32Array([0])
-const EMPTY_U32 = new Uint32Array(0)
+    const COUNTER_INIT = new Uint32Array([0])
+    const EMPTY_U32 = new Uint32Array(0)
 
     const results = await runGpuCompute({
       wgsl: SEMANTIC_EDGES_WGSL,
@@ -174,14 +166,16 @@ function computeTriNormalInto(
   strideFloats: number,
   posOffset: number,
   out: Float64Array,
-  outOffset: number
+  outOffset: number,
 ): void {
   const b = tIdx * 3
   const b0 = indices[b]! * strideFloats + posOffset
   const b1 = indices[b + 1]! * strideFloats + posOffset
   const b2 = indices[b + 2]! * strideFloats + posOffset
 
-  const p0x = vertices[b0]!, p0y = vertices[b0 + 1]!, p0z = vertices[b0 + 2]!
+  const p0x = vertices[b0]!,
+    p0y = vertices[b0 + 1]!,
+    p0z = vertices[b0 + 2]!
   const d1x = vertices[b1]! - p0x
   const d1y = vertices[b1 + 1]! - p0y
   const d1z = vertices[b1 + 2]! - p0z
@@ -196,9 +190,13 @@ function computeTriNormalInto(
   const lenSq = nx * nx + ny * ny + nz * nz
   if (lenSq > 1e-14) {
     const invLen = 1.0 / Math.sqrt(lenSq)
-    nx *= invLen; ny *= invLen; nz *= invLen
+    nx *= invLen
+    ny *= invLen
+    nz *= invLen
   } else {
-    nx = 0; ny = 0; nz = 1
+    nx = 0
+    ny = 0
+    nz = 1
   }
   out[outOffset] = nx
   out[outOffset + 1] = ny
@@ -212,7 +210,7 @@ export function referenceSemanticEdges(
   vertices: Float32Array,
   indices: Uint32Array,
   opts: SemanticEdgesOptions = {},
-  precomputedAdjacency?: Uint32Array
+  precomputedAdjacency?: Uint32Array,
 ): SemanticEdgesResult {
   const edgeAdjacency = precomputedAdjacency ?? buildMeshEdgeAdjacency(indices)
   const totalEdges = edgeAdjacency.length / 4
@@ -241,10 +239,7 @@ export function referenceSemanticEdges(
       // Manifold interior edge: check dihedral angle
       computeTriNormalInto(tri0, vertices, indices, strideFloats, posOffset, nScratch, 0)
       computeTriNormalInto(tri1, vertices, indices, strideFloats, posOffset, nScratch, 3)
-      const dot =
-        nScratch[0]! * nScratch[3]! +
-        nScratch[1]! * nScratch[4]! +
-        nScratch[2]! * nScratch[5]!
+      const dot = nScratch[0]! * nScratch[3]! + nScratch[1]! * nScratch[4]! + nScratch[2]! * nScratch[5]!
 
       if (dot < threshold) {
         outPairs[outPtr++] = v0
@@ -266,7 +261,7 @@ export async function referenceSemanticEdgesAsync(
   vertices: Float32Array,
   indices: Uint32Array,
   opts: SemanticEdgesOptions = {},
-  precomputedAdjacency?: Uint32Array
+  precomputedAdjacency?: Uint32Array,
 ): Promise<SemanticEdgesResult> {
   const edgeAdjacency = precomputedAdjacency ?? buildMeshEdgeAdjacency(indices)
   const totalEdges = edgeAdjacency.length / 4
@@ -295,17 +290,14 @@ export async function referenceSemanticEdgesAsync(
       } else {
         computeTriNormalInto(tri0, vertices, indices, strideFloats, posOffset, nScratch, 0)
         computeTriNormalInto(tri1, vertices, indices, strideFloats, posOffset, nScratch, 3)
-        const dot =
-          nScratch[0]! * nScratch[3]! +
-          nScratch[1]! * nScratch[4]! +
-          nScratch[2]! * nScratch[5]!
+        const dot = nScratch[0]! * nScratch[3]! + nScratch[1]! * nScratch[4]! + nScratch[2]! * nScratch[5]!
         if (dot < threshold) {
           outPairs[outPtr++] = v0
           outPairs[outPtr++] = v1
         }
       }
     },
-    opts
+    opts,
   )
 
   return {

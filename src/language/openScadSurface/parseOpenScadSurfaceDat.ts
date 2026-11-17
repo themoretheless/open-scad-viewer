@@ -1,4 +1,14 @@
-import { ADAM7, CRC_TABLE, NUMBER_TOKEN, OPENSCAD_SURFACE_MAX_DIMENSION, OPENSCAD_SURFACE_MAX_PIXELS, OPENSCAD_SURFACE_MAX_TRIANGLES, OpenScadSurfaceDataError, PNG_SIGNATURE, UTF8_FATAL } from '../openScadSurface'
+import {
+  ADAM7,
+  CRC_TABLE,
+  NUMBER_TOKEN,
+  OPENSCAD_SURFACE_MAX_DIMENSION,
+  OPENSCAD_SURFACE_MAX_PIXELS,
+  OPENSCAD_SURFACE_MAX_TRIANGLES,
+  OpenScadSurfaceDataError,
+  PNG_SIGNATURE,
+  UTF8_FATAL,
+} from '../openScadSurface'
 import type { OpenScadSurfaceHeightMap } from '../openScadSurface'
 import type { OpenScadProjectFile } from '../openScadProject'
 
@@ -12,8 +22,7 @@ export function dataError(
 }
 
 export function isPng(bytes: Uint8Array): boolean {
-  return bytes.byteLength >= PNG_SIGNATURE.length
-    && PNG_SIGNATURE.every((value, index) => bytes[index] === value)
+  return bytes.byteLength >= PNG_SIGNATURE.length && PNG_SIGNATURE.every((value, index) => bytes[index] === value)
 }
 
 export function surfaceTriangleCount(rows: number, columns: number): number {
@@ -108,7 +117,10 @@ export function parseOpenScadSurfaceDat(file: OpenScadProjectFile): OpenScadSurf
         )
       }
       if (!NUMBER_TOKEN.test(token)) {
-        return dataError('E_SURFACE_DAT_INVALID', `surface() DAT input contains illegal value ${JSON.stringify(token)}.`)
+        return dataError(
+          'E_SURFACE_DAT_INVALID',
+          `surface() DAT input contains illegal value ${JSON.stringify(token)}.`,
+        )
       }
       const value = Number(token)
       if (!Number.isFinite(value)) {
@@ -145,21 +157,23 @@ export function pngCrc(bytes: Uint8Array, start: number, end: number): number {
 
 export function channelsForColorType(colorType: number): number {
   switch (colorType) {
-    case 0: return 1
-    case 2: return 3
-    case 3: return 1
-    case 4: return 2
-    case 6: return 4
-    default: return dataError('E_SURFACE_PNG_UNSUPPORTED', `surface() PNG color type ${colorType} is unsupported.`)
+    case 0:
+      return 1
+    case 2:
+      return 3
+    case 3:
+      return 1
+    case 4:
+      return 2
+    case 6:
+      return 4
+    default:
+      return dataError('E_SURFACE_PNG_UNSUPPORTED', `surface() PNG color type ${colorType} is unsupported.`)
   }
 }
 
 export function validateBitDepth(colorType: number, bitDepth: number): void {
-  const valid = colorType === 0
-    ? [1, 2, 4, 8, 16]
-    : colorType === 3
-      ? [1, 2, 4, 8]
-      : [8, 16]
+  const valid = colorType === 0 ? [1, 2, 4, 8, 16] : colorType === 3 ? [1, 2, 4, 8] : [8, 16]
   if (!valid.includes(bitDepth)) {
     dataError(
       'E_SURFACE_PNG_UNSUPPORTED',
@@ -172,22 +186,22 @@ export function passSize(total: number, start: number, step: number): number {
   return total <= start ? 0 : Math.ceil((total - start) / step)
 }
 
-export function expectedInflatedBytes(
-  width: number,
-  height: number,
-  bitsPerPixel: number,
-  interlace: number,
-): number {
+export function expectedInflatedBytes(width: number, height: number, bitsPerPixel: number, interlace: number): number {
   const passes = interlace === 0 ? [[0, 0, 1, 1] as const] : ADAM7
   let total = 0
   for (const [x0, y0, dx, dy] of passes) {
     const passWidth = passSize(width, x0, dx)
     const passHeight = passSize(height, y0, dy)
     if (passWidth === 0 || passHeight === 0) continue
-    total += passHeight * (1 + Math.ceil(passWidth * bitsPerPixel / 8))
+    total += passHeight * (1 + Math.ceil((passWidth * bitsPerPixel) / 8))
   }
   if (!Number.isSafeInteger(total) || total > 16 * 1024 * 1024) {
-    dataError('E_SURFACE_DIMENSION_LIMIT', 'surface() PNG inflated representation is too large.', 16 * 1024 * 1024, total)
+    dataError(
+      'E_SURFACE_DIMENSION_LIMIT',
+      'surface() PNG inflated representation is too large.',
+      16 * 1024 * 1024,
+      total,
+    )
   }
   return total
 }
@@ -249,12 +263,18 @@ export function unfilter(
     const left = index >= bytesPerPixel ? target[index - bytesPerPixel]! : 0
     const up = previous[index] ?? 0
     const upperLeft = index >= bytesPerPixel ? previous[index - bytesPerPixel]! : 0
-    const predictor = filter === 0 ? 0
-      : filter === 1 ? left
-        : filter === 2 ? up
-          : filter === 3 ? Math.floor((left + up) / 2)
-            : filter === 4 ? paeth(left, up, upperLeft)
-              : dataError('E_SURFACE_PNG_INVALID', `surface() PNG uses invalid scanline filter ${filter}.`)
+    const predictor =
+      filter === 0
+        ? 0
+        : filter === 1
+          ? left
+          : filter === 2
+            ? up
+            : filter === 3
+              ? Math.floor((left + up) / 2)
+              : filter === 4
+                ? paeth(left, up, upperLeft)
+                : dataError('E_SURFACE_PNG_INVALID', `surface() PNG uses invalid scanline filter ${filter}.`)
     target[index] = (encoded[index]! + predictor) & 0xff
   }
 }
@@ -270,7 +290,7 @@ export function sample(row: Uint8Array, index: number, bitDepth: number): number
   const shift = 8 - bitDepth - (bitOffset & 7)
   const mask = (1 << bitDepth) - 1
   const value = (row[bitOffset >>> 3]! >>> shift) & mask
-  return Math.round(value * 255 / mask)
+  return Math.round((value * 255) / mask)
 }
 
 export function pixelLuminance(
@@ -284,14 +304,14 @@ export function pixelLuminance(
   const first = x * channels
   if (colorType === 0 || colorType === 4) return sample(row, first, bitDepth)
   if (colorType === 3) {
-    const index = sample(row, first, bitDepth) * ((1 << bitDepth) - 1) / 255
+    const index = (sample(row, first, bitDepth) * ((1 << bitDepth) - 1)) / 255
     const paletteOffset = Math.round(index) * 3
     if (palette === null || paletteOffset + 2 >= palette.length) {
       return dataError('E_SURFACE_PNG_INVALID', 'surface() PNG references a missing palette entry.')
     }
-    return 0.2126 * palette[paletteOffset]!
-      + 0.7152 * palette[paletteOffset + 1]!
-      + 0.0722 * palette[paletteOffset + 2]!
+    return (
+      0.2126 * palette[paletteOffset]! + 0.7152 * palette[paletteOffset + 1]! + 0.0722 * palette[paletteOffset + 2]!
+    )
   }
   const red = sample(row, first, bitDepth)
   const green = sample(row, first + 1, bitDepth)

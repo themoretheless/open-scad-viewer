@@ -1,35 +1,35 @@
 import { createHash } from 'node:crypto'
-import { constants as filesystemConstants, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  constants as filesystemConstants,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
-  FROZEN_ARCHIVES, REFRESH_EXECUTORS, REFRESH_OUTPUTS,
-  prepareQualificationRefresh, publishQualificationRefresh, refreshBinaryInputPaths,
-  refreshInputPaths, artifactBindingChanges,
+  FROZEN_ARCHIVES,
+  REFRESH_EXECUTORS,
+  REFRESH_OUTPUTS,
+  prepareQualificationRefresh,
+  publishQualificationRefresh,
+  refreshBinaryInputPaths,
+  refreshInputPaths,
+  artifactBindingChanges,
 } from '../scripts/refresh-qualification-fingerprints.mjs'
-import {
-  G1_AMENDMENTS, g1RefreshInputPaths, prepareG1PlanRefresh,
-} from '../scripts/refresh-g1-plan.mjs'
+import { G1_AMENDMENTS, g1RefreshInputPaths, prepareG1PlanRefresh } from '../scripts/refresh-g1-plan.mjs'
 
 const repositoryRoot = resolve(import.meta.dirname, '..')
-const fingerprintPath = resolve(
-  repositoryRoot,
-  'docs/qualification/g0-toolchain-fingerprints-v108.json',
-)
-const fingerprintV1Path = resolve(
-  repositoryRoot,
-  'docs/qualification/g0-toolchain-fingerprints-v1.json',
-)
-const statusPath = resolve(
-  repositoryRoot,
-  'docs/qualification/g0-contract-pack-status-v1.json',
-)
-const inventoryPath = resolve(
-  repositoryRoot,
-  'docs/qualification/g2a-predicate-inventory-v1.json',
-)
+const fingerprintPath = resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v108.json')
+const fingerprintV1Path = resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v1.json')
+const statusPath = resolve(repositoryRoot, 'docs/qualification/g0-contract-pack-status-v1.json')
+const inventoryPath = resolve(repositoryRoot, 'docs/qualification/g2a-predicate-inventory-v1.json')
 
 type FingerprintArtifact = {
   readonly id: string
@@ -70,30 +70,42 @@ describe('G0 toolchain fingerprints', () => {
     const v1 = JSON.parse(readFileSync(fingerprintV1Path, 'utf8')) as FingerprintDoc
     expect(v1.fingerprintId).toBe('g0-toolchain-fingerprints-v1')
     expect(v1.artifacts.length).toBeGreaterThan(0)
-    expect(sha256(readFileSync(fingerprintV1Path)))
-      .toBe('4c2a286ea9567ddef66d2a0335a4960bddc94921b662c9e34af063b480cb8af3')
-    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v2.json'))))
-      .toBe('d040f252ce41177e24b02491beef59ccb57771e99fc0efaf9f0e7e4b2a081e76')
-    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v3.json'))))
-      .toBe('c8c74e76f7e6ce9e85c8f1c4267e678ca8c243b16ec4e6dd050584b489c0c171')
-    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v4.json'))))
-      .toBe('38b9fac7b3e03a301b0dfdeadf514572f337feff37b186089d968f3afa9e5a46')
-    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v5.json'))))
-      .toBe('9da6b4921492e2f6592194b58f144d6c7460f3c6787717f1b311cf7040428040')
-    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v6.json'))))
-      .toBe('ef2f25017daec1d75fae2725a85a500fa59d36c448f8a5ba0b9407f90a291eaf')
-    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v7.json'))))
-      .toBe('6a364833e07040d59cd47564bfb791ff97f9bca812239b5f72ce19423a23dcbf')
-    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v8.json'))))
-      .toBe('8446a3193659cf9325579e9f1286d8367a517eb9af780950357d35121e65ec62')
-    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v9.json'))))
-      .toBe('e701eca5a6a2ce9ba4bd408943a2ce5c0efa1617c8b422f5bbdaae71e4ec7251')
-    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v10.json'))))
-      .toBe('cc27233347f9b177691ed08ae77e2eb7a38777133f6451e61b6f3ab160ca7ac3')
-    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v11.json'))))
-      .toBe('5ae685b005bbbeaf3e7c84cf06011f4136e997cf7f6dfab38e439c72ca34ec19')
-    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v12.json'))))
-      .toBe('1af08861746409347f5f2b931c7d794dffc9df3c0321c27cb534b93a3eac3be7')
+    expect(sha256(readFileSync(fingerprintV1Path))).toBe(
+      '4c2a286ea9567ddef66d2a0335a4960bddc94921b662c9e34af063b480cb8af3',
+    )
+    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v2.json')))).toBe(
+      'd040f252ce41177e24b02491beef59ccb57771e99fc0efaf9f0e7e4b2a081e76',
+    )
+    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v3.json')))).toBe(
+      'c8c74e76f7e6ce9e85c8f1c4267e678ca8c243b16ec4e6dd050584b489c0c171',
+    )
+    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v4.json')))).toBe(
+      '38b9fac7b3e03a301b0dfdeadf514572f337feff37b186089d968f3afa9e5a46',
+    )
+    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v5.json')))).toBe(
+      '9da6b4921492e2f6592194b58f144d6c7460f3c6787717f1b311cf7040428040',
+    )
+    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v6.json')))).toBe(
+      'ef2f25017daec1d75fae2725a85a500fa59d36c448f8a5ba0b9407f90a291eaf',
+    )
+    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v7.json')))).toBe(
+      '6a364833e07040d59cd47564bfb791ff97f9bca812239b5f72ce19423a23dcbf',
+    )
+    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v8.json')))).toBe(
+      '8446a3193659cf9325579e9f1286d8367a517eb9af780950357d35121e65ec62',
+    )
+    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v9.json')))).toBe(
+      'e701eca5a6a2ce9ba4bd408943a2ce5c0efa1617c8b422f5bbdaae71e4ec7251',
+    )
+    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v10.json')))).toBe(
+      'cc27233347f9b177691ed08ae77e2eb7a38777133f6451e61b6f3ab160ca7ac3',
+    )
+    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v11.json')))).toBe(
+      '5ae685b005bbbeaf3e7c84cf06011f4136e997cf7f6dfab38e439c72ca34ec19',
+    )
+    expect(sha256(readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-toolchain-fingerprints-v12.json')))).toBe(
+      '1af08861746409347f5f2b931c7d794dffc9df3c0321c27cb534b93a3eac3be7',
+    )
   })
 
   it('matches exact bytes for every listed artifact', () => {
@@ -109,7 +121,7 @@ describe('G0 toolchain fingerprints', () => {
 
 // These fixtures copy and re-hash the complete source/archive tree repeatedly.
 // Only the metadata-test deadline changes; all race and integrity checks remain.
-describe('G0/G1 re-freeze generator', {timeout: 120_000}, () => {
+describe('G0/G1 re-freeze generator', { timeout: 120_000 }, () => {
   const temporaryRoots: string[] = []
   afterEach(() => {
     for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true })
@@ -117,10 +129,7 @@ describe('G0/G1 re-freeze generator', {timeout: 120_000}, () => {
   function fixture(): string {
     const root = mkdtempSync(join(tmpdir(), 'qualification-refreeze-'))
     temporaryRoots.push(root)
-    for (const path of [
-      ...refreshInputPaths(repositoryRoot),
-      ...refreshBinaryInputPaths(repositoryRoot),
-    ]) {
+    for (const path of [...refreshInputPaths(repositoryRoot), ...refreshBinaryInputPaths(repositoryRoot)]) {
       mkdirSync(dirname(resolve(root, path)), { recursive: true })
       copyFileSync(resolve(repositoryRoot, path), resolve(root, path), filesystemConstants.COPYFILE_FICLONE)
     }
@@ -128,7 +137,8 @@ describe('G0/G1 re-freeze generator', {timeout: 120_000}, () => {
   }
   function prepare(root: string) {
     return prepareQualificationRefresh({
-      repositoryRoot: root, recordedAt: '2026-09-16',
+      repositoryRoot: root,
+      recordedAt: '2026-09-16',
       reason: 'Test preparation of the current SVG/BRep binding re-freeze with all clean work reset.',
       observedRustcVersionLine: 'rustc 1.100.0-nightly (a36d05efa 2026-09-09)',
     })
@@ -167,22 +177,37 @@ describe('G0/G1 re-freeze generator', {timeout: 120_000}, () => {
     expect(first.artifactBytes).toEqual(second.artifactBytes)
     expect(first.plan.planId).toBe('semantic-manifold-g1-plan-v125')
     expect(first.status).toMatchObject({
-      qualificationClaim: 'none', qualificationApproval: 'not-approved', g0Closed: false,
-      completedWorkUnits: 0, completedCleanRuns: 0, plannedWorkUnits: 4740,
-      priorEvidenceTreatment: 'discovery-only', priorResultsMayBeImported: false,
+      qualificationClaim: 'none',
+      qualificationApproval: 'not-approved',
+      g0Closed: false,
+      completedWorkUnits: 0,
+      completedCleanRuns: 0,
+      plannedWorkUnits: 4740,
+      priorEvidenceTreatment: 'discovery-only',
+      priorResultsMayBeImported: false,
     })
-    expect(first.status.pendingRows.every(row => row.completedWorkUnits === 0 && row.completedCleanRuns === 0)).toBe(true)
+    expect(first.status.pendingRows.every(row => row.completedWorkUnits === 0 && row.completedCleanRuns === 0)).toBe(
+      true,
+    )
     for (const path of Object.values(REFRESH_OUTPUTS)) expect(existsSync(resolve(root, path))).toBe(false)
     expect(existsSync(resolve(root, 'output/qualification'))).toBe(false)
   })
 
   it('records removed bindings by identity without shifting the remaining artifacts', () => {
-    const before=[{id:'left',sha256:'left-old'},{id:'removed',sha256:'removed-old'},{id:'right',sha256:{value:'right-old'}}]
-    const after=[{id:'right',sha256:{value:'right-new'}},{id:'left',sha256:'left-old'},{id:'added',sha256:'added-new'}]
-    expect(artifactBindingChanges('g0-artifact',before,after)).toEqual([
-      {kind:'g0-artifact',id:'removed',previousSha256:'removed-old',currentSha256:null},
-      {kind:'g0-artifact',id:'right',previousSha256:'right-old',currentSha256:'right-new'},
-      {kind:'g0-artifact',id:'added',previousSha256:null,currentSha256:'added-new'},
+    const before = [
+      { id: 'left', sha256: 'left-old' },
+      { id: 'removed', sha256: 'removed-old' },
+      { id: 'right', sha256: { value: 'right-old' } },
+    ]
+    const after = [
+      { id: 'right', sha256: { value: 'right-new' } },
+      { id: 'left', sha256: 'left-old' },
+      { id: 'added', sha256: 'added-new' },
+    ]
+    expect(artifactBindingChanges('g0-artifact', before, after)).toEqual([
+      { kind: 'g0-artifact', id: 'removed', previousSha256: 'removed-old', currentSha256: null },
+      { kind: 'g0-artifact', id: 'right', previousSha256: 'right-old', currentSha256: 'right-new' },
+      { kind: 'g0-artifact', id: 'added', previousSha256: null, currentSha256: 'added-new' },
     ])
   })
 
@@ -246,10 +271,11 @@ describe('G0/G1 re-freeze generator', {timeout: 120_000}, () => {
   it('historical v24 executors retain run-index admission without executing or creating evidence', () => {
     const root = fixture()
     publishQualificationRefresh(prepare(root))
-    const historicalStatus = JSON.parse(readFileSync(resolve(repositoryRoot,
-      'docs/qualification/g0-v7-g1-v24-refreeze-status-v1.json'), 'utf8')) as {
-        inputSnapshot: { files: { path: string; sha256: string }[] }
-      }
+    const historicalStatus = JSON.parse(
+      readFileSync(resolve(repositoryRoot, 'docs/qualification/g0-v7-g1-v24-refreeze-status-v1.json'), 'utf8'),
+    ) as {
+      inputSnapshot: { files: { path: string; sha256: string }[] }
+    }
     const historicalExecutors = [
       'scripts/run-g1-candidate-clean-fragment.mjs',
       'scripts/run-g1-ubuntu-docker-fragment.mjs',
@@ -261,16 +287,19 @@ describe('G0/G1 re-freeze generator', {timeout: 120_000}, () => {
         .replaceAll('semantic-manifold-g1-plan-v125', 'semantic-manifold-g1-plan-v24')
         .replaceAll('semantic-manifold-g1-candidate-run-v125', 'semantic-manifold-g1-candidate-run-v24')
         .replace('G1 v125 clean-run', 'G1 v24 clean-run')
-      expect(sha256(Buffer.from(historical)))
-        .toBe(historicalStatus.inputSnapshot.files.find(item => item.path === path)?.sha256)
+      expect(sha256(Buffer.from(historical))).toBe(
+        historicalStatus.inputSnapshot.files.find(item => item.path === path)?.sha256,
+      )
       writeFileSync(resolve(root, path), historical)
     }
     // Removing v23 proves the archived executors select v24 directly.
     rmSync(resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v23.json'))
     for (const path of historicalExecutors) {
-      const result = spawnSync(process.execPath, [resolve(root, path),
-        '--row', 'oracle-differential', '--env', 'ubuntu-node20', '--run-index', '999',
-      ], { encoding: 'utf8', timeout: 5000 })
+      const result = spawnSync(
+        process.execPath,
+        [resolve(root, path), '--row', 'oracle-differential', '--env', 'ubuntu-node20', '--run-index', '999'],
+        { encoding: 'utf8', timeout: 5000 },
+      )
       expect(result.status, result.stderr).toBe(2)
       expect(result.stderr).toMatch(/exceeds cleanRunsRequired|Invalid run-index/u)
       expect(existsSync(resolve(root, 'output/qualification'))).toBe(false)
@@ -294,12 +323,22 @@ describe('historical G1 v20-only re-freeze generator', () => {
   }
   it('refuses current G0 drift instead of rewriting the frozen v20 candidate', () => {
     const root = fixture()
-    expect(() => prepareG1PlanRefresh({
-      version: 20, repositoryRoot: root, recordedAt: '2026-09-16',
-      reason: G1_AMENDMENTS[20].reason,
-    })).toThrow(/G0 binding drift/u)
-    expect(() => prepareG1PlanRefresh({version:21,repositoryRoot:root,recordedAt:'2026-09-13',
-      reason:'Unreviewed future version must be rejected'})).toThrow(/explicit reviewed amendment/u)
+    expect(() =>
+      prepareG1PlanRefresh({
+        version: 20,
+        repositoryRoot: root,
+        recordedAt: '2026-09-16',
+        reason: G1_AMENDMENTS[20].reason,
+      }),
+    ).toThrow(/G0 binding drift/u)
+    expect(() =>
+      prepareG1PlanRefresh({
+        version: 21,
+        repositoryRoot: root,
+        recordedAt: '2026-09-13',
+        reason: 'Unreviewed future version must be rejected',
+      }),
+    ).toThrow(/explicit reviewed amendment/u)
   })
 })
 
@@ -313,7 +352,7 @@ describe('G0 contract pack status', () => {
   })
 
   it('tracks every G0.1–G0.14 backlog row', () => {
-    const ids = doc.items.map((item) => item.id)
+    const ids = doc.items.map(item => item.id)
     expect(ids).toEqual([
       'G0.1',
       'G0.2',
@@ -341,11 +380,7 @@ describe('G2a predicate inventory', () => {
       readonly shewchukPolicy: { readonly selectedMode: string }
     }
     expect(inventory.inventoryId).toBe('g2a-predicate-inventory-v1')
-    expect(inventory.predicates.map((p) => p.id)).toEqual([
-      'orient2d',
-      'orient3d',
-      'compare_squared_distance',
-    ])
+    expect(inventory.predicates.map(p => p.id)).toEqual(['orient2d', 'orient3d', 'compare_squared_distance'])
     expect(inventory.shewchukPolicy.selectedMode).toBe('original_from_paper')
   })
 })

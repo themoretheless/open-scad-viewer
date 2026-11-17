@@ -11,11 +11,7 @@ import { evaluateRushGraphGeometry, requireRushGraphChecks } from './rushGraphCh
  * 2D offset. Unsupported syntax fails loudly instead of rendering a wrong model.
  */
 import { geometryAssetId } from '../core/scene'
-import type {
-  MeshData,
-  MeshProvenanceRun,
-  MeshSourceReference,
-} from '../core/mesh'
+import type { MeshData, MeshProvenanceRun, MeshSourceReference } from '../core/mesh'
 import { clamp01, identity } from '../kernel/geometry/math3d'
 import { AbortedError, OpenSCADParseError } from './openscadErrors'
 import { createBrepRecordingKernelOps } from '../kernel/solid/brepRecorder'
@@ -29,17 +25,9 @@ import {
   type Statement,
   type Value,
 } from './openscadCompiler'
-import {
-  formatOpenScadValue,
-  openScadTruthy,
-} from './semantic/openScadValueSemantics'
-import {
-  resolveOpenScadColor,
-  resolveOpenScadOffset,
-} from './semantic/openScadStableModuleSemantics'
-import {
-  resolveOpenScadChildrenSelection,
-} from './semantic/openScadStableGeometrySemantics'
+import { formatOpenScadValue, openScadTruthy } from './semantic/openScadValueSemantics'
+import { resolveOpenScadColor, resolveOpenScadOffset } from './semantic/openScadStableModuleSemantics'
+import { resolveOpenScadChildrenSelection } from './semantic/openScadStableGeometrySemantics'
 import { OpenScadStableScope } from './openScadStableScope'
 import {
   MAX_EVAL_DEPTH,
@@ -51,19 +39,11 @@ import {
   overlayDynamicVariables,
   stableOverlayContext,
 } from './openScadStableExpressionEval'
-import {
-  type OpenScadProject,
-} from './openScadProject'
+import { type OpenScadProject } from './openScadProject'
 import { compileOpenScadProject } from './openScadProjectCompiler'
-import {
-  prepareOpenScadImportAssets,
-} from '../exchange/openScadImport'
-import {
-  prepareOpenScadSurfaceAssets,
-} from './openScadSurface'
-import {
-  prepareOpenScadTextAssets,
-} from './openScadText'
+import { prepareOpenScadImportAssets } from '../exchange/openScadImport'
+import { prepareOpenScadSurfaceAssets } from './openScadSurface'
+import { prepareOpenScadTextAssets } from './openScadText'
 import { defaultGeometryKernel } from '../kernel/cadGeometryKernel'
 import { createOpenScadStableRuntimeVariables } from './openScadStableRuntime'
 import { nextColor, resetPalette, type RGBA } from './openscadColors'
@@ -86,11 +66,7 @@ import {
   type Vec2,
   type Vec3,
 } from '../parser/types'
-export type {
-  ParseOpenScadProjectOptions,
-  ParseOptions,
-  ParseResult,
-} from '../parser/types'
+export type { ParseOpenScadProjectOptions, ParseOptions, ParseResult } from '../parser/types'
 import {
   bindAssertArguments,
   callExpressionArguments,
@@ -157,9 +133,7 @@ async function evalNodes(nodes: readonly Statement[], parent: EvalContext, scope
 }
 
 function stableViewportDisabled(statement: Statement, ctx: EvalContext): boolean {
-  return isStableProfile(ctx)
-    && statement.type === 'call'
-    && hasOpenScadViewportModifier(statement, 'disable')
+  return isStableProfile(ctx) && statement.type === 'call' && hasOpenScadViewportModifier(statement, 'disable')
 }
 
 /**
@@ -170,13 +144,15 @@ function stableViewportDisabled(statement: Statement, ctx: EvalContext): boolean
  * background layer that downstream consumers cannot distinguish.
  */
 async function evalPreparedCall(node: CallNode, ctx: EvalContext): Promise<Shape[]> {
-  const background = isStableProfile(ctx)
-    && ctx.viewportRootOwner !== node
-    && hasOpenScadViewportModifier(node, 'background')
+  const background =
+    isStableProfile(ctx) && ctx.viewportRootOwner !== node && hasOpenScadViewportModifier(node, 'background')
   const shapes = await evalNode(node, ctx)
   if (!background) return shapes
   if (ctx.quality === 'preview' && shapes.length > 0) {
-    warn(ctx, 'Viewport background (%) geometry is omitted in preview because the mesh result contract has no background-layer metadata')
+    warn(
+      ctx,
+      'Viewport background (%) geometry is omitted in preview because the mesh result contract has no background-layer metadata',
+    )
   }
   return []
 }
@@ -193,14 +169,16 @@ async function evalPreparedNodes(nodes: readonly Statement[], ctx: EvalContext):
     // Unlike every other viewport modifier, `*` suppresses argument, effect,
     // child, and geometry evaluation for the complete call subtree.
     if (stableViewportDisabled(node, ctx)) continue
-    if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
+    if (++ctx.budget.ops > MAX_EVAL_OPS)
+      evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
     if (node.type === 'assign') {
       if (!isStableProfile(ctx)) ctx.env.set(node.name, evalExpression(node.value, ctx))
       continue
     }
     if (node.type === 'module' || node.type === 'function') continue
-    output.push(...await evalPreparedCall(node, ctx))
-    if (output.length > MAX_SHAPES) evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
+    output.push(...(await evalPreparedCall(node, ctx)))
+    if (output.length > MAX_SHAPES)
+      evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
   }
   return output
 }
@@ -211,7 +189,11 @@ async function evalPreparedNodes(nodes: readonly Statement[], ctx: EvalContext):
  * mid-loop. A single enormous kernel/BVH call still cannot yield mid-WASM;
  * the coordinator grace timer remains that hard boundary.
  */
-async function evalTopLevel(nodes: readonly Statement[], ctx: EvalContext, control: CooperativeCheckpoint): Promise<Shape[]> {
+async function evalTopLevel(
+  nodes: readonly Statement[],
+  ctx: EvalContext,
+  control: CooperativeCheckpoint,
+): Promise<Shape[]> {
   control.poll()
   try {
     return await evalPreparedNodes(nodes, { ...ctx, control })
@@ -234,7 +216,7 @@ function passedCallChildren(ctx: EvalContext): {
   readonly context: EvalContext
 } {
   const passed = ctx.callChildren
-  const statements = Array.isArray(passed) ? passed : passed?.statements ?? []
+  const statements = Array.isArray(passed) ? passed : (passed?.statements ?? [])
   if (Array.isArray(passed) || passed === undefined) return { statements, context: ctx }
   return {
     statements,
@@ -248,20 +230,16 @@ function passedCallChildren(ctx: EvalContext): {
   }
 }
 
-function compatibilityDeprecation(
-  node: CallNode,
-  ctx: EvalContext,
-  replacement: string,
-): void {
-  const message = node.name === 'child'
-    ? 'child() will be removed in future releases. Use children() instead.'
-    : `The ${node.name}() module will be removed in future releases. Use ${replacement} instead.`
+function compatibilityDeprecation(node: CallNode, ctx: EvalContext, replacement: string): void {
+  const message =
+    node.name === 'child'
+      ? 'child() will be removed in future releases. Use children() instead.'
+      : `The ${node.name}() module will be removed in future releases. Use ${replacement} instead.`
   warn(ctx, message)
 }
 
 async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
-  if (isStableProfile(parent) && !parent.viewportRootLocked
-    && hasOpenScadViewportModifier(node, 'root')) {
+  if (isStableProfile(parent) && !parent.viewportRootLocked && hasOpenScadViewportModifier(node, 'root')) {
     const shapes = await evalNode(node, {
       ...parent,
       viewportRootLocked: true,
@@ -270,7 +248,8 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
     if (viewportRootActivates(node, shapes)) throw new StableViewportRootSelection(shapes)
     return shapes
   }
-  if (parent.depth >= MAX_EVAL_DEPTH) evaluationError(parent, node.p, `Evaluation exceeds ${MAX_EVAL_DEPTH} nested calls`)
+  if (parent.depth >= MAX_EVAL_DEPTH)
+    evaluationError(parent, node.p, `Evaluation exceeds ${MAX_EVAL_DEPTH} nested calls`)
   const operationId = staticOperationId(node)
   const ctx: EvalContext = {
     ...parent,
@@ -303,19 +282,14 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
         const resolved = resolveStableExpressionArguments(args, ['condition', 'message'], ctx)
         const conditionArgument = resolved.get('condition')
         const messageArgument = resolved.get('message')
-        const condition = conditionArgument === undefined
-          ? undefined
-          : evalExpression(conditionArgument.value, ctx)
-        const message = messageArgument === undefined
-          ? undefined
-          : evalExpression(messageArgument.value, ctx)
+        const condition = conditionArgument === undefined ? undefined : evalExpression(conditionArgument.value, ctx)
+        const message = messageArgument === undefined ? undefined : evalExpression(messageArgument.value, ctx)
         if (!openScadTruthy(condition)) {
-          const conditionText = conditionArgument === undefined
-            ? 'undef'
-            : compactDiagnosticText(ctx.source.slice(conditionArgument.p, conditionArgument.end))
-          const detail = messageArgument === undefined
-            ? ''
-            : `: ${compactDiagnosticText(formatOpenScadValue(message))}`
+          const conditionText =
+            conditionArgument === undefined
+              ? 'undef'
+              : compactDiagnosticText(ctx.source.slice(conditionArgument.p, conditionArgument.end))
+          const detail = messageArgument === undefined ? '' : `: ${compactDiagnosticText(formatOpenScadValue(message))}`
           evaluationError(ctx, node.p, `Assertion '${conditionText}' failed${detail}`)
         }
         return await childShapes()
@@ -327,9 +301,7 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       // child geometry when the condition fails.
       const message = bound.message ? evalExpression(bound.message, ctx) : undefined
       if (!truthy(condition)) {
-        const detail = bound.message
-          ? `: ${compactDiagnosticText(valueToString(message))}`
-          : ''
+        const detail = bound.message ? `: ${compactDiagnosticText(valueToString(message))}` : ''
         evaluationError(ctx, node.p, `Assertion '${bound.conditionText}' failed${detail}`)
       }
       return await childShapes()
@@ -337,20 +309,32 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
     case 'cube': {
       if (isStableProfile(ctx)) return makeStableCube(node, ctx)
       const raw = arg(node, 'size', 0, 1, ctx)
-      const size = Array.isArray(raw) ? vectorValue(raw, ctx, node.p, 'cube size') : [finiteNumber(raw, ctx, node.p, 'cube size')]
+      const size = Array.isArray(raw)
+        ? vectorValue(raw, ctx, node.p, 'cube size')
+        : [finiteNumber(raw, ctx, node.p, 'cube size')]
       const dimensions: Vec3 = [size[0] ?? 1, size[1] ?? size[0] ?? 1, size[2] ?? size[0] ?? 1]
       if (dimensions.some(value => value <= 0)) evaluationError(ctx, node.p, 'Cube dimensions must be positive')
-      const geometry = kernelCall(ctx, node.p, () => ctx.kernel.box(dimensions, arg(node, 'center', 1, false, ctx) === true))
+      const geometry = kernelCall(ctx, node.p, () =>
+        ctx.kernel.box(dimensions, arg(node, 'center', 1, false, ctx) === true),
+      )
       return [trackedSolid(geometry, nextColor(), node, ctx)]
     }
     case 'sphere': {
       if (isStableProfile(ctx)) return makeStableSphere(node, ctx)
       let radius = arg(node, 'r', 0, undefined, ctx)
       const diameter = arg(node, 'd', -1, undefined, ctx)
-      if (radius === undefined) radius = diameter === undefined ? 1 : finiteNumber(diameter, ctx, node.p, 'sphere diameter') / 2
+      if (radius === undefined)
+        radius = diameter === undefined ? 1 : finiteNumber(diameter, ctx, node.p, 'sphere diameter') / 2
       const r = finiteNumber(radius, ctx, node.p, 'sphere radius')
       if (r <= 0) evaluationError(ctx, node.p, 'Sphere radius must be positive')
-      return [trackedSolid(kernelCall(ctx, node.p, () => ctx.kernel.sphere(r, segments(node, ctx, 32, 4, r))), nextColor(), node, ctx)]
+      return [
+        trackedSolid(
+          kernelCall(ctx, node.p, () => ctx.kernel.sphere(r, segments(node, ctx, 32, 4, r))),
+          nextColor(),
+          node,
+          ctx,
+        ),
+      ]
     }
     case 'brep_gear': {
       // Involute gear as an exact NURBS body (spur, helical, herringbone; external
@@ -370,7 +354,8 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
         clearance: num('clearance', -1, 0.25),
         backlash: num('backlash', -1, 0),
       }
-      if (spec.module <= 0 || spec.teeth < 3 || spec.height <= 0) evaluationError(ctx, node.p, 'brep_gear needs a positive module and height and at least 3 teeth')
+      if (spec.module <= 0 || spec.teeth < 3 || spec.height <= 0)
+        evaluationError(ctx, node.p, 'brep_gear needs a positive module and height and at least 3 teeth')
       // Six wall faces per tooth (twice for a herringbone), each tessellated into
       // about 2*detail^2 triangles: keep every gear under the bridge's display
       // budget instead of letting a large ring gear fail at the user's $fn.
@@ -380,12 +365,24 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       const maxDetail = isUltra ? 20 : isHigh ? 15 : 12
       const divisor = isUltra ? 3 : isHigh ? 4 : 5
       const faceBudget = isUltra ? 90000 : isHigh ? 64000 : 36000
-      let detail = Math.max(1, Math.min(maxDetail, Math.round(segments(node, ctx, 64, 16, spec.module * spec.teeth / 2) / divisor)))
+      let detail = Math.max(
+        1,
+        Math.min(maxDetail, Math.round(segments(node, ctx, 64, 16, (spec.module * spec.teeth) / 2) / divisor)),
+      )
       while (detail > 1 && faces * detail * detail > faceBudget) detail--
-      return [trackedSolid(kernelCall(ctx, node.p, () => ctx.kernel.gear(spec, detail)), nextColor(), node, ctx)]
+      return [
+        trackedSolid(
+          kernelCall(ctx, node.p, () => ctx.kernel.gear(spec, detail)),
+          nextColor(),
+          node,
+          ctx,
+        ),
+      ]
     }
-    case 'cylinder': return isStableProfile(ctx) ? makeStableCylinder(node, ctx) : makeCylinder(node, ctx)
-    case 'polyhedron': return isStableProfile(ctx) ? makeStablePolyhedron(node, ctx) : makePolyhedron(node, ctx)
+    case 'cylinder':
+      return isStableProfile(ctx) ? makeStableCylinder(node, ctx) : makeCylinder(node, ctx)
+    case 'polyhedron':
+      return isStableProfile(ctx) ? makeStablePolyhedron(node, ctx) : makePolyhedron(node, ctx)
     case 'import': {
       requireStableProfile(ctx, node)
       return makeImport(node, ctx)
@@ -413,31 +410,39 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
     case 'square': {
       if (isStableProfile(ctx)) return makeStableSquare(node, ctx)
       const raw = arg(node, 'size', 0, 1, ctx)
-      const size = Array.isArray(raw) ? vectorValue(raw, ctx, node.p, 'square size') : [finiteNumber(raw, ctx, node.p, 'square size')]
+      const size = Array.isArray(raw)
+        ? vectorValue(raw, ctx, node.p, 'square size')
+        : [finiteNumber(raw, ctx, node.p, 'square size')]
       const dimensions: Vec2 = [size[0] ?? 1, size[1] ?? size[0] ?? 1]
       if (dimensions.some(value => value <= 0)) evaluationError(ctx, node.p, 'Square dimensions must be positive')
-      return [{
-        dimension: 2,
-        geometry: ctx.kernel.rectangle(dimensions, arg(node, 'center', 1, false, ctx) === true),
-        color: nextColor(),
-        entityId: currentEntityId(ctx),
-      }]
+      return [
+        {
+          dimension: 2,
+          geometry: ctx.kernel.rectangle(dimensions, arg(node, 'center', 1, false, ctx) === true),
+          color: nextColor(),
+          entityId: currentEntityId(ctx),
+        },
+      ]
     }
     case 'circle': {
       if (isStableProfile(ctx)) return makeStableCircle(node, ctx)
       let radius = arg(node, 'r', 0, undefined, ctx)
       const diameter = arg(node, 'd', -1, undefined, ctx)
-      if (radius === undefined) radius = diameter === undefined ? 1 : finiteNumber(diameter, ctx, node.p, 'circle diameter') / 2
+      if (radius === undefined)
+        radius = diameter === undefined ? 1 : finiteNumber(diameter, ctx, node.p, 'circle diameter') / 2
       const r = finiteNumber(radius, ctx, node.p, 'circle radius')
       if (r <= 0) evaluationError(ctx, node.p, 'Circle radius must be positive')
-      return [{
-        dimension: 2,
-        geometry: ctx.kernel.circle(r, segments(node, ctx, 48, 3, r)),
-        color: nextColor(),
-        entityId: currentEntityId(ctx),
-      }]
+      return [
+        {
+          dimension: 2,
+          geometry: ctx.kernel.circle(r, segments(node, ctx, 48, 3, r)),
+          color: nextColor(),
+          entityId: currentEntityId(ctx),
+        },
+      ]
     }
-    case 'polygon': return isStableProfile(ctx) ? makeStablePolygon(node, ctx) : makePolygon(node, ctx)
+    case 'polygon':
+      return isStableProfile(ctx) ? makeStablePolygon(node, ctx) : makePolygon(node, ctx)
     case 'translate': {
       if (isStableProfile(ctx)) return await transformStableChildren(node, ctx, evalNodes)
       const vector = vectorValue(arg(node, 'v', 0, [0, 0, 0], ctx), ctx, node.p, 'translate vector')
@@ -445,27 +450,27 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
         ...shape,
         geometry: ctx.kernel.translate(
           shape.geometry,
-          shape.dimension === 3
-            ? [vector[0] ?? 0, vector[1] ?? 0, vector[2] ?? 0]
-            : [vector[0] ?? 0, vector[1] ?? 0],
+          shape.dimension === 3 ? [vector[0] ?? 0, vector[1] ?? 0, vector[2] ?? 0] : [vector[0] ?? 0, vector[1] ?? 0],
         ),
       }))
     }
-    case 'rotate': return isStableProfile(ctx)
-      ? await transformStableChildren(node, ctx, evalNodes)
-      : rotateShapes(await childShapes(), node, ctx)
+    case 'rotate':
+      return isStableProfile(ctx)
+        ? await transformStableChildren(node, ctx, evalNodes)
+        : rotateShapes(await childShapes(), node, ctx)
     case 'scale': {
       if (isStableProfile(ctx)) return await transformStableChildren(node, ctx, evalNodes)
       const raw = arg(node, 'v', 0, [1, 1, 1], ctx)
-      const values = Array.isArray(raw) ? vectorValue(raw, ctx, node.p, 'scale vector') : [finiteNumber(raw, ctx, node.p, 'scale')]
-      const sx = values[0] ?? 1, sy = values[1] ?? sx, sz = values[2] ?? sx
+      const values = Array.isArray(raw)
+        ? vectorValue(raw, ctx, node.p, 'scale vector')
+        : [finiteNumber(raw, ctx, node.p, 'scale')]
+      const sx = values[0] ?? 1,
+        sy = values[1] ?? sx,
+        sz = values[2] ?? sx
       if ([sx, sy, sz].some(value => value === 0)) evaluationError(ctx, node.p, 'Scale values cannot be zero')
       return (await childShapes()).map(shape => ({
         ...shape,
-        geometry: ctx.kernel.scale(
-          shape.geometry,
-          shape.dimension === 3 ? [sx, sy, sz] : [sx, sy],
-        ),
+        geometry: ctx.kernel.scale(shape.geometry, shape.dimension === 3 ? [sx, sy, sz] : [sx, sy]),
       }))
     }
     case 'resize': {
@@ -479,20 +484,19 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
         ...shape,
         geometry: ctx.kernel.mirror(
           shape.geometry,
-          shape.dimension === 3
-            ? [vector[0] ?? 0, vector[1] ?? 0, vector[2] ?? 0]
-            : [vector[0] ?? 0, vector[1] ?? 0],
+          shape.dimension === 3 ? [vector[0] ?? 0, vector[1] ?? 0, vector[2] ?? 0] : [vector[0] ?? 0, vector[1] ?? 0],
         ),
       }))
     }
-    case 'multmatrix': return isStableProfile(ctx)
-      ? await transformStableChildren(node, ctx, evalNodes)
-      : transformByMatrix(await childShapes(), arg(node, 'm', 0, undefined, ctx), node, ctx)
+    case 'multmatrix':
+      return isStableProfile(ctx)
+        ? await transformStableChildren(node, ctx, evalNodes)
+        : transformByMatrix(await childShapes(), arg(node, 'm', 0, undefined, ctx), node, ctx)
     case 'color': {
       const colorValue = arg(node, 'c', 0, isStableProfile(ctx) ? undefined : [0.5, 0.5, 0.5], ctx)
       const alpha = arg(node, 'alpha', 1, undefined, ctx)
       const color = isStableProfile(ctx)
-        ? [...resolveOpenScadColor(colorValue, alpha, stableModuleSemanticsContext(ctx)).rgba] as RGBA
+        ? ([...resolveOpenScadColor(colorValue, alpha, stableModuleSemanticsContext(ctx)).rgba] as RGBA)
         : parseLegacyColor(colorValue, ctx, node.p)
       if (!isStableProfile(ctx) && alpha !== undefined) {
         color[3] = clamp01(finiteNumber(alpha, ctx, node.p, 'color alpha'))
@@ -500,29 +504,39 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       return (await childShapes()).map(shape => ({ ...shape, color: [...color] as RGBA }))
     }
     case 'viewer_bend': {
-      if(isStableProfile(ctx)) evaluationError(ctx,node.p,'viewer_bend is a viewer mesh extension, not standard OpenSCAD')
-      const radius=finiteNumber(arg(node,'radius',0,0,ctx),ctx,node.p,'bend radius')
-      const center=finiteNumber(arg(node,'center',1,0,ctx),ctx,node.p,'bend center')
-      const step=finiteNumber(arg(node,'step',2,5,ctx),ctx,node.p,'bend mesh step')
-      if(radius<=0||step<=0) evaluationError(ctx,node.p,'Bend radius and mesh step must be positive')
-      const reverse=arg(node,'reverse',3,false,ctx)===true
-      const shapes=await childShapes()
-      if(!ctx.kernel.bend3) evaluationError(ctx,node.p,'Bend is unavailable for this geometry backend')
-      return shapes.map(shape=>{
-        if(shape.dimension!==3) evaluationError(ctx,node.p,'viewer_bend requires a 3D solid')
-        return {...shape,geometry:kernelCall(ctx,node.p,()=>ctx.kernel.bend3!(shape.geometry,radius,center,reverse,step))}
+      if (isStableProfile(ctx))
+        evaluationError(ctx, node.p, 'viewer_bend is a viewer mesh extension, not standard OpenSCAD')
+      const radius = finiteNumber(arg(node, 'radius', 0, 0, ctx), ctx, node.p, 'bend radius')
+      const center = finiteNumber(arg(node, 'center', 1, 0, ctx), ctx, node.p, 'bend center')
+      const step = finiteNumber(arg(node, 'step', 2, 5, ctx), ctx, node.p, 'bend mesh step')
+      if (radius <= 0 || step <= 0) evaluationError(ctx, node.p, 'Bend radius and mesh step must be positive')
+      const reverse = arg(node, 'reverse', 3, false, ctx) === true
+      const shapes = await childShapes()
+      if (!ctx.kernel.bend3) evaluationError(ctx, node.p, 'Bend is unavailable for this geometry backend')
+      return shapes.map(shape => {
+        if (shape.dimension !== 3) evaluationError(ctx, node.p, 'viewer_bend requires a 3D solid')
+        return {
+          ...shape,
+          geometry: kernelCall(ctx, node.p, () => ctx.kernel.bend3!(shape.geometry, radius, center, reverse, step)),
+        }
       })
     }
-    case 'union': return await booleanShapesCooperative(await childShapes(), 'union', ctx, node.p)
-    case 'difference': return await differenceChildren(node, ctx, evalNodes, evalPreparedNodes)
-    case 'intersection': return await booleanShapesCooperative(await childShapes(), 'intersection', ctx, node.p)
+    case 'union':
+      return await booleanShapesCooperative(await childShapes(), 'union', ctx, node.p)
+    case 'difference':
+      return await differenceChildren(node, ctx, evalNodes, evalPreparedNodes)
+    case 'intersection':
+      return await booleanShapesCooperative(await childShapes(), 'intersection', ctx, node.p)
     case 'minkowski': {
       requireStableProfile(ctx, node)
       return minkowskiShapes(await childShapes(), node, ctx)
     }
-    case 'hull': return hullShapes(await childShapes(), node, ctx)
-    case 'linear_extrude': return await linearExtrude(node, ctx, evalNodes)
-    case 'rotate_extrude': return await rotateExtrude(node, ctx, evalNodes)
+    case 'hull':
+      return hullShapes(await childShapes(), node, ctx)
+    case 'linear_extrude':
+      return await linearExtrude(node, ctx, evalNodes)
+    case 'rotate_extrude':
+      return await rotateExtrude(node, ctx, evalNodes)
     case 'dxf_linear_extrude':
       requireStableProfile(ctx, node)
       compatibilityDeprecation(node, ctx, 'linear_extrude()')
@@ -533,12 +547,7 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       return await dxfRotateExtrude(node, ctx, evalNodes)
     case 'projection': {
       if (isStableProfile(ctx)) {
-        const values = evaluateStableBuiltinModuleArguments(
-          node,
-          ['cut', 'convexity'],
-          [],
-          ctx,
-        )
+        const values = evaluateStableBuiltinModuleArguments(node, ['cut', 'convexity'], [], ctx)
         const cut = values.get('cut') === true
         const children = await childShapes()
         const solids = children.filter((shape): shape is Shape3D => shape.dimension === 3)
@@ -548,8 +557,17 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
         if (solids.length === 0) return []
         const color = solids[0]!.color
         const geometry = cut
-          ? ctx.kernel.projection(ctx.kernel.boolean3('union', solids.map(shape => shape.geometry)), true)
-          : ctx.kernel.boolean2('union', solids.map(shape => ctx.kernel.projection(shape.geometry, false)))
+          ? ctx.kernel.projection(
+              ctx.kernel.boolean3(
+                'union',
+                solids.map(shape => shape.geometry),
+              ),
+              true,
+            )
+          : ctx.kernel.boolean2(
+              'union',
+              solids.map(shape => ctx.kernel.projection(shape.geometry, false)),
+            )
         return [{ dimension: 2, geometry, color, entityId: currentEntityId(ctx) }]
       }
       const cut = arg(node, 'cut', 0, false, ctx) === true
@@ -568,14 +586,16 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
         const rExpression = node.args.r ?? node.args._0
         const deltaExpression = node.args.delta
         const chamferExpression = node.args.chamfer
-        const resolved = resolveOpenScadOffset({
-          ...(rExpression === undefined ? {} : { r: evalExpression(rExpression, ctx) }),
-          ...(deltaExpression === undefined ? {} : { delta: evalExpression(deltaExpression, ctx) }),
-          ...(chamferExpression === undefined ? {} : { chamfer: evalExpression(chamferExpression, ctx) }),
-        }, stableModuleSemanticsContext(ctx))
-        const circularSegments = resolved.joinType === 'Round'
-          ? segments(node, ctx, 48, 3, Math.abs(resolved.distance))
-          : undefined
+        const resolved = resolveOpenScadOffset(
+          {
+            ...(rExpression === undefined ? {} : { r: evalExpression(rExpression, ctx) }),
+            ...(deltaExpression === undefined ? {} : { delta: evalExpression(deltaExpression, ctx) }),
+            ...(chamferExpression === undefined ? {} : { chamfer: evalExpression(chamferExpression, ctx) }),
+          },
+          stableModuleSemanticsContext(ctx),
+        )
+        const circularSegments =
+          resolved.joinType === 'Round' ? segments(node, ctx, 48, 3, Math.abs(resolved.distance)) : undefined
         return (await childShapes()).map(shape => {
           if (shape.dimension !== 2) evaluationError(ctx, node.p, 'offset() requires 2D children')
           return {
@@ -591,21 +611,24 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
           }
         })
       }
-      const distance = finiteNumber(arg(node, 'r', 0, arg(node, 'delta', 0, 1, ctx), ctx), ctx, node.p, 'offset distance')
-      const hasRoundOption = node.args.r !== undefined || node.args._0 !== undefined || node.args.delta === undefined
-      const hasExplicitRoundSegments = hasRoundOption && (
-        node.args.$fn !== undefined || node.args.$fa !== undefined || node.args.$fs !== undefined
+      const distance = finiteNumber(
+        arg(node, 'r', 0, arg(node, 'delta', 0, 1, ctx), ctx),
+        ctx,
+        node.p,
+        'offset distance',
       )
-      const circularSegments = hasExplicitRoundSegments
-        ? segments(node, ctx, 48, 3, Math.abs(distance))
-        : undefined
+      const hasRoundOption = node.args.r !== undefined || node.args._0 !== undefined || node.args.delta === undefined
+      const hasExplicitRoundSegments =
+        hasRoundOption && (node.args.$fn !== undefined || node.args.$fa !== undefined || node.args.$fs !== undefined)
+      const circularSegments = hasExplicitRoundSegments ? segments(node, ctx, 48, 3, Math.abs(distance)) : undefined
       return (await childShapes()).map(shape => {
         if (shape.dimension !== 2) evaluationError(ctx, node.p, 'offset() requires 2D children')
         return {
           ...shape,
-          geometry: circularSegments === undefined
-            ? ctx.kernel.offset(shape.geometry, distance)
-            : ctx.kernel.offset(shape.geometry, distance, 'Round', 2, circularSegments),
+          geometry:
+            circularSegments === undefined
+              ? ctx.kernel.offset(shape.geometry, distance)
+              : ctx.kernel.offset(shape.geometry, distance, 'Round', 2, circularSegments),
           entityId: currentEntityId(ctx),
         }
       })
@@ -632,10 +655,12 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
         return await evalNodes(node.children, stableOverlayContext(ctx, env), false)
       }
       const env = new Map(ctx.env)
-      for (const [name, expression] of Object.entries(node.args)) if (!name.startsWith('_')) env.set(name, evalExpression(expression, ctx))
+      for (const [name, expression] of Object.entries(node.args))
+        if (!name.startsWith('_')) env.set(name, evalExpression(expression, ctx))
       return await evalNodes(node.children, { ...ctx, env }, false)
     }
-    case 'for': return await evalFor(node, ctx, 'for')
+    case 'for':
+      return await evalFor(node, ctx, 'for')
     case 'intersection_for': {
       requireStableProfile(ctx, node)
       return booleanShapes(
@@ -661,19 +686,24 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       const childContext = passed.context
       if (isStableProfile(ctx)) {
         const selectorExpression = node.args._0
-        const selected = resolveOpenScadChildrenSelection({
-          provided: selectorExpression !== undefined,
-          value: selectorExpression === undefined ? undefined : evalExpression(selectorExpression, ctx),
-          childCount: all.length,
-          maximumRangeItems: MAX_RANGE_ITEMS,
-        }, stableGeometrySemanticsContext(ctx))
+        const selected = resolveOpenScadChildrenSelection(
+          {
+            provided: selectorExpression !== undefined,
+            value: selectorExpression === undefined ? undefined : evalExpression(selectorExpression, ctx),
+            childCount: all.length,
+            maximumRangeItems: MAX_RANGE_ITEMS,
+          },
+          stableGeometrySemanticsContext(ctx),
+        )
         if (selectorExpression === undefined) return await evalNodes(all, childContext)
         const output: Shape[] = []
         for (const [occurrence, childIndex] of selected.entries()) {
-          output.push(...await evalNodes([all[childIndex]!], {
-            ...childContext,
-            instancePath: `${childContext.instancePath}>children:${childIndex}#${occurrence}`,
-          }))
+          output.push(
+            ...(await evalNodes([all[childIndex]!], {
+              ...childContext,
+              instancePath: `${childContext.instancePath}>children:${childIndex}#${occurrence}`,
+            })),
+          )
         }
         return output
       }
@@ -686,12 +716,8 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       requireStableProfile(ctx, node)
       compatibilityDeprecation(node, ctx, 'children()')
       const authored = callExpressionArguments(node)
-      const indexValue = authored[0] === undefined
-        ? 0
-        : evalExpression(authored[0].value, ctx)
-      const index = typeof indexValue === 'number' && Number.isFinite(indexValue)
-        ? Math.trunc(indexValue)
-        : 0
+      const indexValue = authored[0] === undefined ? 0 : evalExpression(authored[0].value, ctx)
+      const index = typeof indexValue === 'number' && Number.isFinite(indexValue) ? Math.trunc(indexValue) : 0
       if (index < 0) {
         warn(ctx, `Negative child index (${index}) not allowed`)
         return []
@@ -743,21 +769,23 @@ async function evalFor(node: CallNode, ctx: EvalContext, diagnosticName: 'for' |
         }
         iterationsSinceYield++
         control?.poll()
-        output.push(...await evalNodes(node.children, {
-          ...iterationContext,
-          instancePath: `${ctx.instancePath}>loop:${valueKey}#${occurrence}`,
-        }, false))
+        output.push(
+          ...(await evalNodes(
+            node.children,
+            {
+              ...iterationContext,
+              instancePath: `${ctx.instancePath}>loop:${valueKey}#${occurrence}`,
+            },
+            false,
+          )),
+        )
         if (output.length > MAX_SHAPES) {
           evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
         }
         return
       }
       const binding = bindings[bindingIndex]!
-      const values = stableIterable(
-        evalExpression(binding.value, iterationContext),
-        iterationContext,
-        binding.p,
-      )
+      const values = stableIterable(evalExpression(binding.value, iterationContext), iterationContext, binding.p)
       if (binding.name === undefined) {
         warn(ctx, `Ignoring ${diagnosticName}() iterator without variable name`)
         return
@@ -790,18 +818,26 @@ async function evalFor(node: CallNode, ctx: EvalContext, diagnosticName: 'for' |
     }
     iterationsSinceYield++
     control?.poll()
-    if (++ctx.budget.ops > MAX_EVAL_OPS) evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
+    if (++ctx.budget.ops > MAX_EVAL_OPS)
+      evaluationError(ctx, node.p, `Model exceeds the ${MAX_EVAL_OPS.toLocaleString()} evaluation step limit`)
     const env = new Map(ctx.env)
     env.set(name, value)
     const valueKey = encodeURIComponent(identityValue(value))
     const occurrence = occurrences.get(valueKey) ?? 0
     occurrences.set(valueKey, occurrence + 1)
-    output.push(...await evalNodes(node.children, {
-      ...ctx,
-      env,
-      instancePath: `${ctx.instancePath}>loop:${encodeURIComponent(name)}=${valueKey}#${occurrence}`,
-    }, false))
-    if (output.length > MAX_SHAPES) evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
+    output.push(
+      ...(await evalNodes(
+        node.children,
+        {
+          ...ctx,
+          env,
+          instancePath: `${ctx.instancePath}>loop:${encodeURIComponent(name)}=${valueKey}#${occurrence}`,
+        },
+        false,
+      )),
+    )
+    if (output.length > MAX_SHAPES)
+      evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString()} object limit`)
   }
   return output
 }
@@ -840,39 +876,56 @@ async function evalUserModule(
     const parameterValues = new Map<string, Value>()
     for (const parameter of module.params) {
       const supplied = resolved.get(parameter.name)
-      const value = supplied !== undefined
-        ? callerValues.get(supplied)
-        : parameter.defaultValue !== undefined
-          ? evalExpression(parameter.defaultValue, { ...definitionContext, env: new Map(definitionEnv) })
-          : undefined
+      const value =
+        supplied !== undefined
+          ? callerValues.get(supplied)
+          : parameter.defaultValue !== undefined
+            ? evalExpression(parameter.defaultValue, { ...definitionContext, env: new Map(definitionEnv) })
+            : undefined
       parameterValues.set(parameter.name, value)
     }
     env = new Map(definitionEnv)
     for (const [name, value] of parameterValues) env.set(name, value)
-    return await booleanShapesCooperative(await evalNodes(module.children, {
-      ...definitionContext,
-      env,
-      callChildren: {
-        statements: call.children,
-        env: new Map(ctx.env),
-        scope: ctx.stableScope ?? definitionScope,
-        continuation: ctx.callChildren,
-      },
-    }, false), 'union', ctx, call.p, module.name)
+    return await booleanShapesCooperative(
+      await evalNodes(
+        module.children,
+        {
+          ...definitionContext,
+          env,
+          callChildren: {
+            statements: call.children,
+            env: new Map(ctx.env),
+            scope: ctx.stableScope ?? definitionScope,
+            continuation: ctx.callChildren,
+          },
+        },
+        false,
+      ),
+      'union',
+      ctx,
+      call.p,
+      module.name,
+    )
   } else {
-    const positional = Object.entries(call.args).filter(([name]) => name.startsWith('_')).sort(([a], [b]) => Number(a.slice(1)) - Number(b.slice(1)))
+    const positional = Object.entries(call.args)
+      .filter(([name]) => name.startsWith('_'))
+      .sort(([a], [b]) => Number(a.slice(1)) - Number(b.slice(1)))
     for (let i = 0; i < module.params.length; i++) {
       const param = module.params[i]!
       const expression = call.args[param.name] ?? positional[i]?.[1] ?? param.defaultValue
       env.set(param.name, expression ? evalExpression(expression, { ...ctx, env }) : undefined)
     }
   }
-  return await evalNodes(module.children, {
-    ...ctx,
-    env,
-    callChildren: call.children,
-    moduleStack: [...ctx.moduleStack, module.name],
-  }, false)
+  return await evalNodes(
+    module.children,
+    {
+      ...ctx,
+      env,
+      callChildren: call.children,
+      moduleStack: [...ctx.moduleStack, module.name],
+    },
+    false,
+  )
 }
 
 /**
@@ -889,9 +942,10 @@ export function warmGeometryKernel(): Promise<void> {
 async function parseInternal(
   source: string,
   options: ParseOptions,
-  compileAst: () => readonly Statement[] = () => compileOpenSCAD(source, {
-    languageProfile: options.languageProfile,
-  }),
+  compileAst: () => readonly Statement[] = () =>
+    compileOpenSCAD(source, {
+      languageProfile: options.languageProfile,
+    }),
   project?: OpenScadProject,
 ): Promise<ParseResult> {
   const now = options.now ?? (() => performance.now())
@@ -923,33 +977,37 @@ async function parseInternal(
     parseMs = Math.max(0, compiledAt - startedAt)
     bindMs = Math.max(0, boundAt - compiledAt)
   }
-  const forcedImportAssets = project === undefined
-    ? []
-    : stableCompatibilityForcedAssets(project, ast)
-  const [importAssets, surfaceAssets, textAssets] = project === undefined
-    ? [undefined, undefined, undefined]
-    : await Promise.all([
-        prepareOpenScadImportAssets(project, { forcedAssets: forcedImportAssets }),
-        prepareOpenScadSurfaceAssets(project),
-        prepareOpenScadTextAssets(project),
-      ])
+  const forcedImportAssets = project === undefined ? [] : stableCompatibilityForcedAssets(project, ast)
+  const [importAssets, surfaceAssets, textAssets] =
+    project === undefined
+      ? [undefined, undefined, undefined]
+      : await Promise.all([
+          prepareOpenScadImportAssets(project, { forcedAssets: forcedImportAssets }),
+          prepareOpenScadSurfaceAssets(project),
+          prepareOpenScadTextAssets(project),
+        ])
   const parsedAt = now()
   const kernelSession = await defaultGeometryKernel.openEvalSession()
   // Recording costs only a small JSON graph, but it is opt-in because the result
   // crosses a protocol that validates an exact set of keys.
-  const exactRecorder = options.recordExactSolids === true
-    ? createBrepRecordingKernelOps(kernelSession.kernel)
-    : null
+  const exactRecorder = options.recordExactSolids === true ? createBrepRecordingKernelOps(kernelSession.kernel) : null
   const warnings: string[] = []
   const modules = new Map(bound.modules)
   const functions = new Map(bound.functions)
   const quality = options.quality ?? 'full'
-  const env = languageProfile === 'openscad/stable-2021.01'
-    ? new Map<string, Value>(Array.from(
-        createOpenScadStableRuntimeVariables({ quality, animationTime: options.animationTime }),
-        ([name, value]) => [name, Array.isArray(value) ? [...value] : value as Value],
-      ))
-    : new Map<string, Value>([['$fn', 0], ['$fa', 12], ['$fs', 2]])
+  const env =
+    languageProfile === 'openscad/stable-2021.01'
+      ? new Map<string, Value>(
+          Array.from(
+            createOpenScadStableRuntimeVariables({ quality, animationTime: options.animationTime }),
+            ([name, value]) => [name, Array.isArray(value) ? [...value] : (value as Value)],
+          ),
+        )
+      : new Map<string, Value>([
+          ['$fn', 0],
+          ['$fa', 12],
+          ['$fs', 2],
+        ])
   const sourceReferences = new Map<number, MeshSourceReference>()
   const reduced = { value: false }
   let ctx: EvalContext = {
@@ -993,8 +1051,14 @@ async function parseInternal(
     // superseded request must not pay it in full before the newest starts.
     if (options.shouldAbort?.()) throw new AbortedError()
     const sections = shapes.filter(shape => shape.dimension === 2)
-    if (sections.length) warn(ctx, `${sections.length} top-level 2D object(s) are not displayed; wrap them in linear_extrude() or rotate_extrude()`)
-    const solids = shapes.filter((shape): shape is Shape3D => shape.dimension === 3 && !ctx.kernel.isEmpty(shape.geometry))
+    if (sections.length)
+      warn(
+        ctx,
+        `${sections.length} top-level 2D object(s) are not displayed; wrap them in linear_extrude() or rotate_extrude()`,
+      )
+    const solids = shapes.filter(
+      (shape): shape is Shape3D => shape.dimension === 3 && !ctx.kernel.isEmpty(shape.geometry),
+    )
     const meshes: MeshData[] = []
     let volume = 0
     let surfaceArea = 0
@@ -1008,21 +1072,27 @@ async function parseInternal(
         const resolved = exactRecorder.recording.resolve(shape.geometry)
         exactRoots.push('id' in resolved ? { name, id: resolved.id } : { name, inexact: resolved.inexact })
       }
-      const analysis = options.shouldAbort || options.onYield
-        ? await ctx.kernel.analyzeSolidCooperatively(shape.geometry, async () => {
-          control.poll()
-          await control.yieldIfDue()
-        })
-        : ctx.kernel.analyzeSolid(shape.geometry)
+      const analysis =
+        options.shouldAbort || options.onYield
+          ? await ctx.kernel.analyzeSolidCooperatively(shape.geometry, async () => {
+              control.poll()
+              await control.yieldIfDue()
+            })
+          : ctx.kernel.analyzeSolid(shape.geometry)
       volume += analysis.volume
       surfaceArea += analysis.surfaceArea
       const mesh = analysis.mesh
       await control.yieldIfDue()
       triangleCount += mesh.numTri
-      if (triangleCount > MAX_TRIANGLES) evaluationError(ctx, 0, `Rendered model exceeds ${MAX_TRIANGLES.toLocaleString()} triangles`)
+      if (triangleCount > MAX_TRIANGLES)
+        evaluationError(ctx, 0, `Rendered model exceeds ${MAX_TRIANGLES.toLocaleString()} triangles`)
       if (mesh.numProp < 6) evaluationError(ctx, 0, 'Geometry kernel did not produce normals')
       let vertices: Float32Array
-      if (mesh.numProp === 6 && mesh.vertProperties instanceof Float32Array && isExclusiveView(mesh.vertProperties, mesh.numVert * 6)) {
+      if (
+        mesh.numProp === 6 &&
+        mesh.vertProperties instanceof Float32Array &&
+        isExclusiveView(mesh.vertProperties, mesh.numVert * 6)
+      ) {
         // The kernel copied this array out for this analysis alone; publish it
         // without another copy. The Worker protocol requires exclusive buffers.
         vertices = mesh.vertProperties
@@ -1031,11 +1101,14 @@ async function parseInternal(
         for (let vertex = 0; vertex < mesh.numVert; vertex++) {
           const sourceOffset = vertex * mesh.numProp
           const targetOffset = vertex * 6
-          for (let channel = 0; channel < 6; channel++) vertices[targetOffset + channel] = mesh.vertProperties[sourceOffset + channel]!
+          for (let channel = 0; channel < 6; channel++)
+            vertices[targetOffset + channel] = mesh.vertProperties[sourceOffset + channel]!
           if ((vertex & 0x3fff) === 0x3fff) await control.yieldIfDue()
         }
       }
-      const indices = isExclusiveView(mesh.triVerts, mesh.triVerts.length) ? mesh.triVerts : new Uint32Array(mesh.triVerts)
+      const indices = isExclusiveView(mesh.triVerts, mesh.triVerts.length)
+        ? mesh.triVerts
+        : new Uint32Array(mesh.triVerts)
       const { bvh, semanticEdges } = analysis
       const provenance: MeshProvenanceRun[] = []
       for (let run = 0; run < mesh.runOriginalID.length; run++) {
@@ -1071,9 +1144,20 @@ async function parseInternal(
     }
     const analyzedAt = now()
     return {
-      meshes, warnings, volume, surfaceArea, quality, reduced: reduced.value,
+      meshes,
+      warnings,
+      volume,
+      surfaceArea,
+      quality,
+      reduced: reduced.value,
       ...(exactRecorder ? { exactSolids: { nodes: exactRecorder.recording.nodes, roots: exactRoots } } : {}),
-      timings: { parseMs, bindMs, initializeMs: Math.max(0, initializedAt - parsedAt), evaluateMs: Math.max(0, evaluatedAt - initializedAt), analyzeMs: Math.max(0, analyzedAt - evaluatedAt) },
+      timings: {
+        parseMs,
+        bindMs,
+        initializeMs: Math.max(0, initializedAt - parsedAt),
+        evaluateMs: Math.max(0, evaluatedAt - initializedAt),
+        analyzeMs: Math.max(0, analyzedAt - evaluatedAt),
+      },
     }
   } finally {
     kernelSession.dispose()
@@ -1092,7 +1176,12 @@ export function parseOpenSCAD(source: string, options: ParseOptions = {}): Promi
         const { buildTextNurbsScene } = await import('./rushFrontendScene')
         if (options.shouldAbort?.()) throw new AbortedError()
         try {
-          const result = await buildTextNurbsScene(compiled.document, options.quality, { shouldAbort: options.shouldAbort, onYield: options.onYield, onSweepPreview: options.onSweepPreview, exportQuality: options.exportQuality })
+          const result = await buildTextNurbsScene(compiled.document, options.quality, {
+            shouldAbort: options.shouldAbort,
+            onYield: options.onYield,
+            onSweepPreview: options.onSweepPreview,
+            exportQuality: options.exportQuality,
+          })
           if (options.shouldAbort?.()) throw new AbortedError()
           return result
         } catch (error) {
@@ -1101,21 +1190,42 @@ export function parseOpenSCAD(source: string, options: ParseOptions = {}): Promi
         }
       }
       const result = await parseInternal(compiled.source, options)
-      requireRushGraphChecks(await evaluateRushGraphGeometry(compiled.geometry_assertions, result.meshes, async source => (await parseInternal(source, options)).meshes))
+      requireRushGraphChecks(
+        await evaluateRushGraphGeometry(
+          compiled.geometry_assertions,
+          result.meshes,
+          async source => (await parseInternal(source, options)).meshes,
+        ),
+      )
       for (const mesh of result.meshes) for (const run of mesh.provenance) run.source = null
       return result
     }
     return parseInternal(source, options)
   }
   const result = parseQueue.then(run, run)
-  parseQueue = result.then(() => undefined, () => undefined)
+  parseQueue = result.then(
+    () => undefined,
+    () => undefined,
+  )
   return result
 }
 
 /** Compile and evaluate one bounded project snapshot with the independent full profile. */
-export function parseOpenScadProject(project: OpenScadProject, options: ParseOpenScadProjectOptions = {}): Promise<ParseResult> {
-  const run = () => parseInternal(project.readEntrypoint().source, { ...options, languageProfile: 'openscad/stable-2021.01' }, () => compileOpenScadProject(project), project)
+export function parseOpenScadProject(
+  project: OpenScadProject,
+  options: ParseOpenScadProjectOptions = {},
+): Promise<ParseResult> {
+  const run = () =>
+    parseInternal(
+      project.readEntrypoint().source,
+      { ...options, languageProfile: 'openscad/stable-2021.01' },
+      () => compileOpenScadProject(project),
+      project,
+    )
   const result = parseQueue.then(run, run)
-  parseQueue = result.then(() => undefined, () => undefined)
+  parseQueue = result.then(
+    () => undefined,
+    () => undefined,
+  )
   return result
 }

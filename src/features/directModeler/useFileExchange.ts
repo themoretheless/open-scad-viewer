@@ -129,9 +129,13 @@ export function useFileExchange(options: UseFileExchangeOptions) {
                   : label('Повторная проверка', 'Verifying the result')
     return `${phase} · ${progress.completed}/${progress.total}`
   })
-  watch(historyPending, pending => {
-    if (!pending) meshImportProgress.value = undefined
-  }, { flush: 'sync' })
+  watch(
+    historyPending,
+    pending => {
+      if (!pending) meshImportProgress.value = undefined
+    },
+    { flush: 'sync' },
+  )
   const { svgInput, svgBusy, importSvg, exportBodySvg } = useSvgExchange(options)
 
   const stepInput = ref<HTMLInputElement>()
@@ -241,18 +245,32 @@ export function useFileExchange(options: UseFileExchangeOptions) {
     cancelCommand()
     error.value = ''
     const body = selectedBody.value
-    if (!body) { error.value = label('Выберите тело.', 'Select a body.'); return }
-    const generation = bumpHistoryGeneration(), before = document.value, id = body.id
-    const name = body.name || 'body', format = bodyExportFormat.value
-    const current = () => generation === getHistoryGeneration() && !isRestoreDisposed()
-      && props.open && document.value === before && selectedBody.value?.id === id
+    if (!body) {
+      error.value = label('Выберите тело.', 'Select a body.')
+      return
+    }
+    const generation = bumpHistoryGeneration(),
+      before = document.value,
+      id = body.id
+    const name = body.name || 'body',
+      format = bodyExportFormat.value
+    const current = () =>
+      generation === getHistoryGeneration() &&
+      !isRestoreDisposed() &&
+      props.open &&
+      document.value === before &&
+      selectedBody.value?.id === id
     historyMode.value = 'export'
     historyPending.value = true
     workspace.value?.focus()
     try {
       const artifact = await historyWorker.run(
         { kind: 'meshExport', mesh: body.mesh, target: format, options: {} },
-        { onProgress: progress => { if (current()) meshImportProgress.value = progress } },
+        {
+          onProgress: progress => {
+            if (current()) meshImportProgress.value = progress
+          },
+        },
       )
       if (!current()) return
       historyPending.value = false
@@ -294,7 +312,11 @@ export function useFileExchange(options: UseFileExchangeOptions) {
           input: bytes,
           options: { weld: preferences.importWeldEpsilonMm, repair: preferences.importRepair },
         },
-        { onProgress: progress => { if (current()) meshImportProgress.value = progress } },
+        {
+          onProgress: progress => {
+            if (current()) meshImportProgress.value = progress
+          },
+        },
       )
       if (!current()) return
       // Publishing the document must not make its watcher cancel this completed import.

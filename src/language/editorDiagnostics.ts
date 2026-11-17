@@ -27,12 +27,18 @@ export function diagnosticFromBuildError(source: string, error: GeometryBuildErr
   if (error.line === undefined || error.column === undefined) return null
   const start = error.start ?? offsetForLineColumn(source, error.line, error.column)
   if (start === null) return null
-  const end = error.end === undefined
-    ? Math.min(source.length, start + Math.max(1, source.slice(start).match(/^[\p{L}\p{N}_$]+/u)?.[0].length ?? 1))
-    : Math.max(start, Math.min(source.length, error.end))
+  const end =
+    error.end === undefined
+      ? Math.min(source.length, start + Math.max(1, source.slice(start).match(/^[\p{L}\p{N}_$]+/u)?.[0].length ?? 1))
+      : Math.max(start, Math.min(source.length, error.end))
   return {
-    severity: 'error', message: error.message, code: error.code,
-    line: error.line, column: error.column, start, end,
+    severity: 'error',
+    message: error.message,
+    code: error.code,
+    line: error.line,
+    column: error.column,
+    start,
+    end,
   }
 }
 

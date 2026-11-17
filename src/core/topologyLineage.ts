@@ -73,19 +73,13 @@ const PREFIX: Readonly<Record<TopoKind, string>> = Object.freeze({
   'control-point': 'cp',
 })
 const ID = /^(v|e|l|f|s|b|cp):[0-9a-f]{32}$/
-const CHANGE_KINDS = new Set<ChangeKind>([
-  'persisted', 'generated', 'modified', 'split', 'merge', 'deleted',
-])
+const CHANGE_KINDS = new Set<ChangeKind>(['persisted', 'generated', 'modified', 'split', 'merge', 'deleted'])
 
 export function isTopoId(value: unknown): value is TopoId {
   return typeof value === 'string' && ID.test(value)
 }
 
-export function topoIdFromParts(
-  high: bigint | number,
-  low: bigint | number,
-  kind: TopoKind = 'face',
-): TopoId {
+export function topoIdFromParts(high: bigint | number, low: bigint | number, kind: TopoKind = 'face'): TopoId {
   const hi = BigInt(high)
   const lo = BigInt(low)
   if (hi < 0n || hi > 0xffffffffffffffffn || lo < 0n || lo > 0xffffffffffffffffn) {
@@ -119,10 +113,7 @@ function freezeChange(change: TopologyChange): TopologyChange {
   })
 }
 
-function validateChange(
-  change: TopologyChange,
-  kinds: ReadonlyMap<TopoId, TopoKind>,
-): void {
+function validateChange(change: TopologyChange, kinds: ReadonlyMap<TopoId, TopoKind>): void {
   exactKeys(change, ['kind', 'topoKind', 'parents', 'children', 'provenance', 'role', 'anchor'], 'Change')
   exactKeys(change.provenance, ['operation', 'operand', 'occurrence'], 'Change provenance')
   if (!CHANGE_KINDS.has(change.kind)) throw new Error('Unknown topology change kind')
@@ -141,25 +132,24 @@ function validateChange(
   if (parents.size !== change.parents.length || children.size !== change.children.length) {
     throw new Error('Topology change endpoints must be unique')
   }
-  const cardinality = (
-    ((change.kind === 'persisted' || change.kind === 'modified')
-      && change.parents.length === 1 && change.children.length === 1)
-    || (change.kind === 'generated' && change.parents.length === 0 && change.children.length === 1)
-    || (change.kind === 'split' && change.parents.length === 1 && change.children.length >= 2)
-    || (change.kind === 'merge' && change.parents.length >= 2 && change.children.length === 1)
-    || (change.kind === 'deleted' && change.parents.length === 1 && change.children.length === 0)
-  )
+  const cardinality =
+    ((change.kind === 'persisted' || change.kind === 'modified') &&
+      change.parents.length === 1 &&
+      change.children.length === 1) ||
+    (change.kind === 'generated' && change.parents.length === 0 && change.children.length === 1) ||
+    (change.kind === 'split' && change.parents.length === 1 && change.children.length >= 2) ||
+    (change.kind === 'merge' && change.parents.length >= 2 && change.children.length === 1) ||
+    (change.kind === 'deleted' && change.parents.length === 1 && change.children.length === 0)
   if (!cardinality) throw new Error('Topology change cardinality does not match its kind')
-  const identityOkay = (
-    (change.kind === 'persisted' && change.parents[0] === change.children[0])
-    || (change.kind === 'modified' && change.parents[0] !== change.children[0])
+  const identityOkay =
+    (change.kind === 'persisted' && change.parents[0] === change.children[0]) ||
+    (change.kind === 'modified' && change.parents[0] !== change.children[0]) ||
     // One split branch or merge operand may legitimately retain its ID.
     // Cardinality remains strict and self-edges do not participate in the DAG.
-    || change.kind === 'split'
-    || change.kind === 'merge'
-    || change.kind === 'generated'
-    || change.kind === 'deleted'
-  )
+    change.kind === 'split' ||
+    change.kind === 'merge' ||
+    change.kind === 'generated' ||
+    change.kind === 'deleted'
   if (!identityOkay) throw new Error('Topology change identity overlap does not match its kind')
   for (const id of [...change.parents, ...change.children]) {
     requireId(id, 'change endpoint', change.topoKind)
@@ -170,12 +160,13 @@ function validateChange(
 function assertAcyclic(nodes: Iterable<TopoId>, changes: readonly TopologyChange[]): void {
   const edges = new Map<TopoId, Set<TopoId>>()
   for (const change of changes) {
-    for (const parent of change.parents) for (const child of change.children) {
-      if (parent === child) continue
-      const outgoing = edges.get(parent) ?? new Set<TopoId>()
-      outgoing.add(child)
-      edges.set(parent, outgoing)
-    }
+    for (const parent of change.parents)
+      for (const child of change.children) {
+        if (parent === child) continue
+        const outgoing = edges.get(parent) ?? new Set<TopoId>()
+        outgoing.add(child)
+        edges.set(parent, outgoing)
+      }
   }
   const visiting = new Set<TopoId>()
   const visited = new Set<TopoId>()
@@ -303,8 +294,7 @@ export class TopologyLineage {
       lineage.changes.push(freezeChange(change))
     }
     assertAcyclic(lineage.kinds.keys(), lineage.changes)
-    if (snapshot.selection !== null
-      && (!isTopoId(snapshot.selection) || !lineage.kinds.has(snapshot.selection))) {
+    if (snapshot.selection !== null && (!isTopoId(snapshot.selection) || !lineage.kinds.has(snapshot.selection))) {
       throw new Error('Topology snapshot selection is invalid')
     }
     const body = JSON.stringify({
@@ -343,10 +333,7 @@ export class TopologyLineage {
   }
 }
 
-export function nativeEdgeReference(
-  artifact: NativeGeometryArtifact,
-  edgeId: TopoId,
-): NativeEdgeReference {
+export function nativeEdgeReference(artifact: NativeGeometryArtifact, edgeId: TopoId): NativeEdgeReference {
   requireId(edgeId, 'native edge', 'edge')
   return Object.freeze({
     nodeId: artifact.nodeId,
@@ -369,15 +356,13 @@ export function nativeControlPointReference(
   })
 }
 
-export function assertNativeEdgeCurrent(
-  artifact: NativeGeometryArtifact,
-  reference: NativeEdgeReference,
-): void {
+export function assertNativeEdgeCurrent(artifact: NativeGeometryArtifact, reference: NativeEdgeReference): void {
   if (
-    reference.nodeId !== artifact.nodeId
-    || reference.kind !== artifact.kind
-    || reference.revision !== artifact.revision
-  ) throw new Error('Native geometry edge selection is stale')
+    reference.nodeId !== artifact.nodeId ||
+    reference.kind !== artifact.kind ||
+    reference.revision !== artifact.revision
+  )
+    throw new Error('Native geometry edge selection is stale')
 }
 
 export function assertNativeControlPointCurrent(
@@ -385,8 +370,9 @@ export function assertNativeControlPointCurrent(
   reference: NativeControlPointReference,
 ): void {
   if (
-    reference.nodeId !== artifact.nodeId
-    || reference.kind !== artifact.kind
-    || reference.revision !== artifact.revision
-  ) throw new Error('Native geometry control-point selection is stale')
+    reference.nodeId !== artifact.nodeId ||
+    reference.kind !== artifact.kind ||
+    reference.revision !== artifact.revision
+  )
+    throw new Error('Native geometry control-point selection is stale')
 }

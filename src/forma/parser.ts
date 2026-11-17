@@ -54,9 +54,7 @@ interface Token {
 }
 
 function tokenize(source: string): Token[] {
-  const cleaned = source
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .replace(/(^|[^:])\/\/.*$/gm, '$1 ')
+  const cleaned = source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1 ')
   const tokens: Token[] = []
   let i = 0
   while (i < cleaned.length) {
@@ -145,11 +143,7 @@ function readRawExpression(tokens: Token[], cursor: { idx: number }): string {
         if (tok.value === ';' || tok.value === ',') cursor.idx++
         break
       }
-      if (
-        tok.kind === 'ident' &&
-        expr.trim().length > 0 &&
-        !/[?:+\-*/|&=!<>]$/.test(expr.trim())
-      ) {
+      if (tok.kind === 'ident' && expr.trim().length > 0 && !/[?:+\-*/|&=!<>]$/.test(expr.trim())) {
         const next = tokens[cursor.idx + 1]
         if (
           next &&
@@ -215,11 +209,7 @@ function parseActionTarget(raw: string): FormaActionCall {
   return { name, args }
 }
 
-function parseBlockChildren(
-  tokens: Token[],
-  cursor: { idx: number },
-  comp?: FormaComponentAst,
-): FormaAstNode[] {
+function parseBlockChildren(tokens: Token[], cursor: { idx: number }, comp?: FormaComponentAst): FormaAstNode[] {
   const nodes: FormaAstNode[] = []
   while (cursor.idx < tokens.length) {
     const tok = tokens[cursor.idx]!
@@ -356,11 +346,7 @@ function parseBlockChildren(
   return nodes
 }
 
-function parseElementBody(
-  type: string,
-  tokens: Token[],
-  cursor: { idx: number },
-): FormaElementNode {
+function parseElementBody(type: string, tokens: Token[], cursor: { idx: number }): FormaElementNode {
   const props: Record<string, string> = {}
   const bindings: Record<string, string> = {}
   const actions: Record<string, FormaActionCall> = {}

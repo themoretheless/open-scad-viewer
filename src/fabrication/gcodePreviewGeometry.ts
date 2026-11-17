@@ -35,8 +35,12 @@ export function computeGcodeLayerSummary(moves: readonly GcodePreviewMove[]): Gc
   let travelMoves = 0
   let printDistanceMm = 0
   let travelDistanceMm = 0
-  let minX = Infinity, minY = Infinity, minZ = Infinity
-  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity
+  let minX = Infinity,
+    minY = Infinity,
+    minZ = Infinity
+  let maxX = -Infinity,
+    maxY = -Infinity,
+    maxZ = -Infinity
 
   for (let i = 0; i < moves.length; i++) {
     const move = moves[i]!
@@ -77,27 +81,47 @@ export function computeGcodeLayerSummary(moves: readonly GcodePreviewMove[]): Gc
   }
 }
 
-export interface GcodeMeshBounds { min: [number, number, number]; max: [number, number, number] }
+export interface GcodeMeshBounds {
+  min: [number, number, number]
+  max: [number, number, number]
+}
 /** Exact bounds in scene coordinates, without materializing a second mesh. */
 export function gcodeMeshBounds(mesh: GcodeSceneMesh): GcodeMeshBounds {
-  const transform = mesh.transform, vertices = mesh.vertices, indices = mesh.indices
+  const transform = mesh.transform,
+    vertices = mesh.vertices,
+    indices = mesh.indices
   if (transform.length !== 16 || vertices.length % 6 || !indices.length) throw new Error('Invalid scene mesh.')
   for (let i = 0; i < 16; i++) {
     if (!Number.isFinite(transform[i])) throw new Error('Invalid scene mesh.')
   }
   const vertexCount = vertices.length / 6
   const visited = new Uint8Array(vertexCount)
-  const m0 = transform[0] ?? NaN, m1 = transform[1] ?? NaN, m2 = transform[2] ?? NaN, m3 = transform[3] ?? NaN
-  const m4 = transform[4] ?? NaN, m5 = transform[5] ?? NaN, m6 = transform[6] ?? NaN, m7 = transform[7] ?? NaN
-  const m8 = transform[8] ?? NaN, m9 = transform[9] ?? NaN, m10 = transform[10] ?? NaN, m11 = transform[11] ?? NaN
-  let minX = Infinity, minY = Infinity, minZ = Infinity
-  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity
+  const m0 = transform[0] ?? NaN,
+    m1 = transform[1] ?? NaN,
+    m2 = transform[2] ?? NaN,
+    m3 = transform[3] ?? NaN
+  const m4 = transform[4] ?? NaN,
+    m5 = transform[5] ?? NaN,
+    m6 = transform[6] ?? NaN,
+    m7 = transform[7] ?? NaN
+  const m8 = transform[8] ?? NaN,
+    m9 = transform[9] ?? NaN,
+    m10 = transform[10] ?? NaN,
+    m11 = transform[11] ?? NaN
+  let minX = Infinity,
+    minY = Infinity,
+    minZ = Infinity
+  let maxX = -Infinity,
+    maxY = -Infinity,
+    maxZ = -Infinity
   for (const index of indices) {
     if (index >= vertexCount) throw new Error('Mesh contains an invalid vertex index.')
     if (visited[index]) continue
     visited[index] = 1
     const vo = index * 6
-    const vx = vertices[vo] ?? NaN, vy = vertices[vo + 1] ?? NaN, vz = vertices[vo + 2] ?? NaN
+    const vx = vertices[vo] ?? NaN,
+      vy = vertices[vo + 1] ?? NaN,
+      vz = vertices[vo + 2] ?? NaN
     const wx = m0 * vx + m1 * vy + m2 * vz + m3
     const wy = m4 * vx + m5 * vy + m6 * vz + m7
     const wz = m8 * vx + m9 * vy + m10 * vz + m11
@@ -115,11 +139,16 @@ export function gcodeMeshBounds(mesh: GcodeSceneMesh): GcodeMeshBounds {
 }
 
 /** Binary search avoids rescanning all moves each time the layer slider changes. */
-export function gcodeLayerRange(preview: GcodePreviewResult, layerIndex: number): { start: number; end: number; z: number | null } {
+export function gcodeLayerRange(
+  preview: GcodePreviewResult,
+  layerIndex: number,
+): { start: number; end: number; z: number | null } {
   // Read packed rows directly: no per-move objects on the slider hot path.
-  const rows = gcodePreviewMoveRows(preview), moveCount = rows.length / GCODE_MOVE_ROW_WIDTH
+  const rows = gcodePreviewMoveRows(preview),
+    moveCount = rows.length / GCODE_MOVE_ROW_WIDTH
   const lowerBound = (layer: number) => {
-    let left = 0, right = moveCount
+    let left = 0,
+      right = moveCount
     while (left < right) {
       const middle = Math.floor((left + right) / 2)
       if ((rows[middle * GCODE_MOVE_ROW_WIDTH + 5] ?? NaN) < layer) left = middle + 1
@@ -127,20 +156,32 @@ export function gcodeLayerRange(preview: GcodePreviewResult, layerIndex: number)
     }
     return left
   }
-  const start = lowerBound(layerIndex), end = lowerBound(layerIndex + 1)
-  return { start, end, z: start < end ? rows[start * GCODE_MOVE_ROW_WIDTH + 2] ?? null : null }
+  const start = lowerBound(layerIndex),
+    end = lowerBound(layerIndex + 1)
+  return { start, end, z: start < end ? (rows[start * GCODE_MOVE_ROW_WIDTH + 2] ?? null) : null }
 }
 
-export function drawGcodeLayer(canvas: HTMLCanvasElement, preview: GcodePreviewResult, layerIndex: number, showTravel: boolean) {
-  const context = canvas.getContext('2d'), bounds = preview.bounds
+export function drawGcodeLayer(
+  canvas: HTMLCanvasElement,
+  preview: GcodePreviewResult,
+  layerIndex: number,
+  showTravel: boolean,
+) {
+  const context = canvas.getContext('2d'),
+    bounds = preview.bounds
   if (!context) return
-  const size = 600, padding = 34
-  canvas.width = size; canvas.height = size
-  context.fillStyle = '#101922'; context.fillRect(0, 0, size, size)
+  const size = 600,
+    padding = 34
+  canvas.width = size
+  canvas.height = size
+  context.fillStyle = '#101922'
+  context.fillRect(0, 0, size, size)
   if (!bounds) return
-  const spanX = Math.max(bounds.max[0] - bounds.min[0], 0.1), spanY = Math.max(bounds.max[1] - bounds.min[1], 0.1)
+  const spanX = Math.max(bounds.max[0] - bounds.min[0], 0.1),
+    spanY = Math.max(bounds.max[1] - bounds.min[1], 0.1)
   const scale = Math.min((size - padding * 2) / spanX, (size - padding * 2) / spanY)
-  const offsetX = (size - spanX * scale) / 2, offsetY = (size - spanY * scale) / 2
+  const offsetX = (size - spanX * scale) / 2,
+    offsetY = (size - spanY * scale) / 2
   const x = (value: number) => offsetX + (value - bounds.min[0]) * scale
   const y = (value: number) => size - offsetY - (value - bounds.min[1]) * scale
   const range = gcodeLayerRange(preview, layerIndex)
@@ -149,19 +190,26 @@ export function drawGcodeLayer(canvas: HTMLCanvasElement, preview: GcodePreviewR
     if (!extrusion && !showTravel) continue
     context.beginPath()
     for (let index = Math.max(1, range.start); index < range.end; index++) {
-      const current = index * GCODE_MOVE_ROW_WIDTH, previous = current - GCODE_MOVE_ROW_WIDTH
+      const current = index * GCODE_MOVE_ROW_WIDTH,
+        previous = current - GCODE_MOVE_ROW_WIDTH
       if ((rows[current + 6] === 1) !== extrusion) continue
-      context.moveTo(x(rows[previous] ?? NaN), y(rows[previous + 1] ?? NaN)); context.lineTo(x(rows[current] ?? NaN), y(rows[current + 1] ?? NaN))
+      context.moveTo(x(rows[previous] ?? NaN), y(rows[previous + 1] ?? NaN))
+      context.lineTo(x(rows[current] ?? NaN), y(rows[current + 1] ?? NaN))
     }
     context.strokeStyle = extrusion ? '#5bcbff' : '#e8ad61'
     context.lineWidth = extrusion ? 2 : 1.2
-    context.setLineDash(extrusion ? [] : [5, 5]); context.stroke()
+    context.setLineDash(extrusion ? [] : [5, 5])
+    context.stroke()
   }
   context.setLineDash([])
-  context.fillStyle = '#becbd7'; context.font = '19px sans-serif'
+  context.fillStyle = '#becbd7'
+  context.font = '19px sans-serif'
   context.fillText(`X ${bounds.min[0].toFixed(2)} … ${bounds.max[0].toFixed(2)} mm`, padding, size - 10)
-  context.save(); context.translate(20, size - padding); context.rotate(-Math.PI / 2)
-  context.fillText(`Y ${bounds.min[1].toFixed(2)} … ${bounds.max[1].toFixed(2)} mm`, 0, 0); context.restore()
+  context.save()
+  context.translate(20, size - padding)
+  context.rotate(-Math.PI / 2)
+  context.fillText(`Y ${bounds.min[1].toFixed(2)} … ${bounds.max[1].toFixed(2)} mm`, 0, 0)
+  context.restore()
 }
 
 export interface GcodePrintabilityAudit {
@@ -327,4 +375,3 @@ export function auditGcodePrintability(gcodeText: string): GcodePrintabilityAudi
     zHopCount,
   }
 }
-

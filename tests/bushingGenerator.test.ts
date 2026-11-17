@@ -1,9 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import {
-  BUSHING_DEFAULTS,
-  computeBushingParameterSuggestions,
-  generateBushing,
-} from '../src/app/bushingGenerator'
+import { BUSHING_DEFAULTS, computeBushingParameterSuggestions, generateBushing } from '../src/app/bushingGenerator'
 import { extractCustomizerParameters } from '../src/language/scadCustomizer'
 import { extractSemanticEdges } from '../src/kernel/meshTopology'
 import { GeometryBuildEngine } from '../src/kernel/geometryBuildEngine'
@@ -112,14 +108,43 @@ describe('threaded bushing generator', () => {
   }, 120000)
 
   it('rejects impossible walls, invalid flange dimensions, and out-of-bounds cuts', () => {
-    expect(() => generateBushing({ ...BUSHING_DEFAULTS, inner_diameter: 20, outer_diameter: 22 })).toThrow(/стенки|wall/)
-    expect(() => generateBushing({ ...BUSHING_DEFAULTS, thread_mode: 3, length: 18, thread_section_length: 10 })).toThrow(/Длина|length/)
-    expect(() => generateBushing({ ...BUSHING_DEFAULTS, thread_mode: 0, auto_thread_std: false, inner_diameter: 3, inner_pitch: 2 })).toThrow(/шага|pitch/)
-    expect(() => generateBushing({ ...BUSHING_DEFAULTS, flange: true, flange_diameter: 18, outer_diameter: 22 })).toThrow(/буртика|flange_diameter/)
-    expect(() => generateBushing({ ...BUSHING_DEFAULTS, flange: true, flange_holes: 4, flange_diameter: 24, outer_diameter: 22, flange_hole_diameter: 3 })).toThrow(/отверстия|holes/)
-    expect(() => generateBushing({ ...BUSHING_DEFAULTS, thread_mode: 0, blind_bottom: 39.5, length: 40 })).toThrow(/глухого|blind_bottom/)
-    expect(() => generateBushing({ ...BUSHING_DEFAULTS, cross_hole_diameter: 4, cross_hole_z: 1.5 })).toThrow(/Поперечное|Cross-hole/)
-    expect(() => generateBushing({ ...BUSHING_DEFAULTS, split_slot_width: 11.5, inner_diameter: 12 })).toThrow(/разреза|split_slot_width/)
+    expect(() => generateBushing({ ...BUSHING_DEFAULTS, inner_diameter: 20, outer_diameter: 22 })).toThrow(
+      /стенки|wall/,
+    )
+    expect(() =>
+      generateBushing({ ...BUSHING_DEFAULTS, thread_mode: 3, length: 18, thread_section_length: 10 }),
+    ).toThrow(/Длина|length/)
+    expect(() =>
+      generateBushing({
+        ...BUSHING_DEFAULTS,
+        thread_mode: 0,
+        auto_thread_std: false,
+        inner_diameter: 3,
+        inner_pitch: 2,
+      }),
+    ).toThrow(/шага|pitch/)
+    expect(() =>
+      generateBushing({ ...BUSHING_DEFAULTS, flange: true, flange_diameter: 18, outer_diameter: 22 }),
+    ).toThrow(/буртика|flange_diameter/)
+    expect(() =>
+      generateBushing({
+        ...BUSHING_DEFAULTS,
+        flange: true,
+        flange_holes: 4,
+        flange_diameter: 24,
+        outer_diameter: 22,
+        flange_hole_diameter: 3,
+      }),
+    ).toThrow(/отверстия|holes/)
+    expect(() => generateBushing({ ...BUSHING_DEFAULTS, thread_mode: 0, blind_bottom: 39.5, length: 40 })).toThrow(
+      /глухого|blind_bottom/,
+    )
+    expect(() => generateBushing({ ...BUSHING_DEFAULTS, cross_hole_diameter: 4, cross_hole_z: 1.5 })).toThrow(
+      /Поперечное|Cross-hole/,
+    )
+    expect(() => generateBushing({ ...BUSHING_DEFAULTS, split_slot_width: 11.5, inner_diameter: 12 })).toThrow(
+      /разреза|split_slot_width/,
+    )
   })
 
   it('suggests matching outer diameter, standard metric pitch and FDM clearance when inner diameter increases', () => {

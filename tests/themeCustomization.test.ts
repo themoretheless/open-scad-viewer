@@ -13,7 +13,18 @@ describe('theme customization', () => {
     expect(customizeTokens(THEME_CATALOG[0].tokens, { accent: null, base: null })).toEqual({})
   })
 
-  it.each(['#101010', '#2a1f14', '#ffffff', '#f2e8d5', '#808080', '#757575', '#707070', '#6e6e6e', '#7a7a7a', '#777777'])('keeps core contrast for base %s with an awkward accent', base => {
+  it.each([
+    '#101010',
+    '#2a1f14',
+    '#ffffff',
+    '#f2e8d5',
+    '#808080',
+    '#757575',
+    '#707070',
+    '#6e6e6e',
+    '#7a7a7a',
+    '#777777',
+  ])('keeps core contrast for base %s with an awkward accent', base => {
     const tokens = customizeTokens(THEME_CATALOG[0].tokens, { accent: '#3a3a3a', base })
     expect(contrastRatio(tokens['--text'], tokens['--bg'])).toBeGreaterThanOrEqual(4.5)
     expect(contrastRatio(tokens['--text-dim'], tokens['--surface'])).toBeGreaterThanOrEqual(4.5)

@@ -29,46 +29,44 @@ const productionRuntimeFiles: readonly SourceFile[] = [
   },
 ]
 
-const productionServer = productionRuntimeFiles.find(
-  file => file.name === 'src/mcp/server.ts',
-)!
-const directWorker = productionRuntimeFiles.find(
-  file => file.name === 'src/mcp/directGeometry.worker.ts',
-)!
-const directSupervisor = productionRuntimeFiles.find(
-  file => file.name === 'src/mcp/directGeometrySupervisor.ts',
-)!
+const productionServer = productionRuntimeFiles.find(file => file.name === 'src/mcp/server.ts')!
+const directWorker = productionRuntimeFiles.find(file => file.name === 'src/mcp/directGeometry.worker.ts')!
+const directSupervisor = productionRuntimeFiles.find(file => file.name === 'src/mcp/directGeometrySupervisor.ts')!
 
 const qualificationOnlyModule = /(?:manifoldPlanQualification(?:Supervisor|Protocol|\.worker)|manifoldPlanEvaluator)/u
-const forbiddenDirectWorkerModule = /(?:duckdb|@modelcontextprotocol|(?:^|\/)(?:bounded|mcp)[^/]*transport(?:\.[cm]?[jt]s)?$|^(?:node:)?(?:fs(?:\/promises)?|net|tls|dgram|dns(?:\/promises)?|http|https|http2|child_process|cluster)$)/iu
+const forbiddenDirectWorkerModule =
+  /(?:duckdb|@modelcontextprotocol|(?:^|\/)(?:bounded|mcp)[^/]*transport(?:\.[cm]?[jt]s)?$|^(?:node:)?(?:fs(?:\/promises)?|net|tls|dgram|dns(?:\/promises)?|http|https|http2|child_process|cluster)$)/iu
 
 function staticImports(source: string): StaticImport[] {
-  return [...source.matchAll(/\bimport\s+([\s\S]*?)\s+from\s+(['"])([^'"]+)\2/gu)]
-    .map(match => ({ bindings: match[1], specifier: match[3] }))
+  return [...source.matchAll(/\bimport\s+([\s\S]*?)\s+from\s+(['"])([^'"]+)\2/gu)].map(match => ({
+    bindings: match[1],
+    specifier: match[3],
+  }))
 }
 
 function importedSpecifiers(source: string): string[] {
   const fromImports = staticImports(source).map(item => item.specifier)
-  const reExports = [...source.matchAll(/\bexport\s+[\s\S]*?\s+from\s+(['"])([^'"]+)\1/gu)]
-    .map(match => match[2])
-  const sideEffectImports = [...source.matchAll(/\bimport\s+(['"])([^'"]+)\1/gu)]
-    .map(match => match[2])
-  const dynamicImports = [...source.matchAll(/\bimport\s*\(\s*(['"])([^'"]+)\1\s*\)/gu)]
-    .map(match => match[2])
-  const workerUrls = [...source.matchAll(
-    /\bnew\s+URL\s*\(\s*(['"])([^'"]+)\1\s*,\s*import\.meta\.url\s*\)/gu,
-  )].map(match => match[2])
+  const reExports = [...source.matchAll(/\bexport\s+[\s\S]*?\s+from\s+(['"])([^'"]+)\1/gu)].map(match => match[2])
+  const sideEffectImports = [...source.matchAll(/\bimport\s+(['"])([^'"]+)\1/gu)].map(match => match[2])
+  const dynamicImports = [...source.matchAll(/\bimport\s*\(\s*(['"])([^'"]+)\1\s*\)/gu)].map(match => match[2])
+  const workerUrls = [...source.matchAll(/\bnew\s+URL\s*\(\s*(['"])([^'"]+)\1\s*,\s*import\.meta\.url\s*\)/gu)].map(
+    match => match[2],
+  )
   return [...fromImports, ...reExports, ...sideEffectImports, ...dynamicImports, ...workerUrls]
 }
 
-async function readSources(files: readonly SourceFile[]): Promise<Array<{
-  readonly name: string
-  readonly source: string
-}>> {
-  return Promise.all(files.map(async file => ({
-    name: file.name,
-    source: await readFile(file.url, 'utf8'),
-  })))
+async function readSources(files: readonly SourceFile[]): Promise<
+  Array<{
+    readonly name: string
+    readonly source: string
+  }>
+> {
+  return Promise.all(
+    files.map(async file => ({
+      name: file.name,
+      source: await readFile(file.url, 'utf8'),
+    })),
+  )
 }
 
 async function resolveRelativeSource(from: URL, specifier: string): Promise<URL | null> {
@@ -93,11 +91,13 @@ async function resolveRelativeSource(from: URL, specifier: string): Promise<URL 
   return null
 }
 
-async function transitiveSourceClosure(entry: SourceFile): Promise<Array<{
-  readonly name: string
-  readonly source: string
-  readonly imports: string[]
-}>> {
+async function transitiveSourceClosure(entry: SourceFile): Promise<
+  Array<{
+    readonly name: string
+    readonly source: string
+    readonly imports: string[]
+  }>
+> {
   const pending = [entry.url]
   const seen = new Set<string>()
   const files: Array<{ name: string; source: string; imports: string[] }> = []
@@ -123,9 +123,7 @@ async function transitiveSourceClosure(entry: SourceFile): Promise<Array<{
 describe('MCP production geometry isolation contract', () => {
   it('keeps qualification-only modules out of every production entry point and runtime file', async () => {
     for (const file of await readSources(productionRuntimeFiles)) {
-      const forbidden = importedSpecifiers(file.source).filter(
-        specifier => qualificationOnlyModule.test(specifier),
-      )
+      const forbidden = importedSpecifiers(file.source).filter(specifier => qualificationOnlyModule.test(specifier))
       expect(forbidden, file.name).toEqual([])
     }
   })
@@ -133,10 +131,11 @@ describe('MCP production geometry isolation contract', () => {
   it('keeps the direct worker on the default engine without storage, transport, or I/O imports', async () => {
     const source = await readFile(directWorker.url, 'utf8')
     const imports = staticImports(source)
-    const engineImports = imports.filter(item => (
-      /\bdefaultGeometryBuildEngine\b/u.test(item.bindings)
-      && /(?:^|\/)geometryBuildEngine(?:\.[cm]?[jt]s)?$/u.test(item.specifier)
-    ))
+    const engineImports = imports.filter(
+      item =>
+        /\bdefaultGeometryBuildEngine\b/u.test(item.bindings) &&
+        /(?:^|\/)geometryBuildEngine(?:\.[cm]?[jt]s)?$/u.test(item.specifier),
+    )
 
     expect(engineImports, directWorker.name).toHaveLength(1)
     expect(
@@ -147,12 +146,14 @@ describe('MCP production geometry isolation contract', () => {
 
   it('keeps the complete direct worker dependency graph free of host I/O and secrets', async () => {
     const closure = await transitiveSourceClosure(directWorker)
-    expect(closure.map(file => file.name)).toEqual(expect.arrayContaining([
-      'src/mcp/directGeometry.worker.ts',
-      'src/mcp/directGeometryProtocol.ts',
-      'src/kernel/geometryBuildEngine.ts',
-      'src/language/openscadParser.ts',
-    ]))
+    expect(closure.map(file => file.name)).toEqual(
+      expect.arrayContaining([
+        'src/mcp/directGeometry.worker.ts',
+        'src/mcp/directGeometryProtocol.ts',
+        'src/kernel/geometryBuildEngine.ts',
+        'src/language/openscadParser.ts',
+      ]),
+    )
     for (const file of closure) {
       expect(
         file.imports.filter(specifier => forbiddenDirectWorkerModule.test(specifier)),
@@ -163,9 +164,7 @@ describe('MCP production geometry isolation contract', () => {
         file.name,
       ).toEqual([])
       expect(file.source, file.name).not.toMatch(/\bprocess\s*\.\s*env\b/u)
-      expect(file.source, file.name).not.toMatch(
-        /\b(?:globalThis\s*\.\s*)?(?:fetch|WebSocket|EventSource)\s*\(/u,
-      )
+      expect(file.source, file.name).not.toMatch(/\b(?:globalThis\s*\.\s*)?(?:fetch|WebSocket|EventSource)\s*\(/u)
     }
   })
 
@@ -179,10 +178,14 @@ describe('MCP production geometry isolation contract', () => {
     const source = await readFile(productionServer.url, 'utf8')
     const imports = staticImports(source)
 
-    expect(imports.filter(item => (
-      /\bDirectGeometrySupervisor\b/u.test(item.bindings)
-      && /(?:^|\/)directGeometrySupervisor(?:\.[cm]?[jt]s)?$/u.test(item.specifier)
-    )), productionServer.name).toHaveLength(1)
+    expect(
+      imports.filter(
+        item =>
+          /\bDirectGeometrySupervisor\b/u.test(item.bindings) &&
+          /(?:^|\/)directGeometrySupervisor(?:\.[cm]?[jt]s)?$/u.test(item.specifier),
+      ),
+      productionServer.name,
+    ).toHaveLength(1)
     expect(source, productionServer.name).toMatch(
       /createGeometryRuntime:\s*\(\)\s*=>\s*new\s+DirectGeometrySupervisor\s*\(\s*\)/u,
     )

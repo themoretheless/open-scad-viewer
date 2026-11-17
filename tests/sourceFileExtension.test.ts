@@ -10,7 +10,6 @@ it('names Rush documents .r and OpenSCAD documents .scad', () => {
   expect(withSourceExtension('part', 'cube(1);')).toBe('part.scad')
 })
 
-
 it('recognizes Rush headers and preserves .r filenames', () => {
   expect(sourceFileExtension('// @rush/1\nshow sphere(10mm)')).toBe('.r')
   expect(sourceFileExtension('// @rush\nshow sphere(10mm)')).toBe('.r')

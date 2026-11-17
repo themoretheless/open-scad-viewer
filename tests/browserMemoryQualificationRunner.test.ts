@@ -26,21 +26,15 @@ import {
   inspectQualificationPlaywrightPackage,
 } from '../scripts/qualificationPlaywrightPackage.mjs'
 
-function processRecord(
-  pid: number,
-  parentPid: number,
-  rssBytes: number,
-  command: string,
-) {
+function processRecord(pid: number, parentPid: number, rssBytes: number, command: string) {
   return Object.freeze({ pid, parentPid, rssBytes, command })
 }
 
 describe('G1 actual-browser memory qualification runner', () => {
   it('matches the frozen plan row without closing actual-run evidence', () => {
-    const plan = JSON.parse(readFileSync(resolve(
-      import.meta.dirname,
-      '../docs/qualification/semantic-manifold-g1-plan-v3.json',
-    ), 'utf8')) as {
+    const plan = JSON.parse(
+      readFileSync(resolve(import.meta.dirname, '../docs/qualification/semantic-manifold-g1-plan-v3.json'), 'utf8'),
+    ) as {
       matrix: Array<{ id: string; harness: { command: string }; evidenceState: string }>
       resourceBudgets: {
         memoryExperiments: Array<{
@@ -57,12 +51,12 @@ describe('G1 actual-browser memory qualification runner', () => {
       unresolvedRows: Array<{ id: string }>
     }
     const row = plan.matrix.find(item => item.id === 'browser-memory-slope')
-    const budget = plan.resourceBudgets.memoryExperiments
-      .find(item => item.id === 'browser-worker-cycle')
+    const budget = plan.resourceBudgets.memoryExperiments.find(item => item.id === 'browser-worker-cycle')
     expect(row).toMatchObject({
       evidenceState: 'not-executed-clean-post-freeze',
       harness: {
-        command: 'node scripts/run-manifold-g1-memory-qualification.mjs --surface browser --browser <chromium|firefox|webkit> --cycles 500 --warmup 50 --sample-every 25 --run-index <1|2|3>',
+        command:
+          'node scripts/run-manifold-g1-memory-qualification.mjs --surface browser --browser <chromium|firefox|webkit> --cycles 500 --warmup 50 --sample-every 25 --run-index <1|2|3>',
       },
     })
     expect(budget).toMatchObject({
@@ -78,14 +72,22 @@ describe('G1 actual-browser memory qualification runner', () => {
   })
 
   it('accepts only the frozen one-engine browser contract', () => {
-    expect(parseBrowserMemoryArguments([
-      '--surface', 'browser',
-      '--browser', 'chromium',
-      '--warmup', '50',
-      '--cycles', '500',
-      '--sample-every', '25',
-      '--run-index', '2',
-    ])).toEqual({
+    expect(
+      parseBrowserMemoryArguments([
+        '--surface',
+        'browser',
+        '--browser',
+        'chromium',
+        '--warmup',
+        '50',
+        '--cycles',
+        '500',
+        '--sample-every',
+        '25',
+        '--run-index',
+        '2',
+      ]),
+    ).toEqual({
       surface: 'browser',
       browser: 'chromium',
       warmupJobs: 50,
@@ -93,18 +95,18 @@ describe('G1 actual-browser memory qualification runner', () => {
       sampleEveryJobs: 25,
       runIndex: 2,
     })
-    expect(() => parseBrowserMemoryArguments([
-      '--surface', 'browser', '--browser', 'all',
-    ])).toThrowError(expect.objectContaining({ code: 'E_ARGUMENT' }))
-    expect(() => parseBrowserMemoryArguments([
-      '--surface', 'browser', '--browser', 'firefox', '--cycles', '499',
-    ])).toThrow('parameters are frozen')
-    expect(() => parseBrowserMemoryArguments([
-      '--surface', 'browser', '--browser', 'webkit', '--run-index', '4',
-    ])).toThrow('--run-index must be between 1 and 3')
-    expect(() => parseBrowserMemoryArguments([
-      '--surface', 'browser', '--browser', 'webkit',
-    ])).toThrow('--run-index must be between 1 and 3')
+    expect(() => parseBrowserMemoryArguments(['--surface', 'browser', '--browser', 'all'])).toThrowError(
+      expect.objectContaining({ code: 'E_ARGUMENT' }),
+    )
+    expect(() =>
+      parseBrowserMemoryArguments(['--surface', 'browser', '--browser', 'firefox', '--cycles', '499']),
+    ).toThrow('parameters are frozen')
+    expect(() =>
+      parseBrowserMemoryArguments(['--surface', 'browser', '--browser', 'webkit', '--run-index', '4']),
+    ).toThrow('--run-index must be between 1 and 3')
+    expect(() => parseBrowserMemoryArguments(['--surface', 'browser', '--browser', 'webkit'])).toThrow(
+      '--run-index must be between 1 and 3',
+    )
   })
 
   it('fails closed on every non-local network transport and blocks service-worker bypass', async () => {
@@ -119,14 +121,17 @@ describe('G1 actual-browser memory qualification runner', () => {
       'file:///tmp/fixture.ts',
       'about:blank',
       'wss://127.0.0.1:41731/hmr',
-    ]) expect(isBrowserMemoryNetworkUrlAllowed(blocked, origin)).toBe(false)
+    ])
+      expect(isBrowserMemoryNetworkUrlAllowed(blocked, origin)).toBe(false)
     expect(isBrowserMemoryWebSocketUrlAllowed('ws://127.0.0.1:41731/hmr', origin)).toBe(true)
     expect(isBrowserMemoryWebSocketUrlAllowed('wss://127.0.0.1:41731/hmr', origin)).toBe(false)
 
     let requestHandler: ((route: any) => Promise<void>) | undefined
     let webSocketHandler: ((route: any) => Promise<void>) | undefined
     const context = {
-      route: async (_pattern: string, handler: (route: any) => Promise<void>) => { requestHandler = handler },
+      route: async (_pattern: string, handler: (route: any) => Promise<void>) => {
+        requestHandler = handler
+      },
       routeWebSocket: async (_pattern: string, handler: (route: any) => Promise<void>) => {
         webSocketHandler = handler
       },
@@ -151,19 +156,20 @@ describe('G1 actual-browser memory qualification runner', () => {
   })
 
   it('fails closed when Playwright or the selected browser binary is missing', async () => {
-    await expect(loadPlaywright(async () => {
-      throw new Error('fixture package missing')
-    })).rejects.toMatchObject({
+    await expect(
+      loadPlaywright(async () => {
+        throw new Error('fixture package missing')
+      }),
+    ).rejects.toMatchObject({
       name: 'BrowserMemoryQualificationError',
       code: 'E_PLAYWRIGHT_UNAVAILABLE',
       details: {
         qualificationPackage: 'tools/browser-qualification',
-        installCommand: 'npm ci --prefix tools/browser-qualification --ignore-scripts --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false',
+        installCommand:
+          'npm ci --prefix tools/browser-qualification --ignore-scripts --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false',
       },
     })
-    await expect(assertExecutableBrowserBinary(
-      '/definitely-not-installed/manifold-g1-browser',
-    )).rejects.toMatchObject({
+    await expect(assertExecutableBrowserBinary('/definitely-not-installed/manifold-g1-browser')).rejects.toMatchObject({
       name: 'BrowserMemoryQualificationError',
       code: 'E_BROWSER_BINARY_UNAVAILABLE',
     })
@@ -197,13 +203,16 @@ describe('G1 actual-browser memory qualification runner', () => {
       code: 'E_PLAYWRIGHT_VERSION',
       details: { observedVersion: '1.62.0' },
     })
-    await expect(loadPlaywright(packageLoader('1.62.1')))
-      .resolves.toMatchObject({ playwright: { chromium: browserType } })
-    await expect(loadPlaywright(async () => ({
-      playwright,
-      manifest: { name: 'playwright', version: '1.62.1' },
-      packageMetadata: {},
-    }))).rejects.toMatchObject({ code: 'E_PLAYWRIGHT_PACKAGE_METADATA' })
+    await expect(loadPlaywright(packageLoader('1.62.1'))).resolves.toMatchObject({
+      playwright: { chromium: browserType },
+    })
+    await expect(
+      loadPlaywright(async () => ({
+        playwright,
+        manifest: { name: 'playwright', version: '1.62.1' },
+        packageMetadata: {},
+      })),
+    ).rejects.toMatchObject({ code: 'E_PLAYWRIGHT_PACKAGE_METADATA' })
   })
 
   it('uses the immutable isolated qualification package instead of the product graph', async () => {
@@ -212,7 +221,8 @@ describe('G1 actual-browser memory qualification runner', () => {
       nodeEngine: '>=20.19.0',
       playwrightVersion: '1.62.1',
       relativeRoot: 'tools/browser-qualification',
-      installCommand: 'npm ci --prefix tools/browser-qualification --ignore-scripts --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false',
+      installCommand:
+        'npm ci --prefix tools/browser-qualification --ignore-scripts --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false',
       browserProvisionEnvironment: 'ubuntu-linux-posix',
       packageJsonSha256: '639d9e0c47a413b3d87e86fc0ef6e6aae546034810d475c5f58ff9ce8835b0e4',
       packageLockSha256: '0a2e7f09703398ff090367d55e1f39b88b363e5267126edf699a2e78fedc471f',
@@ -227,11 +237,7 @@ describe('G1 actual-browser memory qualification runner', () => {
 
   it('bounds a wedged page job with a typed outer timeout', async () => {
     const quarantine = new BrowserMemoryLateSettlementQuarantine()
-    await expect(withBrowserJobTimeout(
-      () => new Promise(() => {}),
-      10,
-      quarantine,
-    )).rejects.toMatchObject({
+    await expect(withBrowserJobTimeout(() => new Promise(() => {}), 10, quarantine)).rejects.toMatchObject({
       name: 'BrowserMemoryQualificationError',
       code: 'E_BROWSER_JOB_TIMEOUT',
       details: { timeoutMs: 10, quarantined: true, hardKillJoinClaim: false },
@@ -246,20 +252,19 @@ describe('G1 actual-browser memory qualification runner', () => {
 
   it('cleans late resource acquisitions and reports unjoined acquisitions without a kill claim', async () => {
     let resolveAcquisition!: (value: { close: () => Promise<void> }) => void
-    const acquisition = new Promise<{ close: () => Promise<void> }>((resolvePromise) => {
+    const acquisition = new Promise<{ close: () => Promise<void> }>(resolvePromise => {
       resolveAcquisition = resolvePromise
     })
     const quarantine = new BrowserMemoryLateSettlementQuarantine()
     const close = vi.fn(async () => {})
-    await expect(acquireBrowserMemoryResource(
-      () => acquisition,
-      {
+    await expect(
+      acquireBrowserMemoryResource(() => acquisition, {
         label: 'fixture context',
         timeoutMs: 10,
         quarantine,
-        cleanupLate: (resource) => resource.close(),
-      },
-    )).rejects.toMatchObject({
+        cleanupLate: resource => resource.close(),
+      }),
+    ).rejects.toMatchObject({
       code: 'E_RESOURCE_ACQUISITION_TIMEOUT',
       details: { lateSettlementCleanupArmed: true, hardKillJoinClaim: false },
     })
@@ -278,12 +283,16 @@ describe('G1 actual-browser memory qualification runner', () => {
         {
           label: 'Playwright context',
           code: 'E_BROWSER_CONTEXT_CLEANUP',
-          run: async () => { throw contextFailure },
+          run: async () => {
+            throw contextFailure
+          },
         },
         {
           label: 'Vite server',
           code: 'E_VITE_CLEANUP',
-          run: async () => { throw serverFailure },
+          run: async () => {
+            throw serverFailure
+          },
         },
       ])
     } catch (error) {
@@ -296,24 +305,40 @@ describe('G1 actual-browser memory qualification runner', () => {
       expect.objectContaining({ code: 'E_VITE_CLEANUP' }),
     ])
 
-    await expect(finalizeQualificationCleanup(null, [{
-      label: 'Playwright context',
-      code: 'E_BROWSER_CONTEXT_CLEANUP',
-      run: async () => { throw contextFailure },
-    }])).rejects.toMatchObject({
+    await expect(
+      finalizeQualificationCleanup(null, [
+        {
+          label: 'Playwright context',
+          code: 'E_BROWSER_CONTEXT_CLEANUP',
+          run: async () => {
+            throw contextFailure
+          },
+        },
+      ]),
+    ).rejects.toMatchObject({
       code: 'E_BROWSER_CONTEXT_CLEANUP',
       details: { cause: 'context close failed' },
     })
-    await expect(finalizeQualificationCleanup(null, [
-      { label: 'context', code: 'E_CONTEXT', run: async () => {} },
-      { label: 'server', code: 'E_SERVER', run: async () => {} },
-    ])).resolves.toBeUndefined()
+    await expect(
+      finalizeQualificationCleanup(null, [
+        { label: 'context', code: 'E_CONTEXT', run: async () => {} },
+        { label: 'server', code: 'E_SERVER', run: async () => {} },
+      ]),
+    ).resolves.toBeUndefined()
 
-    await expect(finalizeQualificationCleanup(null, [{
-      label: 'wedged context',
-      code: 'E_CONTEXT_CLEANUP',
-      run: async () => await new Promise(() => {}),
-    }], { timeoutMs: 10 })).rejects.toMatchObject({
+    await expect(
+      finalizeQualificationCleanup(
+        null,
+        [
+          {
+            label: 'wedged context',
+            code: 'E_CONTEXT_CLEANUP',
+            run: async () => await new Promise(() => {}),
+          },
+        ],
+        { timeoutMs: 10 },
+      ),
+    ).rejects.toMatchObject({
       code: 'E_CONTEXT_CLEANUP',
       details: {
         cleanupDeadlineMs: 10,
@@ -344,24 +369,24 @@ describe('G1 actual-browser memory qualification runner', () => {
 
   it('runs 50 warmups and 500 measured jobs but samples only after every 25th settlement', async () => {
     const calls: Array<{ phase: string; job: number }> = []
-    const samples = await collectBrowserMemorySamples({
-      warmupJobs: 50,
-      measuredJobs: 500,
-      sampleEveryJobs: 25,
-    }, async call => {
-      calls.push(call)
-    }, async job => ({
-      rssBytes: 100_000_000 + job * 1_000,
-      processCount: 7,
-    }))
+    const samples = await collectBrowserMemorySamples(
+      {
+        warmupJobs: 50,
+        measuredJobs: 500,
+        sampleEveryJobs: 25,
+      },
+      async call => {
+        calls.push(call)
+      },
+      async job => ({
+        rssBytes: 100_000_000 + job * 1_000,
+        processCount: 7,
+      }),
+    )
     expect(calls).toHaveLength(550)
-    expect(calls.slice(0, 50)).toEqual(
-      Array.from({ length: 50 }, (_, index) => ({ phase: 'warmup', job: index + 1 })),
-    )
+    expect(calls.slice(0, 50)).toEqual(Array.from({ length: 50 }, (_, index) => ({ phase: 'warmup', job: index + 1 })))
     expect(samples).toHaveLength(20)
-    expect(samples.map(sample => sample.job)).toEqual(
-      Array.from({ length: 20 }, (_, index) => (index + 1) * 25),
-    )
+    expect(samples.map(sample => sample.job)).toEqual(Array.from({ length: 20 }, (_, index) => (index + 1) * 25))
     expect(ordinaryLeastSquaresSlope(samples)).toBeCloseTo(1_000, 8)
   })
 
@@ -380,8 +405,7 @@ describe('G1 actual-browser memory qualification runner', () => {
 
     const slopeFailure = exactSlope.map((sample, index) => ({
       ...sample,
-      rssBytes: 200_000_000 + (index + 1) * 25
-        * (BROWSER_MEMORY_CONTRACT.slopeRssBytesPerJobMax + 1),
+      rssBytes: 200_000_000 + (index + 1) * 25 * (BROWSER_MEMORY_CONTRACT.slopeRssBytesPerJobMax + 1),
     }))
     expect(evaluateBrowserMemoryBudget(slopeFailure)).toMatchObject({
       slopePassed: false,
@@ -390,9 +414,10 @@ describe('G1 actual-browser memory qualification runner', () => {
 
     const endpointFailure = exactSlope.map((sample, index) => ({
       ...sample,
-      rssBytes: index === exactSlope.length - 1
-        ? exactSlope[0].rssBytes + BROWSER_MEMORY_CONTRACT.endpointDriftRssBytesMax + 1
-        : exactSlope[0].rssBytes,
+      rssBytes:
+        index === exactSlope.length - 1
+          ? exactSlope[0].rssBytes + BROWSER_MEMORY_CONTRACT.endpointDriftRssBytesMax + 1
+          : exactSlope[0].rssBytes,
     }))
     expect(evaluateBrowserMemoryBudget(endpointFailure)).toMatchObject({
       endpointPassed: false,
@@ -401,9 +426,7 @@ describe('G1 actual-browser memory qualification runner', () => {
   })
 
   it('emits only a single-run fragment and never claims three clean runs or qualification', () => {
-    const config = parseBrowserMemoryArguments([
-      '--surface', 'browser', '--browser', 'webkit', '--run-index', '1',
-    ])
+    const config = parseBrowserMemoryArguments(['--surface', 'browser', '--browser', 'webkit', '--run-index', '1'])
     const samples = [
       { job: 25, rssBytes: 100_000_000, processCount: 3 },
       { job: 50, rssBytes: 100_001_000, processCount: 3 },
@@ -482,13 +505,19 @@ describe('G1 actual-browser memory qualification runner', () => {
   })
 
   it('uses typed failures for invalid sample sets', async () => {
-    expect(() => ordinaryLeastSquaresSlope([{ job: 25, rssBytes: 1, processCount: 1 }]))
-      .toThrowError(BrowserMemoryQualificationError)
-    await expect(collectBrowserMemorySamples({
-      warmupJobs: 1,
-      measuredJobs: 2,
-      sampleEveryJobs: 1,
-    }, async () => {}, async () => ({ rssBytes: -1, processCount: 0 })))
-      .rejects.toMatchObject({ code: 'E_SAMPLE_SET' })
+    expect(() => ordinaryLeastSquaresSlope([{ job: 25, rssBytes: 1, processCount: 1 }])).toThrowError(
+      BrowserMemoryQualificationError,
+    )
+    await expect(
+      collectBrowserMemorySamples(
+        {
+          warmupJobs: 1,
+          measuredJobs: 2,
+          sampleEveryJobs: 1,
+        },
+        async () => {},
+        async () => ({ rssBytes: -1, processCount: 0 }),
+      ),
+    ).rejects.toMatchObject({ code: 'E_SAMPLE_SET' })
   })
 })

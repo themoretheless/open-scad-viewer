@@ -1,4 +1,8 @@
-import { BrepDiagnosticExecutor, type BrepDiagnosticExecutorOptions, type BrepDiagnosticWorkerPort } from './brepDiagnosticExecutor'
+import {
+  BrepDiagnosticExecutor,
+  type BrepDiagnosticExecutorOptions,
+  type BrepDiagnosticWorkerPort,
+} from './brepDiagnosticExecutor'
 
 function browserPort(): BrepDiagnosticWorkerPort {
   const worker = new Worker(new URL('../workers/brepDiagnostic.worker.ts', import.meta.url), { type: 'module' })
@@ -20,6 +24,8 @@ function browserPort(): BrepDiagnosticWorkerPort {
   }
 }
 /** Owned disposable browser realm; diagnostic receipts are not production providers. */
-export function createBrowserBrepDiagnosticExecutor(options: BrepDiagnosticExecutorOptions = {}): BrepDiagnosticExecutor {
+export function createBrowserBrepDiagnosticExecutor(
+  options: BrepDiagnosticExecutorOptions = {},
+): BrepDiagnosticExecutor {
   return new BrepDiagnosticExecutor(browserPort, options)
 }

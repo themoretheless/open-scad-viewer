@@ -26,13 +26,15 @@ describe('deterministic scale targets', () => {
     const scene: GeometryScene = {
       version: 1,
       assets: [{ version: 1, id: 'asset:scale-target', vertices, indices }],
-      entities: [{
-        id: 'entity:scale-target',
-        geometryAssetId: 'asset:scale-target',
-        color: [1, 1, 1, 1],
-        transform,
-        inspection: { state: 'absent', version: 1 },
-      }],
+      entities: [
+        {
+          id: 'entity:scale-target',
+          geometryAssetId: 'asset:scale-target',
+          color: [1, 1, 1, 1],
+          transform,
+          inspection: { state: 'absent', version: 1 },
+        },
+      ],
     }
 
     const transferables = geometrySceneTransferables(scene)

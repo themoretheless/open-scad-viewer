@@ -3,8 +3,7 @@ import type { Vec2 } from './module'
 
 export type PathPoint = Vec2
 export type PathSegmentJson =
-  | { type: 'line'; to: PathPoint }
-  | { type: 'cubic'; c1: PathPoint; c2: PathPoint; to: PathPoint }
+  { type: 'line'; to: PathPoint } | { type: 'cubic'; c1: PathPoint; c2: PathPoint; to: PathPoint }
 export type BezierPathJson = {
   start: PathPoint
   segments: PathSegmentJson[]
@@ -38,21 +37,17 @@ export type PathGradient = {
   | { kind: 'conic'; center: PathPoint; angle?: number }
 )
 
-const call = <T>(action: string, args: object = {}): T =>
-  callGeometryRust<T>('path2d', { action, ...args })
+const call = <T>(action: string, args: object = {}): T => callGeometryRust<T>('path2d', { action, ...args })
 
-export const pathFromRect = (min: PathPoint, max: PathPoint) =>
-  call<BezierPathJson>('from_rect', { min, max })
+export const pathFromRect = (min: PathPoint, max: PathPoint) => call<BezierPathJson>('from_rect', { min, max })
 export const pathFromCircle = (center: PathPoint, radius: number) =>
   call<BezierPathJson>('from_circle', { center, radius })
 export const pathFromEllipse = (center: PathPoint, radiusX: number, radiusY: number) =>
   call<BezierPathJson>('from_ellipse', { center, radiusX, radiusY })
 export const pathFromPolygon = (points: PathPoint[], closed = true) =>
   call<BezierPathJson>('from_polygon', { points, closed })
-export const flattenPath = (path: BezierPathJson, tolerance = 0.25) =>
-  call<PathPoint[]>('flatten', { path, tolerance })
-export const pathToRing = (path: BezierPathJson, tolerance = 0.25) =>
-  call<PathPoint[]>('to_ring', { path, tolerance })
+export const flattenPath = (path: BezierPathJson, tolerance = 0.25) => call<PathPoint[]>('flatten', { path, tolerance })
+export const pathToRing = (path: BezierPathJson, tolerance = 0.25) => call<PathPoint[]>('to_ring', { path, tolerance })
 export const insertPathAnchor = (path: BezierPathJson, index: number, t: number) =>
   call<BezierPathJson>('insert_anchor', { path, index, t })
 export const deletePathAnchor = (path: BezierPathJson, node: number) =>
@@ -64,8 +59,7 @@ export const smoothPathAnchor = (path: BezierPathJson, node: number) =>
 export const cornerPathAnchor = (path: BezierPathJson, node: number) =>
   call<BezierPathJson>('corner_anchor', { path, node })
 export const addPathAnchors = (path: BezierPathJson) => call<BezierPathJson>('add_anchors', { path })
-export const subdividePath = (path: BezierPathJson, levels = 1) =>
-  call<BezierPathJson>('subdivide', { path, levels })
+export const subdividePath = (path: BezierPathJson, levels = 1) => call<BezierPathJson>('subdivide', { path, levels })
 export const setPathAnchorPosition = (path: BezierPathJson, node: number, position: PathPoint) =>
   call<BezierPathJson>('set_anchor_position', { path, node, position })
 export const pathAnchorHandles = (path: BezierPathJson, node: number) =>
@@ -89,16 +83,13 @@ export const joinPaths = (
 export const outlineStroke = (path: BezierPathJson, width: number) =>
   call<BezierPathJson>('outline_stroke', { path, width })
 export const joinPathsAtTangents = (
-  head: BezierPathJson, tail: BezierPathJson,
+  head: BezierPathJson,
+  tail: BezierPathJson,
   opts: { reverseHead?: boolean; reverseTail?: boolean; weld?: number } = {},
 ) => call<BezierPathJson>('join_tangents', { head, tail, ...opts })
 export const closePathAtTangents = (path: BezierPathJson, weld = 1e-6) =>
   call<BezierPathJson>('close_tangents', { path, weld })
-export const outlineStrokeStyled = (
-  path: BezierPathJson,
-  width: number,
-  opts: PathStrokeOptions = {},
-) =>
+export const outlineStrokeStyled = (path: BezierPathJson, width: number, opts: PathStrokeOptions = {}) =>
   call<BezierPathJson[]>('outline_stroke_styled', {
     path,
     width,
@@ -116,12 +107,8 @@ export const averageAnchors = (
   nodes: number[],
   axis: 'horizontal' | 'vertical' | 'both' = 'both',
 ) => call<BezierPathJson>('average_anchors', { path, nodes, axis })
-export const setAnchorHandle = (
-  path: BezierPathJson,
-  node: number,
-  side: 'in' | 'out',
-  pos: PathPoint,
-) => call<BezierPathJson>('set_anchor_handle', { path, node, side, pos })
+export const setAnchorHandle = (path: BezierPathJson, node: number, side: 'in' | 'out', pos: PathPoint) =>
+  call<BezierPathJson>('set_anchor_handle', { path, node, side, pos })
 export const applyHandleLink = (
   path: BezierPathJson,
   node: number,
@@ -150,13 +137,8 @@ export const concentricOffsetRings = (
   opts: PathFillOptions & { miterLimit?: number } = {},
 ) => call<PathPoint[][][]>('concentric_offset', { rings, count, step, join, segments, ...opts })
 
-export const spiralPath = (
-  min: PathPoint,
-  max: PathPoint,
-  turns: number,
-  innerRatio = 0,
-  clockwise = true,
-) => call<BezierPathJson>('spiral', { min, max, turns, innerRatio, clockwise })
+export const spiralPath = (min: PathPoint, max: PathPoint, turns: number, innerRatio = 0, clockwise = true) =>
+  call<BezierPathJson>('spiral', { min, max, turns, innerRatio, clockwise })
 export const polarGridPaths = (
   min: PathPoint,
   max: PathPoint,
@@ -175,14 +157,20 @@ export const gridArray = (path: BezierPathJson, rows: number, cols: number, spac
 export const stepAndRepeatPaths = (paths: BezierPathJson[], count: number, delta: PathPoint) =>
   call<BezierPathJson[]>('step_and_repeat_paths', { paths, count, delta })
 export const radialRepeatPaths = (
-  paths: BezierPathJson[], count: number, center: PathPoint, angleStep: number, rotateCopies = true,
+  paths: BezierPathJson[],
+  count: number,
+  center: PathPoint,
+  angleStep: number,
+  rotateCopies = true,
 ) => call<BezierPathJson[]>('radial_repeat_paths', { paths, count, center, angleStep, rotateCopies })
 export const gridArrayPaths = (paths: BezierPathJson[], rows: number, cols: number, spacing: PathPoint) =>
   call<BezierPathJson[]>('grid_array_paths', { paths, rows, cols, spacing })
 export const hatchRing = (ring: PathPoint[], spacing: number, angle = 0, cross = false) =>
   call<BezierPathJson[]>('hatch', { ring, spacing, angle, cross })
 export const hatchRegion = (
-  region: PathRegion, spacing: number, opts: PathFillOptions & { angle?: number; cross?: boolean } = {},
+  region: PathRegion,
+  spacing: number,
+  opts: PathFillOptions & { angle?: number; cross?: boolean } = {},
 ) => call<BezierPathJson[]>('hatch', { ...region, spacing, ...opts })
 export const stippleRing = (
   ring: PathPoint[],
@@ -191,25 +179,32 @@ export const stippleRing = (
   kind: 'dot' | 'ring' | 'cross' | 'square' = 'dot',
 ) => call<BezierPathJson[]>('stipple', { ring, spacing, size, kind })
 export const stippleRegion = (
-  region: PathRegion, spacing: number, size: number,
+  region: PathRegion,
+  spacing: number,
+  size: number,
   opts: PathFillOptions & { kind?: 'dot' | 'ring' | 'cross' | 'square'; jitter?: number; seed?: number } = {},
 ) => call<BezierPathJson[]>('stipple', { ...region, spacing, size, ...opts })
 export const zigZagPath = (path: BezierPathJson, amplitude: number, wavelength: number) =>
   call<BezierPathJson>('zig_zag', { path, amplitude, wavelength })
-export const zigZagPathRidges = (path: BezierPathJson, amplitude: number, ridges: number, smooth = false, tolerance = 0.25) =>
-  call<BezierPathJson>('zig_zag', { path, amplitude, ridges, smooth, tolerance })
+export const zigZagPathRidges = (
+  path: BezierPathJson,
+  amplitude: number,
+  ridges: number,
+  smooth = false,
+  tolerance = 0.25,
+) => call<BezierPathJson>('zig_zag', { path, amplitude, ridges, smooth, tolerance })
 export const puckerBloatPath = (path: BezierPathJson, amount: number) =>
   call<BezierPathJson>('pucker_bloat', { path, amount })
 export const roughenPath = (path: BezierPathJson, amount: number, seed = 1) =>
   call<BezierPathJson>('roughen', { path, amount, seed })
 export const roughenPathDetailed = (path: BezierPathJson, amount: number, detail = 4, smooth = false, seed = 0) =>
   call<BezierPathJson>('roughen', { path, amount, detail, smooth, seed })
-export const twistPath = (path: BezierPathJson, radians: number) =>
-  call<BezierPathJson>('twist', { path, radians })
+export const twistPath = (path: BezierPathJson, radians: number) => call<BezierPathJson>('twist', { path, radians })
 export const scatterPath = (path: BezierPathJson, count: number, radius: number, seed = 1) =>
   call<BezierPathJson[]>('scatter', { path, count, radius, seed })
 export const scatterPaths = (
-  paths: BezierPathJson[], count: number,
+  paths: BezierPathJson[],
+  count: number,
   opts: { position?: number; rotationRadians?: number; scaleMin?: number; scaleMax?: number; seed?: number } = {},
 ) => call<BezierPathJson[]>('scatter_paths', { paths, count, ...opts })
 export const blendPaths = (a: BezierPathJson, b: BezierPathJson, steps: number) =>
@@ -226,12 +221,7 @@ export const arcPath = (
 export const starPath = (min: PathPoint, max: PathPoint, points: number, innerRatio = 0.4) =>
   call<BezierPathJson>('star', { min, max, points, innerRatio })
 
-export const findPathSnap = (
-  cursor: PathPoint,
-  threshold: number,
-  paths: BezierPathJson[],
-  grid?: number,
-) =>
+export const findPathSnap = (cursor: PathPoint, threshold: number, paths: BezierPathJson[], grid?: number) =>
   call<{ point: PathPoint; kind: string; distance: number } | null>('snap', {
     cursor,
     threshold,
@@ -246,12 +236,21 @@ export type SnapGeometryJson =
   | { type: 'polyline'; points: PathPoint[] }
   | { type: 'path'; path: BezierPathJson }
   | { type: 'compound'; paths: BezierPathJson[] }
-export type SnapKind = 'Grid' | 'Endpoint' | 'Midpoint' | 'Vertex' | 'Corner' | 'Center' | 'Intersection' | 'Perpendicular'
+export type SnapKind =
+  'Grid' | 'Endpoint' | 'Midpoint' | 'Vertex' | 'Corner' | 'Center' | 'Intersection' | 'Perpendicular'
 /** Semantic Curvex snapping, with kind priority and real anchor/primitive candidates. */
 export const findGeometrySnap = (cursor: PathPoint, threshold: number, geometry: SnapGeometryJson[], grid?: number) =>
-  call<{ point: PathPoint; kind: SnapKind; distance: number } | null>('snap_geometry', { cursor, threshold, geometry, grid })
+  call<{ point: PathPoint; kind: SnapKind; distance: number } | null>('snap_geometry', {
+    cursor,
+    threshold,
+    geometry,
+    grid,
+  })
 export const findDragSnap = (moving: BBoxJson, targets: BBoxJson[], threshold: number) =>
-  call<{ delta: PathPoint; guides: { vertical: boolean; position: number; moving: BBoxJson; target: BBoxJson }[] }>('drag_snap', { moving, targets, threshold })
+  call<{ delta: PathPoint; guides: { vertical: boolean; position: number; moving: BBoxJson; target: BBoxJson }[] }>(
+    'drag_snap',
+    { moving, targets, threshold },
+  )
 export const computeDistanceMarks = (moving: BBoxJson, targets: BBoxJson[]) =>
   call<{ from: PathPoint; to: PathPoint; distance: number }[]>('distance_marks', { moving, targets })
 export const intersectingPaths = (paths: BezierPathJson[], a: PathPoint, b: PathPoint) =>
@@ -259,7 +258,9 @@ export const intersectingPaths = (paths: BezierPathJson[], a: PathPoint, b: Path
 export const intersectingPathDirections = (paths: BezierPathJson[], a: PathPoint, b: PathPoint) =>
   call<number[]>('intersecting_directions', { paths, a, b })
 export const roundedOpenPolylinePath = (
-  points: PathPoint[], radii: number[], styles: ('round' | 'chamfer' | 'inverted' | 'notch')[] = [],
+  points: PathPoint[],
+  radii: number[],
+  styles: ('round' | 'chamfer' | 'inverted' | 'notch')[] = [],
 ) => call<BezierPathJson>('rounded_open_polyline', { points, radii, styles })
 export const alignBoxes = (
   boxes: BBoxJson[],
@@ -304,14 +305,13 @@ export const tessellatePathRegion = (region: PathRegion, opts: PathFillOptions =
 export const gradientFillMesh = (region: PathRegion, gradient: PathGradient, opts: PathFillOptions = {}) =>
   call<PathColoredMesh>('gradient_fill_mesh', { ...region, ...gradient, ...opts })
 export const gradientStrokeMesh = (
-  path: BezierPathJson, width: number, gradient: PathGradient,
+  path: BezierPathJson,
+  width: number,
+  gradient: PathGradient,
   opts: Omit<PathStrokeOptions, 'tolerance'> & { mode?: 'spatial' | 'along' } = {},
 ) => call<PathColoredMesh>('gradient_stroke_mesh', { path, width, ...gradient, ...opts })
 export const measurePoints = (a: PathPoint, b: PathPoint) =>
-  call<{ a: PathPoint; b: PathPoint; distance: number; angleDeg: number; delta: PathPoint }>(
-    'measure',
-    { a, b },
-  )
+  call<{ a: PathPoint; b: PathPoint; distance: number; angleDeg: number; delta: PathPoint }>('measure', { a, b })
 
 export const offsetPath = (
   path: BezierPathJson,
@@ -331,13 +331,16 @@ export const mergeByColor = (shapes: Array<{ rings: PathPoint[][]; color: [numbe
 export const snapToAngle = (start: PathPoint, end: PathPoint, stepDeg = 45) =>
   call<PathPoint>('snap_angle', { start, end, stepDeg })
 export const snapToRays = (
-  start: PathPoint, cursor: PathPoint, opts: { base?: number; count?: number; toleranceDegrees?: number } = {},
+  start: PathPoint,
+  cursor: PathPoint,
+  opts: { base?: number; count?: number; toleranceDegrees?: number } = {},
 ) => call<{ point: PathPoint; angle: number } | null>('snap_rays', { start, cursor, ...opts })
 export const dragAlignGuides = (moving: BBoxJson, targets: BBoxJson[], threshold: number) =>
-  call<{ delta: PathPoint; guides: Array<{ vertical: boolean; position: number }> }>(
-    'drag_guides',
-    { moving, targets, threshold },
-  )
+  call<{ delta: PathPoint; guides: Array<{ vertical: boolean; position: number }> }>('drag_guides', {
+    moving,
+    targets,
+    threshold,
+  })
 export const alignBoxesRelative = (
   boxes: BBoxJson[],
   relative: 'selection' | 'key' | 'page' | 'last',
@@ -371,12 +374,8 @@ export const pathArrowMarkers = (
   start: 'none' | 'arrow' | 'chevron' | 'dot' | 'bar' = 'none',
   end: 'none' | 'arrow' | 'chevron' | 'dot' | 'bar' = 'none',
 ) => call<BezierPathJson[]>('arrow_markers', { path, width, start, end })
-export const recolorRgba = (
-  color: [number, number, number, number],
-  hue: number,
-  sat: number,
-  light: number,
-) => call<[number, number, number, number]>('recolor', { color, hue, sat, light })
+export const recolorRgba = (color: [number, number, number, number], hue: number, sat: number, light: number) =>
+  call<[number, number, number, number]>('recolor', { color, hue, sat, light })
 export const sampleGradient = (
   kind: 'linear' | 'radial' | 'conic',
   point: PathPoint,
@@ -402,4 +401,5 @@ export const sampleGradient = (
     spread: opts.spread ?? 'pad',
   })
 
-export const normalizePathRings=(rings:PathPoint[][],fillRule:PathFillRule='evenodd')=>call<PathPoint[][]>('normalize_rings',{rings,fillRule})
+export const normalizePathRings = (rings: PathPoint[][], fillRule: PathFillRule = 'evenodd') =>
+  call<PathPoint[][]>('normalize_rings', { rings, fillRule })

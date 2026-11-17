@@ -9,7 +9,13 @@ import { WebGPURenderer } from '../src/render/webgpuRenderer'
  * still the selected preset, and the scene default material carries emissive.
  */
 
-interface FakeTexture { size: number[]; format: string; destroyed: boolean; createView(): object; destroy(): void }
+interface FakeTexture {
+  size: number[]
+  format: string
+  destroyed: boolean
+  createView(): object
+  destroy(): void
+}
 
 function fakeDevice() {
   const textures: FakeTexture[] = []
@@ -22,7 +28,9 @@ function fakeDevice() {
         format: descriptor.format,
         destroyed: false,
         createView: () => ({ texture }),
-        destroy() { this.destroyed = true },
+        destroy() {
+          this.destroyed = true
+        },
       }
       textures.push(texture)
       return texture
@@ -37,16 +45,24 @@ function stubGpuGlobals() {
 }
 
 const layouts = { matcapBGL: {}, envBGL: {}, shadowBGL: {} } as unknown as {
-  matcapBGL: GPUBindGroupLayout; envBGL: GPUBindGroupLayout; shadowBGL: GPUBindGroupLayout
+  matcapBGL: GPUBindGroupLayout
+  envBGL: GPUBindGroupLayout
+  shadowBGL: GPUBindGroupLayout
 }
 
-afterEach(() => { vi.unstubAllGlobals() })
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe('TextureResources', () => {
   it('re-init keeps enabled shadows on a real map instead of the 1×1 dummy', () => {
     stubGpuGlobals()
     const { device } = fakeDevice()
-    const resources = new TextureResources({ getDevice: () => device, onTexturesRebound: () => undefined, onLoadError: () => undefined })
+    const resources = new TextureResources({
+      getDevice: () => device,
+      onTexturesRebound: () => undefined,
+      onLoadError: () => undefined,
+    })
     resources.init(device, layouts)
     resources.setShadowsEnabled(true, device)
     // Device loss: teardown then init on the same instance, flag unchanged.
@@ -60,7 +76,11 @@ describe('TextureResources', () => {
   it('enabling before init gets the real map at init', () => {
     stubGpuGlobals()
     const { device } = fakeDevice()
-    const resources = new TextureResources({ getDevice: () => device, onTexturesRebound: () => undefined, onLoadError: () => undefined })
+    const resources = new TextureResources({
+      getDevice: () => device,
+      onTexturesRebound: () => undefined,
+      onLoadError: () => undefined,
+    })
     expect(resources.setShadowsEnabled(true, null)).toBe(false)
     resources.init(device, layouts)
     expect(resources.shadowTexture).not.toBe(resources.shadowDummyTexture)
@@ -70,14 +90,24 @@ describe('TextureResources', () => {
     stubGpuGlobals()
     const { device } = fakeDevice()
     const errors: unknown[] = []
-    const resources = new TextureResources({ getDevice: () => device, onTexturesRebound: () => undefined, onLoadError: error => errors.push(error) })
+    const resources = new TextureResources({
+      getDevice: () => device,
+      onTexturesRebound: () => undefined,
+      onLoadError: error => errors.push(error),
+    })
     resources.init(device, layouts)
     let failFirst: (() => void) | null = null
     vi.stubGlobal('createImageBitmap', vi.fn())
-    vi.stubGlobal('fetch', vi.fn(() => new Promise((resolve, reject) => {
-      if (!failFirst) failFirst = () => reject(new Error('offline'))
-      else resolve({ ok: false, status: 404 })
-    })))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise((resolve, reject) => {
+            if (!failFirst) failFirst = () => reject(new Error('offline'))
+            else resolve({ ok: false, status: 404 })
+          }),
+      ),
+    )
 
     const superseded = resources.setMatcapTexture('studio')
     const current = resources.setMatcapTexture('clay')
@@ -96,10 +126,22 @@ describe('environment map upload', () => {
   it('uses an sRGB texture so the PBR shader samples linear radiance', async () => {
     stubGpuGlobals()
     const { device, textures } = fakeDevice()
-    const resources = new TextureResources({ getDevice: () => device, onTexturesRebound: () => undefined, onLoadError: error => { throw error } })
+    const resources = new TextureResources({
+      getDevice: () => device,
+      onTexturesRebound: () => undefined,
+      onLoadError: error => {
+        throw error
+      },
+    })
     resources.init(device, layouts)
-    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, blob: async () => ({}) })))
-    vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width: 512, height: 256, close: () => undefined })))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true, blob: async () => ({}) })),
+    )
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => ({ width: 512, height: 256, close: () => undefined })),
+    )
     await resources.setEnvMap('studio-softbox')
     expect(ENV_MAP_FORMAT).toBe('rgba8unorm-srgb')
     expect(textures.at(-1)).toMatchObject({ size: [512, 256], format: 'rgba8unorm-srgb' })
@@ -112,7 +154,9 @@ describe('renderer texture load errors', () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const renderer = new WebGPURenderer()
     const events: string[] = []
-    renderer.onStatusChange = event => { events.push(event.status) }
+    renderer.onStatusChange = event => {
+      events.push(event.status)
+    }
     const hooks = (renderer as unknown as { textures: { hooks: { onLoadError(error: unknown): void } } }).textures.hooks
     hooks.onLoadError(new Error('Renderer: matcap fetch failed (404)'))
     expect(renderer.currentStatus.status).toBe('error')
@@ -127,7 +171,11 @@ describe('fillObjectUniform default material', () => {
     const uniform = new Float32Array(56)
     const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
     fillObjectUniform(uniform, identity, identity, [1, 1, 1, 1], 1, 0, undefined, {
-      baseColor: [0.1, 0.1, 0.1], metallic: 0, roughness: 0.7, emissive: [1, 0.9, 0.6], alpha: 1,
+      baseColor: [0.1, 0.1, 0.1],
+      metallic: 0,
+      roughness: 0.7,
+      emissive: [1, 0.9, 0.6],
+      alpha: 1,
     })
     expect([...uniform.slice(48, 51)].map(value => Number(value.toFixed(4)))).toEqual([1, 0.9, 0.6])
     expect(uniform[51]).toBeCloseTo(0.7)

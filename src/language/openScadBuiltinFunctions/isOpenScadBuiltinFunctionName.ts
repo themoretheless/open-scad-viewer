@@ -1,11 +1,22 @@
 import { BUILTIN_NAMES, HANDLERS, MAX_CHR_RANGE_ITEMS, NOT_RECOGNIZED } from '../openScadBuiltinFunctions'
-import type { BuiltinHandler, OpenScadBuiltinFunctionContext, OpenScadBuiltinFunctionName, OpenScadBuiltinFunctionResult, OpenScadBuiltinValue } from '../openScadBuiltinFunctions'
-import { equalValues, expectCount, formatValue, isRangeValue, rangeItemCount, registerArray, warn } from './createDeferredOpenScadBuiltinArguments'
+import type {
+  BuiltinHandler,
+  OpenScadBuiltinFunctionContext,
+  OpenScadBuiltinFunctionName,
+  OpenScadBuiltinFunctionResult,
+  OpenScadBuiltinValue,
+} from '../openScadBuiltinFunctions'
+import {
+  equalValues,
+  expectCount,
+  formatValue,
+  isRangeValue,
+  rangeItemCount,
+  registerArray,
+  warn,
+} from './createDeferredOpenScadBuiltinArguments'
 
-export function characterString(
-  value: OpenScadBuiltinValue,
-  context: OpenScadBuiltinFunctionContext,
-): string {
+export function characterString(value: OpenScadBuiltinValue, context: OpenScadBuiltinFunctionContext): string {
   if (typeof value === 'number') {
     const codePoint = Math.trunc(value)
     if (!(codePoint > 0) || codePoint > 0x10ffff || (codePoint >= 0xd800 && codePoint <= 0xdfff)) return ''
@@ -63,15 +74,17 @@ export function searchNeedles(
     const matches: number[] = []
     for (let index = 0; index < table.length; index++) {
       const row = table[index]
-      if ((column === 0 && equalValues(needle, row))
-        || (Array.isArray(row) && column < row.length && equalValues(needle, row[column]))) matches.push(index)
+      if (
+        (column === 0 && equalValues(needle, row)) ||
+        (Array.isArray(row) && column < row.length && equalValues(needle, row[column]))
+      )
+        matches.push(index)
       if (maximum !== 0 && matches.length >= maximum) break
     }
     if (maximum === 1) {
       if (matches[0] !== undefined) output.push(matches[0])
       else if (includeEmptyFirstMatch) output.push(registerArray(context, 'search', []))
-    }
-    else output.push(returnMatches(context, matches, maximum))
+    } else output.push(returnMatches(context, matches, maximum))
   }
   return registerArray(context, 'search', output)
 }

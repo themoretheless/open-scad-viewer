@@ -36,11 +36,11 @@ export function independentArtifactMimeType(format: IndependentArtifactFormat): 
 function isWellFormedUnicode(value: string): boolean {
   for (let index = 0; index < value.length; index++) {
     const unit = value.charCodeAt(index)
-    if (unit >= 0xD800 && unit <= 0xDBFF) {
+    if (unit >= 0xd800 && unit <= 0xdbff) {
       const next = value.charCodeAt(index + 1)
-      if (next < 0xDC00 || next > 0xDFFF) return false
+      if (next < 0xdc00 || next > 0xdfff) return false
       index++
-    } else if (unit >= 0xDC00 && unit <= 0xDFFF) {
+    } else if (unit >= 0xdc00 && unit <= 0xdfff) {
       return false
     }
   }
@@ -58,9 +58,13 @@ function validateInput(input: IndependentArtifactInput, maxBytes: number): void 
   if (input.mimeType !== expectedMimeType) {
     throw new TypeError(`Independent ${input.format.toUpperCase()} artifact must use ${expectedMimeType}`)
   }
-  if (input.fileName.length < 1 || input.fileName.length > 255
-    || !isWellFormedUnicode(input.fileName) || /[/\\\0]/.test(input.fileName)
-    || !input.fileName.toLowerCase().endsWith(`.${input.format}`)) {
+  if (
+    input.fileName.length < 1 ||
+    input.fileName.length > 255 ||
+    !isWellFormedUnicode(input.fileName) ||
+    /[/\\\0]/.test(input.fileName) ||
+    !input.fileName.toLowerCase().endsWith(`.${input.format}`)
+  ) {
     throw new TypeError(`Independent ${input.format.toUpperCase()} artifact has an invalid file name`)
   }
 }

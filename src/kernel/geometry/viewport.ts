@@ -43,11 +43,15 @@ function unproject(inverse: ArrayLike<number>, x: number, y: number): Ray3 | nul
 }
 
 /** Rect is CSS left/top/width/height; client coordinates are in the same space. */
-export function clientRayInKernel(matrix: Mat4, rect: [number, number, number, number], client: [number, number]): Ray3 | null {
+export function clientRayInKernel(
+  matrix: Mat4,
+  rect: [number, number, number, number],
+  client: [number, number],
+): Ray3 | null {
   if (!finite(matrix) || !finite(rect) || !finite(client)) return null
   if (rect[2] <= 0 || rect[3] <= 0) return null
-  const x = (client[0] - rect[0]) / rect[2] * 2 - 1
-  const y = 1 - (client[1] - rect[1]) / rect[3] * 2
+  const x = ((client[0] - rect[0]) / rect[2]) * 2 - 1
+  const y = 1 - ((client[1] - rect[1]) / rect[3]) * 2
   const inverse = invertMatrixF64(matrix, SCRATCH_INV)
   if (!inverse) return null
   return unproject(inverse, x, y)
@@ -58,15 +62,16 @@ export function unprojectRayInKernel(matrix: Mat4, x: number, y: number): Ray3 |
   return unproject(matrix, x, y)
 }
 
-export function projectPointInKernel(matrix: Mat4, point: readonly number[], size: [number, number]): [number, number] | null {
+export function projectPointInKernel(
+  matrix: Mat4,
+  point: readonly number[],
+  size: [number, number],
+): [number, number] | null {
   if (!finite(matrix) || !finite(point) || !finite(size)) return null
   if (!(size[0] > 0 && size[1] > 0)) return null
   const q = homogeneous(matrix, point)
   if (q[3]! <= 1e-8 || !q.every(Number.isFinite)) return null
-  const result: [number, number] = [
-    (q[0]! / q[3]! + 1) * size[0]! / 2,
-    (1 - q[1]! / q[3]!) * size[1]! / 2,
-  ]
+  const result: [number, number] = [((q[0]! / q[3]! + 1) * size[0]!) / 2, ((1 - q[1]! / q[3]!) * size[1]!) / 2]
   return result.every(Number.isFinite) ? result : null
 }
 

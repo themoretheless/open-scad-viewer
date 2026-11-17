@@ -98,22 +98,65 @@ export function resolveOpenScadLinearExtrude(
     throw new RangeError('OpenSCAD linear_extrude slice maximum must be a positive safe integer')
   }
 
-  const numeric=(value:unknown)=>typeof value==='number' ? Number.isFinite(value)?value:String(value) : null
-  const scaleValue=Array.isArray(input.scale) && input.scale.length===2 ? input.scale.map(numeric) : numeric(input.scale)
-  const response=languageRequest(31,{height:numeric(input.height),heightProvided:input.height!==undefined,scale:scaleValue,scaleMissing:input.scale===undefined,twist:numeric(input.twist),center:input.center===true,slices:numeric(input.slices),resolveSlices:true,maximumSlices,points:input.profilePoints??[],fn:numeric(input.fn),fa:numeric(input.fa),fs:numeric(input.fs)}) as {ok:boolean;value:{height:number;scale:[number,number];twist:number;center:boolean;slices:number;unboundedSlices:number;sliceSource:OpenScadLinearExtrudeSliceSource;manifoldNDivisions:number;reduced:boolean;heightDefaulted:boolean;scaleDefaulted:boolean};error?:{message:string}}
-  if(!response.ok)throw new Error(response.error?.message??'Native extrusion parameter normalization failed')
-  const {height,twist,center}=response.value
-  const scale=Object.freeze(response.value.scale)
-  if(response.value.heightDefaulted)context.warn({code:'OPENSCAD_LINEAR_EXTRUDE_HEIGHT_DEFAULTED',message:'Invalid linear_extrude height was replaced with 100',value:input.height})
-  if(response.value.scaleDefaulted)context.warn({code:'OPENSCAD_LINEAR_EXTRUDE_SCALE_DEFAULTED',message:'Invalid linear_extrude scale was replaced with [1, 1]',value:input.scale})
+  const numeric = (value: unknown) =>
+    typeof value === 'number' ? (Number.isFinite(value) ? value : String(value)) : null
+  const scaleValue =
+    Array.isArray(input.scale) && input.scale.length === 2 ? input.scale.map(numeric) : numeric(input.scale)
+  const response = languageRequest(31, {
+    height: numeric(input.height),
+    heightProvided: input.height !== undefined,
+    scale: scaleValue,
+    scaleMissing: input.scale === undefined,
+    twist: numeric(input.twist),
+    center: input.center === true,
+    slices: numeric(input.slices),
+    resolveSlices: true,
+    maximumSlices,
+    points: input.profilePoints ?? [],
+    fn: numeric(input.fn),
+    fa: numeric(input.fa),
+    fs: numeric(input.fs),
+  }) as {
+    ok: boolean
+    value: {
+      height: number
+      scale: [number, number]
+      twist: number
+      center: boolean
+      slices: number
+      unboundedSlices: number
+      sliceSource: OpenScadLinearExtrudeSliceSource
+      manifoldNDivisions: number
+      reduced: boolean
+      heightDefaulted: boolean
+      scaleDefaulted: boolean
+    }
+    error?: { message: string }
+  }
+  if (!response.ok) throw new Error(response.error?.message ?? 'Native extrusion parameter normalization failed')
+  const { height, twist, center } = response.value
+  const scale = Object.freeze(response.value.scale)
+  if (response.value.heightDefaulted)
+    context.warn({
+      code: 'OPENSCAD_LINEAR_EXTRUDE_HEIGHT_DEFAULTED',
+      message: 'Invalid linear_extrude height was replaced with 100',
+      value: input.height,
+    })
+  if (response.value.scaleDefaulted)
+    context.warn({
+      code: 'OPENSCAD_LINEAR_EXTRUDE_SCALE_DEFAULTED',
+      message: 'Invalid linear_extrude scale was replaced with [1, 1]',
+      value: input.scale,
+    })
 
-  const {slices,unboundedSlices,sliceSource,manifoldNDivisions,reduced}=response.value
-  if (reduced) context.warn({
-    code: 'OPENSCAD_LINEAR_EXTRUDE_SLICES_CLAMPED',
-    message: `linear_extrude slices were clamped to the engine limit ${maximumSlices}`,
-    value: unboundedSlices,
-    limit: maximumSlices,
-  })
+  const { slices, unboundedSlices, sliceSource, manifoldNDivisions, reduced } = response.value
+  if (reduced)
+    context.warn({
+      code: 'OPENSCAD_LINEAR_EXTRUDE_SLICES_CLAMPED',
+      message: `linear_extrude slices were clamped to the engine limit ${maximumSlices}`,
+      value: unboundedSlices,
+      limit: maximumSlices,
+    })
   return Object.freeze({
     empty: height === 0,
     height,
@@ -129,11 +172,7 @@ export function resolveOpenScadLinearExtrude(
   })
 }
 
-export type OpenScadAffine2dMatrix = readonly [
-  number, number, number,
-  number, number, number,
-  number, number, number,
-]
+export type OpenScadAffine2dMatrix = readonly [number, number, number, number, number, number, number, number, number]
 
 /**
  * Convert OpenSCAD's row-major 4x4 value into a column-major affine 2D matrix.
@@ -142,24 +181,35 @@ export type OpenScadAffine2dMatrix = readonly [
  */
 export function resolveOpenScad2dMultmatrix(value: unknown): OpenScadAffine2dMatrix | null {
   const rows = Array.isArray(value)
-    ? value.slice(0, 4).map(row => Array.isArray(row)
-      ? row.slice(0, 4).map(cell => typeof cell === 'number' && Number.isFinite(cell) ? cell : null)
-      : [])
+    ? value
+        .slice(0, 4)
+        .map(row =>
+          Array.isArray(row)
+            ? row.slice(0, 4).map(cell => (typeof cell === 'number' && Number.isFinite(cell) ? cell : null))
+            : [],
+        )
     : null
   const response = languageRequest(25, { rows, legacy2d: true }) as {
-    ok: boolean; value: (number | string)[] | null; error?: { message: string }
+    ok: boolean
+    value: (number | string)[] | null
+    error?: { message: string }
   }
   if (!response.ok) throw new Error(response.error?.message ?? 'Native XY matrix normalization failed')
-  return response.value === null ? null
-    : Object.freeze(response.value.map(Number)) as unknown as OpenScadAffine2dMatrix
+  return response.value === null
+    ? null
+    : (Object.freeze(response.value.map(Number)) as unknown as OpenScadAffine2dMatrix)
 }
 
 function isRangeValue(value: unknown): value is RangeValue {
-  return !Array.isArray(value) && typeof value === 'object' && value !== null
-    && (value as { kind?: unknown }).kind === 'range-value'
-    && typeof (value as { start?: unknown }).start === 'number'
-    && typeof (value as { step?: unknown }).step === 'number'
-    && typeof (value as { end?: unknown }).end === 'number'
+  return (
+    !Array.isArray(value) &&
+    typeof value === 'object' &&
+    value !== null &&
+    (value as { kind?: unknown }).kind === 'range-value' &&
+    typeof (value as { start?: unknown }).start === 'number' &&
+    typeof (value as { step?: unknown }).step === 'number' &&
+    typeof (value as { end?: unknown }).end === 'number'
+  )
 }
 
 export interface OpenScadChildrenSelectionInput {
@@ -170,22 +220,26 @@ export interface OpenScadChildrenSelectionInput {
   readonly maximumRangeItems?: number
 }
 
-function materializeRangeBounded(
-  range: RangeValue,
-  maximum: number,
-  context: OpenScadStableGeometryContext,
-): number[] {
-  const encode = (value: number) => Number.isFinite(value) ? value : String(value)
+function materializeRangeBounded(range: RangeValue, maximum: number, context: OpenScadStableGeometryContext): number[] {
+  const encode = (value: number) => (Number.isFinite(value) ? value : String(value))
   const response = languageRequest(34, { range: [range.start, range.step, range.end].map(encode), maximum }) as {
-    ok: boolean; value: { candidates: (number | string)[]; issue: 'invalid' | 'limit' | null }; error?: { message: string }
+    ok: boolean
+    value: { candidates: (number | string)[]; issue: 'invalid' | 'limit' | null }
+    error?: { message: string }
   }
   if (!response.ok) throw new Error(response.error?.message ?? 'Native children range expansion failed')
-  if (response.value.issue === 'invalid') context.warn({
-    code: 'OPENSCAD_CHILDREN_BAD_SELECTION', message: 'Invalid children range was ignored', value: range,
-  })
-  if (response.value.issue === 'limit') context.warn({
-    code: 'OPENSCAD_CHILDREN_RANGE_LIMIT', message: `children range exceeds the engine limit ${maximum}`, limit: maximum,
-  })
+  if (response.value.issue === 'invalid')
+    context.warn({
+      code: 'OPENSCAD_CHILDREN_BAD_SELECTION',
+      message: 'Invalid children range was ignored',
+      value: range,
+    })
+  if (response.value.issue === 'limit')
+    context.warn({
+      code: 'OPENSCAD_CHILDREN_RANGE_LIMIT',
+      message: `children range exceeds the engine limit ${maximum}`,
+      limit: maximum,
+    })
   return response.value.candidates.map(Number)
 }
 
@@ -218,18 +272,31 @@ export function resolveOpenScadChildrenSelection(
     return Object.freeze([])
   }
 
-  const response = languageRequest(34, { childCount, candidates: candidates.map(value =>
-    typeof value === 'number' && Number.isFinite(value) ? value : null) }) as {
-    ok: boolean; value: { indices: number[]; issues: ({ kind: 'invalid'; candidate: number } | { kind: 'out-of-bounds'; index: number })[] }; error?: { message: string }
+  const response = languageRequest(34, {
+    childCount,
+    candidates: candidates.map(value => (typeof value === 'number' && Number.isFinite(value) ? value : null)),
+  }) as {
+    ok: boolean
+    value: {
+      indices: number[]
+      issues: ({ kind: 'invalid'; candidate: number } | { kind: 'out-of-bounds'; index: number })[]
+    }
+    error?: { message: string }
   }
   if (!response.ok) throw new Error(response.error?.message ?? 'Native child index selection failed')
   for (const issue of response.value.issues) {
-    if (issue.kind === 'invalid') context.warn({
-      code: 'OPENSCAD_CHILDREN_BAD_INDEX', message: 'Non-numeric children index was ignored', value: candidates[issue.candidate],
-    })
-    else context.warn({
-      code: 'OPENSCAD_CHILDREN_INDEX_OUT_OF_BOUNDS', message: `Children index ${issue.index} is outside 0..${Math.max(0, childCount - 1)}`, value: issue.index,
-    })
+    if (issue.kind === 'invalid')
+      context.warn({
+        code: 'OPENSCAD_CHILDREN_BAD_INDEX',
+        message: 'Non-numeric children index was ignored',
+        value: candidates[issue.candidate],
+      })
+    else
+      context.warn({
+        code: 'OPENSCAD_CHILDREN_INDEX_OUT_OF_BOUNDS',
+        message: `Children index ${issue.index} is outside 0..${Math.max(0, childCount - 1)}`,
+        value: issue.index,
+      })
   }
   return Object.freeze(response.value.indices)
 }
@@ -270,16 +337,25 @@ export function resolveOpenScadResize(
     return Object.freeze({ scales: identity, applied: false, valid: false })
   }
   const automatic = autoAxes(input.auto, input.dimension)
-  const positive = (value: unknown): number | null => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null
-  const encode = (value: number) => Number.isFinite(value) ? value : String(value)
+  const positive = (value: unknown): number | null =>
+    typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null
+  const encode = (value: number) => (Number.isFinite(value) ? value : String(value))
   const response = languageRequest(13, {
-    targets: Array.from({length: input.dimension}, (_, axis) => positive((input.newsize as unknown[])[axis])),
-    ...(input.bounds ? { bounds: input.bounds.map(bound => ({
-      min: Array.from({length: input.dimension}, (_, axis) => encode(bound.min[axis] ?? Infinity)),
-      max: Array.from({length: input.dimension}, (_, axis) => encode(bound.max[axis] ?? -Infinity)),
-    })) } : { extents: Array.from({length: input.dimension}, (_, axis) => encode(input.extents?.[axis] ?? NaN)) }),
+    targets: Array.from({ length: input.dimension }, (_, axis) => positive((input.newsize as unknown[])[axis])),
+    ...(input.bounds
+      ? {
+          bounds: input.bounds.map(bound => ({
+            min: Array.from({ length: input.dimension }, (_, axis) => encode(bound.min[axis] ?? Infinity)),
+            max: Array.from({ length: input.dimension }, (_, axis) => encode(bound.max[axis] ?? -Infinity)),
+          })),
+        }
+      : { extents: Array.from({ length: input.dimension }, (_, axis) => encode(input.extents?.[axis] ?? NaN)) }),
     automatic,
-  }) as {ok: boolean; value: {scales: (number | 'Infinity')[]; invalidAxis: number | null; extents: (number | string)[]}; error?: {message: string}}
+  }) as {
+    ok: boolean
+    value: { scales: (number | 'Infinity')[]; invalidAxis: number | null; extents: (number | string)[] }
+    error?: { message: string }
+  }
   if (!response.ok) throw new Error(response.error?.message ?? 'OpenSCAD resize calculation failed')
   const axis = response.value.invalidAxis
   if (axis !== null) {
@@ -288,7 +364,7 @@ export function resolveOpenScadResize(
       message: `resize cannot map a zero-width axis ${axis} to a positive target`,
       value: Number(response.value.extents[axis]),
     })
-    return Object.freeze({scales: identity, applied: false, valid: false})
+    return Object.freeze({ scales: identity, applied: false, valid: false })
   }
   const scales = response.value.scales.map(Number)
   return Object.freeze({
@@ -325,45 +401,61 @@ export function resolveOpenScadRotateExtrude(
   input: OpenScadRotateExtrudeResolutionInput,
   context: OpenScadStableGeometryContext = SILENT_CONTEXT,
 ): OpenScadRotateExtrudeResolution {
-  const authoredAngle = typeof input.angle === 'number'
-    ? Number.isFinite(input.angle) ? input.angle : String(input.angle)
-    : null
+  const authoredAngle =
+    typeof input.angle === 'number' ? (Number.isFinite(input.angle) ? input.angle : String(input.angle)) : null
   const response = languageRequest(32, {
     angle: authoredAngle,
     angleProvided: input.angle !== undefined,
     minimum: Number.isFinite(input.profileXMin) ? input.profileXMin : String(input.profileXMin),
     maximum: Number.isFinite(input.profileXMax) ? input.profileXMax : String(input.profileXMax),
-  }) as { ok: boolean; value: { angle: number; angleDefaulted: boolean; profileSide: OpenScadRotateExtrudeResolution['profileSide']; empty: boolean; reflectProfileX: boolean; radius: number }; error?: { message: string } }
+  }) as {
+    ok: boolean
+    value: {
+      angle: number
+      angleDefaulted: boolean
+      profileSide: OpenScadRotateExtrudeResolution['profileSide']
+      empty: boolean
+      reflectProfileX: boolean
+      radius: number
+    }
+    error?: { message: string }
+  }
   if (!response.ok) throw new Error(response.error?.message ?? 'Native revolution parameter normalization failed')
   const { angle, profileSide, empty } = response.value
-  if (response.value.angleDefaulted) context.warn({
-    code: 'OPENSCAD_ROTATE_EXTRUDE_ANGLE_DEFAULTED',
-    message: 'Invalid rotate_extrude angle was replaced with 360',
-    value: input.angle,
-  })
+  if (response.value.angleDefaulted)
+    context.warn({
+      code: 'OPENSCAD_ROTATE_EXTRUDE_ANGLE_DEFAULTED',
+      message: 'Invalid rotate_extrude angle was replaced with 360',
+      value: input.angle,
+    })
   const crossesAxis = profileSide === 'crossing'
   let circularSegments = 0
   let reduced = false
   if (!empty) {
     const moduleContext: OpenScadStableModuleSemanticsContext = {
-      warn: warning => context.warn({
-        code: warning.code === 'OPENSCAD_FRAGMENTS_CLAMPED'
-          ? 'OPENSCAD_ROTATE_EXTRUDE_FRAGMENTS_CLAMPED'
-          : 'OPENSCAD_ROTATE_EXTRUDE_FRAGMENT_PARAMETER',
-        message: warning.message,
-        value: warning.value,
-        limit: warning.limit,
-      }),
+      warn: warning =>
+        context.warn({
+          code:
+            warning.code === 'OPENSCAD_FRAGMENTS_CLAMPED'
+              ? 'OPENSCAD_ROTATE_EXTRUDE_FRAGMENTS_CLAMPED'
+              : 'OPENSCAD_ROTATE_EXTRUDE_FRAGMENT_PARAMETER',
+          message: warning.message,
+          value: warning.value,
+          limit: warning.limit,
+        }),
     }
-    const fragments = resolveOpenScadSweepFragments({
-      radius: response.value.radius,
-      sweepDegrees: angle,
-      ...(input.fn === undefined ? {} : { fn: input.fn }),
-      ...(input.fa === undefined ? {} : { fa: input.fa }),
-      ...(input.fs === undefined ? {} : { fs: input.fs }),
-      ...(input.quality === undefined ? {} : { quality: input.quality }),
-      ...(input.maximumFragments === undefined ? {} : { maximum: input.maximumFragments }),
-    }, moduleContext)
+    const fragments = resolveOpenScadSweepFragments(
+      {
+        radius: response.value.radius,
+        sweepDegrees: angle,
+        ...(input.fn === undefined ? {} : { fn: input.fn }),
+        ...(input.fa === undefined ? {} : { fa: input.fa }),
+        ...(input.fs === undefined ? {} : { fs: input.fs }),
+        ...(input.quality === undefined ? {} : { quality: input.quality }),
+        ...(input.maximumFragments === undefined ? {} : { maximum: input.maximumFragments }),
+      },
+      moduleContext,
+    )
     circularSegments = fragments.sweepFragments
     reduced = fragments.reduced
   }

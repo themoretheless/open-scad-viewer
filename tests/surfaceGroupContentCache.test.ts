@@ -29,8 +29,16 @@ it('oversized values and failures do not evict the working set', () => {
   const cache = new SurfaceGroupContentCache({ maxEntries: 1, maxBytes: 8 })
   const ids = cache.getOrCompute('a', () => new Uint32Array([1]))
   expect(cache.getOrCompute('large', () => new Uint32Array(100)).length).toBe(100)
-  expect(() => cache.getOrCompute('bad', () => { throw Error('invalid mesh') })).toThrow('invalid mesh')
-  expect(cache.getOrCompute('a', () => { throw Error('cache miss') })).toBe(ids)
+  expect(() =>
+    cache.getOrCompute('bad', () => {
+      throw Error('invalid mesh')
+    }),
+  ).toThrow('invalid mesh')
+  expect(
+    cache.getOrCompute('a', () => {
+      throw Error('cache miss')
+    }),
+  ).toBe(ids)
   expect(cache.retainedBytes).toBe(6)
 })
 

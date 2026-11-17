@@ -40,7 +40,7 @@ export const OPENSCAD_TEXT_ERROR_CODES = Object.freeze([
   'E_TEXT_SHAPING_FAILED',
 ] as const)
 
-export type OpenScadTextErrorCode = typeof OPENSCAD_TEXT_ERROR_CODES[number]
+export type OpenScadTextErrorCode = (typeof OPENSCAD_TEXT_ERROR_CODES)[number]
 
 export interface OpenScadTextErrorDetails {
   readonly sourcePath?: string | undefined
@@ -258,14 +258,15 @@ export async function loadHarfBuzz(): Promise<HarfBuzzApi> {
   if (!harfBuzzPromise) {
     const attempt = (async () => {
       const { createTextRuntime } = await import('./openScadTextRuntime')
-      return await createTextRuntime() as HarfBuzzApi
-    })()
-      .catch(error => textError(
+      return (await createTextRuntime()) as HarfBuzzApi
+    })().catch(error =>
+      textError(
         'E_TEXT_RUNTIME_UNAVAILABLE',
         `The independent text shaping runtime could not initialize: ${error instanceof Error ? error.message : String(error)}`,
         {},
         error,
-      ))
+      ),
+    )
     harfBuzzPromise = attempt
     attempt.catch(() => {
       if (harfBuzzPromise === attempt) harfBuzzPromise = undefined

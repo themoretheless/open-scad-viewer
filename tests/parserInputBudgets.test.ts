@@ -9,7 +9,14 @@ import {
 import { buildStepRawArtifact } from '../src/exchange/stepRawArtifact'
 
 const budgets = { ...DEFAULT_PARSER_INPUT_BUDGETS, entities: 2, depth: 2, faces: 1, controlPoints: 2 }
-const thrown = (run: () => unknown): unknown => { try { run() } catch (error) { return error } throw new Error('Expected parser refusal') }
+const thrown = (run: () => unknown): unknown => {
+  try {
+    run()
+  } catch (error) {
+    return error
+  }
+  throw new Error('Expected parser refusal')
+}
 
 function binaryStl(count: number): ArrayBuffer {
   const buffer = new ArrayBuffer(84 + count * 50)
@@ -34,20 +41,38 @@ describe('unified pathological parser budgets', () => {
   })
 
   it('charges STEP faces and conservative B-spline control references', () => {
-    expect(thrown(() => preflightStepInput('#1=FACE();#2=ADVANCED_FACE();', budgets))).toMatchObject({ budget: 'faces' })
-    expect(thrown(() => preflightStepInput('#1=B_SPLINE_CURVE_WITH_KNOTS((#2,#3,#4,#5));', budgets))).toMatchObject({ budget: 'controlPoints' })
+    expect(thrown(() => preflightStepInput('#1=FACE();#2=ADVANCED_FACE();', budgets))).toMatchObject({
+      budget: 'faces',
+    })
+    expect(thrown(() => preflightStepInput('#1=B_SPLINE_CURVE_WITH_KNOTS((#2,#3,#4,#5));', budgets))).toMatchObject({
+      budget: 'controlPoints',
+    })
   })
 
   it('charges IGES directory faces and declared NURBS controls', () => {
-    const directory = (type: number, sequence: number) => `${String(type).padStart(8, ' ')}${' '.repeat(64)}D${String(sequence).padStart(7, ' ')}`
+    const directory = (type: number, sequence: number) =>
+      `${String(type).padStart(8, ' ')}${' '.repeat(64)}D${String(sequence).padStart(7, ' ')}`
     const parameter = '128,100000,100000;'.padEnd(64, ' ') + ' '.repeat(8) + 'P' + '1'.padStart(7, ' ')
-    expect(thrown(() => preflightIgesInput(`${directory(510, 1)}\n${directory(510, 2)}\n${directory(510, 3)}\n${directory(510, 4)}`, budgets))).toMatchObject({ budget: 'faces' })
+    expect(
+      thrown(() =>
+        preflightIgesInput(
+          `${directory(510, 1)}\n${directory(510, 2)}\n${directory(510, 3)}\n${directory(510, 4)}`,
+          budgets,
+        ),
+      ),
+    ).toMatchObject({ budget: 'faces' })
     expect(thrown(() => preflightIgesInput(parameter, budgets))).toMatchObject({ budget: 'controlPoints' })
   })
 
   it('charges both binary and ASCII STL facets', () => {
-    expect(thrown(() => preflightStlInput(binaryStl(2), budgets))).toMatchObject({ format: 'stl', budget: 'faces', observed: 2 })
-    const ascii = new TextEncoder().encode('solid x\nfacet normal 0 0 0\nendfacet\nfacet normal 0 0 0\nendfacet\nendsolid')
+    expect(thrown(() => preflightStlInput(binaryStl(2), budgets))).toMatchObject({
+      format: 'stl',
+      budget: 'faces',
+      observed: 2,
+    })
+    const ascii = new TextEncoder().encode(
+      'solid x\nfacet normal 0 0 0\nendfacet\nfacet normal 0 0 0\nendfacet\nendsolid',
+    )
     expect(thrown(() => preflightStlInput(ascii, budgets))).toMatchObject({ budget: 'faces' })
   })
 

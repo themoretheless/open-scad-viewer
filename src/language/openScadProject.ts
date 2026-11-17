@@ -24,7 +24,7 @@ export const OPENSCAD_PROJECT_ERROR_CODES = Object.freeze([
   'E_PROJECT_ENTRYPOINT_NOT_SOURCE',
 ] as const)
 
-export type OpenScadProjectErrorCode = typeof OPENSCAD_PROJECT_ERROR_CODES[number]
+export type OpenScadProjectErrorCode = (typeof OPENSCAD_PROJECT_ERROR_CODES)[number]
 
 export interface OpenScadProjectErrorDetails {
   readonly path?: string
@@ -125,11 +125,7 @@ function utf8Length(value: string): number {
 }
 
 function invalidPath(message: string, path?: string): never {
-  throw new OpenScadProjectError(
-    'E_PROJECT_INVALID_PATH',
-    message,
-    path === undefined ? {} : { path },
-  )
+  throw new OpenScadProjectError('E_PROJECT_INVALID_PATH', message, path === undefined ? {} : { path })
 }
 
 /** Canonical NFC, project-relative POSIX file path. */
@@ -146,15 +142,16 @@ export function normalizeOpenScadProjectPath(value: string): string {
       { path, limit: OPENSCAD_PROJECT_MAX_PATH_BYTES, actual: pathBytes },
     )
   }
-  if (path.startsWith('/') || path.endsWith('/') || path.includes('\\')
-    || /^[A-Za-z][A-Za-z0-9+.-]*:/u.test(path)) {
+  if (path.startsWith('/') || path.endsWith('/') || path.includes('\\') || /^[A-Za-z][A-Za-z0-9+.-]*:/u.test(path)) {
     return invalidPath('OpenSCAD project paths must be project-relative POSIX file paths.', path)
   }
   const segments = path.split('/')
   for (const segment of segments) {
-    if (segment.length === 0 || segment === '.' || segment === '..'
-      || /[\u0000-\u001f\u007f]/u.test(segment)) {
-      return invalidPath('OpenSCAD project paths cannot contain empty, dot, parent, or control-character segments.', path)
+    if (segment.length === 0 || segment === '.' || segment === '..' || /[\u0000-\u001f\u007f]/u.test(segment)) {
+      return invalidPath(
+        'OpenSCAD project paths cannot contain empty, dot, parent, or control-character segments.',
+        path,
+      )
     }
     const segmentBytes = utf8Length(segment)
     if (segmentBytes > OPENSCAD_PROJECT_MAX_SEGMENT_BYTES) {
@@ -171,16 +168,19 @@ export function normalizeOpenScadProjectPath(value: string): string {
 /** Resolve a module-relative dependency without permitting traversal above the bundle root. */
 export function resolveOpenScadProjectPath(importer: string, specifier: string): string {
   const importerPath = normalizeOpenScadProjectPath(importer)
-  if (typeof specifier !== 'string' || specifier.length === 0
-    || !isWellFormedUnicode(specifier)) {
+  if (typeof specifier !== 'string' || specifier.length === 0 || !isWellFormedUnicode(specifier)) {
     return invalidPath('OpenSCAD dependency paths must be non-empty, well-formed Unicode strings.')
   }
   const dependency = specifier.normalize('NFC')
-  if (utf8Length(dependency) > OPENSCAD_PROJECT_MAX_PATH_BYTES
-    || dependency.startsWith('/') || dependency.endsWith('/') || dependency.includes('\\')
-    || dependency.includes('//')
-    || /^[A-Za-z][A-Za-z0-9+.-]*:/u.test(dependency)
-    || /[\u0000-\u001f\u007f]/u.test(dependency)) {
+  if (
+    utf8Length(dependency) > OPENSCAD_PROJECT_MAX_PATH_BYTES ||
+    dependency.startsWith('/') ||
+    dependency.endsWith('/') ||
+    dependency.includes('\\') ||
+    dependency.includes('//') ||
+    /^[A-Za-z][A-Za-z0-9+.-]*:/u.test(dependency) ||
+    /[\u0000-\u001f\u007f]/u.test(dependency)
+  ) {
     return invalidPath('OpenSCAD dependencies must be bounded, relative POSIX file paths.', dependency)
   }
   const dependencySegments = dependency.split('/')
@@ -194,11 +194,9 @@ export function resolveOpenScadProjectPath(importer: string, specifier: string):
     if (segment.length === 0 || segment === '.') continue
     if (segment === '..') {
       if (resolved.length === 0) {
-        throw new OpenScadProjectError(
-          'E_PROJECT_PATH_ESCAPE',
-          'OpenSCAD dependency path escapes the project root.',
-          { path: dependency },
-        )
+        throw new OpenScadProjectError('E_PROJECT_PATH_ESCAPE', 'OpenSCAD dependency path escapes the project root.', {
+          path: dependency,
+        })
       }
       resolved.pop()
       continue
@@ -222,20 +220,19 @@ function cloneFile(file: StoredProjectFile): OpenScadProjectFile {
   })
 }
 
-function canonicalProjectDigest(
-  entrypoint: string,
-  files: readonly OpenScadProjectFileSummary[],
-): string {
-  return sha256Hex(JSON.stringify({
-    schemaVersion: OPENSCAD_PROJECT_SCHEMA_VERSION,
-    entrypoint,
-    files: files.map(file => ({
-      kind: file.kind,
-      path: file.path,
-      byteLength: file.byteLength,
-      sha256: file.sha256,
-    })),
-  }))
+function canonicalProjectDigest(entrypoint: string, files: readonly OpenScadProjectFileSummary[]): string {
+  return sha256Hex(
+    JSON.stringify({
+      schemaVersion: OPENSCAD_PROJECT_SCHEMA_VERSION,
+      entrypoint,
+      files: files.map(file => ({
+        kind: file.kind,
+        path: file.path,
+        byteLength: file.byteLength,
+        sha256: file.sha256,
+      })),
+    }),
+  )
 }
 
 /**
@@ -271,8 +268,7 @@ export class OpenScadProject {
     const files = new Map<string, StoredProjectFile>()
     let totalBytes = 0
     for (const inputFile of input.files) {
-      if (!inputFile || typeof inputFile !== 'object'
-        || (inputFile.kind !== 'source' && inputFile.kind !== 'blob')) {
+      if (!inputFile || typeof inputFile !== 'object' || (inputFile.kind !== 'source' && inputFile.kind !== 'blob')) {
         throw new OpenScadProjectError(
           'E_PROJECT_INVALID_BUNDLE',
           'OpenSCAD project files must be tagged source or blob values.',
@@ -364,13 +360,15 @@ export class OpenScadProject {
     }
 
     const summaries = [...files.values()]
-      .map(file => Object.freeze({
-        kind: file.kind,
-        path: file.path,
-        byteLength: file.byteLength,
-        sha256: file.sha256,
-      }))
-      .sort((left, right) => left.path < right.path ? -1 : left.path > right.path ? 1 : 0)
+      .map(file =>
+        Object.freeze({
+          kind: file.kind,
+          path: file.path,
+          byteLength: file.byteLength,
+          sha256: file.sha256,
+        }),
+      )
+      .sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0))
 
     this.entrypoint = entrypoint
     this.fileCount = files.size

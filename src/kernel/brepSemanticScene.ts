@@ -3,19 +3,25 @@ import { createExactFullRoundSnapshot } from './exactFullRoundSnapshot'
 /** Internal SemanticProgram → native B-rep → display adapter.
  * This executable seam does not register a qualified production engine.
  */
-import type {GeometryEvaluationResult, GeometryQuality} from '../core/build'
-import type {MeshData} from '../core/mesh'
-import {createNativeGeometryArtifact, MAX_NATIVE_GEOMETRY_CHARACTERS} from '../core/nativeGeometry'
-import {geometryAssetId} from '../core/scene'
-import {type SemanticOccurrenceId, type SemanticOperationId} from '../core/semanticProgram'
-import {executeBrepNativeProgram} from './brepNativeExecutor'
-import {prepareBrepDisplay} from './geometry/brep'
-import {callGeometryRust} from './geometry/kernel'
-import {buildMeshBvh} from './meshBvh'
-import {extractSemanticEdges} from './meshTopology'
-import {SemanticProgramExecutionError, type SemanticExecutionControl} from '../language/semantic/semanticProgramExecutor'
-import {requireTrustedSemanticLowering, type SemanticLoweringSuccess} from '../language/semantic/semanticProgramLowerer'
-import type {SemanticProgramAttestation} from '../language/semantic/semanticProgramCodec'
+import type { GeometryEvaluationResult, GeometryQuality } from '../core/build'
+import type { MeshData } from '../core/mesh'
+import { createNativeGeometryArtifact, MAX_NATIVE_GEOMETRY_CHARACTERS } from '../core/nativeGeometry'
+import { geometryAssetId } from '../core/scene'
+import { type SemanticOccurrenceId, type SemanticOperationId } from '../core/semanticProgram'
+import { executeBrepNativeProgram } from './brepNativeExecutor'
+import { prepareBrepDisplay } from './geometry/brep'
+import { callGeometryRust } from './geometry/kernel'
+import { buildMeshBvh } from './meshBvh'
+import { extractSemanticEdges } from './meshTopology'
+import {
+  SemanticProgramExecutionError,
+  type SemanticExecutionControl,
+} from '../language/semantic/semanticProgramExecutor'
+import {
+  requireTrustedSemanticLowering,
+  type SemanticLoweringSuccess,
+} from '../language/semantic/semanticProgramLowerer'
+import type { SemanticProgramAttestation } from '../language/semantic/semanticProgramCodec'
 
 export interface BrepSemanticDisplayPolicy {
   readonly quality: GeometryQuality
@@ -67,47 +73,74 @@ export async function buildBrepSemanticScene(
   control: SemanticExecutionControl = {},
 ): Promise<BrepSemanticSceneBuild> {
   const trusted = requireTrustedSemanticLowering(input)
-  if (!Number.isSafeInteger(policy.segments) || policy.segments < 1 || policy.segments > 32
-    || (policy.quality !== 'preview' && policy.quality !== 'full')) {
+  if (
+    !Number.isSafeInteger(policy.segments) ||
+    policy.segments < 1 ||
+    policy.segments > 32 ||
+    (policy.quality !== 'preview' && policy.quality !== 'full')
+  ) {
     throw new RangeError('B-rep display requires preview/full quality and 1..32 segments')
   }
   // Display-policy identity is derived natively; the diagnostic lane re-derives
   // it host-side so a worker cannot self-certify its own policy.
-  const displayPlan = callGeometryRust<{policy: string; displayPolicyHash: string}>('brep_scene_plan', policy)
-  const displayPolicy = Object.freeze({version: 1, sampling: 'uniform-patch' as const, quality: policy.quality, segments: policy.segments})
+  const displayPlan = callGeometryRust<{ policy: string; displayPolicyHash: string }>('brep_scene_plan', policy)
+  const displayPolicy = Object.freeze({
+    version: 1,
+    sampling: 'uniform-patch' as const,
+    quality: policy.quality,
+    segments: policy.segments,
+  })
   const start = performance.now()
   const execution = await executeBrepNativeProgram(trusted, control)
   const evaluated = performance.now()
   let assembled: BrepSemanticSceneBuild
   try {
-    const meshes: MeshData[] = [], outputs: BrepSemanticOutputRecord[] = []
-    let volume = 0, surfaceArea = 0, triangles = 0, nativeCharacters = 0
+    const meshes: MeshData[] = [],
+      outputs: BrepSemanticOutputRecord[] = []
+    let volume = 0,
+      surfaceArea = 0,
+      triangles = 0,
+      nativeCharacters = 0
     const provenanceByOperation = new Map(execution.program.provenance.map(p => [p.operation, p]))
     for (let index = 0; index < execution.outputs.length; index++) {
       checkControl(control)
-      const output = execution.outputs[index]!, item = output.reference
+      const output = execution.outputs[index]!,
+        item = output.reference
       const entityId = output.occurrence.sceneEntityId
       if (entityId === null) throw new Error('B-rep result occurrence has no scene identity')
       const operationId = execution.program.core.operations[output.occurrence.operation]!.operationId
-      const identity = {occurrenceId: output.occurrence.occurrenceId, operationId, entityId, nodeIndex: item.node}
+      const identity = { occurrenceId: output.occurrence.occurrenceId, operationId, entityId, nodeIndex: item.node }
       if (output.value.tag === 'empty') {
-        outputs.push(Object.freeze({...identity, empty: true, snapshotRevision: null, geometryAssetId: null, topologyFaceIds: Object.freeze([])}))
+        outputs.push(
+          Object.freeze({
+            ...identity,
+            empty: true,
+            snapshotRevision: null,
+            geometryAssetId: null,
+            topologyFaceIds: Object.freeze([]),
+          }),
+        )
         continue
       }
-      if(output.value.geometry.kind!=='solid')throw new Error('B-rep scene output must be a solid')
+      if (output.value.geometry.kind !== 'solid') throw new Error('B-rep scene output must be a solid')
       const geometry = output.value.geometry
       const exact = geometry.representation === 'rational-brep'
-      const mesh = exact ? prepareExactFullRoundDisplay(geometry.artifact, displayPolicy.segments)
+      const mesh = exact
+        ? prepareExactFullRoundDisplay(geometry.artifact, displayPolicy.segments)
         : prepareBrepDisplay(geometry.model, displayPolicy.segments)
       checkControl(control)
       triangles += mesh.displayIndices.length / 3
       if (triangles > 20_000) throw new RangeError('B-rep scene exceeds 20000 display triangles')
-      if (!mesh.displayIndices.length || !mesh.report.closed) throw new Error('Nonempty B-rep solid did not produce a closed display mesh')
-      const snapshot = exact ? createExactFullRoundSnapshot(entityId, geometry.artifact, execution.program)
-        : createNativeGeometryArtifact(entityId, 'brep', {geometry: geometry.model}, execution.program)
+      if (!mesh.displayIndices.length || !mesh.report.closed)
+        throw new Error('Nonempty B-rep solid did not produce a closed display mesh')
+      const snapshot = exact
+        ? createExactFullRoundSnapshot(entityId, geometry.artifact, execution.program)
+        : createNativeGeometryArtifact(entityId, 'brep', { geometry: geometry.model }, execution.program)
       nativeCharacters += snapshot.geometryJson.length + snapshot.documentJson.length
-      if (nativeCharacters > MAX_NATIVE_GEOMETRY_CHARACTERS) throw new RangeError('B-rep scene exceeds its aggregate native snapshot limit')
-      const vertices = new Float32Array(mesh.displayVertices), indices = new Uint32Array(mesh.displayIndices)
+      if (nativeCharacters > MAX_NATIVE_GEOMETRY_CHARACTERS)
+        throw new RangeError('B-rep scene exceeds its aggregate native snapshot limit')
+      const vertices = new Float32Array(mesh.displayVertices),
+        indices = new Uint32Array(mesh.displayIndices)
       surfaceArea += mesh.surfaceArea
       const sourceOccurrence = execution.program.core.occurrences[item.producerOccurrence]!
       const source = provenanceByOperation.get(sourceOccurrence.operation)
@@ -115,28 +148,78 @@ export async function buildBrepSemanticScene(
       const assetId = geometryAssetId(vertices, indices)
       // Finer certified display levels are produced on demand by the viewer's display level worker.
       meshes.push({
-        vertices, indices, geometryAssetId: assetId, entityId, nativeGeometry: snapshot,
-        bvh: buildMeshBvh(vertices, indices), edgeIndices: edges.indices,
-        topology: {boundary: mesh.report.boundaryEdges, nonManifold: mesh.report.nonManifoldEdges,
-          degenerate: mesh.report.degenerateTriangles, crease: edges.diagnostics.crease},
-        color: [...output.color], transform: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
-        faceIds: new Uint32Array(mesh.faceIds), faceIdsAuthoritative: true,
-        provenance: [{triangleStart: 0, triangleEnd: indices.length / 3, backside: false,
-          source: source ? {id: sourceOccurrence.operation, originalId: sourceOccurrence.operation,
-            instanceId: entityId, start: source.span.start, end: source.span.end, label: source.label} : null}],
+        vertices,
+        indices,
+        geometryAssetId: assetId,
+        entityId,
+        nativeGeometry: snapshot,
+        bvh: buildMeshBvh(vertices, indices),
+        edgeIndices: edges.indices,
+        topology: {
+          boundary: mesh.report.boundaryEdges,
+          nonManifold: mesh.report.nonManifoldEdges,
+          degenerate: mesh.report.degenerateTriangles,
+          crease: edges.diagnostics.crease,
+        },
+        color: [...output.color],
+        transform: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
+        faceIds: new Uint32Array(mesh.faceIds),
+        faceIdsAuthoritative: true,
+        provenance: [
+          {
+            triangleStart: 0,
+            triangleEnd: indices.length / 3,
+            backside: false,
+            source: source
+              ? {
+                  id: sourceOccurrence.operation,
+                  originalId: sourceOccurrence.operation,
+                  instanceId: entityId,
+                  start: source.span.start,
+                  end: source.span.end,
+                  label: source.label,
+                }
+              : null,
+          },
+        ],
       })
       volume += Math.abs(mesh.report.signedVolumeMm3)
-      outputs.push(Object.freeze({...identity, empty: false, snapshotRevision: snapshot.revision, geometryAssetId: assetId,
-        topologyFaceIds: Object.freeze([...(exact ? mesh.topologyFaceIds ?? [] : geometry.model.topologyIds?.faces ?? [])])}))
+      outputs.push(
+        Object.freeze({
+          ...identity,
+          empty: false,
+          snapshotRevision: snapshot.revision,
+          geometryAssetId: assetId,
+          topologyFaceIds: Object.freeze([
+            ...(exact ? (mesh.topologyFaceIds ?? []) : (geometry.model.topologyIds?.faces ?? [])),
+          ]),
+        }),
+      )
     }
     checkControl(control)
-    if (!Number.isFinite(volume) || !Number.isFinite(surfaceArea)) throw new Error('B-rep display metrics are non-finite')
+    if (!Number.isFinite(volume) || !Number.isFinite(surfaceArea))
+      throw new Error('B-rep display metrics are non-finite')
     assembled = Object.freeze({
-      result: {meshes, warnings: [...trusted.warnings], volume, surfaceArea, quality: displayPolicy.quality, reduced: false,
-        timings: {parseMs: 0, bindMs: 0, initializeMs: 0, evaluateMs: evaluated - start, analyzeMs: performance.now() - evaluated}},
+      result: {
+        meshes,
+        warnings: [...trusted.warnings],
+        volume,
+        surfaceArea,
+        quality: displayPolicy.quality,
+        reduced: false,
+        timings: {
+          parseMs: 0,
+          bindMs: 0,
+          initializeMs: 0,
+          evaluateMs: evaluated - start,
+          analyzeMs: performance.now() - evaluated,
+        },
+      },
       attestation: execution.attestation,
       displayPolicyHash: displayPlan.displayPolicyHash,
-      outputs: Object.freeze(outputs), metrics: 'display_mesh_estimates', deviationStatus: 'not_certified',
+      outputs: Object.freeze(outputs),
+      metrics: 'display_mesh_estimates',
+      deviationStatus: 'not_certified',
     })
   } finally {
     await execution.dispose()

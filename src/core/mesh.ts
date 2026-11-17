@@ -1,4 +1,4 @@
-import type {NativeGeometryArtifact} from './nativeGeometry'
+import type { NativeGeometryArtifact } from './nativeGeometry'
 
 /**
  * Presentation material payload carried by a mesh publication. Structurally

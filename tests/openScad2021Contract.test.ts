@@ -19,44 +19,162 @@ import {
 } from '../src/core/openScad2021Contract'
 
 const EXPECTED_FUNCTIONS = [
-  'abs', 'sign', 'rands', 'min', 'max', 'sin', 'cos', 'asin', 'acos', 'tan', 'atan', 'atan2',
-  'round', 'ceil', 'floor', 'pow', 'sqrt', 'exp', 'len', 'log', 'ln', 'str', 'chr', 'ord',
-  'concat', 'lookup', 'search', 'version', 'version_num', 'norm', 'cross', 'parent_module',
-  'is_undef', 'is_list', 'is_num', 'is_bool', 'is_string', 'is_function',
+  'abs',
+  'sign',
+  'rands',
+  'min',
+  'max',
+  'sin',
+  'cos',
+  'asin',
+  'acos',
+  'tan',
+  'atan',
+  'atan2',
+  'round',
+  'ceil',
+  'floor',
+  'pow',
+  'sqrt',
+  'exp',
+  'len',
+  'log',
+  'ln',
+  'str',
+  'chr',
+  'ord',
+  'concat',
+  'lookup',
+  'search',
+  'version',
+  'version_num',
+  'norm',
+  'cross',
+  'parent_module',
+  'is_undef',
+  'is_list',
+  'is_num',
+  'is_bool',
+  'is_string',
+  'is_function',
 ] as const
 
 const EXPECTED_MODULES = [
-  'render', 'color', 'offset', 'group', 'text', 'import', 'cube', 'sphere', 'cylinder',
-  'polyhedron', 'square', 'circle', 'polygon', 'scale', 'rotate', 'mirror', 'translate',
-  'multmatrix', 'union', 'difference', 'intersection', 'linear_extrude', 'minkowski', 'hull',
-  'resize', 'children', 'echo', 'assert', 'for', 'let', 'intersection_for', 'if', 'projection',
-  'surface', 'rotate_extrude',
+  'render',
+  'color',
+  'offset',
+  'group',
+  'text',
+  'import',
+  'cube',
+  'sphere',
+  'cylinder',
+  'polyhedron',
+  'square',
+  'circle',
+  'polygon',
+  'scale',
+  'rotate',
+  'mirror',
+  'translate',
+  'multmatrix',
+  'union',
+  'difference',
+  'intersection',
+  'linear_extrude',
+  'minkowski',
+  'hull',
+  'resize',
+  'children',
+  'echo',
+  'assert',
+  'for',
+  'let',
+  'intersection_for',
+  'if',
+  'projection',
+  'surface',
+  'rotate_extrude',
 ] as const
 
 const EXPECTED_SYNTAX = [
-  'line-comment', 'block-comment', 'empty-statement', 'statement-block', 'assignment',
-  'module-definition', 'function-definition', 'anonymous-function', 'module-instantiation',
-  'if-else-module', 'literal-number', 'literal-string', 'literal-boolean', 'literal-undefined',
-  'vector', 'range', 'function-call', 'index-lookup', 'member-lookup', 'ternary', 'let-expression',
-  'assert-expression', 'echo-expression', 'list-comprehension-for', 'list-comprehension-c-for',
-  'list-comprehension-if', 'list-comprehension-let', 'list-comprehension-each',
-  'named-and-positional-arguments', 'default-parameters', 'trailing-commas', 'recursive-modules',
-  'recursive-functions', 'include-directive', 'use-directive',
+  'line-comment',
+  'block-comment',
+  'empty-statement',
+  'statement-block',
+  'assignment',
+  'module-definition',
+  'function-definition',
+  'anonymous-function',
+  'module-instantiation',
+  'if-else-module',
+  'literal-number',
+  'literal-string',
+  'literal-boolean',
+  'literal-undefined',
+  'vector',
+  'range',
+  'function-call',
+  'index-lookup',
+  'member-lookup',
+  'ternary',
+  'let-expression',
+  'assert-expression',
+  'echo-expression',
+  'list-comprehension-for',
+  'list-comprehension-c-for',
+  'list-comprehension-if',
+  'list-comprehension-let',
+  'list-comprehension-each',
+  'named-and-positional-arguments',
+  'default-parameters',
+  'trailing-commas',
+  'recursive-modules',
+  'recursive-functions',
+  'include-directive',
+  'use-directive',
 ] as const
 
 const EXPECTED_OPERATOR_IDS = [
-  'postfix-call', 'postfix-index', 'postfix-member', 'exponent', 'unary', 'multiplicative',
-  'additive', 'comparison', 'equality', 'logical-and', 'logical-or', 'conditional',
+  'postfix-call',
+  'postfix-index',
+  'postfix-member',
+  'exponent',
+  'unary',
+  'multiplicative',
+  'additive',
+  'comparison',
+  'equality',
+  'logical-and',
+  'logical-or',
+  'conditional',
 ] as const
 
 const EXPECTED_CONSTANTS = ['true', 'false', 'undef', 'PI'] as const
 const EXPECTED_SPECIAL_VARIABLES = [
-  '$fn', '$fs', '$fa', '$t', '$preview', '$vpt', '$vpr', '$vpd', '$vpf', '$children', '$parent_modules',
+  '$fn',
+  '$fs',
+  '$fa',
+  '$t',
+  '$preview',
+  '$vpt',
+  '$vpr',
+  '$vpd',
+  '$vpf',
+  '$children',
+  '$parent_modules',
 ] as const
 const EXPECTED_MODIFIERS = ['!', '#', '%', '*'] as const
 const EXPECTED_COMPATIBILITY_CALLABLES = [
-  'assign', 'child', 'dxf_linear_extrude', 'dxf_rotate_extrude', 'import_stl', 'import_off',
-  'import_dxf', 'dxf_dim', 'dxf_cross',
+  'assign',
+  'child',
+  'dxf_linear_extrude',
+  'dxf_rotate_extrude',
+  'import_stl',
+  'import_off',
+  'import_dxf',
+  'dxf_dim',
+  'dxf_cross',
 ] as const
 
 function expectExactUniqueInventory(actual: readonly string[], expected: readonly string[]): void {
@@ -111,17 +229,32 @@ describe('OpenSCAD 2021.01 stable language contract', () => {
   })
 
   it('pins the grammar inventory, operators, constants, special variables, and modifiers', () => {
-    expectExactUniqueInventory(OPENSCAD_2021_01_SYNTAX_CONSTRUCTS.map(entry => entry.id), EXPECTED_SYNTAX)
-    expectExactUniqueInventory(OPENSCAD_2021_01_OPERATORS.map(entry => entry.id), EXPECTED_OPERATOR_IDS)
-    expectExactUniqueInventory(OPENSCAD_2021_01_CONSTANTS.map(entry => entry.name), EXPECTED_CONSTANTS)
-    expectExactUniqueInventory(OPENSCAD_2021_01_SPECIAL_VARIABLES.map(entry => entry.name), EXPECTED_SPECIAL_VARIABLES)
-    expectExactUniqueInventory(OPENSCAD_2021_01_MODIFIERS.map(entry => entry.token), EXPECTED_MODIFIERS)
+    expectExactUniqueInventory(
+      OPENSCAD_2021_01_SYNTAX_CONSTRUCTS.map(entry => entry.id),
+      EXPECTED_SYNTAX,
+    )
+    expectExactUniqueInventory(
+      OPENSCAD_2021_01_OPERATORS.map(entry => entry.id),
+      EXPECTED_OPERATOR_IDS,
+    )
+    expectExactUniqueInventory(
+      OPENSCAD_2021_01_CONSTANTS.map(entry => entry.name),
+      EXPECTED_CONSTANTS,
+    )
+    expectExactUniqueInventory(
+      OPENSCAD_2021_01_SPECIAL_VARIABLES.map(entry => entry.name),
+      EXPECTED_SPECIAL_VARIABLES,
+    )
+    expectExactUniqueInventory(
+      OPENSCAD_2021_01_MODIFIERS.map(entry => entry.token),
+      EXPECTED_MODIFIERS,
+    )
   })
 
   it('pins the 2021.01 default camera and animation context', () => {
-    expect(Object.fromEntries(
-      OPENSCAD_2021_01_SPECIAL_VARIABLES.map(entry => [entry.name, entry.defaultValue]),
-    )).toMatchObject({
+    expect(
+      Object.fromEntries(OPENSCAD_2021_01_SPECIAL_VARIABLES.map(entry => [entry.name, entry.defaultValue])),
+    ).toMatchObject({
       $t: 0,
       $preview: false,
       $vpt: [0, 0, 0],
@@ -185,10 +318,17 @@ describe('OpenSCAD 2021.01 stable language contract', () => {
   it('records the complete file-facing surface and tail-call behavior needed by an MCP VFS', () => {
     expect(OPENSCAD_2021_01_CONTRACT.fileSemantics.directives.map(entry => entry.name)).toEqual(['include', 'use'])
     expect(OPENSCAD_2021_01_CONTRACT.fileSemantics.import.extensions).toEqual([
-      'stl', 'off', 'dxf', 'nef3', '3mf', 'amf', 'svg',
+      'stl',
+      'off',
+      'dxf',
+      'nef3',
+      '3mf',
+      'amf',
+      'svg',
     ])
     expect(OPENSCAD_2021_01_CONTRACT.fileSemantics.surface.formats).toEqual([
-      'PNG', 'whitespace-separated DAT height grid',
+      'PNG',
+      'whitespace-separated DAT height grid',
     ])
     expect(OPENSCAD_2021_01_CONTRACT.fileSemantics.resolution.mcpBoundary).toContain('MEMFS')
     expect(OPENSCAD_2021_01_CONTRACT.executionSemantics.tailCallOptimization).toMatchObject({

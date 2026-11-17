@@ -1,5 +1,5 @@
-import {decodeMeshBytesInKernel} from '../kernel/geometry/meshImportKernel'
-import {callGeometryRust, GeometryKernelError, warmGeometryKernel} from '../kernel/geometry/kernel'
+import { decodeMeshBytesInKernel } from '../kernel/geometry/meshImportKernel'
+import { callGeometryRust, GeometryKernelError, warmGeometryKernel } from '../kernel/geometry/kernel'
 import {
   checkManifoldInKernel,
   repairManifoldInKernel,
@@ -27,30 +27,43 @@ import {
 } from './openScadImport'
 import type { OpenScadProjectBlobFile } from '../language/openScadProject'
 import type { PolygonMesh } from '../kernel/geometry/polygon'
-import { detectMeshImportFormat, MESH_IMPORT_FORMATS, MESH_IMPORT_MAX_BYTES, type MeshImportFormat } from './meshFormats'
+import {
+  detectMeshImportFormat,
+  MESH_IMPORT_FORMATS,
+  MESH_IMPORT_MAX_BYTES,
+  type MeshImportFormat,
+} from './meshFormats'
 
-export { detectMeshImportFormat, MESH_IMPORT_ACCEPT, MESH_IMPORT_FORMATS, MESH_IMPORT_MAX_BYTES, stripMeshExtension, type MeshImportFormat } from './meshFormats'
+export {
+  detectMeshImportFormat,
+  MESH_IMPORT_ACCEPT,
+  MESH_IMPORT_FORMATS,
+  MESH_IMPORT_MAX_BYTES,
+  stripMeshExtension,
+  type MeshImportFormat,
+} from './meshFormats'
 
 export const MESH_IMPORT_MAX_TRIANGLES = OPENSCAD_IMPORT_MAX_TRIANGLES
 export const MESH_IMPORT_MAX_VERTICES = OPENSCAD_IMPORT_MAX_VERTICES
 
-export type MeshImportErrorCode =
-  | 'unsupported-format'
-  | 'too-large'
-  | 'encoding'
-  | 'invalid-data'
-  | 'limit'
-  | 'empty'
+export type MeshImportErrorCode = 'unsupported-format' | 'too-large' | 'encoding' | 'invalid-data' | 'limit' | 'empty'
 
 export class MeshImportError extends Error {
-  constructor(readonly code: MeshImportErrorCode, message: string, readonly format?: MeshImportFormat) {
+  constructor(
+    readonly code: MeshImportErrorCode,
+    message: string,
+    readonly format?: MeshImportFormat,
+  ) {
     super(message)
     this.name = 'MeshImportError'
   }
 }
 
 export type MeshImportRepairMode = 'none' | 'conservative' | 'full'
-export type MeshImportRepairStats = Omit<KernelManifoldRepair, 'positions' | 'indices' | 'vertexRemap' | 'removedIsolatedVertices'>
+export type MeshImportRepairStats = Omit<
+  KernelManifoldRepair,
+  'positions' | 'indices' | 'vertexRemap' | 'removedIsolatedVertices'
+>
 
 /** Before/after topology evidence and the changes made by the selected repair. */
 export interface MeshImportManifoldAnalysis {
@@ -103,44 +116,66 @@ export async function importMeshFile(
   const bytes = input instanceof Uint8Array ? input : new Uint8Array(input)
   const maxBytes = options.maxBytes ?? MESH_IMPORT_MAX_BYTES
   if (bytes.byteLength > maxBytes) {
-    throw new MeshImportError('too-large', `${fileName} exceeds the ${(maxBytes / 1_000_000).toFixed(0)} MB import limit.`)
+    throw new MeshImportError(
+      'too-large',
+      `${fileName} exceeds the ${(maxBytes / 1_000_000).toFixed(0)} MB import limit.`,
+    )
   }
   const format = options.format ?? detectMeshImportFormat(fileName, bytes)
   if (!format) {
-    throw new MeshImportError('unsupported-format', `Cannot detect a supported mesh format for ${fileName}. Supported: ${MESH_IMPORT_FORMATS.map(f => f.toUpperCase()).join(', ')}.`)
+    throw new MeshImportError(
+      'unsupported-format',
+      `Cannot detect a supported mesh format for ${fileName}. Supported: ${MESH_IMPORT_FORMATS.map(f => f.toUpperCase()).join(', ')}.`,
+    )
   }
-  onProgress?.({phase: 'decode', completed: 0, total: 5})
+  onProgress?.({ phase: 'decode', completed: 0, total: 5 })
   await warmGeometryKernel()
   const raw = await decode(format, fileName, bytes)
-  onProgress?.({phase: 'finalize', completed: 1, total: 5})
+  onProgress?.({ phase: 'finalize', completed: 1, total: 5 })
   const repair = options.repair ?? (options.weld === false ? 'none' : 'conservative')
   return finalize(format, raw.positions, raw.indices, options.weld ?? 0, repair, onProgress)
 }
 
 /** Convenience wrapper for browser `File` objects. */
-export async function importMeshFromFile(file: Blob & { name?: string }, options: MeshImportOptions = {}): Promise<ImportedMesh> {
+export async function importMeshFromFile(
+  file: Blob & { name?: string },
+  options: MeshImportOptions = {},
+): Promise<ImportedMesh> {
   return importMeshFile(file.name ?? 'mesh', await file.arrayBuffer(), options)
 }
 
-interface RawMesh { positions: ArrayLike<number>; indices: ArrayLike<number> }
+interface RawMesh {
+  positions: ArrayLike<number>
+  indices: ArrayLike<number>
+}
 
 async function decode(format: MeshImportFormat, fileName: string, bytes: Uint8Array): Promise<RawMesh> {
   try {
     switch (format) {
-      case 'stl': return nativeImport(format, bytes)
-      case 'off': return nativeImport(format, bytes)
-      case 'amf': return fromOpenScad(await parseOpenScadAmf(blobFile(fileName, bytes)))
-      case '3mf': return fromOpenScad(await parseOpenScad3mf(blobFile(fileName, bytes)))
-      case 'obj': return nativeImport(format, bytes)
-      case 'ply': return nativeImport(format, bytes)
+      case 'stl':
+        return nativeImport(format, bytes)
+      case 'off':
+        return nativeImport(format, bytes)
+      case 'amf':
+        return fromOpenScad(await parseOpenScadAmf(blobFile(fileName, bytes)))
+      case '3mf':
+        return fromOpenScad(await parseOpenScad3mf(blobFile(fileName, bytes)))
+      case 'obj':
+        return nativeImport(format, bytes)
+      case 'ply':
+        return nativeImport(format, bytes)
     }
   } catch (error) {
     if (error instanceof MeshImportError) throw error
     if (error instanceof OpenScadImportDataError) {
-      const code: MeshImportErrorCode = error.code === 'E_IMPORT_LIMIT' ? 'limit'
-        : error.code === 'E_IMPORT_EMPTY' ? 'empty'
-        : error.code === 'E_IMPORT_ENCODING' ? 'encoding'
-        : 'invalid-data'
+      const code: MeshImportErrorCode =
+        error.code === 'E_IMPORT_LIMIT'
+          ? 'limit'
+          : error.code === 'E_IMPORT_EMPTY'
+            ? 'empty'
+            : error.code === 'E_IMPORT_ENCODING'
+              ? 'encoding'
+              : 'invalid-data'
       throw new MeshImportError(code, error.message, format)
     }
     throw new MeshImportError('invalid-data', error instanceof Error ? error.message : String(error), format)
@@ -157,16 +192,24 @@ function fromOpenScad(geometry: OpenScadImportGeometry3D): RawMesh {
 
 /** File decoding and welding run in mesh-io; errors retain the host API codes. */
 function nativeImport(format: MeshImportFormat, bytes: Uint8Array): RawMesh {
- return nativeImportCall('mesh_decode', {format, bytes}, format)
+  return nativeImportCall('mesh_decode', { format, bytes }, format)
 }
 function nativeImportCall<T>(op: string, payload: Record<string, unknown>, format: MeshImportFormat): T {
- try { return op==='mesh_decode' ? decodeMeshBytesInKernel(format as 'obj'|'ply'|'stl'|'off',payload.bytes as Uint8Array) as T : callGeometryRust<T>(op, payload) }
- catch (error) {
-  const code: MeshImportErrorCode = error instanceof GeometryKernelError && error.code === 'MESH_IMPORT_EMPTY' ? 'empty'
-   : error instanceof GeometryKernelError && error.code === 'MESH_IMPORT_LIMIT' ? 'limit'
-   : error instanceof GeometryKernelError && error.code === 'MESH_IMPORT_ENCODING' ? 'encoding' : 'invalid-data'
-  throw new MeshImportError(code, error instanceof Error ? error.message : String(error), format)
- }
+  try {
+    return op === 'mesh_decode'
+      ? (decodeMeshBytesInKernel(format as 'obj' | 'ply' | 'stl' | 'off', payload.bytes as Uint8Array) as T)
+      : callGeometryRust<T>(op, payload)
+  } catch (error) {
+    const code: MeshImportErrorCode =
+      error instanceof GeometryKernelError && error.code === 'MESH_IMPORT_EMPTY'
+        ? 'empty'
+        : error instanceof GeometryKernelError && error.code === 'MESH_IMPORT_LIMIT'
+          ? 'limit'
+          : error instanceof GeometryKernelError && error.code === 'MESH_IMPORT_ENCODING'
+            ? 'encoding'
+            : 'invalid-data'
+    throw new MeshImportError(code, error instanceof Error ? error.message : String(error), format)
+  }
 }
 function finalize(
   format: MeshImportFormat,
@@ -176,21 +219,25 @@ function finalize(
   mode: MeshImportRepairMode,
   onProgress?: (progress: MeshImportProgress) => void,
 ): ImportedMesh {
-  const result = nativeImportCall<{positions: number[]; indices: number[]; sourceVertexCount: number; degenerateTriangles: number}>(
-    'mesh_import_finalize', {positions, indices, weld}, format)
+  const result = nativeImportCall<{
+    positions: number[]
+    indices: number[]
+    sourceVertexCount: number
+    degenerateTriangles: number
+  }>('mesh_import_finalize', { positions, indices, weld }, format)
   let finalPositions = Float64Array.from(result.positions)
   let finalIndices = Uint32Array.from(result.indices)
-  onProgress?.({phase: 'check', completed: 2, total: 5})
+  onProgress?.({ phase: 'check', completed: 2, total: 5 })
   const before = checkManifoldInKernel(finalPositions, finalIndices)
   let after = before
   let repair: MeshImportRepairStats | null = null
   if (mode !== 'none' && !before.isManifold) {
     // Welding is already owned by mesh_import_finalize; do not apply a second epsilon here.
-    onProgress?.({phase: 'repair', completed: 3, total: 5})
+    onProgress?.({ phase: 'repair', completed: 3, total: 5 })
     const repaired = repairManifoldInKernel(finalPositions, finalIndices, 0, mode === 'full')
     finalPositions = repaired.positions
     finalIndices = repaired.indices
-    onProgress?.({phase: 'verify', completed: 4, total: 5})
+    onProgress?.({ phase: 'verify', completed: 4, total: 5 })
     after = checkManifoldInKernel(finalPositions, finalIndices)
     repair = Object.freeze({
       weldedVertices: repaired.weldedVertices,
@@ -203,7 +250,7 @@ function finalize(
       isManifold: repaired.isManifold,
       isManifoldWithBoundary: repaired.isManifoldWithBoundary,
     })
-  } else onProgress?.({phase: 'verify', completed: 4, total: 5})
+  } else onProgress?.({ phase: 'verify', completed: 4, total: 5 })
   return Object.freeze({
     ...result,
     format,
@@ -211,6 +258,6 @@ function finalize(
     indices: finalIndices,
     triangleCount: finalIndices.length / 3,
     vertexCount: finalPositions.length / 3,
-    manifold: Object.freeze({mode, before, after, repair}),
+    manifold: Object.freeze({ mode, before, after, repair }),
   })
 }

@@ -52,29 +52,39 @@ describe('native topology lineage', () => {
     const service = createSelectionTransferService()
     service.applyRustChangeSet({
       schema: 1,
-      nodes: [{ id: a, kind: 'face' }, { id: b, kind: 'face' }],
-      changes: [{
-        kind: 'modified',
-        topoKind: 'face',
-        parents: [a],
-        children: [b],
-        provenance: { operation: 'push-face', operand: null, occurrence: 'occ-1' },
-        role: 'primary',
-        anchor: 'top-cap',
-      }],
+      nodes: [
+        { id: a, kind: 'face' },
+        { id: b, kind: 'face' },
+      ],
+      changes: [
+        {
+          kind: 'modified',
+          topoKind: 'face',
+          parents: [a],
+          children: [b],
+          provenance: { operation: 'push-face', operand: null, occurrence: 'occ-1' },
+          role: 'primary',
+          anchor: 'top-cap',
+        },
+      ],
     })
     service.applyRustChangeSet({
       schema: 1,
-      nodes: [{ id: b, kind: 'face' }, { id: c, kind: 'face' }],
-      changes: [{
-        kind: 'modified',
-        topoKind: 'face',
-        parents: [b],
-        children: [c],
-        provenance: { operation: 'resize', operand: null, occurrence: 'occ-2' },
-        role: 'primary',
-        anchor: 'top-cap',
-      }],
+      nodes: [
+        { id: b, kind: 'face' },
+        { id: c, kind: 'face' },
+      ],
+      changes: [
+        {
+          kind: 'modified',
+          topoKind: 'face',
+          parents: [b],
+          children: [c],
+          provenance: { operation: 'resize', operand: null, occurrence: 'occ-2' },
+          role: 'primary',
+          anchor: 'top-cap',
+        },
+      ],
     })
     expect(service.transfer(a)).toEqual({ status: 'followed', id: c })
     const snapshot = service.snapshot(c)

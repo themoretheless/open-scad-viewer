@@ -36,10 +36,14 @@ function writeOrbitViewMatrix(eye: Vec3, target: Vec3, out: Float32Array): void 
   let zz = eye[2] - target[2]
   let norm = length3(zx, zy, zz)
   if (norm < 1e-10) {
-    zx = 0; zy = 0; zz = 1
+    zx = 0
+    zy = 0
+    zz = 1
     norm = 1
   }
-  zx /= norm; zy /= norm; zz /= norm
+  zx /= norm
+  zy /= norm
+  zz /= norm
 
   // cross3([0, 0, 1], z) = [-zy, zx, 0]
   let xx = 0 * zz - 1 * zy
@@ -48,26 +52,44 @@ function writeOrbitViewMatrix(eye: Vec3, target: Vec3, out: Float32Array): void 
   norm = length3(xx, xy, xz)
   if (norm < 1e-10) {
     const highZ = Math.abs(zz) > 0.9
-    const ux = 0, uy = highZ ? 1 : 0, uz = highZ ? 0 : 1
+    const ux = 0,
+      uy = highZ ? 1 : 0,
+      uz = highZ ? 0 : 1
     xx = uy * zz - uz * zy
     xy = uz * zx - ux * zz
     xz = ux * zy - uy * zx
     norm = length3(xx, xy, xz)
   }
-  xx /= norm; xy /= norm; xz /= norm
+  xx /= norm
+  xy /= norm
+  xz /= norm
 
   const yx = zy * xz - zz * xy
   const yy = zz * xx - zx * xz
   const yz = zx * xy - zy * xx
 
-  out[0] = xx; out[1] = xy; out[2] = xz; out[3] = -(xx * eye[0] + xy * eye[1] + xz * eye[2])
-  out[4] = yx; out[5] = yy; out[6] = yz; out[7] = -(yx * eye[0] + yy * eye[1] + yz * eye[2])
-  out[8] = zx; out[9] = zy; out[10] = zz; out[11] = -(zx * eye[0] + zy * eye[1] + zz * eye[2])
-  out[12] = 0; out[13] = 0; out[14] = 0; out[15] = 1
+  out[0] = xx
+  out[1] = xy
+  out[2] = xz
+  out[3] = -(xx * eye[0] + xy * eye[1] + xz * eye[2])
+  out[4] = yx
+  out[5] = yy
+  out[6] = yz
+  out[7] = -(yx * eye[0] + yy * eye[1] + yz * eye[2])
+  out[8] = zx
+  out[9] = zy
+  out[10] = zz
+  out[11] = -(zx * eye[0] + zy * eye[1] + zz * eye[2])
+  out[12] = 0
+  out[13] = 0
+  out[14] = 0
+  out[15] = 1
 }
 
 export function computeOrbitCameraFrame(o: OrbitProjectionOptions) {
-  const invalid = (): never => { throw new Error('Invalid or unrepresentable orbit camera') }
+  const invalid = (): never => {
+    throw new Error('Invalid or unrepresentable orbit camera')
+  }
   if (o.projection !== 'perspective' && o.projection !== 'orthographic') invalid()
   if (
     !Number.isFinite(o.yaw) ||
@@ -109,18 +131,12 @@ export function computeOrbitCameraFrame(o: OrbitProjectionOptions) {
     const ox = cx - o.target[0]
     const oy = cy - o.target[1]
     const oz = cz - o.target[2]
-    frontDepth =
-      (bx * ox + by * oy + bz * oz) +
-      (Math.abs(bx) * hx + Math.abs(by) * hy + Math.abs(bz) * hz)
+    frontDepth = bx * ox + by * oy + bz * oz + (Math.abs(bx) * hx + Math.abs(by) * hy + Math.abs(bz) * hz)
     const radius = length3(hx, hy, hz)
     eyeDistance = Math.max(eyeDistance, frontDepth + Math.max(0.01, radius * 0.05))
     extent = Math.max(extent, length3(ox, oy, oz) + radius)
   }
-  const eye: Vec3 = [
-    o.target[0] + eyeDistance * bx,
-    o.target[1] + eyeDistance * by,
-    o.target[2] + eyeDistance * bz,
-  ]
+  const eye: Vec3 = [o.target[0] + eyeDistance * bx, o.target[1] + eyeDistance * by, o.target[2] + eyeDistance * bz]
   const near = Math.max(0.001, (eyeDistance - frontDepth) * 0.05)
   const far = Math.max(near + 1, eyeDistance + extent * 1.1)
   const halfHeight = o.distance * Math.tan(o.fovY / 2)
@@ -150,10 +166,7 @@ export function computeOrbitCameraFrame(o: OrbitProjectionOptions) {
     const p3 = SCRATCH_PROJECTION[r4 + 3]!
     for (let c = 0; c < 4; c++) {
       const sum =
-        p0 * SCRATCH_VIEW[c]! +
-        p1 * SCRATCH_VIEW[4 + c]! +
-        p2 * SCRATCH_VIEW[8 + c]! +
-        p3 * SCRATCH_VIEW[12 + c]!
+        p0 * SCRATCH_VIEW[c]! + p1 * SCRATCH_VIEW[4 + c]! + p2 * SCRATCH_VIEW[8 + c]! + p3 * SCRATCH_VIEW[12 + c]!
       const v = fround(sum)
       if (!Number.isFinite(v)) invalid()
       viewProjection[r4 + c] = v

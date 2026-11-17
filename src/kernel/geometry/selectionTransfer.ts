@@ -91,9 +91,7 @@ export function evaluateRebuildAmbiguity(
     return { ok: transfer.status === 'lost', transfer, notes: fixture.notes }
   }
   return {
-    ok: transfer.status === 'ambiguous'
-      || transfer.status === 'confirmation-required'
-      || transfer.status === 'lost',
+    ok: transfer.status === 'ambiguous' || transfer.status === 'confirmation-required' || transfer.status === 'lost',
     transfer,
     notes: fixture.notes,
   }
@@ -115,9 +113,8 @@ export class SelectionTransferService {
     this.lineage.applyChangeSet(changeSet)
     for (const change of changeSet.changes) {
       for (const child of change.children) {
-        const role = change.role === 'primary' || change.role === 'support' || change.role === 'derived'
-          ? change.role
-          : 'derived'
+        const role =
+          change.role === 'primary' || change.role === 'support' || change.role === 'derived' ? change.role : 'derived'
         this.roles.set(child, role)
         if (change.anchor !== null) {
           this.anchors.set(child, Object.freeze({ id: child, role, parameterHint: change.anchor }))

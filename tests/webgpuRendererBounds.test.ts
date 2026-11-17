@@ -22,11 +22,7 @@ function boundMeasure() {
   }
 }
 
-const vertices = new Float32Array([
-  0, 0, 0, 0, 0, 1,
-  1, 2, 3, 0, 0, 1,
-  -1, 4, 2, 0, 0, 1,
-])
+const vertices = new Float32Array([0, 0, 0, 0, 0, 1, 1, 2, 3, 0, 0, 1, -1, 4, 2, 0, 0, 1])
 
 describe('mesh bounds cache', () => {
   it('computes exact local and world bounds with a scalar scan', () => {
@@ -96,10 +92,7 @@ describe('mesh bounds cache', () => {
 
   it('skips non-finite vertices and reports fully invalid buffers as null', () => {
     const measure = boundMeasure()
-    const withNaN = new Float32Array([
-      NaN, 0, 0, 0, 0, 1,
-      1, 1, 1, 0, 0, 1,
-    ])
+    const withNaN = new Float32Array([NaN, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1])
     expect(measure(withNaN, identity())!.local).toEqual({ min: [1, 1, 1], max: [1, 1, 1] })
 
     const allBad = new Float32Array([NaN, NaN, NaN, 0, 0, 1])

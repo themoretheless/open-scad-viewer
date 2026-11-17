@@ -1,23 +1,25 @@
-import {importStepForWorkbench, exportRetainedStepForWorkbench} from './cadStepRouting'
+import { importStepForWorkbench, exportRetainedStepForWorkbench } from './cadStepRouting'
 import { stringifyMeshJson } from '../exchange/meshJson'
-import {loadProjectStepModel, saveProjectStepModel} from './cadStepIndexedDb'
-import {parseDirectDocument, type DirectBody, type DirectDocument} from '../app/directModeling'
-import {warmGeometryKernel} from './geometry/kernel'
+import { loadProjectStepModel, saveProjectStepModel } from './cadStepIndexedDb'
+import { parseDirectDocument, type DirectBody, type DirectDocument } from '../app/directModeling'
+import { warmGeometryKernel } from './geometry/kernel'
 
 /** Validate the complete addition before replacing the independently retained original. */
 export async function prepareSolidStepImport(text: string, current: DirectDocument) {
   const snapshot = structuredClone(current)
   await warmGeometryKernel()
   const imported = importStepForWorkbench(text)
-  const document = parseDirectDocument(stringifyMeshJson({
-    ...snapshot,
-    bodies: [...snapshot.bodies, ...imported.bodies],
-    interchange: {...snapshot.interchange, step: imported.report},
-  }))
+  const document = parseDirectDocument(
+    stringifyMeshJson({
+      ...snapshot,
+      bodies: [...snapshot.bodies, ...imported.bodies],
+      interchange: { ...snapshot.interchange, step: imported.report },
+    }),
+  )
   if (imported.retainedModel) {
     await saveProjectStepModel(imported.retainedModel, imported.report, imported.retainedDocument)
   }
-  return {document, report: imported.report, selected: imported.bodies[0]?.id ?? ''}
+  return { document, report: imported.report, selected: imported.bodies[0]?.id ?? '' }
 }
 
 /** Export the saved original, never imply that later Solid edits update its assembly graph. */
@@ -29,10 +31,10 @@ export async function exportSolidStepOriginal() {
 }
 
 /** Export the selected body's current B-rep, independent of the retained source file. */
-export async function exportSolidStepCurrent(body:DirectBody) {
-  if(!body.brep)throw Error('Current STEP export requires an exact B-rep body. Export this mesh as STL or OBJ.')
-  const model=structuredClone(body.brep)
+export async function exportSolidStepCurrent(body: DirectBody) {
+  if (!body.brep) throw Error('Current STEP export requires an exact B-rep body. Export this mesh as STL or OBJ.')
+  const model = structuredClone(body.brep)
   await warmGeometryKernel()
-  const {exportDirectStepV9}=await import('./cadNurbsStep')
+  const { exportDirectStepV9 } = await import('./cadNurbsStep')
   return exportDirectStepV9(model).text
 }

@@ -3,7 +3,8 @@ export const isRush = (source: string) => /^\s*\/\/\s*@rush(?:\/1)?(?=\s|$)/.tes
 export const isRushFrontend = isRush
 
 /** Rush uses .r; legacy RushGraph Text keeps .mg. */
-export const sourceFileExtension = (source: string) => (isRush(source) ? '.r' : isRushFrontend(source) ? '.mg' : '.scad')
+export const sourceFileExtension = (source: string) =>
+  isRush(source) ? '.r' : isRushFrontend(source) ? '.mg' : '.scad'
 export const SOURCE_FILE_EXTENSION = /\.(scad|mg|r)$/i
 export const SOURCE_FILE_ACCEPT = '.scad,.r,.mg,text/plain'
 /** Preserve recognized source filenames; infer the extension for unnamed documents. */

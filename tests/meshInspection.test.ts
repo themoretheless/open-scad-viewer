@@ -8,20 +8,17 @@ import {
   summarizeMeasurement,
 } from '../src/kernel/meshInspection'
 import { identity, scale, translate, type Mat4 } from '../src/kernel/geometry/math3d'
-import type {
-  MeshData,
-  MeshSourceReference,
-  SceneEntityId,
-  MeshTopologyDiagnostics,
-} from '../src/core/mesh'
+import type { MeshData, MeshSourceReference, SceneEntityId, MeshTopologyDiagnostics } from '../src/core/mesh'
 
-function makeMesh(options: {
-  positions?: number[][]
-  indices?: number[]
-  transform?: Mat4
-  topology?: MeshTopologyDiagnostics
-  entityId?: SceneEntityId
-} = {}): MeshData {
+function makeMesh(
+  options: {
+    positions?: number[][]
+    indices?: number[]
+    transform?: Mat4
+    topology?: MeshTopologyDiagnostics
+    entityId?: SceneEntityId
+  } = {},
+): MeshData {
   const positions = options.positions ?? [
     [0, 0, 0],
     [1, 0, 0],
@@ -160,7 +157,11 @@ describe('mesh inspection', () => {
   it('computes a barycentric world point and transformed face normal', () => {
     const transform = translate(scale(identity(), [2, 3, 4]), [10, -2, 5])
     const mesh = makeMesh({
-      positions: [[0, 0, 0], [1, 0, 0], [0, 1, 0]],
+      positions: [
+        [0, 0, 0],
+        [1, 0, 0],
+        [0, 1, 0],
+      ],
       indices: [0, 1, 2],
       transform,
     })
@@ -173,7 +174,11 @@ describe('mesh inspection', () => {
 
   it('rejects a normal for a degenerate transformed triangle', () => {
     const mesh = makeMesh({
-      positions: [[0, 0, 0], [1, 0, 0], [2, 0, 0]],
+      positions: [
+        [0, 0, 0],
+        [1, 0, 0],
+        [2, 0, 0],
+      ],
       indices: [0, 1, 2],
     })
     expect(computeHitNormal(mesh, 0)).toBeNull()

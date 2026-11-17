@@ -9,7 +9,6 @@ export function isWellFormedUnicode(value: string): boolean {
   return true
 }
 
-
 export function isNonNegativeSafeInteger(value: unknown): value is number {
   return Number.isSafeInteger(value) && (value as number) >= 0
 }
@@ -17,4 +16,3 @@ export function isNonNegativeSafeInteger(value: unknown): value is number {
 export function isNonNegativeFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0
 }
-

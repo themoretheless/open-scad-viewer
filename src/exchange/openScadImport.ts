@@ -5,7 +5,11 @@ export { parseOpenScadAmf } from './openScadImport/parseOpenScadAmf'
 export { parseOpenScad3mf, parseOpenScadSvg } from './openScadImport/parseOpenScad3mf'
 export { parseOpenScadDxfQueryMetadata, parseOpenScadDxf } from './openScadImport/parseOpenScadDxfQueryMetadata'
 export { prepareOpenScadImportAssets, loadPreparedOpenScadImport } from './openScadImport/prepareOpenScadImportAssets'
-export { queryPreparedOpenScadDxfDimension, queryPreparedOpenScadDxfCross, loadOpenScadImport } from './openScadImport/queryPreparedOpenScadDxfDimension'
+export {
+  queryPreparedOpenScadDxfDimension,
+  queryPreparedOpenScadDxfCross,
+  loadOpenScadImport,
+} from './openScadImport/queryPreparedOpenScadDxfDimension'
 
 export const OPENSCAD_IMPORT_MAX_TRIANGLES = 250_000
 export const OPENSCAD_IMPORT_MAX_VERTICES = 750_000
@@ -23,14 +27,7 @@ export const OPENSCAD_IMPORT_DEFAULT_CURVE_SEGMENTS = 40
 export const OPENSCAD_IMPORT_MAX_DXF_QUERY_RECORDS = OPENSCAD_IMPORT_MAX_XML_ELEMENTS
 export const OPENSCAD_IMPORT_MAX_PROJECT_DXF_QUERY_RECORDS = OPENSCAD_IMPORT_MAX_DXF_QUERY_RECORDS
 
-export const OPENSCAD_IMPORT_FORMATS = Object.freeze([
-  'svg',
-  'dxf',
-  'stl',
-  'off',
-  'amf',
-  '3mf',
-] as const)
+export const OPENSCAD_IMPORT_FORMATS = Object.freeze(['svg', 'dxf', 'stl', 'off', 'amf', '3mf'] as const)
 
 /**
  * Stable 2021.01 import profile. NEF3 is deliberately excluded: upstream only
@@ -48,15 +45,11 @@ export const OPENSCAD_IMPORT_CAPABILITIES = Object.freeze({
   ]),
 })
 
-export type OpenScadImportFormat = typeof OPENSCAD_IMPORT_FORMATS[number]
+export type OpenScadImportFormat = (typeof OPENSCAD_IMPORT_FORMATS)[number]
 
-export const OPENSCAD_2021_LEGACY_IMPORT_FORMATS = Object.freeze([
-  'stl',
-  'off',
-  'dxf',
-] as const)
+export const OPENSCAD_2021_LEGACY_IMPORT_FORMATS = Object.freeze(['stl', 'off', 'dxf'] as const)
 
-export type OpenScad2021LegacyImportFormat = typeof OPENSCAD_2021_LEGACY_IMPORT_FORMATS[number]
+export type OpenScad2021LegacyImportFormat = (typeof OPENSCAD_2021_LEGACY_IMPORT_FORMATS)[number]
 
 export const OPENSCAD_IMPORT_ERROR_CODES = Object.freeze([
   'E_IMPORT_PROJECT_REQUIRED',
@@ -74,7 +67,7 @@ export const OPENSCAD_IMPORT_ERROR_CODES = Object.freeze([
   'E_IMPORT_NON_MANIFOLD',
 ] as const)
 
-export type OpenScadImportErrorCode = typeof OPENSCAD_IMPORT_ERROR_CODES[number]
+export type OpenScadImportErrorCode = (typeof OPENSCAD_IMPORT_ERROR_CODES)[number]
 
 export interface OpenScadImportErrorDetails {
   readonly sourcePath: string
@@ -114,14 +107,16 @@ export class OpenScadImportError extends Error {
 
 export class OpenScadImportDataError extends Error {
   constructor(
-    readonly code: Exclude<OpenScadImportErrorCode,
+    readonly code: Exclude<
+      OpenScadImportErrorCode,
       | 'E_IMPORT_PROJECT_REQUIRED'
       | 'E_IMPORT_FILE_REQUIRED'
       | 'E_IMPORT_PATH_INVALID'
       | 'E_IMPORT_FILE_MISSING'
       | 'E_IMPORT_NEF3_UNAVAILABLE'
       | 'E_IMPORT_ARGUMENT_INVALID'
-      | 'E_IMPORT_NON_MANIFOLD'>,
+      | 'E_IMPORT_NON_MANIFOLD'
+    >,
     message: string,
     readonly format?: OpenScadImportFormat,
     readonly limit?: number,
@@ -259,7 +254,7 @@ export const OPENSCAD_DXF_QUERY_DIAGNOSTIC_CODES = Object.freeze([
   'OPENSCAD_DXF_CROSS_NOT_FOUND',
 ] as const)
 
-export type OpenScadDxfQueryDiagnosticCode = typeof OPENSCAD_DXF_QUERY_DIAGNOSTIC_CODES[number]
+export type OpenScadDxfQueryDiagnosticCode = (typeof OPENSCAD_DXF_QUERY_DIAGNOSTIC_CODES)[number]
 
 export interface OpenScadDxfQueryDiagnostic {
   readonly severity: 'warning'
@@ -330,18 +325,25 @@ export interface MutableXmlElement {
 }
 
 export type Matrix4 = readonly [
-  number, number, number, number,
-  number, number, number, number,
-  number, number, number, number,
-  number, number, number, number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
 ]
 
-export const IDENTITY_4: Matrix4 = [
-  1, 0, 0, 0,
-  0, 1, 0, 0,
-  0, 0, 1, 0,
-  0, 0, 0, 1,
-]
+export const IDENTITY_4: Matrix4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
 
 export interface RawMesh3D {
   readonly vertices: readonly number[]
@@ -396,20 +398,32 @@ export const THREE_MF_START_PART_RELATIONSHIP = 'http://schemas.microsoft.com/3d
 
 export type ThreeMfObject =
   | { readonly kind: 'mesh'; readonly mesh: RawMesh3D }
-  | { readonly kind: 'components'; readonly components: readonly { readonly objectId: string; readonly transform: Matrix4 }[] }
+  | {
+      readonly kind: 'components'
+      readonly components: readonly { readonly objectId: string; readonly transform: Matrix4 }[]
+    }
 
 export type Matrix2 = readonly [number, number, number, number, number, number]
 export const IDENTITY_2: Matrix2 = [1, 0, 0, 1, 0, 0]
 
-export interface DxfPair { readonly code: number; readonly value: string }
-export interface DxfEntity { readonly type: string; readonly pairs: readonly DxfPair[] }
+export interface DxfPair {
+  readonly code: number
+  readonly value: string
+}
+export interface DxfEntity {
+  readonly type: string
+  readonly pairs: readonly DxfPair[]
+}
 
 export interface DxfSegment {
   readonly layer: string
   readonly points: readonly OpenScadImportPoint2[]
 }
 
-export interface DxfBlock { readonly base: OpenScadImportPoint2; readonly entities: readonly DxfEntity[] }
+export interface DxfBlock {
+  readonly base: OpenScadImportPoint2
+  readonly entities: readonly DxfEntity[]
+}
 
 export interface OpenScadDxfIntermediate {
   readonly regions: readonly OpenScadImportRegion2D[]
@@ -436,7 +450,7 @@ export interface ResolvedDxfQueryTransform {
 export const DXF_QUERY_GRID_RESOLUTION = 1 / 1024
 
 export interface DxfQueryPathLine {
-  readonly keys: readonly [string,string]
+  readonly keys: readonly [string, string]
   readonly points: readonly [OpenScadImportPoint2, OpenScadImportPoint2]
   disabled: boolean
 }

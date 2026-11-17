@@ -1,14 +1,10 @@
-import type {MeshObject} from '../../../kernel/meshEditing'
-import type {MainSolidJob,MainSolidResults} from '../../../kernel/mainSolidProtocol'
+import type { MeshObject } from '../../../kernel/meshEditing'
+import type { MainSolidJob, MainSolidResults } from '../../../kernel/mainSolidProtocol'
 import { type SculptFalloff, type SculptKind } from '../../../kernel/geometryEditing'
-import {
-  MeshHistory,
-  type MeshSelectMode,
-  type MeshWorkspaceDocument,
-} from '../../../kernel/meshEditing'
+import { MeshHistory, type MeshSelectMode, type MeshWorkspaceDocument } from '../../../kernel/meshEditing'
 import type { PolygonMesh } from '../../../kernel/geometry/polygon'
-import type {MeshModelerProps} from '../useMeshModeler'
-import type {Ref,ComputedRef,ShallowRef} from 'svet'
+import type { MeshModelerProps } from '../useMeshModeler'
+import type { Ref, ComputedRef, ShallowRef } from 'svet'
 export interface MeshCommandsContext {
   run: (fn: () => void) => void
   history: MeshHistory
@@ -37,7 +33,11 @@ export interface MeshCommandsContext {
   importNotice: Ref<string, string>
   booleanNotice: Ref<string, string>
   document: ShallowRef<MeshWorkspaceDocument, MeshWorkspaceDocument>
-  runMeshTask: <K extends MainSolidJob["kind"]>(job: Extract<MainSolidJob, { kind: K; }>, accept: (result: MainSolidResults[K]) => void, reject: (error: unknown) => void) => Promise<boolean>
+  runMeshTask: <K extends MainSolidJob['kind']>(
+    job: Extract<MainSolidJob, { kind: K }>,
+    accept: (result: MainSolidResults[K]) => void,
+    reject: (error: unknown) => void,
+  ) => Promise<boolean>
   ru: ComputedRef<boolean>
   booleanTarget: Ref<string, string>
   brushKind: Ref<SculptKind, SculptKind>
@@ -46,7 +46,10 @@ export interface MeshCommandsContext {
   brushFalloff: Ref<SculptFalloff, SculptFalloff>
   brushMirror: Ref<[boolean, boolean, boolean], [boolean, boolean, boolean]>
   twistAmount: Ref<number, number>
-  booleanOp: Ref<"union" | "difference" | "intersection", "union" | "difference" | "intersection">
-  exportFormat: Ref<"stl" | "stl_binary" | "3mf" | "obj" | "ply" | "off" | "amf", "stl" | "stl_binary" | "3mf" | "obj" | "ply" | "off" | "amf">
+  booleanOp: Ref<'union' | 'difference' | 'intersection', 'union' | 'difference' | 'intersection'>
+  exportFormat: Ref<
+    'stl' | 'stl_binary' | '3mf' | 'obj' | 'ply' | 'off' | 'amf',
+    'stl' | 'stl_binary' | '3mf' | 'obj' | 'ply' | 'off' | 'amf'
+  >
   props: MeshModelerProps
 }

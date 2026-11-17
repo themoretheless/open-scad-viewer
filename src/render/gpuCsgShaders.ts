@@ -1,5 +1,5 @@
 /** Render shaders for the GPU CSG depth/stencil preview. */
-export const CSG_COMMON_WGSL = /* wgsl */`
+export const CSG_COMMON_WGSL = /* wgsl */ `
 struct CsgScene {
   vp: mat4x4f,
   eye: vec4f,
@@ -19,7 +19,7 @@ struct CsgObj {
 @group(1) @binding(0) var<uniform> ob: CsgObj;
 `
 
-export const CSG_DEPTH_WGSL = /* wgsl */`
+export const CSG_DEPTH_WGSL = /* wgsl */ `
 ${CSG_COMMON_WGSL}
 
 struct VDepth {
@@ -36,7 +36,7 @@ struct VDepth {
 }
 `
 
-export const CSG_SHADE_WGSL = /* wgsl */`
+export const CSG_SHADE_WGSL = /* wgsl */ `
 ${CSG_COMMON_WGSL}
 
 struct VShade {

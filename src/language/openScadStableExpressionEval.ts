@@ -18,10 +18,18 @@ import {
   type Value,
 } from './openscadCompiler'
 import { OpenScadStableScope } from './openScadStableScope'
-import {
-  type OpenScadValueSemanticsContext,
-} from './semantic/openScadValueSemantics'
-export { isStableProfile, evaluationError, registerArrayValue, stableOverlayContext, overlayDynamicVariables, isListComprehensionExpression, isFunctionValue, compactDiagnosticText, appendComprehensionValues } from './openScadStableExpressionEval/isStableProfile'
+import { type OpenScadValueSemanticsContext } from './semantic/openScadValueSemantics'
+export {
+  isStableProfile,
+  evaluationError,
+  registerArrayValue,
+  stableOverlayContext,
+  overlayDynamicVariables,
+  isListComprehensionExpression,
+  isFunctionValue,
+  compactDiagnosticText,
+  appendComprehensionValues,
+} from './openScadStableExpressionEval/isStableProfile'
 export { createStableExpressionEvaluators } from './openScadStableExpressionEval/createStableExpressionEvaluators'
 
 export const MAX_EXPRESSION_DEPTH = 256
@@ -80,7 +88,11 @@ export interface StableExpressionEvalHost<C extends StableExpressionEvalContext>
 export interface StableExpressionEvaluators<C extends StableExpressionEvalContext> {
   readonly stableValueContext: (ctx: C, position: number) => OpenScadValueSemanticsContext
   readonly enterStableStatementScope: (statements: readonly Statement[], parent: C) => C
-  readonly evaluateSequentialBindings: (args: readonly ExpressionArgument[], ctx: C, depth: number) => Map<string, Value>
+  readonly evaluateSequentialBindings: (
+    args: readonly ExpressionArgument[],
+    ctx: C,
+    depth: number,
+  ) => Map<string, Value>
   readonly stableIterable: (value: Value, ctx: C, position: number) => Value[]
   readonly evalListComprehension: (expr: ListComprehensionExpression, ctx: C, depth: number) => Value[]
   readonly resolveStableExpressionArguments: (

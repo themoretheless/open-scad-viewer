@@ -1,6 +1,11 @@
 import { parseDirectDocumentAsync, type DirectBody } from '../../app/directModeling'
 import { warmGeometryKernel } from '../geometry/kernel'
-import { EXACT_SOLID_TIMEOUT_MS, isExactSolidRequest, isExactSolidResponse, type ExactSolidRequest } from './exactSolidProtocol'
+import {
+  EXACT_SOLID_TIMEOUT_MS,
+  isExactSolidRequest,
+  isExactSolidResponse,
+  type ExactSolidRequest,
+} from './exactSolidProtocol'
 
 export interface ExactSolidWorkerPort {
   postMessage(request: ExactSolidRequest): void
@@ -13,7 +18,8 @@ export interface ExactSolidWorkerPort {
 export function buildExactSolidsInWorker(
   source: string,
   signal?: AbortSignal,
-  factory: () => ExactSolidWorkerPort = () => new Worker(new URL('../../workers/geometry.worker.ts', import.meta.url), { type: 'module' }),
+  factory: () => ExactSolidWorkerPort = () =>
+    new Worker(new URL('../../workers/geometry.worker.ts', import.meta.url), { type: 'module' }),
 ): Promise<DirectBody[]> {
   const request: ExactSolidRequest = { kind: 'exact-solid', version: 1, source }
   if (!isExactSolidRequest(request)) return Promise.reject(new RangeError('Group source exceeds 100000 characters.'))
@@ -54,17 +60,34 @@ export function buildExactSolidsInWorker(
         if (settled) return
         const document = await parseDirectDocumentAsync(response.document, { signal: validationAbort.signal })
         if (settled) return
-        if (document.sketches.length || document.curves?.length || document.surfaces?.length
-          || document.bodies.some(body => !body.brep)) throw new Error('Worker returned non-solid geometry.')
+        if (
+          document.sketches.length ||
+          document.curves?.length ||
+          document.surfaces?.length ||
+          document.bodies.some(body => !body.brep)
+        )
+          throw new Error('Worker returned non-solid geometry.')
         finish(undefined, document.bodies)
-      } catch (error) { finish(error) }
+      } catch (error) {
+        finish(error)
+      }
     }
     worker.addEventListener('message', message)
     worker.addEventListener('error', crash)
     worker.addEventListener('messageerror', crash)
     signal?.addEventListener('abort', abort, { once: true })
-    timer = setTimeout(() => finish(new Error('Exact-solid build exceeded its 120 second limit.')), EXACT_SOLID_TIMEOUT_MS)
-    if (signal?.aborted) { abort(); return }
-    try { worker.postMessage(request) } catch (error) { finish(error) }
+    timer = setTimeout(
+      () => finish(new Error('Exact-solid build exceeded its 120 second limit.')),
+      EXACT_SOLID_TIMEOUT_MS,
+    )
+    if (signal?.aborted) {
+      abort()
+      return
+    }
+    try {
+      worker.postMessage(request)
+    } catch (error) {
+      finish(error)
+    }
   })
 }

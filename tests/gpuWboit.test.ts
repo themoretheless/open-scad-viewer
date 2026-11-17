@@ -20,7 +20,9 @@ function createFakeDevice() {
         desc,
         destroyed: false,
         createView: vi.fn(() => ({ texture: tex, desc })),
-        destroy: vi.fn(() => { tex.destroyed = true }),
+        destroy: vi.fn(() => {
+          tex.destroyed = true
+        }),
       }
       textures.push(tex)
       return tex
@@ -174,8 +176,12 @@ describe('GpuWboitRenderer', () => {
     const pass = {
       setPipeline: vi.fn(),
       setBindGroup: vi.fn(),
-      draw: vi.fn((count: number) => { drawCount = count }),
-      end: vi.fn(() => { ended = true }),
+      draw: vi.fn((count: number) => {
+        drawCount = count
+      }),
+      end: vi.fn(() => {
+        ended = true
+      }),
     }
     const encoder = {
       beginRenderPass: vi.fn(() => pass),
@@ -199,25 +205,25 @@ describe('GpuWboitRenderer', () => {
 
     // Order 1: A then B
     const accum1 = {
-      r: (fragA.r * fragA.a) * wA + (fragB.r * fragB.a) * wB,
-      g: (fragA.g * fragA.a) * wA + (fragB.g * fragB.a) * wB,
-      b: (fragA.b * fragA.a) * wA + (fragB.b * fragB.a) * wB,
+      r: fragA.r * fragA.a * wA + fragB.r * fragB.a * wB,
+      g: fragA.g * fragA.a * wA + fragB.g * fragB.a * wB,
+      b: fragA.b * fragA.a * wA + fragB.b * fragB.a * wB,
       a: fragA.a * wA + fragB.a * wB,
     }
     let reveal1 = 1.0
-    reveal1 *= (1.0 - fragA.a)
-    reveal1 *= (1.0 - fragB.a)
+    reveal1 *= 1.0 - fragA.a
+    reveal1 *= 1.0 - fragB.a
 
     // Order 2: B then A
     const accum2 = {
-      r: (fragB.r * fragB.a) * wB + (fragA.r * fragA.a) * wA,
-      g: (fragB.g * fragB.a) * wB + (fragA.g * fragA.a) * wA,
-      b: (fragB.b * fragB.a) * wB + (fragA.b * fragA.a) * wA,
+      r: fragB.r * fragB.a * wB + fragA.r * fragA.a * wA,
+      g: fragB.g * fragB.a * wB + fragA.g * fragA.a * wA,
+      b: fragB.b * fragB.a * wB + fragA.b * fragA.a * wA,
       a: fragB.a * wB + fragA.a * wA,
     }
     let reveal2 = 1.0
-    reveal2 *= (1.0 - fragB.a)
-    reveal2 *= (1.0 - fragA.a)
+    reveal2 *= 1.0 - fragB.a
+    reveal2 *= 1.0 - fragA.a
 
     expect(accum1.r).toBeCloseTo(accum2.r, 8)
     expect(accum1.g).toBeCloseTo(accum2.g, 8)

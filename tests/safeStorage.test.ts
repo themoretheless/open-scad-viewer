@@ -14,9 +14,15 @@ function stubStorage(overrides: Partial<Pick<Storage, 'getItem' | 'setItem' | 'r
   const backing = new Map<string, string>()
   vi.stubGlobal('localStorage', {
     getItem: (key: string) => backing.get(key) ?? null,
-    setItem: (key: string, value: string) => { backing.set(key, String(value)) },
-    removeItem: (key: string) => { backing.delete(key) },
-    get length() { return backing.size },
+    setItem: (key: string, value: string) => {
+      backing.set(key, String(value))
+    },
+    removeItem: (key: string) => {
+      backing.delete(key)
+    },
+    get length() {
+      return backing.size
+    },
     key: (index: number) => [...backing.keys()][index] ?? null,
     ...overrides,
   })
@@ -31,7 +37,9 @@ afterEach(() => {
 describe('safeStorage', () => {
   it('invokes the failure handler and returns false when a write hits the quota', () => {
     stubStorage({
-      setItem: () => { throw new DOMException('The quota has been exceeded.', 'QuotaExceededError') },
+      setItem: () => {
+        throw new DOMException('The quota has been exceeded.', 'QuotaExceededError')
+      },
     })
     const failures: Array<{ key: string; error: unknown }> = []
     setStorageFailureHandler((key, error) => failures.push({ key, error }))
@@ -59,7 +67,11 @@ describe('safeStorage', () => {
   })
 
   it('reports failed removals through the storage failure handler', () => {
-    stubStorage({ removeItem: () => { throw new Error('storage blocked') } })
+    stubStorage({
+      removeItem: () => {
+        throw new Error('storage blocked')
+      },
+    })
     const handler = vi.fn()
     setStorageFailureHandler(handler)
 
@@ -68,7 +80,11 @@ describe('safeStorage', () => {
   })
 
   it('reads fall back safely when storage throws or holds malformed data', () => {
-    stubStorage({ getItem: () => { throw new Error('storage disabled') } })
+    stubStorage({
+      getItem: () => {
+        throw new Error('storage disabled')
+      },
+    })
     expect(storageGet('anything')).toBe(null)
     expect(storageGetJSON('anything', ['fallback'])).toEqual(['fallback'])
     expect(storageGetEnum('anything', ['ru', 'en'] as const, 'ru')).toBe('ru')

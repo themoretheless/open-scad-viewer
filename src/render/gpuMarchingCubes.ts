@@ -84,7 +84,7 @@ function buildGridUniform(grid: MarchingGrid, maxTriangles: number): ArrayBuffer
 export async function runGpuMarchingIsosurface(
   grid: MarchingGrid,
   fieldValues: Float32Array,
-  maxTriangles = 500_000
+  maxTriangles = 500_000,
 ): Promise<MarchingOutput> {
   if (typeof navigator === 'undefined' || !navigator.gpu) {
     return referenceMarchingTetrahedra(grid, fieldValues)
@@ -157,10 +157,7 @@ export async function runGpuMarchingIsosurface(
 /**
  * Fast CPU-side reference evaluator for Marching Tetrahedra (used for conformance verification).
  */
-export function referenceMarchingTetrahedra(
-  grid: MarchingGrid,
-  fieldValues: Float32Array
-): MarchingOutput {
+export function referenceMarchingTetrahedra(grid: MarchingGrid, fieldValues: Float32Array): MarchingOutput {
   const [nx, ny, nz] = grid.cells
   const isoLevel = grid.isoLevel ?? 0.0
   const row = nx + 1
@@ -194,14 +191,15 @@ export function referenceMarchingTetrahedra(
   const q2: [number, number, number] = [0, 0, 0]
   const q3: [number, number, number] = [0, 0, 0]
 
-  function interpInto(
-    i0: number,
-    i1: number,
-    out: [number, number, number]
-  ): [number, number, number] {
-    const v0 = vArr[i0]!, v1 = vArr[i1]!
-    const x0 = pX[i0]!, y0 = pY[i0]!, z0 = pZ[i0]!
-    const x1 = pX[i1]!, y1 = pY[i1]!, z1 = pZ[i1]!
+  function interpInto(i0: number, i1: number, out: [number, number, number]): [number, number, number] {
+    const v0 = vArr[i0]!,
+      v1 = vArr[i1]!
+    const x0 = pX[i0]!,
+      y0 = pY[i0]!,
+      z0 = pZ[i0]!
+    const x1 = pX[i1]!,
+      y1 = pY[i1]!,
+      z1 = pZ[i1]!
     const d = v1 - v0
     if (Math.abs(d) < 1e-6) {
       out[0] = (x0 + x1) * 0.5
@@ -222,10 +220,14 @@ export function referenceMarchingTetrahedra(
     v2: [number, number, number],
     hintX: number,
     hintY: number,
-    hintZ: number
+    hintZ: number,
   ) {
-    const d1x = v1[0] - v0[0], d1y = v1[1] - v0[1], d1z = v1[2] - v0[2]
-    const d2x = v2[0] - v0[0], d2y = v2[1] - v0[1], d2z = v2[2] - v0[2]
+    const d1x = v1[0] - v0[0],
+      d1y = v1[1] - v0[1],
+      d1z = v1[2] - v0[2]
+    const d2x = v2[0] - v0[0],
+      d2y = v2[1] - v0[1],
+      d2z = v2[2] - v0[2]
     let nx = d1y * d2z - d1z * d2y
     let ny = d1z * d2x - d1x * d2z
     let nz = d1x * d2y - d1y * d2x
@@ -233,14 +235,20 @@ export function referenceMarchingTetrahedra(
       const tmp = v1
       v1 = v2
       v2 = tmp
-      nx = -nx; ny = -ny; nz = -nz
+      nx = -nx
+      ny = -ny
+      nz = -nz
     }
     const len = Math.hypot(nx, ny, nz)
     if (len > 1e-6) {
       const invLen = 1 / len
-      nx *= invLen; ny *= invLen; nz *= invLen
+      nx *= invLen
+      ny *= invLen
+      nz *= invLen
     } else {
-      nx = 0; ny = 0; nz = 1
+      nx = 0
+      ny = 0
+      nz = 1
     }
 
     const base = triCount * 3
@@ -256,12 +264,14 @@ export function referenceMarchingTetrahedra(
       const yzBase = y * row + zBase
       for (let x = 0; x < nx; x++) {
         const xyzBase = x + yzBase
-        let hasNeg = false, hasPos = false
+        let hasNeg = false,
+          hasPos = false
         for (let c = 0; c < 8; c++) {
           const [dx, dy, dz] = CORNER_OFFSETS[c]!
           const val = fieldValues[xyzBase + dx + dy * row + dz * slice]!
           cv[c] = val
-          if (val < isoLevel) hasNeg = true; else hasPos = true
+          if (val < isoLevel) hasNeg = true
+          else hasPos = true
         }
         if (!hasNeg || !hasPos) continue
 
@@ -289,7 +299,9 @@ export function referenceMarchingTetrahedra(
 
           if (negLen === 0 || posLen === 0) continue
 
-          let hintX = 0, hintY = 0, hintZ = 0
+          let hintX = 0,
+            hintY = 0,
+            hintZ = 0
           const invPos = 1 / posLen
           for (let k = 0; k < posLen; k++) {
             const idx = pos[k]!
@@ -311,7 +323,9 @@ export function referenceMarchingTetrahedra(
               interpInto(a, pos[0]!, q0),
               interpInto(a, pos[1]!, q1),
               interpInto(a, pos[2]!, q2),
-              hintX, hintY, hintZ
+              hintX,
+              hintY,
+              hintZ,
             )
           } else if (negLen === 3 && posLen === 1) {
             const a = pos[0]!
@@ -319,10 +333,15 @@ export function referenceMarchingTetrahedra(
               interpInto(a, neg[0]!, q0),
               interpInto(a, neg[1]!, q1),
               interpInto(a, neg[2]!, q2),
-              hintX, hintY, hintZ
+              hintX,
+              hintY,
+              hintZ,
             )
           } else if (negLen === 2 && posLen === 2) {
-            const a = neg[0]!, b = neg[1]!, c = pos[0]!, d = pos[1]!
+            const a = neg[0]!,
+              b = neg[1]!,
+              c = pos[0]!,
+              d = pos[1]!
             const ac = interpInto(a, c, q0)
             const bc = interpInto(b, c, q1)
             const ad = interpInto(a, d, q2)

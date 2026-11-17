@@ -2,13 +2,7 @@
 
 export const PRINTER_COMPANION_DEFAULT_URL = 'http://127.0.0.1:17890'
 
-export type PrinterVendor =
-  | 'bambu'
-  | 'moonraker'
-  | 'octoprint'
-  | 'prusa'
-  | 'creality'
-  | 'snapmaker'
+export type PrinterVendor = 'bambu' | 'moonraker' | 'octoprint' | 'prusa' | 'creality' | 'snapmaker'
 
 export interface PrinterCompanionConfig {
   host: string
@@ -48,16 +42,18 @@ export async function companionHealth(baseUrl = PRINTER_COMPANION_DEFAULT_URL): 
   try {
     const response = await fetch(`${baseUrl.replace(/\/$/, '')}/health`, { method: 'GET' })
     if (!response.ok) return false
-    const body = await readJson(response) as { ok?: boolean }
+    const body = (await readJson(response)) as { ok?: boolean }
     return body?.ok === true
   } catch {
     return false
   }
 }
 
-export async function companionDiscover(baseUrl = PRINTER_COMPANION_DEFAULT_URL): Promise<DiscoveredCompanionPrinter[]> {
+export async function companionDiscover(
+  baseUrl = PRINTER_COMPANION_DEFAULT_URL,
+): Promise<DiscoveredCompanionPrinter[]> {
   const response = await fetch(`${baseUrl.replace(/\/$/, '')}/discover`, { method: 'GET' })
-  const body = await readJson(response) as { printers?: DiscoveredCompanionPrinter[]; error?: string }
+  const body = (await readJson(response)) as { printers?: DiscoveredCompanionPrinter[]; error?: string }
   if (!response.ok) throw new Error(body?.error || `Discover failed (${response.status}).`)
   return Array.isArray(body.printers) ? body.printers : []
 }
@@ -74,7 +70,7 @@ export async function companionSend(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ vendor, config, fileName, bytesBase64 }),
   })
-  const body = await readJson(response) as CompanionSendResult & { error?: string }
+  const body = (await readJson(response)) as CompanionSendResult & { error?: string }
   if (!response.ok) throw new Error(body?.error || `Send failed (${response.status}).`)
   return {
     remoteName: body.remoteName,

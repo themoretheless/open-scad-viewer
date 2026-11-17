@@ -1,4 +1,4 @@
-import {readFileSync} from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { Worker } from 'node:worker_threads'
 import { afterEach, describe, expect, it } from 'vitest'
 import { sha256Hex } from '../src/core/sha256'
@@ -46,23 +46,18 @@ class NodeWorkerAsWebWorker implements ManifoldPlanQualificationWorkerLike {
     void this.worker.terminate()
   }
 
-  addEventListener(
-    type: 'message' | 'error' | 'messageerror',
-    listener: EventListener,
-  ): void {
-    const wrapped = type === 'message'
-      ? (data: unknown) => listener({ data } as MessageEvent<unknown>)
-      : type === 'error'
-        ? (error: unknown) => listener({ error } as ErrorEvent)
-        : (error: unknown) => listener({ data: error } as MessageEvent<unknown>)
+  addEventListener(type: 'message' | 'error' | 'messageerror', listener: EventListener): void {
+    const wrapped =
+      type === 'message'
+        ? (data: unknown) => listener({ data } as MessageEvent<unknown>)
+        : type === 'error'
+          ? (error: unknown) => listener({ error } as ErrorEvent)
+          : (error: unknown) => listener({ data: error } as MessageEvent<unknown>)
     this.listeners.set(listener, wrapped)
     this.worker.on(type, wrapped)
   }
 
-  removeEventListener(
-    type: 'message' | 'error' | 'messageerror',
-    listener: EventListener,
-  ): void {
+  removeEventListener(type: 'message' | 'error' | 'messageerror', listener: EventListener): void {
     const wrapped = this.listeners.get(listener)
     if (wrapped === undefined) return
     this.listeners.delete(listener)
@@ -97,19 +92,23 @@ function waitForMessage<T>(worker: Worker, predicate: (value: unknown) => value 
 }
 
 async function ready(worker: Worker): Promise<void> {
-  await waitForMessage(worker, (value): value is { __webWorkerHarness: 'ready' } => (
-    value !== null && typeof value === 'object'
-      && (value as { __webWorkerHarness?: unknown }).__webWorkerHarness === 'ready'
-  ))
+  await waitForMessage(
+    worker,
+    (value): value is { __webWorkerHarness: 'ready' } =>
+      value !== null &&
+      typeof value === 'object' &&
+      (value as { __webWorkerHarness?: unknown }).__webWorkerHarness === 'ready',
+  )
 }
 
 function isDirectTerminalFor(request: GeometryBuildRequest) {
-  return (value: unknown): value is GeometryWorkerEvent => isGeometryWorkerEvent(value)
-    && ['succeeded', 'failed', 'cancelled', 'stale'].includes(value.status)
-    && value.documentRevision === request.documentRevision
-    && value.jobId === request.jobId
-    && value.quality === request.quality
-    && value.sourceSha256 === request.sourceSha256
+  return (value: unknown): value is GeometryWorkerEvent =>
+    isGeometryWorkerEvent(value) &&
+    ['succeeded', 'failed', 'cancelled', 'stale'].includes(value.status) &&
+    value.documentRevision === request.documentRevision &&
+    value.jobId === request.jobId &&
+    value.quality === request.quality &&
+    value.sourceSha256 === request.sourceSha256
 }
 
 async function terminate(worker: Worker): Promise<void> {
@@ -149,7 +148,11 @@ describe('real structured-clone geometry Worker boundaries', () => {
     const oversizedRequest = request(2, oversizedSource)
     worker.postMessage(oversizedRequest)
     const oversized = await waitForMessage(worker, isDirectTerminalFor(oversizedRequest))
-    expect(oversized).toMatchObject({jobId:2,status:'succeeded',meshes:[expect.objectContaining({entityId:expect.stringMatching(/^entity:sha256:/)})]})
+    expect(oversized).toMatchObject({
+      jobId: 2,
+      status: 'succeeded',
+      meshes: [expect.objectContaining({ entityId: expect.stringMatching(/^entity:sha256:/) })],
+    })
     expect(JSON.stringify(oversized)).not.toContain('entity:root>op:root/call%3Aassert')
 
     const recoveryRequest = request(3, 'cube(1);')
@@ -163,9 +166,7 @@ describe('real structured-clone geometry Worker boundaries', () => {
 
   it('runs plan-route 256/257 preflight in real disposable browser Worker realms', async () => {
     const run = async (source: string, workerEpoch: number): Promise<McpManifoldPlanQualificationTerminal> => {
-      const worker = spawnWebWorker(
-        new URL('../src/workers/manifoldPlanQualification.worker.ts', import.meta.url),
-      )
+      const worker = spawnWebWorker(new URL('../src/workers/manifoldPlanQualification.worker.ts', import.meta.url))
       const exited = new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => reject(new Error('Qualification Worker did not exit')), 10_000)
         worker.once('exit', () => {
@@ -185,9 +186,9 @@ describe('real structured-clone geometry Worker boundaries', () => {
         identity: MCP_MANIFOLD_PLAN_QUALIFICATION_IDENTITY,
       }
       worker.postMessage(request)
-      const terminal = await waitForMessage(worker, (value): value is McpManifoldPlanQualificationTerminal => (
-        isMcpManifoldPlanQualificationTerminal(value, request)
-      ))
+      const terminal = await waitForMessage(worker, (value): value is McpManifoldPlanQualificationTerminal =>
+        isMcpManifoldPlanQualificationTerminal(value, request),
+      )
       await exited
       return terminal
     }
@@ -200,7 +201,8 @@ describe('real structured-clone geometry Worker boundaries', () => {
     expect(exact.result.meshes[0].entityId).toHaveLength(256)
 
     await expect(run('assert(true) if(true) let(x=2) cube(x);', 2)).resolves.toMatchObject({
-      status: 'succeeded', result: {meshes:[expect.objectContaining({entityId:expect.stringMatching(/^entity:sha256:/)})]},
+      status: 'succeeded',
+      result: { meshes: [expect.objectContaining({ entityId: expect.stringMatching(/^entity:sha256:/) })] },
     })
     await expect(run('cube(1);', 3)).resolves.toMatchObject({
       status: 'succeeded',
@@ -259,48 +261,77 @@ describe('real structured-clone geometry Worker boundaries', () => {
   }, 30_000)
 })
 
-
-it.each(['progressive-sweep','contact-progressive-hollow-body','progressive-miter-hollow-body'])('streams cloned Rush previews and cancellation for %s through a real worker',async(name)=>{
- const worker=spawnWebWorker(new URL('../src/workers/geometry.worker.ts',import.meta.url))
- await ready(worker)
- const source=readFileSync(`examples/rush/${name}.r`,'utf8')
- const request=(jobId:number):GeometryBuildRequest=>({protocolVersion:GEOMETRY_WORKER_PROTOCOL_VERSION,
-  type:'build',acknowledgeSweepPreviews:true,documentRevision:jobId,jobId,quality:'full',source,sourceSha256:sha256Hex(source)})
- const events:GeometryWorkerEvent[]=[]
- let cancelOnPreview=false
- worker.on('message',(value:unknown)=>{
-  if(!isGeometryWorkerEvent(value))return
-  events.push(materializeGeometryWorkerEvent(value))
-  if(cancelOnPreview&&value.status==='sweep-preview'){
-   cancelOnPreview=false
-   worker.postMessage({protocolVersion:GEOMETRY_WORKER_PROTOCOL_VERSION,type:'cancel',
-    documentRevision:value.documentRevision,jobId:value.jobId,reason:'user'})
-  }
-  if(value.status==='sweep-preview')worker.postMessage({protocolVersion:GEOMETRY_WORKER_PROTOCOL_VERSION,type:'sweep-preview-ack',documentRevision:value.documentRevision,jobId:value.jobId,quality:value.quality,sourceSha256:value.sourceSha256,nodeId:value.nodeId,sections:value.sections})
- })
- const first=request(1),completed=waitForMessage(worker,isDirectTerminalFor(first),45_000)
- worker.postMessage(first)
- expect(await completed).toMatchObject({status:'succeeded'})
- const previews=events.filter(e=>e.status==='sweep-preview')
- expect(previews.length).toBeGreaterThan(0)
- if(name==='progressive-sweep'){
-  expect(previews.length).toBeGreaterThan(1)
-  expect(previews[0]).toMatchObject({accepted:false,sections:5})
- }
- expect(previews.at(-1)).toMatchObject({accepted:true})
- for(const preview of previews){
-  if(preview.status!=='sweep-preview')throw new Error('expected preview')
-  expect(preview.meshes[0]!.vertices.byteLength).toBeGreaterThan(0)
-  expect(preview.meshes[0]!.faceIdsAuthoritative).toBe(false)
-  expect(preview.meshes[0]!.nativeGeometry).toBeUndefined()
- }
- cancelOnPreview=true
- const second=request(2),cancelled=waitForMessage(worker,isDirectTerminalFor(second),45_000)
- worker.postMessage(second)
- expect(await cancelled).toMatchObject({status:'cancelled',reason:'user'})
- expect(events.some(e=>e.jobId===2&&e.status==='succeeded')).toBe(false)
- const third=request(3),recovered=waitForMessage(worker,isDirectTerminalFor(third),45_000)
- worker.postMessage(third)
- expect(await recovered).toMatchObject({status:'succeeded'})
- await terminate(worker)
-},150_000)
+it.each(['progressive-sweep', 'contact-progressive-hollow-body', 'progressive-miter-hollow-body'])(
+  'streams cloned Rush previews and cancellation for %s through a real worker',
+  async name => {
+    const worker = spawnWebWorker(new URL('../src/workers/geometry.worker.ts', import.meta.url))
+    await ready(worker)
+    const source = readFileSync(`examples/rush/${name}.r`, 'utf8')
+    const request = (jobId: number): GeometryBuildRequest => ({
+      protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+      type: 'build',
+      acknowledgeSweepPreviews: true,
+      documentRevision: jobId,
+      jobId,
+      quality: 'full',
+      source,
+      sourceSha256: sha256Hex(source),
+    })
+    const events: GeometryWorkerEvent[] = []
+    let cancelOnPreview = false
+    worker.on('message', (value: unknown) => {
+      if (!isGeometryWorkerEvent(value)) return
+      events.push(materializeGeometryWorkerEvent(value))
+      if (cancelOnPreview && value.status === 'sweep-preview') {
+        cancelOnPreview = false
+        worker.postMessage({
+          protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+          type: 'cancel',
+          documentRevision: value.documentRevision,
+          jobId: value.jobId,
+          reason: 'user',
+        })
+      }
+      if (value.status === 'sweep-preview')
+        worker.postMessage({
+          protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+          type: 'sweep-preview-ack',
+          documentRevision: value.documentRevision,
+          jobId: value.jobId,
+          quality: value.quality,
+          sourceSha256: value.sourceSha256,
+          nodeId: value.nodeId,
+          sections: value.sections,
+        })
+    })
+    const first = request(1),
+      completed = waitForMessage(worker, isDirectTerminalFor(first), 45_000)
+    worker.postMessage(first)
+    expect(await completed).toMatchObject({ status: 'succeeded' })
+    const previews = events.filter(e => e.status === 'sweep-preview')
+    expect(previews.length).toBeGreaterThan(0)
+    if (name === 'progressive-sweep') {
+      expect(previews.length).toBeGreaterThan(1)
+      expect(previews[0]).toMatchObject({ accepted: false, sections: 5 })
+    }
+    expect(previews.at(-1)).toMatchObject({ accepted: true })
+    for (const preview of previews) {
+      if (preview.status !== 'sweep-preview') throw new Error('expected preview')
+      expect(preview.meshes[0]!.vertices.byteLength).toBeGreaterThan(0)
+      expect(preview.meshes[0]!.faceIdsAuthoritative).toBe(false)
+      expect(preview.meshes[0]!.nativeGeometry).toBeUndefined()
+    }
+    cancelOnPreview = true
+    const second = request(2),
+      cancelled = waitForMessage(worker, isDirectTerminalFor(second), 45_000)
+    worker.postMessage(second)
+    expect(await cancelled).toMatchObject({ status: 'cancelled', reason: 'user' })
+    expect(events.some(e => e.jobId === 2 && e.status === 'succeeded')).toBe(false)
+    const third = request(3),
+      recovered = waitForMessage(worker, isDirectTerminalFor(third), 45_000)
+    worker.postMessage(third)
+    expect(await recovered).toMatchObject({ status: 'succeeded' })
+    await terminate(worker)
+  },
+  150_000,
+)

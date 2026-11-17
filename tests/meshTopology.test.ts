@@ -23,16 +23,17 @@ describe('semantic mesh edges', () => {
 
   it('keeps the twelve creases of a triangulated cube but not face diagonals', () => {
     const cubeVertices = vertices([
-      [0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0],
-      [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1],
+      [0, 0, 0],
+      [1, 0, 0],
+      [1, 1, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+      [1, 0, 1],
+      [1, 1, 1],
+      [0, 1, 1],
     ])
     const cubeTriangles = Uint32Array.from([
-      0, 2, 1, 0, 3, 2,
-      4, 5, 6, 4, 6, 7,
-      0, 1, 5, 0, 5, 4,
-      1, 2, 6, 1, 6, 5,
-      2, 3, 7, 2, 7, 6,
-      3, 0, 4, 3, 4, 7,
+      0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 1, 2, 6, 1, 6, 5, 2, 3, 7, 2, 7, 6, 3, 0, 4, 3, 4, 7,
     ])
 
     const result = extractSemanticEdges(cubeVertices, cubeTriangles, { creaseAngleDegrees: 30 })
@@ -43,8 +44,12 @@ describe('semantic mesh edges', () => {
 
   it('reconstructs topology from duplicated property vertices', () => {
     const duplicated = vertices([
-      [0, 0, 0], [1, 0, 0], [1, 1, 0],
-      [0, 0, 0], [1, 1, 0], [0, 1, 0],
+      [0, 0, 0],
+      [1, 0, 0],
+      [1, 1, 0],
+      [0, 0, 0],
+      [1, 1, 0],
+      [0, 1, 0],
     ])
     const triangles = Uint32Array.from([0, 1, 2, 3, 4, 5])
 
@@ -68,11 +73,7 @@ describe('semantic mesh edges', () => {
         [0, 0, 1],
         [0, -1, 0],
       ]),
-      Uint32Array.from([
-        0, 1, 2,
-        1, 0, 3,
-        0, 1, 4,
-      ]),
+      Uint32Array.from([0, 1, 2, 1, 0, 3, 0, 1, 4]),
     )
 
     expect(result.indices).toHaveLength(7 * 2)
@@ -88,11 +89,7 @@ describe('semantic mesh edges', () => {
         [2, 0, 0],
         [0, 1, 0],
       ]),
-      Uint32Array.from([
-        0, 0, 1,
-        0, 1, 2,
-        0, 1, 3,
-      ]),
+      Uint32Array.from([0, 0, 1, 0, 1, 2, 0, 1, 3]),
     )
 
     expect([...result.indices]).toEqual([0, 1, 0, 3, 1, 3])
@@ -125,11 +122,21 @@ describe('semantic mesh edges', () => {
     sparseVertices.set([1, 0, 0], 256 * 6)
     sparseVertices.set([1, 1, 0], 65_535 * 6)
     sparseVertices.set([0, 1, 0], 255 * 6)
-    const result = extractSemanticEdges(sparseVertices, Uint32Array.from([
-      255, 255, 65_536, // Skipped occurrence slots precede the valid triangles.
-      65_536, 256, 65_535,
-      65_536, 65_535, 255,
-    ]), { weldCoincidentVertices: false })
+    const result = extractSemanticEdges(
+      sparseVertices,
+      Uint32Array.from([
+        255,
+        255,
+        65_536, // Skipped occurrence slots precede the valid triangles.
+        65_536,
+        256,
+        65_535,
+        65_536,
+        65_535,
+        255,
+      ]),
+      { weldCoincidentVertices: false },
+    )
 
     // Four square boundaries in lexicographic vertex-ID order. The diagonal
     // (65535, 65536) is coplanar, independently of the sparse ID assignment.
@@ -137,29 +144,42 @@ describe('semantic mesh edges', () => {
     expect(result.diagnostics).toEqual({ boundary: 4, crease: 0, nonManifold: 0, degenerate: 1 })
   })
 
-  it.each([10_922, 10_923])('matches the exact strip boundary around the radix-size transition (%i segments)', segments => {
-    // Each segment contributes six edge occurrences: these cases straddle
-    // 65,536 occurrences while retaining a simple independently known outline.
-    const stripVertices = new Float32Array((segments + 1) * 2 * 6)
-    const triangles = new Uint32Array(segments * 6)
-    const boundary = [[0, 1], [segments * 2, segments * 2 + 1]]
-    for (let x = 0; x <= segments; x++) {
-      stripVertices.set([x, 0, 0, 0, 0, 1, x, 1, 0, 0, 0, 1], x * 12)
-      if (x === segments) continue
-      const low = x * 2
-      // Reversed segment order forces extraction to establish output order.
-      triangles.set([low, low + 2, low + 3, low, low + 3, low + 1], (segments - 1 - x) * 6)
-      boundary.push([low, low + 2], [low + 1, low + 3])
-    }
-    boundary.sort((left, right) => left[0] - right[0] || left[1] - right[1])
+  it.each([10_922, 10_923])(
+    'matches the exact strip boundary around the radix-size transition (%i segments)',
+    segments => {
+      // Each segment contributes six edge occurrences: these cases straddle
+      // 65,536 occurrences while retaining a simple independently known outline.
+      const stripVertices = new Float32Array((segments + 1) * 2 * 6)
+      const triangles = new Uint32Array(segments * 6)
+      const boundary = [
+        [0, 1],
+        [segments * 2, segments * 2 + 1],
+      ]
+      for (let x = 0; x <= segments; x++) {
+        stripVertices.set([x, 0, 0, 0, 0, 1, x, 1, 0, 0, 0, 1], x * 12)
+        if (x === segments) continue
+        const low = x * 2
+        // Reversed segment order forces extraction to establish output order.
+        triangles.set([low, low + 2, low + 3, low, low + 3, low + 1], (segments - 1 - x) * 6)
+        boundary.push([low, low + 2], [low + 1, low + 3])
+      }
+      boundary.sort((left, right) => left[0] - right[0] || left[1] - right[1])
 
-    const result = extractSemanticEdges(stripVertices, triangles, { weldCoincidentVertices: false })
-    expect(result.indices).toEqual(Uint32Array.from(boundary.flat()))
-    expect(result.diagnostics).toEqual({ boundary: segments * 2 + 2, crease: 0, nonManifold: 0, degenerate: 0 })
-  })
+      const result = extractSemanticEdges(stripVertices, triangles, { weldCoincidentVertices: false })
+      expect(result.indices).toEqual(Uint32Array.from(boundary.flat()))
+      expect(result.diagnostics).toEqual({ boundary: segments * 2 + 2, crease: 0, nonManifold: 0, degenerate: 0 })
+    },
+  )
 
   it('returns no edges when every triangle is degenerate', () => {
-    const result = extractSemanticEdges(vertices([[0, 0, 0], [1, 0, 0], [2, 0, 0]]), Uint32Array.from([0, 0, 1, 0, 1, 2]))
+    const result = extractSemanticEdges(
+      vertices([
+        [0, 0, 0],
+        [1, 0, 0],
+        [2, 0, 0],
+      ]),
+      Uint32Array.from([0, 0, 1, 0, 1, 2]),
+    )
     expect(result.indices).toEqual(new Uint32Array())
     expect(result.diagnostics).toEqual({ boundary: 0, crease: 0, nonManifold: 0, degenerate: 2 })
   })
@@ -209,17 +229,18 @@ describe('semantic mesh edges', () => {
       largeVertices[offset + 5] = 1
     }
     const positions = [
-      [0, 0, 0], [1, 0, 0], [1, 1, 0],
-      [-0, 0, 0], [1, 1, 0], [0, 1, 0],
+      [0, 0, 0],
+      [1, 0, 0],
+      [1, 1, 0],
+      [-0, 0, 0],
+      [1, 1, 0],
+      [0, 1, 0],
     ]
     for (let vertex = 0; vertex < positions.length; vertex++) {
       largeVertices.set(positions[vertex], vertex * 6)
     }
 
-    const result = extractSemanticEdges(
-      largeVertices,
-      Uint32Array.from([0, 1, 2, 3, 4, 5]),
-    )
+    const result = extractSemanticEdges(largeVertices, Uint32Array.from([0, 1, 2, 3, 4, 5]))
 
     expect([...result.indices]).toEqual([0, 1, 0, 5, 1, 2, 2, 5])
     expect(result.diagnostics).toEqual({ boundary: 4, crease: 0, nonManifold: 0, degenerate: 0 })

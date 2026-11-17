@@ -1,4 +1,4 @@
-export {isOpenScadBuiltinFunction,findClosestOpenScadBuiltinFunction} from './openScadBuiltinFunctions/discovery'
+export { isOpenScadBuiltinFunction, findClosestOpenScadBuiltinFunction } from './openScadBuiltinFunctions/discovery'
 /**
  * Host-independent implementations of the stable OpenSCAD 2021.01 built-in
  * function inventory.
@@ -9,32 +9,87 @@ export {isOpenScadBuiltinFunction,findClosestOpenScadBuiltinFunction} from './op
  * having all names here is not by itself a full-language conformance claim.
  */
 
-import {evaluateDegreeScalar as nativeDegreeMath} from './openScadDegreeMath'
+import { evaluateDegreeScalar as nativeDegreeMath } from './openScadDegreeMath'
 
-import { arrayValue, binaryNumber, equalValues, expectCount, fail, finiteNumberValue, formatValue, minMax, numberValue, registerArray, registerString, roundAwayFromZero, seededRandom, unaryNumber, warn } from './openScadBuiltinFunctions/createDeferredOpenScadBuiltinArguments'
-import { characterString, isWellFormedUnicode, predicate, returnMatches, searchNeedles, searchStringRows, unsignedSearchParameter } from './openScadBuiltinFunctions/isOpenScadBuiltinFunctionName'
+import {
+  arrayValue,
+  binaryNumber,
+  equalValues,
+  expectCount,
+  fail,
+  finiteNumberValue,
+  formatValue,
+  minMax,
+  numberValue,
+  registerArray,
+  registerString,
+  roundAwayFromZero,
+  seededRandom,
+  unaryNumber,
+  warn,
+} from './openScadBuiltinFunctions/createDeferredOpenScadBuiltinArguments'
+import {
+  characterString,
+  isWellFormedUnicode,
+  predicate,
+  returnMatches,
+  searchNeedles,
+  searchStringRows,
+  unsignedSearchParameter,
+} from './openScadBuiltinFunctions/isOpenScadBuiltinFunctionName'
 export { createDeferredOpenScadBuiltinArguments } from './openScadBuiltinFunctions/createDeferredOpenScadBuiltinArguments'
-export { isOpenScadBuiltinFunctionName, evaluateOpenScadBuiltinFunction } from './openScadBuiltinFunctions/isOpenScadBuiltinFunctionName'
+export {
+  isOpenScadBuiltinFunctionName,
+  evaluateOpenScadBuiltinFunction,
+} from './openScadBuiltinFunctions/isOpenScadBuiltinFunctionName'
 
 export const OPENSCAD_2021_01_BUILTIN_FUNCTION_NAMES = Object.freeze([
-  'abs', 'sign', 'rands', 'min', 'max', 'sin', 'cos', 'asin', 'acos', 'tan', 'atan', 'atan2',
-  'round', 'ceil', 'floor', 'pow', 'sqrt', 'exp', 'len', 'log', 'ln', 'str', 'chr', 'ord',
-  'concat', 'lookup', 'search', 'version', 'version_num', 'norm', 'cross', 'parent_module',
-  'is_undef', 'is_list', 'is_num', 'is_bool', 'is_string', 'is_function',
+  'abs',
+  'sign',
+  'rands',
+  'min',
+  'max',
+  'sin',
+  'cos',
+  'asin',
+  'acos',
+  'tan',
+  'atan',
+  'atan2',
+  'round',
+  'ceil',
+  'floor',
+  'pow',
+  'sqrt',
+  'exp',
+  'len',
+  'log',
+  'ln',
+  'str',
+  'chr',
+  'ord',
+  'concat',
+  'lookup',
+  'search',
+  'version',
+  'version_num',
+  'norm',
+  'cross',
+  'parent_module',
+  'is_undef',
+  'is_list',
+  'is_num',
+  'is_bool',
+  'is_string',
+  'is_function',
 ] as const)
 
-export type OpenScadBuiltinFunctionName = typeof OPENSCAD_2021_01_BUILTIN_FUNCTION_NAMES[number]
+export type OpenScadBuiltinFunctionName = (typeof OPENSCAD_2021_01_BUILTIN_FUNCTION_NAMES)[number]
 
 /** Values which can cross the built-in boundary before the future evaluator
  * gives function values a concrete public representation. */
 export type OpenScadBuiltinValue =
-  | number
-  | string
-  | boolean
-  | undefined
-  | readonly OpenScadBuiltinValue[]
-  | object
-  | ((...args: never[]) => unknown)
+  number | string | boolean | undefined | readonly OpenScadBuiltinValue[] | object | ((...args: never[]) => unknown)
 
 /**
  * Evaluation effects deliberately owned by the host:
@@ -50,10 +105,7 @@ export interface OpenScadBuiltinFunctionContext {
   /** Non-terminal diagnostics for calls which repair an input and continue.
    * Optional until both evaluator hosts expose positioned warning sinks. */
   readonly warning?: (message: string) => void
-  readonly registerArray: (
-    items: readonly OpenScadBuiltinValue[],
-    label: string,
-  ) => OpenScadBuiltinValue
+  readonly registerArray: (items: readonly OpenScadBuiltinValue[], label: string) => OpenScadBuiltinValue
   readonly registerString: (value: string, label: string) => OpenScadBuiltinValue
   readonly random: () => number
   readonly parentModule: (depth: number) => string | undefined
@@ -61,8 +113,7 @@ export interface OpenScadBuiltinFunctionContext {
 }
 
 export type OpenScadBuiltinFunctionResult =
-  | Readonly<{ recognized: false }>
-  | Readonly<{ recognized: true; value: OpenScadBuiltinValue }>
+  Readonly<{ recognized: false }> | Readonly<{ recognized: true; value: OpenScadBuiltinValue }>
 
 export const NOT_RECOGNIZED: OpenScadBuiltinFunctionResult = Object.freeze({ recognized: false })
 const MAX_GENERATED_ITEMS = 1_000_000
@@ -76,13 +127,13 @@ export type BuiltinHandler = (
   context: OpenScadBuiltinFunctionContext,
 ) => OpenScadBuiltinValue
 
-const sinDegrees=(value:number)=>nativeDegreeMath('sin',[value])
-const cosDegrees=(value:number)=>nativeDegreeMath('cos',[value])
-const tanDegrees=(value:number)=>nativeDegreeMath('tan',[value])
-const asinDegrees=(value:number)=>nativeDegreeMath('asin',[value])
-const acosDegrees=(value:number)=>nativeDegreeMath('acos',[value])
-const atanDegrees=(value:number)=>nativeDegreeMath('atan',[value])
-const atan2Degrees=(y:number,x:number)=>nativeDegreeMath('atan2',[y,x])
+const sinDegrees = (value: number) => nativeDegreeMath('sin', [value])
+const cosDegrees = (value: number) => nativeDegreeMath('cos', [value])
+const tanDegrees = (value: number) => nativeDegreeMath('tan', [value])
+const asinDegrees = (value: number) => nativeDegreeMath('asin', [value])
+const acosDegrees = (value: number) => nativeDegreeMath('acos', [value])
+const atanDegrees = (value: number) => nativeDegreeMath('atan', [value])
+const atan2Degrees = (y: number, x: number) => nativeDegreeMath('atan2', [y, x])
 
 export class Mt19937 {
   private readonly state = new Uint32Array(624)
@@ -109,11 +160,9 @@ export class Mt19937 {
 
   private twist(): void {
     for (let index = 0; index < this.state.length; index++) {
-      const combined = (this.state[index]! & 0x80000000)
-        | (this.state[(index + 1) % this.state.length]! & 0x7fffffff)
-      this.state[index] = this.state[(index + 397) % this.state.length]!
-        ^ (combined >>> 1)
-        ^ ((combined & 1) === 0 ? 0 : 0x9908b0df)
+      const combined = (this.state[index]! & 0x80000000) | (this.state[(index + 1) % this.state.length]! & 0x7fffffff)
+      this.state[index] =
+        this.state[(index + 397) % this.state.length]! ^ (combined >>> 1) ^ ((combined & 1) === 0 ? 0 : 0x9908b0df)
     }
     this.index = 0
   }
@@ -184,13 +233,11 @@ const log: BuiltinHandler = (args, context) => {
   return Math.log(value) / Math.log(base)
 }
 
-const str: BuiltinHandler = (args, context) => (
+const str: BuiltinHandler = (args, context) =>
   registerString(context, 'str', args.map(value => formatValue(value, context)).join(''))
-)
 
-const chr: BuiltinHandler = (args, context) => (
+const chr: BuiltinHandler = (args, context) =>
   registerString(context, 'chr', args.map(value => characterString(value, context)).join(''))
-)
 
 const ord: BuiltinHandler = (args, context) => {
   if (args.length === 0) return undefined
@@ -228,9 +275,7 @@ const lookup: BuiltinHandler = (args, context) => {
     return fail(
       context,
       'lookup',
-      typeof positionValue === 'number'
-        ? 'argument 1 must be finite'
-        : 'argument 1 must be a number',
+      typeof positionValue === 'number' ? 'argument 1 must be finite' : 'argument 1 must be a number',
     )
   }
   const position = positionValue
@@ -238,14 +283,13 @@ const lookup: BuiltinHandler = (args, context) => {
   if (!Array.isArray(table) || table.length === 0) return undefined
   const rows = table
   const first = rows[0]
-  if (!Array.isArray(first) || first.length !== 2
-    || typeof first[0] !== 'number' || typeof first[1] !== 'number') return undefined
+  if (!Array.isArray(first) || first.length !== 2 || typeof first[0] !== 'number' || typeof first[1] !== 'number')
+    return undefined
   let [lowPosition, lowValue] = first
   let [highPosition, highValue] = first
   for (let index = 1; index < rows.length; index++) {
     const row = rows[index]
-    if (!Array.isArray(row) || row.length !== 2
-      || typeof row[0] !== 'number' || typeof row[1] !== 'number') continue
+    if (!Array.isArray(row) || row.length !== 2 || typeof row[0] !== 'number' || typeof row[1] !== 'number') continue
     const [candidatePosition, candidateValue] = row
     if (candidatePosition <= position && (candidatePosition > lowPosition || lowPosition > position)) {
       lowPosition = candidatePosition
@@ -266,12 +310,8 @@ const search: BuiltinHandler = (args, context) => {
   if (args.length < 2) return fail(context, 'search', 'expects at least 2 arguments')
   const needle = args[0]
   const table = args[1]
-  const maximum = args.length > 2
-    ? unsignedSearchParameter(args[2])
-    : 1
-  const column = args.length > 3
-    ? unsignedSearchParameter(args[3])
-    : 0
+  const maximum = args.length > 2 ? unsignedSearchParameter(args[2]) : 1
+  const column = args.length > 3 ? unsignedSearchParameter(args[3]) : 0
 
   if (typeof needle === 'string' && typeof table === 'string') {
     const tableCharacters = Array.from(table)
@@ -296,8 +336,11 @@ const search: BuiltinHandler = (args, context) => {
     const matches: number[] = []
     for (let index = 0; index < rows.length; index++) {
       const row = rows[index]
-      if ((column === 0 && equalValues(needle, row))
-        || (Array.isArray(row) && column < row.length && equalValues(needle, row[column]))) matches.push(index)
+      if (
+        (column === 0 && equalValues(needle, row)) ||
+        (Array.isArray(row) && column < row.length && equalValues(needle, row[column]))
+      )
+        matches.push(index)
       if (maximum !== 0 && matches.length >= maximum) break
     }
     return registerArray(context, 'search', matches)
@@ -322,11 +365,15 @@ const versionNum: BuiltinHandler = (args, _context) => {
   if (!Array.isArray(value)) return undefined
   const parts = value
   if (parts.length !== 2 && parts.length !== 3) return undefined
-  if (typeof parts[0] !== 'number' || typeof parts[1] !== 'number'
-    || (parts.length === 3 && typeof parts[2] !== 'number')) return undefined
+  if (
+    typeof parts[0] !== 'number' ||
+    typeof parts[1] !== 'number' ||
+    (parts.length === 3 && typeof parts[2] !== 'number')
+  )
+    return undefined
   const year = parts[0]
   const month = parts[1]
-  const day = parts.length === 3 ? parts[2] as number : 0
+  const day = parts.length === 3 ? (parts[2] as number) : 0
   return year * 10_000 + month * 100 + day
 }
 
@@ -393,7 +440,7 @@ const parentModule: BuiltinHandler = (args, context) => {
 
 export const HANDLERS: Readonly<Record<OpenScadBuiltinFunctionName, BuiltinHandler>> = Object.freeze({
   abs: unaryNumber('abs', Math.abs),
-  sign: unaryNumber('sign', value => value < 0 ? -1 : value > 0 ? 1 : 0),
+  sign: unaryNumber('sign', value => (value < 0 ? -1 : value > 0 ? 1 : 0)),
   rands,
   min: minMax('min'),
   max: minMax('max'),

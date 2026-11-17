@@ -1,5 +1,5 @@
-import type {PhotoDensePreset, PhotoDiagnostics, PhotoPixels, PhotoReconstruction, PhotoSurface} from './kernel'
-import type {WebGpuMemoryArchitecture} from '../../render/webgpuFeatures'
+import type { PhotoDensePreset, PhotoDiagnostics, PhotoPixels, PhotoReconstruction, PhotoSurface } from './kernel'
+import type { WebGpuMemoryArchitecture } from '../../render/webgpuFeatures'
 
 export interface PhotoWorkerRequest {
   /** Kernel module compiled once on the main thread; the Worker only instantiates it. */
@@ -34,9 +34,9 @@ export interface PhotoTimings {
 }
 
 export type PhotoWorkerEvent =
-  | {type: 'stage'; stage: 'calibration' | 'cameras' | 'depth'}
-  | {type: 'sparse'; result: PhotoReconstruction}
-  | {type: 'surface'; result: PhotoSurface}
-  | {type: 'warning'; message: string}
-  | {type: 'error'; message: string; diagnostics?: PhotoDiagnostics}
-  | {type: 'done'; timings: PhotoTimings}
+  | { type: 'stage'; stage: 'calibration' | 'cameras' | 'depth' }
+  | { type: 'sparse'; result: PhotoReconstruction }
+  | { type: 'surface'; result: PhotoSurface }
+  | { type: 'warning'; message: string }
+  | { type: 'error'; message: string; diagnostics?: PhotoDiagnostics }
+  | { type: 'done'; timings: PhotoTimings }

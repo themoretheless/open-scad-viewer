@@ -17,16 +17,7 @@ import {
   resolveTransitionChild,
   setTemplateRef,
 } from './svet-props'
-import {
-  Comment,
-  Fragment,
-  Static,
-  Teleport,
-  Text,
-  Transition,
-  isVNode,
-  type SvetVNode,
-} from './svet-vnode'
+import { Comment, Fragment, Static, Teleport, Text, Transition, isVNode, type SvetVNode } from './svet-vnode'
 
 export type { SvetApp }
 
@@ -40,9 +31,21 @@ export interface RendererOptions<HostNode = any, HostElement = any> {
   remove(el: HostNode): void
   parentNode(node: HostNode): HostElement | null
   nextSibling(node: HostNode): HostNode | null
-  patchProp(el: HostElement, key: string, prevValue: any, nextValue: any, namespace?: string, parentComponent?: any): void
+  patchProp(
+    el: HostElement,
+    key: string,
+    prevValue: any,
+    nextValue: any,
+    namespace?: string,
+    parentComponent?: any,
+  ): void
   setScopeId?(el: HostElement, id: string): void
-  insertStaticContent?(content: string, parent: HostElement, anchor: HostNode | null, namespace?: string): [HostNode, HostNode]
+  insertStaticContent?(
+    content: string,
+    parent: HostElement,
+    anchor: HostNode | null,
+    namespace?: string,
+  ): [HostNode, HostNode]
   querySelector?(selector: string): HostElement | null
 }
 
@@ -64,16 +67,18 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
     insertStaticContent: hostInsertStaticContent,
   } = options
 
-  const { mountComponent, updateComponent, unmountComponent, createAppAPI } =
-    createComponentOperations<HostNode, HostElement>({
-      patch,
-      unmount,
-      getFirstHostNode,
-      getNextHostNode,
-      hostParentNode,
-      querySelector: options.querySelector,
-      render,
-    })
+  const { mountComponent, updateComponent, unmountComponent, createAppAPI } = createComponentOperations<
+    HostNode,
+    HostElement
+  >({
+    patch,
+    unmount,
+    getFirstHostNode,
+    getNextHostNode,
+    hostParentNode,
+    querySelector: options.querySelector,
+    render,
+  })
 
   function patch(
     n1: SvetVNode | null,
@@ -251,12 +256,7 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
     }
   }
 
-  function mountElement(
-    vnode: SvetVNode,
-    container: HostElement,
-    anchor: HostNode | null,
-    namespace?: string,
-  ): void {
+  function mountElement(vnode: SvetVNode, container: HostElement, anchor: HostNode | null, namespace?: string): void {
     const el = (vnode.el = hostCreateElement(vnode.type as string, namespace, undefined, vnode.props))
     if (vnode.scopeId && hostSetScopeId) {
       hostSetScopeId(el, vnode.scopeId)
@@ -302,12 +302,7 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
     if (n2.dirs) invokeDirectiveHook(n2, n1, 'updated')
   }
 
-  function mountChildren(
-    vnode: SvetVNode,
-    container: HostElement,
-    anchor: HostNode | null,
-    namespace?: string,
-  ): void {
+  function mountChildren(vnode: SvetVNode, container: HostElement, anchor: HostNode | null, namespace?: string): void {
     const list = normalizeChildrenArray(vnode.children)
     vnode.children = list
     for (let i = 0; i < list.length; i++) {

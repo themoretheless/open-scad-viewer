@@ -1,14 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import {
-  compileOpenSCAD,
-  type CallNode,
-  type Statement,
-} from '../src/language/openscadCompiler'
+import { compileOpenSCAD, type CallNode, type Statement } from '../src/language/openscadCompiler'
 import { OpenScadProject } from '../src/language/openScadProject'
-import {
-  compileOpenScadProject,
-  OpenScadProjectCompileError,
-} from '../src/language/openScadProjectCompiler'
+import { compileOpenScadProject, OpenScadProjectCompileError } from '../src/language/openScadProjectCompiler'
 import { parseOpenSCAD, parseOpenScadProject } from '../src/language/openscadParser'
 import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 
@@ -18,14 +11,9 @@ function lower(source: string, quality: 'preview' | 'full' = 'full') {
   return lowerOpenSCADToSemanticProgram(source, { ...stable, quality })
 }
 
-function operationSlots(
-  artifact: ReturnType<typeof lower>,
-  name: string,
-): readonly string[][] {
+function operationSlots(artifact: ReturnType<typeof lower>, name: string): readonly string[][] {
   const operationIds = new Set(
-    artifact.program.core.operations
-      .filter(operation => operation.name === name)
-      .map(operation => operation.id),
+    artifact.program.core.operations.filter(operation => operation.name === name).map(operation => operation.id),
   )
   return artifact.program.core.occurrences
     .filter(occurrence => operationIds.has(occurrence.operation))
@@ -56,21 +44,23 @@ describe('OpenSCAD 2021.01 viewport modifiers', () => {
     if (statement?.type !== 'call') throw new Error('Expected call')
 
     expect(statement.viewportModifiers?.map(modifier => modifier.kind)).toEqual([
-      'highlight', 'background', 'root', 'disable',
+      'highlight',
+      'background',
+      'root',
+      'disable',
     ])
-    expect(statement.viewportModifiers?.map(modifier => (
-      source.slice(modifier.span.start, modifier.span.end)
-    ))).toEqual(['#', '%', '!', '*'])
+    expect(statement.viewportModifiers?.map(modifier => source.slice(modifier.span.start, modifier.span.end))).toEqual([
+      '#',
+      '%',
+      '!',
+      '*',
+    ])
     expect(Object.isFrozen(statement.viewportModifiers)).toBe(true)
 
     // The frozen legacy profile keeps both its eager `*` removal and error.
     expect(compileOpenSCAD('*cube(1);')).toEqual([])
-    expect(() => compileOpenSCAD('#cube(1);')).toThrow(
-      expect.objectContaining({ code: 'E_FEATURE_VIEWPORT_MODIFIER' }),
-    )
-    expect(() => compileOpenSCAD('#value = 1;', stable)).toThrow(
-      /may prefix only a module instantiation/,
-    )
+    expect(() => compileOpenSCAD('#cube(1);')).toThrow(expect.objectContaining({ code: 'E_FEATURE_VIEWPORT_MODIFIER' }))
+    expect(() => compileOpenSCAD('#value = 1;', stable)).toThrow(/may prefix only a module instantiation/)
   })
 
   it('makes disable dominant and skips the complete subtree without effects', () => {
@@ -86,10 +76,7 @@ describe('OpenSCAD 2021.01 viewport modifiers', () => {
     const result = lower('#cube(1); cube(2);')
 
     expect(result.program.core.nodes.map(node => node.kind)).toEqual(['box', 'box'])
-    expect(operationSlots(result, 'cube')).toEqual([
-      ['$viewport-highlight'],
-      ['$evaluation'],
-    ])
+    expect(operationSlots(result, 'cube')).toEqual([['$viewport-highlight'], ['$evaluation']])
   })
 
   it('evaluates background effects, excludes its geometry from full, and layers preview metadata', () => {
@@ -123,7 +110,8 @@ describe('OpenSCAD 2021.01 viewport modifiers', () => {
     const emptyCandidate = lower('!if (false) cube(7); sphere(1);')
     expect(emptyCandidate.program.core.nodes).toHaveLength(1)
     expect(emptyCandidate.program.core.nodes[0]).toMatchObject({
-      kind: 'sphere-polygonal', radius: 1,
+      kind: 'sphere-polygonal',
+      radius: 1,
     })
 
     const emptyContainer = lower('!union(); sphere(1);')
@@ -139,9 +127,7 @@ describe('OpenSCAD 2021.01 viewport modifiers', () => {
     const chained = lower('%#!cube(1); sphere(2);', 'preview')
     expect(chained.program.core.nodes).toHaveLength(1)
     expect(chained.program.core.nodes[0]).toMatchObject({ kind: 'box' })
-    const slots = chained.program.core.occurrences.flatMap(occurrence => (
-      occurrence.dynamicSlots.map(slot => slot.name)
-    ))
+    const slots = chained.program.core.occurrences.flatMap(occurrence => occurrence.dynamicSlots.map(slot => slot.name))
     expect(slots).not.toContain('$viewport-highlight')
     expect(slots).not.toContain('$viewport-background')
   })
@@ -180,10 +166,7 @@ describe('OpenSCAD 2021.01 viewport modifiers', () => {
 
 describe('viewport modifiers in direct kernel evaluation', () => {
   it('keeps disabled subtrees entirely unevaluated', async () => {
-    const result = await parseOpenSCAD(
-      '*echo(assert(false), missing) cube(9); cube(2);',
-      stable,
-    )
+    const result = await parseOpenSCAD('*echo(assert(false), missing) cube(9); cube(2);', stable)
 
     expect(result.warnings).toEqual([])
     expect(result.meshes).toHaveLength(1)
@@ -192,10 +175,7 @@ describe('viewport modifiers in direct kernel evaluation', () => {
 
   it('renders highlight normally and conservatively omits unrepresentable preview backgrounds', async () => {
     const highlighted = await parseOpenSCAD('#cube(2);', stable)
-    const background = await parseOpenSCAD(
-      '%echo("background") cube(3); cube(2);',
-      { ...stable, quality: 'preview' },
-    )
+    const background = await parseOpenSCAD('%echo("background") cube(3); cube(2);', { ...stable, quality: 'preview' })
 
     expect(highlighted.meshes).toHaveLength(1)
     expect(highlighted.volume).toBeCloseTo(8, 6)
@@ -208,18 +188,9 @@ describe('viewport modifiers in direct kernel evaluation', () => {
   })
 
   it('detaches the first runtime root while retaining its dynamic values', async () => {
-    const nested = await parseOpenSCAD(
-      'translate([9, 0, 0]) { cube(1); !cube(2); } cube(3);',
-      stable,
-    )
-    const branch = await parseOpenSCAD(
-      'if (false) !cube(7); for (i = [2:3]) !cube(i); cube(4);',
-      stable,
-    )
-    const ancestor = await parseOpenSCAD(
-      '!translate([4, 0, 0]) { cube(1); !cube(2); } cube(3);',
-      stable,
-    )
+    const nested = await parseOpenSCAD('translate([9, 0, 0]) { cube(1); !cube(2); } cube(3);', stable)
+    const branch = await parseOpenSCAD('if (false) !cube(7); for (i = [2:3]) !cube(i); cube(4);', stable)
+    const ancestor = await parseOpenSCAD('!translate([4, 0, 0]) { cube(1); !cube(2); } cube(3);', stable)
 
     expect(nested.meshes).toHaveLength(1)
     expect(nested.volume).toBeCloseTo(8, 6)
@@ -232,11 +203,14 @@ describe('viewport modifiers in direct kernel evaluation', () => {
   })
 
   it('keeps caller children when children() itself is the selected root', async () => {
-    const result = await parseOpenSCAD(`
+    const result = await parseOpenSCAD(
+      `
       module pass() { !children(); }
       translate([10, 0, 0]) pass() cube(2);
       cube(3);
-    `, stable)
+    `,
+      stable,
+    )
 
     expect(result.meshes).toHaveLength(1)
     expect(result.volume).toBeCloseTo(8, 6)
@@ -278,12 +252,14 @@ describe('viewport modifiers through project expansion', () => {
     })
     const expanded = calls(compileOpenScadProject(recursive))
     expect(expanded.map(call => call.name)).toEqual(['cube', 'sphere'])
-    expect(expanded[0].viewportModifiers).toMatchObject([{
-      kind: 'highlight',
-      token: '#',
-      span: { start: 0, end: 1 },
-      sourcePath: 'main.scad',
-    }])
+    expect(expanded[0].viewportModifiers).toMatchObject([
+      {
+        kind: 'highlight',
+        token: '#',
+        span: { start: 0, end: 1 },
+        sourcePath: 'main.scad',
+      },
+    ])
 
     const empty = new OpenScadProject({
       entrypoint: 'main.scad',
@@ -292,9 +268,12 @@ describe('viewport modifiers through project expansion', () => {
         { kind: 'source', path: 'empty.scad', source: '' },
       ],
     })
-    expect(calls(compileOpenScadProject(empty))[0].viewportModifiers).toMatchObject([{
-      kind: 'background', sourcePath: 'main.scad',
-    }])
+    expect(calls(compileOpenScadProject(empty))[0].viewportModifiers).toMatchObject([
+      {
+        kind: 'background',
+        sourcePath: 'main.scad',
+      },
+    ])
   })
 
   it('rejects a transferred modifier whose first dependency statement is not a call', () => {

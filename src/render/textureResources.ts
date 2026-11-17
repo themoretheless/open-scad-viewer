@@ -6,12 +6,7 @@
  * in-flight loads and destroys every texture. The renderer keeps only the
  * public API forwarding.
  */
-import {
-  DEFAULT_ENV,
-  DEFAULT_MATCAP,
-  getEnvPreset,
-  getMatcapPreset,
-} from './rendererContracts'
+import { DEFAULT_ENV, DEFAULT_MATCAP, getEnvPreset, getMatcapPreset } from './rendererContracts'
 
 /** Environment maps hold sRGB-encoded bytes; see setEnvMap. */
 export const ENV_MAP_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb'
@@ -72,7 +67,10 @@ export class TextureResources {
    * the current device. Shadow first: the matcap/env groups embed the shadow
    * view at bindings 2/3, so it must exist before those groups are built.
    */
-  init(dev: GPUDevice, layouts: { matcapBGL: GPUBindGroupLayout; envBGL: GPUBindGroupLayout; shadowBGL: GPUBindGroupLayout }) {
+  init(
+    dev: GPUDevice,
+    layouts: { matcapBGL: GPUBindGroupLayout; envBGL: GPUBindGroupLayout; shadowBGL: GPUBindGroupLayout },
+  ) {
     this.matcapBGL = layouts.matcapBGL
     this.envBGL = layouts.envBGL
     this.shadowBGL = layouts.shadowBGL
@@ -81,7 +79,11 @@ export class TextureResources {
     this.shadowTexture?.destroy()
     this.shadowDummyTexture?.destroy()
     this.shadowSampler = dev.createSampler({ compare: 'less-equal' })
-    this.shadowDummyTexture = dev.createTexture({ size: [1, 1], format: 'depth32float', usage: GPUTextureUsage.TEXTURE_BINDING })
+    this.shadowDummyTexture = dev.createTexture({
+      size: [1, 1],
+      format: 'depth32float',
+      usage: GPUTextureUsage.TEXTURE_BINDING,
+    })
     // The enable flag outlives teardown (device-loss recovery re-inits the
     // same instance, and callers may enable before init), so an enabled
     // renderer gets its real map back instead of silently rendering unshadowed.
@@ -92,7 +94,11 @@ export class TextureResources {
     this.matcapTexture?.destroy()
     this.matcapDummyTexture?.destroy()
     this.matcapSampler = dev.createSampler({ magFilter: 'linear', minFilter: 'linear' })
-    this.matcapDummyTexture = dev.createTexture({ size: [1, 1], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST })
+    this.matcapDummyTexture = dev.createTexture({
+      size: [1, 1],
+      format: 'rgba8unorm',
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+    })
     dev.queue.writeTexture({ texture: this.matcapDummyTexture }, new Uint8Array([255, 255, 255, 255]), {}, [1, 1])
     this.matcapTexture = this.matcapDummyTexture
     this.matcapBG = this.createMatcapBindGroup(this.matcapTexture)
@@ -100,8 +106,17 @@ export class TextureResources {
     // (textureDimensions == 1), so the default look is exact.
     this.envTexture?.destroy()
     this.envDummyTexture?.destroy()
-    this.envSampler = dev.createSampler({ magFilter: 'linear', minFilter: 'linear', addressModeU: 'repeat', addressModeV: 'clamp-to-edge' })
-    this.envDummyTexture = dev.createTexture({ size: [1, 1], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST })
+    this.envSampler = dev.createSampler({
+      magFilter: 'linear',
+      minFilter: 'linear',
+      addressModeU: 'repeat',
+      addressModeV: 'clamp-to-edge',
+    })
+    this.envDummyTexture = dev.createTexture({
+      size: [1, 1],
+      format: 'rgba8unorm',
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+    })
     dev.queue.writeTexture({ texture: this.envDummyTexture }, new Uint8Array([255, 255, 255, 255]), {}, [1, 1])
     this.envTexture = this.envDummyTexture
     this.envBG = this.createEnvBindGroup(this.envTexture)
@@ -162,7 +177,10 @@ export class TextureResources {
     this.matcapId = id
     const token = ++this.matcapLoadToken
     const bind = (texture: GPUTexture) => {
-      if (!this.hooks.getDevice() || token !== this.matcapLoadToken) { texture.destroy(); return }
+      if (!this.hooks.getDevice() || token !== this.matcapLoadToken) {
+        texture.destroy()
+        return
+      }
       const previous = this.matcapTexture
       this.matcapTexture = texture
       this.matcapBG = this.createMatcapBindGroup(texture)
@@ -207,7 +225,10 @@ export class TextureResources {
     this.envId = id
     const token = ++this.envLoadToken
     const bind = (texture: GPUTexture) => {
-      if (!this.hooks.getDevice() || token !== this.envLoadToken) { texture.destroy(); return }
+      if (!this.hooks.getDevice() || token !== this.envLoadToken) {
+        texture.destroy()
+        return
+      }
       const previous = this.envTexture
       this.envTexture = texture
       this.envBG = this.createEnvBindGroup(texture)

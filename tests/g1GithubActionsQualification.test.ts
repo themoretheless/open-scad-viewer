@@ -9,31 +9,24 @@ const root = resolve(import.meta.dirname, '..')
 const harness = resolve(root, 'scripts/g1-github-actions.mjs')
 const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v125.json')
 const plan = JSON.parse(readFileSync(planPath, 'utf8'))
-const runtimeFreeze = JSON.parse(readFileSync(resolve(
-  root, 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json',
-), 'utf8'))
-const githubFreeze = JSON.parse(readFileSync(resolve(
-  root, 'docs/qualification/environment-freeze/g1-github-actions-v40.json',
-), 'utf8'))
+const runtimeFreeze = JSON.parse(
+  readFileSync(resolve(root, 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json'), 'utf8'),
+)
+const githubFreeze = JSON.parse(
+  readFileSync(resolve(root, 'docs/qualification/environment-freeze/g1-github-actions-v40.json'), 'utf8'),
+)
 const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
 const temporaryRoots: string[] = []
 
 const digest = (bytes: Buffer | string) => createHash('sha256').update(bytes).digest('hex')
-const runnerKey = (environment: any) => environment.os === 'macos-15'
-  ? 'macos-15-arm64'
-  : environment.os
-const evidenceProducers = [
-  '.github/workflows/g1-qualification-clean.yml',
-  'scripts/g1-github-actions.mjs',
-]
+const runnerKey = (environment: any) => (environment.os === 'macos-15' ? 'macos-15-arm64' : environment.os)
+const evidenceProducers = ['.github/workflows/g1-qualification-clean.yml', 'scripts/g1-github-actions.mjs']
 
 function validateHarnessBinding(bundle: any): void {
   for (const path of evidenceProducers) {
     if (!bundle.paths.includes(path)) throw new Error(`unbound evidence producer: ${path}`)
   }
-  const records = bundle.paths.map((path: string) => (
-    `${path}\0${digest(readFileSync(resolve(root, path)))}\n`
-  )).join('')
+  const records = bundle.paths.map((path: string) => `${path}\0${digest(readFileSync(resolve(root, path)))}\n`).join('')
   if (digest(records) !== bundle.sha256.value || Buffer.byteLength(records) !== bundle.sha256.byteLength) {
     throw new Error('harness binding mismatch')
   }
@@ -46,9 +39,10 @@ function writeEvidence(directory: string, fragment: any, preflight: any): void {
   writeFileSync(resolve(directory, 'stdout.log'), '')
   writeFileSync(resolve(directory, 'stderr.log'), '')
   const names = ['fragment.json', 'preflight.json', 'stdout.log', 'stderr.log']
-  writeFileSync(resolve(directory, 'checksums.sha256'), `${names.map(name => (
-    `${digest(readFileSync(resolve(directory, name)))}  ${name}`
-  )).join('\n')}\n`)
+  writeFileSync(
+    resolve(directory, 'checksums.sha256'),
+    `${names.map(name => `${digest(readFileSync(resolve(directory, name)))}  ${name}`).join('\n')}\n`,
+  )
 }
 
 function fixture(): { artifacts: string; first: string } {
@@ -56,42 +50,52 @@ function fixture(): { artifacts: string; first: string } {
   temporaryRoots.push(directory)
   const artifacts = resolve(directory, 'artifacts')
   const bindings = {
-    artifacts: Object.fromEntries(plan.bindings.artifacts.map((item: any) => [
-      item.id, { value: item.sha256.value, byteLength: item.sha256.byteLength },
-    ])),
-    bundles: Object.fromEntries(plan.bindings.bundles.map((item: any) => [
-      item.id, { value: item.sha256.value, byteLength: item.sha256.byteLength },
-    ])),
+    artifacts: Object.fromEntries(
+      plan.bindings.artifacts.map((item: any) => [
+        item.id,
+        { value: item.sha256.value, byteLength: item.sha256.byteLength },
+      ]),
+    ),
+    bundles: Object.fromEntries(
+      plan.bindings.bundles.map((item: any) => [
+        item.id,
+        { value: item.sha256.value, byteLength: item.sha256.byteLength },
+      ]),
+    ),
   }
   let first = ''
   for (const row of plan.matrix) {
     for (const environmentId of row.executionEnvironmentIds) {
       const environment = plan.environments.find((item: any) => item.id === environmentId)
-      const node = runtimeFreeze.nodeArtifacts[
-        environment.class === 'vite-browser' ? 'vite-host-node22' : environmentId
-      ]
+      const node =
+        runtimeFreeze.nodeArtifacts[environment.class === 'vite-browser' ? 'vite-host-node22' : environmentId]
       const runner = githubFreeze.runnerImages[runnerKey(environment)]
       const browserRevision = environment.browser
         ? githubFreeze.playwright.executedTree[environment.browser.engine]
         : null
-      const browser = browserRevision ? {
-        engine: environment.browser.engine,
-        revision: browserRevision,
-        provisionRoot: '/frozen/playwright',
-        value: githubFreeze.playwright.browserTrees[browserRevision].treeSha256,
-        byteLength: githubFreeze.playwright.browserTrees[browserRevision].manifestByteLength,
-        entryCount: githubFreeze.playwright.browserTrees[browserRevision].entryCount,
-        trees: Object.fromEntries(
-          githubFreeze.playwright.requiredTrees[environment.browser.engine].map((revision: string) => {
-            const tree = githubFreeze.playwright.browserTrees[revision]
-            return [revision, {
-              value: tree.treeSha256,
-              byteLength: tree.manifestByteLength,
-              entryCount: tree.entryCount,
-            }]
-          }),
-        ),
-      } : null
+      const browser = browserRevision
+        ? {
+            engine: environment.browser.engine,
+            revision: browserRevision,
+            provisionRoot: '/frozen/playwright',
+            value: githubFreeze.playwright.browserTrees[browserRevision].treeSha256,
+            byteLength: githubFreeze.playwright.browserTrees[browserRevision].manifestByteLength,
+            entryCount: githubFreeze.playwright.browserTrees[browserRevision].entryCount,
+            trees: Object.fromEntries(
+              githubFreeze.playwright.requiredTrees[environment.browser.engine].map((revision: string) => {
+                const tree = githubFreeze.playwright.browserTrees[revision]
+                return [
+                  revision,
+                  {
+                    value: tree.treeSha256,
+                    byteLength: tree.manifestByteLength,
+                    entryCount: tree.entryCount,
+                  },
+                ]
+              }),
+            ),
+          }
+        : null
       const toolchain = {
         nodeVersion: `v${environment.runtime.version}`,
         npmVersion: '10.9.8',
@@ -107,8 +111,11 @@ function fixture(): { artifacts: string; first: string } {
         },
       }
       const host = {
-        platform: environment.os.startsWith('ubuntu') ? 'linux'
-          : environment.os.startsWith('macos') ? 'darwin' : 'win32',
+        platform: environment.os.startsWith('ubuntu')
+          ? 'linux'
+          : environment.os.startsWith('macos')
+            ? 'darwin'
+            : 'win32',
         architecture: environment.architecture === 'aarch64' ? 'arm64' : 'x64',
         runnerImage: runner.imageOS,
         runnerImageVersion: runner.imageVersion,
@@ -165,9 +172,11 @@ function aggregate(artifacts: string, suffix: string, sha = sourceSha, githubSha
   const env: NodeJS.ProcessEnv = { ...process.env, GITHUB_SHA: githubSha }
   // Windows environment names are case-insensitive and may be stored in any case.
   for (const name of Object.keys(env)) if (/^image(?:os|version)$/iu.test(name)) delete env[name]
-  const child = spawnSync(process.execPath, [
-    harness, 'aggregate', '--artifacts', artifacts, '--source-sha', sha, '--output', output,
-  ], { cwd: root, encoding: 'utf8', env })
+  const child = spawnSync(
+    process.execPath,
+    [harness, 'aggregate', '--artifacts', artifacts, '--source-sha', sha, '--output', output],
+    { cwd: root, encoding: 'utf8', env },
+  )
   return { process: child, output }
 }
 
@@ -183,24 +192,25 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
       priorResultsMayBeImported: false,
     })
     expect(plan.lifecycle.qualificationClaim).toBe('none')
-    const harnessBundle = plan.bindings.bundles.find((item: any) => (
-      item.id === 'g1-qualification-harness-bundle'
-    ))
-    expect(harnessBundle.paths).toEqual(expect.arrayContaining([
-      '.github/workflows/g1-qualification-clean.yml',
-      'scripts/g1-github-actions.mjs',
-      'scripts/run-g1-candidate-clean-fragment.mjs',
-      'scripts/run-g1-ubuntu-docker-fragment.mjs',
-    ]))
+    const harnessBundle = plan.bindings.bundles.find((item: any) => item.id === 'g1-qualification-harness-bundle')
+    expect(harnessBundle.paths).toEqual(
+      expect.arrayContaining([
+        '.github/workflows/g1-qualification-clean.yml',
+        'scripts/g1-github-actions.mjs',
+        'scripts/run-g1-candidate-clean-fragment.mjs',
+        'scripts/run-g1-ubuntu-docker-fragment.mjs',
+      ]),
+    )
     expect(() => validateHarnessBinding(harnessBundle)).not.toThrow()
-    expect(digest(readFileSync(resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v33.json'))))
-      .toBe('27b756158efdee25758bb012394fc056d1fb676e4f87af393ec2a4c4d784fbda')
+    expect(digest(readFileSync(resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v33.json')))).toBe(
+      '27b756158efdee25758bb012394fc056d1fb676e4f87af393ec2a4c4d784fbda',
+    )
   })
 
   it.each(evidenceProducers)('rejects an unbound %s producer', producer => {
-    const harnessBundle = structuredClone(plan.bindings.bundles.find((item: any) => (
-      item.id === 'g1-qualification-harness-bundle'
-    )))
+    const harnessBundle = structuredClone(
+      plan.bindings.bundles.find((item: any) => item.id === 'g1-qualification-harness-bundle'),
+    )
     harnessBundle.paths = harnessBundle.paths.filter((path: string) => path !== producer)
     expect(() => validateHarnessBinding(harnessBundle)).toThrow(/unbound evidence producer/u)
   })
@@ -218,40 +228,42 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
   })
 
   it('accepts an observed exact image variant and preserves its recorded identity', () => {
-    const {artifacts,first}=fixture()
-    const fragment=JSON.parse(readFileSync(resolve(first,'fragment.json'),'utf8'))
-    const preflight=JSON.parse(readFileSync(resolve(first,'preflight.json'),'utf8'))
-    const environment=plan.environments.find((item:any)=>item.id===fragment.environmentId)
-    const variant=githubFreeze.runnerImages[runnerKey(environment)].observedVariants[0]
-    for(const value of [fragment,preflight]) {
-      value.host.runnerImage=variant.imageOS
-      value.host.runnerImageVersion=variant.imageVersion
+    const { artifacts, first } = fixture()
+    const fragment = JSON.parse(readFileSync(resolve(first, 'fragment.json'), 'utf8'))
+    const preflight = JSON.parse(readFileSync(resolve(first, 'preflight.json'), 'utf8'))
+    const environment = plan.environments.find((item: any) => item.id === fragment.environmentId)
+    const variant = githubFreeze.runnerImages[runnerKey(environment)].observedVariants[0]
+    for (const value of [fragment, preflight]) {
+      value.host.runnerImage = variant.imageOS
+      value.host.runnerImageVersion = variant.imageVersion
     }
-    writeEvidence(first,fragment,preflight)
-    const result=aggregate(artifacts,'observed-image')
-    expect(result.process.status,result.process.stderr).toBe(0)
-    expect(JSON.parse(readFileSync(result.output,'utf8')).completedWorkUnits).toBe(4740)
+    writeEvidence(first, fragment, preflight)
+    const result = aggregate(artifacts, 'observed-image')
+    expect(result.process.status, result.process.stderr).toBe(0)
+    expect(JSON.parse(readFileSync(result.output, 'utf8')).completedWorkUnits).toBe(4740)
   })
 
   it.each(['observed', 'unobserved'])('checks %s Windows rollout image without loosening host admission', kind => {
-    const {artifacts}=fixture()
-    const row=plan.matrix.find((item:any)=>item.executionEnvironmentIds.includes('windows-node20'))
-    const target=resolve(artifacts,`${row.id}--windows-node20--run-1`)
-    const fragment=JSON.parse(readFileSync(resolve(target,'fragment.json'),'utf8'))
-    const preflight=JSON.parse(readFileSync(resolve(target,'preflight.json'),'utf8'))
-    const variant=githubFreeze.runnerImages['windows-2025'].observedVariants[0]
-    for(const value of [fragment,preflight]) {
-      value.host.runnerImage=variant.imageOS
-      value.host.runnerImageVersion=kind==='observed'?variant.imageVersion:'19000101.0.0'
+    const { artifacts } = fixture()
+    const row = plan.matrix.find((item: any) => item.executionEnvironmentIds.includes('windows-node20'))
+    const target = resolve(artifacts, `${row.id}--windows-node20--run-1`)
+    const fragment = JSON.parse(readFileSync(resolve(target, 'fragment.json'), 'utf8'))
+    const preflight = JSON.parse(readFileSync(resolve(target, 'preflight.json'), 'utf8'))
+    const variant = githubFreeze.runnerImages['windows-2025'].observedVariants[0]
+    for (const value of [fragment, preflight]) {
+      value.host.runnerImage = variant.imageOS
+      value.host.runnerImageVersion = kind === 'observed' ? variant.imageVersion : '19000101.0.0'
     }
-    writeEvidence(target,fragment,preflight)
-    const result=aggregate(artifacts,`windows-${kind}`)
-    if(kind==='observed') {
-      expect(result.process.status,result.process.stderr).toBe(0)
-      expect(JSON.parse(readFileSync(result.output,'utf8')).completedWorkUnits).toBe(4740)
+    writeEvidence(target, fragment, preflight)
+    const result = aggregate(artifacts, `windows-${kind}`)
+    if (kind === 'observed') {
+      expect(result.process.status, result.process.stderr).toBe(0)
+      expect(JSON.parse(readFileSync(result.output, 'utf8')).completedWorkUnits).toBe(4740)
     } else {
       expect(result.process.status).toBe(1)
-      expect(JSON.parse(readFileSync(result.output,'utf8')).errors.join('\n')).toMatch(/hosted runner identity mismatch/u)
+      expect(JSON.parse(readFileSync(result.output, 'utf8')).errors.join('\n')).toMatch(
+        /hosted runner identity mismatch/u,
+      )
     }
   })
 
@@ -264,9 +276,9 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
     } else {
       const fragment = JSON.parse(readFileSync(resolve(first, 'fragment.json'), 'utf8'))
       const preflight = JSON.parse(readFileSync(resolve(first, 'preflight.json'), 'utf8'))
-      if(kind==='discovery-only') {
-        fragment.classification='discovery-only'
-        fragment.unitsCompleted=0
+      if (kind === 'discovery-only') {
+        fragment.classification = 'discovery-only'
+        fragment.unitsCompleted = 0
       } else {
         fragment.host.runnerImageVersion = 'wrong'
         preflight.host.runnerImageVersion = 'wrong'
@@ -300,7 +312,7 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
 
 describe('cross-platform frozen runtime execution', () => {
   it('accepts the actual Node Windows identity and refuses another OS or architecture', async () => {
-    const {matchesNodeHost} = await import('../scripts/g1RuntimeIdentity.mjs')
+    const { matchesNodeHost } = await import('../scripts/g1RuntimeIdentity.mjs')
     const windows = plan.environments.find((item: any) => item.id === 'windows-node20')
     expect(matchesNodeHost(windows, 'win32', 'x64')).toBe(true)
     expect(matchesNodeHost(windows, 'linux', 'x64')).toBe(false)
@@ -313,35 +325,47 @@ describe('cross-platform frozen runtime execution', () => {
   })
 
   it('preserves frozen test arguments through direct Node execution on Windows', async () => {
-    const {qualificationInvocation} = await import('../scripts/g1RuntimeIdentity.mjs')
+    const { qualificationInvocation } = await import('../scripts/g1RuntimeIdentity.mjs')
     const invocation = qualificationInvocation(
       'npm test -- tests/mcpManifoldPlanQualificationSupervisor.test.ts --maxWorkers 2',
-      'C:/Node Runtime/node.exe', root,
+      'C:/Node Runtime/node.exe',
+      root,
     )
     expect(invocation.executable).toBe('C:/Node Runtime/node.exe')
     expect(invocation.args).toEqual([
       resolve(root, 'node_modules/vitest/vitest.mjs'),
-      'tests/mcpManifoldPlanQualificationSupervisor.test.ts', '--maxWorkers', '2',
+      'tests/mcpManifoldPlanQualificationSupervisor.test.ts',
+      '--maxWorkers',
+      '2',
     ])
     expect(() => qualificationInvocation('powershell arbitrary', 'node', root)).toThrow('Unsupported frozen command')
   })
 
   it('probes all frozen hosts without replacing the full matrix', () => {
-    const result = spawnSync(process.execPath, [harness, 'matrix', '--probe-only'], {cwd:root,encoding:'utf8'})
+    const result = spawnSync(process.execPath, [harness, 'matrix', '--probe-only'], { cwd: root, encoding: 'utf8' })
     expect(result.status, result.stderr).toBe(0)
     const matrix = JSON.parse(result.stdout)
     expect(matrix.nodes.include.map((item: any) => item.environment).sort()).toEqual([
-      'macos-node20','ubuntu-node20','ubuntu-node22','windows-node20',
+      'macos-node20',
+      'ubuntu-node20',
+      'ubuntu-node22',
+      'windows-node20',
     ])
-    expect(matrix.browsers.include.map((item: any) => item.environment).sort()).toEqual(['vite-chromium','vite-webkit'])
+    expect(matrix.browsers.include.map((item: any) => item.environment).sort()).toEqual([
+      'vite-chromium',
+      'vite-webkit',
+    ])
   })
 })
 
 it('preserves exact LF checkout bytes for every bound source and native sources', () => {
   const paths = [...new Set(plan.bindings.bundles.flatMap((item: any) => item.paths))] as string[]
   paths.push('crates/nurbs-core/src/sweeps/profile_certificate.rs', 'crates/Cargo.toml', 'crates/Cargo.lock')
-  const attributes = execFileSync('git', ['check-attr', '-z', 'eol', '--', ...paths], {cwd:root,encoding:'utf8'}).split('\0')
-  for (let i=0;i<attributes.length-1;i+=3) expect(attributes[i+2], attributes[i]).toBe('lf')
+  const attributes = execFileSync('git', ['check-attr', '-z', 'eol', '--', ...paths], {
+    cwd: root,
+    encoding: 'utf8',
+  }).split('\0')
+  for (let i = 0; i < attributes.length - 1; i += 3) expect(attributes[i + 2], attributes[i]).toBe('lf')
   const harnessBundle = plan.bindings.bundles.find((item: any) => item.paths.includes('scripts/g1-github-actions.mjs'))
   expect(harnessBundle.paths).toContain('.gitattributes')
 })

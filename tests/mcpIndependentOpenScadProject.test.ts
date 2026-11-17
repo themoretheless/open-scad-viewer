@@ -6,25 +6,27 @@ import { createOpenScadMcpServer } from '../src/mcp/createServer'
 import { DuckDbModelStore } from '../src/mcp/duckdbModelStore'
 import type { OfficialOpenScadRuntimeService } from '../src/mcp/officialOpenScadRuntimeService'
 
-const RGBA_PNG_2X2 = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGUlEQVR4nGNgAIL///8LMjQ0NCg6ODgYAgAyLgWhbk/ABgAAAABJRU5ErkJggg=='
-const IMPORT_SVG_FIXTURE = OPENSCAD_2021_01_SMOKE_FIXTURES.find(
-  fixture => fixture.id === 'import-square-svg',
-)!
+const RGBA_PNG_2X2 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGUlEQVR4nGNgAIL///8LMjQ0NCg6ODgYAgAyLgWhbk/ABgAAAABJRU5ErkJggg=='
+const IMPORT_SVG_FIXTURE = OPENSCAD_2021_01_SMOKE_FIXTURES.find(fixture => fixture.id === 'import-square-svg')!
 const LEGACY_TETRA_STL = readFileSync(new URL('./fixtures/legacy-tetra.stl', import.meta.url), 'utf8')
 const LEGACY_TETRA_OFF = readFileSync(new URL('./fixtures/legacy-tetra.off', import.meta.url), 'utf8')
 const LEGACY_SQUARE_DXF = readFileSync(new URL('./fixtures/legacy-square.dxf', import.meta.url), 'utf8')
-const LEGACY_DIMENSIONED_DXF = readFileSync(
-  new URL('./fixtures/legacy-dimensioned.dxf', import.meta.url),
-  'utf8',
-)
+const LEGACY_DIMENSIONED_DXF = readFileSync(new URL('./fixtures/legacy-dimensioned.dxf', import.meta.url), 'utf8')
 
 describe('independent OpenSCAD project execution through MCP', () => {
   let close: () => Promise<void>
   let request: (method: string, params?: Record<string, unknown>) => Promise<Record<string, unknown>>
   const upstream = {
-    capabilities: vi.fn(async () => { throw new Error('upstream oracle must not be called') }),
-    check: vi.fn(async () => { throw new Error('upstream oracle must not be called') }),
-    export: vi.fn(async () => { throw new Error('upstream oracle must not be called') }),
+    capabilities: vi.fn(async () => {
+      throw new Error('upstream oracle must not be called')
+    }),
+    check: vi.fn(async () => {
+      throw new Error('upstream oracle must not be called')
+    }),
+    export: vi.fn(async () => {
+      throw new Error('upstream oracle must not be called')
+    }),
     close: vi.fn(async () => undefined),
   } as unknown as OfficialOpenScadRuntimeService
 
@@ -35,8 +37,8 @@ describe('independent OpenSCAD project execution through MCP', () => {
     const pending = new Map<number, (value: Record<string, unknown>) => void>()
     let nextId = 1
     clientTransport.onmessage = message => {
-      if (!('id' in message) || typeof message.id !== 'number'
-        || (!('result' in message) && !('error' in message))) return
+      if (!('id' in message) || typeof message.id !== 'number' || (!('result' in message) && !('error' in message)))
+        return
       pending.get(message.id)?.(message as Record<string, unknown>)
       pending.delete(message.id)
     }
@@ -75,7 +77,7 @@ describe('independent OpenSCAD project execution through MCP', () => {
   afterAll(async () => close?.())
 
   it('executes include/use files without any upstream runtime call', async () => {
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_independent_check',
       arguments: {
         source: 'include <config.scad> use <lib/part.scad> make_part(edge);',
@@ -89,7 +91,7 @@ describe('independent OpenSCAD project execution through MCP', () => {
         ],
         quality: 'full',
       },
-    }) as {
+    })) as {
       isError?: boolean
       structuredContent?: {
         check: {
@@ -122,13 +124,13 @@ describe('independent OpenSCAD project execution through MCP', () => {
   })
 
   it('accepts entrypoint source above the legacy model limit but within the advertised project limit', async () => {
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_independent_check',
       arguments: {
         source: `${' '.repeat(250_000)}cube(1);`,
         quality: 'full',
       },
-    }) as {
+    })) as {
       isError?: boolean
       structuredContent?: { check: { volume: number } }
     }
@@ -141,7 +143,7 @@ describe('independent OpenSCAD project execution through MCP', () => {
   })
 
   it('loads module-relative DAT and PNG surface assets without any upstream runtime call', async () => {
-    const dat = await request('tools/call', {
+    const dat = (await request('tools/call', {
       name: 'openscad_independent_check',
       arguments: {
         source: 'use <lib/terrain.scad> terrain();',
@@ -154,7 +156,7 @@ describe('independent OpenSCAD project execution through MCP', () => {
         ],
         quality: 'full',
       },
-    }) as {
+    })) as {
       isError?: boolean
       structuredContent?: { check: { mesh_count: number; volume: number; triangle_count: number } }
     }
@@ -163,14 +165,14 @@ describe('independent OpenSCAD project execution through MCP', () => {
     expect(dat.structuredContent?.check.volume).toBeCloseTo(2.5, 5)
     expect(dat.structuredContent?.check.triangle_count).toBeGreaterThan(0)
 
-    const png = await request('tools/call', {
+    const png = (await request('tools/call', {
       name: 'openscad_independent_check',
       arguments: {
         source: 'surface(file = "assets/map.png", center = true, invert = true);',
         files: [{ path: 'assets/map.png', data_base64: RGBA_PNG_2X2 }],
         quality: 'full',
       },
-    }) as {
+    })) as {
       isError?: boolean
       structuredContent?: { check: { mesh_count: number; volume: number; triangle_count: number } }
     }
@@ -186,7 +188,7 @@ describe('independent OpenSCAD project execution through MCP', () => {
 
   it('loads a module-relative SVG import without any upstream runtime call', async () => {
     if (IMPORT_SVG_FIXTURE.provisioning !== 'inline-text') throw new Error('Expected inline SVG fixture')
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_independent_check',
       arguments: {
         source: 'use <lib/part.scad> imported_part();',
@@ -199,7 +201,7 @@ describe('independent OpenSCAD project execution through MCP', () => {
         ],
         quality: 'full',
       },
-    }) as {
+    })) as {
       isError?: boolean
       structuredContent?: { check: { mesh_count: number; volume: number; triangle_count: number } }
     }
@@ -214,17 +216,19 @@ describe('independent OpenSCAD project execution through MCP', () => {
   })
 
   it('returns typed defining-source diagnostics for missing import assets', async () => {
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_independent_check',
       arguments: {
         source: 'use <lib/part.scad> imported_part();',
-        files: [{
-          path: 'lib/part.scad',
-          text: 'module imported_part() {\n  import(file = "../assets/missing.svg");\n}',
-        }],
+        files: [
+          {
+            path: 'lib/part.scad',
+            text: 'module imported_part() {\n  import(file = "../assets/missing.svg");\n}',
+          },
+        ],
         quality: 'full',
       },
-    }) as {
+    })) as {
       isError?: boolean
       structuredContent?: {
         error: {
@@ -259,17 +263,19 @@ describe('independent OpenSCAD project execution through MCP', () => {
   })
 
   it('returns typed defining-source diagnostics for missing text fonts', async () => {
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_independent_check',
       arguments: {
         source: 'use <lib/label.scad> label();',
-        files: [{
-          path: 'lib/label.scad',
-          text: 'module label() {\n  text("A", font = "../fonts/missing.ttf");\n}',
-        }],
+        files: [
+          {
+            path: 'lib/label.scad',
+            text: 'module label() {\n  text("A", font = "../fonts/missing.ttf");\n}',
+          },
+        ],
         quality: 'full',
       },
-    }) as {
+    })) as {
       isError?: boolean
       structuredContent?: {
         error: {
@@ -303,17 +309,19 @@ describe('independent OpenSCAD project execution through MCP', () => {
   })
 
   it('returns typed defining-source diagnostics for missing surface assets', async () => {
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_independent_check',
       arguments: {
         source: 'use <lib/terrain.scad> terrain();',
-        files: [{
-          path: 'lib/terrain.scad',
-          text: 'module terrain() {\n  surface(file = "../assets/missing.dat");\n}',
-        }],
+        files: [
+          {
+            path: 'lib/terrain.scad',
+            text: 'module terrain() {\n  surface(file = "../assets/missing.dat");\n}',
+          },
+        ],
         quality: 'full',
       },
-    }) as {
+    })) as {
       isError?: boolean
       structuredContent?: {
         error: {
@@ -347,7 +355,7 @@ describe('independent OpenSCAD project execution through MCP', () => {
   })
 
   it('runs all nine compatibility symbols with dynamic forced-format VFS paths and no upstream call', async () => {
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_independent_check',
       arguments: {
         source: `
@@ -381,7 +389,7 @@ describe('independent OpenSCAD project execution through MCP', () => {
         ],
         quality: 'full',
       },
-    }) as {
+    })) as {
       isError?: boolean
       structuredContent?: {
         check: {

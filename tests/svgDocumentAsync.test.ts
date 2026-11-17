@@ -11,8 +11,13 @@ beforeEach(() => vi.resetAllMocks())
 
 describe('async SVG document boundary', () => {
   it('rejects invalid options before warming or executing', async () => {
-    for (const options of [{ dpi: 0 }, { tolerance: 0 }, { rasterSize: 0 },
-      { alphaThreshold: 0 }, { fonts: [new Uint8Array()] }]) {
+    for (const options of [
+      { dpi: 0 },
+      { tolerance: 0 },
+      { rasterSize: 0 },
+      { alphaThreshold: 0 },
+      { fonts: [new Uint8Array()] },
+    ]) {
       await expect(readSvgDocumentAsync('<svg/>', options)).rejects.toThrow()
     }
     expect(warmGeometryKernel).not.toHaveBeenCalled()
@@ -21,7 +26,11 @@ describe('async SVG document boundary', () => {
 
   it('captures options and font bytes before waiting and uses the same payload as the synchronous API', async () => {
     let ready!: () => void
-    vi.mocked(warmGeometryKernel).mockReturnValue(new Promise(resolve => { ready = resolve }))
+    vi.mocked(warmGeometryKernel).mockReturnValue(
+      new Promise(resolve => {
+        ready = resolve
+      }),
+    )
     const options: SvgOptions = { dpi: 72, fonts: [new Uint8Array([1, 2, 3])] }
     readSvgDocument('<svg/>', options, 'preview', true)
     const expected = vi.mocked(callGeometryRust).mock.calls[0]

@@ -7,7 +7,7 @@ it('pushes a displayed cylinder cap through the retained B-rep editor', () => {
   const brep = createBrepCylinder(3, 5)
   const body = { id: 'cylinder', name: 'Cylinder', brep, mesh: tessellateNurbsBrep(brep, 1) }
   const before = JSON.stringify(body)
-  const top = solidTopology(body.mesh).faces.findIndex(f => f.normal[2] > .99)
+  const top = solidTopology(body.mesh).faces.findIndex(f => f.normal[2] > 0.99)
   expect(top).toBeGreaterThanOrEqual(0)
   const result = pushPullFace(body, top, 20)
   expect(result.brep).toBeDefined()

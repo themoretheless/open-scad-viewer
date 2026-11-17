@@ -9,7 +9,9 @@ const MAX_GRAPH_NODES = 128
 const MAX_PROFILE_WORK = 262144
 
 function conversionLimit(reason: string): never {
-  throw new Error(`SVG RushGraph conversion: ${reason}. Increase SVG tolerance or reduce the artwork complexity; omit includeRushGraph to request SCAD only.`)
+  throw new Error(
+    `SVG RushGraph conversion: ${reason}. Increase SVG tolerance or reduce the artwork complexity; omit includeRushGraph to request SCAD only.`,
+  )
 }
 
 /** Convert canonical SVG profile contours into editable, native RushGraph nodes.
@@ -21,7 +23,12 @@ export async function svgProfileRushGraph(contours: SvgContours, height: number)
   contoursExtrusion(contours, height)
   if (contours.length + 1 > MAX_GRAPH_NODES) conversionLimit('the graph requires more than 128 nodes')
   if (contours.some(ring => ring.length > MAX_POLYGON_POINTS)) conversionLimit('a polygon exceeds 256 points')
-  if (contours.some(ring => ring.length < 3 || ring.some(point => point.length !== 2 || point.some(value => Math.abs(value) > 1_000_000)))) {
+  if (
+    contours.some(
+      ring =>
+        ring.length < 3 || ring.some(point => point.length !== 2 || point.some(value => Math.abs(value) > 1_000_000)),
+    )
+  ) {
     conversionLimit('polygons require at least three points with coordinates within ±1000000 mm')
   }
   if (contours.reduce((work, ring) => work + ring.length ** 2, 0) > MAX_PROFILE_WORK) {
@@ -37,7 +44,14 @@ export async function svgProfileRushGraph(contours: SvgContours, height: number)
     for (let inner = 0; inner < sections.length; inner++) {
       for (let outer = 0; outer < sections.length; outer++) {
         if (inner === outer) continue
-        if ([0, 1].some(axis => bounds[inner]!.min[axis]! < bounds[outer]!.min[axis]! || bounds[inner]!.max[axis]! > bounds[outer]!.max[axis]!)) continue
+        if (
+          [0, 1].some(
+            axis =>
+              bounds[inner]!.min[axis]! < bounds[outer]!.min[axis]! ||
+              bounds[inner]!.max[axis]! > bounds[outer]!.max[axis]!,
+          )
+        )
+          continue
         const remaining = kernel.boolean2('difference', [sections[inner]!, sections[outer]!])
         const contained = kernel.isEmpty(remaining)
         kernel.delete(remaining)
@@ -53,9 +67,14 @@ export async function svgProfileRushGraph(contours: SvgContours, height: number)
   for (let index = 0; index < contours.length; index++) {
     const enclosing = containers[index]!
     if (enclosing.some(other => containers[other]!.includes(index))) conversionLimit('contour containment is cyclic')
-    if (!enclosing.length) { roots.push(index); continue }
+    if (!enclosing.length) {
+      roots.push(index)
+      continue
+    }
     // A canonical nonintersecting contour forest has one deepest enclosing ring.
-    const deepest = enclosing.filter(candidate => enclosing.every(other => candidate === other || containers[candidate]!.includes(other)))
+    const deepest = enclosing.filter(candidate =>
+      enclosing.every(other => candidate === other || containers[candidate]!.includes(other)),
+    )
     if (deepest.length !== 1) conversionLimit('contour containment is ambiguous')
     children[deepest[0]!]!.push(index)
   }
@@ -91,15 +110,23 @@ export async function svgProfileRushGraph(contours: SvgContours, height: number)
   const profile = union(roots.map(index => region(index)))
   nodes.push({ id: 'svg_extrusion', op: 'extrude', input: profile, height: { param: 'svg_height' }, center: false })
   const document: RushGraph = {
-    language: 'rush/ir-1', units: 'mm', segments: 48,
+    language: 'rush/ir-1',
+    units: 'mm',
+    segments: 48,
     parameters: [{ id: 'svg_height', value: height, unit: 'mm', min: 0, max: 100000 }],
-    nodes, root: 'svg_extrusion',
+    nodes,
+    root: 'svg_extrusion',
   }
   // Bound transport size before entering the compiler's own JSON-value budget.
-  if (JSON.stringify(document).length > MAX_WORKSPACE_SOURCE_LENGTH) conversionLimit('the document exceeds 250000 characters')
+  if (JSON.stringify(document).length > MAX_WORKSPACE_SOURCE_LENGTH)
+    conversionLimit('the document exceeds 250000 characters')
   let compiled: RushGraphCompilation
-  try { compiled = compileRushGraph(document) }
-  catch (error) { conversionLimit(error instanceof Error ? error.message : 'the document failed RushGraph validation') }
-  if (compiled.source.length > MAX_WORKSPACE_SOURCE_LENGTH) conversionLimit('the compiled source exceeds 250000 characters')
+  try {
+    compiled = compileRushGraph(document)
+  } catch (error) {
+    conversionLimit(error instanceof Error ? error.message : 'the document failed RushGraph validation')
+  }
+  if (compiled.source.length > MAX_WORKSPACE_SOURCE_LENGTH)
+    conversionLimit('the compiled source exceeds 250000 characters')
   return compiled
 }

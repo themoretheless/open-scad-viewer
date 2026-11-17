@@ -106,7 +106,13 @@ describe('command search', () => {
     expect(nextEnabledCommandIndex(commands, 1, 1)).toBe(3)
     expect(nextEnabledCommandIndex(commands, 3, 1)).toBe(1)
     expect(nextEnabledCommandIndex(commands, 1, -1)).toBe(3)
-    expect(nextEnabledCommandIndex(commands.filter(item => item.enabled === false), -1, 1)).toBe(-1)
+    expect(
+      nextEnabledCommandIndex(
+        commands.filter(item => item.enabled === false),
+        -1,
+        1,
+      ),
+    ).toBe(-1)
   })
 
   it('lets keyboard navigation land on disabled options to expose their reasons', () => {

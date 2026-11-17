@@ -67,8 +67,10 @@ export interface AxesScreenProjection {
 
 /** Project Z-up world axes into the renderer's orbit-camera screen basis. */
 export function projectAxesToScreen(yaw: number, pitch: number): AxesScreenProjection {
-  const cy = Math.cos(yaw), sy = Math.sin(yaw)
-  const cp = Math.cos(pitch), sp = Math.sin(pitch)
+  const cy = Math.cos(yaw),
+    sy = Math.sin(yaw)
+  const cp = Math.cos(pitch),
+    sp = Math.sin(pitch)
   if (Math.abs(cp) < 1e-10) {
     const sign = sp >= 0 ? 1 : -1
     return {

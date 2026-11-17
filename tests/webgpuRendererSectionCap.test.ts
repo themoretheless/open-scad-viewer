@@ -1,4 +1,4 @@
-import type {PipelineFactory} from '../src/render/pipelineFactory'
+import type { PipelineFactory } from '../src/render/pipelineFactory'
 import { describe, expect, it, vi } from 'vitest'
 import { WebGPURenderer } from '../src/render/webgpuRenderer'
 
@@ -59,7 +59,9 @@ function harness() {
   vi.stubGlobal('GPUBufferUsage', { VERTEX: 32, INDEX: 16, UNIFORM: 64, COPY_DST: 8, STORAGE: 128 })
   const pipelines: unknown[] = []
   const pass = {
-    setPipeline: (pipeline: unknown) => { pipelines.push(pipeline) },
+    setPipeline: (pipeline: unknown) => {
+      pipelines.push(pipeline)
+    },
     setBindGroup: () => undefined,
     setVertexBuffer: () => undefined,
     setIndexBuffer: () => undefined,
@@ -100,8 +102,8 @@ function harness() {
   internal.sectionNormal = [0, 0, 1]
   internal.sectionOffset = 0
   // Pipeline stand-ins as set during the warmup; identity marks the pass role.
-  const meshPipe = internal.pipelines.getRenderPipeline(internal.dev as GPUDevice,'mesh')
-  const capPipe = internal.pipelines.getRenderPipeline(internal.dev as GPUDevice,'meshSectionCap')
+  const meshPipe = internal.pipelines.getRenderPipeline(internal.dev as GPUDevice, 'mesh')
+  const capPipe = internal.pipelines.getRenderPipeline(internal.dev as GPUDevice, 'meshSectionCap')
   return { internal, pipelines, meshPipe, capPipe }
 }
 

@@ -4,11 +4,7 @@ import {
   semanticResultItems,
   type SemanticProgramV1,
 } from '../core/semanticProgram'
-import {
-  assembleLegacyV5Result,
-  LegacyV5AssemblyError,
-  type LegacyV5AssemblyOptions,
-} from '../app/legacyV5Assembler'
+import { assembleLegacyV5Result, LegacyV5AssemblyError, type LegacyV5AssemblyOptions } from '../app/legacyV5Assembler'
 import {
   loadManifoldPlanBackend,
   type ManifoldPlanBackend,
@@ -48,14 +44,8 @@ function backendCauseText(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause)
 }
 
-function preserveExecutionCleanup(
-  primary: unknown,
-  failure: SemanticProgramExecutionError,
-  message: string,
-): unknown {
-  return failure.cleanupError === undefined
-    ? primary
-    : new AggregateError([primary, failure.cleanupError], message)
+function preserveExecutionCleanup(primary: unknown, failure: SemanticProgramExecutionError, message: string): unknown {
+  return failure.cleanupError === undefined ? primary : new AggregateError([primary, failure.cleanupError], message)
 }
 
 function legacyKernelError(
@@ -105,11 +95,7 @@ async function evaluateInternal(
   const now = options.now ?? (() => performance.now())
   const startedAt = now()
   if (source.length > MAX_SOURCE_LENGTH) {
-    throw new OpenSCADParseError(
-      source,
-      0,
-      `Source exceeds ${MAX_SOURCE_LENGTH.toLocaleString()} characters`,
-    )
+    throw new OpenSCADParseError(source, 0, `Source exceeds ${MAX_SOURCE_LENGTH.toLocaleString()} characters`)
   }
   const artifact = lowerOpenSCADToSemanticProgram(source, {
     quality: options.quality,
@@ -136,9 +122,11 @@ async function evaluateInternal(
         'Semantic execution was aborted and Manifold session cleanup also failed',
       )
     }
-    if (error instanceof SemanticProgramExecutionError
-      && error.code === 'E_SEMANTIC_LANGUAGE_TERMINAL'
-      && artifact.terminalError !== null) {
+    if (
+      error instanceof SemanticProgramExecutionError &&
+      error.code === 'E_SEMANTIC_LANGUAGE_TERMINAL' &&
+      artifact.terminalError !== null
+    ) {
       throw preserveExecutionCleanup(
         artifact.terminalError,
         error,
@@ -171,9 +159,7 @@ async function evaluateInternal(
     }
   } catch (error) {
     failed = true
-    primaryFailure = error instanceof LegacyV5AssemblyError
-      ? publicAssemblyError(source, error)
-      : error
+    primaryFailure = error instanceof LegacyV5AssemblyError ? publicAssemblyError(source, error) : error
     throw primaryFailure
   } finally {
     try {
@@ -217,32 +203,31 @@ export class ManifoldPlanQualificationLane {
     if (this.backendPromise === undefined) {
       const attempt = this.loadBackend()
       this.backendPromise = attempt
-      attempt.then(() => {
-        if (this.backendPromise === attempt) this.generation++
-      }, () => {
-        if (this.backendPromise === attempt) this.backendPromise = undefined
-      })
+      attempt.then(
+        () => {
+          if (this.backendPromise === attempt) this.generation++
+        },
+        () => {
+          if (this.backendPromise === attempt) this.backendPromise = undefined
+        },
+      )
     }
     return this.backendPromise
   }
 
-  private retireIfQuarantined(
-    backendPromise: Promise<ManifoldPlanBackend>,
-    backend: ManifoldPlanBackend,
-  ): void {
+  private retireIfQuarantined(backendPromise: Promise<ManifoldPlanBackend>, backend: ManifoldPlanBackend): void {
     if (backend.lifecycleState === 'quarantined' && this.backendPromise === backendPromise) {
       this.backendPromise = undefined
     }
   }
 
-  private async evaluateOne(
-    source: string,
-    options: ManifoldPlanEvaluationOptions,
-  ): Promise<GeometryEvaluationResult> {
-    let acquired: {
-      readonly promise: Promise<ManifoldPlanBackend>
-      readonly backend: ManifoldPlanBackend
-    } | undefined
+  private async evaluateOne(source: string, options: ManifoldPlanEvaluationOptions): Promise<GeometryEvaluationResult> {
+    let acquired:
+      | {
+          readonly promise: Promise<ManifoldPlanBackend>
+          readonly backend: ManifoldPlanBackend
+        }
+      | undefined
     const acquireAfterLowering = async () => {
       const promise = this.backend()
       const backend = await promise
@@ -260,15 +245,15 @@ export class ManifoldPlanQualificationLane {
     }
   }
 
-  evaluate(
-    source: string,
-    options: ManifoldPlanEvaluationOptions = {},
-  ): Promise<GeometryEvaluationResult> {
+  evaluate(source: string, options: ManifoldPlanEvaluationOptions = {}): Promise<GeometryEvaluationResult> {
     const result = this.evaluationQueue.then(
       () => this.evaluateOne(source, options),
       () => this.evaluateOne(source, options),
     )
-    this.evaluationQueue = result.then(() => undefined, () => undefined)
+    this.evaluationQueue = result.then(
+      () => undefined,
+      () => undefined,
+    )
     return result
   }
 }

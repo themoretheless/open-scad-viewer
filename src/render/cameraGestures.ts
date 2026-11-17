@@ -1,7 +1,10 @@
 import { callGeometryRust } from '../kernel/geometry/kernel'
 const FOV_Y = Math.PI / 4
 
-export interface PinchPoint { x: number; y: number }
+export interface PinchPoint {
+  x: number
+  y: number
+}
 
 export interface OrbitCameraState {
   yaw: number
@@ -15,7 +18,9 @@ export interface OrbitCameraState {
 export type PinchCameraState = OrbitCameraState
 
 // Binary transport is finite-only; retain scalar fallback semantics explicitly.
-function number(value: number): number | string { return Number.isFinite(value) ? value : String(value) }
+function number(value: number): number | string {
+  return Number.isFinite(value) ? value : String(value)
+}
 
 export function clampGestureDistance(distance: number): number {
   return callGeometryRust('camera_gesture', { action: 'clamp', distance: number(distance) })
@@ -23,19 +28,33 @@ export function clampGestureDistance(distance: number): number {
 export function computeOrbitUpdate(state: OrbitCameraState, dx: number, dy: number): OrbitCameraState {
   return callGeometryRust('camera_gesture', { action: 'orbit', state, dx, dy })
 }
-export function computePanUpdate(state: OrbitCameraState, dx: number, dy: number, viewportHeight: number, fovY = FOV_Y): OrbitCameraState {
+export function computePanUpdate(
+  state: OrbitCameraState,
+  dx: number,
+  dy: number,
+  viewportHeight: number,
+  fovY = FOV_Y,
+): OrbitCameraState {
   return callGeometryRust('camera_gesture', { action: 'pan', state, dx, dy, height: viewportHeight, fov: fovY })
 }
 export function computeWheelDistance(distance: number, deltaPixels: number): number {
   return callGeometryRust('camera_gesture', { action: 'wheel', distance: number(distance), delta: number(deltaPixels) })
 }
 export function computePinchUpdate(
-  prevA: PinchPoint, prevB: PinchPoint, curA: PinchPoint, curB: PinchPoint,
-  state: PinchCameraState, viewportHeight: number, fovY = FOV_Y,
+  prevA: PinchPoint,
+  prevB: PinchPoint,
+  curA: PinchPoint,
+  curB: PinchPoint,
+  state: PinchCameraState,
+  viewportHeight: number,
+  fovY = FOV_Y,
 ): PinchCameraState {
   return callGeometryRust('camera_gesture', {
-    action: 'pinch', points: [prevA, prevB, curA, curB].map(p => [p.x, p.y]),
-    state, height: viewportHeight, fov: fovY,
+    action: 'pinch',
+    points: [prevA, prevB, curA, curB].map(p => [p.x, p.y]),
+    state,
+    height: viewportHeight,
+    fov: fovY,
   })
 }
 
@@ -56,7 +75,12 @@ const MAX_CAMERA_DIST = 100_000
  * the returned distance factor `prevDistancePx / nextDistancePx` is `< 1`.
  */
 export function computePinchZoomFactor(prevDistancePx: number, nextDistancePx: number): number {
-  if (!Number.isFinite(prevDistancePx) || !Number.isFinite(nextDistancePx) || prevDistancePx <= 1e-3 || nextDistancePx <= 1e-3) {
+  if (
+    !Number.isFinite(prevDistancePx) ||
+    !Number.isFinite(nextDistancePx) ||
+    prevDistancePx <= 1e-3 ||
+    nextDistancePx <= 1e-3
+  ) {
     return 1
   }
   const rawFactor = prevDistancePx / nextDistancePx
@@ -78,9 +102,7 @@ export function stepInertialOrbitCamera(
     return {
       state: { ...state },
       velocity: { ...velocity },
-      moving:
-        Math.hypot(velocity.yawRadPerSec, velocity.pitchRadPerSec) > 1e-4 ||
-        Math.abs(velocity.zoomPerSec) > 1e-4,
+      moving: Math.hypot(velocity.yawRadPerSec, velocity.pitchRadPerSec) > 1e-4 || Math.abs(velocity.zoomPerSec) > 1e-4,
     }
   }
   const safeDamping = Number.isFinite(damping) && damping >= 0 ? damping : 8

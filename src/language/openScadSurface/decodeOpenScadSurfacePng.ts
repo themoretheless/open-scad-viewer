@@ -1,7 +1,33 @@
-import { ADAM7, OPENSCAD_SURFACE_MAX_PREPARED_PIXELS, OPENSCAD_SURFACE_MAX_TRIANGLES, OpenScadSurfaceDataError, PNG_SIGNATURE } from '../openScadSurface'
-import type { DecodedPngLuminance, OpenScadSurfaceHeightMap, OpenScadSurfaceMesh, PreparedOpenScadSurfaceAssets } from '../openScadSurface'
+import {
+  ADAM7,
+  OPENSCAD_SURFACE_MAX_PREPARED_PIXELS,
+  OPENSCAD_SURFACE_MAX_TRIANGLES,
+  OpenScadSurfaceDataError,
+  PNG_SIGNATURE,
+} from '../openScadSurface'
+import type {
+  DecodedPngLuminance,
+  OpenScadSurfaceHeightMap,
+  OpenScadSurfaceMesh,
+  PreparedOpenScadSurfaceAssets,
+} from '../openScadSurface'
 import { OpenScadProject, resolveOpenScadProjectPath } from '../openScadProject'
-import { channelsForColorType, dataError, enforceDimensions, expectedInflatedBytes, heightMap, inflatePng, isPng, parseOpenScadSurfaceDat, passSize, pixelLuminance, pngCrc, surfaceTriangleCount, unfilter, validateBitDepth } from './parseOpenScadSurfaceDat'
+import {
+  channelsForColorType,
+  dataError,
+  enforceDimensions,
+  expectedInflatedBytes,
+  heightMap,
+  inflatePng,
+  isPng,
+  parseOpenScadSurfaceDat,
+  passSize,
+  pixelLuminance,
+  pngCrc,
+  surfaceTriangleCount,
+  unfilter,
+  validateBitDepth,
+} from './parseOpenScadSurfaceDat'
 import { u32 } from '../../core/bytes'
 
 /** Dependency-free, bounded PNG decoder for OpenSCAD surface() luminance. */
@@ -20,7 +46,8 @@ export async function decodeOpenScadSurfacePng(bytes: Uint8Array): Promise<Decod
   let compressedLength = 0
 
   while (cursor < bytes.byteLength) {
-    if (cursor + 12 > bytes.byteLength) return dataError('E_SURFACE_PNG_INVALID', 'surface() PNG contains a truncated chunk.')
+    if (cursor + 12 > bytes.byteLength)
+      return dataError('E_SURFACE_PNG_INVALID', 'surface() PNG contains a truncated chunk.')
     const length = u32(bytes, cursor)
     const typeOffset = cursor + 4
     const dataOffset = cursor + 8
@@ -97,7 +124,7 @@ export async function decodeOpenScadSurfacePng(bytes: Uint8Array): Promise<Decod
     const passWidth = passSize(width, x0, dx)
     const passHeight = passSize(height, y0, dy)
     if (passWidth === 0 || passHeight === 0) continue
-    const stride = Math.ceil(passWidth * bitsPerPixel / 8)
+    const stride = Math.ceil((passWidth * bitsPerPixel) / 8)
     const bytesPerPixel = Math.max(1, Math.ceil(bitsPerPixel / 8))
     let previous = new Uint8Array(stride)
     for (let passY = 0; passY < passHeight; passY++) {
@@ -121,9 +148,7 @@ export async function decodeOpenScadSurfacePng(bytes: Uint8Array): Promise<Decod
 }
 
 /** Decode bounded PNG blobs once before the synchronous geometry evaluator runs. */
-export async function prepareOpenScadSurfaceAssets(
-  project: OpenScadProject,
-): Promise<PreparedOpenScadSurfaceAssets> {
+export async function prepareOpenScadSurfaceAssets(project: OpenScadProject): Promise<PreparedOpenScadSurfaceAssets> {
   const png = new Map<string, DecodedPngLuminance | OpenScadSurfaceDataError>()
   let preparedPixels = 0
   for (const summary of project.list()) {
@@ -133,21 +158,27 @@ export async function prepareOpenScadSurfaceAssets(
       const decoded = await decodeOpenScadSurfacePng(file.data)
       const nextPreparedPixels = preparedPixels + decoded.width * decoded.height
       if (nextPreparedPixels > OPENSCAD_SURFACE_MAX_PREPARED_PIXELS) {
-        png.set(file.path, new OpenScadSurfaceDataError(
-          'E_SURFACE_DIMENSION_LIMIT',
-          `surface() project PNG decode budget exceeds ${OPENSCAD_SURFACE_MAX_PREPARED_PIXELS.toLocaleString('en-US')} pixels.`,
-          OPENSCAD_SURFACE_MAX_PREPARED_PIXELS,
-          nextPreparedPixels,
+        png.set(
           file.path,
-        ))
+          new OpenScadSurfaceDataError(
+            'E_SURFACE_DIMENSION_LIMIT',
+            `surface() project PNG decode budget exceeds ${OPENSCAD_SURFACE_MAX_PREPARED_PIXELS.toLocaleString('en-US')} pixels.`,
+            OPENSCAD_SURFACE_MAX_PREPARED_PIXELS,
+            nextPreparedPixels,
+            file.path,
+          ),
+        )
         continue
       }
       preparedPixels = nextPreparedPixels
       png.set(file.path, decoded)
     } catch (error) {
-      png.set(file.path, error instanceof OpenScadSurfaceDataError
-        ? error
-        : new OpenScadSurfaceDataError('E_SURFACE_PNG_INVALID', 'surface() PNG decoding failed.'))
+      png.set(
+        file.path,
+        error instanceof OpenScadSurfaceDataError
+          ? error
+          : new OpenScadSurfaceDataError('E_SURFACE_PNG_INVALID', 'surface() PNG decoding failed.'),
+      )
     }
   }
   return Object.freeze({ png })
@@ -208,10 +239,7 @@ export function loadOpenScadSurfaceHeightMap(
 }
 
 /** Triangulate the OpenSCAD 2021 surface solid with a midpoint fan per cell. */
-export function triangulateOpenScadSurface(
-  map: OpenScadSurfaceHeightMap,
-  center: boolean,
-): OpenScadSurfaceMesh {
+export function triangulateOpenScadSurface(map: OpenScadSurfaceHeightMap, center: boolean): OpenScadSurfaceMesh {
   const { rows, columns, values, base } = map
   const triangleCount = surfaceTriangleCount(rows, columns)
   if (triangleCount > OPENSCAD_SURFACE_MAX_TRIANGLES) {
@@ -251,12 +279,12 @@ export function triangulateOpenScadSurface(
   const centerStart = vertex
   for (let row = 0; row < rows - 1; row++) {
     for (let column = 0; column < columns - 1; column++) {
-      const average = (
-        values[gridIndex(row, column)]!
-        + values[gridIndex(row, column + 1)]!
-        + values[gridIndex(row + 1, column)]!
-        + values[gridIndex(row + 1, column + 1)]!
-      ) / 4
+      const average =
+        (values[gridIndex(row, column)]! +
+          values[gridIndex(row, column + 1)]! +
+          values[gridIndex(row + 1, column)]! +
+          values[gridIndex(row + 1, column + 1)]!) /
+        4
       addVertex(ox + column + 0.5, oy + row + 0.5, average)
     }
   }

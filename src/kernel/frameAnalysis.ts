@@ -1,4 +1,4 @@
-import {callGeometryRust} from './geometry/kernel'
+import { callGeometryRust } from './geometry/kernel'
 
 export type FrameVector = [number, number, number]
 /** Rotational restraint mask: 3 translations, then 3 rotations. */
@@ -24,10 +24,10 @@ export interface FrameMember {
   releaseB?: [boolean, boolean, boolean]
 }
 export type FrameMemberLoad =
-  | {type: 'pointForce'; member: number; atMm: number; forceN: FrameVector; localAxes: boolean}
-  | {type: 'pointMoment'; member: number; atMm: number; momentNmm: FrameVector; localAxes: boolean}
-  | {type: 'uniform'; member: number; forceNPerMm: FrameVector; localAxes: boolean}
-  | {type: 'trapezoidal'; member: number; fromNPerMm: FrameVector; toNPerMm: FrameVector; localAxes: boolean}
+  | { type: 'pointForce'; member: number; atMm: number; forceN: FrameVector; localAxes: boolean }
+  | { type: 'pointMoment'; member: number; atMm: number; momentNmm: FrameVector; localAxes: boolean }
+  | { type: 'uniform'; member: number; forceNPerMm: FrameVector; localAxes: boolean }
+  | { type: 'trapezoidal'; member: number; fromNPerMm: FrameVector; toNPerMm: FrameVector; localAxes: boolean }
 /** Nodal support beyond the rigid restraint mask. Springs are bidirectional;
  * lower/upper springs engage only under contact; lower/upper bounds are rigid
  * unilateral contacts solved by an active-set iteration. `dof`: 0-2
@@ -35,11 +35,11 @@ export type FrameMemberLoad =
  * nonlinear; envelopes then solve every combination directly.
  */
 export type FrameSupport =
-  | {type: 'spring'; node: number; dof: number; stiffness: number}
-  | {type: 'lowerSpring'; node: number; dof: number; stiffness: number}
-  | {type: 'upperSpring'; node: number; dof: number; stiffness: number}
-  | {type: 'lowerBound'; node: number; dof: number}
-  | {type: 'upperBound'; node: number; dof: number}
+  | { type: 'spring'; node: number; dof: number; stiffness: number }
+  | { type: 'lowerSpring'; node: number; dof: number; stiffness: number }
+  | { type: 'upperSpring'; node: number; dof: number; stiffness: number }
+  | { type: 'lowerBound'; node: number; dof: number }
+  | { type: 'upperBound'; node: number; dof: number }
 export interface FrameModel {
   nodesMm: FrameVector[]
   members: FrameMember[]
@@ -65,7 +65,7 @@ export interface FrameResponse {
   reactionsN: FrameVector[]
   reactionMomentsNmm: FrameVector[]
   /** 21 stations per member, endpoints included, in member-local axes. */
-  members: {stations: FrameStation[]}[]
+  members: { stations: FrameStation[] }[]
   maxDeflectionMm: number
   maxRelativeResidual: number
   freeDofs: number
@@ -128,7 +128,7 @@ export interface FrameEnvelopeResponse {
   reactionsN: FrameMinMax[][]
   reactionMomentsNmm: FrameMinMax[][]
   /** 21 station envelopes per member, endpoints included. */
-  members: {stations: FrameStationEnvelope[]}[]
+  members: { stations: FrameStationEnvelope[] }[]
   /** Envelope of each combination's maximum nodal displacement norm. */
   maxDeflectionMm: FrameMinMax
   maxRelativeResidual: number
@@ -268,12 +268,19 @@ export function solveFrameCollapse(model: FrameCollapseModel): FrameCollapseResp
 
 /** Response quantity whose influence line is requested. */
 export type InfluenceTarget =
-  | {type:'displacement';node:number;/** 0-2 translation, 3-5 rotation. */dof:number}
-  | {type:'reaction';node:number;/** Restrained DOF. */dof:number}
-  | {type:'memberResultant';member:number;atMm:number;
-     resultant:'axial'|'shearY'|'shearZ'|'torsion'|'momentY'|'momentZ'}
+  | { type: 'displacement'; node: number; /** 0-2 translation, 3-5 rotation. */ dof: number }
+  | { type: 'reaction'; node: number; /** Restrained DOF. */ dof: number }
+  | {
+      type: 'memberResultant'
+      member: number
+      atMm: number
+      resultant: 'axial' | 'shearY' | 'shearZ' | 'torsion' | 'momentY' | 'momentZ'
+    }
 /** One load position: member index and distance from its node A. */
-export interface InfluencePosition {member:number;atMm:number}
+export interface InfluencePosition {
+  member: number
+  atMm: number
+}
 export interface FrameInfluenceModel {
   nodesMm: FrameVector[]
   members: FrameMember[]
