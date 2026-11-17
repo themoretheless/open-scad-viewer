@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 455,
-  "unallocatedCount": 545,
+  "specifiedCount": 456,
+  "unallocatedCount": 544,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -11778,6 +11778,35 @@
       "remainingQualification": [
         "Simplify spatial paths with a continuous order-preserving error bound.",
         "Accept chords only after exact monotone projection and squared deviation tests. Linear interpolation bounds the full traversal, with an explicit topology limitation.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0456",
+      "name": "Точное разбиение пространственной ломаной в узлах самопересечений",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::node_exact_spatial_polyline",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "docs/qualification/nurbs-curvature-field-456-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-456-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Split a spatial path into directed edges at exact crossings, touches and overlap ends.",
+        "Split source spans at all exact intersection parameters. Intern equal spatial positions and preserve directed source occurrences, including retraced and stationary spans.",
         "WASM and application integration are separate."
       ]
     }

@@ -4554,3 +4554,63 @@ fn bounded_spatial_polyline_simplification_preserves_retracing_and_a_closed_anch
     assert_eq!(report.points_mm, [p(0), p(2), p(0)]);
     assert!(simplify_bounded_spatial_polyline(&path, &q(-1), 1_000_000).is_err());
 }
+
+#[test]
+fn exact_spatial_polyline_noding_shares_crossing_nodes_with_exact_source_parameters() {
+    use brep_core::analysis::{NodedSpatialPolylineEdge, node_exact_spatial_polyline};
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y| [q(x, 1), q(y, 1), q(x + y, 1)];
+    let path = [p(0, 0), p(4, 4), p(0, 4), p(4, 0)];
+    let report = node_exact_spatial_polyline(&path, 1_000_000).unwrap();
+    assert_eq!(
+        report.nodes_mm,
+        [p(0, 0), p(2, 2), p(4, 4), p(0, 4), p(4, 0)]
+    );
+    let edge = |source_span, lo, hi, nodes| NodedSpatialPolylineEdge {
+        source_span,
+        parameters: [lo, hi],
+        nodes,
+    };
+    assert_eq!(
+        report.edges,
+        [
+            edge(0, q(0, 1), q(1, 2), [0, 1]),
+            edge(0, q(1, 2), q(1, 1), [1, 2]),
+            edge(1, q(0, 1), q(1, 1), [2, 3]),
+            edge(2, q(0, 1), q(1, 2), [3, 1]),
+            edge(2, q(1, 2), q(1, 1), [1, 4]),
+        ],
+    );
+    assert_eq!(
+        node_exact_spatial_polyline(&path, report.exact_work).unwrap(),
+        report
+    );
+    assert!(node_exact_spatial_polyline(&path, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_spatial_polyline_noding_preserves_retraced_and_stationary_occurrences() {
+    use brep_core::analysis::node_exact_spatial_polyline;
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x| [q(x), q(x), q(0)];
+    let path = [p(0), p(4), p(4), p(2), p(6)];
+    let report = node_exact_spatial_polyline(&path, 1_000_000).unwrap();
+    assert_eq!(report.nodes_mm, [p(0), p(2), p(4), p(6)]);
+    assert_eq!(
+        report
+            .edges
+            .iter()
+            .map(|edge| (edge.source_span, edge.nodes))
+            .collect::<Vec<_>>(),
+        [
+            (0, [0, 1]),
+            (0, [1, 2]),
+            (1, [2, 2]),
+            (2, [2, 1]),
+            (3, [1, 2]),
+            (3, [2, 3])
+        ],
+    );
+}

@@ -2040,3 +2040,75 @@ pub fn simplify_bounded_spatial_polyline(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NodedSpatialPolylineEdge {
+    pub source_span: usize,
+    pub parameters: [Q; 2],
+    /// Start and end node indices in traversal order.
+    pub nodes: [usize; 2],
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactNodedSpatialPolyline {
+    /// Unique exact positions, indexed in order of first visit.
+    pub nodes_mm: Vec<[Q; 3]>,
+    /// Directed occurrences in source order, including retracing and stationary spans.
+    pub edges: Vec<NodedSpatialPolylineEdge>,
+    pub exact_work: u64,
+}
+
+/// Split a spatial polyline at self-crossings, nonlocal touches and both
+/// ends of every overlap. Coincident positions share a node.
+pub fn node_exact_spatial_polyline(
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactNodedSpatialPolyline> {
+    let report = self_intersections_exact_spatial_polyline(points_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - report.exact_work;
+    spend(&mut remaining, 4 * (points_mm.len() as u64 - 1))?;
+    let mut cuts = vec![vec![Q::zero(), Q::one()]; points_mm.len() - 1];
+    for hit in report.intersections {
+        spend(&mut remaining, 4)?;
+        for (span, parameters) in hit.spans.into_iter().zip(hit.parameters) {
+            cuts[span].extend(parameters);
+        }
+    }
+    let mut nodes_mm = Vec::new();
+    let mut indices = BTreeMap::new();
+    let mut edges = Vec::new();
+    for (source_span, (pair, mut parameters)) in points_mm.windows(2).zip(cuts).enumerate() {
+        let count = parameters.len() as u64;
+        spend(
+            &mut remaining,
+            count.saturating_mul(8 * u64::from(count.ilog2() + 1)),
+        )?;
+        parameters.sort_unstable();
+        parameters.dedup();
+        let direction: [Q; 3] = std::array::from_fn(|i| &pair[1][i] - &pair[0][i]);
+        let mut previous = None;
+        for at in parameters {
+            let depth = u64::from((indices.len() + 1).ilog2()) + 1;
+            spend(&mut remaining, 16 + 8 * depth)?;
+            let point = std::array::from_fn(|i| &pair[0][i] + &at * &direction[i]);
+            let node = *indices.entry(point.clone()).or_insert_with(|| {
+                let index = nodes_mm.len();
+                nodes_mm.push(point);
+                index
+            });
+            if let Some((lo, start)) = previous {
+                edges.push(NodedSpatialPolylineEdge {
+                    source_span,
+                    parameters: [lo, at.clone()],
+                    nodes: [start, node],
+                });
+            }
+            previous = Some((at, node));
+        }
+    }
+    Ok(ExactNodedSpatialPolyline {
+        nodes_mm,
+        edges,
+        exact_work: max_exact_work - remaining,
+    })
+}
