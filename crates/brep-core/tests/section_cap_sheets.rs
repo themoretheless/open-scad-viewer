@@ -4990,3 +4990,58 @@ fn exact_planar_polyline_second_moments_preserve_negative_mixed_terms_and_windin
         );
     }
 }
+
+#[test]
+fn bounded_planar_polyline_principal_moments_are_exact_for_rational_spectra() {
+    use brep_core::analysis::bounded_planar_spatial_polyline_principal_moments;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let square = |tilt: i64| {
+        let p = |x: i64, y: i64| [q(x, 1), q(y, 1), q(tilt * (x + y), 1)];
+        [p(0, 0), p(2, 0), p(2, 2), p(0, 2), p(0, 0)]
+    };
+    for (tilt, larger) in [(0, q(1, 3)), (1, q(1, 1))] {
+        let contour = square(tilt);
+        let report =
+            bounded_planar_spatial_polyline_principal_moments(&contour, 1e-9, 1_000_000).unwrap();
+        assert_eq!(
+            report.principal_bounds_mm2,
+            [[q(1, 3), q(1, 3)], [larger.clone(), larger]]
+        );
+        assert_eq!(
+            bounded_planar_spatial_polyline_principal_moments(&contour, 1e-9, report.exact_work)
+                .unwrap(),
+            report
+        );
+        assert!(
+            bounded_planar_spatial_polyline_principal_moments(
+                &contour,
+                1e-9,
+                report.exact_work - 1
+            )
+            .is_err()
+        );
+    }
+}
+
+#[test]
+fn bounded_planar_polyline_principal_moments_enclose_irrational_eigenvalues() {
+    use brep_core::analysis::bounded_planar_spatial_polyline_principal_moments;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y| [q(x, 1), q(y, 1), q(0, 1)];
+    let path = [p(0, 0), p(2, 0), p(0, 1), p(0, 0)];
+    let tolerance = 1e-10;
+    let report =
+        bounded_planar_spatial_polyline_principal_moments(&path, tolerance, 1_000_000).unwrap();
+    let [[small_lo, small_hi], [large_lo, large_hi]] = report.principal_bounds_mm2;
+    let from_small = |value: &Q| q(5, 1) - q(36, 1) * value;
+    let from_large = |value: &Q| q(36, 1) * value - q(5, 1);
+    assert!(from_small(&small_hi) > q(0, 1) && from_small(&small_hi).pow(2) < q(13, 1));
+    assert!(from_small(&small_lo).pow(2) > q(13, 1));
+    assert!(from_large(&large_lo) > q(0, 1) && from_large(&large_lo).pow(2) < q(13, 1));
+    assert!(from_large(&large_hi).pow(2) > q(13, 1));
+    let width = Q::from_float(tolerance).unwrap();
+    assert!(small_hi - small_lo <= width);
+    assert!(large_hi - large_lo <= width);
+}

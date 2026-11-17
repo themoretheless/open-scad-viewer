@@ -2527,3 +2527,54 @@ pub fn exact_planar_spatial_polyline_second_moments(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BoundedPlanarPolylinePrincipalMoments {
+    /// Inclusive bounds for the smaller and larger area-normalized moments
+    /// in the profile plane. The normal direction has a zero moment.
+    pub principal_bounds_mm2: [[Q; 2]; 2],
+    pub centroid_mm: [Q; 3],
+    pub area_squared_mm4: Q,
+    pub exact_work: u64,
+}
+
+/// Bound the two in-plane eigenvalues of a simple profile's normalized
+/// central second moment tensor. Each enclosure has width at most tolerance.
+pub fn bounded_planar_spatial_polyline_principal_moments(
+    contour_mm: &[[Q; 3]],
+    tolerance_mm2: f64,
+    max_exact_work: u64,
+) -> Result<BoundedPlanarPolylinePrincipalMoments> {
+    let tolerance = enclosure_width(tolerance_mm2)?;
+    let report = exact_planar_spatial_polyline_second_moments(contour_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - report.exact_work;
+    spend(&mut remaining, 64)?;
+    let tensor = &report.normalized_central_moments_mm2;
+    let trace: Q = (0..3).map(|i| &tensor[i][i]).sum();
+    let squared_trace: Q = tensor
+        .iter()
+        .flatten()
+        .map(|component| component.pow(2))
+        .sum();
+    let two = Q::from_integer(2.into());
+    // The normal eigenvalue is zero. Thus 2*tr(M²)-tr(M)² is the
+    // squared gap between the two in-plane eigenvalues.
+    let discriminant = &two * squared_trace - trace.pow(2);
+    if discriminant.is_negative() {
+        return Err(refuse("Invalid exact second moment spectrum"));
+    }
+    let [lo, hi] = bound_root_sum(vec![discriminant], &two * tolerance, &mut remaining)?;
+    let principal_bounds_mm2 = [
+        [
+            ((&trace - &hi) / &two).max(Q::zero()),
+            (&trace - &lo) / &two,
+        ],
+        [(&trace + lo) / &two, (trace + hi) / two],
+    ];
+    Ok(BoundedPlanarPolylinePrincipalMoments {
+        principal_bounds_mm2,
+        centroid_mm: report.centroid_mm,
+        area_squared_mm4: report.area_squared_mm4,
+        exact_work: max_exact_work - remaining,
+    })
+}
