@@ -290,8 +290,9 @@ mod solid;
 pub use solid::{
     BoundedSectionSolid, InferredSectionSolidAdmission, OrientedSectionSolid, SectionSolid,
     SectionSolidOptions, build_bounded_section_solid, build_expanded_inferred_section_solid,
-    build_expanded_section_solid, build_inferred_section_solid, build_outward_section_solid,
-    build_section_solid, inspect_inferred_section_solid,
+    build_expanded_section_solid, build_inferred_section_solid,
+    build_outward_inferred_section_solid, build_outward_section_solid, build_section_solid,
+    inspect_inferred_section_solid,
 };
 
 pub use discover::{

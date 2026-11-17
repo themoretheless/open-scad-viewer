@@ -88,6 +88,14 @@ pub fn build_outward_section_solid(
         options.max_exact_work,
         options.max_verification_cells,
     )?;
+    qualify_outward_attachment(source, attachment, options)
+}
+
+fn qualify_outward_attachment(
+    source: &Model,
+    attachment: AttachedSectionCaps,
+    options: SectionSolidOptions,
+) -> Result<OrientedSectionSolid> {
     let mut admission = admit_model(source, attachment.model, options.admission)?;
     let evidence = admission.geometry();
     let orientation_reversed = evidence.boundary.proven
@@ -179,7 +187,26 @@ pub fn build_expanded_inferred_section_solid(
     options: SectionSolidOptions,
 ) -> Result<SectionSolid> {
     require_standalone_shell(source)?;
-    let attachment = close_inferred(
+    let attachment = close_expanded_inferred(source, options)?;
+    qualify_attachment(source, attachment, options)
+}
+
+/// Infer exact cap planes, then correct the orientation of an embedded shell
+/// when it is proven inward. Each admission has its own geometry budget.
+pub fn build_outward_inferred_section_solid(
+    source: &Model,
+    options: SectionSolidOptions,
+) -> Result<OrientedSectionSolid> {
+    require_standalone_shell(source)?;
+    let attachment = close_expanded_inferred(source, options)?;
+    qualify_outward_attachment(source, attachment, options)
+}
+
+fn close_expanded_inferred(
+    source: &Model,
+    options: SectionSolidOptions,
+) -> Result<AttachedSectionCaps> {
+    close_inferred(
         source,
         0,
         options.max_exact_work,
@@ -189,8 +216,7 @@ pub fn build_expanded_inferred_section_solid(
                 current, 0, rings, normal, offset, work, cells,
             )
         },
-    )?;
-    qualify_attachment(source, attachment, options)
+    )
 }
 
 pub struct InferredSectionSolidAdmission {

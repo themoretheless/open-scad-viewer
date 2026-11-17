@@ -1,0 +1,44 @@
+{
+  "id": "NURBS-0400",
+  "testedBase": "9a0e89a2f33a63a99adbad46d07d87ae18176cfb",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 124,
+  "scope": [
+    "Infer exact cap planes, correct a proven inward orientation, and certify the resulting solid and volume.",
+    "Exact rim-plane inference supplies every cap. Orientation reversal requires a proven embedded inward boundary, and the corrected solid is independently certified."
+  ],
+  "logSha256": "ad9b3ba01c6c0f3243b7430555171b84b4973a85b1c491098909ade3c02c706d",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "10224c1b5d80baa8cc5e260fe8dda1c4c36aca7a27ccf38c4d0797e80f57af2a",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "7a2a5b950cb317e3358e59ee6ed7acee765639f3f41a7e9c670a4693e8d0c80c",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "e6b04d6967199d71c2d384f8edbecbe6d070ace1883fd009253395fca5955bd1",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs": "6da5012ec1d0f258ce8bdbcf2e57778b8c93d2f2abc0310609fd1d37ee17df11",
+    "crates/brep-core/src/profile/planar_cap/section_sheets/expanded_support.rs": "b354b108e78cefd988c066490de00a364e317183d0c93db402bcf0931f84d77f",
+    "crates/brep-core/src/contact/boundary_agreement.rs": "d90d598ed52451d4d6ed02c3880dd1a31c2f78bccafcfb6324b8b2d4d9a3e22a",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/solid.rs": "eb08133890e2603c76bf17de9b9f0aa424c7b7c2f37064507051e8c18449d750",
+    "crates/brep-core/src/model/closed_solid.rs": "a6168b4728676e87d9cd631bab94e07573aabf49c26df8dcf5c1c8b11eb0e67f",
+    "crates/brep-core/src/body_analysis/analysis/certified_freeform_volume.rs": "0d24317b5fb03ed9ac0f267132a90d33ec1e0012a987da0e105d3ca78f2000a1"
+  }
+}

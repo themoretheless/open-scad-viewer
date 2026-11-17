@@ -1484,3 +1484,46 @@ fn outward_capping_refuses_when_orientation_cannot_be_proven() {
     assert_eq!(err.code, "BREP_CLOSED_SOLID_UNPROVED");
     assert_eq!(source, before);
 }
+
+#[test]
+fn infers_two_oblique_caps_and_corrects_the_inward_shell() {
+    use brep_core::planar_cap::build_outward_inferred_section_solid;
+    let (mut source, _) = open_prism(false);
+    remove_prism_cap(&mut source, 0.);
+    map_prism_to_nonbinary_cap_support(&mut source);
+    let options = section_solid_options();
+    let outward = build_outward_inferred_section_solid(&source, options).unwrap();
+    assert!(!outward.orientation_reversed);
+    for face in &mut source.shells[0].faces {
+        face.reversed = !face.reversed;
+    }
+    let before = source.clone();
+    let corrected = build_outward_inferred_section_solid(&source, options).unwrap();
+    assert!(corrected.orientation_reversed);
+    assert_eq!(corrected.section.cap_faces.len(), 2);
+    let solid = corrected.section.solid;
+    assert!(solid.geometry().boundary.agreement.all_equal);
+    assert_eq!(solid.geometry().orientations[0].outward, Some(true));
+    assert_eq!(solid.model().edges, source.edges);
+    assert_eq!(solid.model().vertices, source.vertices);
+    let volume = corrected.section.volume.volume_mm3;
+    assert!(volume.lower > 0. && volume.lower <= 12. && 12. <= volume.upper);
+    assert_eq!(source, before);
+}
+
+#[test]
+fn refuses_inferred_orientation_repair_without_a_boundary_proof() {
+    use brep_core::planar_cap::build_outward_inferred_section_solid;
+    let mut source = open_prism_with_nonbinary_cap_support();
+    for face in &mut source.shells[0].faces {
+        face.reversed = !face.reversed;
+    }
+    let before = source.clone();
+    let mut options = section_solid_options();
+    options.admission.geometry.boundary.exact_work = 1;
+    let error = build_outward_inferred_section_solid(&source, options)
+        .err()
+        .unwrap();
+    assert_eq!(error.code, "BREP_CLOSED_SOLID_UNPROVED");
+    assert_eq!(source, before);
+}
