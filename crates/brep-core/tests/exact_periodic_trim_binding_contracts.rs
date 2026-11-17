@@ -451,3 +451,72 @@ fn input_range_clips_to_segment_and_omits_point_contacts() {
             .is_empty()
     );
 }
+
+#[test]
+fn extract_input_range_curves_preserves_exact_seam_geometry_and_direction() {
+    use num_rational::BigRational;
+    let q = |n: i64, d: i64| BigRational::new(n.into(), d.into());
+    let outer = [
+        [3.5, 0.125],
+        [3.5, 0.875],
+        [0.5, 0.875],
+        [0.5, 0.125],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_trim_sheet_with_input_bindings(&support(), &[&outer], 1e-8, 1_000_000)
+            .unwrap();
+    let report = result
+        .extract_input_range_curves(0, 3, [&q(1, 4), &q(3, 4)], 1_000_000)
+        .unwrap();
+    let pieces = report.pieces.unwrap();
+    assert_eq!(pieces.len(), 2);
+    assert_eq!(pieces[0].curve.domain(), [0.5, 0.75]);
+    assert_eq!(pieces[1].curve.domain(), [0.25, 0.5]);
+    assert_eq!(pieces[0].range.edge_parameters, [q(3, 4), q(1, 2)]);
+    assert_eq!(pieces[1].range.edge_parameters, [q(1, 2), q(1, 4)]);
+    let model = result.bound_sheet.sheet.model.unwrap();
+    for piece in pieces {
+        let index = model
+            .1
+            .edges
+            .iter()
+            .position(|id| *id == piece.range.edge_id)
+            .unwrap();
+        let [lo, hi] = piece.curve.domain();
+        for parameter in [lo, (lo + hi) / 2., hi] {
+            assert_eq!(
+                piece.curve.evaluate(parameter).unwrap().point,
+                model.edges[index].curve.evaluate(parameter).unwrap().point
+            );
+        }
+    }
+}
+
+#[test]
+fn extract_input_range_curves_refuses_unstorable_cuts_and_exhausted_work() {
+    use num_rational::BigRational;
+    use nurbs_core::editing::rational_factor::Refusal;
+    let q = |n: i64, d: i64| BigRational::new(n.into(), d.into());
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_trim_sheet_with_input_bindings(&support(), &[&outer], 1e-8, 1_000_000)
+            .unwrap();
+    let refused = result
+        .extract_input_range_curves(0, 0, [&q(1, 4), &q(2, 3)], 1_000_000)
+        .unwrap();
+    assert!(refused.pieces.is_none());
+    assert_eq!(refused.refusal, Some(Refusal::NotRepresentable));
+    assert!(refused.work_used > 0);
+    let exhausted = result
+        .extract_input_range_curves(0, 0, [&q(1, 4), &q(3, 4)], 1)
+        .unwrap();
+    assert!(exhausted.pieces.is_none());
+    assert_eq!(exhausted.refusal, Some(Refusal::ResourceLimit));
+}

@@ -3,12 +3,15 @@ use crate::{
     Coedge, Edge, Error, Face, FaceUse, Loop, Model, Result, Shell, TopoId, TopologyIds, Vertex,
 };
 use num_rational::BigRational;
+use num_traits::ToPrimitive;
 use nurbs_core::{
+    curve::Curve,
     editing::exact_periodic_surface::{
         PeriodicTrimEdge, PeriodicTrimEdgeRefusal, PeriodicTrimEdgeSource, PeriodicTrimEdgesReport,
         PeriodicTrimInputEdgeSource, build_exact_periodic_surface_trim_edges,
         build_exact_periodic_surface_trim_input_edges,
     },
+    editing::{exact_knot_insertion, rational_factor::Refusal as ExactRefusal},
     surface::Surface,
 };
 
@@ -117,6 +120,20 @@ pub struct PeriodicTrimEdgeRange {
     pub edge_parameters: [BigRational; 2],
 }
 
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimCurvePiece {
+    pub range: PeriodicTrimEdgeRange,
+    /// Keeps the edge's native clock. Use the directed range to traverse it.
+    pub curve: Curve,
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimCurveExtraction {
+    pub pieces: Option<Vec<PeriodicTrimCurvePiece>>,
+    pub work_used: u64,
+    pub refusal: Option<ExactRefusal>,
+}
+
 impl InputBoundPeriodicTrimSheet {
     /// Find the edges containing a parameter on an original contour segment.
     /// At a split inside the segment, return both incident edges in model order.
@@ -162,6 +179,76 @@ impl InputBoundPeriodicTrimSheet {
         segment: usize,
         range: [&BigRational; 2],
     ) -> Result<Vec<PeriodicTrimEdgeRange>> {
+        Ok(self
+            .locate_indexed_input_range(contour, segment, range)?
+            .into_iter()
+            .map(|(_, range)| range)
+            .collect())
+    }
+
+    /// Extract the exact NURBS pieces under one shared restriction budget.
+    /// Refuse atomically if a parameter or restricted spline cannot be stored exactly.
+    pub fn extract_input_range_curves(
+        &self,
+        contour: usize,
+        segment: usize,
+        range: [&BigRational; 2],
+        max_work: u64,
+    ) -> Result<PeriodicTrimCurveExtraction> {
+        if !(1..=cad_predicates::MAX_WORK).contains(&max_work) {
+            return Err(Error::new(
+                "BREP_PERIODIC_TRIM_SHEET",
+                "Invalid exact restriction work limit",
+            ));
+        }
+        let refused = |reason, work_used| PeriodicTrimCurveExtraction {
+            pieces: None,
+            work_used,
+            refusal: Some(reason),
+        };
+        let mut work_used = 0;
+        let mut pieces = Vec::new();
+        if let Some(model) = &self.bound_sheet.sheet.model {
+            for (index, range) in self.locate_indexed_input_range(contour, segment, range)? {
+                if work_used == max_work {
+                    return Ok(refused(ExactRefusal::ResourceLimit, work_used));
+                }
+                let [lo, hi] = range.edge_parameters.each_ref().map(|parameter| {
+                    parameter.to_f64().filter(|stored| {
+                        BigRational::from_float(*stored).as_ref() == Some(parameter)
+                    })
+                });
+                let (Some(lo), Some(hi)) = (lo, hi) else {
+                    return Ok(refused(ExactRefusal::NotRepresentable, work_used));
+                };
+                let report = exact_knot_insertion::restrict(
+                    &model.edges[index].curve,
+                    [lo.min(hi), lo.max(hi)],
+                    max_work - work_used,
+                )?;
+                work_used += report.work_used;
+                let Some(curve) = report.curve else {
+                    return Ok(refused(
+                        report.refusal.unwrap_or(ExactRefusal::InvalidOutput),
+                        work_used,
+                    ));
+                };
+                pieces.push(PeriodicTrimCurvePiece { range, curve });
+            }
+        }
+        Ok(PeriodicTrimCurveExtraction {
+            pieces: Some(pieces),
+            work_used,
+            refusal: None,
+        })
+    }
+
+    fn locate_indexed_input_range(
+        &self,
+        contour: usize,
+        segment: usize,
+        range: [&BigRational; 2],
+    ) -> Result<Vec<(usize, PeriodicTrimEdgeRange)>> {
         let Some(model) = &self.bound_sheet.sheet.model else {
             return Ok(Vec::new());
         };
@@ -187,13 +274,16 @@ impl InputBoundPeriodicTrimSheet {
             let scale = (edge_end - &edge_start) / (end - start);
             let edge_parameters =
                 input_parameters.map(|parameter| &edge_start + (parameter - start) * &scale);
-            pieces.push(PeriodicTrimEdgeRange {
-                edge_id: binding.edge_id,
-                input_parameters: input_parameters.map(Clone::clone),
-                edge_parameters,
-            });
+            pieces.push((
+                index,
+                PeriodicTrimEdgeRange {
+                    edge_id: binding.edge_id,
+                    input_parameters: input_parameters.map(Clone::clone),
+                    edge_parameters,
+                },
+            ));
         }
-        pieces.sort_by(|a, b| a.input_parameters[0].cmp(&b.input_parameters[0]));
+        pieces.sort_by(|(_, a), (_, b)| a.input_parameters[0].cmp(&b.input_parameters[0]));
         if from > to {
             pieces.reverse();
         }
