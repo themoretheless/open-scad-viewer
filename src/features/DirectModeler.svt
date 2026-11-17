@@ -35,6 +35,7 @@ import {type SurfaceBoundaryReport,type SurfaceBoundaryOptions} from '../kernel/
 import { computed, nextTick, onUnmounted, reactive, ref, shallowRef, watch, watchEffect } from 'svet'
 import {solidVertexCount} from '../kernel/solidMeasurements'
 import {isSolidProfileEdit,type SolidProfileEditOptions} from '../kernel/solidProfileEdit'
+import {combineSketchProfiles,sketchProfileRegions} from '../app/retainedSketchProfile'
 import {isSolidSceneEdit} from '../kernel/solidSceneEdit'
 import {isSolidBodyEdit,type SolidBodyEditOptions} from '../kernel/solidBodyEdit'
 import {assignSolidMaterial} from '../kernel/solidMaterial'
@@ -379,7 +380,7 @@ function setProfileTarget(id:string){
 const pointTrimPick=shallowRef<{point:[number,number];matrix:NurbsScreenProjection;radius:number}|null>(null)
 const activePlane=ref<SketchPlane>(xyPlane()),advancedOp=ref<'nurbs-offset'|'nurbs-point-trim'|'instance-transform'|'instance-create'|'instance-place'|'instance-array'|'push'|'chamfer'|'edge-fillet'|'shell'|'split'|'offset'|'extend'|'curve'|'transform'|'loft'|'nurbs-loft'|'nurbs-sweep'|'nurbs-rebuild'|'nurbs-reduce'|'nurbs-surface-rebuild'|'nurbs-surface-reduce'|'nurbs-patch'|'nurbs-runout'|'nurbs-match'|'nurbs-prepare'|'nurbs-curve-match'|'profile-prepare'|'profile-union'|'profile-difference'|'profile-intersection'|null>(null)
 const loftPreviewId=ref(''),surfaceInputs=ref<string[]>([]),surfaceReversed=ref<boolean[]>([])
-const advanced=ref({runoutPosition:90,runoutTangentLength:.1,runoutFlip:false,offsetJoin:'smooth' as 'smooth'|'bevel'|'trim-nonzero'|'trim-evenodd',patchPrepare:false,patchError:1e-6,profileGap:.01,curveEndA:'end' as 'start'|'end',curveEndB:'start' as 'start'|'end',curveAngle:1e-6,prepareOpenPeriodic:false,matchOrder:1 as 1|2,matchBoundaryA:'uMax' as SurfaceJetBoundary,matchBoundaryB:'uMin' as SurfaceJetBoundary,matchScale:1,matchReverse:false,matchError:1e-6,sweepMode:'translation' as 'translation'|'framed',sweepSections:24,sweepDeviation:.01,sweepNormalX:0,sweepNormalY:0,sweepNormalZ:1,sweepResult:'surface' as SweepResultMode,sweepTarget:'',sweepExtraTargets:[] as string[],surfaceAxis:'u' as 'u'|'v',rebuildControls:6,reduceDegree:1,maxError:.01,distance:2,radius:2,endRadius:3,filletMode:'constant' as 'constant'|'variable'|'corner'|'partial-preview',axis:'z' as 'x'|'y'|'z',x:0,y:0,z:0,angle:0,scale:1,cx:0,cy:0,start:0,sweep:180,end:'end' as 'start'|'end',arrayKind:'step' as 'step'|'extent'|'path',arrayCount:4,arrayAlign:false})
+const advanced=ref({runoutPosition:90,runoutTangentLength:.1,runoutFlip:false,offsetJoin:'smooth' as 'smooth'|'bevel'|'trim-nonzero'|'trim-evenodd',patchPrepare:false,patchError:1e-6,profileGap:.01,curveEndA:'end' as 'start'|'end',curveEndB:'start' as 'start'|'end',curveAngle:1e-6,prepareOpenPeriodic:false,matchOrder:1 as 1|2,matchBoundaryA:'uMax' as SurfaceJetBoundary,matchBoundaryB:'uMin' as SurfaceJetBoundary,matchScale:1,matchReverse:false,matchError:1e-6,sweepMode:'translation' as 'translation'|'framed',sweepSections:24,sweepDeviation:.01,sweepNormalX:0,sweepNormalY:0,sweepNormalZ:1,sweepResult:'surface' as SweepResultMode,sweepTarget:'',sweepExtraTargets:[] as string[],surfaceAxis:'u' as 'u'|'v',rebuildControls:6,reduceDegree:1,maxError:.01,distance:2,radius:2,endRadius:3,filletMode:'constant' as 'constant'|'variable'|'corner'|'partial-preview',axis:'z' as 'x'|'y'|'z',x:0,y:0,z:0,angle:0,scale:1,cx:0,cy:0,start:0,sweep:180,end:'end' as 'start'|'end',arrayKind:'step' as 'step'|'extent'|'path',arrayCount:4,arrayAlign:false,profileExcludedRegions:[] as number[]})
 const brepSegments=ref(4),filletSegments=ref(12)
 const revolveGeometry=ref<'faceted'|'exact'>('faceted')
 function setPickedEdge(index:number){edgeIndex.value=index;edgeIndexes.value=index>=0?[index]:[];advancedOp.value=null}
@@ -843,6 +844,21 @@ watch(()=>[props.open,bodyEditRevision.value,advancedOp.value,document.value,sel
   finally{if(generation===bodyEditGeneration){bodyEditPending.value=false;if(bodyEditApplyGeneration===generation){bodyEditApplyGeneration=null;applyCommand()}}}
  })
 },{flush:'sync'})
+// C9 Boolean Region: regions of the unfiltered profile Boolean; the user drops the ones not wanted before Extrude.
+watch(()=>[advancedOp.value,surfaceInputs.value.join('\0')],()=>{if(advanced.value.profileExcludedRegions.length)advanced.value.profileExcludedRegions=[]},{flush:'sync'})
+const profileRegionChoices=computed(()=>{
+ const operation=profileBooleanOperation(advancedOp.value)
+ if(!operation||!advancedPreview.value.document)return []
+ try{
+  const inputs=surfaceInputs.value.map(id=>document.value.sketches.find(s=>s.id===id)!)
+  const regions=sketchProfileRegions(combineSketchProfiles(inputs,operation).retainedProfile!)
+  return regions.length>1?regions:[]
+ }catch{return []}
+})
+function toggleProfileRegion(index:number,keep:boolean){
+ const excluded=advanced.value.profileExcludedRegions.filter(i=>i!==index)
+ advanced.value.profileExcludedRegions=keep?excluded:[...excluded,index].sort((a,b)=>a-b)
+}
 const previewReplacesTarget=computed(()=>solidActive.value&&extrusionMode.value!=='new'&&(!!previewBody.value||previewEmpty.value))
 // Presentation state stays outside the persisted CAD document and undo history.
 const compactWorkspace = ref(true)
@@ -3005,6 +3021,10 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <template v-if="profileBooleanOperation(advancedOp)">
                 <label v-if="advancedOp==='profile-difference'">{{ label('Основной профиль','Target profile') }}<select :value="surfaceInputs[0]" :aria-label="label('Основной профиль','Target profile')" @change="setProfileTarget(($event.target as HTMLSelectElement).value)"><option v-for="id in surfaceInputs" :key="id" :value="id">{{ document.sketches.find(s=>s.id===id)?.name }}</option></select></label>
                 <small data-testid="profile-operands">{{ advancedOp==='profile-difference'?label('Вычитаемые: ','Cutters: '):label('Входы: ','Inputs: ') }}{{ (advancedOp==='profile-difference'?surfaceInputs.slice(1):surfaceInputs).map(id=>document.sketches.find(s=>s.id===id)?.name).join(', ') }}</small>
+                <fieldset v-if="profileRegionChoices.length" data-testid="profile-regions"><legend>{{ label('Области результата','Result regions') }}</legend>
+                  <label v-for="(region,i) in profileRegionChoices" :key="i"><input type="checkbox" :checked="!advanced.profileExcludedRegions.includes(i)" :disabled="!advanced.profileExcludedRegions.includes(i) && advanced.profileExcludedRegions.length===profileRegionChoices.length-1" :aria-label="label('Область','Region')+' '+(i+1)" @change="toggleProfileRegion(i,($event.target as HTMLInputElement).checked)">{{ label('Область','Region') }} {{ i+1 }} · {{ region.areaMm2.toFixed(2) }} {{ label('мм²','mm²') }}<template v-if="region.loops.length>1"> · {{ label('отверстий','holes') }}: {{ region.loops.length-1 }}</template></label>
+                  <small>{{ label('Снимите отметку с областей, которые не нужны для выдавливания. Хотя бы одна область остаётся.','Clear the regions you do not want to extrude. At least one region stays.') }}</small>
+                </fieldset>
                 <small>{{ label('Кривые и отверстия сохраняются. ID — первого профиля. Размеры удаляются; Undo возвращает входы.','Curves, holes and the first profile identity are retained. Dimensions are removed; Undo restores the inputs.') }}</small>
                 <small>{{ label('Прямые и круговые дуги; неоднозначные пересечения отклоняются.','Lines and circular arcs; ambiguous intersections are refused.') }}</small>
               </template>

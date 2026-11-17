@@ -1,10 +1,12 @@
 import {parseDirectDocument,type DirectDocument} from '../app/directModeling'
-import {combineSketchProfiles} from '../app/retainedSketchProfile'
+import {combineSketchProfiles,selectSketchProfileRegions} from '../app/retainedSketchProfile'
 import {offsetSketch,extendSketch,sampleCurve,xyPlane} from '../app/directSketchGeometry'
 import {stringifyMeshJson} from '../exchange/meshJson'
 export type SolidProfileEditOperation='profile-union'|'profile-difference'|'profile-intersection'|'offset'|'extend'|'curve'
 export interface SolidProfileEditOptions {
  operation:SolidProfileEditOperation;id:string;inputs:string[];distance:number;end:'start'|'end';cx:number;cy:number;radius:number;start:number;sweep:number
+ /** Region indexes of the Boolean result to drop before committing; empty keeps every region. */
+ profileExcludedRegions?:number[]
 }
 export function isSolidProfileEdit(operation:unknown):operation is SolidProfileEditOperation {
  return ['profile-union','profile-difference','profile-intersection','offset','extend','curve'].includes(String(operation))
@@ -15,7 +17,7 @@ export function applySolidProfileEdit(document:DirectDocument,p:SolidProfileEdit
  if(p.operation.startsWith('profile-')){
   const sketches=p.inputs.map(id=>{const sketch=d.sketches.find(s=>s.id===id);if(!sketch)throw Error('Profile input no longer exists.');return sketch})
   const operation=p.operation==='profile-union'?'union':p.operation==='profile-difference'?'difference':'intersection'
-  const result=combineSketchProfiles(sketches,operation)
+  const result=selectSketchProfileRegions(combineSketchProfiles(sketches,operation),p.profileExcludedRegions??[])
   d.sketches=d.sketches.filter(s=>!p.inputs.includes(s.id)).concat(result)
  }else{
   const index=d.sketches.findIndex(s=>s.id===p.id),sketch=d.sketches[index]

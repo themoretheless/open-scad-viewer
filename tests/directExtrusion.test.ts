@@ -81,7 +81,7 @@ it('adds and cuts an annular face profile with an exact circular hole',()=>{
  }
 })
 
-import {combineSketchProfiles,unionSketchProfiles,withRetainedProfile,sketchProfile} from '../src/app/retainedSketchProfile'
+import {combineSketchProfiles,selectSketchProfileRegions,sketchProfileRegions,unionSketchProfiles,withRetainedProfile,sketchProfile} from '../src/app/retainedSketchProfile'
 import {parseDirectDocument,extrudeSketchBrep,DirectHistory} from '../src/app/directModeling'
 import {transformSketch} from '../src/app/directSketchGeometry'
 import {transformSelection} from '../src/app/directSolidTools'
@@ -255,4 +255,21 @@ describe('C9 extrude up to a face or plane',()=>{
     expect(planarFaceTargetAtTriangle({id:'b',mesh,brep} as never,0)?.face).toBe(0)
     expect(planarFaceTargetAtTriangle({id:'b',mesh,brep} as never,1)).toBeNull()
   })
+})
+
+it('splits a profile Boolean result into owned regions and keeps a chosen subset',()=>{
+ const plate={id:'p',name:'Plate',closed:true,points:[[0,0],[10,0],[10,4],[0,4]]} as DirectSketch
+ const cut={id:'c',name:'Cut',closed:true,points:[[4,-1],[6,-1],[6,5],[4,5]]} as DirectSketch
+ const hole={id:'h',name:'Hole',closed:true,points:[],analytic:{kind:'circle',center:[2,2],radius:1,start:0,sweep:360}} as DirectSketch
+ const result=combineSketchProfiles([plate,cut,hole],'difference')
+ const regions=sketchProfileRegions(result.retainedProfile!)
+ expect(regions).toHaveLength(2)
+ expect(regions.map(r=>r.loops.length).sort()).toEqual([1,2])
+ expect(regions.reduce((a,r)=>a+r.areaMm2,0)).toBeCloseTo(32-Math.PI,6)
+ const holed=regions.findIndex(r=>r.loops.length===2)
+ const kept=selectSketchProfileRegions(result,[1-holed])
+ expect(kept.id).toBe('p');expect(kept.retainedProfile!.loops).toHaveLength(2);expect(kept.retainedProfile!.areaMm2).toBeCloseTo(16-Math.PI,6)
+ expect(()=>selectSketchProfileRegions(result,[0,1])).toThrow('Keep at least one profile region.')
+ expect(()=>selectSketchProfileRegions(result,[2])).toThrow('no longer exists')
+ expect(selectSketchProfileRegions(result,[])).toBe(result)
 })

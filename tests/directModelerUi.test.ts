@@ -2149,6 +2149,25 @@ it('subtracts profile regions with target roles, empty-result refusal, cancel, u
  await ui.click('↶');expect(normalized()).toEqual(before)
  await ui.click('Repeat · Shift R');await commandKey(ui,'Enter');expect(normalized()).toEqual(committed)
 })
+it('keeps only the chosen Boolean regions before Extrude with refusal and undo',async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const plate={id:'plate',name:'Region plate',closed:true,points:[[0,0],[10,0],[10,4],[0,4]]}
+ const bar={id:'bar',name:'Region bar',closed:true,points:[[4,-1],[6,-1],[6,5],[4,5]]}
+ const ui=await mount({},JSON.stringify(parseDirectDocument(JSON.stringify({version:1,sketches:[plate,bar],bodies:[]}))))
+ const normalized=()=>parseDirectDocument(JSON.stringify(ui.doc()))
+ await ui.click(plate.name);await ui.click(bar.name,true);const before=normalized()
+ await ui.click('Subtract profile regions');await flushClearance()
+ const box=(n:number)=>ui.all().find(node=>node.props['aria-label']==='Region '+n)!
+ expect(box(1)).toBeTruthy();expect(box(2)).toBeTruthy();expect(box(3)).toBeUndefined()
+ box(2).props.onChange({target:{checked:false}});await flushClearance()
+ expect(box(1).props.disabled).toBe(true)
+ await commandKey(ui,'Enter')
+ const committed=normalized();expect(committed.sketches).toHaveLength(1)
+ expect(committed.sketches[0].retainedProfile!.loops).toHaveLength(1)
+ expect(committed.sketches[0].retainedProfile!.areaMm2).toBeCloseTo(16,8)
+ expect(Math.max(...committed.sketches[0].points.map(p=>p[0]))).toBeCloseTo(4,8)
+ await ui.click('↶');expect(normalized()).toEqual(before)
+})
 it('keeps the common profile region with retained circular boundaries',async()=>{
  await geometryKernel.warmGeometryKernel()
  const plate={id:'plate',name:'Intersection plate',closed:true,points:[[-4,-3],[4,-3],[4,3],[-4,3]]}
