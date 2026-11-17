@@ -324,6 +324,8 @@ fn apply(source: &Surface, field: Field, max_work: u64) -> Result<Report> {
 
 mod plane_side;
 pub use plane_side::{
+    PlaneGraphPosition, SurfacePlaneGraph, SurfacePlaneGraphAudit, SurfacePlaneGraphCell,
+    SurfacePlaneGraphStatus, audit_surface_plane_graphs,
     RefinedSurfacePlaneAudit, SurfacePlaneAudit, SurfacePlaneCell, SurfacePlaneRegion,
     SurfacePlaneSide, audit_surface_plane_side, refine_surface_plane_side,
 };

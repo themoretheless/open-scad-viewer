@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 360,
-  "unallocatedCount": 640,
+  "specifiedCount": 361,
+  "unallocatedCount": 639,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9256,6 +9256,29 @@
       "remainingQualification": [
         "Subdivide exact homogeneous plane residual and weight nets to certify separated and possible contact regions.",
         "Exact dyadic subdivision preserves the homogeneous quotient on every leaf. Regions cover the original knot cells and retain uncertainty on depth-limited leaves.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0361",
+      "name": "Сертификация единственной ветви пересечения NURBS-поверхности с плоскостью",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::audit_surface_plane_graphs",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs",
+        "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/graph.rs",
+        "docs/qualification/nurbs-curvature-field-361-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-361-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify a unique plane root for each transverse parameter by exact tensor endpoint and derivative signs.",
+        "Strict homogeneous derivative sign and opposite weak edge signs certify a unique graph over the whole transverse interval. Exact edge and corner contacts are retained.",
         "WASM and application integration are separate."
       ]
     }

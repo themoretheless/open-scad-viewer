@@ -1,7 +1,8 @@
 use num_rational::BigRational as Q;
 use nurbs_core::{
     editing::exact_surface_derivative::{
-        Refusal, SurfacePlaneSide, audit_surface_plane_side, refine_surface_plane_side,
+        PlaneGraphPosition, Refusal, SurfacePlaneGraphStatus, SurfacePlaneSide,
+        audit_surface_plane_graphs, audit_surface_plane_side, refine_surface_plane_side,
     },
     surface::Surface,
 };
@@ -138,4 +139,60 @@ fn localizes_a_folded_crossing_and_keeps_the_whole_original_domain_covered() {
     let limited =
         refine_surface_plane_side(&folded, [0., 0., 1.], 0., 8, report.work_used - 1).unwrap();
     assert_eq!(limited.regions, Err(Refusal::ResourceLimit));
+}
+
+#[test]
+fn certifies_unique_intersection_graphs_in_the_interior_and_on_an_edge() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let crossing = surface(1, vec![0., 0., 1., 1.], &[-1., 1.]);
+    let report = audit_surface_plane_graphs(&crossing, [0., 0., 1.], 0., WORK).unwrap();
+    let cells = report.cells.unwrap();
+    let SurfacePlaneGraphStatus::Graphs(graphs) = &cells[0].status else {
+        panic!("{:?}", cells[0].status);
+    };
+    let graph = graphs[0].as_ref().unwrap();
+    assert_eq!(graph.solve_axis, UvAxis::U);
+    assert_eq!(graph.position, PlaneGraphPosition::Interior);
+    assert_eq!(graph.derivative, [q(3), q(5)]);
+    assert!(graphs[1].is_none());
+
+    let edge = surface(1, vec![-2., -2., 4., 4.], &[0., 1.]);
+    let report = audit_surface_plane_graphs(&edge, [0., 0., -1.], 0., WORK).unwrap();
+    let cells = report.cells.unwrap();
+    let SurfacePlaneGraphStatus::Graphs(graphs) = &cells[0].status else {
+        panic!("{:?}", cells[0].status);
+    };
+    assert_eq!(
+        graphs[0].as_ref().unwrap().position,
+        PlaneGraphPosition::LowerEdge
+    );
+    assert_eq!(graphs[0].as_ref().unwrap().derivative, [q(-3), q(-2)]);
+}
+
+#[test]
+fn handles_a_diagonal_across_closed_edges_and_refuses_to_certify_a_fold() {
+    let mut diagonal = surface(1, vec![0., 0., 1., 1.], &[-1., 0.]);
+    diagonal.weights = vec![vec![1.; 2]; 2];
+    diagonal.control_points[0][1][2] = 0.;
+    diagonal.control_points[1][1][2] = 1.;
+    let report = audit_surface_plane_graphs(&diagonal, [0., 0., 1.], 0., WORK).unwrap();
+    let cells = report.cells.unwrap();
+    let SurfacePlaneGraphStatus::Graphs(graphs) = &cells[0].status else {
+        panic!("{:?}", cells[0].status);
+    };
+    assert!(graphs.iter().all(|graph| {
+        graph
+            .as_ref()
+            .is_some_and(|g| g.position == PlaneGraphPosition::Closed)
+    }));
+    let limited =
+        audit_surface_plane_graphs(&diagonal, [0., 0., 1.], 0., report.work_used - 1).unwrap();
+    assert_eq!(limited.cells, Err(Refusal::ResourceLimit));
+
+    let folded = surface(2, vec![0., 0., 0., 1., 1., 1.], &[1., -3., 1.]);
+    let report = audit_surface_plane_graphs(&folded, [0., 0., 1.], 0., WORK).unwrap();
+    assert_eq!(
+        report.cells.unwrap()[0].status,
+        SurfacePlaneGraphStatus::Unresolved
+    );
 }

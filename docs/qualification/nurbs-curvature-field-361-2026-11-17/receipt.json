@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0361",
+  "testedBase": "69fd23e1edad2ca4d773c7c6524ca993948796db",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "gaussian_curvature_field_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 53,
+  "scope": [
+    "Certify a unique plane root for each transverse parameter by exact tensor endpoint and derivative signs.",
+    "Strict homogeneous derivative sign and opposite weak edge signs certify a unique graph over the whole transverse interval. Exact edge and corner contacts are retained."
+  ],
+  "logSha256": "31f335187b587f64ef7743320042c5497ed4b613e516e0be109c29fe827518a9",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "b3214d0dc9df85a4e89993536c10f738f0b7ef668d496eb2f51db6d54768d586",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs": "a6ae8d008e07d381e749f45d58957aec3c2a07f878fd7ce63637d0e1f036c8fa",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "13c74cc94adafab6a07cfb3b1d442aa6ac3512dd8c4543b60bed425613281275",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "e7ed271777c6cb74d84d2eefe35d8e5681ec872da59a1b6ee1546b211a21c455",
+    "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs": "1b32045cb31adce641855a470be1226b7515fa0cfabb8c81d82069985b72fe3f",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/graph.rs": "ad4a3fca55fa69a964d6a52c059b6f3bb737a4ae38f4cb63e4f9587a1bb20efa"
+  }
+}

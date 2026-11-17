@@ -199,3 +199,9 @@ fn classify([lo, hi]: &[Q; 2], corners: &[Q; 4]) -> SurfacePlaneSide {
         SurfacePlaneSide::Unresolved
     }
 }
+
+mod graph;
+pub use graph::{
+    PlaneGraphPosition, SurfacePlaneGraph, SurfacePlaneGraphAudit, SurfacePlaneGraphCell,
+    SurfacePlaneGraphStatus, audit_surface_plane_graphs,
+};
