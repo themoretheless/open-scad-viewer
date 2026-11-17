@@ -371,3 +371,83 @@ fn edge_parameter_returns_no_hit_outside_domain_or_for_unknown_id() {
             .is_none()
     );
 }
+
+#[test]
+fn input_range_clips_both_seam_edges_in_requested_order() {
+    use num_rational::BigRational;
+    let q = |n: i64, d: i64| BigRational::new(n.into(), d.into());
+    let outer = [
+        [3.5, 0.125],
+        [3.5, 0.875],
+        [0.5, 0.875],
+        [0.5, 0.125],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_trim_sheet_with_input_bindings(&support(), &[&outer], 1e-8, 1_000_000)
+            .unwrap();
+    let pieces = result
+        .locate_input_range(0, 3, [&q(1, 3), &q(3, 4)])
+        .unwrap();
+    assert_eq!(pieces.len(), 2);
+    assert_eq!(pieces[0].edge_id, result.edge_bindings[1].edge_id);
+    assert_eq!(pieces[1].edge_id, result.edge_bindings[0].edge_id);
+    assert_eq!(pieces[0].input_parameters, [q(1, 3), q(1, 2)]);
+    assert_eq!(pieces[1].input_parameters, [q(1, 2), q(3, 4)]);
+    assert_eq!(pieces[0].edge_parameters, [q(2, 3), q(1, 2)]);
+    assert_eq!(pieces[1].edge_parameters, [q(1, 2), q(1, 4)]);
+    let reverse = result
+        .locate_input_range(0, 3, [&q(3, 4), &q(1, 3)])
+        .unwrap();
+    assert_eq!(reverse.len(), pieces.len());
+    for (forward, reverse) in pieces.iter().zip(reverse.iter().rev()) {
+        assert_eq!(forward.edge_id, reverse.edge_id);
+        assert_eq!(
+            forward.input_parameters,
+            [
+                reverse.input_parameters[1].clone(),
+                reverse.input_parameters[0].clone()
+            ]
+        );
+        assert_eq!(
+            forward.edge_parameters,
+            [
+                reverse.edge_parameters[1].clone(),
+                reverse.edge_parameters[0].clone()
+            ]
+        );
+    }
+}
+
+#[test]
+fn input_range_clips_to_segment_and_omits_point_contacts() {
+    use num_rational::BigRational;
+    let q = |n: i64, d: i64| BigRational::new(n.into(), d.into());
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_trim_sheet_with_input_bindings(&support(), &[&outer], 1e-8, 1_000_000)
+            .unwrap();
+    let pieces = result
+        .locate_input_range(0, 0, [&q(-1, 3), &q(1, 2)])
+        .unwrap();
+    assert_eq!(pieces.len(), 1);
+    assert_eq!(pieces[0].input_parameters, [q(0, 1), q(1, 2)]);
+    assert!(
+        result
+            .locate_input_range(0, 0, [&q(1, 2), &q(1, 2)])
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        result
+            .locate_input_range(0, 0, [&q(2, 1), &q(3, 1)])
+            .unwrap()
+            .is_empty()
+    );
+}

@@ -109,6 +109,14 @@ pub struct PeriodicTrimInputParameter {
     pub parameter: BigRational,
 }
 
+/// A clipped section of one edge, ordered in the caller's traversal direction.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PeriodicTrimEdgeRange {
+    pub edge_id: TopoId,
+    pub input_parameters: [BigRational; 2],
+    pub edge_parameters: [BigRational; 2],
+}
+
 impl InputBoundPeriodicTrimSheet {
     /// Find the edges containing a parameter on an original contour segment.
     /// At a split inside the segment, return both incident edges in model order.
@@ -144,6 +152,52 @@ impl InputBoundPeriodicTrimSheet {
             });
         }
         Ok(hits)
+    }
+
+    /// Clip a directed input segment range to the generated edges.
+    /// Pieces follow the input range direction. Point contacts are omitted.
+    pub fn locate_input_range(
+        &self,
+        contour: usize,
+        segment: usize,
+        range: [&BigRational; 2],
+    ) -> Result<Vec<PeriodicTrimEdgeRange>> {
+        let Some(model) = &self.bound_sheet.sheet.model else {
+            return Ok(Vec::new());
+        };
+        if self.edge_bindings.len() != model.edges.len() {
+            return Err(edge_count_error());
+        }
+        let [from, to] = range;
+        let (low, high) = (from.min(to), from.max(to));
+        let mut pieces = Vec::new();
+        for (index, binding) in self.edge_bindings.iter().enumerate() {
+            let source = &binding.source;
+            if source.contour != contour || source.segment != segment {
+                continue;
+            }
+            let [start, end] = &source.parameters;
+            let lo = low.max(start.min(end));
+            let hi = high.min(start.max(end));
+            if lo >= hi {
+                continue;
+            }
+            let [edge_start, edge_end] = bound_edge_domain(model, index, binding)?;
+            let input_parameters = if from < to { [lo, hi] } else { [hi, lo] };
+            let scale = (edge_end - &edge_start) / (end - start);
+            let edge_parameters =
+                input_parameters.map(|parameter| &edge_start + (parameter - start) * &scale);
+            pieces.push(PeriodicTrimEdgeRange {
+                edge_id: binding.edge_id,
+                input_parameters: input_parameters.map(Clone::clone),
+                edge_parameters,
+            });
+        }
+        pieces.sort_by(|a, b| a.input_parameters[0].cmp(&b.input_parameters[0]));
+        if from > to {
+            pieces.reverse();
+        }
+        Ok(pieces)
     }
 
     /// Map an edge parameter back to the original input contour segment.
