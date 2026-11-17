@@ -4453,3 +4453,66 @@ fn periodic_trim_input_edges_withhold_sources_on_refusal() {
         [0., 0.5].map(|t| num_rational::BigRational::from_float(t).unwrap()),
     );
 }
+
+#[test]
+fn periodic_trim_input_point_evaluates_exact_rational_coordinates_across_seam() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let q = |n: i64, d: i64| num_rational::BigRational::new(n.into(), d.into());
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let mut result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    let sample = result
+        .evaluate_input_point(0, 0, &q(1, 3), 1_000_000)
+        .unwrap();
+    assert_eq!(sample.point, Some([q(0, 1), q(1, 6), q(1, 4)]));
+    let seam = result
+        .evaluate_input_point(0, 0, &q(1, 2), 1_000_000)
+        .unwrap();
+    assert_eq!(seam.point, Some([q(0, 1), q(0, 1), q(1, 4)]));
+    let none = result
+        .evaluate_input_point(3, 0, &q(1, 2), 1_000_000)
+        .unwrap();
+    assert!(none.point.is_none() && none.refusal.is_none());
+
+    result.geometry.patches.as_mut().unwrap()[0].loops[0][1]
+        .curve
+        .control_points[0][0] = 0.125;
+    let disagreement = result
+        .evaluate_input_point(0, 0, &q(1, 2), 1_000_000)
+        .unwrap();
+    assert!(disagreement.point.is_none() && disagreement.refusal.is_some());
+}
+
+#[test]
+fn periodic_trim_input_point_withholds_results_when_work_is_exhausted() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    use nurbs_core::editing::rational_factor::Refusal;
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let result = build_exact_periodic_surface_trim_input_edges(
+        &doubly_periodic_tensor(),
+        &[&outer],
+        1_000_000,
+    )
+    .unwrap();
+    let seam = num_rational::BigRational::new(1.into(), 2.into());
+    let report = result.evaluate_input_point(0, 0, &seam, 1).unwrap();
+    assert!(report.point.is_none());
+    assert_eq!(report.refusal, Some(Refusal::ResourceLimit));
+}

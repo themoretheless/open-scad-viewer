@@ -7,6 +7,7 @@ use super::{
 };
 use crate::{
     Result,
+    curve::Curve,
     surface::{Axis, Surface},
 };
 
@@ -4279,4 +4280,149 @@ pub fn build_exact_periodic_surface_trim_input_edges(
         sources.push(loops);
     }
     Ok(PeriodicTrimInputEdges { geometry, sources })
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimInputPoint {
+    /// Exact world coordinates. Absent for an unmatched query or refusal.
+    pub point: Option<[BigRational; 3]>,
+    pub work_used: u64,
+    pub refusal: Option<ExactRefusal>,
+}
+
+impl PeriodicTrimInputEdges {
+    /// Evaluate an original contour segment at a rational parameter, and
+    /// require the exact 3D values of all incident pieces to agree.
+    pub fn evaluate_input_point(
+        &self,
+        contour: usize,
+        segment: usize,
+        parameter: &BigRational,
+        max_work: u64,
+    ) -> Result<PeriodicTrimInputPoint> {
+        crate::check(
+            (1..=cad_predicates::MAX_WORK).contains(&max_work),
+            "Exact periodic trim point work must be in 1..=1000000",
+        )?;
+        let mut work = Work {
+            used: 0,
+            limit: max_work,
+        };
+        let result = self.evaluate_input_point_with_work(contour, segment, parameter, &mut work);
+        let (point, refusal) = match result {
+            Ok(point) => (point, None),
+            Err(reason) => (None, Some(reason)),
+        };
+        Ok(PeriodicTrimInputPoint {
+            point,
+            work_used: work.used,
+            refusal,
+        })
+    }
+
+    fn evaluate_input_point_with_work(
+        &self,
+        contour: usize,
+        segment: usize,
+        parameter: &BigRational,
+        work: &mut Work,
+    ) -> std::result::Result<Option<[BigRational; 3]>, ExactRefusal> {
+        let Some(patches) = &self.geometry.patches else {
+            return Ok(None);
+        };
+        if patches.len() != self.sources.len() {
+            return Err(ExactRefusal::InvalidOutput);
+        }
+        let mut point = None;
+        for (patch, sources) in patches.iter().zip(&self.sources) {
+            if patch.loops.len() != sources.len() {
+                return Err(ExactRefusal::InvalidOutput);
+            }
+            for (edges, sources) in patch.loops.iter().zip(sources) {
+                if edges.len() != sources.len() {
+                    return Err(ExactRefusal::InvalidOutput);
+                }
+                for (edge, source) in edges.iter().zip(sources) {
+                    work.charge(1)?;
+                    if source.contour != contour || source.segment != segment {
+                        continue;
+                    }
+                    let [start, end] = &source.parameters;
+                    if parameter < start.min(end) || parameter > start.max(end) {
+                        continue;
+                    }
+                    if start == end {
+                        return Err(ExactRefusal::InvalidOutput);
+                    }
+                    let offset = work.op(parameter, start, |a, b| a - b)?;
+                    let width = work.op(end, start, |a, b| a - b)?;
+                    let fraction = work.op(&offset, &width, |a, b| a / b)?;
+                    let candidate = evaluate_trim_bezier(&edge.curve, &fraction, work)?;
+                    if point
+                        .as_ref()
+                        .is_some_and(|previous| previous != &candidate)
+                    {
+                        return Err(ExactRefusal::InvalidOutput);
+                    }
+                    point = Some(candidate);
+                }
+            }
+        }
+        Ok(point)
+    }
+}
+
+fn evaluate_trim_bezier(
+    curve: &Curve,
+    fraction: &BigRational,
+    work: &mut Work,
+) -> std::result::Result<[BigRational; 3], ExactRefusal> {
+    use num_traits::{One, Zero};
+
+    curve.validate().map_err(|_| ExactRefusal::InvalidOutput)?;
+    let count = curve.control_points.len();
+    if curve.periodic || count != curve.degree + 1 || curve.control_points[0].len() != 3 {
+        return Err(ExactRefusal::InvalidOutput);
+    }
+    let [start, end] = curve.domain();
+    if curve.knots[..count].iter().any(|&t| t != start)
+        || curve.knots[count..].iter().any(|&t| t != end)
+    {
+        return Err(ExactRefusal::InvalidOutput);
+    }
+    let complement = work.op(&BigRational::one(), fraction, |a, b| a - b)?;
+    let mut net = Vec::with_capacity(count);
+    for (point, &weight) in curve.control_points.iter().zip(&curve.weights) {
+        let weight = work.lift(weight)?;
+        let mut pole = [
+            BigRational::zero(),
+            BigRational::zero(),
+            BigRational::zero(),
+            BigRational::zero(),
+        ];
+        for (coordinate, &value) in pole.iter_mut().zip(point) {
+            let value = work.lift(value)?;
+            *coordinate = work.op(&value, &weight, |a, b| a * b)?;
+        }
+        pole[3] = weight;
+        net.push(pole);
+    }
+    for width in (1..count).rev() {
+        for i in 0..width {
+            for axis in 0..4 {
+                let left = work.op(&net[i][axis], &complement, |a, b| a * b)?;
+                let right = work.op(&net[i + 1][axis], fraction, |a, b| a * b)?;
+                net[i][axis] = work.op(&left, &right, |a, b| a + b)?;
+            }
+        }
+    }
+    let [x, y, z, w] = net.swap_remove(0);
+    if w.is_zero() {
+        return Err(ExactRefusal::InvalidOutput);
+    }
+    Ok([
+        work.op(&x, &w, |a, b| a / b)?,
+        work.op(&y, &w, |a, b| a / b)?,
+        work.op(&z, &w, |a, b| a / b)?,
+    ])
 }
