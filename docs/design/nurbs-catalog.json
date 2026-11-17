@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 361,
-  "unallocatedCount": 639,
+  "specifiedCount": 362,
+  "unallocatedCount": 638,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9279,6 +9279,30 @@
       "remainingQualification": [
         "Certify a unique plane root for each transverse parameter by exact tensor endpoint and derivative signs.",
         "Strict homogeneous derivative sign and opposite weak edge signs certify a unique graph over the whole transverse interval. Exact edge and corner contacts are retained.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0362",
+      "name": "Сертифицированные пробы ветви пересечения NURBS-поверхности с плоскостью",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::sample_surface_plane_graph",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs",
+        "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/samples.rs",
+        "docs/qualification/nurbs-curvature-field-362-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-362-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Sample the unique per-cell surface-plane branch at exact rational transverse parameters.",
+        "Exact Bernstein restriction and rational bisection enclose each certified root in the normalized knot cell, including nonbinary sample parameters and exact edge roots.",
         "WASM and application integration are separate."
       ]
     }

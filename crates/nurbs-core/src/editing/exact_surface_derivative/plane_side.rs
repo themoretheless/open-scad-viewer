@@ -205,3 +205,9 @@ pub use graph::{
     PlaneGraphPosition, SurfacePlaneGraph, SurfacePlaneGraphAudit, SurfacePlaneGraphCell,
     SurfacePlaneGraphStatus, audit_surface_plane_graphs,
 };
+
+mod samples;
+pub use samples::{
+    SurfacePlaneGraphSample, SurfacePlaneGraphSampleOptions, SurfacePlaneGraphSampleReport,
+    SurfacePlaneGraphSamples, sample_surface_plane_graph,
+};

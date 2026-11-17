@@ -1,8 +1,9 @@
 use num_rational::BigRational as Q;
 use nurbs_core::{
     editing::exact_surface_derivative::{
-        PlaneGraphPosition, Refusal, SurfacePlaneGraphStatus, SurfacePlaneSide,
-        audit_surface_plane_graphs, audit_surface_plane_side, refine_surface_plane_side,
+        PlaneGraphPosition, Refusal, SurfacePlaneGraphSampleOptions, SurfacePlaneGraphStatus,
+        SurfacePlaneSide, audit_surface_plane_graphs, audit_surface_plane_side,
+        refine_surface_plane_side, sample_surface_plane_graph,
     },
     surface::Surface,
 };
@@ -195,4 +196,87 @@ fn handles_a_diagonal_across_closed_edges_and_refuses_to_certify_a_fold() {
         report.cells.unwrap()[0].status,
         SurfacePlaneGraphStatus::Unresolved
     );
+}
+
+#[test]
+fn samples_weighted_branches_at_nonbinary_parameters_without_rounding() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let crossing = surface(1, vec![-2., -2., 4., 4.], &[-1., 1.]);
+    let options = SurfacePlaneGraphSampleOptions {
+        span: [1, 1],
+        solve_axis: UvAxis::U,
+        max_normalized_width: 1e-18,
+        max_work: WORK,
+    };
+    let third = Q::new(1.into(), 3.into());
+    let inputs = [q(0), third, q(1)];
+    let report = sample_surface_plane_graph(&crossing, [0., 0., 1.], 0., &inputs, options).unwrap();
+    let result = report.outcome.unwrap();
+    assert_eq!(result.domain, [[-2., 4.], [0., 1.]]);
+    let exact = [
+        Q::new(1.into(), 3.into()),
+        Q::new(4.into(), 11.into()),
+        Q::new(2.into(), 5.into()),
+    ];
+    for ((sample, t), root) in result.samples.iter().zip(&inputs).zip(exact) {
+        assert_eq!(&sample.transverse, t);
+        assert!(sample.root[0] <= root && root <= sample.root[1]);
+        assert!(
+            &sample.root[1] - &sample.root[0]
+                <= Q::from_float(options.max_normalized_width).unwrap()
+        );
+    }
+    let reversed = sample_surface_plane_graph(&crossing, [0., 0., -1.], 0., &inputs, options)
+        .unwrap()
+        .outcome
+        .unwrap();
+    assert_eq!(result.samples, reversed.samples);
+    let limited = sample_surface_plane_graph(
+        &crossing,
+        [0., 0., 1.],
+        0.,
+        &inputs,
+        SurfacePlaneGraphSampleOptions {
+            max_work: report.work_used - 1,
+            ..options
+        },
+    )
+    .unwrap();
+    assert_eq!(limited.outcome, Err(Refusal::ResourceLimit));
+}
+
+#[test]
+fn retains_exact_edge_samples_and_requires_a_unique_full_graph() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let flat_edge = surface(1, vec![0., 0., 1., 1.], &[0., 1.]);
+    let options = SurfacePlaneGraphSampleOptions {
+        span: [1, 1],
+        solve_axis: UvAxis::U,
+        max_normalized_width: 1e-12,
+        max_work: WORK,
+    };
+    let report =
+        sample_surface_plane_graph(&flat_edge, [0., 0., 1.], 0., &[q(0), q(1)], options).unwrap();
+    assert!(
+        report
+            .outcome
+            .unwrap()
+            .samples
+            .iter()
+            .all(|sample| sample.root == [q(0), q(0)])
+    );
+
+    let folded = surface(2, vec![0., 0., 0., 1., 1., 1.], &[1., -3., 1.]);
+    let report = sample_surface_plane_graph(
+        &folded,
+        [0., 0., 1.],
+        0.,
+        &[q(0)],
+        SurfacePlaneGraphSampleOptions {
+            span: [2, 1],
+            ..options
+        },
+    )
+    .unwrap();
+    assert_eq!(report.outcome, Err(Refusal::UnprovedIdentity));
 }

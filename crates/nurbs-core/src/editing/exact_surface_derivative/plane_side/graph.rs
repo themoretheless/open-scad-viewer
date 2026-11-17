@@ -85,7 +85,11 @@ fn certify(net: &PlaneNet, work: &mut Work) -> PResult<SurfacePlaneGraphStatus> 
     })
 }
 
-fn graph(net: &PlaneNet, axis: UvAxis, work: &mut Work) -> PResult<Option<SurfacePlaneGraph>> {
+pub(super) fn graph(
+    net: &PlaneNet,
+    axis: UvAxis,
+    work: &mut Work,
+) -> PResult<Option<SurfacePlaneGraph>> {
     let [nu, nv] = net.size;
     let (along, across, stride) = match axis {
         UvAxis::U => (nu, nv, nv),
