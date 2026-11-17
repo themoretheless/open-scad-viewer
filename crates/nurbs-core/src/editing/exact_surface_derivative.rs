@@ -324,6 +324,8 @@ fn apply(source: &Surface, field: Field, max_work: u64) -> Result<Report> {
 
 mod plane_side;
 pub use plane_side::{
+    PlanarSectionCapArrangement, PlanarSectionCapArrangementReport, PlanarSectionCapRegion,
+    arrange_surface_plane_section_caps,
     PlanarSectionCap, PlanarSectionCapReport, PlanarSectionCapWithHoles, PlanarSectionCapWithHolesReport, cap_surface_plane_section, cap_surface_plane_section_with_holes,
     PeriodicSurfacePlaneTrimSplit, PeriodicSurfacePlaneTrimSplitReport, split_periodic_surface_strip_by_plane,
     StoredPeriodicSurfacePlaneSection, StoredPeriodicSurfacePlaneSectionReport,

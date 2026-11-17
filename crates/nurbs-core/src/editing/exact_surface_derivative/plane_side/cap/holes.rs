@@ -29,6 +29,25 @@ pub fn cap_surface_plane_section_with_holes(
     boundary_tolerance: f64,
     max_work: u64,
 ) -> Result<PlanarSectionCapWithHolesReport> {
+    validate_rings(rings, normal, offset, boundary_tolerance, max_work)?;
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let outcome = build(rings, normal, offset, boundary_tolerance, &mut work);
+    Ok(PlanarSectionCapWithHolesReport {
+        outcome,
+        work_used: work.used,
+    })
+}
+
+fn validate_rings(
+    rings: &[&[Curve]],
+    normal: [f64; 3],
+    offset: f64,
+    boundary_tolerance: f64,
+    max_work: u64,
+) -> Result<()> {
     check(
         (1..=256).contains(&rings.len())
             && rings.iter().all(|ring| (1..=256).contains(&ring.len()))
@@ -43,15 +62,7 @@ pub fn cap_surface_plane_section_with_holes(
     for ring in rings {
         validate_edges(ring)?;
     }
-    let mut work = Work {
-        used: 0,
-        limit: max_work,
-    };
-    let outcome = build(rings, normal, offset, boundary_tolerance, &mut work);
-    Ok(PlanarSectionCapWithHolesReport {
-        outcome,
-        work_used: work.used,
-    })
+    Ok(())
 }
 
 fn build(
@@ -89,10 +100,7 @@ fn build(
                 return Err(Refusal::UnprovedIdentity);
             }
         }
-        contour.reverse();
-        for curve in &mut contour {
-            curve.control_points.reverse();
-        }
+        reverse_ring(&mut contour);
         face.loops.push(contour);
         polygons.push(candidate);
         reversed.push(!hole.reversed);
@@ -159,3 +167,16 @@ fn inside(ring: &Ring, point: &[Q; 2], work: &mut Work) -> PResult<bool> {
     }
     Ok(inside)
 }
+
+fn reverse_ring(contour: &mut [Curve]) {
+    contour.reverse();
+    for curve in contour {
+        curve.control_points.reverse();
+    }
+}
+
+mod arrangement;
+pub use arrangement::{
+    PlanarSectionCapArrangement, PlanarSectionCapArrangementReport, PlanarSectionCapRegion,
+    arrange_surface_plane_section_caps,
+};

@@ -5,13 +5,13 @@ use nurbs_core::{
         SurfacePlaneGraphStripOptions, SurfacePlanePolylineOptions, SurfacePlaneSide,
         SurfacePlaneWorldPolylineOptions, SurfacePlaneWorldStripOptions,
         approximate_surface_plane_graph, approximate_surface_plane_graph_xyz,
-        approximate_surface_plane_strip_xyz, audit_surface_plane_graphs, audit_surface_plane_side,
-        cap_surface_plane_section, cap_surface_plane_section_with_holes,
-        close_periodic_surface_plane_strip_xyz, refine_surface_plane_side,
-        sample_surface_plane_graph, split_periodic_surface_strip_by_plane,
-        split_surface_cell_by_plane, stitch_surface_plane_graph_strip,
-        store_periodic_surface_plane_section, store_surface_plane_section_curve,
-        store_surface_plane_section_pair,
+        approximate_surface_plane_strip_xyz, arrange_surface_plane_section_caps,
+        audit_surface_plane_graphs, audit_surface_plane_side, cap_surface_plane_section,
+        cap_surface_plane_section_with_holes, close_periodic_surface_plane_strip_xyz,
+        refine_surface_plane_side, sample_surface_plane_graph,
+        split_periodic_surface_strip_by_plane, split_surface_cell_by_plane,
+        stitch_surface_plane_graph_strip, store_periodic_surface_plane_section,
+        store_surface_plane_section_curve, store_surface_plane_section_pair,
     },
     surface::Surface,
 };
@@ -1186,4 +1186,71 @@ fn refuses_touching_exterior_and_nested_hole_boundaries() {
     test(&[&outer, &big_hole, &nested]);
     let adjacent = square_ring([5., 2.], [7., 3.]);
     test(&[&outer, &big_hole, &adjacent]);
+}
+
+#[test]
+fn arranges_disconnected_and_nested_rings_in_any_input_order() {
+    use nurbs_core::trim::trim_domain::{Location, TrimDomain};
+    let island_hole = square_ring([4., 4.], [5., 5.]);
+    let mut disjoint = square_ring([20., 20.], [22., 22.]);
+    disjoint[0].control_points.reverse();
+    let hole = square_ring([2., 2.], [8., 8.]);
+    let island = square_ring([3., 3.], [6., 6.]);
+    let outer = square_ring([0., 0.], [10., 10.]);
+    let rings = [
+        island_hole.as_slice(),
+        disjoint.as_slice(),
+        hole.as_slice(),
+        island.as_slice(),
+        outer.as_slice(),
+    ];
+    let report = arrange_surface_plane_section_caps(&rings, [0., 0., 1.], 0., 0., WORK).unwrap();
+    let arrangement = report.outcome.unwrap();
+    assert_eq!(arrangement.parents, [Some(3), None, Some(4), Some(2), None]);
+    assert_eq!(
+        arrangement
+            .regions
+            .iter()
+            .map(|r| r.rings.clone())
+            .collect::<Vec<_>>(),
+        [vec![1], vec![3, 0], vec![4, 2]]
+    );
+    assert_eq!(arrangement.regions[0].cap.reversed, [true]);
+    let material = |point| {
+        arrangement
+            .regions
+            .iter()
+            .filter(|region| {
+                TrimDomain::new(&region.cap.face.loops, 1e-9)
+                    .unwrap()
+                    .classify_point(point, 1000)
+                    .unwrap()
+                    .location
+                    == Location::Inside
+            })
+            .count()
+    };
+    assert_eq!(material([21., 21.]), 1);
+    assert_eq!(material([1., 1.]), 1);
+    assert_eq!(material([7., 7.]), 0);
+    assert_eq!(material([3.5, 3.5]), 1);
+    assert_eq!(material([4.5, 4.5]), 0);
+    let limited =
+        arrange_surface_plane_section_caps(&rings, [0., 0., 1.], 0., 0., report.work_used - 1)
+            .unwrap();
+    assert!(matches!(limited.outcome, Err(Refusal::ResourceLimit)));
+}
+
+#[test]
+fn refuses_crossing_or_touching_inputs_to_cap_arrangement() {
+    let first = square_ring([0., 0.], [2., 2.]);
+    for second in [
+        square_ring([1., 1.], [3., 3.]),
+        square_ring([2., 2.], [3., 3.]),
+    ] {
+        let result =
+            arrange_surface_plane_section_caps(&[&first, &second], [0., 0., 1.], 0., 0., WORK)
+                .unwrap();
+        assert!(matches!(result.outcome, Err(Refusal::UnprovedIdentity)));
+    }
 }

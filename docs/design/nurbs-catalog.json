@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 374,
-  "unallocatedCount": 626,
+  "specifiedCount": 375,
+  "unallocatedCount": 625,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9608,6 +9608,31 @@
       "remainingQualification": [
         "Build a planar cap with disjoint, strictly contained holes and certified boundary gaps.",
         "Exact inter-ring predicates exclude touches and crossings. Half-open point containment proves each hole is strictly inside the outer boundary and excludes nested holes. Opposite winding preserves the material region.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0375",
+      "name": "Автоматическая сборка раздельных крышек NURBS с вложенными островами",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::arrange_surface_plane_section_caps",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs",
+        "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "docs/qualification/nurbs-curvature-field-375-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-375-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Arrange disjoint and nested section rings into oriented planar cap regions under exact even-odd membership.",
+        "Exact pairwise crossing and containment tests define an immediate-parent tree independent of input order or winding. Even-depth rings define material caps, with odd-depth children as holes.",
         "WASM and application integration are separate."
       ]
     }

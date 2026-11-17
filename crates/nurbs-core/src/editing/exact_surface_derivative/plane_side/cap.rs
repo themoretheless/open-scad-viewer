@@ -276,6 +276,7 @@ fn cross(a: &[Q; 2], b: &[Q; 2], work: &mut Work) -> PResult<Q> {
 
 mod holes;
 pub use holes::{
-    PlanarSectionCapWithHoles, PlanarSectionCapWithHolesReport,
+    PlanarSectionCapArrangement, PlanarSectionCapArrangementReport, PlanarSectionCapRegion,
+    PlanarSectionCapWithHoles, PlanarSectionCapWithHolesReport, arrange_surface_plane_section_caps,
     cap_surface_plane_section_with_holes,
 };
