@@ -11,11 +11,12 @@ use nurbs_core::{
             PlanarSegmentStorage, StoredPlanarIntersection, SupportPlaneIntersection,
             TrimmedPlanarIntersection, bound_planar_face_boundary_intersection,
             build_planar_intersection_segments, classify_planar_face_contacts,
-            intersect_planar_face_boundaries, intersect_planar_face_boundary_contacts,
-            intersect_planar_supports, intersect_trimmed_planar_faces,
-            match_quadratic_planar_boundary_contacts, optimize_planar_intersection_segment_storage,
-            refine_planar_face_boundary_extents, resolve_planar_face_boundary_intersection,
-            store_planar_intersection_segment, store_trimmed_planar_intersection,
+            enclose_algebraic_planar_boundary_point, intersect_planar_face_boundaries,
+            intersect_planar_face_boundary_contacts, intersect_planar_supports,
+            intersect_trimmed_planar_faces, match_quadratic_planar_boundary_contacts,
+            optimize_planar_intersection_segment_storage, refine_planar_face_boundary_extents,
+            resolve_planar_face_boundary_intersection, store_planar_intersection_segment,
+            store_trimmed_planar_intersection,
         },
         planar_coplanar_ray::CoplanarRayPartitionOptions,
         planar_trim_projection::ProjectedTrimmedFace,
@@ -1109,4 +1110,78 @@ fn compares_weighted_algebraic_images_and_rejects_nearby_unequal_roots() {
     assert!(
         matches!(result.outcome, AlgebraicPlanarContacts::Transverse { points, .. } if points.is_empty())
     );
+}
+
+#[test]
+fn encloses_each_algebraic_branch_with_a_certified_xyz_diameter() {
+    let [_, b] = perpendicular_boundary_faces();
+    let support = intersect_planar_supports(&plane(|x, _| -x), &b.projection, WORK).unwrap();
+    let SupportPlaneIntersection::Line(line) = support.outcome else {
+        panic!("{:?}", support.outcome);
+    };
+    assert_eq!(line.clock_axis, 0);
+    assert_eq!(line.direction, [q(1, 1), q(0, 1), q(-1, 1)]);
+    let tolerance = 1e-25;
+    let point = |upper_root| AlgebraicBoundaryClock::Quadratic {
+        linear: q(-2, 3),
+        constant: q(1, 18),
+        upper_root,
+    };
+    let lower =
+        enclose_algebraic_planar_boundary_point(&line, &point(false), tolerance, WORK).unwrap();
+    let upper =
+        enclose_algebraic_planar_boundary_point(&line, &point(true), tolerance, WORK).unwrap();
+    let lower = lower.outcome.unwrap();
+    let upper = upper.outcome.unwrap();
+    assert!(lower.parameter[1] < upper.parameter[0]);
+    for (bounds, sign) in [lower, upper].iter().zip([q(-1, 1), q(1, 1)]) {
+        let [lo, hi] = &bounds.parameter;
+        let at = |t: &Q| t.pow(2) - q(2, 3) * t + q(1, 18);
+        assert!(at(lo) * &sign <= q(0, 1));
+        assert!(at(hi) * &sign >= q(0, 1));
+        assert_eq!(
+            bounds.xyz,
+            [[lo.clone(), hi.clone()], [q(0, 1), q(0, 1)], [-hi, -lo]]
+        );
+        assert_eq!(bounds.diameter_squared, (hi - lo).pow(2) * q(2, 1));
+        assert!(bounds.diameter_squared <= Q::from_float(tolerance).unwrap().pow(2));
+    }
+    let invalid_axis = enclose_algebraic_planar_boundary_point(
+        &nurbs_core::analysis::exact_plane_intersection::ExactSupportLine {
+            clock_axis: 3,
+            ..line
+        },
+        &point(true),
+        tolerance,
+        WORK,
+    );
+    assert!(invalid_axis.is_err());
+}
+
+#[test]
+fn encloses_rational_clock_values_exactly_and_bounds_algebraic_work() {
+    use nurbs_core::editing::exact_derivative::Refusal;
+    let [a, b] = perpendicular_boundary_faces();
+    let report = intersect_planar_supports(&a.projection, &b.projection, WORK).unwrap();
+    let SupportPlaneIntersection::Line(line) = report.outcome else {
+        panic!("{:?}", report.outcome);
+    };
+    let rational = AlgebraicBoundaryClock::Rational(q(1, 3));
+    let exact = enclose_algebraic_planar_boundary_point(&line, &rational, 0., WORK)
+        .unwrap()
+        .outcome
+        .unwrap();
+    assert_eq!(exact.parameter, [q(1, 3), q(1, 3)]);
+    assert_eq!(exact.diameter_squared, q(0, 1));
+    let irrational = AlgebraicBoundaryClock::Quadratic {
+        linear: q(0, 1),
+        constant: q(-2, 1),
+        upper_root: true,
+    };
+    let zero_tolerance =
+        enclose_algebraic_planar_boundary_point(&line, &irrational, 0., WORK).unwrap();
+    assert_eq!(zero_tolerance.outcome, Err(Refusal::NotRepresentable));
+    let limited = enclose_algebraic_planar_boundary_point(&line, &irrational, 1e-8, 1).unwrap();
+    assert_eq!(limited.outcome, Err(Refusal::ResourceLimit));
+    assert!(limited.work_used <= 1);
 }

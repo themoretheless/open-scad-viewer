@@ -213,3 +213,9 @@ pub use algebraic::{
     AlgebraicBoundaryClock, AlgebraicPlanarContactReport, AlgebraicPlanarContacts,
     match_quadratic_planar_boundary_contacts,
 };
+
+mod algebraic_enclosure;
+pub use algebraic_enclosure::{
+    AlgebraicBoundaryEnclosure, AlgebraicBoundaryEnclosureReport,
+    enclose_algebraic_planar_boundary_point,
+};
