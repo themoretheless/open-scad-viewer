@@ -4812,3 +4812,106 @@ pub fn mesh_exact_parallel_planar_profile_extrusion_overlap(
     mesh.exact_work = max_exact_work - remaining;
     Ok(mesh)
 }
+
+pub struct ExactParallelProfileExtrusionOverlapBrep {
+    /// Absent for intersections with zero volume.
+    pub solid: Option<QualifiedClosedSolid>,
+    pub volume_mm3: Q,
+    pub exact_work: u64,
+}
+
+/// Author and qualify a compact B-rep of the positive-volume intersection
+/// of two collinear planar profile extrusions. Result vertices must be
+/// exactly representable in the B-rep coordinate format.
+pub fn brep_exact_parallel_planar_profile_extrusion_overlap(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    first_sweep_mm: &[Q; 3],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    second_sweep_mm: &[Q; 3],
+    tolerance_mm: f64,
+    policy: crate::closed_solid::AdmissionPolicy,
+    max_exact_work: u64,
+) -> Result<ExactParallelProfileExtrusionOverlapBrep> {
+    if !tolerance_mm.is_finite() || tolerance_mm <= 0.0 {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "B-rep tolerance must be finite and positive",
+        ));
+    }
+    let prepared = prepare_parallel_extrusion_overlap(
+        first_outer_mm,
+        first_holes_mm,
+        first_sweep_mm,
+        second_outer_mm,
+        second_holes_mm,
+        second_sweep_mm,
+        max_exact_work,
+    )?;
+    let measurement = prepared.measurement;
+    if measurement.volume_mm3.is_zero() {
+        return Ok(ExactParallelProfileExtrusionOverlapBrep {
+            solid: None,
+            volume_mm3: Q::zero(),
+            exact_work: measurement.exact_work,
+        });
+    }
+    let Some([lo, hi]) = measurement.common_sweep_range else {
+        return Err(refuse(
+            "Positive intersection volume requires an axial interval",
+        ));
+    };
+    let mut remaining = max_exact_work - measurement.exact_work;
+    spend(&mut remaining, 24)?;
+    let shift: [Q; 3] = first_sweep_mm.each_ref().map(|coordinate| coordinate * &lo);
+    let sweep = first_sweep_mm
+        .each_ref()
+        .map(|coordinate| coordinate * (&hi - &lo));
+    let mut translate = |ring: &[[Q; 3]]| {
+        ring.iter()
+            .map(|point| {
+                spend(&mut remaining, 8)?;
+                Ok(std::array::from_fn(|i| &point[i] + &shift[i]))
+            })
+            .collect::<Result<Vec<_>>>()
+    };
+    let outer_a = translate(first_outer_mm)?;
+    let outer_b = translate(&prepared.second_outer_mm)?;
+    let holes_a = first_holes_mm
+        .iter()
+        .map(|ring| translate(ring))
+        .collect::<Result<Vec<_>>>()?;
+    let holes_b = prepared
+        .second_holes_mm
+        .iter()
+        .map(|ring| translate(ring))
+        .collect::<Result<Vec<_>>>()?;
+    let holes_a: Vec<_> = holes_a.iter().map(Vec::as_slice).collect();
+    let holes_b: Vec<_> = holes_b.iter().map(Vec::as_slice).collect();
+    if remaining == 0 {
+        return Err(super::work_exhausted());
+    }
+    let result = extrude_exact_coplanar_polyline_boolean_brep(
+        &outer_a,
+        &holes_a,
+        &outer_b,
+        &holes_b,
+        CoplanarPolylineBoolean::Intersection,
+        &sweep,
+        tolerance_mm,
+        policy,
+        remaining,
+    )?;
+    remaining -= result.exact_work;
+    if result.volume_mm3 != measurement.volume_mm3 {
+        return Err(refuse(
+            "Intersection B-rep does not match the exact overlap volume",
+        ));
+    }
+    Ok(ExactParallelProfileExtrusionOverlapBrep {
+        solid: Some(result.solid),
+        volume_mm3: result.volume_mm3,
+        exact_work: max_exact_work - remaining,
+    })
+}

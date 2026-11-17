@@ -7045,3 +7045,103 @@ fn exact_parallel_extrusion_overlap_mesh_is_empty_for_cap_contact_or_separate_fo
         assert_eq!(report.volume_mm3, q(0));
     }
 }
+
+#[test]
+fn exact_parallel_extrusion_overlap_brep_qualifies_holed_result_in_the_shared_slab() {
+    use brep_core::analysis::{
+        PolyhedralPointLocation, brep_exact_parallel_planar_profile_extrusion_overlap,
+        exact_polyhedral_point_location,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y, z| [q(x), q(y), q(z)];
+    let rect = |lo, hi, z| {
+        [
+            p(lo, lo, z),
+            p(hi, lo, z),
+            p(hi, hi, z),
+            p(lo, hi, z),
+            p(lo, lo, z),
+        ]
+    };
+    let a = rect(0, 6, 0);
+    let hole = rect(2, 4, 0);
+    let b = rect(1, 5, 3);
+    let get = |budget| {
+        brep_exact_parallel_planar_profile_extrusion_overlap(
+            &a,
+            &[&hole],
+            &p(0, 0, 4),
+            &b,
+            &[],
+            &p(0, 0, -2),
+            1e-8,
+            section_solid_options().admission,
+            budget,
+        )
+    };
+    let report = get(1_000_000).unwrap();
+    assert_eq!(report.volume_mm3, q(24));
+    let solid = report.solid.as_ref().unwrap();
+    assert!(solid.geometry().proven);
+    assert_eq!(
+        solid
+            .model()
+            .faces
+            .iter()
+            .filter(|face| face.holes.len() == 1)
+            .count(),
+        2
+    );
+    assert!(
+        solid
+            .model()
+            .vertices
+            .iter()
+            .all(|vertex| [1.0, 3.0].contains(&vertex.point[2]))
+    );
+    assert_eq!(
+        exact_polyhedral_point_location(solid, &p(3, 3, 2), 1_000_000)
+            .unwrap()
+            .location,
+        PolyhedralPointLocation::Exterior
+    );
+    assert_eq!(
+        get(report.exact_work).unwrap().volume_mm3,
+        report.volume_mm3
+    );
+    assert!(get(report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_parallel_extrusion_overlap_brep_keeps_zero_volume_contact_empty() {
+    use brep_core::analysis::brep_exact_parallel_planar_profile_extrusion_overlap;
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let ring = |z| {
+        [
+            [q(0), q(0), q(z)],
+            [q(3), q(0), q(z)],
+            [q(3), q(3), q(z)],
+            [q(0), q(3), q(z)],
+            [q(0), q(0), q(z)],
+        ]
+    };
+    let a = ring(0);
+    let b = ring(2);
+    let sweep = [q(0), q(0), q(2)];
+    let result = brep_exact_parallel_planar_profile_extrusion_overlap(
+        &a,
+        &[],
+        &sweep,
+        &b,
+        &[],
+        &sweep,
+        1e-8,
+        section_solid_options().admission,
+        1_000_000,
+    )
+    .unwrap();
+    assert!(result.solid.is_none());
+    assert_eq!(result.volume_mm3, q(0));
+}
