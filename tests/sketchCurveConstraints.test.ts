@@ -1,0 +1,121 @@
+import { describe, it, expect } from 'vitest'
+import {
+  addSketchCurveConstraint,
+  sketchCurveConstraintName,
+  sketchCurveConstraintResidual,
+  validateSketchCurveConstraints,
+} from '../src/app/sketchCurveConstraints'
+import {
+  emptyDirectDocument,
+  parseDirectDocument,
+  serializeDirectDocument,
+  type DirectSketch,
+} from '../src/app/directModeling'
+import { sampleCurve, type AnalyticCurve } from '../src/app/directSketchGeometry'
+
+const circle = (
+  id: string,
+  center: [number, number],
+  radius: number,
+  kind: 'circle' | 'arc' = 'circle',
+): DirectSketch => {
+  const analytic: AnalyticCurve = {
+    kind,
+    center,
+    radius,
+    start: 0,
+    sweep: kind === 'circle' ? Math.PI * 2 : Math.PI / 2,
+  }
+  return { id, name: id, points: sampleCurve(analytic), closed: kind === 'circle', analytic }
+}
+const line: DirectSketch = {
+  id: 'L',
+  name: 'L',
+  points: [
+    [0, 0],
+    [20, 0],
+    [20, 10],
+  ],
+  closed: false,
+}
+const ref = circle('R', [0, 0], 5)
+
+describe('sketch curve constraints', () => {
+  it('makes a circle concentric with a fixed reference and keeps the reference', () => {
+    const out = addSketchCurveConstraint(circle('A', [3, 4], 2), { kind: 'concentric', ref: 'R' }, [ref])
+    expect(out.analytic!.center[0]).toBeCloseTo(0, 6)
+    expect(out.analytic!.center[1]).toBeCloseTo(0, 6)
+    expect(out.curveConstraints).toHaveLength(1)
+    expect(ref.analytic!.center).toEqual([0, 0])
+  })
+
+  it('combines concentric and equal radius on an arc', () => {
+    let a = addSketchCurveConstraint(circle('A', [3, 4], 2, 'arc'), { kind: 'concentric', ref: 'R' }, [ref])
+    a = addSketchCurveConstraint(a, { kind: 'equal_radius', ref: 'R' }, [ref])
+    expect(a.analytic!.radius).toBeCloseTo(5, 6)
+    expect(a.analytic!.kind).toBe('arc')
+    for (const c of a.curveConstraints!) expect(sketchCurveConstraintResidual(a.analytic!, c, ref)).toBeLessThan(1e-5)
+  })
+
+  it('makes a circle tangent to a polyline segment', () => {
+    const out = addSketchCurveConstraint(circle('A', [10, 6], 3), { kind: 'tangent_line', ref: 'L', a: 0, b: 1 }, [
+      line,
+    ])
+    expect(Math.abs(out.analytic!.center[1])).toBeCloseTo(out.analytic!.radius, 4)
+  })
+
+  it('makes circles tangent externally and internally', () => {
+    const ext = addSketchCurveConstraint(
+      circle('A', [12, 0], 3),
+      { kind: 'tangent_circle', ref: 'R', internal: false },
+      [ref],
+    )
+    expect(Math.hypot(...ext.analytic!.center)).toBeCloseTo(ext.analytic!.radius + 5, 4)
+    const int = addSketchCurveConstraint(circle('A', [1, 0], 2), { kind: 'tangent_circle', ref: 'R', internal: true }, [
+      ref,
+    ])
+    expect(Math.hypot(...int.analytic!.center)).toBeCloseTo(Math.abs(int.analytic!.radius - 5), 4)
+  })
+
+  it('holds a dimensioned radius and rejects a conflict', () => {
+    const a: DirectSketch = { ...circle('A', [3, 4], 2), dimensions: [{ kind: 'radius' }] }
+    const concentric = addSketchCurveConstraint(a, { kind: 'concentric', ref: 'R' }, [ref])
+    expect(concentric.analytic!.radius).toBeCloseTo(2, 6)
+    expect(() => addSketchCurveConstraint(concentric, { kind: 'equal_radius', ref: 'R' }, [ref])).toThrow(/conflict/)
+    expect(() =>
+      addSketchCurveConstraint(concentric, { kind: 'tangent_circle', ref: 'R', internal: false }, [ref]),
+    ).toThrow(/conflict/)
+  })
+
+  it('rejects invalid references', () => {
+    const a = circle('A', [3, 4], 2)
+    const bad = (c: unknown, sketches: DirectSketch[] = [ref, line]) =>
+      expect(() => validateSketchCurveConstraints({ ...a, curveConstraints: [c as never] }, sketches)).toThrow()
+    bad({ kind: 'concentric', ref: 'missing' })
+    bad({ kind: 'concentric', ref: 'A' })
+    bad({ kind: 'concentric', ref: 'L' })
+    bad({ kind: 'tangent_line', ref: 'R', a: 0, b: 1 })
+    bad({ kind: 'tangent_line', ref: 'L', a: 0, b: 2 })
+    bad({ kind: 'tangent_circle', ref: 'R' })
+    bad({ kind: 'concentric', ref: 'R', extra: 1 })
+    bad({ kind: 'concentric', ref: 'R' }, [{ ...ref, plane: { origin: [0, 0, 5], u: [1, 0, 0], v: [0, 1, 0] } }])
+    expect(() =>
+      validateSketchCurveConstraints({ ...line, curveConstraints: [{ kind: 'concentric', ref: 'R' }] }, [ref]),
+    ).toThrow(/circle or arc/)
+  })
+
+  it('round-trips through the document and rejects dangling references', () => {
+    const a = addSketchCurveConstraint(circle('A', [3, 4], 2), { kind: 'concentric', ref: 'R' }, [ref])
+    const doc = { ...emptyDirectDocument(), sketches: [ref, a] }
+    const back = parseDirectDocument(serializeDirectDocument(doc))
+    expect(back.sketches[1]!.curveConstraints).toEqual([{ kind: 'concentric', ref: 'R' }])
+    expect(() => parseDirectDocument(serializeDirectDocument({ ...doc, sketches: [a] }))).toThrow(/missing sketch/)
+  })
+
+  it('names constraints in RU and EN', () => {
+    expect(sketchCurveConstraintName({ kind: 'tangent_circle', ref: 'R', internal: true }, 'ru')).toBe(
+      'касание окружностей (внутреннее)',
+    )
+    expect(sketchCurveConstraintName({ kind: 'concentric', ref: 'R' }, 'en')).toBe('concentric')
+  })
+})

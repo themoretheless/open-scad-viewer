@@ -14,6 +14,7 @@ import {sameMeshJson} from '../exchange/sameMeshJson'
 import {resolveSolidInstances,type SolidInstanceLink} from '../kernel/solidInstances'
 import { sketchDimensions, type SketchDimension } from './directDimensions'
 import { validateSketchConstraints, type SketchConstraint } from './sketchConstraints'
+import { validateSketchCurveConstraints, type SketchCurveConstraint } from './sketchCurveConstraints'
 import {callGeometryRust} from '../kernel/geometry/kernel'
 import {validatePivots,validCPlane,type DirectCPlane,type DirectPivot} from './directPivots'
 import { MAX_DOCUMENT_CHARACTERS, MAX_BODY_MESH_COMPONENTS } from '../core/directDocumentLimits'
@@ -30,7 +31,7 @@ import { BrepInspectionCache } from '../kernel/brepInspectionCache'
 import { isDocumentLengthUnit, type DocumentLengthUnit } from './documentUnits'
 
 export type Point2 = [number, number]
-export interface DirectSketch { group?: string; id: string; name: string; points: Point2[]; closed: boolean; editablePath?: BezierPathJson; retainedProfile?: BrepProfile; analytic?: AnalyticCurve; plane?: SketchPlane; supportBodyId?: string; dimensions?: SketchDimension[]; constraints?: SketchConstraint[] }
+export interface DirectSketch { group?: string; id: string; name: string; points: Point2[]; closed: boolean; editablePath?: BezierPathJson; retainedProfile?: BrepProfile; analytic?: AnalyticCurve; plane?: SketchPlane; supportBodyId?: string; dimensions?: SketchDimension[]; constraints?: SketchConstraint[]; curveConstraints?: SketchCurveConstraint[] }
 /** `group` names a flat, optional grouping shown in the scene list. Bodies built from
  * source share one, so a rebuild can be recognised, replaced or deleted as a unit. */
 export interface DirectMaterial { name: string; color: string; metallic?: number; roughness?: number; opacity?: number }
@@ -200,6 +201,7 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
     validateSketchConstraints(s)
     yield
   }
+  for (const s of d.sketches) validateSketchCurveConstraints(s, d.sketches)
   const validUnitChannel = (v: number | undefined) => v === undefined || (Number.isFinite(v) && v >= 0 && v <= 1)
   for (const b of d.bodies) {
     if(b.material!==undefined&&(!b.material||typeof b.material.name!=='string'||!b.material.name.length||b.material.name.length>100||typeof b.material.color!=='string'||!/^#[0-9a-f]{6}$/i.test(b.material.color)))throw Error('Invalid body material.')
