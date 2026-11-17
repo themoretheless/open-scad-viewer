@@ -134,7 +134,7 @@ export function useModalDialog(options: ModalDialogOptions) {
     }
     const active = activeElement()
     const current = active ? stops.indexOf(active) : -1
-    stops[nextTrappedIndex(current, stops.length, event.shiftKey)].focus()
+    stops[nextTrappedIndex(current, stops.length, event.shiftKey)]?.focus()
   }
 
   return { handleKeydown }

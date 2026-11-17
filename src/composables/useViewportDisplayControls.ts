@@ -407,8 +407,8 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
   }
 
   async function copyMeasurement(value: PanelMeasurement) {
-    if (value.points.length < 2) return
     const [a, b] = value.points
+    if (a === undefined || b === undefined) return
     const dx = b[0] - a[0]
     const dy = b[1] - a[1]
     const dz = b[2] - a[2]

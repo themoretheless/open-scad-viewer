@@ -1,7 +1,7 @@
 import { createApp, markRaw } from 'svet'
 import { sourceFileExtension } from './language/rushFrontendDetect'
 import App from './App.svt'
-import { EXAMPLES } from './data/examples'
+import { DEFAULT_EXAMPLE_SOURCE } from './data/examples'
 import { storageGet, storageGetEnum, storageKeys, storageRemove, storageSet } from './core/safeStorage'
 import { resolveTheme, THEME_SELECTIONS, type ThemeSelection } from './app/themePreferences'
 import { IndexedDbWorkspaceRepository } from './app/workspaceIndexedDb'
@@ -50,7 +50,7 @@ const workspacePersistence = new BrowserWorkspacePersistence(
 )
 const importedSource = readWorkspaceShareHash(location.hash)
 const bootstrap = await workspacePersistence.initialize({
-  fallbackSource: EXAMPLES.basic,
+  fallbackSource: DEFAULT_EXAMPLE_SOURCE,
   importedSource,
   importedFileName: `shared-model${sourceFileExtension(importedSource ?? '')}`,
 })

@@ -55,10 +55,10 @@ export function useSourceProvenanceCaret(options: UseSourceProvenanceCaretOption
     entries.sort((a, b) => a.start - b.start || b.order - a.order)
     const maxEnd = new Array<number>(entries.length)
     let max = -Infinity
-    for (let i = 0; i < entries.length; i++) {
-      if (entries[i].end > max) max = entries[i].end
+    entries.forEach((entry, i) => {
+      if (entry.end > max) max = entry.end
       maxEnd[i] = max
-    }
+    })
     provenanceSpanCache = { meshes, spans: entries, maxEnd }
     return provenanceSpanCache
   }
@@ -78,7 +78,7 @@ export function useSourceProvenanceCaret(options: UseSourceProvenanceCaretOption
       hi = spans.length
     while (lo < hi) {
       const mid = (lo + hi) >>> 1
-      if (spans[mid].start <= caret) lo = mid + 1
+      if ((spans[mid]?.start ?? Infinity) <= caret) lo = mid + 1
       else hi = mid
     }
     let sourceId: number | null = null
@@ -87,8 +87,8 @@ export function useSourceProvenanceCaret(options: UseSourceProvenanceCaretOption
     for (let j = lo - 1; j >= 0; j--) {
       // No span at or before j reaches the caret, or none can beat the current best:
       // a containing span starting at s is longer than caret - s, which only grows leftward.
-      if (maxEnd[j] <= caret || caret - spans[j].start >= smallestSpan) break
       const span = spans[j]
+      if (span === undefined || (maxEnd[j] ?? -Infinity) <= caret || caret - span.start >= smallestSpan) break
       if (span.end <= caret) continue
       const length = span.end - span.start
       if (length < smallestSpan || (length === smallestSpan && span.start > deepestStart)) {

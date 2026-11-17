@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.mcp.json",
     "lint": "node scripts/audit-lint.mjs",
     "lint:update": "node scripts/audit-lint.mjs --update",
+    "check:unchecked-index": "node scripts/check-unchecked-index.mjs",
     "format": "prettier --write",
     "test": "vitest run",
     "test:gcode": "npm run build:geometry && cargo test --locked --manifest-path crates/Cargo.toml -p gcode-core -p slicer-core && cargo test --locked --manifest-path crates/Cargo.toml -p geometry-bridge --test gcode && vitest run tests/meshToolpathHostApi.test.ts tests/gcodePreviewWorker.test.ts tests/gcodePanel.test.ts",

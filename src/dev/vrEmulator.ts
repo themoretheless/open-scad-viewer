@@ -48,7 +48,8 @@ export function installVrEmulator(): void {
       session.requestAnimationFrame((_time, frame) => {
         const views = frame.getViewerPose(space)?.views ?? []
         const positions = views.map(view => view.transform.position)
-        const distance = positions.length === 2 ? Math.hypot(positions[0].x - positions[1].x, positions[0].y - positions[1].y, positions[0].z - positions[1].z) : 0
+        const [left, right] = positions
+        const distance = positions.length === 2 && left && right ? Math.hypot(left.x - right.x, left.y - right.y, left.z - right.z) : 0
         const gl = device.appCanvas?.getContext('webgl2')
         evidence.textContent = `Views: ${views.map(view => view.eye).join(', ')} · eye distance ${(distance * 1000).toFixed(1)} mm · WebGL error ${gl?.getError() ?? 'unavailable'}`
       })

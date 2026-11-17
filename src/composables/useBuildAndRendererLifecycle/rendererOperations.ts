@@ -272,8 +272,9 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
       context.renderer?.setMeshVisibilityBatch(context.options.meshVisibility.value)
       context.options.sceneController.applyRendererHover(null)
       if (publication.nextSelectedIndex !== null) {
-        const faceRestored = previousFaceHit && previousMeshes[previousFaceHit.meshIndex]
-          && context.renderer?.restoreNativeFaceSelection(previousMeshes[previousFaceHit.meshIndex], previousFaceHit, publication.nextSelectedIndex)
+        const previousFaceMesh = previousFaceHit ? previousMeshes[previousFaceHit.meshIndex] : undefined
+        const faceRestored = previousFaceHit && previousFaceMesh
+          && context.renderer?.restoreNativeFaceSelection(previousFaceMesh, previousFaceHit, publication.nextSelectedIndex)
         if (!faceRestored) context.renderer?.selectMesh(publication.nextSelectedIndex)
         if (publication.nextIsolated) context.renderer?.toggleIsolateSelection()
       } else {

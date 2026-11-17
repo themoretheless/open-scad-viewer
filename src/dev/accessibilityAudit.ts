@@ -84,8 +84,7 @@ export function auditAccessibility(root: AuditNode): AccessibilityIssue[] {
     visit.push(node)
     // A closed <details> renders only its <summary>.
     const closed = tag === 'details' && node.getAttribute('open') === null
-    for (let i = 0; i < node.children.length; i++) {
-      const child = node.children[i]
+    for (const child of Array.from(node.children)) {
       if (!closed || child.tagName.toLowerCase() === 'summary') walk(child)
     }
   }
@@ -104,7 +103,7 @@ export function auditAccessibility(root: AuditNode): AccessibilityIssue[] {
     if (skipped(node)) return
     const own = node.tagName.toLowerCase() === 'label' ? text(node) : label
     if (own !== null) labelText.set(node, own)
-    for (let i = 0; i < node.children.length; i++) collectLabels(node.children[i], own)
+    for (const child of Array.from(node.children)) collectLabels(child, own)
   }
   collectLabels(root, null)
   for (const node of visit) {
@@ -146,7 +145,8 @@ export function auditAccessibility(root: AuditNode): AccessibilityIssue[] {
     if (!ids.has(target)) issues.push({ rule: 'broken-reference', element: `label[for=${target}]` })
   }
   for (const [, nodes] of ids) {
-    if (nodes.length > 1) issues.push({ rule: 'duplicate-id', element: describe(nodes[1]) })
+    const duplicate = nodes[1]
+    if (duplicate !== undefined) issues.push({ rule: 'duplicate-id', element: describe(duplicate) })
   }
   return issues
 }

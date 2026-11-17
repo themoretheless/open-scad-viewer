@@ -183,10 +183,10 @@ export function useCommandDispatch(options: UseCommandDispatchOptions) {
       const index = options.selectedMesh.value
       if (index !== null) v.setSceneMeshVisibility(index, options.meshVisibility.value[index] === false)
     },
-    'cycle-selection-mode': () =>
-      v.setSelectionMode(
-        SELECTION_MODES[(SELECTION_MODES.indexOf(v.selectionMode.value) + 1) % SELECTION_MODES.length],
-      ),
+    'cycle-selection-mode': () => {
+      const next = SELECTION_MODES[(SELECTION_MODES.indexOf(v.selectionMode.value) + 1) % SELECTION_MODES.length]
+      if (next !== undefined) v.setSelectionMode(next)
+    },
   }
 
   function executeCommand(id: string) {
@@ -204,7 +204,7 @@ export function useCommandDispatch(options: UseCommandDispatchOptions) {
     else if (id === 'function-reference') options.openFunctionReferenceFromCommand(paletteWasOpen)
     else if (id === 'command-palette') {
       if (!paletteWasOpen) options.openCommandPalette()
-    } else if (Object.hasOwn(actions, id)) actions[id]()
+    } else if (Object.hasOwn(actions, id)) actions[id]?.()
   }
 
   function dispatchKeyboardCommand(event: KeyboardEvent, scope: CommandScope) {

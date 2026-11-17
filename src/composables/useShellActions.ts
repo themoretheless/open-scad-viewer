@@ -35,7 +35,9 @@ export function useShellActions(options: UseShellActionsOptions) {
     if (!key) return
     event.preventDefault()
     const next = nextRovingIndex(dockTabs.indexOf(dockTab.value), dockTabs.length, key)
-    dockTab.value = dockTabs[next]
+    const nextTab = dockTabs[next]
+    if (nextTab === undefined) return
+    dockTab.value = nextTab
     void nextTick(() => document.getElementById(`dock-tab-${dockTab.value}`)?.focus())
   }
 
@@ -76,7 +78,7 @@ export function useShellActions(options: UseShellActionsOptions) {
   }
 
   function handleShellAction(name: string, args: unknown[], event?: Event) {
-    if (Object.hasOwn(actions, name)) actions[name](args, event)
+    if (Object.hasOwn(actions, name)) actions[name]?.(args, event)
   }
 
   function handleShellBinding(path: string, value: unknown) {
