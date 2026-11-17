@@ -5172,3 +5172,65 @@ fn periodic_trim_prefix_lengths_reject_missing_coverage_and_omit_partial_tables(
             .is_err()
     );
 }
+
+#[test]
+fn periodic_trim_contour_inversion_locates_vertices_and_splits() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicTrimLengthLocationStatus as Status, build_exact_periodic_surface_trim_input_edges,
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [3.5, 0.875],
+        [0.5, 0.875],
+        [0.5, 0.125],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    for (distance, expected) in [(0., 0.), (0.75, 0.5), (1.5, 1.), (2., 1.5), (4.5, 3.5)] {
+        let report = result
+            .locate_input_contour_at_length(0, distance, 1e-10, 1e-6, 1024)
+            .unwrap();
+        let [lo, hi] = report.parameter_bounds.unwrap();
+        assert!(lo <= expected && expected <= hi, "{report:?}");
+        assert_eq!(report.status, Status::Tolerance);
+        assert!(hi - lo <= 1e-6 && report.cells <= 1024);
+    }
+}
+
+#[test]
+fn periodic_trim_contour_inversion_retains_proved_bracket_on_cell_limit() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicTrimLengthLocationStatus as Status, build_exact_periodic_surface_trim_input_edges,
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [3.5, 0.875],
+        [0.5, 0.875],
+        [0.5, 0.125],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    let report = result
+        .locate_input_contour_at_length(0, 2., 1e-10, 1e-6, 6)
+        .unwrap();
+    assert_eq!(report.parameter_bounds, Some([1., 2.]));
+    assert_eq!(report.status, Status::WorkLimit);
+    assert_eq!(report.cells, 6);
+    let outside = result
+        .locate_input_contour_at_length(0, 6., 1e-10, 1e-6, 6)
+        .unwrap();
+    assert!(outside.parameter_bounds.is_none());
+    assert_eq!(outside.status, Status::Outside);
+}

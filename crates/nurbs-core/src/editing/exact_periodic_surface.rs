@@ -5198,13 +5198,7 @@ impl PeriodicTrimInputEdges {
         use PeriodicTrimLengthLocationStatus as Status;
         use num_traits::Zero;
 
-        crate::check(
-            distance.is_finite()
-                && distance >= 0.
-                && parameter_tolerance.is_finite()
-                && parameter_tolerance > 0.,
-            "Periodic trim length inversion needs a nonnegative distance and positive parameter tolerance",
-        )?;
+        validate_trim_length_inversion(distance, parameter_tolerance)?;
         let result = |parameter_bounds, cells, status| PeriodicTrimLengthLocation {
             parameter_bounds,
             cells,
@@ -5220,7 +5214,7 @@ impl PeriodicTrimInputEdges {
             };
             return Ok(result(None, 0, status));
         };
-        let mut cells = length.cells;
+        let cells = length.cells;
         if distance == 0. {
             return Ok(result(Some([0., 0.]), cells, Status::Tolerance));
         }
@@ -5232,47 +5226,166 @@ impl PeriodicTrimInputEdges {
         }
 
         let zero = BigRational::zero();
-        let mut bounds = [0.0_f64, 1.0_f64];
-        loop {
-            let [lo, hi] = bounds;
-            if (hi - lo).next_up() <= parameter_tolerance {
-                return Ok(result(Some(bounds), cells, Status::Tolerance));
-            }
-            let third = (hi - lo) / 3.;
-            let candidates = [lo + third, hi - third];
-            if !(lo < candidates[0] && candidates[0] < candidates[1] && candidates[1] < hi) {
-                return Ok(result(Some(bounds), cells, Status::PrecisionLimit));
-            }
-            for candidate in candidates {
-                if candidate <= bounds[0] || candidate >= bounds[1] {
-                    continue;
-                }
-                if cells == max_cells {
-                    return Ok(result(Some(bounds), cells, Status::WorkLimit));
-                }
+        refine_trim_length_location(
+            [0., 1.],
+            distance,
+            parameter_tolerance,
+            cells,
+            max_cells,
+            |candidate, remaining| {
                 let parameter = BigRational::from_float(candidate).unwrap();
                 let prefix = self.measure_rational_input_segment_range_length(
                     contour,
                     segment,
                     [&zero, &parameter],
                     length_tolerance,
-                    max_cells - cells,
+                    remaining,
                 )?;
-                let Some(prefix) = prefix.length else {
-                    return Ok(result(Some(bounds), cells, Status::WorkLimit));
-                };
-                cells += prefix.cells;
-                if prefix.bounds[1] < distance {
-                    bounds[0] = candidate;
-                } else if prefix.bounds[0] > distance {
-                    bounds[1] = candidate;
+                Ok(prefix.length.map(|length| (length.bounds, length.cells)))
+            },
+        )
+    }
+
+    /// Invert certified length measured from vertex zero of a closed contour.
+    /// Returned parameters use segment index plus local parameter.
+    pub fn locate_input_contour_at_length(
+        &self,
+        contour: usize,
+        distance: f64,
+        length_tolerance: f64,
+        parameter_tolerance: f64,
+        max_cells: usize,
+    ) -> Result<PeriodicTrimLengthLocation> {
+        use crate::distance_bounds::Interval;
+        use PeriodicTrimLengthLocationStatus as Status;
+        use num_traits::Zero;
+
+        validate_trim_length_inversion(distance, parameter_tolerance)?;
+        let table =
+            self.measure_input_contour_prefix_lengths(contour, length_tolerance, max_cells)?;
+        let result = |parameter_bounds, status| PeriodicTrimLengthLocation {
+            parameter_bounds,
+            cells: table.cells,
+            status,
+        };
+        let Some(prefixes) = table.vertex_prefix_bounds else {
+            let status = if table.minimum_cells == 0 {
+                Status::Unavailable
+            } else {
+                Status::WorkLimit
+            };
+            return Ok(result(None, status));
+        };
+        let [total_low, total_high] = prefixes[prefixes.len() - 1];
+        if distance == 0. {
+            return Ok(result(Some([0., 0.]), Status::Tolerance));
+        }
+        if distance > total_high {
+            return Ok(result(None, Status::Outside));
+        }
+        if distance > total_low {
+            return Ok(result(None, Status::LengthUncertainty));
+        }
+        let lo = prefixes.partition_point(|bounds| bounds[1] < distance) - 1;
+        let hi = prefixes
+            .partition_point(|bounds| bounds[0] <= distance)
+            .min(prefixes.len() - 1);
+        let zero = BigRational::zero();
+        refine_trim_length_location(
+            [lo as f64, hi as f64],
+            distance,
+            parameter_tolerance,
+            table.cells,
+            max_cells,
+            |candidate, remaining| {
+                let segment = candidate.floor() as usize;
+                let local = candidate - segment as f64;
+                let [lo, hi] = prefixes[segment];
+                if local == 0. {
+                    return Ok(Some(([lo, hi], 0)));
                 }
+                let parameter = BigRational::from_float(local).unwrap();
+                let prefix = self.measure_rational_input_segment_range_length(
+                    contour,
+                    segment,
+                    [&zero, &parameter],
+                    length_tolerance,
+                    remaining,
+                )?;
+                let Some(length) = prefix.length else {
+                    return Ok(None);
+                };
+                let bounds = Interval::new(lo, hi)?
+                    .add(Interval::new(length.bounds[0], length.bounds[1])?)?;
+                Ok(Some(([bounds.lo.max(lo), bounds.hi], length.cells)))
+            },
+        )
+    }
+}
+
+fn validate_trim_length_inversion(distance: f64, parameter_tolerance: f64) -> Result<()> {
+    crate::check(
+        distance.is_finite()
+            && distance >= 0.
+            && parameter_tolerance.is_finite()
+            && parameter_tolerance > 0.,
+        "Periodic trim length inversion needs a nonnegative distance and positive parameter tolerance",
+    )
+}
+
+fn refine_trim_length_location(
+    mut bounds: [f64; 2],
+    distance: f64,
+    parameter_tolerance: f64,
+    mut cells: usize,
+    max_cells: usize,
+    mut prefix_at: impl FnMut(f64, usize) -> Result<Option<([f64; 2], usize)>>,
+) -> Result<PeriodicTrimLengthLocation> {
+    use PeriodicTrimLengthLocationStatus as Status;
+
+    let status = loop {
+        let [lo, hi] = bounds;
+        if (hi - lo).next_up() <= parameter_tolerance {
+            break Status::Tolerance;
+        }
+        let third = (hi - lo) / 3.;
+        let candidates = [lo + third, hi - third];
+        if !(lo < candidates[0] && candidates[0] < candidates[1] && candidates[1] < hi) {
+            break Status::PrecisionLimit;
+        }
+        for candidate in candidates {
+            if candidate <= bounds[0] || candidate >= bounds[1] {
+                continue;
             }
-            if bounds == [lo, hi] {
-                return Ok(result(Some(bounds), cells, Status::LengthUncertainty));
+            let remaining = max_cells - cells;
+            let prefix = if remaining == 0 {
+                None
+            } else {
+                prefix_at(candidate, remaining)?
+            };
+            let Some((prefix, used)) = prefix else {
+                return Ok(PeriodicTrimLengthLocation {
+                    parameter_bounds: Some(bounds),
+                    cells,
+                    status: Status::WorkLimit,
+                });
+            };
+            cells += used;
+            if prefix[1] < distance {
+                bounds[0] = candidate;
+            } else if prefix[0] > distance {
+                bounds[1] = candidate;
             }
         }
-    }
+        if bounds == [lo, hi] {
+            break Status::LengthUncertainty;
+        }
+    };
+    Ok(PeriodicTrimLengthLocation {
+        parameter_bounds: Some(bounds),
+        cells,
+        status,
+    })
 }
 
 #[derive(Clone, Debug)]

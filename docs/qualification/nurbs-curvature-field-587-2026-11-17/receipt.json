@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0587",
+  "testedBase": "09f47a25299f84ad6ddf4fcfce7f12689aff6871",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 165,
+  "scope": [
+    "Invert certified contour prefix length across original vertices and seam subdivisions.",
+    "Check exact vertex stations and seam splits, out-of-range distances, and preservation of proved brackets at the shared cell limit."
+  ],
+  "logSha256": "4566339f893ca1db81f3fea197095dd3246e8bd2a01b299c126152f4c9b600c0",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "7733e761b4a734c69581e53f5c48306df93a6dacc22318cb5253847fe603954a",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "efba7c4baea03c4d9ac1345d2df95cb7b6173ae88fdfd2167b421b46353a11e4"
+  }
+}
