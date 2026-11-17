@@ -9,25 +9,29 @@ const bytes=readFileSync(path),module=await WebAssembly.compile(bytes)
 assert.deepEqual(WebAssembly.Module.imports(module),[])
 const instance=await WebAssembly.instantiate(module,{})
 const wasm=instance.exports as unknown as {memory:WebAssembly.Memory;abi_alloc(n:number):number;abi_free(p:number,n:number):void;abi_request(op:number,p:number,n:number):bigint}
-function request(value:unknown):any{
+type Reply={ok:boolean;error?:unknown;value?:unknown}
+type NurbsBox={faces:{surface:{controlPoints:number[][][]}}[]}
+type CaseRow={name:string;ok:boolean;elapsedMs:number;error:unknown}
+type GraphResult={outcomes:{geometry:{representation:string;model:{vertices:{point:unknown[][]}[];faces:unknown[];topologyIds:{faces:unknown[]}};artifact:{geometry:unknown;source:unknown}}}[]}
+function request(value:unknown):Reply{
  const data=encodeBinary(value),ptr=wasm.abi_alloc(data.length);assert(ptr)
  new Uint8Array(wasm.memory.buffer,ptr,data.length).set(data)
  try{const packed=wasm.abi_request(0,ptr,data.length),p=Number(packed&0xffffffffn),n=Number(packed>>32n)
-  try{return decodeBinary(new Uint8Array(wasm.memory.buffer,p,n))}finally{wasm.abi_free(p,n)}
+  try{return decodeBinary(new Uint8Array(wasm.memory.buffer,p,n)) as Reply}finally{wasm.abi_free(p,n)}
  }finally{wasm.abi_free(ptr,data.length)}
 }
 const source=request({op:'brep_nurbs_box',min:[0,0,0],max:[4,8,6]});assert(source.ok)
-const face=(axis:number,value:number)=>source.value.faces.findIndex((f:any)=>f.surface.controlPoints.flat().every((p:number[])=>p[axis]===value))
+const face=(axis:number,value:number)=>(source.value as NurbsBox).faces.findIndex(f=>f.surface.controlPoints.flat().every((p:number[])=>p[axis]===value))
 const faces=[face(0,0),face(1,8),face(0,4)];assert(faces.every(f=>f>=0))
 const carrier=(rational:boolean)=>({space:'d3',geometryKind:'solid',representation:rational?'rational-brep':'analytic-brep',evidence:{tag:'representation-preserving'}})
 const cube={id:0,kind:'box',valueType:carrier(false),size:[4,8,6],center:false}
 const round={id:1,kind:'full-round-exact',input:0,faces,valueType:carrier(true)}
 const graph=(nodes:unknown[])=>({op:'brep_graph',nodes,outputs:[nodes.length-1],maxNodes:4,maxBytes:4194304})
-const cases:any[]=[]
-function run(name:string,value:unknown,ok:boolean):any{const start=performance.now(),reply=request(value)
+const cases:CaseRow[]=[]
+function run<T=unknown>(name:string,value:unknown,ok:boolean):T{const start=performance.now(),reply=request(value)
  assert.equal(reply.ok,ok,`${name}: ${JSON.stringify(reply.error)}`)
- cases.push({name,ok,elapsedMs:performance.now()-start,error:reply.error});console.log(JSON.stringify(cases.at(-1)));return reply.value}
-const result=run('public-graph-exact-result',graph([cube,round]),true)
+ cases.push({name,ok,elapsedMs:performance.now()-start,error:reply.error});console.log(JSON.stringify(cases.at(-1)));return reply.value as T}
+const result=run<GraphResult>('public-graph-exact-result',graph([cube,round]),true)
 const value=result.outcomes[0].geometry
 assert.equal(value.representation,'rational-brep')
 assert.deepEqual(value.model,value.artifact.geometry)

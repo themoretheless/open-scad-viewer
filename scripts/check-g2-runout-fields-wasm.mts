@@ -5,10 +5,11 @@ import {resolve} from 'node:path'
 import artifact from '../src/generated/geometry-kernels/identity'
 import * as module from 'node:module'
 import {load} from '../tests/fixtures/raw-import-loader.mjs'
-import type {MainSolidJob} from '../src/kernel/mainSolidProtocol'
+import type {MainSolidJob,MainSolidResponse,MainSolidResults} from '../src/kernel/mainSolidProtocol'
 import type {DirectDocument} from '../src/app/directModeling'
 import type {SolidSurfaceBuildOptions} from '../src/kernel/solidSurfaceConstruction'
-if(typeof(module as any).registerHooks==='function')(module as any).registerHooks({load})
+const moduleHooks=module as unknown as {registerHooks?:(hooks:{load:typeof load})=>void}
+if(typeof moduleHooks.registerHooks==='function')moduleHooks.registerHooks({load})
 else module.register(new URL('../tests/fixtures/raw-import-loader.mjs',import.meta.url),import.meta.url)
 const {createG2RunoutSurface,validG2RunoutResult}=await import('../src/kernel/geometricG2')
 const {createMainSolidWorkerHandler}=await import('../src/kernel/mainSolidWorkerRuntime')
@@ -29,7 +30,8 @@ for(const [name,width,maxCells] of [['wide',.5,100000],['one-tenth-mm',.1,100000
  assert.equal(JSON.stringify([source,plane]),before)
  cases.push({name,elapsedMs:performance.now()-started,report:r.report})
 }
-const messages:any[]=[],handler=createMainSolidWorkerHandler(message=>messages.push(message)),worker=[]
+type SurfaceBuildReply={ok:boolean;result:MainSolidResults['surfaceBuild']}
+const messages:MainSolidResponse[]=[],handler=createMainSolidWorkerHandler(message=>messages.push(message)),worker=[]
 for(const [id,width] of [[1,.5],[2,.1]] as const){
  const document:DirectDocument={version:1,bodies:[],sketches:[],surfaces:[{id:'source',name:'Source',surface:source,segmentsU:4,segmentsV:4},{id:'plane',name:'End',surface:plane,segmentsU:4,segmentsV:4}],
   curves:[{id:'target',name:'Target',curve:{degree:1,knots:[0,0,1,1],controlPoints:[[0,1,width],[1,1,width]],weights:[1,1]}}]}
@@ -37,7 +39,7 @@ for(const [id,width] of [[1,.5],[2,.1]] as const){
  const options:SolidSurfaceBuildOptions={kind:'nurbs-runout',ids:['source','plane','target'],id:'new-runout',reversed:[],sweep:{mode:'translation',normal:[0,0,1],sections:4,maxDeviation:.01},
   runout:{sourceBoundary:'vMax',sourcePosition:1-width,tangentLengthMm:width,flipSide:false,reverse:false}}
  const job:MainSolidJob={kind:'surfaceBuild',document,options}
- await handler({version:1,id,job});const reply=messages.at(-1)
+ await handler({version:1,id,job});const reply=messages.at(-1) as SurfaceBuildReply
  assert.equal(reply.ok,true);assert(mainSolidResult(mainSolidExpectation(job),reply.result))
  if(width===.5){assert.equal(reply.result.error,'');assert.equal(reply.result.document.surfaces.length,3)}
  else {assert.equal(reply.result.document,null);assert.equal(reply.result.error,'RUNOUT_CURVATURE_LIMIT')}

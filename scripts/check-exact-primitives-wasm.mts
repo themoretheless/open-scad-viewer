@@ -12,14 +12,15 @@ assert.deepEqual(WebAssembly.Module.imports(module), [])
 const instance = await WebAssembly.instantiate(module, {})
 const w = instance.exports as unknown as { memory: WebAssembly.Memory; abi_alloc(n:number):number; abi_free(p:number,n:number):void; abi_request(op:number,p:number,n:number):bigint }
 const cases: object[] = []
-function request(v:unknown):any {
+type Reply = { ok: boolean; value: { status?: unknown; refusal?: unknown; geometry?: unknown; metadata?: unknown; topologyAuthority?: unknown } }
+function request(v:unknown):Reply {
   const data = encodeBinary(v), original = data.slice(), ptr = w.abi_alloc(data.length)
   assert(ptr)
   new Uint8Array(w.memory.buffer, ptr, data.length).set(data)
   try {
     const packed = w.abi_request(0, ptr, data.length), p = Number(packed & 0xffffffffn), n = Number(packed >> 32n)
     try {
-      const result = decodeBinary(new Uint8Array(w.memory.buffer, p, n))
+      const result = decodeBinary(new Uint8Array(w.memory.buffer, p, n)) as Reply
       assert.deepEqual(new Uint8Array(w.memory.buffer, ptr, data.length), original)
       return result
     } finally { w.abi_free(p, n) }
