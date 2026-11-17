@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 421,
-  "unallocatedCount": 579,
+  "specifiedCount": 422,
+  "unallocatedCount": 578,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -10836,6 +10836,32 @@
       "remainingQualification": [
         "Clip all coplanar polyline spans against one transverse section with a shared work budget.",
         "One exact section serves the entire polyline. Every span retains closed local parameter intervals and repeated vertices are handled without losing span indices.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0422",
+      "name": "Гарантированная длина траектории в материале поперечного сечения",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::bounded_polyhedral_section_path_length",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/mod.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops/clip.rs",
+        "docs/qualification/nurbs-curvature-field-422-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-422-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the polyline length retained by exact transverse section clipping.",
+        "Exact clip intervals measure covered fractions per span. A certified sum of spatial radical lengths handles irrational directions, repeated traversals and voids.",
         "WASM and application integration are separate."
       ]
     }

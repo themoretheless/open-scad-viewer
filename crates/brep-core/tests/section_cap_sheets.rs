@@ -2594,3 +2594,60 @@ fn polyline_clip_preserves_repeated_inside_vertices_and_rejects_off_plane_tails(
     path[2][2] = q(2);
     assert!(exact_polyhedral_section_clip_polyline(solid, normal, 1., &path, 1_000_000).is_err());
 }
+
+#[test]
+fn section_path_length_counts_repeated_traversals_and_excludes_holes() {
+    use brep_core::{
+        analysis::bounded_polyhedral_section_path_length,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let p = |x: i64| {
+        [
+            Q::from_integer(x.into()),
+            Q::new(3.into(), 2.into()),
+            Q::from_integer(1.into()),
+        ]
+    };
+    let path = [p(-1), p(5), p(5), p(-1)];
+    let normal = [0., 0., 1.];
+    let report =
+        bounded_polyhedral_section_path_length(solid, normal, 1., &path, 1e-10, 1_000_000).unwrap();
+    assert_eq!(
+        report.bounds_mm,
+        [Q::from_integer(6.into()), Q::from_integer(6.into())]
+    );
+    assert!(
+        bounded_polyhedral_section_path_length(solid, normal, 1., &path, 1e-10, report.exact_work)
+            .is_ok()
+    );
+    assert!(
+        bounded_polyhedral_section_path_length(
+            solid,
+            normal,
+            1.,
+            &path,
+            1e-10,
+            report.exact_work - 1
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn section_path_length_encloses_an_irrational_oblique_chord() {
+    use brep_core::analysis::bounded_polyhedral_section_path_length;
+    use num_rational::BigRational as Q;
+    let solid = shifted_oblique_solid(0.);
+    let q = |a: i64, b: i64| Q::new(a.into(), b.into());
+    let path = [[q(0, 1), q(3, 2), q(7, 6)], [q(3, 1), q(-3, 2), q(7, 6)]];
+    let report =
+        bounded_polyhedral_section_path_length(&solid, [-1., -1., 3.], 2., &path, 1e-12, 1_000_000)
+            .unwrap();
+    let [lower, upper] = report.bounds_mm;
+    assert!(lower.pow(2) < q(8, 1) && q(8, 1) < upper.pow(2));
+    assert!(upper - lower <= Q::from_float(1e-12).unwrap());
+}

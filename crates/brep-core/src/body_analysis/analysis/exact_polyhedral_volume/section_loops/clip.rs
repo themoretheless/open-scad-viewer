@@ -187,3 +187,47 @@ fn is_material(location: PolyhedralSectionPointLocation) -> bool {
         PolyhedralSectionPointLocation::Material | PolyhedralSectionPointLocation::Boundary { .. }
     )
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BoundedPolyhedralSectionPathLength {
+    /// Outward rational bounds on the total length inside closed material.
+    pub bounds_mm: [Q; 2],
+    pub exact_work: u64,
+}
+
+/// Measure the length of a planar polyline inside a strict transverse section.
+/// Boundary spans have length, isolated touches have zero length, and repeated
+/// traversals contribute once per traversal.
+pub fn bounded_polyhedral_section_path_length(
+    solid: &QualifiedClosedSolid,
+    normal: [f64; 3],
+    offset: f64,
+    points_mm: &[[Q; 3]],
+    max_width_mm: f64,
+    max_exact_work: u64,
+) -> Result<BoundedPolyhedralSectionPathLength> {
+    let width = super::super::enclosure_width(max_width_mm)?;
+    let clip =
+        exact_polyhedral_section_clip_polyline(solid, normal, offset, points_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - clip.exact_work;
+    let mut squares = Vec::new();
+    for (span, intervals) in points_mm.windows(2).zip(clip.span_intervals) {
+        spend(&mut remaining, 1 + 2 * intervals.len() as u64)?;
+        let covered: Q = intervals.into_iter().map(|[lo, hi]| hi - lo).sum();
+        if covered.is_zero() || span[0] == span[1] {
+            continue;
+        }
+        spend(&mut remaining, 12)?;
+        let span_squared: Q = span[0]
+            .iter()
+            .zip(&span[1])
+            .map(|(a, b)| (b - a).pow(2))
+            .sum();
+        squares.push(covered.pow(2) * span_squared);
+    }
+    let bounds_mm = super::super::bound_root_sum(squares, width, &mut remaining)?;
+    Ok(BoundedPolyhedralSectionPathLength {
+        bounds_mm,
+        exact_work: max_exact_work - remaining,
+    })
+}
