@@ -12,6 +12,7 @@ pub mod bilinear_graph;
 pub mod closed_graph;
 pub(crate) mod opposite_rows;
 mod monotone_coordinate;
+pub(crate) mod jordan_partition;
 
 mod certificate;
 mod separates_surfaces;

@@ -88,6 +88,11 @@ pub(crate) fn active_pcurves(coedge: &Coedge) -> Result<Vec<Curve>> {
     let Some(trim) = coedge.trim() else {
         return Ok(vec![curve.clone()]);
     };
+    // A forward full-period trim already has the authored periodic
+    // representation. Its world curve may have an independently remapped clock.
+    if curve.periodic && trim.pcurve_parameter == curve.domain() {
+        return Ok(vec![curve.clone()]);
+    }
     // The pcurve already stores literal lifted coordinates. Its endpoint
     // lift metadata is validated by the caller against the surface chart.
     restrict_pcurve(
@@ -97,7 +102,26 @@ pub(crate) fn active_pcurves(coedge: &Coedge) -> Result<Vec<Curve>> {
 }
 
 pub(crate) fn restrict_pcurve(curve: &Curve, [a, b]: [Q; 2]) -> Result<Vec<Curve>> {
+    curve.validate()?;
     let [lo, hi] = [(&a).min(&b).clone(), (&a).max(&b).clone()];
+    let [start, end] = curve.domain().map(|v| Q::from_float(v).unwrap());
+    if lo < start || hi > end || lo == hi {
+        return Err(unsupported("Exact pcurve restriction needs a nonempty native interval"));
+    }
+    let native;
+    let curve = if curve.periodic {
+        if !nurbs_core::curve_partition_agreement::verify_periodic_source_closure(curve)? {
+            return Err(unsupported("Exact periodic pcurve restriction needs a closed native period"));
+        }
+        // Within the native period, ordinary B-spline evaluation uses the
+        // same active poles. Exact closure identifies the endpoint limits.
+        let mut basis = curve.clone();
+        basis.periodic = false;
+        native = basis;
+        &native
+    } else {
+        curve
+    };
     let mut clocks = vec![lo.clone(), hi.clone()];
     clocks.extend(
         curve
@@ -123,4 +147,36 @@ pub(crate) fn restrict_pcurve(curve: &Curve, [a, b]: [Q; 2]) -> Result<Vec<Curve
             materialize_span(curve, &net, &domain)
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn periodic_pcurve_trim_keeps_order_and_exact_endpoints() {
+        let curve = Curve {
+            degree: 1,
+            periodic: true,
+            knots: vec![-0.25, 0., 0.25, 0.5, 0.75, 1., 1.25],
+            control_points: [[0., 0.], [1., 0.], [1., 1.], [0., 1.], [0., 0.]]
+                .map(Vec::from)
+                .to_vec(),
+            weights: vec![1.; 5],
+        };
+        let range = |ends: [f64; 2]| ends.map(|v| Q::from_float(v).unwrap());
+        let forward = restrict_pcurve(&curve, range([0.125, 1.])).unwrap();
+        assert_eq!(forward.len(), 4);
+        assert!(forward.iter().all(|piece| !piece.periodic));
+        assert_eq!(forward[0].control_points[0], vec![0.5, 0.]);
+        assert_eq!(forward[3].control_points[1], vec![0., 0.]);
+        assert!(forward.windows(2).all(|pair| {
+            pair[0].control_points.last() == pair[1].control_points.first()
+        }));
+        let reverse = restrict_pcurve(&curve, range([1., 0.125])).unwrap();
+        assert_eq!(reverse[0].control_points[0], vec![0., 0.]);
+        assert_eq!(reverse[3].control_points[1], vec![0.5, 0.]);
+        assert!(restrict_pcurve(&curve, range([0.5, 0.5])).is_err());
+        assert!(restrict_pcurve(&curve, range([0.5, 1.25])).is_err());
+    }
 }

@@ -841,7 +841,6 @@ const surfaceBuildResult=shallowRef<ReturnType<typeof buildSolidSurface>|null>(n
 const invalidQuantities = ref<Record<string, boolean>>({})
 watch(()=>[advancedOp.value,advanced.value.sweep,selectedSketch.value?.analytic?.kind],()=>quantityValidity('curve.sweep-range',advancedOp.value!=='curve'||selectedSketch.value?.analytic?.kind!=='arc'||Number.isFinite(advanced.value.sweep)&&Math.abs(advanced.value.sweep)>=.1&&Math.abs(advanced.value.sweep)<=360),{flush:'sync'})
 const bodyEditRevision=ref(0),bodyEditRetryVisible=ref(false)
-watch(advancedOp,()=>{bodyEditRetryVisible.value=false},{flush:'sync'})
 watch(()=>props.open,open=>{if(!open)advancedOp.value=null},{flush:'sync'})
 const bodyEditWorker=createSolidPreviewWorker()
 let bodyEditGeneration=0,bodyEditApplyGeneration:number|null=null
@@ -856,6 +855,7 @@ const invalidQuantitiesKey=computed(()=>JSON.stringify(invalidQuantities.value))
 const selectedIdsKey=computed(()=>selectedIds.value.join('\0'))
 watch(()=>[props.open,bodyEditRevision.value,advancedOp.value,document.value,selection.value,faceIndex.value,edgeIndex.value,edgeIndexes.value.join(','),openingFaces.value.join(','),surfaceInputs.value.join('\0'),selectedIdsKey.value,surfaceReversed.value.join(','),loftPreviewId.value,activeGroup.value,JSON.stringify(advanced.value),JSON.stringify(pointTrimPick.value),filletSegments.value,invalidQuantitiesKey.value],()=>{
  cancelBodyEdit()
+ bodyEditRetryVisible.value=false
  if(!props.open||Object.keys(invalidQuantities.value).length||!(advancedOp.value==='full-round'||advancedOp.value==='nurbs-offset'||advancedOp.value==='nurbs-point-trim'||isSolidBodyEdit(advancedOp.value)||isSolidProfileEdit(advancedOp.value)||advancedOp.value==='profile-prepare'||isSolidNurbsRefit(advancedOp.value)||isSolidSurfaceBuild(advancedOp.value)||isNurbsMatch(advancedOp.value)||isSolidSceneEdit(advancedOp.value)))return
  const generation=bodyEditGeneration
  const operation=advancedOp.value

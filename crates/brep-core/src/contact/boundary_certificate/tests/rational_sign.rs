@@ -370,15 +370,25 @@ fn check_coupled_wall_certificates(
 
 #[test]
 fn rectangular_rational_wall_outside_the_rails_class_keeps_joint_certificates() {
-    check_polygonal_rational_wall_certificates(false);
+    check_polygonal_rational_wall_certificates(false, false, false);
 }
 
 #[test]
 fn oblique_quadrilateral_rational_walls_keep_joint_certificates() {
-    check_polygonal_rational_wall_certificates(true);
+    check_polygonal_rational_wall_certificates(true, false, false);
 }
 
-fn check_polygonal_rational_wall_certificates(oblique: bool) {
+#[test]
+fn curved_nonconvex_wall_projection_keeps_joint_certificates() {
+    check_polygonal_rational_wall_certificates(false, true, false);
+}
+
+#[test]
+fn multispan_curved_nonconvex_wall_projection_keeps_joint_certificates() {
+    check_polygonal_rational_wall_certificates(false, true, true);
+}
+
+fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, multispan: bool) {
     let corners = [[0., 0.], [4., 0.], [4., 4.], [0., 4.]];
     let sections = [0., 4., 8.].map(|z| {
         vec![(0..4)
@@ -393,6 +403,10 @@ fn check_polygonal_rational_wall_certificates(oblique: bool) {
     let wall_count = reference.faces.len() - 2;
     for face in &mut reference.0.faces[..wall_count] {
         let surface = &mut face.surface;
+        if multispan && !(surface.control_points[0][0][1] == 0.
+            && surface.control_points[1][0][1] == 0.) {
+            continue;
+        }
         let start = surface.control_points[0][0].clone();
         let end = surface.control_points[1][1].clone();
         surface.degree_u = 2;
@@ -421,6 +435,33 @@ fn check_polygonal_rational_wall_certificates(oblique: bool) {
         // weights are symmetric across the two station endpoints.
         surface.control_points[1][2][2] = if start[2] == 0. { 3.5 } else { 4.5 };
     }
+    if curved_seam {
+        // Bend the shared station seam on the y=0 wall. The upper
+        // chart has a nonconvex projected image above this bowed edge.
+        // Move the same three seam-adjacent poles on each side to
+        // retain matching first and second seam jets.
+        let bump = 0.125;
+        for face in &mut reference.0.faces[..wall_count] {
+            let s = &mut face.surface;
+            if s.control_points[0][0][1] == 0. && s.control_points[s.degree_u][0][1] == 0. {
+                let columns = if s.control_points[0][0][2] == 0. { 2..5 } else { 0..3 };
+                for j in columns {
+                    s.control_points[1][j][2] += bump;
+                }
+            }
+        }
+        for edge in &mut reference.0.edges {
+            let c = &mut edge.curve;
+            let [a, b] = c.control_points.as_slice() else { continue };
+            if a[1] == 0. && b[1] == 0. && a[2] == 4. && b[2] == 4. {
+                let middle = vec![(a[0] + b[0]) / 2., 0., 4. + bump];
+                c.control_points.insert(1, middle);
+                c.degree = 2;
+                c.knots = vec![0., 0., 0., 1., 1., 1.];
+                c.weights = vec![1.; 3];
+            }
+        }
+    }
     if oblique {
         reference = crate::transform::affine(&reference, [
             [1., 0., 0., 0.],
@@ -429,11 +470,30 @@ fn check_polygonal_rational_wall_certificates(oblique: bool) {
             [0., 0., 0., 1.],
         ]).unwrap();
     }
+    if multispan {
+        // The inserted knot mixes weights 1 and 4. Scaling Z by five
+        // makes the new Cartesian coordinates exactly dyadic.
+        reference = crate::transform::affine(&reference, [
+            [1., 0., 0., 0.], [0., 1., 0., 0.],
+            [0., 0., 5., 0.], [0., 0., 0., 1.],
+        ]).unwrap();
+        let surface = &mut reference.0.faces[4].surface;
+        *surface = nurbs_core::surface_edit::insert(
+            surface, nurbs_core::surface::Axis::V, 0.5, 1,
+        ).unwrap();
+        assert_eq!(surface.knots_v.iter().filter(|&&k| k == 0.5).count(), 1);
+    }
     reference.validate().unwrap();
-    let wall = &reference.faces[0].surface;
+    let wall = &reference.faces[if curved_seam { 4 } else { 0 }].surface;
     let chart = nurbs_core::surface_injectivity::certify_chart(wall, 1000).unwrap();
     assert!(chart.proven, "{chart:?}");
-    assert_eq!(chart.reason, if oblique {
+    assert_eq!(chart.reason, if multispan {
+        assert!(wall.evaluate(0.5, 0.).unwrap().point[2] > 20.);
+        "global-rational-multispan-jordan-jacobian"
+    } else if curved_seam {
+        assert!(wall.evaluate(0.5, 0.).unwrap().point[2] > 4.);
+        "global-rational-jordan-jacobian"
+    } else if oblique {
         "global-rational-convex-quadrilateral-jacobian"
     } else {
         "global-rational-rectangle-jacobian"
@@ -454,6 +514,10 @@ fn check_polygonal_rational_wall_certificates(oblique: bool) {
             v.boundary.intersections.faces.all_faces_injective,
             v.boundary.intersections.pairs.all_pairs_classified,
             &v.boundary.intersections.faces,
+            v.boundary.intersections.pairs.pairs.iter()
+                .filter(|pair| pair.reason == "pair-unresolved")
+                .map(|pair| (pair.faces, pair.source_chart_cells, pair.hull_cells))
+                .collect::<Vec<_>>(),
         )));
     let caps = [wall_count, wall_count + 1];
     let station = crate::sweep_smoothness::inspect_axis(
