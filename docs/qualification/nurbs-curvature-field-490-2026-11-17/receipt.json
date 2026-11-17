@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0490",
+  "testedBase": "21f00377a27f6a0cedb268ea55f0c8af5a468c5d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 34,
+  "scope": [
+    "Restrict the original NURBS parameter law to a closed interval without rounding the geometry.",
+    "Apply two proven seam refinements under a shared budget and publish only the final exact restriction. A late refusal yields no partial curve."
+  ],
+  "logSha256": "a3f756bb59cac4c02da78522af7a242530cc55212333c4525ffa642ea451bca0",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_knot_insertion.rs": "6424d8610071f94a3bcf3bc9e9a1938dd9e4435affde832c5aac98dfbcdc9cd8",
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "8558136ae29684e7b5b194098dd8f202da96cf5dbc42277cf0d41b0cd25a3ce5",
+    "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs": "84623dbf72f342facaf61bb86894a0484781b06cc10c0b8d3a5b177fa8736a9a"
+  }
+}

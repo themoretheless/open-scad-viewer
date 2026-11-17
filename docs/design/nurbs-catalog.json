@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 489,
-  "unallocatedCount": 511,
+  "specifiedCount": 490,
+  "unallocatedCount": 510,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12762,6 +12762,26 @@
       "remainingQualification": [
         "Split an original nonperiodic NURBS curve into two exact restrictions with the original absolute parameter.",
         "Exact Boehm refinement saturates the split knot, then structural restriction clamps both seam ends with the same weighted pole. Unstoreable refinements publish neither child.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0490",
+      "name": "Точное выделение подынтервала рациональной NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_knot_insertion::restrict",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_knot_insertion.rs",
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-490-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-490-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Restrict the original NURBS parameter law to a closed interval without rounding the geometry.",
+        "Apply two proven seam refinements under a shared budget and publish only the final exact restriction. A late refusal yields no partial curve.",
         "WASM and application integration are separate."
       ]
     }

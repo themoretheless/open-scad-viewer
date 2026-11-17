@@ -256,3 +256,62 @@ pub fn split(source: &Curve, parameter: f64, max_work: u64) -> Result<SplitRepor
         refusal: None,
     })
 }
+
+#[derive(Clone, Debug)]
+pub struct RestrictionReport {
+    /// The complete restricted curve, absent on any exact refinement refusal.
+    pub curve: Option<Curve>,
+    pub work_used: u64,
+    pub refusal: Option<Refusal>,
+}
+
+/// Restrict a nonperiodic curve to a closed subinterval of its original
+/// domain. Interior cuts use exact split and share one work budget.
+pub fn restrict(source: &Curve, interval: [f64; 2], max_work: u64) -> Result<RestrictionReport> {
+    use std::borrow::Cow;
+
+    source.validate()?;
+    check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact restriction work must be in 1..=1000000",
+    )?;
+    check(
+        !source.periodic,
+        "Exact restriction requires nonperiodic storage",
+    )?;
+    let [start, end] = source.domain();
+    let [lo, hi] = interval;
+    check(
+        lo.is_finite() && hi.is_finite() && start <= lo && lo < hi && hi <= end,
+        "Exact restriction requires a nonempty interval inside the original domain",
+    )?;
+    let mut curve = Cow::Borrowed(source);
+    let mut work_used = 0;
+    for (cut, keep_right) in [(lo, true), (hi, false)] {
+        if (keep_right && cut == start) || (!keep_right && cut == end) {
+            continue;
+        }
+        if work_used == max_work {
+            return Ok(RestrictionReport {
+                curve: None,
+                work_used,
+                refusal: Some(Refusal::ResourceLimit),
+            });
+        }
+        let report = split(&curve, cut, max_work - work_used)?;
+        work_used += report.work_used;
+        let Some([left, right]) = report.pieces else {
+            return Ok(RestrictionReport {
+                curve: None,
+                work_used,
+                refusal: report.refusal,
+            });
+        };
+        curve = Cow::Owned(if keep_right { right } else { left });
+    }
+    Ok(RestrictionReport {
+        curve: Some(curve.into_owned()),
+        work_used,
+        refusal: None,
+    })
+}

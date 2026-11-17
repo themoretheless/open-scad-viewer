@@ -196,3 +196,49 @@ fn exact_split_reuses_a_saturated_knot_and_refuses_unstoreable_seams() {
     assert_eq!(report.refusal, Some(Refusal::NotRepresentable));
     assert!(split(&source, -2., 1_000_000).is_err());
 }
+
+#[test]
+fn exact_restriction_matches_original_geometry_with_both_absolute_cuts() {
+    use nurbs_core::editing::exact_knot_insertion::restrict;
+    let source = quadratic();
+    let report = restrict(&source, [0., 4.], 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let curve = report.curve.unwrap();
+    assert_eq!(curve.domain(), [0., 4.]);
+    assert_eq!(curve.knots, [0., 0., 0., 4., 4., 4.]);
+    assert_eq!(
+        curve.control_points,
+        [vec![0.5, 0.375], vec![1., 0.625], vec![1.5, 0.375]]
+    );
+    for parameter in [0., 1., 2., 3., 4.] {
+        assert_eq!(
+            curve.evaluate(parameter).unwrap().point,
+            source.evaluate(parameter).unwrap().point
+        );
+    }
+    assert_eq!(
+        restrict(&source, [0., 4.], report.work_used).unwrap().curve,
+        Some(curve)
+    );
+    assert!(
+        restrict(&source, [0., 4.], report.work_used - 1)
+            .unwrap()
+            .curve
+            .is_none()
+    );
+}
+
+#[test]
+fn exact_restriction_returns_full_domain_and_rejects_a_late_unstoreable_cut_atomically() {
+    use nurbs_core::editing::exact_knot_insertion::{restrict, split};
+    let source = line(3., vec![1., 2.]);
+    assert_eq!(
+        restrict(&source, [0., 1.], 1).unwrap().curve,
+        Some(source.clone())
+    );
+    assert!(split(&source, 0.5, 1_000_000).unwrap().pieces.is_some());
+    let refused = restrict(&source, [0.5, 0.75], 1_000_000).unwrap();
+    assert_eq!(refused.refusal, Some(Refusal::NotRepresentable));
+    assert!(refused.curve.is_none());
+    assert!(restrict(&source, [0.5, 0.5], 1_000_000).is_err());
+}
