@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0560",
+  "testedBase": "b0289049f5274ec88bd47a9928037670467c396d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "-p",
+    "brep-core",
+    "--test",
+    "exact_periodic_trim_step_contracts",
+    "--test",
+    "exact_periodic_trim_sheet_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 2,
+  "scope": [
+    "Deliver exact periodic trim sheets through the AP242 open-shell export and round-trip topology and curves.",
+    "Use the AP242 open-shell route, retaining support knots, hole bounds and exact UV/world edge pairs through normal import."
+  ],
+  "logSha256": "f903e767407ff9212ccfcc75e4d584c35f5437bfdc473bd070453e2acf4aa572",
+  "sourceSha256": {
+    "crates/cad-step/src/periodic_trim_step.rs": "977fea07a20b8983059e1b95eda54058c2be08d436a8094d47d1058ed63ac609",
+    "crates/cad-step/tests/exact_periodic_trim_step_contracts.rs": "f3c2739765202252a85318e68f0e272abb61e0006ffc29614a0de7ae873d35a7",
+    "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs": "97b7fd5b080390d43bec94bc261773cef08ef8e610930e91f52d309aca62f722"
+  }
+}

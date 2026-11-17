@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 559,
-  "unallocatedCount": 441,
+  "specifiedCount": 560,
+  "unallocatedCount": 440,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14213,6 +14213,26 @@
       "remainingQualification": [
         "Connect exact periodic trim sheet authoring to the native B-rep display tessellator.",
         "Tessellate the exact open model through the shared edge registry, retaining face identity and separate outer and hole boundary loops.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0560",
+      "name": "Экспорт в STEP открытых NURBS-граней с обрезкой через периодические швы",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "cad_step::periodic_trim_step::export_exact_periodic_trim_sheet_step",
+      "evidence": [
+        "crates/cad-step/src/periodic_trim_step.rs",
+        "crates/cad-step/tests/exact_periodic_trim_step_contracts.rs",
+        "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs",
+        "docs/qualification/nurbs-curvature-field-560-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-560-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Deliver exact periodic trim sheets through the AP242 open-shell export and round-trip topology and curves.",
+        "Use the AP242 open-shell route, retaining support knots, hole bounds and exact UV/world edge pairs through normal import.",
         "WASM and application integration are separate."
       ]
     }

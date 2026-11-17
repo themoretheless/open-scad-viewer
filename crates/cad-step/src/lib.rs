@@ -10,6 +10,7 @@ pub mod nurbs_step_interchange;
 mod nurbs_step_shared;
 pub mod nurbs_step_solid;
 pub mod nurbs_step_trimmed;
+pub mod periodic_trim_step;
 pub mod source_exchange_step;
 mod step_v3_export;
 pub mod step_pmi;
