@@ -905,14 +905,15 @@ pub use section_loops::*;
 
 mod spatial_clip;
 pub use spatial_clip::{
-    ExactPolyhedralBallClearance, ExactPolyhedralBoundaryDistance,
-    ExactPolyhedralPathBoundaryContacts, ExactPolyhedralPathMaterialClip,
-    ExactPolyhedralPointLocation, ExactPolyhedralSegmentClip, ExactPolyhedralSignedDistance,
-    ExactPolyhedralSignedDistanceBatch, ExactPolyhedralSweptBallClearance,
-    ExactPolyhedralSweptPathClearance, ExactPolyhedralSweptPathMaterial, PolyhedralBallRelation,
-    PolyhedralPathFaceContacts, PolyhedralPointLocation, PolyhedralSweptFaceContactRange,
-    PolyhedralSweptFaceContactRanges, PolyhedralSweptPathContact, PolyhedralSweptPathFirstContact,
-    PolyhedralSweptPathRelation, bounded_polyhedral_swept_face_contact_ranges,
+    BoundedPolyhedralPathMaterialLength, ExactPolyhedralBallClearance,
+    ExactPolyhedralBoundaryDistance, ExactPolyhedralPathBoundaryContacts,
+    ExactPolyhedralPathMaterialClip, ExactPolyhedralPointLocation, ExactPolyhedralSegmentClip,
+    ExactPolyhedralSignedDistance, ExactPolyhedralSignedDistanceBatch,
+    ExactPolyhedralSweptBallClearance, ExactPolyhedralSweptPathClearance,
+    ExactPolyhedralSweptPathMaterial, PolyhedralBallRelation, PolyhedralPathFaceContacts,
+    PolyhedralPointLocation, PolyhedralSweptFaceContactRange, PolyhedralSweptFaceContactRanges,
+    PolyhedralSweptPathContact, PolyhedralSweptPathFirstContact, PolyhedralSweptPathRelation,
+    bounded_polyhedral_path_material_length, bounded_polyhedral_swept_face_contact_ranges,
     bounded_polyhedral_swept_path_first_contact, exact_polyhedral_ball_clearance,
     exact_polyhedral_boundary_distance, exact_polyhedral_path_boundary_contacts,
     exact_polyhedral_path_material_clip, exact_polyhedral_point_location,

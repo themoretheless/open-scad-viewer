@@ -1,4 +1,7 @@
-use super::{nearest_segment_point, refuse, spend, visit_polyhedral_boundary};
+use super::{
+    bound_root_sum, enclosure_width, nearest_segment_point, refuse, spend,
+    visit_polyhedral_boundary,
+};
 use crate::{Error, Result, closed_solid::QualifiedClosedSolid};
 use num_rational::BigRational as Q;
 use num_traits::{One, Signed, Zero};
@@ -719,4 +722,45 @@ fn append_closed_interval(intervals: &mut Vec<[Q; 2]>, interval: [Q; 2]) {
     } else {
         intervals.push(interval);
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BoundedPolyhedralPathMaterialLength {
+    /// Inclusive bounds in millimeters for distance traveled in closed material.
+    pub length_bounds_mm: [Q; 2],
+    pub exact_work: u64,
+}
+
+/// Bound the length of a polyline restricted to a qualified polyhedral solid.
+/// Boundary travel contributes to length, and repeated traversals count separately.
+pub fn bounded_polyhedral_path_material_length(
+    solid: &QualifiedClosedSolid,
+    points_mm: &[[Q; 3]],
+    tolerance_mm: f64,
+    max_exact_work: u64,
+) -> Result<BoundedPolyhedralPathMaterialLength> {
+    let tolerance = enclosure_width(tolerance_mm)?;
+    let clip = exact_polyhedral_path_material_clip(solid, points_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - clip.exact_work;
+    let mut squares = Vec::new();
+    for (pair, intervals) in points_mm.windows(2).zip(clip.span_intervals) {
+        spend(&mut remaining, 8)?;
+        let mut fraction = Q::zero();
+        for [lo, hi] in intervals {
+            spend(&mut remaining, 4)?;
+            fraction += hi - lo;
+        }
+        if fraction.is_positive() {
+            let direction = std::array::from_fn(|i| &pair[1][i] - &pair[0][i]);
+            let square = dot(&direction, &direction);
+            if square.is_positive() {
+                squares.push(fraction.pow(2) * square);
+            }
+        }
+    }
+    let length_bounds_mm = bound_root_sum(squares, tolerance, &mut remaining)?;
+    Ok(BoundedPolyhedralPathMaterialLength {
+        length_bounds_mm,
+        exact_work: max_exact_work - remaining,
+    })
 }

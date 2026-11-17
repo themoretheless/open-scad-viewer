@@ -3408,3 +3408,56 @@ fn exact_path_material_clip_preserves_isolated_and_stationary_contacts() {
         assert_eq!(report.span_intervals, [expected]);
     }
 }
+
+#[test]
+fn bounded_path_material_length_counts_boundary_travel_and_retracing() {
+    use brep_core::{
+        analysis::bounded_polyhedral_path_material_length,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |x| [q(x, 1), q(3, 2), q(2, 1)];
+    let path = [point(-1), point(5), point(5), point(-1)];
+    let report = bounded_polyhedral_path_material_length(solid, &path, 1e-6, 1_000_000).unwrap();
+    assert_eq!(report.length_bounds_mm, [q(6, 1), q(6, 1)]);
+    assert_eq!(
+        bounded_polyhedral_path_material_length(solid, &path, 1e-6, report.exact_work).unwrap(),
+        report
+    );
+    assert!(
+        bounded_polyhedral_path_material_length(solid, &path, 1e-6, report.exact_work - 1).is_err()
+    );
+}
+
+#[test]
+fn bounded_path_material_length_encloses_irrational_distance() {
+    use brep_core::{
+        analysis::bounded_polyhedral_path_material_length,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64| Q::from_integer(n.into());
+    let point = |x| [q(x), q(x), q(1)];
+    let path = [point(-1), point(5)];
+    let tolerance = 1e-9;
+    let [lo, hi] = bounded_polyhedral_path_material_length(solid, &path, tolerance, 1_000_000)
+        .unwrap()
+        .length_bounds_mm;
+    assert!(lo >= q(0) && lo.pow(2) < q(18) && hi.pow(2) > q(18));
+    assert!(hi - lo <= Q::from_float(tolerance).unwrap());
+    assert!(bounded_polyhedral_path_material_length(solid, &path, f64::NAN, 1_000_000).is_err());
+    let tangent = [[q(-1), q(1), q(1)], [q(1), q(-1), q(1)]];
+    assert_eq!(
+        bounded_polyhedral_path_material_length(solid, &tangent, tolerance, 1_000_000)
+            .unwrap()
+            .length_bounds_mm,
+        [q(0), q(0)]
+    );
+}
