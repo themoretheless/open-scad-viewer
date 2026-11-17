@@ -14,7 +14,7 @@ use crate::{
         exact_derivative::Refusal,
         exact_projective::{
             PcurveSeamIsolation,
-            pcurve_seam_isolation::{coincident_span_endpoints, isolate_rational_pcurve_line},
+            pcurve_seam_isolation::{exact_span_line_ranges, isolate_rational_pcurve_line},
         },
     },
     trim::trim_domain::exact_loop_joins,
@@ -482,9 +482,10 @@ fn validate_closed_contours(face: &ProjectedTrimmedFace) -> Result<()> {
     Ok(())
 }
 
-pub(super) fn coincident_boundary_ranges(
+pub(super) fn exact_boundary_ranges(
     face: &ProjectedTrimmedFace,
     line: &ExactSupportLine,
+    include_isolated: bool,
     work: &mut Work,
 ) -> Result<std::result::Result<Vec<[Q; 2]>, Refusal>> {
     validate_closed_contours(face)?;
@@ -497,7 +498,9 @@ pub(super) fn coincident_boundary_ranges(
         )?;
         let mut ranges = Vec::new();
         for curve in face.loops.iter().flatten() {
-            for [a, b] in coincident_span_endpoints(curve, &clock.equation, clock.axis, work)? {
+            for [a, b] in
+                exact_span_line_ranges(curve, &clock.equation, clock.axis, include_isolated, work)?
+            {
                 let a = clock.exact_parameter(&a, work)?;
                 let b = clock.exact_parameter(&b, work)?;
                 ranges.push(if a <= b { [a, b] } else { [b, a] });

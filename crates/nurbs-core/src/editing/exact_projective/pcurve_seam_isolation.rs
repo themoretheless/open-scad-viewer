@@ -16,7 +16,7 @@ use crate::{
     },
 };
 use num_rational::BigRational as Q;
-use num_traits::{One, Zero};
+use num_traits::{One, Signed, Zero};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PcurveSeamRoot {
@@ -157,38 +157,81 @@ fn line_equation(homogeneous: &[Poly], coefficients: &[Q; 3], work: &mut Work) -
         })
 }
 
-/// Endpoint coordinates of the continuous pieces that lie on the line.
-pub(crate) fn coincident_span_endpoints(
+/// Certified coordinate ranges and exact isolated contacts of the line.
+pub(crate) fn exact_span_line_ranges(
     source: &Curve,
     coefficients: &[Q; 3],
     axis: usize,
+    include_isolated: bool,
     work: &mut Work,
 ) -> PResult<Vec<[Q; 2]>> {
-    use super::chart_nonnegative::sum;
+    use super::chart_nonnegative::{evaluate, sum};
     let mut result = Vec::new();
+    let zero = Q::zero();
+    let one = Q::one();
     for (span, parameter) in active_spans(source) {
         let homogeneous = original_span(source, span, parameter, work)?;
-        if !line_equation(&homogeneous, coefficients, work)?.is_empty() {
-            continue;
+        let equation = line_equation(&homogeneous, coefficients, work)?;
+        let coordinate = |t: &Q, work: &mut Work| -> PResult<Q> {
+            let value = evaluate(&homogeneous[axis], t, work)?;
+            let weight = evaluate(&homogeneous[2], t, work)?;
+            if weight.is_zero() {
+                return Err(Refusal::UnprovedDenominator);
+            }
+            Ok(work.op(&value, &weight, |a, b| a / b)?)
+        };
+        if equation.is_empty() {
+            result.push([coordinate(&zero, work)?, coordinate(&one, work)?]);
+        } else if include_isolated {
+            let mut roots = rational_interior_roots(&equation, work)?;
+            if equation[0].is_zero() {
+                roots.push(zero.clone());
+            }
+            if sum(&equation, work)?.is_zero() {
+                roots.push(one.clone());
+            }
+            for root in roots {
+                let value = coordinate(&root, work)?;
+                result.push([value.clone(), value]);
+            }
         }
-        let component = &homogeneous[axis];
-        let weights = &homogeneous[2];
-        let start = component.first().cloned().unwrap_or_else(Q::zero);
-        let end = sum(component, work)?;
-        let w0 = weights
-            .first()
-            .filter(|w| !w.is_zero())
-            .ok_or(Refusal::UnprovedDenominator)?;
-        let w1 = sum(weights, work)?;
-        if w1.is_zero() {
-            return Err(Refusal::UnprovedDenominator);
-        }
-        result.push([
-            work.op(&start, w0, |a, b| a / b)?,
-            work.op(&end, &w1, |a, b| a / b)?,
-        ]);
     }
     Ok(result)
+}
+
+fn rational_interior_roots(power: &Poly, work: &mut Work) -> PResult<Vec<Q>> {
+    let roots = match power.as_slice() {
+        [c, b] => vec![work.op(c, b, |c, b| -c / b)?],
+        [c, b, a] => {
+            let ac = work.op(a, c, |a, c| a * c)?;
+            let b2 = work.op(b, b, |a, b| a * b)?;
+            let four = Q::from_integer(4.into());
+            let four_ac = work.op(&ac, &four, |x, y| x * y)?;
+            let d = work.op(&b2, &four_ac, |x, y| x - y)?;
+            if d.is_negative() {
+                return Ok(Vec::new());
+            }
+            work.charge(1 + (d.numer().bits() + d.denom().bits()) / 64)?;
+            let sqrt = Q::new(d.numer().sqrt(), d.denom().sqrt());
+            if work.op(&sqrt, &sqrt, |x, y| x * y)? != d {
+                return Ok(Vec::new());
+            }
+            let two = Q::from_integer(2.into());
+            let denominator = work.op(a, &two, |x, y| x * y)?;
+            let mut roots = Vec::with_capacity(2);
+            for offset in [&sqrt, &(-&sqrt)] {
+                let numerator = work.op(b, offset, |b, offset| offset - b)?;
+                roots.push(work.op(&numerator, &denominator, |x, y| x / y)?);
+            }
+            roots.dedup();
+            roots
+        }
+        _ => Vec::new(),
+    };
+    Ok(roots
+        .into_iter()
+        .filter(|r| r.is_positive() && r < &Q::one())
+        .collect())
 }
 
 fn isolate_equation(

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 344,
-  "unallocatedCount": 656,
+  "specifiedCount": 345,
+  "unallocatedCount": 655,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8868,6 +8868,29 @@
       "remainingQualification": [
         "Intersect certified exact boundary intervals sourced from rational trim spans coincident with the support line.",
         "The exact limits of continuous coincident spans certify closed subintervals of the contour image, including nonbinary endpoints and singleton overlaps. Excursions and isolated contacts from noncoincident spans are outside this proof.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0345",
+      "name": "Изолированные общие точки рациональных контуров непараллельных NURBS-граней",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Пересечения",
+      "nativeApi": "nurbs_core::analysis::exact_plane_intersection::intersect_planar_face_boundary_contacts",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/exact_plane_intersection.rs",
+        "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs",
+        "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs",
+        "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs",
+        "docs/qualification/nurbs-curvature-field-345-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-345-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify exact shared boundary points by rational line intersections, including weighted crossings and rational quadratic tangencies.",
+        "Exact span limits and rational interior roots of linear and quadratic homogeneous line equations are included. Irrational and higher-degree interior roots are outside this proof.",
         "WASM and application integration are separate."
       ]
     }

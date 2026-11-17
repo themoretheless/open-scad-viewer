@@ -165,7 +165,7 @@ impl SturmChain {
     }
 }
 
-fn evaluate(p: &Poly, x: &Q, work: &mut Work) -> PResult<Q> {
+pub(super) fn evaluate(p: &Poly, x: &Q, work: &mut Work) -> PResult<Q> {
     if x.is_zero() {
         return Ok(p.first().cloned().unwrap_or_default());
     }

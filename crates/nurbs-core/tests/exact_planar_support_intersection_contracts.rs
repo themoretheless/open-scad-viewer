@@ -8,9 +8,10 @@ use nurbs_core::{
             ExactPlanarIntersectionSegment, PlanarBoundaryIntersection, PlanarIntersectionSegments,
             PlanarSegmentStorage, StoredPlanarIntersection, SupportPlaneIntersection,
             TrimmedPlanarIntersection, build_planar_intersection_segments,
-            intersect_planar_face_boundaries, intersect_planar_supports,
-            intersect_trimmed_planar_faces, optimize_planar_intersection_segment_storage,
-            store_planar_intersection_segment, store_trimmed_planar_intersection,
+            intersect_planar_face_boundaries, intersect_planar_face_boundary_contacts,
+            intersect_planar_supports, intersect_trimmed_planar_faces,
+            optimize_planar_intersection_segment_storage, store_planar_intersection_segment,
+            store_trimmed_planar_intersection,
         },
         planar_coplanar_ray::CoplanarRayPartitionOptions,
         planar_trim_projection::ProjectedTrimmedFace,
@@ -648,5 +649,83 @@ fn retains_singleton_shared_boundary_and_refuses_under_budget_exhaustion() {
     let disjoint = intersect_planar_face_boundaries(&a, &b, WORK).unwrap();
     assert!(
         matches!(disjoint.outcome, PlanarBoundaryIntersection::Transverse { shared_boundary, .. } if shared_boundary.is_empty())
+    );
+}
+
+fn crossing_triangle() -> Vec<Curve> {
+    vec![Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 3.],
+        control_points: vec![vec![0., -1.], vec![1., 2.], vec![0., 2.], vec![0., -1.]],
+        weights: vec![1., 2., 3., 1.],
+        periodic: false,
+    }]
+}
+
+#[test]
+fn proves_matching_points_of_two_transverse_rational_contours() {
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.loops = vec![crossing_triangle()];
+    b.loops = vec![crossing_triangle()];
+    let old = intersect_planar_face_boundaries(&a, &b, WORK).unwrap();
+    assert!(
+        matches!(old.outcome, PlanarBoundaryIntersection::Transverse { shared_boundary, .. } if shared_boundary.is_empty())
+    );
+    let result = intersect_planar_face_boundary_contacts(&a, &b, WORK).unwrap();
+    let PlanarBoundaryIntersection::Transverse {
+        shared_boundary, ..
+    } = result.outcome
+    else {
+        panic!("{:?}", result.outcome);
+    };
+    assert_eq!(shared_boundary, [[q(0, 1), q(0, 1)], [q(1, 3), q(1, 3)]]);
+}
+
+#[test]
+fn proves_a_quadratic_rational_tangency_without_promoting_irrational_roots() {
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.loops = vec![crossing_triangle()];
+    let tangent = |shift: f64| {
+        vec![
+            Curve {
+                degree: 2,
+                knots: vec![0., 0., 0., 1., 1., 1.],
+                control_points: vec![
+                    vec![0., 1. - shift],
+                    vec![0.5, -2. - shift],
+                    vec![1., 4. - shift],
+                ],
+                weights: vec![1.; 3],
+                periodic: false,
+            },
+            Curve {
+                degree: 1,
+                knots: vec![0., 0., 1., 1.],
+                control_points: vec![vec![1., 4. - shift], vec![0., 1. - shift]],
+                weights: vec![1.; 2],
+                periodic: false,
+            },
+        ]
+    };
+    b.loops = vec![tangent(0.)];
+    let shared = intersect_planar_face_boundary_contacts(&a, &b, WORK).unwrap();
+    let PlanarBoundaryIntersection::Transverse {
+        shared_boundary, ..
+    } = shared.outcome
+    else {
+        panic!("{:?}", shared.outcome);
+    };
+    assert_eq!(shared_boundary, [[q(1, 3), q(1, 3)]]);
+    let limited = intersect_planar_face_boundary_contacts(&a, &b, shared.work_used - 1).unwrap();
+    assert_eq!(
+        limited.outcome,
+        PlanarBoundaryIntersection::Refused(
+            nurbs_core::editing::exact_derivative::Refusal::ResourceLimit
+        )
+    );
+    b.loops = vec![tangent(0.5)];
+    let irrational = intersect_planar_face_boundary_contacts(&a, &b, WORK).unwrap();
+    assert!(
+        matches!(irrational.outcome, PlanarBoundaryIntersection::Transverse { shared_boundary, .. } if shared_boundary.is_empty())
     );
 }
