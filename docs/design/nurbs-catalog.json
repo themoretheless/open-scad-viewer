@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 373,
-  "unallocatedCount": 627,
+  "specifiedCount": 374,
+  "unallocatedCount": 626,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9584,6 +9584,30 @@
       "remainingQualification": [
         "Build a planar trimmed cap from a simple closed section edge chain with a continuous boundary gap certificate.",
         "The dominant normal defines an exact support chart. Rational segment predicates and signed area certify a simple oriented cap loop. Affine lift bounds each entire edge by its endpoint gap.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0374",
+      "name": "Плоская крышка NURBS с точно проверенными отверстиями",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::cap_surface_plane_section_with_holes",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs",
+        "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes.rs",
+        "docs/qualification/nurbs-curvature-field-374-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-374-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Build a planar cap with disjoint, strictly contained holes and certified boundary gaps.",
+        "Exact inter-ring predicates exclude touches and crossings. Half-open point containment proves each hole is strictly inside the outer boundary and excludes nested holes. Opposite winding preserves the material region.",
         "WASM and application integration are separate."
       ]
     }

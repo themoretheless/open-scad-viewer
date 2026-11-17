@@ -43,6 +43,19 @@ pub fn cap_surface_plane_section(
             && (1..=cad_predicates::MAX_WORK).contains(&max_work),
         "Plane cap needs a bounded edge chain, finite nonzero plane and nonnegative tolerance",
     )?;
+    validate_edges(edges)?;
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let outcome = cap(edges, normal, offset, boundary_tolerance, &mut work);
+    Ok(PlanarSectionCapReport {
+        outcome,
+        work_used: work.used,
+    })
+}
+
+fn validate_edges(edges: &[Curve]) -> Result<()> {
     for edge in edges {
         edge.validate()?;
         let count = edge.control_points.len();
@@ -60,15 +73,7 @@ pub fn cap_surface_plane_section(
             "Plane cap edges must use the degree-one section clock",
         )?;
     }
-    let mut work = Work {
-        used: 0,
-        limit: max_work,
-    };
-    let outcome = cap(edges, normal, offset, boundary_tolerance, &mut work);
-    Ok(PlanarSectionCapReport {
-        outcome,
-        work_used: work.used,
-    })
+    Ok(())
 }
 
 fn cap(
@@ -208,23 +213,11 @@ fn simple_winding(points: &[[f64; 2]], work: &mut Work) -> PResult<Q> {
             if p == i {
                 continue;
             }
-            work.charge(1)?;
-            if (0..2).any(|axis| {
-                points[i][axis].max(points[j][axis]) < points[m][axis].min(points[p][axis])
-                    || points[m][axis].max(points[p][axis]) < points[i][axis].min(points[j][axis])
-            }) {
-                continue;
-            }
-            let a = orient(&exact[i], &exact[j], &exact[m], work)?;
-            let b = orient(&exact[i], &exact[j], &exact[p], work)?;
-            let c = orient(&exact[m], &exact[p], &exact[i], work)?;
-            let d = orient(&exact[m], &exact[p], &exact[j], work)?;
-            if (opposite(&a, &b) && opposite(&c, &d))
-                || (a.is_zero() && contained(points[m], points[i], points[j]))
-                || (b.is_zero() && contained(points[p], points[i], points[j]))
-                || (c.is_zero() && contained(points[i], points[m], points[p]))
-                || (d.is_zero() && contained(points[j], points[m], points[p]))
-            {
+            if segments_contact(
+                [points[i], points[j], points[m], points[p]],
+                [&exact[i], &exact[j], &exact[m], &exact[p]],
+                work,
+            )? {
                 return Err(Refusal::UnprovedIdentity);
             }
         }
@@ -233,6 +226,26 @@ fn simple_winding(points: &[[f64; 2]], work: &mut Work) -> PResult<Q> {
         return Err(Refusal::UnprovedIdentity);
     }
     Ok(area)
+}
+
+fn segments_contact(
+    [a, b, c, d]: [[f64; 2]; 4],
+    [aq, bq, cq, dq]: [&[Q; 2]; 4],
+    work: &mut Work,
+) -> PResult<bool> {
+    work.charge(1)?;
+    if (0..2).any(|i| a[i].max(b[i]) < c[i].min(d[i]) || c[i].max(d[i]) < a[i].min(b[i])) {
+        return Ok(false);
+    }
+    let p = orient(aq, bq, cq, work)?;
+    let q = orient(aq, bq, dq, work)?;
+    let r = orient(cq, dq, aq, work)?;
+    let s = orient(cq, dq, bq, work)?;
+    Ok((opposite(&p, &q) && opposite(&r, &s))
+        || (p.is_zero() && contained(c, a, b))
+        || (q.is_zero() && contained(d, a, b))
+        || (r.is_zero() && contained(a, c, d))
+        || (s.is_zero() && contained(b, c, d)))
 }
 
 fn contained(p: [f64; 2], a: [f64; 2], b: [f64; 2]) -> bool {
@@ -260,3 +273,9 @@ fn cross(a: &[Q; 2], b: &[Q; 2], work: &mut Work) -> PResult<Q> {
     let y = work.op(&a[1], &b[0], |a, b| a * b)?;
     Ok(work.op(&x, &y, |a, b| a - b)?)
 }
+
+mod holes;
+pub use holes::{
+    PlanarSectionCapWithHoles, PlanarSectionCapWithHolesReport,
+    cap_surface_plane_section_with_holes,
+};

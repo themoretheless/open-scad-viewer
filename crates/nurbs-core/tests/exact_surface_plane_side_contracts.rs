@@ -6,11 +6,12 @@ use nurbs_core::{
         SurfacePlaneWorldPolylineOptions, SurfacePlaneWorldStripOptions,
         approximate_surface_plane_graph, approximate_surface_plane_graph_xyz,
         approximate_surface_plane_strip_xyz, audit_surface_plane_graphs, audit_surface_plane_side,
-        cap_surface_plane_section, close_periodic_surface_plane_strip_xyz,
-        refine_surface_plane_side, sample_surface_plane_graph,
-        split_periodic_surface_strip_by_plane, split_surface_cell_by_plane,
-        stitch_surface_plane_graph_strip, store_periodic_surface_plane_section,
-        store_surface_plane_section_curve, store_surface_plane_section_pair,
+        cap_surface_plane_section, cap_surface_plane_section_with_holes,
+        close_periodic_surface_plane_strip_xyz, refine_surface_plane_side,
+        sample_surface_plane_graph, split_periodic_surface_strip_by_plane,
+        split_surface_cell_by_plane, stitch_surface_plane_graph_strip,
+        store_periodic_surface_plane_section, store_surface_plane_section_curve,
+        store_surface_plane_section_pair,
     },
     surface::Surface,
 };
@@ -1121,4 +1122,68 @@ fn certifies_projection_gap_and_refuses_a_self_crossing_cap() {
             .outcome,
         Err(Refusal::UnprovedIdentity)
     ));
+}
+
+fn square_ring(lo: [f64; 2], hi: [f64; 2]) -> [nurbs_core::curve::Curve; 1] {
+    use nurbs_core::curve::Curve;
+    let [x0, y0] = lo;
+    let [x1, y1] = hi;
+    [Curve::from_polyline(vec![
+        vec![x0, y0, 0.],
+        vec![x1, y0, 0.],
+        vec![x1, y1, 0.],
+        vec![x0, y1, 0.],
+        vec![x0, y0, 0.],
+    ])
+    .unwrap()]
+}
+
+#[test]
+fn builds_a_cap_with_two_oriented_holes_and_preserves_material_between_them() {
+    use nurbs_core::trim::trim_domain::{Location, TrimDomain};
+    let outer = square_ring([0., 0.], [10., 10.]);
+    let a = square_ring([1., 1.], [3., 3.]);
+    let b = square_ring([6., 6.], [8., 8.]);
+    let rings = [outer.as_slice(), a.as_slice(), b.as_slice()];
+    let report = cap_surface_plane_section_with_holes(&rings, [0., 0., 1.], 0., 0., WORK).unwrap();
+    let cap = report.outcome.unwrap();
+    assert_eq!(cap.reversed, [false, true, true]);
+    assert_eq!(cap.face.loops.len(), 3);
+    assert_eq!(cap.boundary_gap_upper, q(0));
+    let domain = TrimDomain::new(&cap.face.loops, 1e-9).unwrap();
+    for point in [[2., 2.], [7., 7.]] {
+        assert_eq!(
+            domain.classify_point(point, 1000).unwrap().location,
+            Location::Outside
+        );
+    }
+    let material = domain.classify_point([5., 5.], 1000).unwrap();
+    assert_eq!(material.location, Location::Inside);
+    assert_eq!(material.winding, Some(1));
+    let limited =
+        cap_surface_plane_section_with_holes(&rings, [0., 0., 1.], 0., 0., report.work_used - 1)
+            .unwrap();
+    assert!(matches!(limited.outcome, Err(Refusal::ResourceLimit)));
+}
+
+#[test]
+fn refuses_touching_exterior_and_nested_hole_boundaries() {
+    let outer = square_ring([0., 0.], [10., 10.]);
+    let test = |rings: &[&[nurbs_core::curve::Curve]]| {
+        assert!(matches!(
+            cap_surface_plane_section_with_holes(rings, [0., 0., 1.], 0., 0., WORK)
+                .unwrap()
+                .outcome,
+            Err(Refusal::UnprovedIdentity)
+        ));
+    };
+    let exterior = square_ring([11., 11.], [12., 12.]);
+    test(&[&outer, &exterior]);
+    let touching = square_ring([0., 1.], [2., 2.]);
+    test(&[&outer, &touching]);
+    let big_hole = square_ring([1., 1.], [5., 5.]);
+    let nested = square_ring([2., 2.], [3., 3.]);
+    test(&[&outer, &big_hole, &nested]);
+    let adjacent = square_ring([5., 2.], [7., 3.]);
+    test(&[&outer, &big_hole, &adjacent]);
 }
