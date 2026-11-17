@@ -5111,3 +5111,64 @@ fn periodic_trim_length_location_distinguishes_outside_and_cell_limit() {
         assert!(report.cells <= max_cells);
     }
 }
+
+#[test]
+fn periodic_trim_prefix_lengths_follow_input_order_across_seam() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [3.5, 0.875],
+        [0.5, 0.875],
+        [0.5, 0.125],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    let report = result
+        .measure_input_contour_prefix_lengths(0, 1e-8, 100)
+        .unwrap();
+    assert_eq!(report.minimum_cells, 6);
+    assert!(report.cells <= 100);
+    let prefixes = report.vertex_prefix_bounds.unwrap();
+    assert_eq!(prefixes.len(), 5);
+    assert_eq!(prefixes[0], [0., 0.]);
+    for ([lo, hi], expected) in prefixes.into_iter().zip([0., 1.5, 2.5, 4., 5.]) {
+        assert!(lo <= expected && expected <= hi);
+        assert!(hi - lo < 1e-8);
+    }
+}
+
+#[test]
+fn periodic_trim_prefix_lengths_reject_missing_coverage_and_omit_partial_tables() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let mut result = build_exact_periodic_surface_trim_input_edges(
+        &doubly_periodic_tensor(),
+        &[&outer],
+        1_000_000,
+    )
+    .unwrap();
+    let limited = result
+        .measure_input_contour_prefix_lengths(0, 1e-8, 7)
+        .unwrap();
+    assert!(limited.vertex_prefix_bounds.is_none());
+    assert_eq!(limited.minimum_cells, 8);
+    assert_eq!(limited.cells, 0);
+    result.sources[0][0][1].parameters[0] = num_rational::BigRational::new(3.into(), 4.into());
+    assert!(
+        result
+            .measure_input_contour_prefix_lengths(0, 1e-8, 100)
+            .is_err()
+    );
+}

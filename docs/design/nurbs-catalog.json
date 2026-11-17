@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 585,
-  "unallocatedCount": 415,
+  "specifiedCount": 586,
+  "unallocatedCount": 414,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14719,6 +14719,25 @@
       "remainingQualification": [
         "Find a certified original parameter bracket for a target prefix length through seam splits.",
         "Check inverse brackets across the seam, out-of-range distances, and uncertainty under a shared cell limit.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0586",
+      "name": "Таблица гарантированных накопленных длин в исходных вершинах периодической обрезки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::measure_input_contour_prefix_lengths",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-586-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-586-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose all original vertex stations in contour order under one shared cell budget.",
+        "Verify cumulative lengths at all original vertices through reversed seam splits, full source coverage, and atomic budget refusal.",
         "WASM and application integration are separate."
       ]
     }

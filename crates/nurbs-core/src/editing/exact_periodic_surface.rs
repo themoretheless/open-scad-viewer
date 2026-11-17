@@ -4965,9 +4965,14 @@ impl PeriodicTrimInputEdges {
         &self,
         contour: usize,
         segment: usize,
-    ) -> Result<Vec<(&Curve, &PeriodicTrimInputEdgeSource)>> {
-        use num_traits::{One, Zero};
+    ) -> Result<Vec<TrimInputPiece<'_>>> {
+        let mut pieces = self.input_contour_pieces(contour)?;
+        pieces.retain(|(_, source)| source.segment == segment);
+        verify_trim_segment_partition(&mut pieces)?;
+        Ok(pieces)
+    }
 
+    fn input_contour_pieces(&self, contour: usize) -> Result<Vec<TrimInputPiece<'_>>> {
         let mut pieces = Vec::new();
         if let Some(patches) = &self.geometry.patches {
             crate::check(
@@ -4984,33 +4989,46 @@ impl PeriodicTrimInputEdges {
                         edges.len() == sources.len(),
                         "Periodic trim segment edge count differs",
                     )?;
-                    for (edge, source) in edges.iter().zip(sources) {
-                        if source.contour == contour && source.segment == segment {
-                            let [from, to] = &source.parameters;
-                            pieces.push((from.min(to), from.max(to), &edge.curve, source));
-                        }
-                    }
+                    pieces.extend(
+                        edges
+                            .iter()
+                            .zip(sources)
+                            .filter(|(_, source)| source.contour == contour)
+                            .map(|(edge, source)| (&edge.curve, source)),
+                    );
                 }
             }
         }
-        pieces.sort_by(|a, b| a.0.cmp(b.0));
-        let mut next = &BigRational::zero();
-        for (lo, hi, _, _) in &pieces {
-            crate::check(
-                *lo == next && lo < hi,
-                "Periodic trim segment bindings do not partition the segment",
-            )?;
-            next = hi;
-        }
-        crate::check(
-            pieces.is_empty() || next.is_one(),
-            "Periodic trim segment bindings end before the segment",
-        )?;
-        Ok(pieces
-            .into_iter()
-            .map(|(_, _, curve, source)| (curve, source))
-            .collect())
+        Ok(pieces)
     }
+}
+
+type TrimInputPiece<'a> = (&'a Curve, &'a PeriodicTrimInputEdgeSource);
+
+fn verify_trim_segment_partition(pieces: &mut [TrimInputPiece<'_>]) -> Result<()> {
+    use num_traits::{One, Zero};
+
+    pieces.sort_by(|(_, a), (_, b)| {
+        let [a0, a1] = &a.parameters;
+        let [b0, b1] = &b.parameters;
+        a0.min(a1).cmp(b0.min(b1))
+    });
+    let zero = BigRational::zero();
+    let mut next = &zero;
+    for (_, source) in pieces.iter() {
+        let [a, b] = &source.parameters;
+        let lo = a.min(b);
+        let hi = a.max(b);
+        crate::check(
+            lo == next && lo < hi,
+            "Periodic trim segment bindings do not partition the segment",
+        )?;
+        next = hi;
+    }
+    crate::check(
+        pieces.is_empty() || next.is_one(),
+        "Periodic trim segment bindings end before the segment",
+    )
 }
 
 fn map_trim_input_interval(
@@ -5254,5 +5272,88 @@ impl PeriodicTrimInputEdges {
                 return Ok(result(Some(bounds), cells, Status::LengthUncertainty));
             }
         }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimContourLengthTable {
+    /// Prefix bounds at original vertices, starting at zero and ending at closure.
+    pub vertex_prefix_bounds: Option<Vec<[f64; 2]>>,
+    pub minimum_cells: usize,
+    pub cells: usize,
+}
+
+impl PeriodicTrimInputEdges {
+    /// Measure cumulative world length in original contour order under one cell budget.
+    pub fn measure_input_contour_prefix_lengths(
+        &self,
+        contour: usize,
+        tolerance: f64,
+        max_cells: usize,
+    ) -> Result<PeriodicTrimContourLengthTable> {
+        use crate::distance_bounds::Interval;
+        crate::check(
+            tolerance.is_finite() && tolerance > 0. && (1..=100_000).contains(&max_cells),
+            "Periodic trim length needs positive finite tolerance and 1..100000 cells",
+        )?;
+        let mut segments = std::collections::BTreeMap::<_, Vec<_>>::new();
+        for piece in self.input_contour_pieces(contour)? {
+            segments.entry(piece.1.segment).or_default().push(piece);
+        }
+        let mut minimum_cells = 0;
+        let mut jobs = Vec::with_capacity(segments.len());
+        for (expected, (segment, mut pieces)) in segments.into_iter().enumerate() {
+            crate::check(
+                segment == expected,
+                "Periodic trim contour segment is missing",
+            )?;
+            verify_trim_segment_partition(&mut pieces)?;
+            let mut minimum = 0;
+            let mut curves = Vec::with_capacity(pieces.len());
+            for (curve, _) in pieces {
+                curve.validate()?;
+                minimum += curve.knots[curve.degree..=curve.control_points.len()]
+                    .windows(2)
+                    .filter(|pair| pair[0] < pair[1])
+                    .count();
+                curves.push((curve, None));
+            }
+            minimum_cells += minimum;
+            jobs.push((curves, minimum));
+        }
+        if jobs.is_empty() || minimum_cells > max_cells {
+            return Ok(PeriodicTrimContourLengthTable {
+                vertex_prefix_bounds: None,
+                minimum_cells,
+                cells: 0,
+            });
+        }
+        let piece_tolerance = (tolerance / jobs.len() as f64).max(f64::from_bits(1));
+        let mut remaining_minimum = minimum_cells;
+        let mut cells = 0;
+        let mut prefix = Interval::point(0.);
+        let mut prefixes = vec![[0., 0.]];
+        for (curves, minimum) in jobs {
+            remaining_minimum -= minimum;
+            let report = measure_periodic_trim_curves(
+                curves,
+                piece_tolerance,
+                max_cells - cells - remaining_minimum,
+            )?;
+            let length = report
+                .length
+                .ok_or_else(|| crate::input("Missing periodic trim segment length"))?;
+            cells += length.cells;
+            let mut next = prefix.add(Interval::new(length.bounds[0], length.bounds[1])?)?;
+            next.lo = next.lo.max(prefix.lo);
+            next.hi = next.hi.max(prefix.hi);
+            prefixes.push([next.lo, next.hi]);
+            prefix = next;
+        }
+        Ok(PeriodicTrimContourLengthTable {
+            vertex_prefix_bounds: Some(prefixes),
+            minimum_cells,
+            cells,
+        })
     }
 }
