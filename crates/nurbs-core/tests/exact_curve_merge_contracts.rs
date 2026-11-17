@@ -5508,3 +5508,75 @@ fn periodic_trim_division_boxes_cover_coarse_stations_and_skip_unproved_ones() {
             .all(|station| station.point_bounds.is_some())
     );
 }
+
+#[test]
+fn periodic_trim_projected_area_is_exact_and_respects_input_direction() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let q = |n: i64, d: i64| num_rational::BigRational::new(n.into(), d.into());
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let mut outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    for sign in [-1, 1] {
+        let result =
+            build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+        let report = result
+            .exact_input_contour_projected_area(0, 1_000_000)
+            .unwrap();
+        assert_eq!(
+            report.projected_area,
+            Some([q(sign * 3, 4), q(sign * 3, 4), q(0, 1)])
+        );
+        outer.reverse();
+    }
+}
+
+#[test]
+fn periodic_trim_projected_area_refuses_exhaustion_and_disconnected_edges() {
+    use nurbs_core::editing::{
+        exact_periodic_surface::{
+            PeriodicTrimProjectedAreaRefusal as Failure,
+            build_exact_periodic_surface_trim_input_edges,
+        },
+        rational_factor::Refusal,
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let mut result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    let limited = result.exact_input_contour_projected_area(0, 1).unwrap();
+    assert!(limited.projected_area.is_none());
+    assert_eq!(
+        limited.refusal,
+        Some(Failure::Arithmetic(Refusal::ResourceLimit))
+    );
+    result.geometry.patches.as_mut().unwrap()[0].loops[0][0]
+        .curve
+        .control_points[0][0] = 0.25;
+    let invalid = result
+        .exact_input_contour_projected_area(0, 1_000_000)
+        .unwrap();
+    assert!(invalid.projected_area.is_none());
+    assert_eq!(
+        invalid.refusal,
+        Some(Failure::Arithmetic(Refusal::InvalidOutput))
+    );
+}

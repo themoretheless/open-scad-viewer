@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 594,
-  "unallocatedCount": 406,
+  "specifiedCount": 595,
+  "unallocatedCount": 405,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14897,6 +14897,25 @@
         "Expose equal-length divisions with ordered station brackets and world boxes through the binary ABI.",
         "Verify ordered equal-length station boxes, closure, shared budget accounting and build refusals through the binary ABI.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0595",
+      "name": "Точная ориентированная площадь проекций замкнутого периодического контура",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::exact_input_contour_projected_area",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-595-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-595-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Calculate signed projected areas of closed contours with straight spatial edges in original input direction.",
+        "Verify exact signed projection areas on a seam-spanning nonplanar wire, reversal, disconnected geometry and bounded refusal.",
+        "WASM and application integration are separate."
       ]
     }
   ],

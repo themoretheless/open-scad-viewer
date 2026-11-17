@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0595",
+  "testedBase": "446c95a35ff450c3e182564a80609bde80a29723",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 175,
+  "scope": [
+    "Calculate signed projected areas of closed contours with straight spatial edges in original input direction.",
+    "Verify exact signed projection areas on a seam-spanning nonplanar wire, reversal, disconnected geometry and bounded refusal."
+  ],
+  "logSha256": "4b860dc574f6ea6a8cf53f08dc714b6264dfb70ea104491fdfba4c5218ce16e6",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "da58a7df4da9d965c5b785ad3f2c85e0080c07766e1a1c5d9532812547123975",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "9ba3e08ad3552df83042676f240ba91d129279ba1c5befc19596927870bcad03"
+  }
+}

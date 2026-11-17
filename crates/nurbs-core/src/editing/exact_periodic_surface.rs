@@ -5803,3 +5803,132 @@ impl PeriodicTrimInputEdges {
         Ok(bounds)
     }
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PeriodicTrimProjectedAreaRefusal {
+    NonlinearEdge,
+    Arithmetic(ExactRefusal),
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimProjectedArea {
+    /// Signed projected areas onto the YZ, ZX and XY planes in input direction.
+    pub projected_area: Option<[BigRational; 3]>,
+    pub work_used: u64,
+    pub refusal: Option<PeriodicTrimProjectedAreaRefusal>,
+}
+
+impl PeriodicTrimInputEdges {
+    /// Integrate the oriented projection areas of a closed contour made
+    /// of straight spatial edges, including rational degree-one edges.
+    pub fn exact_input_contour_projected_area(
+        &self,
+        contour: usize,
+        max_work: u64,
+    ) -> Result<PeriodicTrimProjectedArea> {
+        crate::check(
+            (1..=cad_predicates::MAX_WORK).contains(&max_work),
+            "Exact periodic trim area work must be in 1..=1000000",
+        )?;
+        let mut work = Work {
+            used: 0,
+            limit: max_work,
+        };
+        let pieces = self.input_contour_pieces(contour)?;
+        let result = if pieces.is_empty() {
+            Ok(None)
+        } else {
+            trim_linear_projected_area(&pieces, &mut work).map(Some)
+        };
+        let (projected_area, refusal) = match result {
+            Ok(area) => (area, None),
+            Err(reason) => (None, Some(reason)),
+        };
+        Ok(PeriodicTrimProjectedArea {
+            projected_area,
+            work_used: work.used,
+            refusal,
+        })
+    }
+}
+
+impl From<ExactRefusal> for PeriodicTrimProjectedAreaRefusal {
+    fn from(reason: ExactRefusal) -> Self {
+        Self::Arithmetic(reason)
+    }
+}
+
+fn trim_linear_projected_area(
+    pieces: &[TrimInputPiece<'_>],
+    work: &mut Work,
+) -> std::result::Result<[BigRational; 3], PeriodicTrimProjectedAreaRefusal> {
+    let mut area: [BigRational; 3] = std::array::from_fn(|_| BigRational::default());
+    let mut first = None;
+    let mut previous = None;
+    let reversed = pieces[0].1.parameters[0] > pieces[0].1.parameters[1];
+    for (curve, source) in pieces {
+        work.charge(1).map_err(ExactRefusal::from)?;
+        curve.validate().map_err(|_| ExactRefusal::InvalidOutput)?;
+        if curve.degree != 1 || curve.control_points.len() != 2 {
+            return Err(PeriodicTrimProjectedAreaRefusal::NonlinearEdge);
+        }
+        let [lo, hi] = curve.domain();
+        if curve.periodic
+            || curve.knots != [lo, lo, hi, hi]
+            || curve.control_points[0].len() != 3
+            || source.parameters[0] == source.parameters[1]
+            || reversed != (source.parameters[0] > source.parameters[1])
+        {
+            return Err(ExactRefusal::InvalidOutput.into());
+        }
+        let mut endpoints = [
+            [
+                BigRational::default(),
+                BigRational::default(),
+                BigRational::default(),
+            ],
+            [
+                BigRational::default(),
+                BigRational::default(),
+                BigRational::default(),
+            ],
+        ];
+        for (out, pole) in endpoints.iter_mut().zip(&curve.control_points) {
+            for (value, &coordinate) in out.iter_mut().zip(pole) {
+                *value = work.lift(coordinate).map_err(ExactRefusal::from)?;
+            }
+        }
+        let [start, end] = endpoints;
+        if previous.as_ref().is_some_and(|point| point != &start) {
+            return Err(ExactRefusal::InvalidOutput.into());
+        }
+        if first.is_none() {
+            first = Some(start.clone());
+        }
+        for (axis, sum) in area.iter_mut().enumerate() {
+            let i = (axis + 1) % 3;
+            let j = (axis + 2) % 3;
+            let a = work
+                .op(&start[i], &end[j], |a, b| a * b)
+                .map_err(ExactRefusal::from)?;
+            let b = work
+                .op(&start[j], &end[i], |a, b| a * b)
+                .map_err(ExactRefusal::from)?;
+            let cross = work.op(&a, &b, |a, b| a - b).map_err(ExactRefusal::from)?;
+            *sum = work
+                .op(sum, &cross, |a, b| a + b)
+                .map_err(ExactRefusal::from)?;
+        }
+        previous = Some(end);
+    }
+    if first != previous {
+        return Err(ExactRefusal::InvalidOutput.into());
+    }
+    let divisor = BigRational::from_integer(if reversed { (-2).into() } else { 2.into() });
+    for sum in &mut area {
+        *sum = work
+            .op(sum, &divisor, |a, b| a / b)
+            .map_err(ExactRefusal::from)?;
+    }
+    Ok(area)
+}
