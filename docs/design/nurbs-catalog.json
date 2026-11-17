@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 317,
-  "unallocatedCount": 683,
+  "specifiedCount": 318,
+  "unallocatedCount": 682,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8308,6 +8308,27 @@
       "remainingQualification": [
         "Project a group into one exact planar coordinate system derived from the affine hull of all active surface images.",
         "A two-dimensional combined active affine hull, up to 256 surfaces and one shared budget. Every member retains its own parameter basis.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0318",
+      "name": "Точная проекция контуров обрезки компланарных граней в общие 2D-координаты",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::analysis::planar_trim_projection::project_coplanar_trim_loops",
+      "evidence": [
+        "crates/nurbs-core/src/analysis.rs",
+        "crates/nurbs-core/src/analysis/planar_trim_projection.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/nurbs-core/tests/exact_planar_trim_projection_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-318-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-318-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Compose closed rational trim traces with their surfaces in a common exact Cartesian plane.",
+        "Exact common affine plane, closed trim traces, exact knot-cell cuts and binary64 curve storage. Boundary certificate only.",
         "WASM and application integration are separate."
       ]
     }
