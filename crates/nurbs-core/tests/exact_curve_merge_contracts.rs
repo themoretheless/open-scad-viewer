@@ -2909,3 +2909,68 @@ fn multiturn_surface_strip_refuses_an_oversized_cover() {
         Some(GaugeMergeRefusal::Exact(Refusal::ResourceLimit))
     );
 }
+
+#[test]
+fn multiturn_periodic_rectangle_preserves_both_absolute_parameter_axes() {
+    use nurbs_core::editing::exact_periodic_surface::restrict_exact_doubly_periodic_surface_over_turns;
+    let mut source = doubly_periodic_tensor();
+    // The interior rational weight survives both periodic extensions.
+    source.weights[2][2] = 2.;
+    let u = [3.5, 15.25];
+    let v = [3.75, 12.25];
+    let report =
+        restrict_exact_doubly_periodic_surface_over_turns(&source, u, v, 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let patch = report.surface.unwrap();
+    assert!(!patch.periodic_u && !patch.periodic_v);
+    assert_eq!(
+        [patch.knots_u[1], patch.knots_u[patch.control_points.len()]],
+        u
+    );
+    assert_eq!(
+        [
+            patch.knots_v[1],
+            patch.knots_v[patch.control_points[0].len()]
+        ],
+        v
+    );
+    for a in [3.5, 4., 5.5, 6.75, 8., 12.5, 15.25] {
+        for b in [3.75, 4., 6.25, 8., 9.5, 11.75, 12.25] {
+            let p = patch.evaluate(a, b).unwrap().point;
+            let expected = source.evaluate(a % 4., b % 4.).unwrap().point;
+            assert!(
+                p.into_iter()
+                    .zip(expected)
+                    .all(|(a, b)| (a - b).abs() < 1e-13)
+            );
+        }
+    }
+    assert!(
+        restrict_exact_doubly_periodic_surface_over_turns(&source, u, v, report.work_used - 1)
+            .unwrap()
+            .surface
+            .is_none()
+    );
+}
+
+#[test]
+fn multiturn_periodic_rectangle_withholds_first_strip_if_second_axis_is_oversized() {
+    use nurbs_core::editing::{
+        exact_curve_merge::GaugeMergeRefusal,
+        exact_periodic_surface::restrict_exact_doubly_periodic_surface_over_turns,
+        rational_factor::Refusal,
+    };
+    let report = restrict_exact_doubly_periodic_surface_over_turns(
+        &doubly_periodic_tensor(),
+        [3.5, 10.25],
+        [0., 1024.],
+        1_000_000,
+    )
+    .unwrap();
+    assert!(report.work_used > 0);
+    assert!(report.surface.is_none());
+    assert_eq!(
+        report.refusal,
+        Some(GaugeMergeRefusal::Exact(Refusal::ResourceLimit))
+    );
+}

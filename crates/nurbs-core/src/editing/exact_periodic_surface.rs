@@ -350,13 +350,36 @@ pub fn restrict_exact_doubly_periodic_surface(
     v: [f64; 2],
     max_work: u64,
 ) -> Result<Report> {
+    restrict_periodic_rectangle(source, u, v, max_work, false)
+}
+
+/// Extract a clamped rectangle across full and partial turns on both axes.
+/// Each start lies in its source half-open domain. Preserve the lifted
+/// absolute U and V coordinates and share one work budget across both cuts.
+pub fn restrict_exact_doubly_periodic_surface_over_turns(
+    source: &Surface,
+    u: [f64; 2],
+    v: [f64; 2],
+    max_work: u64,
+) -> Result<Report> {
+    restrict_periodic_rectangle(source, u, v, max_work, true)
+}
+
+fn restrict_periodic_rectangle(
+    source: &Surface,
+    u: [f64; 2],
+    v: [f64; 2],
+    max_work: u64,
+    allow_multiple_turns: bool,
+) -> Result<Report> {
     crate::check(
         [u, v]
             .iter()
             .all(|[lo, hi]| lo.is_finite() && hi.is_finite() && lo < hi),
         "Periodic surface rectangle needs increasing finite intervals",
     )?;
-    let first = restrict_exact_periodic_surface_axis(source, Axis::U, u, max_work)?;
+    let first =
+        restrict_periodic_surface_interval(source, Axis::U, u, max_work, allow_multiple_turns)?;
     let Some(strip) = first.surface else {
         return Ok(first);
     };
@@ -367,8 +390,13 @@ pub fn restrict_exact_doubly_periodic_surface(
             refusal: Some(GaugeMergeRefusal::Exact(ExactRefusal::ResourceLimit)),
         });
     }
-    let mut second =
-        restrict_exact_periodic_surface_axis(&strip, Axis::V, v, max_work - first.work_used)?;
+    let mut second = restrict_periodic_surface_interval(
+        &strip,
+        Axis::V,
+        v,
+        max_work - first.work_used,
+        allow_multiple_turns,
+    )?;
     second.work_used += first.work_used;
     Ok(second)
 }
