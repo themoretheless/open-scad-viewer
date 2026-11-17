@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 506,
-  "unallocatedCount": 494,
+  "specifiedCount": 507,
+  "unallocatedCount": 493,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13107,6 +13107,26 @@
       "remainingQualification": [
         "Store a C2-closed clamped spline as an exactly equivalent cyclic spline, preserving the complete active parameter law.",
         "Verify exact C2 closure and equal endpoint weights, repeat the poles and period knots, and prove whole-domain identity of the actual stored output.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0507",
+      "name": "Точный перенос шва периодической NURBS-кривой на существующий узел",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::rotate_periodic_curve_at_exact_knot",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-507-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-507-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Rotate cyclic rational spline storage while requiring exact translated knot storage and an unchanged parameter period.",
+        "Rotate the exact infinite periodic knot sequence and its control cycle. Preserve overlapping knots literally and refuse newly exposed knots that would round.",
         "WASM and application integration are separate."
       ]
     }

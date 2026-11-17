@@ -1152,3 +1152,77 @@ fn repeat_clamped_cycle(
     curve.validate().map_err(|_| ExactRefusal::InvalidOutput)?;
     Ok(curve)
 }
+
+/// Rotate a periodic spline to an existing knot in its half-open domain.
+/// All translated knots must be exactly representable. The returned domain
+/// starts at the new seam and retains the original period and parameter units.
+pub fn rotate_periodic_curve_at_exact_knot(
+    source: &Curve,
+    parameter: f64,
+    max_work: u64,
+) -> Result<GaugeMergeReport> {
+    use super::{rational_edit::Work, rational_factor::Refusal as ExactRefusal};
+
+    source.validate()?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact periodic rotation work must be in 1..=1000000",
+    )?;
+    let refused = |reason, work_used| GaugeMergeReport {
+        curve: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    if !crate::analysis::curve_partition_agreement::verify_periodic_source_closure(source)? {
+        return Ok(refused(GaugeMergeRefusal::Join(Refusal::InvalidOutput), 0));
+    }
+    let degree = source.degree;
+    let n = source.control_points.len();
+    let cycle = n - degree;
+    let Some(shift) = source.knots[degree..n].iter().position(|&k| k == parameter) else {
+        return Ok(refused(GaugeMergeRefusal::Join(Refusal::SeamMismatch), 0));
+    };
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let mut rotated = source.clone();
+    let mut remap = || -> std::result::Result<(), ExactRefusal> {
+        let [lo, hi] = source.domain();
+        let lo = work.lift(lo)?;
+        let hi = work.lift(hi)?;
+        let period = work.op(&hi, &lo, |a, b| a - b)?;
+        for (i, knot) in rotated.knots.iter_mut().enumerate() {
+            let index = i + shift;
+            // Keep all overlapping knots literal and translate only the
+            // newly exposed suffix of the infinite periodic knot sequence.
+            *knot = if index < source.knots.len() {
+                source.knots[index]
+            } else {
+                let base = work.lift(source.knots[index - cycle])?;
+                let mapped = work.op(&base, &period, |a, b| a + b)?;
+                work.float(&mapped)?
+            };
+        }
+        Ok(())
+    };
+    if let Err(reason) = remap() {
+        return Ok(refused(GaugeMergeRefusal::Exact(reason), work.used));
+    }
+    for i in 0..n {
+        let original = (i + shift) % cycle;
+        rotated.control_points[i].clone_from(&source.control_points[original]);
+        rotated.weights[i] = source.weights[original];
+    }
+    if rotated.validate().is_err() {
+        return Ok(refused(
+            GaugeMergeRefusal::Join(Refusal::InvalidOutput),
+            work.used,
+        ));
+    }
+    Ok(GaugeMergeReport {
+        curve: Some(rotated),
+        work_used: work.used,
+        refusal: None,
+    })
+}

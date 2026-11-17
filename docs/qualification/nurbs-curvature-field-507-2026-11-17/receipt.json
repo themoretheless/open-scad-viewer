@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0507",
+  "testedBase": "bd8bb90497d66bfc168f8f12a9c5ddde2e9106bc",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 68,
+  "scope": [
+    "Rotate cyclic rational spline storage while requiring exact translated knot storage and an unchanged parameter period.",
+    "Rotate the exact infinite periodic knot sequence and its control cycle. Preserve overlapping knots literally and refuse newly exposed knots that would round."
+  ],
+  "logSha256": "f30dd0fe516060a0071bb306aa8ec53bd91e174699d246c6572fc9082df56b6d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "428f889ea5fb1f87288ea5f5106a8adabf33f711de96469e859fed07f38f6c4f",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "b1f4f99798aba4017323cbd815b759f0ec54305b355ed42db2bfbf647c6ecdc8"
+  }
+}

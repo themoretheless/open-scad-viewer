@@ -1184,3 +1184,72 @@ fn periodic_c2_storage_rejects_a_position_only_wrap() {
         Some(GaugeMergeRefusal::Join(Refusal::SeamMismatch))
     );
 }
+
+#[test]
+fn exact_periodic_knot_rotation_transports_a_weighted_nonuniform_curve() {
+    use nurbs_core::editing::exact_curve_merge::rotate_periodic_curve_at_exact_knot;
+    let source = Curve {
+        degree: 2,
+        knots: vec![-2., -1., 0., 1., 3., 4., 5., 6., 8.],
+        control_points: vec![
+            vec![0., 0.],
+            vec![2., 0.],
+            vec![2., 1.],
+            vec![0., 2.],
+            vec![0., 0.],
+            vec![2., 0.],
+        ],
+        weights: vec![1., 2., 1., 4., 1., 2.],
+        periodic: true,
+    };
+    let report = rotate_periodic_curve_at_exact_knot(&source, 3., 1_000_000).unwrap();
+    let curve = report.curve.unwrap();
+    assert_eq!(curve.domain(), [3., 8.]);
+    for t in [3., 3.5, 4., 4.5, 5., 5.5, 6., 7., 8.] {
+        let u = if t >= 5. { t - 5. } else { t };
+        assert_eq!(
+            curve.evaluate(t).unwrap().point,
+            source.evaluate(u).unwrap().point
+        );
+    }
+    assert!(
+        rotate_periodic_curve_at_exact_knot(&source, 3., report.work_used)
+            .unwrap()
+            .curve
+            .is_some()
+    );
+    assert!(
+        rotate_periodic_curve_at_exact_knot(&source, 3., report.work_used - 1)
+            .unwrap()
+            .curve
+            .is_none()
+    );
+}
+
+#[test]
+fn exact_periodic_knot_rotation_refuses_rounded_translations() {
+    use nurbs_core::editing::exact_curve_merge::{
+        GaugeMergeRefusal, rotate_periodic_curve_at_exact_knot,
+    };
+    use nurbs_core::editing::rational_factor::Refusal as ExactRefusal;
+    let seam = 0.5_f64.next_up();
+    let source = Curve {
+        degree: 1,
+        knots: vec![-0.25, 0., 0.25, seam, 0.75, 1., 1.25],
+        control_points: vec![
+            vec![0., 0.],
+            vec![1., 0.],
+            vec![1., 1.],
+            vec![0., 1.],
+            vec![0., 0.],
+        ],
+        weights: vec![1.; 5],
+        periodic: true,
+    };
+    assert_eq!(
+        rotate_periodic_curve_at_exact_knot(&source, seam, 1_000_000)
+            .unwrap()
+            .refusal,
+        Some(GaugeMergeRefusal::Exact(ExactRefusal::NotRepresentable))
+    );
+}
