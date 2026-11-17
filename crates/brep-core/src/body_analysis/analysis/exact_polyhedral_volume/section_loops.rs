@@ -338,14 +338,7 @@ pub fn exact_polyhedral_section_point(
     point_mm: &[Q; 3],
     max_exact_work: u64,
 ) -> Result<ExactPolyhedralSectionPoint> {
-    if point_mm
-        .iter()
-        .any(|coordinate| coordinate.numer().bits().max(coordinate.denom().bits()) > 8192)
-    {
-        return Err(refuse(
-            "Section query coordinates exceed the exact bit limit",
-        ));
-    }
+    validate_query_point(point_mm)?;
     let section = exact_polyhedral_section_loops(solid, normal, offset, max_exact_work)?;
     let mut remaining = max_exact_work - section.exact_work;
     spend(&mut remaining, 16)?;
@@ -409,4 +402,86 @@ fn classify_section_loops(
     } else {
         PolyhedralSectionPointLocation::Outside
     })
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PolyhedralSectionNearestPoint {
+    pub distance_squared_mm2: Q,
+    pub point_mm: [Q; 3],
+    pub ring: usize,
+    pub segment: usize,
+    pub face: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralSectionDistance {
+    /// Nearest contour witness, or no witness for an empty section.
+    pub nearest: Option<PolyhedralSectionNearestPoint>,
+    pub exact_work: u64,
+}
+
+/// Find the nearest point on any contour of a strict transverse section.
+/// This measures Euclidean distance in world space, including for off-plane
+/// queries. Exact ties keep the first segment in section traversal order.
+pub fn exact_polyhedral_section_distance(
+    solid: &QualifiedClosedSolid,
+    normal: [f64; 3],
+    offset: f64,
+    point_mm: &[Q; 3],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralSectionDistance> {
+    use num_traits::{One, Zero};
+
+    validate_query_point(point_mm)?;
+    let section = exact_polyhedral_section_loops(solid, normal, offset, max_exact_work)?;
+    let mut remaining = max_exact_work - section.exact_work;
+    let mut nearest: Option<PolyhedralSectionNearestPoint> = None;
+    for (ring, contour) in section.loops.iter().enumerate() {
+        let points = &contour.points_mm;
+        for (segment, (a, b)) in points.iter().zip(points.iter().cycle().skip(1)).enumerate() {
+            spend(&mut remaining, 40)?;
+            let delta: [Q; 3] = std::array::from_fn(|i| &b[i] - &a[i]);
+            let length_squared: Q = delta.iter().map(|d| d * d).sum();
+            let projection: Q = delta
+                .iter()
+                .enumerate()
+                .map(|(i, d)| d * (&point_mm[i] - &a[i]))
+                .sum();
+            let t = (projection / length_squared).clamp(Q::zero(), Q::one());
+            let closest: [Q; 3] = std::array::from_fn(|i| &a[i] + &t * &delta[i]);
+            let distance_squared_mm2: Q = point_mm
+                .iter()
+                .zip(&closest)
+                .map(|(p, c)| (p - c).pow(2))
+                .sum();
+            if nearest
+                .as_ref()
+                .is_none_or(|candidate| distance_squared_mm2 < candidate.distance_squared_mm2)
+            {
+                nearest = Some(PolyhedralSectionNearestPoint {
+                    distance_squared_mm2,
+                    point_mm: closest,
+                    ring,
+                    segment,
+                    face: contour.faces[segment],
+                });
+            }
+        }
+    }
+    Ok(ExactPolyhedralSectionDistance {
+        nearest,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn validate_query_point(point_mm: &[Q; 3]) -> Result<()> {
+    if point_mm
+        .iter()
+        .any(|coordinate| coordinate.numer().bits().max(coordinate.denom().bits()) > 8192)
+    {
+        return Err(refuse(
+            "Section query coordinates exceed the exact bit limit",
+        ));
+    }
+    Ok(())
 }

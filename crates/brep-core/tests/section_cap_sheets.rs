@@ -2345,3 +2345,59 @@ fn locates_a_nonbinary_point_in_an_oblique_section() {
         exact_polyhedral_section_point(&solid, [-1., -1., 3.], 2., &point, 1_000_000).unwrap();
     assert_eq!(result.location, Material);
 }
+
+#[test]
+fn finds_the_exact_nearest_point_on_a_hole_from_off_plane() {
+    use brep_core::{
+        analysis::{exact_polyhedral_section_distance, exact_polyhedral_section_loops},
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |a: i64, b: i64| Q::new(a.into(), b.into());
+    let normal = [0., 0., 1.];
+    let point = [q(5, 4), q(3, 2), q(2, 1)];
+    let report = exact_polyhedral_section_distance(solid, normal, 1., &point, 1_000_000).unwrap();
+    let nearest = report.nearest.unwrap();
+    assert_eq!(nearest.distance_squared_mm2, q(17, 16));
+    assert_eq!(nearest.point_mm, [q(1, 1), q(3, 2), q(1, 1)]);
+    let section = exact_polyhedral_section_loops(solid, normal, 1., 1_000_000).unwrap();
+    assert_eq!(
+        section.loops[nearest.ring].faces[nearest.segment],
+        nearest.face
+    );
+    assert!(
+        exact_polyhedral_section_distance(solid, normal, 1., &point, report.exact_work).is_ok()
+    );
+    assert!(
+        exact_polyhedral_section_distance(solid, normal, 1., &point, report.exact_work - 1)
+            .is_err()
+    );
+}
+
+#[test]
+fn clamps_to_a_section_vertex_and_reports_empty_sections() {
+    use brep_core::{
+        analysis::exact_polyhedral_section_distance,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64| Q::from_integer(n.into());
+    let query = [-1, -2, 1].map(q);
+    let normal = [0., 0., 1.];
+    let report = exact_polyhedral_section_distance(solid, normal, 1., &query, 1_000_000).unwrap();
+    let nearest = report.nearest.unwrap();
+    assert_eq!(nearest.point_mm, [0, 0, 1].map(q));
+    assert_eq!(nearest.distance_squared_mm2, q(5));
+    assert!(
+        exact_polyhedral_section_distance(solid, normal, 5., &query, 1_000_000)
+            .unwrap()
+            .nearest
+            .is_none()
+    );
+}
