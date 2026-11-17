@@ -4322,6 +4322,21 @@ pub struct PeriodicTrimTangentJoinReport {
     pub refusal: Option<ExactRefusal>,
 }
 
+/// A join in original contour order. Parameter zero denotes an original vertex.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PeriodicTrimContourJoin {
+    pub segment: usize,
+    pub parameter: BigRational,
+    pub join: PeriodicTrimTangentJoin,
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimContourJoinReport {
+    pub joins: Option<Vec<PeriodicTrimContourJoin>>,
+    pub work_used: u64,
+    pub refusal: Option<ExactRefusal>,
+}
+
 #[derive(Default)]
 struct PeriodicTrimInputSample {
     point: Option<[BigRational; 3]>,
@@ -4493,6 +4508,130 @@ impl PeriodicTrimInputEdges {
             work,
         )
         .map(Some)
+    }
+
+    /// Audit every original vertex and every generated split of one closed contour.
+    /// The complete contour must partition its original segment parameters.
+    pub fn audit_input_contour_joins(
+        &self,
+        contour: usize,
+        max_work: u64,
+    ) -> Result<PeriodicTrimContourJoinReport> {
+        crate::check(
+            (1..=cad_predicates::MAX_WORK).contains(&max_work),
+            "Exact periodic trim contour join work must be in 1..=1000000",
+        )?;
+        let mut work = Work {
+            used: 0,
+            limit: max_work,
+        };
+        let result = self.audit_input_contour_with_work(contour, &mut work);
+        let (joins, refusal) = match result {
+            Ok(joins) => (joins, None),
+            Err(reason) => (None, Some(reason)),
+        };
+        Ok(PeriodicTrimContourJoinReport {
+            joins,
+            work_used: work.used,
+            refusal,
+        })
+    }
+
+    fn audit_input_contour_with_work(
+        &self,
+        contour: usize,
+        work: &mut Work,
+    ) -> std::result::Result<Option<Vec<PeriodicTrimContourJoin>>, ExactRefusal> {
+        use num_traits::{One, Zero};
+
+        let Some(patches) = &self.geometry.patches else {
+            return Ok(None);
+        };
+        if patches.len() != self.sources.len() {
+            return Err(ExactRefusal::InvalidOutput);
+        }
+        let mut ordered = std::collections::BTreeMap::new();
+        for (patch, sources) in patches.iter().zip(&self.sources) {
+            if patch.loops.len() != sources.len() {
+                return Err(ExactRefusal::InvalidOutput);
+            }
+            for (edges, sources) in patch.loops.iter().zip(sources) {
+                if edges.len() != sources.len() {
+                    return Err(ExactRefusal::InvalidOutput);
+                }
+                for (edge, source) in edges.iter().zip(sources) {
+                    work.charge(1)?;
+                    if source.contour != contour {
+                        continue;
+                    }
+                    let [a, b] = &source.parameters;
+                    if ordered
+                        .insert((source.segment, a.min(b)), (edge, source))
+                        .is_some()
+                    {
+                        return Err(ExactRefusal::InvalidOutput);
+                    }
+                }
+            }
+        }
+        if ordered.is_empty() {
+            return Ok(None);
+        }
+        let ordered: Vec<_> = ordered.into_values().collect();
+        let mut joins = Vec::with_capacity(ordered.len());
+        for (i, ((incoming, left), (outgoing, right))) in ordered
+            .iter()
+            .cycle()
+            .skip(ordered.len() - 1)
+            .zip(&ordered)
+            .enumerate()
+        {
+            let [a, b] = &left.parameters;
+            let [c, d] = &right.parameters;
+            let end = a.max(b);
+            let start = c.min(d);
+            let valid = if i == 0 {
+                right.segment == 0 && start.is_zero() && end.is_one()
+            } else if left.segment == right.segment {
+                end == start
+            } else {
+                left.segment.checked_add(1) == Some(right.segment)
+                    && end.is_one()
+                    && start.is_zero()
+            };
+            if !valid || a == b || c == d {
+                return Err(ExactRefusal::InvalidOutput);
+            }
+
+            let left_width = work.op(b, a, |x, y| x - y)?;
+            let right_width = work.op(d, c, |x, y| x - y)?;
+            let end_fraction = if a < b {
+                BigRational::one()
+            } else {
+                BigRational::zero()
+            };
+            let start_fraction = if c < d {
+                BigRational::zero()
+            } else {
+                BigRational::one()
+            };
+            let (left_point, before) =
+                evaluate_trim_bezier(&incoming.curve, &end_fraction, Some(&left_width), work)?;
+            let (right_point, after) =
+                evaluate_trim_bezier(&outgoing.curve, &start_fraction, Some(&right_width), work)?;
+            if left_point != right_point || before.is_none() || after.is_none() {
+                return Err(ExactRefusal::InvalidOutput);
+            }
+            joins.push(PeriodicTrimContourJoin {
+                segment: right.segment,
+                parameter: start.clone(),
+                join: classify_trim_tangent_pair(
+                    &PeriodicTrimInputTangents { before, after },
+                    work,
+                )?,
+            });
+        }
+        Ok(Some(joins))
     }
 
     fn evaluate_input_sample(

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0578",
+  "testedBase": "e585700280f1f570b9604aa7296824fbc0096572",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 151,
+  "scope": [
+    "Audit all original vertices and generated splits in original contour order under a shared work limit.",
+    "Verify exact directed intervals under reversed winding and splitting across a periodic seam, and withhold mappings on refusal."
+  ],
+  "logSha256": "b22212801c2299b9a3b25789bd719f32ed89a9b349cf2f4a8a8e09a738e073b4",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "00f49e88ba4f8cf5b7bdf43ceb8705bc5ecfda844ace3bcb19cda8b1341a9e62",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "325ce6bb511c1b7bd4cf372bb63345dd45a4d934d484d5a9885c3b77a964d7a7"
+  }
+}

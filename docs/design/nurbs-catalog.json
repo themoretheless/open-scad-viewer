@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 577,
-  "unallocatedCount": 423,
+  "specifiedCount": 578,
+  "unallocatedCount": 422,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14561,6 +14561,25 @@
       ],
       "remainingQualification": [
         "Classify joins between original contour segments, including the closing vertex, after exact point agreement.",
+        "Verify exact directed intervals under reversed winding and splitting across a periodic seam, and withhold mappings on refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0578",
+      "name": "Полный точный аудит стыков замкнутого контура периодической обрезки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::audit_input_contour_joins",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-578-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-578-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Audit all original vertices and generated splits in original contour order under a shared work limit.",
         "Verify exact directed intervals under reversed winding and splitting across a periodic seam, and withhold mappings on refusal.",
         "WASM and application integration are separate."
       ]

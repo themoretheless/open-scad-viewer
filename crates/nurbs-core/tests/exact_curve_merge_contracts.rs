@@ -4716,3 +4716,73 @@ fn periodic_trim_vertex_join_refuses_disconnected_geometry_and_exhaustion() {
     assert_eq!(disconnected.refusal, Some(Refusal::InvalidOutput));
     assert!(disconnected.join.is_none());
 }
+
+#[test]
+fn periodic_trim_contour_audit_lists_vertices_and_seam_splits_in_input_order() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicTrimTangentJoin, build_exact_periodic_surface_trim_input_edges,
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [3.5, 0.875],
+        [0.5, 0.875],
+        [0.5, 0.125],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    let joins = result
+        .audit_input_contour_joins(0, 1_000_000)
+        .unwrap()
+        .joins
+        .unwrap();
+    let q = |n, d| {
+        num_rational::BigRational::new(num_bigint::BigInt::from(n), num_bigint::BigInt::from(d))
+    };
+    let expected = [
+        (0, q(0, 1)),
+        (1, q(0, 1)),
+        (1, q(1, 2)),
+        (2, q(0, 1)),
+        (3, q(0, 1)),
+        (3, q(1, 2)),
+    ];
+    assert_eq!(joins.len(), expected.len());
+    for (join, (segment, parameter)) in joins.iter().zip(expected) {
+        assert_eq!((join.segment, &join.parameter), (segment, &parameter));
+        assert_eq!(join.join, PeriodicTrimTangentJoin::Corner);
+    }
+}
+
+#[test]
+fn periodic_trim_contour_audit_withholds_results_on_gap_or_exhaustion() {
+    use nurbs_core::editing::{
+        exact_periodic_surface::build_exact_periodic_surface_trim_input_edges,
+        rational_factor::Refusal,
+    };
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let mut result = build_exact_periodic_surface_trim_input_edges(
+        &doubly_periodic_tensor(),
+        &[&outer],
+        1_000_000,
+    )
+    .unwrap();
+    let limited = result.audit_input_contour_joins(0, 1).unwrap();
+    assert!(limited.joins.is_none());
+    assert_eq!(limited.refusal, Some(Refusal::ResourceLimit));
+    result.sources[0][0][1].parameters[0] = num_rational::BigRational::new(3.into(), 4.into());
+    let gap = result.audit_input_contour_joins(0, 1_000_000).unwrap();
+    assert!(gap.joins.is_none());
+    assert_eq!(gap.refusal, Some(Refusal::InvalidOutput));
+}
