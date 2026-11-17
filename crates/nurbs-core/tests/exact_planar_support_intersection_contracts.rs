@@ -8,9 +8,10 @@ use nurbs_core::{
             AdaptiveBoundaryOptions, AlgebraicBoundaryClock, AlgebraicPlanarContacts,
             BoundaryResolution, BoundedPlanarBoundaryIntersection, ClassifiedPlanarSection,
             ExactPlanarIntersectionSegment, PlanarBoundaryIntersection, PlanarFaceContactPartition,
-            PlanarIntersectionSegments, PlanarSectionOutcome, PlanarSectionWindingOptions,
-            PlanarSegmentStorage, StoredPlanarIntersection, SupportPlaneIntersection,
-            TrimmedPlanarIntersection, bound_planar_face_boundary_intersection,
+            PlanarIntersectionSegments, PlanarSectionMaterial, PlanarSectionOutcome,
+            PlanarSectionWindingOptions, PlanarSegmentStorage, StoredPlanarIntersection,
+            SupportPlaneIntersection, TrimmedPlanarIntersection,
+            assemble_quadratic_planar_section_material, bound_planar_face_boundary_intersection,
             build_planar_intersection_segments, classify_planar_face_contacts,
             classify_quadratic_planar_section, enclose_algebraic_planar_boundary_point,
             intersect_planar_face_boundaries, intersect_planar_face_boundary_contacts,
@@ -1437,4 +1438,66 @@ fn classifies_the_full_gap_between_irrational_events_with_bounded_winding() {
     assert_eq!(limited_section, section);
     assert_eq!(gaps, [[Unresolved, Unresolved]]);
     assert!(limited.winding_cells <= 1);
+}
+
+#[test]
+fn assembles_closed_components_on_both_sides_of_a_hole() {
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.loops = vec![
+        rectangle([-2., 2.], [-1., 1.], false),
+        rectangle([-0.5, 0.5], [-0.5, 0.5], true),
+    ];
+    b.loops = vec![rectangle([-1., 1.], [-1., 1.], false)];
+    let report =
+        assemble_quadratic_planar_section_material(&a, &b, section_winding_options(10_000))
+            .unwrap();
+    let PlanarSectionMaterial::Transverse {
+        section,
+        proven,
+        possible,
+    } = report.outcome
+    else {
+        panic!("{:?}", report.outcome);
+    };
+    assert_eq!(proven, [[1, 2], [3, 4]]);
+    assert_eq!(possible, proven);
+    assert_eq!(
+        section.events[2].clock,
+        AlgebraicBoundaryClock::Rational(q(-1, 2))
+    );
+    let limited =
+        assemble_quadratic_planar_section_material(&a, &b, section_winding_options(1)).unwrap();
+    let PlanarSectionMaterial::Transverse {
+        proven, possible, ..
+    } = limited.outcome
+    else {
+        panic!("{:?}", limited.outcome);
+    };
+    assert!(proven.is_empty());
+    assert_eq!(possible, [[0, 5]]);
+}
+
+#[test]
+fn preserves_an_isolated_tangent_contact_inside_the_other_face() {
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.loops = vec![irrational_contact_loop(0., 1., false)];
+    b.loops = vec![rectangle([-1., 1.], [-1., 1.], false)];
+    let report =
+        assemble_quadratic_planar_section_material(&a, &b, section_winding_options(10_000))
+            .unwrap();
+    let PlanarSectionMaterial::Transverse {
+        section,
+        proven,
+        possible,
+    } = report.outcome
+    else {
+        panic!("{:?}", report.outcome);
+    };
+    assert_eq!(proven, [[1, 1]]);
+    assert_eq!(possible, proven);
+    assert_eq!(
+        section.events[1].clock,
+        AlgebraicBoundaryClock::Rational(q(1, 3))
+    );
+    assert_eq!(section.events[1].on_boundary, [true, false]);
 }

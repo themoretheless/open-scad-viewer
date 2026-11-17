@@ -227,3 +227,8 @@ fn classify_gaps(
     }
     Ok(Ok(gaps))
 }
+
+mod material;
+pub use material::{
+    PlanarSectionMaterial, PlanarSectionMaterialReport, assemble_quadratic_planar_section_material,
+};

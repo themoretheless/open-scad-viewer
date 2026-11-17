@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 355,
-  "unallocatedCount": 645,
+  "specifiedCount": 356,
+  "unallocatedCount": 644,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9135,6 +9135,30 @@
       "remainingQualification": [
         "Certify the complete open section intervals as inside or outside each face using rational samples between all boundary events.",
         "Exact contact enumeration excludes boundary crossings throughout each open gap. A winding proof at one rational sample labels the full gap, preserving unresolved labels when coverage is inconclusive.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0356",
+      "name": "Точные связные компоненты общего материала по секущей двух NURBS-граней",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Пересечения",
+      "nativeApi": "nurbs_core::analysis::exact_plane_intersection::assemble_quadratic_planar_section_material",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/exact_plane_intersection.rs",
+        "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs",
+        "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs",
+        "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs",
+        "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/section.rs",
+        "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/section/material.rs",
+        "docs/qualification/nurbs-curvature-field-356-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-356-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Assemble closed common material components and singleton contacts from the exact ordered quadratic section.",
+        "Exact section events are included as authored boundaries or classified through incident open gaps. Proven and possible closed components retain isolated contacts and unresolved material.",
         "WASM and application integration are separate."
       ]
     }

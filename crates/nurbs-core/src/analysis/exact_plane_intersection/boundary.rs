@@ -230,6 +230,7 @@ pub use algebraic_order::{
 mod section;
 pub use section::{
     ClassifiedPlanarSection, ClassifiedPlanarSectionReport, ExactPlanarSection, PlanarSectionEvent,
-    PlanarSectionOutcome, PlanarSectionReport, PlanarSectionWindingOptions,
+    PlanarSectionMaterial, PlanarSectionMaterialReport, PlanarSectionOutcome, PlanarSectionReport,
+    PlanarSectionWindingOptions, assemble_quadratic_planar_section_material,
     classify_quadratic_planar_section, partition_quadratic_planar_section,
 };
