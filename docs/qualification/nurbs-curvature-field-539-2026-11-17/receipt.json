@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0539",
+  "testedBase": "ce47d1bc36eda2ececa3bc987616d7546bb72f9f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 135,
+  "scope": [
+    "Lift native UV samples by the unique shortest signed step on each periodic axis.",
+    "Accumulate signed exact period shifts along each sampled axis and refuse ambiguous half-turns or unstorable lifted values."
+  ],
+  "logSha256": "9972ba7b0f354b0753fbb2d85cdcf75e9def7e044ce805398b4eec84f6af57b7",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "2c93418679cb0bf03a6ce78ec8939977d7764d636b7846d07b167dc90b34f462",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "4f49af5ca57e1b4d8d0d2af5a67acfc93a016ed4cd57ee80e4807a7b9abb9a1c"
+  }
+}

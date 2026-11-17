@@ -3190,3 +3190,48 @@ fn wrapped_periodic_surface_batch_identifies_unstorable_sample_without_a_prefix(
     assert_eq!(report.refused_sample, Some(1));
     assert_eq!(report.refusal, Some(Refusal::NotRepresentable));
 }
+
+#[test]
+fn periodic_surface_path_lift_tracks_multiple_signed_seam_crossings() {
+    use nurbs_core::editing::exact_periodic_surface::lift_exact_periodic_surface_path;
+    let source = doubly_periodic_tensor();
+    let native = [
+        [3.5, 0.5],
+        [0.5, 3.5],
+        [1.5, 2.5],
+        [2.5, 1.5],
+        [3.5, 0.5],
+        [0.5, 3.5],
+    ];
+    let result = lift_exact_periodic_surface_path(&source, &native, 1_000_000).unwrap();
+    assert_eq!(
+        result.parameters,
+        Some(vec![
+            [3.5, 0.5],
+            [4.5, -0.5],
+            [5.5, -1.5],
+            [6.5, -2.5],
+            [7.5, -3.5],
+            [8.5, -4.5]
+        ])
+    );
+    let short = lift_exact_periodic_surface_path(&source, &native, result.work_used - 1).unwrap();
+    assert_eq!(short.refused_coordinate, Some([5, 1]));
+    assert!(short.parameters.is_none());
+}
+
+#[test]
+fn periodic_surface_path_lift_refuses_exact_half_turns() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicLiftRefusal, lift_exact_periodic_surface_path,
+    };
+    let report = lift_exact_periodic_surface_path(
+        &doubly_periodic_tensor(),
+        &[[1., 3.5], [1.5, 0.5], [2., 2.5]],
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(report.refusal, Some(PeriodicLiftRefusal::AmbiguousHalfTurn));
+    assert_eq!(report.refused_coordinate, Some([2, 1]));
+    assert!(report.parameters.is_none());
+}
