@@ -36,7 +36,7 @@ import {type SurfaceBoundaryReport,type SurfaceBoundaryOptions} from '../kernel/
 import { computed, nextTick, onUnmounted, reactive, ref, shallowRef, watch, watchEffect } from 'svet'
 import {solidVertexCount} from '../kernel/solidMeasurements'
 import {isSolidProfileEdit,type SolidProfileEditOptions} from '../kernel/solidProfileEdit'
-import {combineSketchProfiles,sketchProfileRegions} from '../app/retainedSketchProfile'
+import {combineSketchProfiles,sketchProfileRegionDisplay,sketchProfileRegions} from '../app/retainedSketchProfile'
 import {isSolidSceneEdit} from '../kernel/solidSceneEdit'
 import {isSolidBodyEdit,type SolidBodyEditOptions} from '../kernel/solidBodyEdit'
 import {assignSolidMaterial} from '../kernel/solidMaterial'
@@ -865,10 +865,26 @@ const profileRegionChoices=computed(()=>{
  if(!operation||!advancedPreview.value.document)return []
  try{
   const inputs=surfaceInputs.value.map(id=>document.value.sketches.find(s=>s.id===id)!)
-  const regions=sketchProfileRegions(combineSketchProfiles(inputs,operation).retainedProfile!)
-  return regions.length>1?regions:[]
+  const profile=combineSketchProfiles(inputs,operation).retainedProfile!,regions=sketchProfileRegions(profile)
+  if(regions.length<2)return []
+  const display=sketchProfileRegionDisplay(profile)
+  const plane=inputs[0]?.plane??{origin:[0,0,0],u:[1,0,0],v:[0,1,0]}
+  return regions.map((r,i)=>({...r,display:display[i]??[],plane}))
  }catch{return []}
 })
+function profileRegionPath(region:{display:Point2[][];plane:{origin:number[];u:number[];v:number[]}},pane:Pane){
+ const {origin:o,u,v}=region.plane
+ const at=(p:Point2)=>pane==='2d'?project(p,pane):project([0,1,2].map(k=>o[k]+u[k]*p[0]+v[k]*p[1]),pane)
+ return region.display.map(loop=>'M '+loop.map(p=>at(p).join(',')).join(' L ')+' Z').join(' ')
+}
+// C9 region pick: hover highlights a region in the 2D viewport, click / Enter / Space toggles it.
+const hoveredProfileRegion=ref(-1)
+watch(profileRegionChoices,()=>{hoveredProfileRegion.value=-1})
+function pickProfileRegion(index:number){
+ const excluded=advanced.value.profileExcludedRegions.includes(index)
+ if(!excluded&&advanced.value.profileExcludedRegions.length>=profileRegionChoices.value.length-1)return
+ toggleProfileRegion(index,excluded)
+}
 function toggleProfileRegion(index:number,keep:boolean){
  const excluded=advanced.value.profileExcludedRegions.filter(i=>i!==index)
  advanced.value.profileExcludedRegions=keep?excluded:[...excluded,index].sort((a,b)=>a-b)
@@ -2935,6 +2951,9 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <circle v-for="(point,i) in patchGapPoints" :key="i" :cx="project(point,'3d')[0]" :cy="project(point,'3d')[1]" :r="views['3d']/100" vector-effect="non-scaling-stroke" />
               </g>
               <path v-if="pane==='2d' && profileBooleanOperation(advancedOp) && advancedPreview.document" data-preview="retained-profile" :d="profileLoops(advancedPreview.document.sketches.find(s=>s.id===surfaceInputs[0])!).map(loop=>'M '+loop.map(p=>[p[0],-p[1]].join(',')).join(' L ')+' Z').join(' ')" fill="#77eac520" fill-rule="evenodd" stroke="#77eac5" stroke-width="3" vector-effect="non-scaling-stroke" pointer-events="none"/>
+              <g v-if="profileRegionChoices.length" data-region-pick role="group" :aria-label="label('Области результата во вьюпорте','Result regions in the viewport')">
+                <path v-for="(region,i) in profileRegionChoices" :key="'region'+i" :data-region-index="i" :data-region-hover="hoveredProfileRegion===i?'':undefined" :data-region-excluded="advanced.profileExcludedRegions.includes(i)?'':undefined" :d="profileRegionPath(region,pane)" fill-rule="evenodd" :fill="advanced.profileExcludedRegions.includes(i)?(hoveredProfileRegion===i?'#ff647c30':'#00000000'):(hoveredProfileRegion===i?'#77eac570':'#77eac530')" :stroke="hoveredProfileRegion===i?'#f4afee':'none'" stroke-width="3" vector-effect="non-scaling-stroke" tabindex="0" role="checkbox" :aria-checked="!advanced.profileExcludedRegions.includes(i)" :aria-label="label('Область','Region')+' '+(i+1)+': '+(advanced.profileExcludedRegions.includes(i)?label('исключена, нажмите чтобы включить','excluded, press to include'):label('включена, нажмите чтобы исключить','included, press to exclude'))" style="cursor:pointer;outline:none" @pointerenter="hoveredProfileRegion=i" @pointerleave="hoveredProfileRegion===i&&(hoveredProfileRegion=-1)" @focus="hoveredProfileRegion=i" @blur="hoveredProfileRegion===i&&(hoveredProfileRegion=-1)" @pointerdown.stop.prevent="pickProfileRegion(i)" @keydown.enter.stop.prevent="pickProfileRegion(i)" @keydown.space.stop.prevent="pickProfileRegion(i)"><title>{{ label('Область','Region') }} {{ i+1 }}</title></path>
+              </g>
               <g v-if="pane==='2d' && advancedOp==='profile-prepare' && profilePreparation?.value" pointer-events="none" data-diagnostic="profile-preparation">
                 <polygon v-if="profilePreparation.value.report.accepted" data-preview="prepared-profile" :points="profilePreparation.value.report.points.map(p=>[p[0],-p[1]].join(',')).join(' ')" fill="#77eac520" stroke="#77eac5" stroke-width="3" vector-effect="non-scaling-stroke"/>
                 <polyline v-for="segment in profilePreparation.value.report.segmentDefect?.segments??[]" :key="'defect-edge'+segment.index" data-diagnostic="profile-segment" :data-segment-index="segment.index" :points="[segment.a,segment.b].map(p=>[p[0],-p[1]].join(',')).join(' ')" fill="none" stroke="#ff647c" stroke-width="5" vector-effect="non-scaling-stroke"/>
@@ -3050,6 +3069,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <fieldset v-if="profileRegionChoices.length" data-testid="profile-regions"><legend>{{ label('Области результата','Result regions') }}</legend>
                   <label v-for="(region,i) in profileRegionChoices" :key="i"><input type="checkbox" :checked="!advanced.profileExcludedRegions.includes(i)" :disabled="!advanced.profileExcludedRegions.includes(i) && advanced.profileExcludedRegions.length===profileRegionChoices.length-1" :aria-label="label('Область','Region')+' '+(i+1)" @change="toggleProfileRegion(i,($event.target as HTMLInputElement).checked)">{{ label('Область','Region') }} {{ i+1 }} · {{ region.areaMm2.toFixed(2) }} {{ label('мм²','mm²') }}<template v-if="region.loops.length>1"> · {{ label('отверстий','holes') }}: {{ region.loops.length-1 }}</template></label>
                   <small>{{ label('Снимите отметку с областей, которые не нужны для выдавливания. Хотя бы одна область остаётся.','Clear the regions you do not want to extrude. At least one region stays.') }}</small>
+                  <small data-region-pick-hint>{{ label('Области можно включать и исключать кликом во вьюпорте или клавишами Enter / Пробел.','Click a region in the viewport, or press Enter / Space on it, to include or exclude it.') }}</small>
                 </fieldset>
                 <small>{{ label('Кривые и отверстия сохраняются. ID — первого профиля. Размеры удаляются; Undo возвращает входы.','Curves, holes and the first profile identity are retained. Dimensions are removed; Undo restores the inputs.') }}</small>
                 <small>{{ label('Прямые и круговые дуги; неоднозначные пересечения отклоняются.','Lines and circular arcs; ambiguous intersections are refused.') }}</small>

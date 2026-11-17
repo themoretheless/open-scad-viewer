@@ -5945,3 +5945,35 @@ it('marks the sweep deviation field when the framed sweep exceeds its budget',as
  expect(field.props['aria-invalid']).toBe(true)
  expect(invalidRows(ui).length).toBe(2)
 })
+
+it.each(['en','ru'])('C9 region pick: hover, click and keyboard toggle Boolean result regions in the viewport (%s)',async locale=>{
+ await geometryKernel.warmGeometryKernel()
+ const plate={id:'plate',name:'Region plate',closed:true,points:[[0,0],[10,0],[10,4],[0,4]]}
+ const cut={id:'cut',name:'Region cut',closed:true,points:[[4,-1],[6,-1],[6,5],[4,5]]}
+ const ui=await mount({locale},JSON.stringify(parseDirectDocument(JSON.stringify({version:1,sketches:[plate,cut],bodies:[]}))))
+ await ui.click(plate.name);await ui.click(cut.name,true)
+ await ui.click(locale==='ru'?'Вычесть области профилей':'Subtract profile regions');await flushClearance()
+ // Every visible pane draws the same pickable regions; drive the first pane's copies.
+ const regions=()=>ui.all().filter(n=>n.props['data-region-index']!==undefined).slice(0,2)
+ expect(new Set(ui.all().filter(n=>n.props['data-region-index']!==undefined).map(n=>n.props['data-region-index']))).toEqual(new Set([0,1]))
+ const call=(handler:unknown,event:Record<string,unknown>)=>{for(const h of [handler].flat())(h as (e:unknown)=>void)({stopPropagation(){},preventDefault(){},...event})}
+ const first=()=>regions()[0]!
+ expect(first().props.tabindex).toBe('0')
+ expect(first().props['aria-label']).toBe(locale==='ru'?'Область 1: включена, нажмите чтобы исключить':'Region 1: included, press to exclude')
+ call(first().props.onPointerenter,{});await nextTick()
+ expect(first().props['data-region-hover']).toBe('')
+ call(first().props.onPointerdown,{button:0});await flushClearance()
+ expect(first().props['aria-checked']).toBe(false)
+ expect(first().props['data-region-excluded']).toBe('')
+ const box=(i:number)=>ui.all().find(n=>n.tag==='input'&&n.props['aria-label']===(locale==='ru'?'Область':'Region')+' '+i)!
+ expect(box(1).props.checked).toBe(false)
+ // The last included region cannot be excluded.
+ call(regions()[1]!.props.onKeydown,{key:'Enter'});await nextTick()
+ expect(regions()[1]!.props['aria-checked']).toBe(true)
+ call(first().props.onFocus,{});call(first().props.onKeydown,{key:' '});await flushClearance()
+ expect(first().props['aria-checked']).toBe(true);expect(box(1).props.checked).toBe(true)
+ call(first().props.onKeydown,{key:'Enter'});await flushClearance()
+ await commandKey(ui,'Enter')
+ const committed=parseDirectDocument(JSON.stringify(ui.doc()))
+ expect(committed.sketches).toHaveLength(1);expect(committed.sketches[0].retainedProfile!.areaMm2).toBeCloseTo(16,6)
+})

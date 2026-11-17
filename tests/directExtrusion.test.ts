@@ -81,7 +81,7 @@ it('adds and cuts an annular face profile with an exact circular hole',()=>{
  }
 })
 
-import {combineSketchProfiles,selectSketchProfileRegions,sketchProfileRegions,unionSketchProfiles,withRetainedProfile,sketchProfile} from '../src/app/retainedSketchProfile'
+import {combineSketchProfiles,selectSketchProfileRegions,sketchProfileRegionAt,sketchProfileRegionDisplay,sketchProfileRegions,unionSketchProfiles,withRetainedProfile,sketchProfile} from '../src/app/retainedSketchProfile'
 import {parseDirectDocument,extrudeSketchBrep,DirectHistory} from '../src/app/directModeling'
 import {transformSketch} from '../src/app/directSketchGeometry'
 import {transformSelection} from '../src/app/directSolidTools'
@@ -272,4 +272,19 @@ it('splits a profile Boolean result into owned regions and keeps a chosen subset
  expect(()=>selectSketchProfileRegions(result,[0,1])).toThrow('Keep at least one profile region.')
  expect(()=>selectSketchProfileRegions(result,[2])).toThrow('no longer exists')
  expect(selectSketchProfileRegions(result,[])).toBe(result)
+})
+
+it('C9 region pick: finds the profile region under a point and skips holes',()=>{
+ const plate={id:'p',name:'Plate',closed:true,points:[[0,0],[10,0],[10,4],[0,4]]} as DirectSketch
+ const cut={id:'c',name:'Cut',closed:true,points:[[4,-1],[6,-1],[6,5],[4,5]]} as DirectSketch
+ const hole={id:'h',name:'Hole',closed:true,points:[],analytic:{kind:'circle',center:[2,2],radius:1,start:0,sweep:360}} as DirectSketch
+ const profile=combineSketchProfiles([plate,cut,hole],'difference').retainedProfile!
+ const regions=sketchProfileRegions(profile),display=sketchProfileRegionDisplay(profile)
+ expect(display.map(d=>d.length)).toEqual(regions.map(r=>r.loops.length))
+ const holed=regions.findIndex(r=>r.loops.length===2)
+ expect(sketchProfileRegionAt(profile,[0.5,0.5])).toBe(holed)
+ expect(sketchProfileRegionAt(profile,[8,2])).toBe(1-holed)
+ expect(sketchProfileRegionAt(profile,[2,2])).toBe(-1)
+ expect(sketchProfileRegionAt(profile,[5,2])).toBe(-1)
+ expect(sketchProfileRegionAt(profile,[20,2])).toBe(-1)
 })

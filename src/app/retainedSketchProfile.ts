@@ -52,6 +52,15 @@ export function sketchProfileRegions(profile:BrepProfile):SketchProfileRegion[] 
  })
  return regions
 }
+/** Display loops of each region (outer loop first, then its holes), for viewport highlighting only. */
+export function sketchProfileRegionDisplay(profile:BrepProfile):Point2[][][] {
+ const display=retainedProfileDisplay(profile)
+ return sketchProfileRegions(profile).map(r=>r.loops.map(i=>display[i]??[]))
+}
+/** Index of the region whose material contains the point (inside the outer loop, outside its holes), or -1. */
+export function sketchProfileRegionAt(profile:BrepProfile,point:Point2):number {
+ return sketchProfileRegionDisplay(profile).findIndex(([outer,...holes])=>!!outer&&insidePolygon(point,outer)&&!holes.some(h=>insidePolygon(point,h)))
+}
 /** Keep only the listed region indexes of a retained profile sketch. */
 export function selectSketchProfileRegions(sketch:DirectSketch,excluded:readonly number[]):DirectSketch {
  if(!excluded.length)return sketch
