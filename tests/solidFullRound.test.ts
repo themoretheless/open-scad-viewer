@@ -55,8 +55,10 @@ describe('Full Round Solid document edit', () => {
   it('refuses forged histories, invalid inputs and mixed B-rep caches', () => {
     const applied = applySolidFullRound(boxDocument(), options)
     const forged = structuredClone(applied)
-    const artifact = forged.bodies[0]!.exactFullRound!.history.revisions[0]!.artifact as any
-    artifact.geometry.vertices[0].point[0] = ['999', '1']
+    const artifact = forged.bodies[0]!.exactFullRound!.history.revisions[0]!.artifact as {
+      geometry: { vertices: { point: unknown[] }[] }
+    }
+    artifact.geometry.vertices[0]!.point[0] = ['999', '1']
     expect(() => restoreSolidFullRoundBodies(forged)).toThrow()
     expect(() => applySolidFullRound(boxDocument(), { ...options, faces: [5, 5, 3] })).toThrow(/three distinct/)
     expect(() => applySolidFullRound(boxDocument(), { ...options, segments: 0 })).toThrow(/1\.\.32/)
