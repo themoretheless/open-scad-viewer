@@ -221,4 +221,8 @@ pub use algebraic_enclosure::{
 };
 
 mod algebraic_order;
-pub use algebraic_order::{AlgebraicBoundaryOrderReport, order_algebraic_boundary_clocks};
+pub use algebraic_order::{
+    AlgebraicBoundaryIsolation, AlgebraicBoundaryIsolationReport, AlgebraicBoundaryOrderReport,
+    IsolatedAlgebraicBoundaryClock, isolate_ordered_algebraic_boundary_clocks,
+    order_algebraic_boundary_clocks,
+};

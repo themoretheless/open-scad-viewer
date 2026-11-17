@@ -13,10 +13,11 @@ use nurbs_core::{
             build_planar_intersection_segments, classify_planar_face_contacts,
             enclose_algebraic_planar_boundary_point, intersect_planar_face_boundaries,
             intersect_planar_face_boundary_contacts, intersect_planar_supports,
-            intersect_trimmed_planar_faces, match_quadratic_planar_boundary_contacts,
-            optimize_planar_intersection_segment_storage, order_algebraic_boundary_clocks,
-            refine_planar_face_boundary_extents, resolve_planar_face_boundary_intersection,
-            store_planar_intersection_segment, store_trimmed_planar_intersection,
+            intersect_trimmed_planar_faces, isolate_ordered_algebraic_boundary_clocks,
+            match_quadratic_planar_boundary_contacts, optimize_planar_intersection_segment_storage,
+            order_algebraic_boundary_clocks, refine_planar_face_boundary_extents,
+            resolve_planar_face_boundary_intersection, store_planar_intersection_segment,
+            store_trimmed_planar_intersection,
         },
         planar_coplanar_ray::CoplanarRayPartitionOptions,
         planar_trim_projection::ProjectedTrimmedFace,
@@ -1253,4 +1254,57 @@ fn groups_reducible_representations_and_refuses_invalid_roots_or_exhausted_work(
     }];
     let report = order_algebraic_boundary_clocks(&invalid, WORK).unwrap();
     assert_eq!(report.outcome, Err(Refusal::InvalidOutput));
+}
+
+#[test]
+fn isolates_nearly_equal_algebraic_roots_and_produces_a_rational_separator() {
+    let epsilon = q(1, 2).pow(125);
+    let root = |constant| AlgebraicBoundaryClock::Quadratic {
+        linear: q(0, 1),
+        constant,
+        upper_root: true,
+    };
+    let points = [root(q(-2, 1) - &epsilon), root(q(-2, 1)), root(q(-2, 1))];
+    let report = isolate_ordered_algebraic_boundary_clocks(&points, WORK).unwrap();
+    let result = report.outcome.unwrap();
+    assert_eq!(result.clocks.len(), 2);
+    assert_eq!(result.clocks[0].indices, [1, 2]);
+    assert_eq!(result.clocks[1].indices, [0]);
+    let separator = &result.witnesses[0];
+    assert!(&result.clocks[0].parameter[1] < separator);
+    assert!(separator < &result.clocks[1].parameter[0]);
+    assert!(q(2, 1) < separator.pow(2) && separator.pow(2) < q(2, 1) + &epsilon);
+    for (clock, square) in result.clocks.iter().zip([q(2, 1), q(2, 1) + &epsilon]) {
+        assert!(clock.parameter[0].pow(2) <= square);
+        assert!(clock.parameter[1].pow(2) >= square);
+    }
+    let limited = isolate_ordered_algebraic_boundary_clocks(&points, report.work_used - 1).unwrap();
+    assert_eq!(
+        limited.outcome,
+        Err(nurbs_core::editing::exact_derivative::Refusal::ResourceLimit)
+    );
+}
+
+#[test]
+fn builds_exact_witnesses_between_rational_points_and_handles_empty_input() {
+    let values = [q(1, 3), q(-3, 2), q(4, 3)];
+    let points = values.clone().map(AlgebraicBoundaryClock::Rational);
+    let result = isolate_ordered_algebraic_boundary_clocks(&points, WORK)
+        .unwrap()
+        .outcome
+        .unwrap();
+    assert_eq!(
+        result
+            .clocks
+            .iter()
+            .map(|clock| clock.parameter.clone())
+            .collect::<Vec<_>>(),
+        [1, 0, 2].map(|i| [values[i].clone(), values[i].clone()])
+    );
+    assert_eq!(result.witnesses, [q(-7, 12), q(5, 6)]);
+    let empty = isolate_ordered_algebraic_boundary_clocks(&[], WORK)
+        .unwrap()
+        .outcome
+        .unwrap();
+    assert!(empty.clocks.is_empty() && empty.witnesses.is_empty());
 }

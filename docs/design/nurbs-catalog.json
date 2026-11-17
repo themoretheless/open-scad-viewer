@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 352,
-  "unallocatedCount": 648,
+  "specifiedCount": 353,
+  "unallocatedCount": 647,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9060,6 +9060,30 @@
       "remainingQualification": [
         "Order rational and quadratic support-clock values by exact polynomial signs, grouping truly equal coordinates.",
         "Compare quadratic branches using their vertices and exact reduced polynomial signs. Retain every source index in stable groups of equal coordinates.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0353",
+      "name": "Разделение алгебраических точек контакта NURBS рациональными интервалами",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Пересечения",
+      "nativeApi": "nurbs_core::analysis::exact_plane_intersection::isolate_ordered_algebraic_boundary_clocks",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/exact_plane_intersection.rs",
+        "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs",
+        "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs",
+        "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs",
+        "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/algebraic_order.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation/quadratic_contacts.rs",
+        "docs/qualification/nurbs-curvature-field-353-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-353-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Isolate ordered algebraic contact coordinates in disjoint rational clock intervals and construct exact witnesses between them.",
+        "Exact comparisons refine only neighboring boxes that overlap. Each gap receives an exact rational witness. Coincident input coordinates share one box with all source indices.",
         "WASM and application integration are separate."
       ]
     }

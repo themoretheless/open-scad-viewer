@@ -19,16 +19,59 @@ pub fn order_algebraic_boundary_clocks(
     points: &[AlgebraicBoundaryClock],
     max_work: u64,
 ) -> Result<AlgebraicBoundaryOrderReport> {
-    check(
-        points.len() <= 4096 && (1..=cad_predicates::MAX_WORK).contains(&max_work),
-        "Algebraic boundary ordering supports at most 4096 points and bounded work",
-    )?;
+    validate(points, max_work)?;
     let mut work = Work {
         used: 0,
         limit: max_work,
     };
     let outcome = order(points, &mut work);
     Ok(AlgebraicBoundaryOrderReport {
+        outcome,
+        work_used: work.used,
+    })
+}
+
+fn validate(points: &[AlgebraicBoundaryClock], max_work: u64) -> Result<()> {
+    check(
+        points.len() <= 4096 && (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Algebraic boundary ordering supports at most 4096 points and bounded work",
+    )
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct IsolatedAlgebraicBoundaryClock {
+    pub indices: Vec<usize>,
+    pub parameter: [Q; 2],
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AlgebraicBoundaryIsolation {
+    /// Strictly separated closed clock intervals in numerical order.
+    pub clocks: Vec<IsolatedAlgebraicBoundaryClock>,
+    /// One rational clock value strictly between every pair of adjacent boxes.
+    pub witnesses: Vec<Q>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AlgebraicBoundaryIsolationReport {
+    pub outcome: std::result::Result<AlgebraicBoundaryIsolation, Refusal>,
+    pub work_used: u64,
+}
+
+/// Isolate an ordered set of rational and quadratic contact coordinates.
+/// Witnesses separate the supplied coordinates and can be evaluated
+/// exactly on the support line.
+pub fn isolate_ordered_algebraic_boundary_clocks(
+    points: &[AlgebraicBoundaryClock],
+    max_work: u64,
+) -> Result<AlgebraicBoundaryIsolationReport> {
+    validate(points, max_work)?;
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let outcome = isolate(points, &mut work);
+    Ok(AlgebraicBoundaryIsolationReport {
         outcome,
         work_used: work.used,
     })
@@ -53,9 +96,13 @@ fn order(points: &[AlgebraicBoundaryClock], work: &mut Work) -> Checked<Vec<Vec<
         .iter()
         .map(|point| key(point, work))
         .collect::<Checked<Vec<_>>>()?;
-    let mut indices: Vec<_> = (0..points.len()).collect();
+    group_keys(&keys, work)
+}
+
+fn group_keys(keys: &[Key], work: &mut Work) -> Checked<Vec<Vec<usize>>> {
+    let mut indices: Vec<_> = (0..keys.len()).collect();
     let mut scratch = vec![0; indices.len()];
-    sort(&mut indices, &mut scratch, &keys, work)?;
+    sort(&mut indices, &mut scratch, keys, work)?;
     let mut groups: Vec<Vec<usize>> = Vec::new();
     for i in indices {
         if let Some(group) = groups.last_mut()
@@ -189,4 +236,65 @@ fn opposite_halves(upper: bool, other_side: Ordering) -> Option<Ordering> {
     } else {
         None
     }
+}
+
+fn isolate(
+    points: &[AlgebraicBoundaryClock],
+    work: &mut Work,
+) -> Checked<AlgebraicBoundaryIsolation> {
+    let keys = points
+        .iter()
+        .map(|point| key(point, work))
+        .collect::<Checked<Vec<_>>>()?;
+    let mut clocks = group_keys(&keys, work)?
+        .into_iter()
+        .map(|indices| {
+            let parameter = initial_range(&keys[indices[0]], work)?;
+            Ok(IsolatedAlgebraicBoundaryClock { indices, parameter })
+        })
+        .collect::<Checked<Vec<_>>>()?;
+    for i in 1..clocks.len() {
+        let (left, right) = clocks.split_at_mut(i);
+        let a = &mut left[i - 1];
+        let b = &mut right[0];
+        while a.parameter[1] >= b.parameter[0] {
+            refine(&keys[a.indices[0]], &mut a.parameter, work)?;
+            refine(&keys[b.indices[0]], &mut b.parameter, work)?;
+        }
+    }
+    let witnesses = clocks
+        .windows(2)
+        .map(|pair| midpoint(&pair[0].parameter[1], &pair[1].parameter[0], work))
+        .collect::<Checked<Vec<_>>>()?;
+    Ok(AlgebraicBoundaryIsolation { clocks, witnesses })
+}
+
+fn initial_range(key: &Key, work: &mut Work) -> Checked<[Q; 2]> {
+    match key {
+        Key::Rational(value) => Ok([value.clone(), value.clone()]),
+        Key::Quadratic(root) => {
+            let max = root.linear.abs().max(root.constant.abs());
+            let one = Q::from_integer(1.into());
+            let bound = work.op(&max, &one, |a, b| a + b)?;
+            Ok(if root.upper {
+                [root.vertex.clone(), bound]
+            } else {
+                [-bound, root.vertex.clone()]
+            })
+        }
+    }
+}
+
+fn refine(key: &Key, range: &mut [Q; 2], work: &mut Work) -> Checked<()> {
+    if let Key::Quadratic(root) = key {
+        let middle = midpoint(&range[0], &range[1], work)?;
+        let side = root_vs_rational(root, &middle, work)?;
+        range[usize::from(side == Ordering::Less)] = middle;
+    }
+    Ok(())
+}
+
+fn midpoint(lo: &Q, hi: &Q, work: &mut Work) -> Checked<Q> {
+    let two = Q::from_integer(2.into());
+    Ok(work.op(lo, hi, |a, b| (a + b) / &two)?)
 }
