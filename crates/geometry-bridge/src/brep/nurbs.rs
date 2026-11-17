@@ -747,3 +747,96 @@ pub fn exact_periodic_trim_contour_audit_request(
         "refusalStage": refusal_stage,
     }))
 }
+
+/// Enclose a periodic trim segment range specified by decimal rational pairs.
+pub fn exact_periodic_trim_range_length_request(
+    request: &value_codec::Value,
+) -> Result<value_codec::Value> {
+    use crate::field;
+    use nurbs_core::{
+        analysis::curve_measure::StopReason,
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges,
+    };
+    use value_codec::{Value, json};
+
+    let source: nurbs_core::surface::Surface = field(request, "surface")?;
+    let contours: Vec<Vec<[f64; 2]>> = field(request, "contours")?;
+    let contour: usize = field(request, "contour")?;
+    let segment: usize = field(request, "segment")?;
+    let tolerance: f64 = field(request, "toleranceMm")?;
+    let max_work: u64 = field(request, "maxWork")?;
+    let max_cells: usize = field(request, "maxCells")?;
+    let range: [Value; 2] = field(request, "range")?;
+    if !contours
+        .get(contour)
+        .is_some_and(|path| segment < path.len().saturating_sub(1))
+    {
+        return Err(input(
+            "Periodic trim length contour or segment index is out of range",
+        ));
+    }
+    if !tolerance.is_finite() || tolerance <= 0. || !(1..=100_000).contains(&max_cells) {
+        return Err(input(
+            "Periodic trim length needs positive tolerance and 1..100000 cells",
+        ));
+    }
+    let parse = |value: &Value| -> Result<_> {
+        let numerator: String = field(value, "numerator")?;
+        let denominator: String = field(value, "denominator")?;
+        let digits = |s: &str| {
+            !s.is_empty() && s.len() <= 1234 && s.bytes().all(|byte| byte.is_ascii_digit())
+        };
+        if !digits(&numerator)
+            || !digits(&denominator)
+            || !denominator.bytes().any(|byte| byte != b'0')
+        {
+            return Err(input(
+                "Periodic trim length parameters need nonnegative rational pairs",
+            ));
+        }
+        format!("{numerator}/{denominator}")
+            .parse()
+            .map_err(|_| input("Invalid periodic trim length parameter"))
+    };
+    let start = parse(&range[0])?;
+    let end = parse(&range[1])?;
+    let contours = contours.iter().map(Vec::as_slice).collect::<Vec<_>>();
+    let edges = build_exact_periodic_surface_trim_input_edges(&source, &contours, max_work)?;
+    let work_used = edges.geometry.work_used;
+    if edges.geometry.patches.is_none() {
+        return Ok(json!({
+            "length": null, "minimumCells": null, "workUsed": work_used, "refusalStage": "build",
+        }));
+    }
+    let report = edges.measure_rational_input_segment_range_length(
+        contour,
+        segment,
+        [&start, &end],
+        tolerance,
+        max_cells,
+    )?;
+    let length = report.length.map(|length| {
+        let stop_reason = match length.stop_reason {
+            StopReason::Tolerance => "tolerance",
+            StopReason::WorkLimit => "workLimit",
+            StopReason::PrecisionLimit => "precisionLimit",
+            StopReason::IterationLimit => "iterationLimit",
+            StopReason::TargetUncertainty => "targetUncertainty",
+        };
+        json!({
+            "valueMm": length.value,
+            "boundsMm": length.bounds,
+            "errorUpperMm": length.error_upper,
+            "withinTolerance": length.within_tolerance,
+            "cells": length.cells,
+            "stopReason": stop_reason,
+        })
+    });
+    let refusal_stage = length.is_none().then_some("measure");
+    Ok(json!({
+        "length": length,
+        "minimumCells": report.minimum_cells,
+        "workUsed": work_used,
+        "refusalStage": refusal_stage,
+    }))
+}

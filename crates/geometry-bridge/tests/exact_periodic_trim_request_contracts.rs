@@ -186,3 +186,42 @@ fn contour_audit_withholds_partial_joins_with_only_build_budget() {
     assert_eq!(response["value"]["refusalStage"], "audit");
     assert!(response["value"]["workUsed"].as_u64().unwrap() <= build_work + 1);
 }
+
+fn range_length_request() -> Value {
+    let mut request = request();
+    request["op"] = json!("brep_measure_exact_periodic_trim_range");
+    request["contour"] = json!(0);
+    request["segment"] = json!(0);
+    request["maxCells"] = json!(100);
+    request["range"] = json!([
+        {"numerator": "4", "denominator": "5"},
+        {"numerator": "1", "denominator": "3"},
+    ]);
+    request
+}
+
+#[test]
+fn range_length_operation_encloses_exact_rational_endpoints() {
+    let response = run(&range_length_request());
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    assert!(report["refusalStage"].is_null());
+    assert_eq!(report["minimumCells"], 4);
+    let length = &report["length"];
+    let bounds = &length["boundsMm"];
+    let expected = 7. / 15.;
+    assert!(bounds[0].as_f64().unwrap() <= expected && expected <= bounds[1].as_f64().unwrap());
+    assert_eq!(length["withinTolerance"], true);
+}
+
+#[test]
+fn range_length_operation_reports_budget_and_rejects_zero_denominator() {
+    let mut request = range_length_request();
+    request["maxCells"] = json!(3);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    assert!(response["value"]["length"].is_null());
+    assert_eq!(response["value"]["refusalStage"], "measure");
+    request["range"][0]["denominator"] = json!("0");
+    assert_eq!(run(&request)["ok"], false);
+}

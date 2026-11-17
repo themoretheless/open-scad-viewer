@@ -21,6 +21,8 @@ interface Report {
     topologyIds: { edges: string[] }
   } | null
   edgeBindings?: { edgeId: string; contour: number; segment: number; interval?: [number, number]; parameters?: [Rational, Rational] }[]
+  length?: { boundsMm: [number, number]; withinTolerance: boolean } | null
+  minimumCells?: number | null
   joins?: { segment: number; parameter: Rational; kind: string }[] | null
   workUsed: number
   refusalStage: string | null
@@ -47,8 +49,7 @@ const request = {
   maxWork: 1_000_000,
 }
 
-function call(maxWork: number, op = request.op, contour?: number): Report {
-  const options = contour === undefined ? {} : { contour }
+function call(maxWork: number, op = request.op, options = {}): Report {
   const bytes = encodeBinary({ ...request, ...options, maxWork, op })
   const ptr = writeLinear(kernel.memory, kernel.abi_alloc, bytes)
   assert.ok(ptr)
@@ -113,13 +114,27 @@ assert.deepEqual(refusedDirected.edgeBindings, [])
 console.log('WASM ABI retained exact rational parameters in original contour direction.')
 
 const auditOp = 'brep_audit_exact_periodic_trim_contour'
-const audit = call(request.maxWork, auditOp, 0)
+const audit = call(request.maxWork, auditOp, { contour: 0 })
 assert.ok(audit.joins)
 assert.equal(audit.joins.length, 6)
 assert.deepEqual(audit.joins[1], {
   segment: 0, parameter: { numerator: '1', denominator: '2' }, kind: 'corner',
 })
-const refusedAudit = call(result.workUsed + 1, auditOp, 0)
+const refusedAudit = call(result.workUsed + 1, auditOp, { contour: 0 })
 assert.equal(refusedAudit.joins, null)
 assert.equal(refusedAudit.refusalStage, 'audit')
 console.log('WASM ABI returned exact contour joins and withheld an exhausted audit.')
+
+const lengthOp = 'brep_measure_exact_periodic_trim_range'
+const selection = {
+  contour: 0, segment: 0,
+  range: [{ numerator: '4', denominator: '5' }, { numerator: '1', denominator: '3' }],
+}
+const measured = call(request.maxWork, lengthOp, { ...selection, maxCells: 100 })
+assert.ok(measured.length?.withinTolerance)
+assert.ok(measured.length.boundsMm[0] <= 7 / 15 && 7 / 15 <= measured.length.boundsMm[1])
+const short = call(request.maxWork, lengthOp, { ...selection, maxCells: 3 })
+assert.equal(short.length, null)
+assert.equal(short.minimumCells, 4)
+assert.equal(short.refusalStage, 'measure')
+console.log('WASM ABI enclosed a rational trim length and enforced its cell budget.')
