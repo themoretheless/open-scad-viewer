@@ -2176,3 +2176,44 @@ pub fn exact_planar_spatial_polyline_area(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPlanarPolylineCentroid {
+    pub centroid_mm: [Q; 3],
+    pub area: ExactPlanarPolylineArea,
+    pub exact_work: u64,
+}
+
+/// Compute the area centroid of a simple planar spatial polyline.
+/// Signed triangle contributions account for concavity and orientation.
+pub fn exact_planar_spatial_polyline_centroid(
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPlanarPolylineCentroid> {
+    let area = exact_planar_spatial_polyline_area(points_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - area.exact_work;
+    spend(&mut remaining, 16)?;
+    let [i, j] = plane_axes(&area.area_vector_mm2);
+    let origin = &points_mm[0];
+    let mut moment = [Q::zero(), Q::zero(), Q::zero()];
+    for pair in points_mm.windows(2) {
+        spend(&mut remaining, 20)?;
+        let a: [Q; 3] = std::array::from_fn(|k| &pair[0][k] - &origin[k]);
+        let b: [Q; 3] = std::array::from_fn(|k| &pair[1][k] - &origin[k]);
+        let twice_area = &a[i] * &b[j] - &a[j] * &b[i];
+        for k in 0..3 {
+            moment[k] += (&a[k] + &b[k]) * &twice_area;
+        }
+    }
+    // plane_axes may return either orientation. Use the corresponding
+    // oriented component of the area vector in the triangle denominator.
+    let normal_axis = 3 - i - j;
+    let sign = if (i + 1) % 3 == j { 6 } else { -6 };
+    let denominator = &area.area_vector_mm2[normal_axis] * Q::from_integer(sign.into());
+    let centroid_mm = std::array::from_fn(|k| &origin[k] + &moment[k] / &denominator);
+    Ok(ExactPlanarPolylineCentroid {
+        centroid_mm,
+        area,
+        exact_work: max_exact_work - remaining,
+    })
+}

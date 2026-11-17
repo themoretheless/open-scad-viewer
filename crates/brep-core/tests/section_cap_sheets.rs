@@ -4654,3 +4654,44 @@ fn exact_planar_spatial_polyline_area_rejects_warped_and_self_crossing_profiles(
         assert!(exact_planar_spatial_polyline_area(path, 1_000_000).is_err());
     }
 }
+
+#[test]
+fn exact_planar_polyline_centroid_handles_a_concave_tilted_profile() {
+    use brep_core::analysis::exact_planar_spatial_polyline_centroid;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x: i64, y: i64| [q(x + 7, 1), q(y - 8, 1), q(x + 2 * y, 1)];
+    let path = [
+        p(0, 0),
+        p(3, 0),
+        p(3, 1),
+        p(1, 1),
+        p(1, 3),
+        p(0, 3),
+        p(0, 0),
+    ];
+    let report = exact_planar_spatial_polyline_centroid(&path, 1_000_000).unwrap();
+    assert_eq!(report.centroid_mm, [q(81, 10), q(-69, 10), q(33, 10)]);
+    assert_eq!(report.area.area_vector_mm2, [q(-5, 1), q(-10, 1), q(5, 1)]);
+    assert_eq!(
+        exact_planar_spatial_polyline_centroid(&path, report.exact_work).unwrap(),
+        report
+    );
+    assert!(exact_planar_spatial_polyline_centroid(&path, report.exact_work - 1).is_err());
+    let reversed = path.into_iter().rev().collect::<Vec<_>>();
+    let reverse = exact_planar_spatial_polyline_centroid(&reversed, 1_000_000).unwrap();
+    assert_eq!(reverse.centroid_mm, report.centroid_mm);
+}
+
+#[test]
+fn exact_planar_polyline_centroid_supports_vertical_profiles_and_refuses_warp() {
+    use brep_core::analysis::exact_planar_spatial_polyline_centroid;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y, z| [q(x, 1), q(y, 1), q(z, 1)];
+    let path = [p(2, 0, 0), p(2, 1, 0), p(2, 0, 1), p(2, 0, 0)];
+    let report = exact_planar_spatial_polyline_centroid(&path, 1_000_000).unwrap();
+    assert_eq!(report.centroid_mm, [q(2, 1), q(1, 3), q(1, 3)]);
+    let warped = [p(2, 0, 0), p(2, 1, 0), p(2, 1, 1), p(3, 0, 1), p(2, 0, 0)];
+    assert!(exact_planar_spatial_polyline_centroid(&warped, 1_000_000).is_err());
+}
