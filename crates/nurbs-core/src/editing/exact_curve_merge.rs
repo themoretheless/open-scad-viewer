@@ -1101,7 +1101,7 @@ pub fn store_exact_periodic_c2_curve(source: &Curve, max_work: u64) -> Result<Ga
     })
 }
 
-fn repeat_clamped_cycle(
+pub(super) fn repeat_clamped_cycle(
     source: &Curve,
     work: &mut super::rational_edit::Work,
 ) -> std::result::Result<Curve, super::rational_factor::Refusal> {

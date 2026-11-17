@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 519,
-  "unallocatedCount": 481,
+  "specifiedCount": 520,
+  "unallocatedCount": 480,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13375,6 +13375,27 @@
       "remainingQualification": [
         "Tile one complete turn on each axis with exact clamped tensor patches.",
         "Partition one lifted axis into exact strips, then partition the other along each strip under the same work budget. A refusal withholds the grid.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0520",
+      "name": "Точная сборка полос NURBS-поверхности в периодическое представление",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::assemble_exact_periodic_surface_axis",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-520-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-520-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Assemble compatible strips, prove exact seam control and weight identity, and store one periodic surface axis.",
+        "Join matching tensor strips, require literal wrap agreement throughout the transverse control row, and repeat the exact periodic support.",
         "WASM and application integration are separate."
       ]
     }

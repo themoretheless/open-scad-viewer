@@ -457,3 +457,139 @@ pub fn partition_exact_doubly_periodic_surface(
         refusal: None,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PeriodicAssemblyRefusal {
+    Join {
+        strip: usize,
+        reason: super::exact_surface_merge::Refusal,
+    },
+    Wrap {
+        transverse_index: usize,
+    },
+    Exact(ExactRefusal),
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicAssemblyReport {
+    pub surface: Option<Surface>,
+    pub work_used: u64,
+    pub refusal: Option<PeriodicAssemblyRefusal>,
+}
+
+/// Assemble compatible clamped strips into periodic storage along one axis.
+/// Every join and the final wrap require literal agreement of poles and
+/// weights. This proves C0 closure and preserves both parameter laws.
+pub fn assemble_exact_periodic_surface_axis(
+    strips: &[Surface],
+    axis: Axis,
+    max_work: u64,
+) -> Result<PeriodicAssemblyReport> {
+    use PeriodicAssemblyRefusal as Failure;
+
+    crate::check(
+        (2..=256).contains(&strips.len()),
+        "Periodic assembly needs 2..=256 strips",
+    )?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Periodic assembly work must be in 1..=1000000",
+    )?;
+    for strip in strips {
+        strip.validate()?;
+    }
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let reject = |reason, work_used| PeriodicAssemblyReport {
+        surface: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    let mut surface = strips[0].clone();
+    for (strip, next) in strips.iter().enumerate().skip(1) {
+        let controls = |s: &Surface| (s.control_points.len() * s.control_points[0].len()) as u64;
+        if work.charge(controls(&surface) + controls(next)).is_err() {
+            return Ok(reject(
+                Failure::Exact(ExactRefusal::ResourceLimit),
+                work.used,
+            ));
+        }
+        let joined = super::exact_surface_merge::merge(&surface, next, axis)?;
+        let Some(merged) = joined.surface else {
+            let reason = joined
+                .refusal
+                .unwrap_or(super::exact_surface_merge::Refusal::InvalidOutput);
+            return Ok(reject(Failure::Join { strip, reason }, work.used));
+        };
+        surface = merged;
+    }
+
+    match close_surface_cycle(surface, axis, &mut work) {
+        Ok(surface) => Ok(PeriodicAssemblyReport {
+            surface: Some(surface),
+            work_used: work.used,
+            refusal: None,
+        }),
+        Err(reason) => Ok(reject(reason, work.used)),
+    }
+}
+
+fn close_surface_cycle(
+    mut surface: Surface,
+    axis: Axis,
+    work: &mut Work,
+) -> std::result::Result<Surface, PeriodicAssemblyRefusal> {
+    use PeriodicAssemblyRefusal as Failure;
+
+    let [nu, nv] = [
+        surface.control_points.len(),
+        surface.control_points[0].len(),
+    ];
+    let (depth, transverse) = match axis {
+        Axis::U => (nu, nv),
+        Axis::V => (nv, nu),
+    };
+    work.charge(transverse as u64)
+        .map_err(|e| Failure::Exact(e.into()))?;
+    for i in 0..transverse {
+        let ((a, b), (c, d)) = match axis {
+            Axis::U => ((0, i), (depth - 1, i)),
+            Axis::V => ((i, 0), (i, depth - 1)),
+        };
+        if surface.control_points[a][b] != surface.control_points[c][d]
+            || surface.weights[a][b] != surface.weights[c][d]
+        {
+            return Err(Failure::Wrap {
+                transverse_index: i,
+            });
+        }
+    }
+    let cycle = super::exact_curve_merge::repeat_clamped_cycle(&row(&surface, axis, 0), work)
+        .map_err(Failure::Exact)?;
+    match axis {
+        Axis::U => {
+            surface.knots_u = cycle.knots;
+            surface.periodic_u = true;
+            surface
+                .control_points
+                .extend_from_within(1..surface.degree_u);
+            surface.weights.extend_from_within(1..surface.degree_u);
+        }
+        Axis::V => {
+            surface.knots_v = cycle.knots;
+            surface.periodic_v = true;
+            for points in &mut surface.control_points {
+                points.extend_from_within(1..surface.degree_v);
+            }
+            for weights in &mut surface.weights {
+                weights.extend_from_within(1..surface.degree_v);
+            }
+        }
+    }
+    surface
+        .validate()
+        .map_err(|_| Failure::Exact(ExactRefusal::InvalidOutput))?;
+    Ok(surface)
+}

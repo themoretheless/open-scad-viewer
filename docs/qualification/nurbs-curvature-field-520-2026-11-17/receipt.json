@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0520",
+  "testedBase": "7561dae37596ed8be6221549bde45bd099badd0d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 97,
+  "scope": [
+    "Assemble compatible strips, prove exact seam control and weight identity, and store one periodic surface axis.",
+    "Join matching tensor strips, require literal wrap agreement throughout the transverse control row, and repeat the exact periodic support."
+  ],
+  "logSha256": "d0cfe9447097e0af91fcca4779ddb51a54c34a34dce8904a87f6898835781592",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "03f2401d668690ab72788d4bd7f696c215095438310d06015ee98a3ee90dcffa",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "21ba0d3ec3fabcf8984ef194de889a23bf3803a1a48d4bbfeec2c644896e581b"
+  }
+}

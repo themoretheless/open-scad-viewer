@@ -2020,3 +2020,66 @@ fn periodic_grid_refuses_oversized_layouts() {
             .is_err()
     );
 }
+
+#[test]
+fn exact_periodic_surface_assembly_round_trips_strips_on_both_axes() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::{
+            assemble_exact_periodic_surface_axis, partition_exact_periodic_surface_axis,
+        },
+        surface::Axis,
+    };
+    let source = doubly_periodic_tensor();
+    for axis in [Axis::U, Axis::V] {
+        let strips =
+            partition_exact_periodic_surface_axis(&source, axis, 3.5, &[4.5, 6.], 1_000_000)
+                .unwrap()
+                .strips
+                .unwrap();
+        let report = assemble_exact_periodic_surface_axis(&strips, axis, 1_000_000).unwrap();
+        assert_eq!(report.refusal, None);
+        let surface = report.surface.unwrap();
+        assert!(surface.periodic_u && surface.periodic_v);
+        for t in [3.5, 4.25, 5.5, 7.5] {
+            let (u, v, old_u, old_v) = match axis {
+                Axis::U => (t, 2.25, t % 4., 2.25),
+                Axis::V => (2.25, t, 2.25, t % 4.),
+            };
+            assert_eq!(
+                surface.evaluate(u, v).unwrap().point,
+                source.evaluate(old_u, old_v).unwrap().point
+            );
+        }
+        assert!(
+            assemble_exact_periodic_surface_axis(&strips, axis, report.work_used - 1)
+                .unwrap()
+                .surface
+                .is_none()
+        );
+    }
+}
+
+#[test]
+fn exact_periodic_surface_assembly_rejects_a_wrap_weight_mismatch() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::{
+            PeriodicAssemblyRefusal, assemble_exact_periodic_surface_axis,
+            partition_exact_periodic_surface_axis,
+        },
+        surface::Axis,
+    };
+    let source = doubly_periodic_tensor();
+    let mut strips = partition_exact_periodic_surface_axis(&source, Axis::U, 0., &[2.], 1_000_000)
+        .unwrap()
+        .strips
+        .unwrap();
+    strips[0].weights[0][2] *= 2.;
+    let report = assemble_exact_periodic_surface_axis(&strips, Axis::U, 1_000_000).unwrap();
+    assert!(report.surface.is_none());
+    assert_eq!(
+        report.refusal,
+        Some(PeriodicAssemblyRefusal::Wrap {
+            transverse_index: 2
+        })
+    );
+}
