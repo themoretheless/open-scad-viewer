@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 581,
-  "unallocatedCount": 419,
+  "specifiedCount": 582,
+  "unallocatedCount": 418,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14640,6 +14640,26 @@
       "remainingQualification": [
         "Enclose an original segment length across all seam pieces and verify full source interval coverage.",
         "Verify exact directed intervals under reversed winding and splitting across a periodic seam, and withhold mappings on refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0582",
+      "name": "Гарантированные границы длины выбранного диапазона периодической обрезки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::measure_input_segment_range_length",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "docs/qualification/nurbs-curvature-field-582-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-582-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose clipped 3D lengths across the seam using exact clock mapping and one cell budget.",
+        "Verify both input directions, seam endpoint ownership, exact clock conversion, and all-or-none coverage with a cell budget.",
         "WASM and application integration are separate."
       ]
     }

@@ -272,6 +272,22 @@ pub fn length(curve: &Curve, tolerance: f64, max_cells: usize) -> Result<LengthR
     validate(tolerance, max_cells)?;
     measure(curve, curve.domain(), tolerance, max_cells)
 }
+pub(crate) fn length_on_interval(
+    curve: &Curve,
+    interval: [f64; 2],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<LengthReport> {
+    curve.validate()?;
+    validate(tolerance, max_cells)?;
+    let [start, end] = curve.domain();
+    let [lo, hi] = interval;
+    check(
+        start <= lo && lo < hi && hi <= end,
+        "Length interval must lie inside the curve domain",
+    )?;
+    measure(curve, interval, tolerance, max_cells)
+}
 fn point_report(
     curve: &Curve,
     parameter: f64,

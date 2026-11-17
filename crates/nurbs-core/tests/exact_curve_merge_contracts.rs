@@ -4924,3 +4924,68 @@ fn periodic_trim_segment_length_rejects_incomplete_bindings() {
             .is_err()
     );
 }
+
+#[test]
+fn periodic_trim_range_length_counts_only_requested_pieces_in_either_direction() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [3.5, 0.875],
+        [0.5, 0.875],
+        [0.5, 0.125],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    for (range, expected, minimum) in [
+        ([0.125, 0.75], 0.625, 2),
+        ([0.75, 0.125], 0.625, 2),
+        ([0.5, 0.75], 0.25, 1),
+    ] {
+        let report = result
+            .measure_input_segment_range_length(0, 3, range, 1e-8, 100)
+            .unwrap();
+        assert_eq!(report.minimum_cells, minimum);
+        let length = report.length.unwrap();
+        assert!(length.bounds[0] <= expected && expected <= length.bounds[1]);
+        assert!(length.within_tolerance);
+    }
+}
+
+#[test]
+fn periodic_trim_range_length_refuses_unstorable_clock_and_insufficient_budget() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let result = build_exact_periodic_surface_trim_input_edges(
+        &doubly_periodic_tensor(),
+        &[&outer],
+        1_000_000,
+    )
+    .unwrap();
+    let limited = result
+        .measure_input_segment_range_length(0, 0, [0.25, 0.75], 1e-8, 1)
+        .unwrap();
+    assert_eq!(limited.minimum_cells, 2);
+    assert!(limited.length.is_none());
+    assert!(
+        result
+            .measure_input_segment_range_length(0, 1, [0.1, 0.25], 1e-8, 100)
+            .is_err()
+    );
+    assert!(
+        result
+            .measure_input_segment_range_length(0, 0, [0.5, 0.5], 1e-8, 100)
+            .is_err()
+    );
+}

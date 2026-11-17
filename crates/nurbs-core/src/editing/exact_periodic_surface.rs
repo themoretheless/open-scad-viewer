@@ -4846,7 +4846,7 @@ impl PeriodicTrimInputEdges {
             )?;
             for (&source, path) in patch.patch.trim.contours.iter().zip(&patch.loops) {
                 if source == contour {
-                    curves.extend(path.iter().map(|edge| &edge.curve));
+                    curves.extend(path.iter().map(|edge| (&edge.curve, None)));
                 }
             }
         }
@@ -4862,6 +4862,69 @@ impl PeriodicTrimInputEdges {
         tolerance: f64,
         max_cells: usize,
     ) -> Result<PeriodicTrimContourLength> {
+        measure_periodic_trim_curves(
+            self.input_segment_pieces(contour, segment)?
+                .into_iter()
+                .map(|(curve, _)| (curve, None))
+                .collect(),
+            tolerance,
+            max_cells,
+        )
+    }
+
+    /// Enclose the length between two normalized input segment parameters.
+    /// Either direction is accepted. A cut must map to an exact binary64 edge clock.
+    pub fn measure_input_segment_range_length(
+        &self,
+        contour: usize,
+        segment: usize,
+        range: [f64; 2],
+        tolerance: f64,
+        max_cells: usize,
+    ) -> Result<PeriodicTrimContourLength> {
+        use num_traits::ToPrimitive;
+        let [a, b] = range;
+        crate::check(
+            range.iter().all(|t| (0. ..=1.).contains(t)) && a != b,
+            "Periodic trim length range needs distinct parameters in [0,1]",
+        )?;
+        let low = BigRational::from_float(a.min(b)).unwrap();
+        let high = BigRational::from_float(a.max(b)).unwrap();
+        let mut curves = Vec::new();
+        for (curve, source) in self.input_segment_pieces(contour, segment)? {
+            let [from, to] = &source.parameters;
+            let lo = (&low).max(from.min(to));
+            let hi = (&high).min(from.max(to));
+            if lo >= hi {
+                continue;
+            }
+            curve.validate()?;
+            let [start, end] = curve.domain().map(BigRational::from_float);
+            let (Some(start), Some(end)) = (start, end) else {
+                return Err(crate::input("Invalid periodic trim edge clock"));
+            };
+            let scale = (end - &start) / (to - from);
+            let store = |parameter: &BigRational| {
+                let clock = &start + (parameter - from) * &scale;
+                clock
+                    .to_f64()
+                    .filter(|stored| BigRational::from_float(*stored).as_ref() == Some(&clock))
+                    .ok_or_else(|| {
+                        crate::input("Periodic trim length cut is not exactly representable")
+                    })
+            };
+            let x = store(lo)?;
+            let y = store(hi)?;
+            curves.push((curve, Some([x.min(y), x.max(y)])));
+        }
+        measure_periodic_trim_curves(curves, tolerance, max_cells)
+    }
+
+    fn input_segment_pieces(
+        &self,
+        contour: usize,
+        segment: usize,
+    ) -> Result<Vec<(&Curve, &PeriodicTrimInputEdgeSource)>> {
         use num_traits::{One, Zero};
 
         let mut pieces = Vec::new();
@@ -4883,7 +4946,7 @@ impl PeriodicTrimInputEdges {
                     for (edge, source) in edges.iter().zip(sources) {
                         if source.contour == contour && source.segment == segment {
                             let [from, to] = &source.parameters;
-                            pieces.push((from.min(to), from.max(to), &edge.curve));
+                            pieces.push((from.min(to), from.max(to), &edge.curve, source));
                         }
                     }
                 }
@@ -4891,7 +4954,7 @@ impl PeriodicTrimInputEdges {
         }
         pieces.sort_by(|a, b| a.0.cmp(b.0));
         let mut next = &BigRational::zero();
-        for (lo, hi, _) in &pieces {
+        for (lo, hi, _, _) in &pieces {
             crate::check(
                 *lo == next && lo < hi,
                 "Periodic trim segment bindings do not partition the segment",
@@ -4902,21 +4965,20 @@ impl PeriodicTrimInputEdges {
             pieces.is_empty() || next.is_one(),
             "Periodic trim segment bindings end before the segment",
         )?;
-        measure_periodic_trim_curves(
-            pieces.into_iter().map(|(_, _, curve)| curve).collect(),
-            tolerance,
-            max_cells,
-        )
+        Ok(pieces
+            .into_iter()
+            .map(|(_, _, curve, source)| (curve, source))
+            .collect())
     }
 }
 
 fn measure_periodic_trim_curves(
-    curves: Vec<&Curve>,
+    curves: Vec<(&Curve, Option<[f64; 2]>)>,
     tolerance: f64,
     max_cells: usize,
 ) -> Result<PeriodicTrimContourLength> {
     use crate::{
-        analysis::curve_measure::{LengthReport, StopReason, length},
+        analysis::curve_measure::{LengthReport, StopReason, length_on_interval},
         distance_bounds::Interval,
     };
 
@@ -4925,12 +4987,13 @@ fn measure_periodic_trim_curves(
         "Periodic trim length needs positive finite tolerance and 1..100000 cells",
     )?;
     let mut spans = Vec::with_capacity(curves.len());
-    for curve in &curves {
+    for (curve, interval) in &curves {
         curve.validate()?;
+        let [lo, hi] = interval.unwrap_or_else(|| curve.domain());
         spans.push(
             curve.knots[curve.degree..=curve.control_points.len()]
                 .windows(2)
-                .filter(|knots| knots[0] < knots[1])
+                .filter(|knots| lo.max(knots[0]) < hi.min(knots[1]))
                 .count(),
         );
     }
@@ -4947,10 +5010,11 @@ fn measure_periodic_trim_curves(
     let mut cells = 0;
     let mut bounds = Interval::point(0.);
     let mut stop = StopReason::PrecisionLimit;
-    for (curve, minimum) in curves.into_iter().zip(spans) {
+    for ((curve, interval), minimum) in curves.into_iter().zip(spans) {
         remaining_minimum -= minimum;
-        let report = length(
+        let report = length_on_interval(
             curve,
+            interval.unwrap_or_else(|| curve.domain()),
             piece_tolerance,
             max_cells - cells - remaining_minimum,
         )?;
