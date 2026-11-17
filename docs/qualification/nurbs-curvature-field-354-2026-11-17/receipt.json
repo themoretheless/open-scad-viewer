@@ -1,0 +1,38 @@
+{
+  "id": "NURBS-0354",
+  "testedBase": "376487c6fb04a4697c0d1b09718acfb2000077b2",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts",
+    "--test",
+    "exact_pcurve_line_contact_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 40,
+  "scope": [
+    "Enumerate the complete finite section of two planar contour sets when their homogeneous contact equations have degree at most two.",
+    "Combine exact span endpoints, rational roots and irreducible quadratic roots in one clock. Report both face incidences, separated ranges and a rational witness per bounded gap. Coincident or higher-degree spans refuse the finite enumeration."
+  ],
+  "logSha256": "4970c6aed4ac254ebdd23fd551c6614d3e65b6ca2335e79aff965b82b52e77a2",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "08e6b3976eb79221b6102877c1127865c064e9ea83c8abdd8b0dfcc64b3792ee",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs": "ad8220b7b2cbaef1ae07aaa50f64dd8857e8b8e4a526fb802c681b199936b0cf",
+    "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs": "0d6fcfc8d47e7bb2fd027bbcbc7a8872dd150189149588036f0a8f10de34992d",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "55572461a9096d70b99a6b7bc15a77aed695467431b765074739761027faf390",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "b9cce7ead1ff7cf6646e0e1e81ec86faf6f4d1f0c6d522e802d8fe38505d1818",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/section.rs": "c0c460bcc46a42ed731b791e736c0092ea7ad3acc315578f106eaef789e0c077",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/algebraic.rs": "c55bd57e23354b5c1c042578f6eaaaf4d7a1180887fc427396119266e35b2246",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/algebraic_order.rs": "ecb5b91b366a1de458fd75e8ed85657d1e82ea3ef140353e14da0c33a28b8001",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation/quadratic_contacts.rs": "91105550c89e687c5c014553b9b251d49e3e45588149ba0ad431cdc879a6779a"
+  }
+}

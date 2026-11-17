@@ -8,14 +8,15 @@ use nurbs_core::{
             AdaptiveBoundaryOptions, AlgebraicBoundaryClock, AlgebraicPlanarContacts,
             BoundaryResolution, BoundedPlanarBoundaryIntersection, ExactPlanarIntersectionSegment,
             PlanarBoundaryIntersection, PlanarFaceContactPartition, PlanarIntersectionSegments,
-            PlanarSegmentStorage, StoredPlanarIntersection, SupportPlaneIntersection,
-            TrimmedPlanarIntersection, bound_planar_face_boundary_intersection,
-            build_planar_intersection_segments, classify_planar_face_contacts,
-            enclose_algebraic_planar_boundary_point, intersect_planar_face_boundaries,
-            intersect_planar_face_boundary_contacts, intersect_planar_supports,
-            intersect_trimmed_planar_faces, isolate_ordered_algebraic_boundary_clocks,
-            match_quadratic_planar_boundary_contacts, optimize_planar_intersection_segment_storage,
-            order_algebraic_boundary_clocks, refine_planar_face_boundary_extents,
+            PlanarSectionOutcome, PlanarSegmentStorage, StoredPlanarIntersection,
+            SupportPlaneIntersection, TrimmedPlanarIntersection,
+            bound_planar_face_boundary_intersection, build_planar_intersection_segments,
+            classify_planar_face_contacts, enclose_algebraic_planar_boundary_point,
+            intersect_planar_face_boundaries, intersect_planar_face_boundary_contacts,
+            intersect_planar_supports, intersect_trimmed_planar_faces,
+            isolate_ordered_algebraic_boundary_clocks, match_quadratic_planar_boundary_contacts,
+            optimize_planar_intersection_segment_storage, order_algebraic_boundary_clocks,
+            partition_quadratic_planar_section, refine_planar_face_boundary_extents,
             resolve_planar_face_boundary_intersection, store_planar_intersection_segment,
             store_trimmed_planar_intersection,
         },
@@ -1307,4 +1308,53 @@ fn builds_exact_witnesses_between_rational_points_and_handles_empty_input() {
         .outcome
         .unwrap();
     assert!(empty.clocks.is_empty() && empty.witnesses.is_empty());
+}
+
+#[test]
+fn partitions_all_rational_and_quadratic_events_and_records_face_incidence() {
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.loops = vec![irrational_contact_loop(0.5, 1., false), crossing_triangle()];
+    b.loops = vec![irrational_contact_loop(0.5, 1., true)];
+    let report = partition_quadratic_planar_section(&a, &b, WORK).unwrap();
+    let PlanarSectionOutcome::Transverse(section) = &report.outcome else {
+        panic!("{:?}", report.outcome);
+    };
+    assert_eq!(section.events.len(), 4);
+    assert_eq!(
+        section.events[0].clock,
+        AlgebraicBoundaryClock::Rational(q(0, 1))
+    );
+    assert_eq!(
+        section.events[2].clock,
+        AlgebraicBoundaryClock::Rational(q(1, 3))
+    );
+    assert_eq!(section.events[0].on_boundary, [true, false]);
+    assert_eq!(section.events[1].on_boundary, [true, true]);
+    assert_eq!(section.events[2].on_boundary, [true, false]);
+    assert_eq!(section.events[3].on_boundary, [true, true]);
+    for (gap, sample) in section.events.windows(2).zip(&section.samples) {
+        assert!(&gap[0].parameter_bounds[1] < sample);
+        assert!(sample < &gap[1].parameter_bounds[0]);
+    }
+    assert_eq!(section.samples.len(), 3);
+    let limited = partition_quadratic_planar_section(&a, &b, report.work_used - 1).unwrap();
+    assert_eq!(
+        limited.outcome,
+        PlanarSectionOutcome::Refused(
+            nurbs_core::editing::exact_derivative::Refusal::ResourceLimit
+        )
+    );
+}
+
+#[test]
+fn refuses_a_coincident_span_instead_of_claiming_a_finite_cut_list() {
+    let [a, mut b] = perpendicular_boundary_faces();
+    b.loops = vec![crossing_triangle()];
+    let report = partition_quadratic_planar_section(&a, &b, WORK).unwrap();
+    assert_eq!(
+        report.outcome,
+        PlanarSectionOutcome::Refused(
+            nurbs_core::editing::exact_derivative::Refusal::UnprovedIdentity
+        )
+    );
 }

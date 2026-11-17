@@ -552,6 +552,7 @@ pub(super) fn bound_boundary_ranges(
 pub(super) fn algebraic_boundary_clocks(
     face: &ProjectedTrimmedFace,
     line: &ExactSupportLine,
+    complete: bool,
     work: &mut Work,
 ) -> Result<std::result::Result<Vec<AlgebraicBoundaryClock>, Refusal>> {
     validate_closed_contours(face)?;
@@ -570,6 +571,7 @@ pub(super) fn algebraic_boundary_clocks(
                 clock.axis,
                 &clock.origin,
                 &clock.step,
+                complete,
                 work,
             )?);
         }

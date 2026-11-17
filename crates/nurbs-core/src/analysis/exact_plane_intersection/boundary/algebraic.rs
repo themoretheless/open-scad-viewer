@@ -58,11 +58,11 @@ fn shared(
     line: ExactSupportLine,
     work: &mut Work,
 ) -> Result<AlgebraicPlanarContacts> {
-    let a = match algebraic_boundary_clocks(left, &line, work)? {
+    let a = match algebraic_boundary_clocks(left, &line, false, work)? {
         Ok(points) => points,
         Err(reason) => return Ok(AlgebraicPlanarContacts::Refused(reason)),
     };
-    let b = match algebraic_boundary_clocks(right, &line, work)? {
+    let b = match algebraic_boundary_clocks(right, &line, false, work)? {
         Ok(points) => points,
         Err(reason) => return Ok(AlgebraicPlanarContacts::Refused(reason)),
     };

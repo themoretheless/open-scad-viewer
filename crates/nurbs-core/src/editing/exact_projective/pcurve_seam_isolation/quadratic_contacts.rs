@@ -1,5 +1,8 @@
-//! Canonical algebraic clock values for irreducible quadratic span contacts.
-use super::{PResult, Poly, Q, Work, active_spans, line_equation, original_span};
+//! Canonical algebraic clock values for contacts of degree at most two.
+use super::super::chart_nonnegative::{evaluate, sum};
+use super::{
+    PResult, Poly, Q, Work, active_spans, line_equation, original_span, rational_interior_roots,
+};
 use crate::{
     curve::Curve,
     editing::{
@@ -26,6 +29,7 @@ pub(crate) fn quadratic_span_contacts(
     axis: usize,
     origin: &Q,
     step: &Q,
+    complete: bool,
     work: &mut Work,
 ) -> PResult<Vec<AlgebraicBoundaryClock>> {
     let mut points = Vec::new();
@@ -34,6 +38,32 @@ pub(crate) fn quadratic_span_contacts(
     for (span, parameter) in active_spans(curve) {
         let homogeneous = original_span(curve, span, parameter, work)?;
         let contact = line_equation(&homogeneous, equation, work)?;
+        if complete {
+            if contact.is_empty() || contact.len() > 3 {
+                return Err(Refusal::UnprovedIdentity);
+            }
+            let mut rational = rational_interior_roots(&contact, work)?;
+            if contact[0].is_zero() {
+                rational.push(zero.clone());
+            }
+            if sum(&contact, work)?.is_zero() {
+                rational.push(one.clone());
+            }
+            for parameter in rational {
+                let value = evaluate(&homogeneous[axis], &parameter, work)?;
+                let weight = evaluate(&homogeneous[2], &parameter, work)?;
+                if !weight.is_positive() {
+                    return Err(Refusal::UnprovedDenominator);
+                }
+                let coordinate = work.op(&value, &weight, |a, b| a / b)?;
+                let offset = work.op(&coordinate, origin, |a, b| a - b)?;
+                points.push(AlgebraicBoundaryClock::Rational(work.op(
+                    &offset,
+                    step,
+                    |a, b| a / b,
+                )?));
+            }
+        }
         let [constant, linear, lead] = contact.as_slice() else {
             continue;
         };

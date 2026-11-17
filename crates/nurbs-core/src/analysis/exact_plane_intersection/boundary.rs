@@ -226,3 +226,9 @@ pub use algebraic_order::{
     IsolatedAlgebraicBoundaryClock, isolate_ordered_algebraic_boundary_clocks,
     order_algebraic_boundary_clocks,
 };
+
+mod section;
+pub use section::{
+    ExactPlanarSection, PlanarSectionEvent, PlanarSectionOutcome, PlanarSectionReport,
+    partition_quadratic_planar_section,
+};

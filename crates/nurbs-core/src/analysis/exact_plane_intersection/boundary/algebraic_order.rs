@@ -238,7 +238,7 @@ fn opposite_halves(upper: bool, other_side: Ordering) -> Option<Ordering> {
     }
 }
 
-fn isolate(
+pub(super) fn isolate(
     points: &[AlgebraicBoundaryClock],
     work: &mut Work,
 ) -> Checked<AlgebraicBoundaryIsolation> {

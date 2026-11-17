@@ -278,12 +278,14 @@ pub use boundary::{
     AlgebraicBoundaryEnclosure, AlgebraicBoundaryEnclosureReport, AlgebraicBoundaryIsolation,
     AlgebraicBoundaryIsolationReport, AlgebraicBoundaryOrderReport, AlgebraicPlanarContactReport,
     AlgebraicPlanarContacts, BoundaryResolution, BoundedPlanarBoundaryIntersection,
-    BoundedPlanarBoundaryReport, IsolatedAlgebraicBoundaryClock, PlanarBoundaryIntersection,
-    PlanarBoundaryIntersectionReport, bound_planar_face_boundary_intersection,
+    BoundedPlanarBoundaryReport, ExactPlanarSection, IsolatedAlgebraicBoundaryClock,
+    PlanarBoundaryIntersection, PlanarBoundaryIntersectionReport, PlanarSectionEvent,
+    PlanarSectionOutcome, PlanarSectionReport, bound_planar_face_boundary_intersection,
     enclose_algebraic_planar_boundary_point, intersect_planar_face_boundaries,
     intersect_planar_face_boundary_contacts, isolate_ordered_algebraic_boundary_clocks,
     match_quadratic_planar_boundary_contacts, order_algebraic_boundary_clocks,
-    refine_planar_face_boundary_extents, resolve_planar_face_boundary_intersection,
+    partition_quadratic_planar_section, refine_planar_face_boundary_extents,
+    resolve_planar_face_boundary_intersection,
 };
 
 mod contact_partition;
