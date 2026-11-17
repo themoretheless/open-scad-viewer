@@ -3658,3 +3658,69 @@ fn periodic_contour_pair_certifies_disjoint_boundaries_of_nested_loops() {
     assert_eq!(report.disjoint, Some(true));
     assert!(report.contact.is_none());
 }
+
+#[test]
+fn periodic_path_relation_certifies_strict_nesting_across_both_seams() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicPathRelation as R, relate_exact_periodic_surface_paths,
+    };
+    let source = doubly_periodic_tensor();
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let inner = [
+        [3.75, 3.75],
+        [0.25, 3.75],
+        [0.25, 0.25],
+        [3.75, 0.25],
+        [3.75, 3.75],
+    ];
+    let result = relate_exact_periodic_surface_paths(&source, &outer, &inner, 1_000_000).unwrap();
+    assert_eq!(result.relation, Some(R::FirstContainsSecond));
+    assert_eq!(
+        relate_exact_periodic_surface_paths(&source, &inner, &outer, 1_000_000)
+            .unwrap()
+            .relation,
+        Some(R::SecondContainsFirst)
+    );
+    assert!(
+        relate_exact_periodic_surface_paths(&source, &outer, &inner, result.work_used - 1)
+            .unwrap()
+            .relation
+            .is_none()
+    );
+}
+
+#[test]
+fn periodic_path_relation_distinguishes_contact_and_self_intersection() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicPathRelation as R, relate_exact_periodic_surface_paths,
+    };
+    let source = doubly_periodic_tensor();
+    let square = [[0., 0.], [1., 0.], [1., 1.], [0., 1.], [0., 0.]];
+    let adjacent = [[1., 0.], [2., 0.], [2., 1.], [1., 1.], [1., 0.]];
+    let far = [[2., 2.], [3., 2.], [3., 3.], [2., 3.], [2., 2.]];
+    let bow = [[0., 0.], [1., 1.], [0., 1.], [1., 0.], [0., 0.]];
+    assert!(matches!(
+        relate_exact_periodic_surface_paths(&source, &square, &adjacent, 1_000_000)
+            .unwrap()
+            .relation,
+        Some(R::BoundaryContact(_))
+    ));
+    assert_eq!(
+        relate_exact_periodic_surface_paths(&source, &square, &far, 1_000_000)
+            .unwrap()
+            .relation,
+        Some(R::Separate)
+    );
+    assert!(matches!(
+        relate_exact_periodic_surface_paths(&source, &square, &bow, 1_000_000)
+            .unwrap()
+            .relation,
+        Some(R::NonSimple { contour: 1, .. })
+    ));
+}

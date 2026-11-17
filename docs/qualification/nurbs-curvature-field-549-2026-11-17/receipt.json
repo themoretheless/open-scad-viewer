@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0549",
+  "testedBase": "646bf49f5a40cf70c49166e809290329604b580a",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 155,
+  "scope": [
+    "Distinguish nesting, separation and boundary contact after exact periodic simplicity checks.",
+    "Prove the two projected polygons simple, test every boundary translate, and classify witness vertices to determine strict nesting."
+  ],
+  "logSha256": "acd015c23b5873e852aacbeb37a5b4f2f28e76634063bb5ee537401abb8bb062",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "9d1d7a5f767fa6518a7bc6ca0d283902ddd1bd0456283654f258fc05e8d84aea",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "cc444c418b053cc42aaab1cbc311d7fd37c2a048b8057ee47b3145793cb07b54"
+  }
+}

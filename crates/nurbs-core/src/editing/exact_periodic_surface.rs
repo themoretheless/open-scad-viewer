@@ -2871,10 +2871,8 @@ pub fn check_exact_periodic_surface_path_contact(
     use PeriodicPathAreaRefusal as Failure;
 
     crate::check(
-        [first, second]
-            .iter()
-            .all(|path| path.len() >= 4 && path.first() == path.last()),
-        "Periodic contact needs two closed polygons",
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact periodic contact work must be in 1..=1000000",
     )?;
     let refused = |reason, work_used| PeriodicPathPairReport {
         disjoint: None,
@@ -2882,13 +2880,45 @@ pub fn check_exact_periodic_surface_path_contact(
         work_used,
         refusal: Some(reason),
     };
-    let mut work_used = 0;
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let [a, b] = match prepare_periodic_polygon_pair(source, first, second, &mut work)? {
+        Ok(pair) => pair,
+        Err(reason) => return Ok(refused(reason, work.used)),
+    };
+    Ok(match find_periodic_path_pair_contact(&a, &b, &mut work) {
+        Ok(contact) => PeriodicPathPairReport {
+            disjoint: Some(contact.is_none()),
+            contact,
+            work_used: work.used,
+            refusal: None,
+        },
+        Err(reason) => refused(Failure::Arithmetic(reason), work.used),
+    })
+}
+
+fn prepare_periodic_polygon_pair(
+    source: &Surface,
+    first: &[[f64; 2]],
+    second: &[[f64; 2]],
+    work: &mut Work,
+) -> Result<std::result::Result<[LiftedPolygon; 2], PeriodicPathAreaRefusal>> {
+    use PeriodicPathAreaRefusal as Failure;
+    crate::check(
+        [first, second]
+            .iter()
+            .all(|path| path.len() >= 4 && path.first() == path.last()),
+        "Periodic contact needs two closed polygons",
+    )?;
+
     let mut lift = |path: &[[f64; 2]]| -> Result<std::result::Result<Vec<[f64; 2]>, Failure>> {
-        if work_used == max_work {
+        if work.used == work.limit {
             return Ok(Err(Failure::Arithmetic(ExactRefusal::ResourceLimit)));
         }
-        let report = lift_exact_periodic_surface_path(source, path, max_work - work_used)?;
-        work_used += report.work_used;
+        let report = lift_exact_periodic_surface_path(source, path, work.limit - work.used)?;
+        work.used += report.work_used;
         let Some(points) = report.parameters else {
             return Ok(Err(Failure::Lift(report.refusal.unwrap_or(
                 PeriodicLiftRefusal::Arithmetic(ExactRefusal::InvalidOutput),
@@ -2899,40 +2929,25 @@ pub fn check_exact_periodic_surface_path_contact(
         }
         Ok(Ok(points))
     };
-    crate::check(
-        (1..=cad_predicates::MAX_WORK).contains(&max_work),
-        "Exact periodic contact work must be in 1..=1000000",
-    )?;
     let first = match lift(first)? {
         Ok(points) => points,
-        Err(reason) => return Ok(refused(reason, work_used)),
+        Err(reason) => return Ok(Err(reason)),
     };
     let second = match lift(second)? {
         Ok(points) => points,
-        Err(reason) => return Ok(refused(reason, work_used)),
+        Err(reason) => return Ok(Err(reason)),
     };
     let domains = [Axis::U, Axis::V].map(|axis| {
         let axis = row(source, axis, 0);
         axis.periodic.then(|| axis.domain())
     });
-    let mut work = Work {
-        used: work_used,
-        limit: max_work,
+    let mut prepare = || -> std::result::Result<_, ExactRefusal> {
+        let a = prepare_lifted_polygon(&first, domains, work)?;
+        let mut b = prepare_lifted_polygon(&second, [None; 2], work)?;
+        b.periods.clone_from(&a.periods);
+        Ok([a, b])
     };
-    let mut compare = || -> std::result::Result<_, ExactRefusal> {
-        let a = prepare_lifted_polygon(&first, domains, &mut work)?;
-        let b = prepare_lifted_polygon(&second, [None; 2], &mut work)?;
-        find_periodic_path_pair_contact(&a, &b, &mut work)
-    };
-    Ok(match compare() {
-        Ok(contact) => PeriodicPathPairReport {
-            disjoint: Some(contact.is_none()),
-            contact,
-            work_used: work.used,
-            refusal: None,
-        },
-        Err(reason) => refused(Failure::Arithmetic(reason), work.used),
-    })
+    Ok(prepare().map_err(Failure::Arithmetic))
 }
 
 fn find_periodic_path_pair_contact(
@@ -2995,4 +3010,79 @@ fn find_periodic_path_pair_contact(
         }
     }
     Ok(None)
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PeriodicPathRelation {
+    FirstContainsSecond,
+    SecondContainsFirst,
+    Separate,
+    BoundaryContact(PeriodicPathContact),
+    NonSimple {
+        contour: usize,
+        contact: PeriodicPathContact,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicPathRelationReport {
+    pub relation: Option<PeriodicPathRelation>,
+    pub work_used: u64,
+    pub refusal: Option<PeriodicPathAreaRefusal>,
+}
+
+/// Compare the bounded regions of two simple closed lifts projected onto
+/// the periodic parameter chart. Certify simplicity and boundary separation
+/// before using one point on each contour to distinguish strict nesting.
+pub fn relate_exact_periodic_surface_paths(
+    source: &Surface,
+    first: &[[f64; 2]],
+    second: &[[f64; 2]],
+    max_work: u64,
+) -> Result<PeriodicPathRelationReport> {
+    use PeriodicPathRelation as Relation;
+
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact periodic relation work must be in 1..=1000000",
+    )?;
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let refused = |reason, work_used| PeriodicPathRelationReport {
+        relation: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    let [a, b] = match prepare_periodic_polygon_pair(source, first, second, &mut work)? {
+        Ok(pair) => pair,
+        Err(reason) => return Ok(refused(reason, work.used)),
+    };
+    let mut compare = || -> std::result::Result<Relation, ExactRefusal> {
+        for (contour, polygon) in [&a, &b].into_iter().enumerate() {
+            if let Some(contact) = find_cyclic_polygon_contact(polygon, &mut work)? {
+                return Ok(Relation::NonSimple { contour, contact });
+            }
+        }
+        if let Some(contact) = find_periodic_path_pair_contact(&a, &b, &mut work)? {
+            return Ok(Relation::BoundaryContact(contact));
+        }
+        if classify_lifted_polygon(&a, second[0], &mut work)? == PeriodicPathLocation::Inside {
+            Ok(Relation::FirstContainsSecond)
+        } else if classify_lifted_polygon(&b, first[0], &mut work)? == PeriodicPathLocation::Inside
+        {
+            Ok(Relation::SecondContainsFirst)
+        } else {
+            Ok(Relation::Separate)
+        }
+    };
+    Ok(match compare() {
+        Ok(relation) => PeriodicPathRelationReport {
+            relation: Some(relation),
+            work_used: work.used,
+            refusal: None,
+        },
+        Err(reason) => refused(PeriodicPathAreaRefusal::Arithmetic(reason), work.used),
+    })
 }
