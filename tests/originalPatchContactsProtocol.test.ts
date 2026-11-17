@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { isOriginalPatchContactsReport } from '../src/kernel/originalPatchContactsProtocol'
-function report(): any {
+function report() {
   return {
     schema: 'nurbs-original-affine-patch-contacts/1',
     status: 'present',

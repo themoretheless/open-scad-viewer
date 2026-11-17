@@ -4,6 +4,7 @@ import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanti
 import { editExactFullRoundSceneMesh } from '../src/kernel/exactFullRoundHistoryScene'
 import { restoreExactFullRoundSnapshot, createExactFullRoundSnapshot } from '../src/kernel/exactFullRoundSnapshot'
 import { callGeometryRust } from '../src/kernel/geometry/kernel'
+import type { NurbsBrep } from '../src/kernel/geometry/brep'
 import { assertNativeReferenceCurrent, nativeFaceReference } from '../src/core/nativeGeometry'
 import { geometrySceneFromMeshes, meshesFromGeometryScene } from '../src/core/scene'
 const build = () =>
@@ -16,7 +17,7 @@ describe('exact feature history scene publication on installed WASM', () => {
     const original = (await build()).result.meshes[0]
     const before = structuredClone(original)
     const artifact = restoreExactFullRoundSnapshot(original.nativeGeometry!).artifact
-    const source = callGeometryRust<any>('brep_nurbs_transform', {
+    const source = callGeometryRust<NurbsBrep>('brep_nurbs_transform', {
       model: artifact.source,
       matrix: [
         [1, 0, 0, 0],
@@ -49,7 +50,7 @@ describe('exact feature history scene publication on installed WASM', () => {
     const original = (await build()).result.meshes[0]
     const seeded = editExactFullRoundSceneMesh(original, { action: 'restore' }, 4)
     const artifact = restoreExactFullRoundSnapshot(original.nativeGeometry!).artifact
-    const source = callGeometryRust<any>('brep_nurbs_transform', {
+    const source = callGeometryRust<NurbsBrep>('brep_nurbs_transform', {
       model: artifact.source,
       matrix: [
         [1, 0, 0, 0],

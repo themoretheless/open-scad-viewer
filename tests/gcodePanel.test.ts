@@ -35,12 +35,15 @@ vi.mock('../src/fabrication/printerCompanion', () => ({
   utf8ToBase64: (text: string) => Buffer.from(text, 'utf8').toString('base64'),
 }))
 
+/** Props patched onto fake nodes; event handlers are invoked directly by the tests. */
+type Handler = (...args: unknown[]) => unknown
+type NodeProps = { [key: string]: unknown } & { [key: `on${string}`]: Handler | undefined }
 class Node {
   parent: Node | null = null
   children: Node[] = []
-  props: Record<string, any> = {}
+  props: NodeProps = {}
   text = ''
-  value: any = ''
+  value: unknown = ''
   constructor(public tag: string) {}
   get tagName() {
     return this.tag.toUpperCase()
@@ -76,7 +79,8 @@ const renderer = createRenderer<Node, Node>({
     if (node.parent) node.parent.children = node.parent.children.filter(child => child !== node)
     node.parent = parent
     const index = anchor ? parent.children.indexOf(anchor) : -1
-    index < 0 ? parent.children.push(node) : parent.children.splice(index, 0, node)
+    if (index < 0) parent.children.push(node)
+    else parent.children.splice(index, 0, node)
   },
   remove: node => {
     if (node.parent) node.parent.children = node.parent.children.filter(child => child !== node)
@@ -88,7 +92,8 @@ const renderer = createRenderer<Node, Node>({
     if (node.parent) node.parent.children = node.parent.children.filter(child => child !== node)
     node.parent = parent
     const index = anchor ? parent.children.indexOf(anchor) : -1
-    index < 0 ? parent.children.push(node) : parent.children.splice(index, 0, node)
+    if (index < 0) parent.children.push(node)
+    else parent.children.splice(index, 0, node)
     return [node, node]
   },
 })
@@ -180,18 +185,18 @@ async function mount(overrides: Record<string, unknown> = {}) {
     return node!
   }
   const edit = async (label: string, value: unknown) => {
-    input(label).props['onUpdate:modelValue'](value)
+    input(label).props['onUpdate:modelValue']!(value)
     await nextTick()
   }
   const click = async (name: string) => {
     const node = button(name)
     expect(node.props.disabled).toBeFalsy()
-    await node.props.onClick({})
+    await node.props.onClick!({})
     await nextTick()
   }
   const upload = async (file: unknown) => {
     const target = { files: [file], value: 'selected' }
-    await input('Open preview G-code').props.onChange({ target })
+    await input('Open preview G-code').props.onChange!({ target })
     await nextTick()
     expect(target.value).toBe('')
   }
@@ -283,7 +288,7 @@ it('discards delayed success after cancellation or edits and leaves a fresh gene
         finish = resolve
       }),
   )
-  const pending = ui.button('Generate toolpaths').props.onClick()
+  const pending = ui.button('Generate toolpaths').props.onClick!()
   await nextTick()
   expect(ui.text()).toContain('Processing toolpaths')
   await ui.click('Cancel processing')
@@ -297,7 +302,7 @@ it('discards delayed success after cancellation or edits and leaves a fresh gene
         finish = resolve
       }),
   )
-  const stale = ui.button('Generate toolpaths').props.onClick()
+  const stale = ui.button('Generate toolpaths').props.onClick!()
   await nextTick()
   await ui.edit('Z max, mm', 13)
   finish(result())
@@ -362,7 +367,7 @@ it('opens its own preview dialect without a selected model and rejects oversized
 it('does not start stale file parsing after the owner cancels while reading', async () => {
   const ui = await mount()
   let read!: (value: string) => void
-  const upload = ui.input('Open preview G-code').props.onChange({
+  const upload = ui.input('Open preview G-code').props.onChange!({
     target: {
       files: [
         {
@@ -395,11 +400,9 @@ it('cancels work when the section closes and disposes its worker when the CAD pa
         finish = resolve
       }),
   )
-  const pending = ui.button('Generate toolpaths').props.onClick()
+  const pending = ui.button('Generate toolpaths').props.onClick!()
   await nextTick()
-  ui.all()
-    .find(node => node.tag === 'details')!
-    .props.onToggle({ target: { open: false } })
+  ui.all().find(node => node.tag === 'details')!.props.onToggle!({ target: { open: false } })
   await nextTick()
   expect(ui.text()).toContain('Processing cancelled.')
   finish(result())
@@ -412,7 +415,7 @@ it('cancels work when the section closes and disposes its worker when the CAD pa
         finish = resolve
       }),
   )
-  const closing = ui.button('Generate toolpaths').props.onClick()
+  const closing = ui.button('Generate toolpaths').props.onClick!()
   await nextTick()
   ui.unmount()
   expect(service.dispose).toHaveBeenCalledOnce()
@@ -447,7 +450,7 @@ it('disables Send without companion and sends via localhost after a print job', 
 
 it('sends the chosen firmware flavor with print jobs and shows it in the result', async () => {
   const ui = await mount()
-  await ui.input('Firmware flavor (job)').props.onChange({ target: { value: 'klipper' } })
+  await ui.input('Firmware flavor (job)').props.onChange!({ target: { value: 'klipper' } })
   await nextTick()
   service.run.mockResolvedValueOnce({ ...jobResult(), flavor: 'klipper' })
   await ui.click('Generate print job')

@@ -1,8 +1,21 @@
 import { normalizeRefinedNativeEvidence } from './helpers/refinedNativeEvidence'
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
-import { MainSolidWorkerClient } from '../src/kernel/mainSolidWorkerClient'
-import { selfIntersectionExpectation, validSelfIntersection } from '../src/kernel/solidSelfIntersection'
+import { MainSolidWorkerClient, type MainSolidPort } from '../src/kernel/mainSolidWorkerClient'
+import {
+  selfIntersectionExpectation,
+  validSelfIntersection,
+  type SelfIntersection,
+} from '../src/kernel/solidSelfIntersection'
+import type { MainSolidRequest, MainSolidResponse } from '../src/kernel/mainSolidProtocol'
+import type { NurbsBrep } from '../src/kernel/geometry/brep'
+type SelfIntersectionFace = SelfIntersection['faces'][number]
+type SourceSurface = NurbsBrep['faces'][number]['surface']
+/** Worker port double that records the last request and whether it was terminated. */
+interface FakePort extends MainSolidPort {
+  terminated: boolean
+  request?: MainSolidRequest
+}
 const fixture = JSON.parse(
   readFileSync(
     new URL(
@@ -12,7 +25,7 @@ const fixture = JSON.parse(
     'utf8',
   ),
 ).cases[0]
-const { model, toleranceUv, op, ...limits } = fixture.request
+const { model, toleranceUv, op: _op, ...limits } = fixture.request
 const expectation = selfIntersectionExpectation(model, toleranceUv, limits, 6)
 const report = {
   ...fixture.result,
@@ -42,13 +55,13 @@ it('validates owned quotient proofs and their shared budget without certifying p
       'utf8',
     ),
   )
-  const { model, toleranceUv, maxSpans, op, ...limits } = fixture.request
+  const { model, toleranceUv, maxSpans, op: _op, ...limits } = fixture.request
   const e = selfIntersectionExpectation(model, toleranceUv, limits, maxSpans),
     r = fixture.result
   expect(validSelfIntersection(e, r)).toBe(true)
   expect(r.allFacesInjective).toBe(true)
   expect(r.absenceProven).toBe(false)
-  expect(r.faces.filter((f: any) => f.quotientProof?.proven)).toHaveLength(2)
+  expect(r.faces.filter((f: SelfIntersectionFace) => f.quotientProof?.proven)).toHaveLength(2)
   for (const patch of [
     { collapsedEnd: 1 },
     { poleEdge: 999 },
@@ -86,19 +99,19 @@ it('validates owned quotient proofs and their shared budget without certifying p
   alteredReply.faces[0].quotientProof.sourceSurface.controlPoints[1][1][2] += 0.001
   expect(validSelfIntersection(e, alteredReply)).toBe(false)
   for (const mutate of [
-    (s: any) => {
+    (s: SourceSurface) => {
       s.knotsU[0] -= 0.001
     },
-    (s: any) => {
+    (s: SourceSurface) => {
       s.knotsV[s.knotsV.length - 1] += 0.001
     },
-    (s: any) => {
+    (s: SourceSurface) => {
       s.degreeU += 1
     },
-    (s: any) => {
+    (s: SourceSurface) => {
       s.periodicU = true
     },
-    (s: any) => {
+    (s: SourceSurface) => {
       s.periodicV = true
     },
   ]) {
@@ -127,11 +140,11 @@ it('binds native polar proof coefficients to the source and leaves collapsed tip
       'utf8',
     ),
   )
-  const { model, toleranceUv, maxSpans, op, ...limits } = f.request
+  const { model, toleranceUv, maxSpans, op: _op, ...limits } = f.request
   const e = selfIntersectionExpectation(model, toleranceUv, limits, maxSpans),
     r = f.result
   expect(validSelfIntersection(e, r)).toBe(true)
-  expect(r.faces.filter((f: any) => f.result?.proven)).toHaveLength(25)
+  expect(r.faces.filter((f: SelfIntersectionFace) => f.result?.proven)).toHaveLength(25)
   expect(r.absenceProven).toBe(false)
   for (const patch of [
     { polarProjection: null },
@@ -200,7 +213,7 @@ it('keeps unvisited faces explicit and rejects a proof over an exhausted budget'
     spans: 1,
     allFacesInjective: false,
     absenceProven: false,
-    faces: report.faces.map((f: any, i: number) => (i ? { face: i, result: null } : f)),
+    faces: report.faces.map((f: SelfIntersectionFace, i: number) => (i ? { face: i, result: null } : f)),
   }
   const e = { ...expectation, maxSpans: 1 }
   expect(validSelfIntersection(e, partial)).toBe(true)
@@ -210,14 +223,14 @@ it('keeps unvisited faces explicit and rejects a proof over an exhausted budget'
 
 it('terminates obsolete work and validates the current worker reply', async () => {
   const { MainSolidWorkerClient } = await import('../src/kernel/mainSolidWorkerClient')
-  const ports: any[] = []
+  const ports: FakePort[] = []
   const client = new MainSolidWorkerClient(() => {
-    const p: any = {
+    const p: FakePort = {
       onmessage: null,
       onerror: null,
       onmessageerror: null,
       terminated: false,
-      postMessage(m: any) {
+      postMessage(m: MainSolidRequest) {
         this.request = m
       },
       terminate() {
@@ -276,7 +289,7 @@ it('validates actual WASM reports for full coverage and each exhausted budget', 
 
 it('runs real combined diagnostics through the worker after a rejected span budget', async () => {
   const { createMainSolidWorkerHandler } = await import('../src/kernel/mainSolidWorkerRuntime')
-  const messages: any[] = [],
+  const messages: MainSolidResponse[] = [],
     handle = createMainSolidWorkerHandler(m => messages.push(m))
   const job = { kind: 'selfIntersection' as const, model, toleranceUv, limits, maxSpans: 6 }
   await handle({ version: 1, id: 1, job: { ...job, maxSpans: 0 } })
@@ -336,7 +349,7 @@ it('accepts actual native cylinder linear-projection reports without certifying 
       'utf8',
     ),
   )
-  const { model, toleranceUv, maxSpans, op, ...limits } = fixture.request
+  const { model, toleranceUv, maxSpans, op: _op, ...limits } = fixture.request
   expect(validSelfIntersection(selfIntersectionExpectation(model, toleranceUv, limits, maxSpans), fixture.result)).toBe(
     true,
   )
@@ -354,7 +367,7 @@ it('qualifies actual WASM complete cylinder face and pair proofs', async () => {
       'utf8',
     ),
   )
-  const { model, toleranceUv, maxSpans, op, ...limits } = fixture.request
+  const { model, toleranceUv, maxSpans, op: _op, ...limits } = fixture.request
   const { inspectSelfIntersection } = await import('../src/kernel/solidSelfIntersection')
   const before = JSON.stringify(model),
     r = inspectSelfIntersection(model, toleranceUv, limits, maxSpans)
@@ -376,7 +389,7 @@ it('validates native complete-cylinder pair classification with linear face proo
       'utf8',
     ),
   )
-  const { model, toleranceUv, maxSpans, op, ...limits } = fixture.request
+  const { model, toleranceUv, maxSpans, op: _op, ...limits } = fixture.request
   expect(validSelfIntersection(selfIntersectionExpectation(model, toleranceUv, limits, maxSpans), fixture.result)).toBe(
     true,
   )
@@ -393,7 +406,7 @@ it('checks native perspective face proofs against source coefficients and comple
       'utf8',
     ),
   )
-  const { model, toleranceUv, maxSpans, op, ...limits } = fixture.request
+  const { model, toleranceUv, maxSpans, op: _op, ...limits } = fixture.request
   const e = selfIntersectionExpectation(model, toleranceUv, limits, maxSpans),
     r = fixture.result
   expect(validSelfIntersection(e, r)).toBe(true)
@@ -451,7 +464,7 @@ it('checks native perspective face proofs against source coefficients and comple
 
 it('authors actual WASM sphere equators with matching rational edge and trim traversals', async () => {
   const { callGeometryRust } = await import('../src/kernel/geometry/kernel')
-  const model = callGeometryRust<any>('brep_nurbs_sphere', { radius: 3 })
+  const model = callGeometryRust<NurbsBrep>('brep_nurbs_sphere', { radius: 3 })
   expect(model.faces).toHaveLength(8)
   expect(model.edges).toHaveLength(12)
   for (const face of model.faces) {
@@ -472,7 +485,7 @@ it('qualifies actual WASM perspective face proofs and exhausted aggregate budget
       'utf8',
     ),
   )
-  const { model, toleranceUv, maxSpans, op, ...limits } = fixture.request
+  const { model, toleranceUv, maxSpans, op: _op, ...limits } = fixture.request
   const { inspectSelfIntersection } = await import('../src/kernel/solidSelfIntersection')
   const before = JSON.stringify(model)
   const complete = inspectSelfIntersection(model, toleranceUv, limits, maxSpans)
@@ -486,7 +499,7 @@ it('qualifies actual WASM perspective face proofs and exhausted aggregate budget
       // Projection proposals may improve; replay validation above binds every new
       // witness to its original surface and remaining budget, not the old frame.
       expect(r.faces.map(f => ({ face: f.face, proven: f.result?.proven }))).toEqual(
-        fixture.result.faces.map((f: any) => ({ face: f.face, proven: f.result?.proven })),
+        fixture.result.faces.map((f: SelfIntersectionFace) => ({ face: f.face, proven: f.result?.proven })),
       )
       expect(r.spans).toBe(complete.spans)
       expect(r.spans).toBeLessThanOrEqual(fixture.result.spans)
@@ -505,7 +518,7 @@ it('qualifies owned quotient charts in actual WASM and keeps exhausted coverage 
       'utf8',
     ),
   )
-  const { model, toleranceUv, maxSpans, op, ...limits } = fixture.request
+  const { model, toleranceUv, maxSpans, op: _op, ...limits } = fixture.request
   const { inspectSelfIntersection } = await import('../src/kernel/solidSelfIntersection')
   const before = JSON.stringify(model)
   for (const budget of [maxSpans, 600, 256, 255]) {
@@ -516,7 +529,7 @@ it('qualifies owned quotient charts in actual WASM and keeps exhausted coverage 
     if (budget === maxSpans) {
       expect(r.faces.filter(f => f.result?.proven)).toHaveLength(25)
       expect(r.faces.filter(f => f.quotientProof?.proven)).toHaveLength(2)
-      const expectedFaces = fixture.result.faces.map((f: any) => ({
+      const expectedFaces = fixture.result.faces.map((f: SelfIntersectionFace) => ({
         ...f,
         quotientProof: f.quotientProof ? { ...f.quotientProof, collapsedAxis: 0, polar: null } : null,
         result: f.result ? { ...f.result, polarPMatrix: null } : null,
@@ -534,7 +547,7 @@ it('qualifies owned quotient charts in actual WASM and keeps exhausted coverage 
 it('binds explicit boundary audit and exact contacts to source, budgets and ownership', () => {
   const audit = { exactWork: 1000000, trimPairs: 1000, trimCells: 10000, trimDomainCells: 100000 }
   const e = selfIntersectionExpectation(model, toleranceUv, limits, 6, audit)
-  const r: any = structuredClone(report)
+  const r: SelfIntersection = structuredClone(report)
   r.boundaryEmbedding = {
     proven: true,
     exactAgreement: true,
@@ -550,7 +563,7 @@ it('binds explicit boundary audit and exact contacts to source, budgets and owne
   }
   expect(validSelfIntersection(e, r)).toBe(true)
   expect(validSelfIntersection(expectation, r)).toBe(false)
-  const pair = r.pairs.find((p: any) => p.status === 'shared-boundary')
+  const pair = r.pairs.find((p: SelfIntersection['pairs'][number]) => p.status === 'shared-boundary')
   expect(pair).toBeDefined()
   const edge = pair.sharedBoundary.edge
   pair.sharedBoundary = {
@@ -581,7 +594,10 @@ it('binds explicit boundary audit and exact contacts to source, budgets and owne
     { joinedProof: { proven: true } },
   ]) {
     const copy = structuredClone(r)
-    Object.assign(copy.pairs.find((p: any) => p.status === 'shared-boundary').sharedBoundary, patch)
+    Object.assign(
+      copy.pairs.find((p: SelfIntersection['pairs'][number]) => p.status === 'shared-boundary').sharedBoundary,
+      patch,
+    )
     expect(validSelfIntersection(e, copy)).toBe(false)
   }
   for (const patch of [
@@ -609,14 +625,14 @@ it('binds explicit boundary audit and exact contacts to source, budgets and owne
 })
 
 it('cancels an audited request when the audit mode changes and ignores its late reply', async () => {
-  const ports: any[] = []
+  const ports: FakePort[] = []
   const client = new MainSolidWorkerClient(() => {
-    const p: any = {
+    const p: FakePort = {
       onmessage: null,
       onerror: null,
       onmessageerror: null,
       terminated: false,
-      postMessage(m: any) {
+      postMessage(m: MainSolidRequest) {
         this.request = m
       },
       terminate() {

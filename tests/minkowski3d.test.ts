@@ -57,7 +57,7 @@ it('rejects altered source, boundary, census, schema and invalid source topology
       p.certificate.sourceCells[0]++
     },
     (p: typeof proof) => {
-      ;(p.certificate as any).unknown = true
+      Object.assign(p.certificate, { unknown: true })
     },
     (p: typeof proof) => {
       p.certificate.vertices[0][0][1] = '0'

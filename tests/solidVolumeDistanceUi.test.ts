@@ -7,12 +7,15 @@ import Panel from '../src/components/SolidVolumeDistance.svt'
 const cases = JSON.parse(
   readFileSync('docs/qualification/cad-roadmap-2026-09-28/solid-distance-2026-09-30/contract-fixtures.json', 'utf8'),
 ).cases
+/** Props patched onto fake nodes; event handlers are invoked directly by the tests. */
+type Handler = (...args: unknown[]) => unknown
+type NodeProps = { [key: string]: unknown } & { [key: `on${string}`]: Handler | undefined }
 class Node {
   parent: Node | null = null
   children: Node[] = []
-  props: Record<string, any> = {}
+  props: NodeProps = {}
   text = ''
-  value: any
+  value: unknown
   checked = false
   constructor(public tag: string) {}
   addEventListener() {}
@@ -46,7 +49,8 @@ const renderer = createRenderer<Node, Node>({
     if (n.parent) n.parent.children = n.parent.children.filter(c => c !== n)
     n.parent = p
     const i = a ? p.children.indexOf(a) : -1
-    i < 0 ? p.children.push(n) : p.children.splice(i, 0, n)
+    if (i < 0) p.children.push(n)
+    else p.children.splice(i, 0, n)
   },
   remove: n => {
     if (n.parent) n.parent.children = n.parent.children.filter(c => c !== n)
@@ -83,16 +87,14 @@ function mount() {
   const all = (n: Node = root): Node[] => [n, ...n.children.flatMap(all)],
     text = (n: Node = root): string => n.text + n.children.map(text).join('')
   const click = async (s: string) => {
-    all()
-      .find(n => n.tag === 'button' && text(n).includes(s))!
-      .props.onClick()
+    all().find(n => n.tag === 'button' && text(n).includes(s))!.props.onClick!()
     await flush()
   }
   return { props, root, app, all, text, click, states }
 }
 it('cancels on close/context change and ignores late results', async () => {
   mock.run.mockReset()
-  const replies: Array<(v: any) => void> = []
+  const replies: Array<(v: unknown) => void> = []
   mock.run.mockImplementation(() => new Promise(r => replies.push(r)))
   const ui = mount(),
     before = JSON.stringify([ui.props.a, ui.props.b])

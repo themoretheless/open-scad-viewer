@@ -1,7 +1,17 @@
 import { expect, it } from 'vitest'
 import { createMainSolidWorkerHandler } from '../src/kernel/mainSolidWorkerRuntime'
-import type { MainSolidResponse } from '../src/kernel/mainSolidProtocol'
+import type {
+  MainSolidExpectation,
+  MainSolidJob,
+  MainSolidResponse,
+  MainSolidResults,
+} from '../src/kernel/mainSolidProtocol'
 import type { TrussModel } from '../src/kernel/trussAnalysis'
+
+/** Result payload of a worker reply, typed by the job kind it answers. */
+function resultOf<K extends keyof MainSolidResults>(message: MainSolidResponse | undefined, _kind: K) {
+  return (message as { result?: unknown }).result as MainSolidResults[K]
+}
 
 it('rejects overlapping requests during initialization and recovers after typed errors', async () => {
   const messages: MainSolidResponse[] = [],
@@ -418,7 +428,7 @@ it('uses the same exact revolve result for new, union and complete subtraction',
   }
   await handle({ version: 1, id: 1, job: { kind: 'revolve', document, options } })
   expect(messages[0]).toMatchObject({ ok: true, kind: 'revolve' })
-  const built = (messages[0] as any).result
+  const built = resultOf(messages[0], 'revolve')
   expect(built.bodies).toHaveLength(1)
   expect(inspectPolygonMesh(built.bodies[0].mesh).closed).toBe(true)
   const before = JSON.stringify(built)
@@ -481,7 +491,7 @@ it('splits a body in the worker, retaining its identity and source snapshot', as
     kind: 'bodyEdit',
     result: { bodies: [{ id: 'stock' }, { id: 'preview-split' }] },
   })
-  expect((messages[0] as any).result.bodies.map((b: any) => inspectPolygonMesh(b.mesh).signedVolumeMm3)).toEqual([
+  expect(resultOf(messages[0], 'bodyEdit').bodies.map(b => inspectPolygonMesh(b.mesh).signedVolumeMm3)).toEqual([
     500, 500,
   ])
   expect(JSON.stringify(document)).toBe(before)
@@ -525,7 +535,7 @@ it('computes profile difference and retained offset in the worker with holes and
     handle = createMainSolidWorkerHandler(message => messages.push(message))
   await handle({ version: 1, id: 1, job: { kind: 'profileEdit', document, options } })
   expect(messages[0]).toMatchObject({ ok: true, kind: 'profileEdit' })
-  const result = (messages[0] as any).result
+  const result = resultOf(messages[0], 'profileEdit')
   expect(result.sketches).toHaveLength(1)
   expect(result.sketches[0].id).toBe('plate')
   expect(result.sketches[0].retainedProfile.loops).toHaveLength(2)
@@ -536,7 +546,7 @@ it('computes profile difference and retained offset in the worker with holes and
     job: { kind: 'profileEdit', document: result, options: { ...options, operation: 'offset' } },
   })
   expect(messages[1]).toMatchObject({ ok: true })
-  expect((messages[1] as any).result.sketches[0].retainedProfile.areaMm2).toBeCloseTo(62, 9)
+  expect(resultOf(messages[1], 'profileEdit').sketches[0].retainedProfile.areaMm2).toBeCloseTo(62, 9)
   expect(JSON.stringify(document)).toBe(before)
 })
 
@@ -701,11 +711,11 @@ it('preserves the sweep refinement report on worker refusal and success', async 
     expect(response.ok).toBe(true)
     if (response.ok) {
       expect(mainSolidResult({ kind: 'surfaceBuild' }, response.result)).toBe(true)
-      expect((response.result as any).report.accepted).toBe(i === 1)
+      expect(resultOf(response, 'surfaceBuild').report.accepted).toBe(i === 1)
     }
   }
-  expect((messages[0] as any).result.document).toBe(null)
-  expect((messages[1] as any).result.document.surfaces[0].id).toBe('surface')
+  expect(resultOf(messages[0], 'surfaceBuild').document).toBe(null)
+  expect(resultOf(messages[1], 'surfaceBuild').document.surfaces[0].id).toBe('surface')
   expect(JSON.stringify(document)).toBe(before)
 })
 
@@ -752,7 +762,7 @@ it('carries curve, surface and seam proof reports through the actual worker prot
     await handle({ version: 1, id: index + 1, job })
     const response = messages.at(-1)!
     expect(response).toMatchObject({ ok: true, result: { report: { accepted: true } } })
-    if (response.ok) expect(mainSolidResult({ kind: job.kind } as any, response.result)).toBe(true)
+    if (response.ok) expect(mainSolidResult({ kind: job.kind } as MainSolidExpectation, response.result)).toBe(true)
   }
   expect(JSON.stringify(document)).toBe(before)
 })
@@ -791,15 +801,15 @@ it('updates linked geometry in the scene worker preview without changing its sou
     ok: true,
     result: { bodies: [{ id: 'source' }, { id: 'linked', instance: { sourceId: 'source' } }] },
   })
-  const linked = (messages[0] as any).result,
+  const linked = resultOf(messages[0], 'sceneEdit'),
     original = JSON.stringify(linked)
   await handle({
     version: 1,
     id: 2,
     job: { kind: 'sceneEdit', document: linked, options: { ...options, operation: 'transform', x: 5 } },
   })
-  const next = (messages[1] as any).result
-  const minX = (body: any) =>
+  const next = resultOf(messages[1], 'sceneEdit')
+  const minX = (body: { mesh: { positions: ArrayLike<number> } }) =>
     Math.min(...Array.from(body.mesh.positions as ArrayLike<number>).filter((_, i) => i % 3 === 0))
   expect(minX(next.bodies[0])).toBeCloseTo(5)
   expect(minX(next.bodies[1])).toBeCloseTo(25)
@@ -848,7 +858,7 @@ it('builds a ruled solid loft in the worker with its requested identity', async 
     },
   })
   expect(messages[0]).toMatchObject({ ok: true, result: { bodies: [{ id: 'loft' }] } })
-  expect(analyzeNurbsBrep((messages[0] as any).result.bodies[0].brep).signedVolumeMm3).toBeCloseTo(500, 8)
+  expect(analyzeNurbsBrep(resultOf(messages[0], 'sceneEdit').bodies[0].brep).signedVolumeMm3).toBeCloseTo(500, 8)
   expect(JSON.stringify(document)).toBe(before)
 })
 
@@ -920,7 +930,7 @@ it('runs exact Boolean groups in a worker with one anchor ID, empty results and 
     ok: true,
     result: { resultId: 'A', exact: true, toleranceMm: 0, document: { bodies: [{ id: 'A' }] } },
   })
-  const result = (messages[0] as any).result
+  const result = resultOf(messages[0], 'boolean')
   expect(result.document.bodies).toHaveLength(1)
   expect(analyzeNurbsBrep(result.document.bodies[0].brep).signedVolumeMm3).toBeCloseTo(500)
   expect(mainSolidResult({ kind: 'boolean' }, result)).toBe(true)
@@ -932,7 +942,7 @@ it('runs exact Boolean groups in a worker with one anchor ID, empty results and 
     job: { kind: 'boolean', document, options: { ...options, operation: 'intersection', a: ['A'], b: ['C'] } },
   })
   expect(messages[1]).toMatchObject({ ok: true, result: { resultId: null, document: { bodies: [{ id: 'B' }] } } })
-  expect((messages[1] as any).result.document.bodies).toHaveLength(1)
+  expect(resultOf(messages[1], 'boolean').document.bodies).toHaveLength(1)
   await handle({ version: 1, id: 3, job: { kind: 'boolean', document, options: { ...options, b: ['A'] } } })
   expect(messages[2]).toMatchObject({ ok: false, error: { message: 'Each body must occur once, in either A or B.' } })
   expect(JSON.stringify(document)).toBe(before)
@@ -971,7 +981,7 @@ it('builds sketch corners and circular copies with stable IDs without mutating t
   }
   await handle({ version: 1, id: 1, job: { kind: 'sketchEdit', document, options } })
   expect(messages[0]).toMatchObject({ ok: true, result: { sketches: [{ id: 's' }] } })
-  const points = (messages[0] as any).result.sketches[0].points
+  const points = resultOf(messages[0], 'sketchEdit').sketches[0].points
   expect(points[0][0]).toBeCloseTo(0)
   expect(points[0][1]).toBeCloseTo(2)
   expect(points.at(-4)[0]).toBeCloseTo(2)
@@ -988,8 +998,8 @@ it('builds sketch corners and circular copies with stable IDs without mutating t
     id: 3,
     job: { kind: 'sketchEdit', document, options: { ...options, operation: 'array' } },
   })
-  const copies = (messages[2] as any).result.sketches
-  expect(copies.map((s: any) => s.id)).toEqual(['s', 'c1', 'c2', 'c3'])
+  const copies = resultOf(messages[2], 'sketchEdit').sketches
+  expect(copies.map((s: { id: string }) => s.id)).toEqual(['s', 'c1', 'c2', 'c3'])
   expect(copies[1].points[1][0]).toBeCloseTo(0)
   expect(copies[1].points[1][1]).toBeCloseTo(10)
   await handle({ version: 1, id: 4, job: { kind: 'sketchEdit', document, options: { ...options, radius: 20 } } })
@@ -1092,7 +1102,7 @@ it('edits a CV and its dependent bridge, and moves mesh vertices without changin
     job: { kind: 'pointEdit', document, options: { kind: 'cv', id: 'a', u, v: 0, point } },
   })
   expect(messages[0]).toMatchObject({ ok: true })
-  const result = (messages[0] as any).result
+  const result = resultOf(messages[0], 'pointEdit')
   expect(result.curves[0].curve.controlPoints[u]).toEqual(point)
   expect(result.curves[2].curve.controlPoints[0]).toEqual(point)
   expect(result.curves[2].bridge).toEqual(bridge.bridge)
@@ -1143,7 +1153,7 @@ it('edits analytic circle/arc handles and sketch vertices in isolated worker sna
   ].entries())
     await handle({ version: 1, id: i + 1, job: { kind: 'pointEdit', document, options: option } })
   expect(messages.every(m => m.ok)).toBe(true)
-  const result = (i: number) => (messages[i] as any).result
+  const result = (i: number) => resultOf(messages[i], 'pointEdit')
   expect(result(0).sketches[0].analytic.radius).toBe(6)
   expect(result(1).sketches[0].analytic.center).toEqual([5, 6])
   expect(result(2).sketches[0].analytic).toMatchObject({ start: 90, sweep: 90 })
@@ -1169,11 +1179,11 @@ it('runs native NURBS commands with stable identities and preserved knot/elevati
   const snapshot = JSON.stringify(source),
     messages: MainSolidResponse[] = [],
     handle = createMainSolidWorkerHandler(m => messages.push(m))
-  async function edit(options: any) {
+  async function edit(options: Extract<MainSolidJob, { kind: 'nurbsEdit' }>['options']) {
     await handle({ version: 1, id: messages.length + 1, job: { kind: 'nurbsEdit', document: source, options } })
     const reply = messages.at(-1)!
     expect(reply.ok).toBe(true)
-    return (reply as any).result
+    return resultOf(reply, 'nurbsEdit')
   }
   for (const kind of ['knot', 'elevate']) {
     const d = await edit({ kind, id: 'curve', axis: 'curve', value: 0.4 })
@@ -1266,15 +1276,15 @@ it('creates a dependent bridge and runs B-rep properties/detail in the worker', 
     ok: true,
     result: { curves: [{ id: 'a' }, { id: 'b' }, { id: 'bridge', bridge: { sourceA: 'a', sourceB: 'b' } }] },
   })
-  const bridge = (messages[0] as any).result.curves[2].curve
+  const bridge = resultOf(messages[0], 'nurbsEdit').curves[2].curve
   expect(evaluateNurbsCurve(bridge, 0).point).toEqual(evaluateNurbsCurve(a.curve, 1).point)
   expect(evaluateNurbsCurve(bridge, 1).point).toEqual(evaluateNurbsCurve(b.curve, 0).point)
   const job = { kind: 'brepTool' as const, document: source, options: { kind: 'mass' as const, id: 'box' } }
   await handle({ version: 1, id: 2, job })
   expect(messages[1]).toMatchObject({ ok: true, result: { kind: 'mass', id: 'box' } })
-  expect((messages[1] as any).result.mass.signedVolumeMm3).toBeCloseTo(6000, 7)
-  expect((messages[1] as any).result.mass.surfaceAreaMm2).toBeCloseTo(2200, 7)
-  const result = (messages[1] as any).result,
+  expect(resultOf(messages[1], 'brepTool').mass.signedVolumeMm3).toBeCloseTo(6000, 7)
+  expect(resultOf(messages[1], 'brepTool').mass.surfaceAreaMm2).toBeCloseTo(2200, 7)
+  const result = resultOf(messages[1], 'brepTool'),
     expectation = mainSolidExpectation(job)
   expect(mainSolidResult(expectation, result)).toBe(true)
   expect(mainSolidResult(expectation, { ...result, id: 'wrong' })).toBe(false)
@@ -1287,8 +1297,8 @@ it('creates a dependent bridge and runs B-rep properties/detail in the worker', 
     ok: true,
     result: { kind: 'display', diagnostics: { report: { boundaryEdges: 0, nonManifoldEdges: 0 } } },
   })
-  expect(mainSolidResult(mainSolidExpectation(displayJob), (messages[3] as any).result)).toBe(true)
-  expect((messages[3] as any).result.diagnostics.section.contours.length).toBeGreaterThan(0)
+  expect(mainSolidResult(mainSolidExpectation(displayJob), resultOf(messages[3], 'brepTool'))).toBe(true)
+  expect(resultOf(messages[3], 'brepTool').diagnostics.section.contours.length).toBeGreaterThan(0)
   expect(JSON.stringify(source)).toBe(snapshot)
 })
 

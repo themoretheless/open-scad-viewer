@@ -184,9 +184,9 @@ it('validates rejected worker receipts before the interface reads diagnostic fie
   const result = { document: null, error: 'RUNOUT_CURVATURE_LIMIT', report: null, runoutReport: r.report }
   expect(mainSolidResult({ kind: 'surfaceBuild', runoutId: 'result' }, result)).toBe(true)
   for (const mutate of [
-    (v: any) => delete v.runoutReport.fields,
-    (v: any) => (v.runoutReport.method = 'native-original-support-G2-runout/1'),
-    (v: any) => (v.runoutReport.fields[0].patch = 2),
+    (v: typeof result) => Reflect.deleteProperty(v.runoutReport, 'fields'),
+    (v: typeof result) => Object.assign(v.runoutReport, { method: 'native-original-support-G2-runout/1' }),
+    (v: typeof result) => (v.runoutReport.fields[0]!.patch = 2),
   ]) {
     const bad = structuredClone(result)
     mutate(bad)

@@ -1,23 +1,25 @@
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest'
 import { SurfaceSelfIntersectionBrowser } from '../src/kernel/surfaceSelfIntersectionBrowser'
 import { quadricQuery, quadricReport } from './fixtures/quadricCarrier'
+import type { OriginalQuadricCarrierQuery } from '../src/kernel/originalQuadricCarrierProtocol'
+type SentRequest = { id: number; type: string; [key: string]: unknown }
 class FakeWorker {
   static all: FakeWorker[] = []
-  onmessage: any
-  onerror: any
-  onmessageerror: any
-  sent: any
+  onmessage!: (event: { data: unknown }) => void
+  onerror!: ((event: unknown) => void) | null
+  onmessageerror!: ((event: unknown) => void) | null
+  sent!: SentRequest
   terminated = 0
   constructor() {
     FakeWorker.all.push(this)
   }
-  postMessage(v: any) {
+  postMessage(v: SentRequest) {
     this.sent = v
   }
   terminate() {
     this.terminated++
   }
-  reply(report: any) {
+  reply(report: unknown) {
     this.onmessage({ data: { type: 'surface-self-result/1', id: this.sent.id, ok: true, report } })
   }
 }
@@ -71,17 +73,17 @@ describe('quadric carrier browser ownership', () => {
     const l = lane(),
       c = new AbortController(),
       p = l.inspectOriginalQuadricCarrierRoots(quadricQuery(), { signal: c.signal })
-    await expect(l.inspect({} as any, 10)).rejects.toThrow('busy')
+    await expect(l.inspect({} as Parameters<SurfaceSelfIntersectionBrowser['inspect']>[0], 10)).rejects.toThrow('busy')
     c.abort()
     await expect(p).rejects.toThrow('cancelled')
     expect(l.snapshot()).toEqual({ active: false, workersStarted: 1, workersTerminated: 1 })
   })
   it('rejects invalid matrices/products and budgets before starting a worker', async () => {
     for (const modify of [
-      (q: any) => (q.quadric = Array(4)),
-      (q: any) => (q.quadric[0][0] = NaN),
-      (q: any) => (q.constantProducts = Array(1)),
-      (q: any) => (q.maxExactWork = 1000001),
+      (q: OriginalQuadricCarrierQuery) => (q.quadric = Array(4)),
+      (q: OriginalQuadricCarrierQuery) => (q.quadric[0][0] = NaN),
+      (q: OriginalQuadricCarrierQuery) => (q.constantProducts = Array(1)),
+      (q: OriginalQuadricCarrierQuery) => (q.maxExactWork = 1000001),
     ]) {
       const q = quadricQuery()
       modify(q)

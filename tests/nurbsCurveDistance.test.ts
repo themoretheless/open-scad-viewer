@@ -1,6 +1,11 @@
 import { expect, it } from 'vitest'
 import { measureNurbsCurveDistance, evaluateNurbsCurve, type NurbsCurve } from '../src/kernel/nurbsCurve'
-import { mainSolidExpectation, mainSolidResult, type MainSolidJob } from '../src/kernel/mainSolidProtocol'
+import {
+  mainSolidExpectation,
+  mainSolidResult,
+  type MainSolidJob,
+  type MainSolidResponse,
+} from '../src/kernel/mainSolidProtocol'
 import { createMainSolidWorkerHandler } from '../src/kernel/mainSolidWorkerRuntime'
 const line = (points: number[][]): NurbsCurve => ({
   degree: 1,
@@ -95,7 +100,7 @@ it('admits only results matching dimensions, parameter domains, tolerance and bu
     expect(mainSolidResult(expectation, { ...result, ...patch })).toBe(false)
 })
 it('runs both successful and invalid distance requests through the worker and recovers', async () => {
-  const messages: any[] = [],
+  const messages: MainSolidResponse[] = [],
     handler = createMainSolidWorkerHandler(message => messages.push(message))
   const job = {
     kind: 'curveDistance' as const,

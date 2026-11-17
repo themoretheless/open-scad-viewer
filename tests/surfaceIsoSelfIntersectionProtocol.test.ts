@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { isSurfaceIsoAuditReport } from '../src/kernel/surfaceIsoSelfIntersectionProtocol'
-function report(): any {
+function report() {
   return {
     schema: 'nurbs-surface-iso-self-intersection/1',
     status: 'present',

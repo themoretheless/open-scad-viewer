@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
 import { measureFaceDistance, type FaceDistanceOptions } from '../src/kernel/solidMeasurements'
-import { mainSolidExpectation, mainSolidResult } from '../src/kernel/mainSolidProtocol'
+import { mainSolidExpectation, mainSolidResult, type MainSolidResponse } from '../src/kernel/mainSolidProtocol'
 import { createMainSolidWorkerHandler } from '../src/kernel/mainSolidWorkerRuntime'
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/face-distance.json', import.meta.url), 'utf8'))
 const options = (): FaceDistanceOptions => ({
@@ -64,7 +64,7 @@ it('rejects malformed, mismatched and falsely completed face results', () => {
     expect(mainSolidResult(e, { ...r, ...patch })).toBe(false)
 })
 it('recovers from invalid face input in the worker', async () => {
-  const messages: any[] = [],
+  const messages: MainSolidResponse[] = [],
     handler = createMainSolidWorkerHandler(m => messages.push(m)),
     o = options()
   await handler({ version: 1, id: 1, job: { kind: 'faceDistance', options: { ...o, faceA: 99999 } } })

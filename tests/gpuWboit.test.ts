@@ -3,14 +3,21 @@ import { describe, expect, it, vi } from 'vitest'
 import { GpuWboitRenderer, toWboitShader, WBOIT_ACCUM_FORMAT, WBOIT_REVEAL_FORMAT } from '../src/render/gpuWboit'
 import { MESH_WGSL } from '../src/render/shaders'
 
+interface FakeTexture {
+  desc: GPUTextureDescriptor
+  destroyed: boolean
+  createView: () => unknown
+  destroy: () => void
+}
+
 function createFakeDevice() {
-  const textures: any[] = []
-  const pipelines: any[] = []
-  const bindGroups: any[] = []
+  const textures: FakeTexture[] = []
+  const pipelines: { desc: GPURenderPipelineDescriptor }[] = []
+  const bindGroups: { desc: GPUBindGroupDescriptor }[] = []
 
   const device = {
-    createTexture: vi.fn((desc: any) => {
-      const tex = {
+    createTexture: vi.fn((desc: GPUTextureDescriptor) => {
+      const tex: FakeTexture = {
         desc,
         destroyed: false,
         createView: vi.fn(() => ({ texture: tex, desc })),
@@ -21,15 +28,15 @@ function createFakeDevice() {
       textures.push(tex)
       return tex
     }),
-    createBindGroupLayout: vi.fn((desc: any) => ({ desc })),
-    createBindGroup: vi.fn((desc: any) => {
+    createBindGroupLayout: vi.fn((desc: GPUBindGroupLayoutDescriptor) => ({ desc })),
+    createBindGroup: vi.fn((desc: GPUBindGroupDescriptor) => {
       const bg = { desc }
       bindGroups.push(bg)
       return bg
     }),
-    createPipelineLayout: vi.fn((desc: any) => ({ desc })),
-    createShaderModule: vi.fn((desc: any) => ({ desc, code: desc.code })),
-    createRenderPipeline: vi.fn((desc: any) => {
+    createPipelineLayout: vi.fn((desc: GPUPipelineLayoutDescriptor) => ({ desc })),
+    createShaderModule: vi.fn((desc: GPUShaderModuleDescriptor) => ({ desc, code: desc.code })),
+    createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
       const p = { desc }
       pipelines.push(p)
       return p
@@ -141,9 +148,9 @@ describe('GpuWboitRenderer', () => {
     const wboit = new GpuWboitRenderer()
     wboit.ensureTextures(device, 500, 500)
 
-    let passDesc: any = null
+    let passDesc: GPURenderPassDescriptor | null = null
     const encoder = {
-      beginRenderPass: vi.fn((desc: any) => {
+      beginRenderPass: vi.fn((desc: GPURenderPassDescriptor) => {
         passDesc = desc
         return { setPipeline: vi.fn(), end: vi.fn() }
       }),
@@ -244,7 +251,7 @@ describe('GpuWboitRenderer', () => {
 
   it('integrates with WebGPURenderer transparencyMode and teardown', async () => {
     const { WebGPURenderer } = await import('../src/render/webgpuRenderer')
-    const { device } = createFakeDevice()
+    createFakeDevice()
     const renderer = new WebGPURenderer()
 
     expect(renderer.getTransparencyMode()).toBe('sorted')

@@ -5,7 +5,8 @@ const native = vi.hoisted(() => vi.fn())
 vi.mock('../src/kernel/geometry/nurbs', () => ({ callNurbsRust: native }))
 import { restoreFrozenGraphBody, frozenGraphExpectation, validFrozenGraphBody } from '../src/kernel/frozenGraphBody'
 const artifact = JSON.parse(gunzipSync(readFileSync('tests/fixtures/frozen-graph-body.json.gz')).toString())
-function receipt(): any {
+type Receipt = ReturnType<typeof receipt>
+function receipt() {
   const g = artifact.geometry,
     n = g.faces.length
   return {
@@ -54,14 +55,14 @@ it('binds all exact geometry and identity links to an immutable request expectat
   input.geometry.vertices[0][0][0] = ['999', '1']
   expect(validFrozenGraphBody(r, expected)).toBe(true)
   const changes = [
-    (r: any) => (r.artifact.geometry.identityLinks.edges[0].sourceId = 'different-id'),
-    (r: any) => (r.artifact.geometry.edges[0].range[0] = ['1', '7']),
-    (r: any) => (r.report.applicationAdmitted = true),
-    (r: any) => (r.report.radiusLawCertified = true),
-    (r: any) => (r.report.pairProducts = 0),
-    (r: any) => (r.report.maxPairs = 10001),
-    (r: any) => (r.report.absoluteCurvatureUpper = 11),
-    (r: any) => (r.report.signedVolumeMm3 = ['0', '1']),
+    (r: Receipt) => (r.artifact.geometry.identityLinks.edges[0].sourceId = 'different-id'),
+    (r: Receipt) => (r.artifact.geometry.edges[0].range[0] = ['1', '7']),
+    (r: Receipt) => (r.report.applicationAdmitted = true),
+    (r: Receipt) => (r.report.radiusLawCertified = true),
+    (r: Receipt) => (r.report.pairProducts = 0),
+    (r: Receipt) => (r.report.maxPairs = 10001),
+    (r: Receipt) => (r.report.absoluteCurvatureUpper = 11),
+    (r: Receipt) => (r.report.signedVolumeMm3 = ['0', '1']),
   ]
   for (const change of changes) {
     const v = receipt()

@@ -33,7 +33,7 @@ describe('untrusted parser worker boundary', () => {
       sandbox: false,
       terminatesOnTimeout: true,
     })
-    expect(PARSER_ISOLATION_BOUNDARY.note).not.toMatch(/security sandbox\./i && /is a security sandbox/i)
+    expect(PARSER_ISOLATION_BOUNDARY.note).not.toMatch(/is a security sandbox/i)
   })
 
   it('returns the raw pass result across the same typed request lifecycle', async () => {

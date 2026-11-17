@@ -79,29 +79,29 @@ describe('exact Full Round semantic contract', () => {
     [0, '1', 2],
     [0, 0, 2],
   ])('refuses malformed face selection %j', (...faces) => {
-    const core: any = fixture()
-    core.nodes[2].faces = faces
+    const core = fixture()
+    Object.assign(core.nodes[2]!, { faces })
     expect(() => admit(core)).toThrow()
   })
   it('validates explicit material budgets and rejects unknown fields', () => {
-    const core: any = fixture()
-    core.nodes[2].limits = { maxPairProjections: 0, refinements: 192 }
-    core.nodes[2].maxBytes = 4194304
+    const core = fixture()
+    Object.assign(core.nodes[2]!, { limits: { maxPairProjections: 0, refinements: 192 }, maxBytes: 4194304 })
     expect(() => admit(core)).not.toThrow()
     for (const limits of [{ extra: 1 }, { refinements: -1 }, { maxAtoms: 1.5 }, { maxRayCells: 2 ** 32 }, null]) {
-      core.nodes[2].limits = limits
+      Object.assign(core.nodes[2]!, { limits })
       expect(() => admit(core)).toThrow()
     }
   })
   it('refuses false carriers, wrong frontier inputs and inherited identity', () => {
-    const core: any = fixture()
-    core.nodes[2].valueType.representation = 'analytic-brep'
+    const core = fixture()
+    Object.assign(core.nodes[2]!.valueType, { representation: 'analytic-brep' })
     expect(() => admit(core)).toThrow()
-    const wrong: any = fixture()
-    wrong.nodes[2].input = 0
+    const wrong = fixture()
+    Object.assign(wrong.nodes[2]!, { input: 0 })
     expect(() => admit(wrong)).toThrow()
-    const identity: any = fixture()
-    identity.result.item.identityOccurrence = 4
+    const identity = fixture()
+    if (identity.result.tag !== 'single') throw Error('expected a single result')
+    Object.assign(identity.result.item, { identityOccurrence: 4 })
     expect(() => admit(identity)).toThrow()
     expect(() => validateNodes(fixture().nodes, 'legacy/current')).toThrow()
   })
@@ -144,7 +144,8 @@ it('keeps separate materializer identities for multiple root-map outputs', () =>
   const program = lowerOpenSCADToSemanticProgram(code).program
   expect(program.core.result.tag).toBe('multi')
   expect(() => normalizeSemanticProgram(program)).not.toThrow()
-  const bad: any = structuredClone(program)
-  bad.core.result.items[1].identityOccurrence = bad.core.result.items[0].identityOccurrence
+  const bad = structuredClone(program)
+  if (bad.core.result.tag !== 'multi') throw Error('expected a multi result')
+  Object.assign(bad.core.result.items[1]!, { identityOccurrence: bad.core.result.items[0]!.identityOccurrence })
   expect(() => normalizeSemanticProgram(bad)).toThrow()
 })

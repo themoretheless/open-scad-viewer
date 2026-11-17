@@ -3,17 +3,20 @@ import { it, expect, vi, afterEach } from 'vitest'
 import MainModelingOverlay from '../src/features/MainModelingOverlay.svt'
 import MainSketchTools from '../src/features/MainSketchTools.svt'
 import CadWorkbenchPanel from '../src/features/CadWorkbenchPanel.svt'
-import { previewMeshes } from '../src/app/mainModeling'
+import { previewMeshes, type MainParameters } from '../src/app/mainModeling'
 import { extrudeDirectSketch } from '../src/app/directModeling'
 import { sampleCurve } from '../src/app/directSketchGeometry'
 import { inspectPolygonMesh } from '../src/kernel/geometry/polygon'
+/** Props patched onto fake nodes; event handlers are invoked directly by the tests. */
+type Handler = (...args: unknown[]) => unknown
+type NodeProps = { [key: string]: unknown } & { [key: `on${string}`]: Handler | undefined }
 class Node {
   parent: Node | null = null
   children: Node[] = []
-  props: Record<string, any> = {}
-  style: Record<string, any> = {}
+  props: NodeProps = {}
+  style: Record<string, unknown> = {}
   text = ''
-  value: any = ''
+  value: unknown = ''
   selected = false
   constructor(public tag: string) {}
   get tagName() {
@@ -47,7 +50,7 @@ class Node {
   getScreenCTM() {
     return { inverse: () => ({}) }
   }
-  setAttribute(key: string, v: any) {
+  setAttribute(key: string, v: unknown) {
     this.props[key] = v
   }
   removeAttribute(key: string) {
@@ -79,7 +82,8 @@ const renderer = createRenderer<Node, Node>({
     if (n.parent) n.parent.children = n.parent.children.filter(c => c !== n)
     n.parent = p
     const i = anchor ? p.children.indexOf(anchor) : -1
-    i < 0 ? p.children.push(n) : p.children.splice(i, 0, n)
+    if (i < 0) p.children.push(n)
+    else p.children.splice(i, 0, n)
   },
   remove: n => {
     if (n.parent) n.parent.children = n.parent.children.filter(c => c !== n)
@@ -89,13 +93,18 @@ const renderer = createRenderer<Node, Node>({
     throw Error('Unexpected static content')
   },
 })
+type DirectBody = NonNullable<ReturnType<typeof extrudeDirectSketch>>
 const mounts: Array<() => void> = []
 afterEach(() => {
   mounts.splice(0).forEach(f => f())
   vi.unstubAllGlobals()
 })
 
-async function mount(component: any, props: any, stored: string | null = null) {
+async function mount(
+  component: Parameters<typeof renderer.createApp>[0],
+  props: Record<string, unknown>,
+  stored: string | null = null,
+) {
   vi.stubGlobal('localStorage', { getItem: () => stored, setItem: () => {} })
   vi.stubGlobal('Document', class {})
   vi.stubGlobal('ShadowRoot', class {})
@@ -124,7 +133,7 @@ async function mount(component: any, props: any, stored: string | null = null) {
     event,
     click: async (name: string) => {
       const n = all().find(n => n.tag === 'button' && text(n) === name)!
-      n.props.onClick({})
+      n.props.onClick!({})
       await nextTick()
     },
   }
@@ -172,7 +181,7 @@ it('fits a bounded nominal opening and preserves geometry when print constraints
       .find(n => n.tag === 'label' && ui.text(n).startsWith(label))!
       .children.find(n => n.tag === 'input')!
   const set = async (label: string, value: unknown) => {
-    input(label).props['onUpdate:modelValue'](value)
+    input(label).props['onUpdate:modelValue']!(value)
     await nextTick()
   }
   await set('Limit nominal opening', true)
@@ -206,7 +215,7 @@ it('offers centered lattice patterns with spatial controls and no ineffective ra
   expect(select.options.some(o => o.value === 'octet')).toBe(true)
   expect(select.options.some(o => o.value === 'isogrid')).toBe(true)
   for (const pattern of ['bcc', 'octet']) {
-    select.props['onUpdate:modelValue'](pattern)
+    select.props['onUpdate:modelValue']!(pattern)
     await nextTick()
     const labels = ui
       .all()
@@ -218,19 +227,19 @@ it('offers centered lattice patterns with spatial controls and no ineffective ra
     expect(labels.some(s => s.includes('Randomness'))).toBe(false)
     expect(ui.all().some(n => n.tag === 'button' && ui.text(n) === 'Next variation')).toBe(false)
   }
-  select.props['onUpdate:modelValue']('spatial')
+  select.props['onUpdate:modelValue']!('spatial')
   await nextTick()
   expect(ui.all().some(n => n.tag === 'label' && ui.text(n).includes('Randomness'))).toBe(true)
-  select.props['onUpdate:modelValue']('grid')
+  select.props['onUpdate:modelValue']!('grid')
   await nextTick()
   expect(ui.all().some(n => n.tag === 'label' && ui.text(n).includes('Channel axis'))).toBe(true)
-  select.props['onUpdate:modelValue']('isogrid')
+  select.props['onUpdate:modelValue']!('isogrid')
   await nextTick()
   expect(ui.all().some(n => n.tag === 'label' && ui.text(n).includes('Channel axis'))).toBe(true)
   expect(ui.all().some(n => n.tag === 'label' && ui.text(n).includes('Outer skin, mm'))).toBe(false)
 })
 it('drags a main viewport gizmo and commits once on release', async () => {
-  const values: any[] = [],
+  const values: MainParameters[] = [],
     preview = vi.fn(),
     apply = vi.fn()
   const ui = await mount(MainModelingOverlay, {
@@ -243,35 +252,35 @@ it('drags a main viewport gizmo and commits once on release', async () => {
     project: (p: number[]) => [p[0] * 10, p[1] * 10],
     revision: 0,
     box: false,
-    onParameters: (p: any) => values.push(p),
+    onParameters: (p: MainParameters) => values.push(p),
     onPreview: preview,
     onApply: apply,
   })
   const svg = ui.all().find(n => n.tag === 'svg')!,
     g = ui.all().find(n => n.tag === 'g' && n.props.onPointerdown)!
-  g.props.onPointerdown(ui.event(g, 0, 0))
-  svg.props.onPointermove(ui.event(svg, 20, 0))
-  expect(values.at(-1).x).toBeCloseTo(2)
+  g.props.onPointerdown!(ui.event(g, 0, 0))
+  svg.props.onPointermove!(ui.event(svg, 20, 0))
+  expect(values.at(-1)!.x).toBeCloseTo(2)
   expect(preview).toHaveBeenCalledTimes(1)
   expect(apply).not.toHaveBeenCalled()
-  svg.props.onPointerup()
+  svg.props.onPointerup!()
   expect(apply).toHaveBeenCalledTimes(1)
 })
 it('draws and extrudes a sketch directly on the main workplane', async () => {
-  const emitted: any[] = [],
+  const emitted: DirectBody[] = [],
     ui = await mount(MainSketchTools, {
       plane: null,
       project: (p: number[]) => [p[0], p[1]],
       ray: (x: number, y: number) => ({ origin: [x, y, 100], direction: [0, 0, -1] }),
       revision: 0,
       locale: 'en',
-      onBody: (b: any) => emitted.push(b),
+      onBody: (b: DirectBody) => emitted.push(b),
     })
   await ui.click('rectangle')
   const svg = ui.all().find(n => n.tag === 'svg')!
-  svg.props.onPointerdown(ui.event(svg, 0, 0))
-  svg.props.onPointermove(ui.event(svg, 10, 10))
-  svg.props.onPointerup()
+  svg.props.onPointerdown!(ui.event(svg, 0, 0))
+  svg.props.onPointermove!(ui.event(svg, 10, 10))
+  svg.props.onPointerup!()
   await nextTick()
   await ui.click('Extrude')
   expect(emitted).toHaveLength(1)
@@ -313,22 +322,22 @@ it('re-solves a constrained circle when its own handles are dragged in the main 
   )
   const svg = ui.all().find(n => n.tag === 'svg')!,
     curve = () => ui.all().filter(n => n.tag === 'polyline' && n.props['stroke-width'] === '3')[2]!
-  curve().props.onPointerdown(ui.event(curve(), 0, 2))
+  curve().props.onPointerdown!(ui.event(curve(), 0, 2))
   await nextTick()
   const handles = () => ui.all().filter(n => n.tag === 'circle' && String(n.props.r) === '6')
   const center = handles()[0]!
-  center.props.onPointerdown(ui.event(center, 0, 0))
-  svg.props.onPointermove(ui.event(svg, 7, 7))
-  svg.props.onPointerup()
+  center.props.onPointerdown!(ui.event(center, 0, 0))
+  svg.props.onPointermove!(ui.event(svg, 7, 7))
+  svg.props.onPointerup!()
   await nextTick()
   expect(handles()[0]!.props.cx).toBeCloseTo(0, 6)
   expect(handles()[0]!.props.cy).toBeCloseTo(0, 6)
   const radius = handles()[1]!
-  radius.props.onPointerdown(ui.event(radius, 2, 0))
-  svg.props.onPointermove(ui.event(svg, 0, 20))
-  svg.props.onPointerup()
+  radius.props.onPointerdown!(ui.event(radius, 2, 0))
+  svg.props.onPointermove!(ui.event(svg, 0, 20))
+  svg.props.onPointerup!()
   await nextTick()
-  expect(Math.hypot(handles()[1]!.props.cx, handles()[1]!.props.cy)).toBeCloseTo(20, 6)
+  expect(Math.hypot(handles()[1]!.props.cx as number, handles()[1]!.props.cy as number)).toBeCloseTo(20, 6)
   expect(handles()[0]!.props.cx).toBeCloseTo(0, 6)
   expect(ui.all().some(n => n.props.role === 'alert' || n.props.role === 'status')).toBe(false)
 })
@@ -350,30 +359,30 @@ it('refuses a main sketch handle drag with a notice when the circle constraints 
   )
   const svg = ui.all().find(n => n.tag === 'svg')!,
     curve = () => ui.all().filter(n => n.tag === 'polyline' && n.props['stroke-width'] === '3')[2]!
-  curve().props.onPointerdown(ui.event(curve(), 0, 2))
+  curve().props.onPointerdown!(ui.event(curve(), 0, 2))
   await nextTick()
   const before = curve().props.points,
     radius = ui.all().filter(n => n.tag === 'circle' && String(n.props.r) === '6')[1]!
-  radius.props.onPointerdown(ui.event(radius, 2, 0))
-  svg.props.onPointermove(ui.event(svg, 0, 9))
+  radius.props.onPointerdown!(ui.event(radius, 2, 0))
+  svg.props.onPointermove!(ui.event(svg, 0, 9))
   await nextTick()
   expect(curve().props.points).toEqual(before)
   expect(
     ui.all().find(n => n.props.role === 'status') && ui.text(ui.all().find(n => n.props.role === 'status')!),
   ).toContain('drag was refused')
-  svg.props.onPointerup()
+  svg.props.onPointerup!()
   await nextTick()
   expect(curve().props.points).toEqual(before)
 })
 it('authors Bézier nodes, edits handles, cancels a drag and extrudes from the viewport', async () => {
-  const bodies: any[] = [],
+  const bodies: DirectBody[] = [],
     ui = await mount(MainSketchTools, {
       plane: null,
       project: (p: number[]) => [p[0], p[1]],
       ray: (x: number, y: number) => ({ origin: [x, y, 100], direction: [0, 0, -1] }),
       revision: 0,
       locale: 'en',
-      onBody: (b: any) => bodies.push(b),
+      onBody: (b: DirectBody) => bodies.push(b),
     })
   await ui.click('bezier')
   const svg = ui.all().find(n => n.tag === 'svg')!
@@ -383,46 +392,46 @@ it('authors Bézier nodes, edits handles, cancels a drag and extrudes from the v
     [40, 40],
     [0, 40],
   ])
-    svg.props.onPointerdown(ui.event(svg, x, y))
+    svg.props.onPointerdown!(ui.event(svg, x, y))
   await nextTick()
   await ui.click('Close contour')
   expect(ui.all().filter(n => n.tag === 'circle' && String(n.props.r) === '6')).toHaveLength(4)
   const path = () => ui.all().find(n => n.tag === 'polyline' && n.props['stroke-width'] === '3')!.props.points
   const before = path(),
     handle = ui.all().find(n => n.tag === 'circle' && String(n.props.r) === '4')!
-  handle.props.onPointerdown(ui.event(handle))
-  svg.props.onPointermove(ui.event(svg, 15, -20))
+  handle.props.onPointerdown!(ui.event(handle))
+  svg.props.onPointermove!(ui.event(svg, 15, -20))
   await nextTick()
   expect(path()).not.toEqual(before)
-  svg.props.onPointercancel()
+  svg.props.onPointercancel!()
   await nextTick()
   expect(path()).toEqual(before)
   const anchor = ui.all().filter(n => n.tag === 'circle' && String(n.props.r) === '6')[1]
-  anchor.props.onPointerdown(ui.event(anchor, 40, 0))
-  svg.props.onPointermove(ui.event(svg, 50, 1))
+  anchor.props.onPointerdown!(ui.event(anchor, 40, 0))
+  svg.props.onPointermove!(ui.event(svg, 50, 1))
   await nextTick()
   expect(ui.all().some(n => n.tag === 'line' && n.props['stroke-dasharray'] === '5 4')).toBe(true)
-  svg.props.onPointerup()
+  svg.props.onPointerup!()
   await nextTick()
   await ui.click('Extrude')
   expect(bodies).toHaveLength(1)
   expect(inspectPolygonMesh(bodies[0].mesh).signedVolumeMm3).toBeGreaterThan(0)
 })
 it('outlines a closed sketch as a region with a hole before viewport extrusion', async () => {
-  const bodies: any[] = [],
+  const bodies: DirectBody[] = [],
     ui = await mount(MainSketchTools, {
       plane: null,
       project: (p: number[]) => [p[0], p[1]],
       ray: (x: number, y: number) => ({ origin: [x, y, 100], direction: [0, 0, -1] }),
       revision: 0,
       locale: 'en',
-      onBody: (b: any) => bodies.push(b),
+      onBody: (b: DirectBody) => bodies.push(b),
     })
   await ui.click('rectangle')
   const svg = ui.all().find(n => n.tag === 'svg')!
-  svg.props.onPointerdown(ui.event(svg, 0, 0))
-  svg.props.onPointermove(ui.event(svg, 20, 20))
-  svg.props.onPointerup()
+  svg.props.onPointerdown!(ui.event(svg, 0, 0))
+  svg.props.onPointermove!(ui.event(svg, 20, 20))
+  svg.props.onPointerup!()
   await nextTick()
   await ui.click('Outline Stroke')
   await ui.click('Extrude')
@@ -467,18 +476,16 @@ it('C7 coincident: shows constraint glyphs in the main sketch overlay, selects o
   expect(ui.text(coincident)).toContain('●')
   const rect = ui.all(coincident).find(n => n.tag === 'rect')!
   // About 14 px from vertex 0 at the origin, diagonally.
-  expect(Math.hypot(rect.props.x + 9, rect.props.y + 9)).toBeCloseTo(14, 6)
-  coincident.props.onPointerdown(ui.event(coincident))
+  expect(Math.hypot((rect.props.x as number) + 9, (rect.props.y as number) + 9)).toBeCloseTo(14, 6)
+  coincident.props.onPointerdown!(ui.event(coincident))
   await nextTick()
   expect(glyphs().find(g => g.props['data-constraint-glyph'] === 'coincident')!.props['aria-pressed']).toBe(true)
   expect(glyphs().find(g => g.props['data-constraint-glyph'] === 'horizontal')!.props['aria-pressed']).toBe(false)
   const svg = ui.all().find(n => n.tag === 'svg')!
-  svg.props.onKeydown({ key: 'Delete', preventDefault() {} })
+  svg.props.onKeydown!({ key: 'Delete', preventDefault() {} })
   await nextTick()
   expect(glyphs().map(g => g.props['data-constraint-glyph'])).toEqual(['horizontal'])
-  ui.all()
-    .find(n => n.tag === 'button' && ui.text(n) === '↶')!
-    .props.onClick({})
+  ui.all().find(n => n.tag === 'button' && ui.text(n) === '↶')!.props.onClick!({})
   await nextTick()
   expect(
     glyphs()
@@ -486,7 +493,7 @@ it('C7 coincident: shows constraint glyphs in the main sketch overlay, selects o
       .sort(),
   ).toEqual(['coincident', 'horizontal'])
   // Delete without a selected glyph leaves the constraints alone.
-  svg.props.onKeydown({ key: 'Delete', preventDefault() {} })
+  svg.props.onKeydown!({ key: 'Delete', preventDefault() {} })
   await nextTick()
   expect(glyphs()).toHaveLength(2)
 })
@@ -494,25 +501,25 @@ it('C7 coincident: a main sketch vertex drag keeps the coincident vertex on its 
   const ui = await mount(MainSketchTools, sketchProps, coincidentSketches())
   const svg = ui.all().find(n => n.tag === 'svg')!,
     line = () => ui.all().filter(n => n.tag === 'polyline' && n.props['stroke-width'] === '3')[1]!
-  line().props.onPointerdown(ui.event(line(), 10, 0))
+  line().props.onPointerdown!(ui.event(line(), 10, 0))
   await nextTick()
   const handles = () => ui.all().filter(n => n.tag === 'circle' && String(n.props.r) === '5')
   const end = handles()[2]!
-  end.props.onPointerdown(ui.event(end, 20, 10))
-  svg.props.onPointermove(ui.event(svg, 40, 30))
-  svg.props.onPointerup()
+  end.props.onPointerdown!(ui.event(end, 20, 10))
+  svg.props.onPointermove!(ui.event(svg, 40, 30))
+  svg.props.onPointerup!()
   await nextTick()
   expect(handles()[2]!.props.cx).toBeCloseTo(40, 6)
   expect(handles()[0]!.props.cx).toBeCloseTo(0, 9)
   expect(handles()[0]!.props.cy).toBeCloseTo(0, 9)
   const before = line().props.points,
     first = handles()[0]!
-  first.props.onPointerdown(ui.event(first, 0, 0))
-  svg.props.onPointermove(ui.event(svg, -30, -30))
+  first.props.onPointerdown!(ui.event(first, 0, 0))
+  svg.props.onPointermove!(ui.event(svg, -30, -30))
   await nextTick()
   expect(line().props.points).toEqual(before)
   expect(ui.text(ui.all().find(n => n.props.role === 'status')!)).toContain('edit was refused')
-  svg.props.onPointerup()
+  svg.props.onPointerup!()
   await nextTick()
   expect(line().props.points).toEqual(before)
 })
@@ -558,7 +565,7 @@ it('C7 trim notice: the main sketch tool names dimensions the trim dropped', asy
   )
   await ui.click('trim')
   const line = ui.all().filter(n => n.tag === 'polyline' && n.props['stroke-width'] === '3')[0]!
-  line.props.onPointerdown(ui.event(line, 7, 0))
+  line.props.onPointerdown!(ui.event(line, 7, 0))
   await nextTick()
   const status = ui.all().find(n => n.props.role === 'status')
   expect(status && ui.text(status)).toContain('Trim removed sketch dimensions (1): length (2–3).')

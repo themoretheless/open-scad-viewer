@@ -23,7 +23,7 @@ it('exports current instance geometry and stable project/body identities', () =>
   expect(output.bodies[0].material).toEqual({ name: 'Copper', color: '#b87333', metallic: 1, roughness: 0.2 })
   expect(output.schema).toBe('openscad-viewer/blender-1')
   expect(output.projectId).toBe('project-a')
-  expect(output.bodies.map((body: any) => body.id)).toEqual(['source', 'instance'])
+  expect(output.bodies.map((body: { id: string }) => body.id)).toEqual(['source', 'instance'])
   expect(Math.max(...output.bodies[1].mesh.positions.filter((_: number, i: number) => i % 3 === 0))).toBe(12)
   expect(exportSolidBlenderSnapshot(linked, 'project-a')).toBe(JSON.stringify(output))
 })

@@ -8,6 +8,19 @@ import {
 } from '../src/kernel/geometry/brep'
 import { readNativeGeometryData } from '../src/kernel/nativeGeometrySnapshot'
 import { isNativeGeometryArtifact } from '../src/core/nativeGeometry'
+/** Fields of rush construction reports read by these assertions; the build API exposes them as plain objects. */
+type SmoothConstructionReport = {
+  profileSmoothness?: {
+    profileG1Certified: boolean
+    profile: { exactG1G2Certified: boolean }
+    stationContinuity: string
+  }
+}
+type PlacedConstructionReport = {
+  placement?: { reason: string; arithmeticErrorUpper: number }
+  boundaryCertificate: { continuousBound: unknown }
+  volume: { solidGeometryCertified: boolean }
+}
 const law = (value: number) => ({ degree: 1, knots: [0, 0, 1, 1], values: [value, value], weights: [1, 1] })
 const shear = [
   [1, 0, 0, 0],
@@ -236,8 +249,8 @@ it.each([
   const graph = compileRushFrontend(transformed).document,
     before = structuredClone(graph)
   const transformedBody = buildOwnNurbs(graph, { action: 'build', display: { segments: 4, subdivisionLevels: 0 } })
-  const smoothReports = Object.values(transformedBody.report.construction!) as any[]
-  const auditedProfiles = smoothReports.filter(r => r.profileSmoothness)
+  const smoothReports = Object.values(transformedBody.report.construction!) as SmoothConstructionReport[]
+  const auditedProfiles = smoothReports.filter((r): r is Required<SmoothConstructionReport> => !!r.profileSmoothness)
   expect(auditedProfiles.length).toBe(3)
   expect(auditedProfiles.every(r => r.profileSmoothness.profileG1Certified)).toBe(true)
   expect(auditedProfiles.every(r => r.profileSmoothness.profile.exactG1G2Certified)).toBe(true)
@@ -300,7 +313,7 @@ it('admits reflected automatic periodic caps with exact off-lattice native arith
     inspectProgressiveSweepSolidAdmission(built.nativeGeometry!, readNativeGeometryData(built.nativeGeometry!).geometry)
       .solidGeometryCertified,
   ).toBe(true)
-  const reports = Object.values(built.report.construction!) as any[]
+  const reports = Object.values(built.report.construction!) as PlacedConstructionReport[]
   expect(
     reports.some(
       r =>

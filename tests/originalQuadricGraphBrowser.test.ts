@@ -1,23 +1,24 @@
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest'
 import { SurfaceSelfIntersectionBrowser } from '../src/kernel/surfaceSelfIntersectionBrowser'
 import { graphQuery, graphReport, graphUnprovedReport } from './fixtures/quadricGraph'
+type SentRequest = { id: number; type: string; [key: string]: unknown }
 class FakeWorker {
   static all: FakeWorker[] = []
-  onmessage: any
-  onerror: any
-  onmessageerror: any
-  sent: any
+  onmessage!: (event: { data: unknown }) => void
+  onerror!: ((event: unknown) => void) | null
+  onmessageerror!: ((event: unknown) => void) | null
+  sent!: SentRequest
   terminated = 0
   constructor() {
     FakeWorker.all.push(this)
   }
-  postMessage(v: any) {
+  postMessage(v: SentRequest) {
     this.sent = v
   }
   terminate() {
     this.terminated++
   }
-  reply(report: any) {
+  reply(report: unknown) {
     this.onmessage({ data: { type: 'surface-self-result/1', id: this.sent.id, ok: true, report } })
   }
 }

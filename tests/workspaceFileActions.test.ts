@@ -8,7 +8,7 @@ const control = vi.hoisted(() => ({
   run: vi.fn(),
   cancel: vi.fn(),
   dispose: vi.fn(),
-  jobs: [] as any[],
+  jobs: [] as { kind: string; target?: string; mesh: unknown[] }[],
   events: [] as { phase: string; completed: number; total: number }[],
   resolve: (_value?: unknown) => {},
 }))

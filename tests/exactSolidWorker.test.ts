@@ -65,11 +65,11 @@ describe('exact-solid worker boundary', () => {
     '// @rush/1\npart = box(10mm, 10mm, 10mm)\nshow part',
   ])('preserves exact geometry for %s', async source => {
     const plan = (await evaluateExactSolids(source)).exactSolids!
-    const expected = buildExactSolidBodies(plan.nodes, plan.roots).map(({ id, ...body }) => body)
+    const expected = buildExactSolidBodies(plan.nodes, plan.roots).map(({ id: _id, ...body }) => body)
     const worker = new FakeWorker()
     const pending = buildExactSolidsInWorker(source, undefined, () => worker)
     worker.reply(await runExactSolidRequest(worker.postMessage.mock.calls[0][0]))
-    const actual = (await pending).map(({ id, ...body }) => body)
+    const actual = (await pending).map(({ id: _id, ...body }) => body)
     expect(actual).toEqual(expected)
     expect(worker.terminate).toHaveBeenCalledOnce()
   })

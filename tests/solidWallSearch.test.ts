@@ -1,10 +1,16 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
 import { wallSearchCandidates, wholeWallSearchCandidates } from '../src/kernel/solidWallSearch'
-import { inspectMaterialWall, materialWallExpectation, validMaterialWall } from '../src/kernel/solidMaterialWall'
+import {
+  inspectMaterialWall,
+  materialWallExpectation,
+  validMaterialWall,
+  type MaterialWallOptions,
+} from '../src/kernel/solidMaterialWall'
 import { transformNurbsBrep } from '../src/kernel/geometry/brep'
 import { evaluateNurbsSurface } from '../src/kernel/nurbsSurface'
-const fixtures = JSON.parse(
+type Evaluate = typeof evaluateNurbsSurface
+const fixtures: { name: string; request: MaterialWallOptions }[] = JSON.parse(
   readFileSync(
     new URL(
       '../docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-03/material-wall/contract.json',
@@ -15,7 +21,7 @@ const fixtures = JSON.parse(
 ).cases
 it('finds original material walls after rigid rotation and translation without editing the source', () => {
   for (const name of ['cube-wall']) {
-    const c = fixtures.find((c: any) => c.name === name),
+    const c = fixtures.find(c => c.name === name),
       before = JSON.stringify(c.request.model)
     const model = transformNurbsBrep(c.request.model, [
       [0, -1, 0, 123],
@@ -46,7 +52,7 @@ it('finds original material walls after rigid rotation and translation without e
   }
 }, 30000)
 it('keeps annular candidate geometry covariant under rigid placement without claiming volume qualification', () => {
-  const c = fixtures.find((c: any) => c.name === 'annular-wall'),
+  const c = fixtures.find(c => c.name === 'annular-wall'),
     m = [
       [0, -1, 0, 123],
       [0, 0, -1, -45],
@@ -74,7 +80,10 @@ it('refuses invalid groups and skips singular normal samples', () => {
     model = c.request.model
   expect(() => wallSearchCandidates(model, [[0], [0]])).toThrow('groups')
   expect(() => wallSearchCandidates(model, c.request.faceGroups, undefined, 0)).toThrow('budget')
-  const singular = (s: any, u: number, v: number) => ({ ...evaluateNurbsSurface(s, u, v), normal: null })
+  const singular = (s: Parameters<Evaluate>[0], u: number, v: number) => ({
+    ...evaluateNurbsSurface(s, u, v),
+    normal: null,
+  })
   expect(wallSearchCandidates(model, c.request.faceGroups, singular)).toEqual([])
 })
 
@@ -83,9 +92,9 @@ it('bounds whole-model sample work and skips singular regions without marking th
     model = structuredClone(source)
   model.faces = Array.from({ length: 10000 }, () => structuredClone(source.faces[0]))
   let evaluations = 0
-  const singular = (_s: any, _u: number, _v: number) => {
+  const singular = (_s: Parameters<Evaluate>[0], _u: number, _v: number) => {
     evaluations++
-    return { point: [0, 0, 0], normal: null } as any
+    return { point: [0, 0, 0], normal: null } as unknown as ReturnType<Evaluate>
   }
   expect(wholeWallSearchCandidates(model, singular, 8)).toEqual([])
   expect(evaluations).toBe(8 + 4 * 8)

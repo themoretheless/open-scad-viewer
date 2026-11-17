@@ -9,8 +9,8 @@ describe('Rust frontend compatibility', () => {
     it(fixture.path, () => {
       const result = compileRushFrontend(fixture.source)
       // Rush owns stable part IDs; compare the independent historical graph modulo IDs.
-      const normalize = (document: any) => {
-        const ids = new Map(document.nodes.map((node: any, i: number) => [node.id, `node${i}`]))
+      const normalize = (document: { nodes: readonly { id: string }[] }) => {
+        const ids = new Map(document.nodes.map((node, i) => [node.id, `node${i}`]))
         return JSON.parse(JSON.stringify(document), (_key, value) =>
           typeof value === 'string' && ids.has(value) ? ids.get(value) : value,
         )

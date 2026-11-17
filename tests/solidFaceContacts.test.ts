@@ -1,9 +1,33 @@
 import { normalizeRefinedNativeEvidence } from './helpers/refinedNativeEvidence'
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
-import { mainSolidExpectation, mainSolidResult } from '../src/kernel/mainSolidProtocol'
-import { MainSolidWorkerClient } from '../src/kernel/mainSolidWorkerClient'
-const fixtures = JSON.parse(
+import {
+  mainSolidExpectation,
+  mainSolidResult,
+  type MainSolidRequest,
+  type MainSolidResponse,
+} from '../src/kernel/mainSolidProtocol'
+import { MainSolidWorkerClient, type MainSolidPort } from '../src/kernel/mainSolidWorkerClient'
+import type { FaceContactLimits, FaceContactPair, FaceContacts } from '../src/kernel/solidFaceContacts'
+import type { NurbsBrep } from '../src/kernel/geometry/brep'
+/** Worker port double that records the last request and whether it was terminated. */
+interface FakePort extends MainSolidPort {
+  terminated: boolean
+  request?: MainSolidRequest
+}
+interface FaceContactRequest extends FaceContactLimits {
+  model: NurbsBrep
+  toleranceUv: number
+  op: string
+}
+interface FaceContactFixture {
+  name: string
+  request: FaceContactRequest
+  result: FaceContacts
+  partialRequest: FaceContactRequest
+  partialResult: FaceContacts
+}
+const fixtures: FaceContactFixture[] = JSON.parse(
   readFileSync(
     new URL(
       '../docs/qualification/cad-roadmap-2026-09-28/surface-contact-native/face-contact-api-fixtures.json',
@@ -12,8 +36,8 @@ const fixtures = JSON.parse(
     'utf8',
   ),
 ).cases
-function job(q: any) {
-  const { model, toleranceUv, op, ...limits } = q
+function job(q: FaceContactRequest) {
+  const { model, toleranceUv, op: _op, ...limits } = q
   return { kind: 'faceContacts' as const, model, toleranceUv, limits }
 }
 it('accepts native full and partial reports without turning visited into disjoint', () => {
@@ -63,7 +87,7 @@ it('rejects forged identities, coverage, counts, budgets and output truncation',
         ],
       },
     ]) {
-      const pairs = r.pairs.map((p: any, i: number) => (i === 0 ? { ...p, ...patch } : p))
+      const pairs = r.pairs.map((p: FaceContactPair, i: number) => (i === 0 ? { ...p, ...patch } : p))
       expect(mainSolidResult(e, { ...r, pairs })).toBe(false)
     }
   }
@@ -99,19 +123,19 @@ it('rejects malformed or out-of-domain contact witnesses', () => {
       ],
     },
   ]) {
-    const pairs = r.pairs.map((p: any, i: number) => (i === 0 ? { ...p, witness } : p))
+    const pairs = r.pairs.map((p: FaceContactPair, i: number) => (i === 0 ? { ...p, witness } : p))
     expect(mainSolidResult(e, { ...r, pairs })).toBe(false)
   }
 })
 it('terminates cancelled contact work and ignores a captured stale reply', async () => {
-  const ports: any[] = []
+  const ports: FakePort[] = []
   const client = new MainSolidWorkerClient(() => {
-    const p: any = {
+    const p: FakePort = {
       onmessage: null,
       onerror: null,
       onmessageerror: null,
       terminated: false,
-      postMessage(m: any) {
+      postMessage(m: MainSolidRequest) {
         this.request = m
       },
       terminate() {
@@ -165,7 +189,7 @@ it('matches native fixtures through the production WASM operation', async () => 
 })
 it('worker recovers after a rejected budget using the real WASM command', async () => {
   const { createMainSolidWorkerHandler } = await import('../src/kernel/mainSolidWorkerRuntime')
-  const messages: any[] = [],
+  const messages: MainSolidResponse[] = [],
     handle = createMainSolidWorkerHandler(m => messages.push(m)),
     j = job(fixtures[1].request)
   await handle({ version: 1, id: 1, job: { ...j, limits: { ...j.limits, maxCells: 0 } } })
@@ -183,7 +207,7 @@ it('rejects forged shared-edge certificates and incomplete classification flags'
   const f = fixtures[0],
     r = f.result,
     e = mainSolidExpectation(job(f.request)),
-    i = r.pairs.findIndex((p: any) => p.status === 'shared-boundary'),
+    i = r.pairs.findIndex((p: FaceContactPair) => p.status === 'shared-boundary'),
     c = r.pairs[i].sharedBoundary
   expect(r.sharedBoundaryPairCount).toBe(12)
   for (const patch of [{ sharedBoundaryPairCount: 11 }, { allPairsClassified: false }, { unresolvedPairCount: 1 }])
@@ -194,15 +218,15 @@ it('rejects forged shared-edge certificates and incomplete classification flags'
     { ...c, planarFace: c.sidedFace },
     { ...c, planarFace: 999 },
   ]) {
-    const pairs = r.pairs.map((p: any, j: number) => (j === i ? { ...p, sharedBoundary } : p))
+    const pairs = r.pairs.map((p: FaceContactPair, j: number) => (j === i ? { ...p, sharedBoundary } : p))
     expect(mainSolidResult(e, { ...r, pairs })).toBe(false)
   }
 })
 it('accepts native opposite-side evidence and rejects forged roles or kind', () => {
-  const f = fixtures.find((c: any) => c.name === 'curved-shared-boundary'),
+  const f = fixtures.find(c => c.name === 'curved-shared-boundary'),
     r = f.result,
     e = mainSolidExpectation(job(f.request)),
-    i = r.pairs.findIndex((p: any) => p.sharedBoundary?.kind === 'opposite-sides')
+    i = r.pairs.findIndex((p: FaceContactPair) => p.sharedBoundary?.kind === 'opposite-sides')
   expect(i).toBeGreaterThanOrEqual(0)
   expect(mainSolidResult(e, r)).toBe(true)
   const c = r.pairs[i].sharedBoundary
@@ -213,7 +237,7 @@ it('accepts native opposite-side evidence and rejects forged roles or kind', () 
     { ...c, faces: [0, 999] },
     { ...c, edge: 999 },
   ]) {
-    const pairs = r.pairs.map((p: any, j: number) => (j === i ? { ...p, sharedBoundary } : p))
+    const pairs = r.pairs.map((p: FaceContactPair, j: number) => (j === i ? { ...p, sharedBoundary } : p))
     expect(mainSolidResult(e, { ...r, pairs })).toBe(false)
   }
 })

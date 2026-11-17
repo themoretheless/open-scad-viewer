@@ -20,7 +20,8 @@ const width = {
   weights: [1, 1],
 }
 const options = { radiusMm: 1, radiusToleranceMm: 0.001 }
-function receipt(): any {
+type Receipt = ReturnType<typeof receipt>
+function receipt() {
   return {
     patch: structuredClone(surface),
     report: {
@@ -62,18 +63,18 @@ it('preserves full-domain radius refusal while returning a display-only candidat
 })
 it('refuses forged admission, missing geometry, stale radii and partial domains', () => {
   for (const mutate of [
-    (r: any) => (r.report.applicationAdmitted = true),
-    (r: any) => (r.report.solidGeometryCertified = true),
-    (r: any) => (r.report.coefficientWork = 1000001),
-    (r: any) =>
+    (r: Receipt) => (r.report.applicationAdmitted = true),
+    (r: Receipt) => (r.report.solidGeometryCertified = true),
+    (r: Receipt) => (r.report.coefficientWork = 1000001),
+    (r: Receipt) =>
       (r.report.radiusDomain = [
         [0, 1],
         [0.25, 0.75],
       ]),
-    (r: any) => (r.report.radiusMm = 2),
-    (r: any) => (r.report.radiusWitnessUv = null),
-    (r: any) => (r.patch.weights = []),
-    (r: any) => (r.report.absoluteCurvatureUpper = 11),
+    (r: Receipt) => (r.report.radiusMm = 2),
+    (r: Receipt) => (r.report.radiusWitnessUv = null),
+    (r: Receipt) => (r.patch.weights = []),
+    (r: Receipt) => (r.report.absoluteCurvatureUpper = 11),
   ]) {
     const r = receipt()
     mutate(r)
