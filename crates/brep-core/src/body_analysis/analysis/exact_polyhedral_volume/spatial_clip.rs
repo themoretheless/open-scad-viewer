@@ -554,71 +554,169 @@ pub fn exact_polyhedral_path_boundary_contacts(
     points_mm: &[[Q; 3]],
     max_exact_work: u64,
 ) -> Result<ExactPolyhedralPathBoundaryContacts> {
-    use super::section_loops::clip::clip_planar_segment;
-
-    if points_mm.len() < 2 {
-        return Err(Error::new(
-            "BREP_INVALID_INPUT",
-            "Contact path requires at least two points",
-        ));
-    }
     let mut remaining = max_exact_work;
-    let faces = prepare_faces(solid, &mut remaining)?;
-    for point in points_mm {
-        spend(&mut remaining, 1)?;
-        validate_point(point)?;
-    }
+    let faces = prepare_path_faces(solid, points_mm, &mut remaining)?;
     let mut contacts = Vec::new();
     for (span, pair) in points_mm.windows(2).enumerate() {
-        let (start, end) = (&pair[0], &pair[1]);
-        let direction: [Q; 3] = std::array::from_fn(|i| &end[i] - &start[i]);
-        spend(&mut remaining, 3)?;
-        for (&face, boundary) in &faces {
-            spend(&mut remaining, 24)?;
-            let normal = face_normal(boundary)?;
-            let delta = std::array::from_fn(|i| &boundary.origin[i] - &start[i]);
-            let numerator = dot(normal, &delta);
-            let denominator = dot(normal, &direction);
-            let axes = plane_axes(normal);
-            let intervals = if denominator.is_zero() {
-                if !numerator.is_zero() {
-                    continue;
-                }
-                clip_planar_segment(
-                    boundary.segments.iter().map(|[a, b]| (a, b)),
-                    axes,
-                    start,
-                    end,
-                    &mut remaining,
-                    |point, remaining| {
-                        Ok(point_in_face(&boundary.segments, point, axes, remaining)?
-                            != FaceLocation::Outside)
-                    },
-                )?
-            } else {
-                let t = numerator / denominator;
-                if t.is_negative() || t > Q::one() {
-                    continue;
-                }
-                let point = std::array::from_fn(|i| &start[i] + &t * &direction[i]);
-                if point_in_face(&boundary.segments, &point, axes, &mut remaining)?
-                    == FaceLocation::Outside
-                {
-                    continue;
-                }
-                vec![[t.clone(), t]]
-            };
-            if !intervals.is_empty() {
-                contacts.push(PolyhedralPathFaceContacts {
-                    span,
-                    face,
-                    intervals,
-                });
-            }
-        }
+        contacts.extend(span_face_contacts(
+            &faces,
+            span,
+            &pair[0],
+            &pair[1],
+            &mut remaining,
+        )?);
     }
     Ok(ExactPolyhedralPathBoundaryContacts {
         contacts,
         exact_work: max_exact_work - remaining,
     })
+}
+
+fn prepare_path_faces(
+    solid: &QualifiedClosedSolid,
+    points_mm: &[[Q; 3]],
+    remaining: &mut u64,
+) -> Result<BTreeMap<usize, FaceBoundary>> {
+    if points_mm.len() < 2 {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Spatial path requires at least two points",
+        ));
+    }
+    let faces = prepare_faces(solid, remaining)?;
+    for point in points_mm {
+        spend(remaining, 1)?;
+        validate_point(point)?;
+    }
+    Ok(faces)
+}
+
+fn span_face_contacts(
+    faces: &BTreeMap<usize, FaceBoundary>,
+    span: usize,
+    start: &[Q; 3],
+    end: &[Q; 3],
+    remaining: &mut u64,
+) -> Result<Vec<PolyhedralPathFaceContacts>> {
+    use super::section_loops::clip::clip_planar_segment;
+
+    let mut contacts = Vec::new();
+    let direction: [Q; 3] = std::array::from_fn(|i| &end[i] - &start[i]);
+    spend(remaining, 3)?;
+    for (&face, boundary) in faces {
+        spend(remaining, 24)?;
+        let normal = face_normal(boundary)?;
+        let delta = std::array::from_fn(|i| &boundary.origin[i] - &start[i]);
+        let numerator = dot(normal, &delta);
+        let denominator = dot(normal, &direction);
+        let axes = plane_axes(normal);
+        let intervals = if denominator.is_zero() {
+            if !numerator.is_zero() {
+                continue;
+            }
+            clip_planar_segment(
+                boundary.segments.iter().map(|[a, b]| (a, b)),
+                axes,
+                start,
+                end,
+                remaining,
+                |point, remaining| {
+                    Ok(point_in_face(&boundary.segments, point, axes, remaining)?
+                        != FaceLocation::Outside)
+                },
+            )?
+        } else {
+            let t = numerator / denominator;
+            if t.is_negative() || t > Q::one() {
+                continue;
+            }
+            let point = std::array::from_fn(|i| &start[i] + &t * &direction[i]);
+            if point_in_face(&boundary.segments, &point, axes, remaining)? == FaceLocation::Outside
+            {
+                continue;
+            }
+            vec![[t.clone(), t]]
+        };
+        if !intervals.is_empty() {
+            contacts.push(PolyhedralPathFaceContacts {
+                span,
+                face,
+                intervals,
+            });
+        }
+    }
+    Ok(contacts)
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralPathMaterialClip {
+    /// Sorted, disjoint closed intervals of local parameters for each span.
+    pub span_intervals: Vec<Vec<[Q; 2]>>,
+    pub exact_work: u64,
+}
+
+/// Clip a spatial polyline to the closed material of a qualified polyhedral
+/// solid. Intervals include boundary overlaps and isolated tangencies.
+pub fn exact_polyhedral_path_material_clip(
+    solid: &QualifiedClosedSolid,
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralPathMaterialClip> {
+    let mut remaining = max_exact_work;
+    let faces = prepare_path_faces(solid, points_mm, &mut remaining)?;
+    let mut span_intervals = Vec::new();
+    for (span, pair) in points_mm.windows(2).enumerate() {
+        let [start, end] = [&pair[0], &pair[1]];
+        let mut contacts: Vec<_> = span_face_contacts(&faces, span, start, end, &mut remaining)?
+            .into_iter()
+            .flat_map(|contact| contact.intervals)
+            .collect();
+        let count = contacts.len() as u64;
+        spend(
+            &mut remaining,
+            count.saturating_mul(8 * (u64::from(count.checked_ilog2().unwrap_or(0)) + 1)),
+        )?;
+        contacts.sort_unstable();
+
+        let mut intervals = Vec::new();
+        let mut cursor = Q::zero();
+        let direction: [Q; 3] = std::array::from_fn(|i| &end[i] - &start[i]);
+        let two = Q::from_integer(2.into());
+        for contact in contacts.into_iter().map(Some).chain([None]) {
+            let lo = contact
+                .as_ref()
+                .map_or_else(Q::one, |interval| interval[0].clone());
+            if cursor < lo {
+                spend(&mut remaining, 8)?;
+                let t = (&cursor + &lo) / &two;
+                let point = std::array::from_fn(|i| &start[i] + &t * &direction[i]);
+                if classify_open_point(&faces, &point, &mut remaining)?
+                    == PolyhedralPointLocation::Material
+                {
+                    append_closed_interval(&mut intervals, [cursor.clone(), lo.clone()]);
+                }
+            }
+            if let Some([lo, hi]) = contact {
+                cursor = cursor.max(hi.clone());
+                append_closed_interval(&mut intervals, [lo, hi]);
+            }
+        }
+        span_intervals.push(intervals);
+    }
+    Ok(ExactPolyhedralPathMaterialClip {
+        span_intervals,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn append_closed_interval(intervals: &mut Vec<[Q; 2]>, interval: [Q; 2]) {
+    if let Some(last) = intervals.last_mut()
+        && last[1] >= interval[0]
+    {
+        if interval[1] > last[1] {
+            last[1] = interval[1].clone();
+        }
+    } else {
+        intervals.push(interval);
+    }
 }

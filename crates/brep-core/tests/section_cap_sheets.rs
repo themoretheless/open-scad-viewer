@@ -3352,3 +3352,59 @@ fn exact_zero_radius_face_contacts_include_transverse_points_and_stationary_span
         ]
     );
 }
+
+#[test]
+fn exact_path_material_clip_keeps_voids_interior_and_coplanar() {
+    use brep_core::{
+        analysis::exact_polyhedral_path_material_clip,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |x, z| [q(x, 1), q(3, 2), q(z, 1)];
+    let path = [point(-1, 1), point(5, 1), point(5, 2), point(-1, 2)];
+    let report = exact_polyhedral_path_material_clip(solid, &path, 1_000_000).unwrap();
+    assert_eq!(
+        report.span_intervals,
+        [
+            vec![[q(1, 6), q(1, 3)], [q(1, 2), q(5, 6)]],
+            vec![],
+            vec![[q(1, 6), q(1, 2)], [q(2, 3), q(5, 6)]],
+        ]
+    );
+    assert_eq!(
+        exact_polyhedral_path_material_clip(solid, &path, report.exact_work).unwrap(),
+        report
+    );
+    assert!(exact_polyhedral_path_material_clip(solid, &path, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_path_material_clip_preserves_isolated_and_stationary_contacts() {
+    use brep_core::{
+        analysis::exact_polyhedral_path_material_clip,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |x, y| [q(x, 1), q(y, 1), q(1, 1)];
+    let inside = [q(1, 2), q(1, 2), q(1, 1)];
+    let boundary = point(0, 0);
+    let full = vec![[q(0, 1), q(1, 1)]];
+    for (path, expected) in [
+        ([point(-1, 1), point(1, -1)], vec![[q(1, 2), q(1, 2)]]),
+        ([point(-1, -1), boundary.clone()], vec![[q(1, 1), q(1, 1)]]),
+        ([inside.clone(), inside], full.clone()),
+        ([boundary.clone(), boundary], full),
+        ([point(-1, -1), point(-1, -1)], vec![]),
+    ] {
+        let report = exact_polyhedral_path_material_clip(solid, &path, 1_000_000).unwrap();
+        assert_eq!(report.span_intervals, [expected]);
+    }
+}
