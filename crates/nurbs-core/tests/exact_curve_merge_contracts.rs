@@ -5431,3 +5431,80 @@ fn periodic_trim_equal_length_division_preserves_endpoints_under_cell_limit() {
     assert!(report.stations[1].parameter_bounds.is_some());
     assert_eq!(report.stations[2].parameter_bounds, Some([4., 4.]));
 }
+
+#[test]
+fn periodic_trim_division_boxes_enclose_points_including_closure() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    let division = result
+        .enclose_input_contour_divisions(0, 5, 1e-10, 1e-6, 2048)
+        .unwrap();
+    assert_eq!(division.stations.len(), 6);
+    assert!(division.cells <= 2048);
+    assert_eq!(division.table_cells, 6);
+    for (station, expected) in division.stations.into_iter().zip([
+        [0., 0.5, 0.25],
+        [0.5, 0., 0.25],
+        [0.5, 0., 1.25],
+        [0., 0., 1.75],
+        [0., 0.5, 1.25],
+        [0., 0.5, 0.25],
+    ]) {
+        for ([lo, hi], value) in station.point_bounds.unwrap().into_iter().zip(expected) {
+            assert!(lo <= value && value <= hi, "{station:?}");
+            assert!(hi - lo < 1e-5);
+        }
+    }
+}
+
+#[test]
+fn periodic_trim_division_boxes_cover_coarse_stations_and_skip_unproved_ones() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicTrimLengthLocationStatus as Status, build_exact_periodic_surface_trim_input_edges,
+    };
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let result = build_exact_periodic_surface_trim_input_edges(
+        &doubly_periodic_tensor(),
+        &[&outer],
+        1_000_000,
+    )
+    .unwrap();
+    let unresolved = result
+        .enclose_input_contour_divisions(0, 2, 1e-8, 1e-6, 7)
+        .unwrap();
+    assert!(
+        unresolved
+            .stations
+            .iter()
+            .all(|station| station.point_bounds.is_none())
+    );
+    let coarse = result
+        .enclose_input_contour_divisions(0, 2, 1e-8, 1e-6, 8)
+        .unwrap();
+    assert_eq!(coarse.stations[1].location.status, Status::WorkLimit);
+    assert!(
+        coarse
+            .stations
+            .iter()
+            .all(|station| station.point_bounds.is_some())
+    );
+}

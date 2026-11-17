@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 592,
-  "unallocatedCount": 408,
+  "specifiedCount": 593,
+  "unallocatedCount": 407,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14856,6 +14856,25 @@
       "remainingQualification": [
         "Enclose stations of normalized arc length using exact rational fractions and bounded total length.",
         "Verify exact fraction targets, seam splits, closure endpoint ownership, and certified brackets under one cell limit.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0593",
+      "name": "Гарантированные 3D-боксы точек равномерного деления периодического контура",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::enclose_input_contour_divisions",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-593-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-593-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Return certified world boxes for equal-length contour stations and closing endpoints.",
+        "Verify world enclosures at seam-crossing equal-length stations, closed endpoints, and preserved coarse brackets.",
         "WASM and application integration are separate."
       ]
     }

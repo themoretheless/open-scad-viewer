@@ -5661,6 +5661,13 @@ pub struct PeriodicTrimStationBounds {
     pub point_bounds: Option<[[f64; 2]; 3]>,
 }
 
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimDivisionBounds {
+    pub stations: Vec<PeriodicTrimStationBounds>,
+    pub table_cells: usize,
+    pub cells: usize,
+}
+
 impl PeriodicTrimInputEdges {
     /// Enclose the world-space point at a certified contour station.
     /// The box covers every curve piece intersecting the proved parameter range.
@@ -5679,9 +5686,65 @@ impl PeriodicTrimInputEdges {
             parameter_tolerance,
             max_cells,
         )?;
+        let pieces = if location.parameter_bounds.is_some() {
+            self.sorted_station_pieces(contour)?
+        } else {
+            Vec::new()
+        };
+        Self::enclose_contour_location(&pieces, location)
+    }
+
+    /// Enclose the world coordinates of every equal-length division station.
+    /// Stations retain their individual search status and any proved bracket.
+    pub fn enclose_input_contour_divisions(
+        &self,
+        contour: usize,
+        divisions: usize,
+        length_tolerance: f64,
+        parameter_tolerance: f64,
+        max_cells: usize,
+    ) -> Result<PeriodicTrimDivisionBounds> {
+        let division = self.divide_input_contour_by_length(
+            contour,
+            divisions,
+            length_tolerance,
+            parameter_tolerance,
+            max_cells,
+        )?;
+        let pieces = if division
+            .stations
+            .iter()
+            .any(|station| station.parameter_bounds.is_some())
+        {
+            self.sorted_station_pieces(contour)?
+        } else {
+            Vec::new()
+        };
+        let stations = division
+            .stations
+            .into_iter()
+            .map(|location| Self::enclose_contour_location(&pieces, location))
+            .collect::<Result<Vec<_>>>()?;
+        Ok(PeriodicTrimDivisionBounds {
+            stations,
+            table_cells: division.table_cells,
+            cells: division.cells,
+        })
+    }
+
+    fn sorted_station_pieces(&self, contour: usize) -> Result<Vec<TrimInputPiece<'_>>> {
+        let mut pieces = self.input_contour_pieces(contour)?;
+        pieces.sort_by_key(|(_, source)| source.segment);
+        Ok(pieces)
+    }
+
+    fn enclose_contour_location(
+        pieces: &[TrimInputPiece<'_>],
+        location: PeriodicTrimLengthLocation,
+    ) -> Result<PeriodicTrimStationBounds> {
         let point_bounds = location
             .parameter_bounds
-            .map(|parameter| self.enclose_contour_parameter_bounds(contour, parameter))
+            .map(|parameter| Self::enclose_contour_parameter_bounds(pieces, parameter))
             .transpose()?;
         Ok(PeriodicTrimStationBounds {
             location,
@@ -5690,13 +5753,16 @@ impl PeriodicTrimInputEdges {
     }
 
     fn enclose_contour_parameter_bounds(
-        &self,
-        contour: usize,
+        pieces: &[TrimInputPiece<'_>],
         parameter: [f64; 2],
     ) -> Result<[[f64; 2]; 3]> {
+        let first = (parameter[0].ceil() as usize).saturating_sub(1);
+        let last = parameter[1].floor() as usize;
+        let start = pieces.partition_point(|(_, source)| source.segment < first);
+        let end = pieces.partition_point(|(_, source)| source.segment <= last);
         let global = parameter.map(|t| BigRational::from_float(t).unwrap());
         let mut bounds = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
-        for (curve, source) in self.input_contour_pieces(contour)? {
+        for &(curve, source) in &pieces[start..end] {
             let offset = BigRational::from_integer(source.segment.into());
             let [a, b] = &source.parameters;
             let [start, end] = [a.min(b) + &offset, a.max(b) + &offset];
