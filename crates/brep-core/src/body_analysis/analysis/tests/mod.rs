@@ -3,7 +3,7 @@ fn near(a: f64, b: f64) {
     assert!((a - b).abs() < 1e-7 * b.abs().max(1.), "{a} != {b}");
 }
 #[test]
-fn unresolved_tangent_knot_crossing_cannot_report_convergence() {
+fn dyadic_tangent_knot_crossing_is_certified_as_one_break() {
     let curve = Curve {
         degree: 2,
         knots: vec![0., 0., 0., 1., 1., 1.],
@@ -20,8 +20,12 @@ fn unresolved_tangent_knot_crossing_cannot_report_convergence() {
         limit: 200_000,
     };
     let grid = conditioned_surface_grid(&surface, &mut budget).unwrap();
-    let error = trim_intervals(&curve, &grid, 1e-7, &mut budget).unwrap_err();
-    assert_eq!(error.code, "BREP_ANALYSIS_INDETERMINATE");
+    // The trim touches the inserted knot line v = 0.5 at its apex t = 0.5.
+    // Curve/plane tangency is certified with multiplicity at dyadic
+    // parameters, so the double root becomes one exact break instead of a
+    // refusal (a non-dyadic tangency still ends in a typed refusal there).
+    let intervals = trim_intervals(&curve, &grid, 1e-7, &mut budget).unwrap();
+    assert_eq!(intervals, vec![[0., 0.5], [0.5, 1.]]);
     assert!(
         budget.used > curve.control_points.len(),
         "Root search work must count against the budget"

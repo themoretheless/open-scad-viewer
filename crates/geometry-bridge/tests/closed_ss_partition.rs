@@ -70,7 +70,7 @@ fn all_closed_components_become_two_holes_and_three_finite_faces() {
         assert!(m.persistent_naming_complete());
     }
     let mut invalid = input.clone();
-    invalid["maxRepairs"] = json!(65);
+    invalid["maxRepairs"] = json!(129);
     assert!(dispatch(invalid).is_err());
     let mut invalid_attempts = input.clone();
     invalid_attempts["maxStartAttempts"] = json!(129);
