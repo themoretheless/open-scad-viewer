@@ -4266,3 +4266,135 @@ pub fn bounded_coplanar_polyline_boolean_extrusion_area(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactBooleanExtrusionSection {
+    /// Positive-area convex section cells, oriented by the supplied normal.
+    pub cells_mm: Vec<Vec<[Q; 3]>>,
+    pub exact_work: u64,
+}
+
+/// Slice a rational Boolean extrusion by the plane `normal · point = offset`.
+/// The plane must be transverse to the sweep vector. Cells represent the
+/// closure of the positive-area section, including a coincident cap.
+pub fn section_exact_coplanar_polyline_boolean_extrusion(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    operation: CoplanarPolylineBoolean,
+    sweep_mm: &[Q; 3],
+    normal: &[Q; 3],
+    offset: &Q,
+    max_exact_work: u64,
+) -> Result<ExactBooleanExtrusionSection> {
+    super::validate_work(max_exact_work)?;
+    validate_point(sweep_mm)?;
+    validate_point(normal)?;
+    if offset.numer().bits().max(offset.denom().bits()) > 8192 {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Section plane offset exceeds the exact bit limit",
+        ));
+    }
+    let height = dot(normal, sweep_mm);
+    if height.is_zero() {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Section plane must be transverse to the sweep vector",
+        ));
+    }
+    let (report, _) = planar_profile_boolean_cells(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        operation,
+        max_exact_work,
+    )?;
+    let mut remaining = max_exact_work - report.exact_work;
+    if let Some(cell) = report.cells_mm.first() {
+        spend(&mut remaining, 24)?;
+        let a = std::array::from_fn(|i| &cell[1][i] - &cell[0][i]);
+        let b = std::array::from_fn(|i| &cell[2][i] - &cell[0][i]);
+        if super::determinant(&a, &b, sweep_mm).is_zero() {
+            return Err(refuse("Extrusion vector lies in the profile plane"));
+        }
+    }
+    let [s, t] = plane_axes(normal);
+    let positive = normal[3 - s - t].is_positive();
+    let mut cells_mm = Vec::new();
+    for cell in report.cells_mm {
+        let mut projected = Vec::new();
+        for point in cell {
+            spend(&mut remaining, 16)?;
+            let parameter = (offset - dot(normal, &point)) / &height;
+            projected.push((point, parameter));
+        }
+        let clipped = clip_section_cell_parameter(projected, Q::zero(), true, &mut remaining)?;
+        let clipped = clip_section_cell_parameter(clipped, Q::one(), false, &mut remaining)?;
+        let mut lifted = Vec::new();
+        for (point, alpha) in clipped {
+            spend(&mut remaining, 12)?;
+            lifted.push(std::array::from_fn(|i| &point[i] + &alpha * &sweep_mm[i]));
+        }
+        lifted.dedup();
+        if lifted.len() > 1 && lifted.first() == lifted.last() {
+            lifted.pop();
+        }
+        if lifted.len() < 3 {
+            continue;
+        }
+        spend(&mut remaining, 8 * lifted.len() as u64)?;
+        let twice_area: Q = lifted
+            .iter()
+            .zip(lifted.iter().cycle().skip(1))
+            .map(|(a, b): (&[Q; 3], &[Q; 3])| &a[s] * &b[t] - &a[t] * &b[s])
+            .sum();
+        if twice_area.is_zero() {
+            continue;
+        }
+        if twice_area.is_positive() != positive {
+            lifted.reverse();
+        }
+        cells_mm.push(lifted);
+    }
+    Ok(ExactBooleanExtrusionSection {
+        cells_mm,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn clip_section_cell_parameter(
+    polygon: Vec<([Q; 3], Q)>,
+    limit: Q,
+    keep_above: bool,
+    remaining: &mut u64,
+) -> Result<Vec<([Q; 3], Q)>> {
+    let Some(mut prior) = polygon.last() else {
+        return Ok(Vec::new());
+    };
+    let inside = |parameter: &Q| {
+        if keep_above {
+            parameter >= &limit
+        } else {
+            parameter <= &limit
+        }
+    };
+    let mut result = Vec::new();
+    for next in &polygon {
+        spend(remaining, 8)?;
+        if inside(&prior.1) != inside(&next.1) && prior.1 != limit && next.1 != limit {
+            spend(remaining, 20)?;
+            let fraction = (&limit - &prior.1) / (&next.1 - &prior.1);
+            let point =
+                std::array::from_fn(|i| &prior.0[i] + &fraction * (&next.0[i] - &prior.0[i]));
+            result.push((point, limit.clone()));
+        }
+        if inside(&next.1) {
+            result.push(next.clone());
+        }
+        prior = next;
+    }
+    Ok(result)
+}

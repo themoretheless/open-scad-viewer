@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 482,
-  "unallocatedCount": 518,
+  "specifiedCount": 483,
+  "unallocatedCount": 517,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12566,6 +12566,35 @@
       "remainingQualification": [
         "Enclose cap, wall and total area of an exact rational Boolean extrusion.",
         "Compute exact cap and side wall area squares from boundary cross products. Bound their square root sums with a shared total tolerance.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0483",
+      "name": "Точное наклонное сечение выдавленного булева профиля",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::section_exact_coplanar_polyline_boolean_extrusion",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "docs/qualification/nurbs-curvature-field-483-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-483-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Construct exact positive-area sections of Boolean extrusions transverse to the sweep.",
+        "Pull the cutting plane back to an affine sweep parameter on each exact footprint cell. Clip to both cap bounds and lift the retained cells to the section plane.",
         "WASM and application integration are separate."
       ]
     }
