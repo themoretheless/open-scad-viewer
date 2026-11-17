@@ -1,5 +1,6 @@
 use super::{
-    AttachedSectionCaps, attach_section_caps, charge, close_shell, collect_free_rings, invalid,
+    AttachedSectionCaps, BoundedSectionAttachment, SectionAttachmentOptions, attach_section_caps,
+    attach_section_caps_with_support_tolerance, charge, close_shell, collect_free_rings, invalid,
 };
 use crate::Model;
 use num_bigint::BigInt;
@@ -100,6 +101,67 @@ pub fn close_shell_with_inferred_section_caps(
     max_exact_work: u64,
     max_verification_cells: usize,
 ) -> Result<AttachedSectionCaps> {
+    close_inferred(
+        source,
+        shell,
+        max_exact_work,
+        max_verification_cells,
+        |current, rings, normal, offset, work, cells| {
+            attach_section_caps(current, shell, rings, normal, offset, work, cells)
+        },
+    )
+}
+
+/// Infer exact rim planes, then cap with certified, exactly planar stored
+/// supports. The support error limit is applied separately to each cap.
+pub fn close_shell_with_bounded_inferred_section_caps(
+    source: &Model,
+    shell: usize,
+    options: SectionAttachmentOptions,
+) -> Result<BoundedSectionAttachment> {
+    let mut support_error_upper = Vec::new();
+    let attachment = close_inferred(
+        source,
+        shell,
+        options.max_exact_work,
+        options.max_verification_cells,
+        |current, rings, normal, offset, work, cells| {
+            let report = attach_section_caps_with_support_tolerance(
+                current,
+                shell,
+                rings,
+                normal,
+                offset,
+                SectionAttachmentOptions {
+                    max_exact_work: work,
+                    max_verification_cells: cells,
+                    ..options
+                },
+            )?;
+            support_error_upper.extend(report.support_error_upper);
+            Ok(report.attachment)
+        },
+    )?;
+    Ok(BoundedSectionAttachment {
+        attachment,
+        support_error_upper,
+    })
+}
+
+fn close_inferred(
+    source: &Model,
+    shell: usize,
+    max_exact_work: u64,
+    max_verification_cells: usize,
+    mut attach: impl FnMut(
+        &Model,
+        &[&[[usize; 2]]],
+        [f64; 3],
+        f64,
+        u64,
+        usize,
+    ) -> Result<AttachedSectionCaps>,
+) -> Result<AttachedSectionCaps> {
     let inferred = infer_section_planes(source, shell, max_exact_work)?;
     let mut result = close_shell(
         source,
@@ -111,8 +173,7 @@ pub fn close_shell_with_inferred_section_caps(
             let budget = work;
             let [x, y, z, offset] = store_equation(plane, &mut work)?;
             let rings: Vec<_> = plane.rings.iter().map(Vec::as_slice).collect();
-            let attachment =
-                attach_section_caps(current, shell, &rings, [x, y, z], offset, work, cells)?;
+            let attachment = attach(current, &rings, [x, y, z], offset, work, cells)?;
             Ok((attachment, budget - work))
         },
     )?;

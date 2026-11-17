@@ -274,6 +274,6 @@ pub use solid::{
 };
 
 pub use discover::{
-    InferredSectionPlane, InferredSectionPlanes, close_shell_with_inferred_section_caps,
-    infer_section_planes,
+    InferredSectionPlane, InferredSectionPlanes, close_shell_with_bounded_inferred_section_caps,
+    close_shell_with_inferred_section_caps, infer_section_planes,
 };

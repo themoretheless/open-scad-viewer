@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 387,
-  "unallocatedCount": 613,
+  "specifiedCount": 388,
+  "unallocatedCount": 612,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9930,6 +9930,33 @@
       "remainingQualification": [
         "Infer all rim planes and close the selected shell with exact supports and retained topology.",
         "Exact common-denominator scaling stores representable plane equations without changing them. Original rim addresses feed cap construction under shared work and verification budgets.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0388",
+      "name": "Автоматические крышки с ограниченным округлением выведенной плоской опоры",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::planar_cap::close_shell_with_bounded_inferred_section_caps",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/support.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs",
+        "docs/qualification/nurbs-curvature-field-388-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-388-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Infer exact rim planes and close the shell with jointly rounded planar supports and certified displacement bounds.",
+        "Inferred planes remain exact. Caps with unrepresentable affine control points use planar binary64 supports within a certified displacement bound, preserving and reverifying original boundary curves.",
         "WASM and application integration are separate."
       ]
     }

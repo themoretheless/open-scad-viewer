@@ -834,3 +834,100 @@ fn automatically_caps_nested_rims_as_one_face_with_a_hole() {
     assert!(report.model.shells[0].closed);
     assert!(!source.shells[0].closed);
 }
+
+fn open_prism_with_nonbinary_cap_support() -> brep_core::Model {
+    let (mut source, _) = open_prism(false);
+    let map = |point: &mut [f64]| {
+        let (x, y, z) = (point[0], point[1], point[2]);
+        point.copy_from_slice(&[0.5 * x + 0.25 * y, -0.5 * x + 0.5 * y, z + 0.25 * y]);
+    };
+    for vertex in &mut source.vertices {
+        map(&mut vertex.point);
+    }
+    for edge in &mut source.edges {
+        for point in &mut edge.curve.control_points {
+            map(point);
+        }
+    }
+    for face in &mut source.faces {
+        for point in face.surface.control_points.iter_mut().flatten() {
+            map(point);
+        }
+    }
+    source.rebuild_topology_ids();
+    source.validate().unwrap();
+    source
+}
+
+#[test]
+fn caps_an_exact_inferred_oblique_rim_with_a_rounded_support() {
+    use brep_core::planar_cap::{
+        SectionAttachmentOptions, close_shell_with_bounded_inferred_section_caps,
+        close_shell_with_inferred_section_caps,
+    };
+    use num_rational::BigRational as Q;
+    use num_traits::Zero;
+    let source = open_prism_with_nonbinary_cap_support();
+    assert!(close_shell_with_inferred_section_caps(&source, 0, 1_000_000, 10_000).is_err());
+    let options = SectionAttachmentOptions {
+        support_tolerance_mm: 1e-14,
+        max_exact_work: 1_000_000,
+        max_verification_cells: 10_000,
+    };
+    let report = close_shell_with_bounded_inferred_section_caps(&source, 0, options).unwrap();
+    let [error] = report.support_error_upper.as_slice() else {
+        panic!("expected one bound")
+    };
+    assert!(error > &Q::zero() && error <= &Q::from_float(options.support_tolerance_mm).unwrap());
+    assert_eq!(
+        report
+            .attachment
+            .model
+            .validate()
+            .unwrap()
+            .boundary_edge_count,
+        0
+    );
+    assert!(report.attachment.model.shells[0].closed);
+    assert_eq!(report.attachment.model.edges, source.edges);
+    assert_eq!(report.attachment.model.vertices, source.vertices);
+    let tight = SectionAttachmentOptions {
+        max_exact_work: report.attachment.exact_work,
+        max_verification_cells: report.attachment.verification_cells,
+        ..options
+    };
+    assert!(close_shell_with_bounded_inferred_section_caps(&source, 0, tight).is_ok());
+    assert!(
+        close_shell_with_bounded_inferred_section_caps(
+            &source,
+            0,
+            SectionAttachmentOptions {
+                max_exact_work: tight.max_exact_work - 1,
+                ..tight
+            }
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn refuses_zero_rounding_allowance_for_the_inferred_oblique_support() {
+    use brep_core::planar_cap::{
+        SectionAttachmentOptions, close_shell_with_bounded_inferred_section_caps,
+    };
+    let source = open_prism_with_nonbinary_cap_support();
+    let before = source.clone();
+    assert!(
+        close_shell_with_bounded_inferred_section_caps(
+            &source,
+            0,
+            SectionAttachmentOptions {
+                support_tolerance_mm: 0.,
+                max_exact_work: 1_000_000,
+                max_verification_cells: 10_000,
+            }
+        )
+        .is_err()
+    );
+    assert_eq!(source, before);
+}
