@@ -3391,3 +3391,44 @@ fn periodic_path_inertia_is_undefined_for_zero_algebraic_area() {
     assert!(report.geometry.centroid.is_none());
     assert!(report.central_moments.is_none());
 }
+
+#[test]
+fn periodic_point_classification_tests_wrapped_interior_edges_and_vertices() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicPathLocation as L, classify_exact_periodic_surface_path_point,
+    };
+    let source = doubly_periodic_tensor();
+    let path = [[3.5, 3.5], [0.5, 3.5], [0.5, 0.5], [3.5, 0.5], [3.5, 3.5]];
+    for (point, expected) in [
+        ([0., 0.], L::Inside),
+        ([0.5, 0.], L::Boundary),
+        ([3.5, 3.5], L::Boundary),
+        ([2., 0.], L::Outside),
+    ] {
+        let report =
+            classify_exact_periodic_surface_path_point(&source, &path, point, 1_000_000).unwrap();
+        assert_eq!(report.location, Some(expected));
+        assert!(
+            classify_exact_periodic_surface_path_point(&source, &path, point, report.work_used - 1)
+                .unwrap()
+                .location
+                .is_none()
+        );
+    }
+}
+
+#[test]
+fn periodic_point_classification_refuses_nonclosing_lifts() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicPathAreaRefusal, classify_exact_periodic_surface_path_point,
+    };
+    let source = doubly_periodic_tensor();
+    let path = [[0., 0.], [1., 0.], [2., 0.], [3., 0.], [0., 0.]];
+    let report =
+        classify_exact_periodic_surface_path_point(&source, &path, [0., 0.], 1_000_000).unwrap();
+    assert_eq!(
+        report.refusal,
+        Some(PeriodicPathAreaRefusal::NonzeroWinding)
+    );
+    assert!(report.location.is_none());
+}

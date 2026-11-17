@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 543,
-  "unallocatedCount": 457,
+  "specifiedCount": 544,
+  "unallocatedCount": 456,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13879,6 +13879,27 @@
       "remainingQualification": [
         "Compute the signed rational central second moments of a closed lifted UV polygon.",
         "Integrate rational quadratic moments over oriented polygon triangles and translate them to the exact centroid.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0544",
+      "name": "Точная классификация UV-точки относительно периодического дискретного контура",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::classify_exact_periodic_surface_path_point",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-544-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-544-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify native UV points against periodic copies of a closed polygon lift using exact edge predicates.",
+        "Enumerate exact query translates within the lifted bounds and classify with rational boundary and even-odd crossing tests.",
         "WASM and application integration are separate."
       ]
     }

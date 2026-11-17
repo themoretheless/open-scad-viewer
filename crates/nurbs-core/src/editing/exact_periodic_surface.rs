@@ -2323,3 +2323,185 @@ fn periodic_path_moments(
         Err(reason) => refused(Failure::Arithmetic(reason), work.used, None),
     })
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PeriodicPathLocation {
+    Outside,
+    Inside,
+    Boundary,
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicPathLocationReport {
+    pub location: Option<PeriodicPathLocation>,
+    pub work_used: u64,
+    pub refusal: Option<PeriodicPathAreaRefusal>,
+}
+
+/// Classify a native UV point against a closed shortest-step polygon lift.
+/// Use even-odd fill in the lift and accept any periodic copy of the query.
+/// Boundary takes precedence over interior when copies overlap.
+pub fn classify_exact_periodic_surface_path_point(
+    source: &Surface,
+    native: &[[f64; 2]],
+    query: [f64; 2],
+    max_work: u64,
+) -> Result<PeriodicPathLocationReport> {
+    use PeriodicPathAreaRefusal as Failure;
+
+    crate::check(
+        native.len() >= 4 && native.first() == native.last(),
+        "Periodic point classification needs a closed polygon",
+    );
+    let lift = lift_exact_periodic_surface_path(source, native, max_work)?;
+    let refused = |reason, work_used| PeriodicPathLocationReport {
+        location: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    let Some(points) = lift.parameters else {
+        let reason = lift
+            .refusal
+            .unwrap_or(PeriodicLiftRefusal::Arithmetic(ExactRefusal::InvalidOutput));
+        return Ok(refused(Failure::Lift(reason), lift.work_used));
+    };
+    if points.first() != points.last() {
+        return Ok(refused(Failure::NonzeroWinding, lift.work_used));
+    }
+    let mut work = Work {
+        used: lift.work_used,
+        limit: max_work,
+    };
+    let mut domains = [None; 2];
+    for (i, axis) in [Axis::U, Axis::V].into_iter().enumerate() {
+        let reference = row(source, axis, 0);
+        let [lo, hi] = reference.domain();
+        crate::check(
+            lo <= query[i] && (query[i] < hi || !reference.periodic && query[i] == hi),
+            "Query must lie inside the native domain (half-open on periodic axes)",
+        )?;
+        if reference.periodic {
+            domains[i] = Some([lo, hi]);
+        }
+    }
+    Ok(
+        match classify_lifted_polygon(&points, query, domains, &mut work) {
+            Ok(location) => PeriodicPathLocationReport {
+                location: Some(location),
+                work_used: work.used,
+                refusal: None,
+            },
+            Err(reason) => refused(Failure::Arithmetic(reason), work.used),
+        },
+    )
+}
+
+fn classify_lifted_polygon(
+    points: &[[f64; 2]],
+    query: [f64; 2],
+    domains: [Option<[f64; 2]>; 2],
+    work: &mut Work,
+) -> std::result::Result<PeriodicPathLocation, ExactRefusal> {
+    use PeriodicPathLocation as Location;
+    use num_traits::ToPrimitive;
+
+    let query = [work.lift(query[0])?, work.lift(query[1])?];
+    let points = points
+        .iter()
+        .map(|&[x, y]| Ok([work.lift(x)?, work.lift(y)?]))
+        .collect::<std::result::Result<Vec<_>, ExactRefusal>>()?;
+    let mut periods = [BigRational::default(), BigRational::default()];
+    let mut ranges = [(0, 0); 2];
+    for (i, domain) in domains.into_iter().enumerate() {
+        if let Some([lo, hi]) = domain {
+            let lo = work.lift(lo)?;
+            let hi = work.lift(hi)?;
+            periods[i] = work.op(&hi, &lo, |a, b| a - b)?;
+        }
+        let min = points
+            .iter()
+            .map(|p| &p[i])
+            .min()
+            .ok_or(ExactRefusal::InvalidOutput)?;
+        let max = points
+            .iter()
+            .map(|p| &p[i])
+            .max()
+            .ok_or(ExactRefusal::InvalidOutput)?;
+        if domain.is_some() {
+            let lo = work.op(min, &query[i], |a, b| a - b)?;
+            let hi = work.op(max, &query[i], |a, b| a - b)?;
+            ranges[i] = (
+                work.op(&lo, &periods[i], |a, b| (a / b).ceil())?
+                    .to_integer()
+                    .to_i64()
+                    .ok_or(ExactRefusal::ResourceLimit)?,
+                work.op(&hi, &periods[i], |a, b| (a / b).floor())?
+                    .to_integer()
+                    .to_i64()
+                    .ok_or(ExactRefusal::ResourceLimit)?,
+            );
+        } else if &query[i] < min || &query[i] > max {
+            return Ok(Location::Outside);
+        }
+    }
+    let mut location = Location::Outside;
+    for u in ranges[0].0..=ranges[0].1 {
+        for v in ranges[1].0..=ranges[1].1 {
+            let shift = |i: usize, turns: i64, work: &mut Work| {
+                let delta = work.op(
+                    &periods[i],
+                    &BigRational::from_integer(turns.into()),
+                    |a, b| a * b,
+                )?;
+                work.op(&query[i], &delta, |a, b| a + b)
+            };
+            let p = [shift(0, u, work)?, shift(1, v, work)?];
+            match classify_polygon_copy(&points, &p, work)? {
+                Location::Boundary => return Ok(Location::Boundary),
+                Location::Inside => location = Location::Inside,
+                Location::Outside => {}
+            }
+        }
+    }
+    Ok(location)
+}
+
+fn classify_polygon_copy(
+    points: &[[BigRational; 2]],
+    p: &[BigRational; 2],
+    work: &mut Work,
+) -> std::result::Result<PeriodicPathLocation, ExactRefusal> {
+    use PeriodicPathLocation as Location;
+    use num_traits::{Signed, Zero};
+
+    let mut inside = false;
+    for edge in points.windows(2) {
+        let a = &edge[0];
+        let b = &edge[1];
+        let dx = work.op(&b[0], &a[0], |b, a| b - a)?;
+        let dy = work.op(&b[1], &a[1], |b, a| b - a)?;
+        let x = work.op(&p[0], &a[0], |p, a| p - a)?;
+        let y = work.op(&p[1], &a[1], |p, a| p - a)?;
+        let left = work.op(&dx, &y, |a, b| a * b)?;
+        let right = work.op(&dy, &x, |a, b| a * b)?;
+        let cross = work.op(&left, &right, |a, b| a - b)?;
+        if cross.is_zero()
+            && (0..2).all(|i| {
+                let lo = (&a[i]).min(&b[i]);
+                let hi = (&a[i]).max(&b[i]);
+                lo <= &p[i] && &p[i] <= hi
+            })
+        {
+            return Ok(Location::Boundary);
+        }
+        if (a[1] > p[1]) != (b[1] > p[1]) && cross.is_positive() == dy.is_positive() {
+            inside = !inside;
+        }
+    }
+    Ok(if inside {
+        Location::Inside
+    } else {
+        Location::Outside
+    })
+}
