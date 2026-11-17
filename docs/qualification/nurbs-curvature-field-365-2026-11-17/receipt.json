@@ -1,0 +1,37 @@
+{
+  "id": "NURBS-0365",
+  "testedBase": "c984fd3de12fb5ad7a076426f4a4e0358c57546c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "gaussian_curvature_field_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 61,
+  "scope": [
+    "Store the certified surface-plane section as a degree-one core curve with exact integer knots and bounded XYZ error.",
+    "Orthogonal rational plane projection is nonexpansive relative to the true section. Exact binary64 rounding bounds cover the whole curve, whose integer knots retain the uniform transverse clock."
+  ],
+  "logSha256": "2f2eb6dfc272ceec6414461fa7738b68ca3170f40ab4c1e126bc56e26f198530",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "8a2898442c7240b80cbf3f3cde4c127fce7018e7673ffaa3619d8768b30b5605",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs": "af42b837453b10e05c077d3319dea3564e5987a9e003203141abcb798575a7d7",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "13c74cc94adafab6a07cfb3b1d442aa6ac3512dd8c4543b60bed425613281275",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "e7ed271777c6cb74d84d2eefe35d8e5681ec872da59a1b6ee1546b211a21c455",
+    "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs": "d67aba36235ec85849116e949d9ca4ee9a186dc3b29749d7449ebe7c8c1cd0f6",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/world_polyline.rs": "51f5279d822609d4ad0974abbfe9022a88051d6b8ebf2aa8c9db373452c0c794",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/store_curve.rs": "99646cd40732da3f1a7286f2e12d9640e9d63d08963a748172a42c3a1f727097",
+    "crates/nurbs-geometry/src/curve.rs": "b6d24031f1965d1a5f948b1bab14f483f205ed92b339445b611d24dc2f870b8d"
+  }
+}

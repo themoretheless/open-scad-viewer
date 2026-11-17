@@ -241,3 +241,8 @@ pub use world_polyline::{
     SurfacePlaneWorldPolyline, SurfacePlaneWorldPolylineOptions, SurfacePlaneWorldPolylineReport,
     approximate_surface_plane_graph_xyz,
 };
+
+mod store_curve;
+pub use store_curve::{
+    StoredSurfacePlaneCurve, StoredSurfacePlaneCurveReport, store_surface_plane_section_curve,
+};

@@ -57,19 +57,25 @@ pub fn approximate_surface_plane_graph_xyz(
         used: 0,
         limit: options.max_work,
     };
-    let outcome = build(surface, normal, offset, options, domain, &mut work);
+    let outcome = (|| {
+        let tolerance = work.lift(options.max_xyz_error)?;
+        build(
+            surface, normal, offset, options, domain, &tolerance, &mut work,
+        )
+    })();
     Ok(SurfacePlaneWorldPolylineReport {
         outcome,
         work_used: work.used,
     })
 }
 
-fn build(
+pub(super) fn build(
     surface: &Surface,
     [x, y, z]: [f64; 3],
     offset: f64,
     options: SurfacePlaneWorldPolylineOptions,
     domain: [[f64; 2]; 2],
+    tolerance: &Q,
     work: &mut Work,
 ) -> PResult<SurfacePlaneWorldPolyline> {
     let plane = [
@@ -111,12 +117,11 @@ fn build(
         sensitivity = work.op(&sensitivity, &spatial_slope, |a, b| a + b)?;
         curvature = work.op(&curvature, &spatial_bend, |a, b| a + b)?;
     }
-    let tolerance = work.lift(options.max_xyz_error)?;
-    let half = work.op(&tolerance, &Q::from_integer(2.into()), |a, b| a / b)?;
+    let half = work.op(tolerance, &Q::from_integer(2.into()), |a, b| a / b)?;
     let (count, chord_error) = segment_count(&curvature, &half, options.max_segments, work)?;
     let mut width = Q::one();
     if !sensitivity.is_zero() {
-        width = width.min(work.op(&tolerance, &sensitivity, |a, b| a / b)?);
+        width = width.min(work.op(tolerance, &sensitivity, |a, b| a / b)?);
     }
     let (uv, radius) = sample_vertices(&net, &graph, &width, count, work)?;
     let vertex_error = work.op(&sensitivity, &radius, |a, b| a * b)?;

@@ -5,7 +5,7 @@ use nurbs_core::{
         SurfacePlanePolylineOptions, SurfacePlaneSide, SurfacePlaneWorldPolylineOptions,
         approximate_surface_plane_graph, approximate_surface_plane_graph_xyz,
         audit_surface_plane_graphs, audit_surface_plane_side, refine_surface_plane_side,
-        sample_surface_plane_graph,
+        sample_surface_plane_graph, store_surface_plane_section_curve,
     },
     surface::Surface,
 };
@@ -412,4 +412,85 @@ fn preserves_an_affine_xyz_section_as_one_exact_segment() {
     let half = Q::new(1.into(), 2.into());
     assert_eq!(result.xyz, [[half.clone(), q(0), q(0)], [half, q(1), q(0)]]);
     assert_eq!(result.xyz_error_upper, q(0));
+}
+
+#[test]
+fn stores_a_nonbinary_section_and_refuses_a_tolerance_below_rounding_error() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let mut patch = surface(1, vec![0., 0., 1., 1.], &[-1., 2.]);
+    patch.weights = vec![vec![1.; 2]; 2];
+    let options = SurfacePlaneWorldPolylineOptions {
+        span: [1, 1],
+        solve_axis: UvAxis::U,
+        max_xyz_error: 1e-12,
+        max_segments: 1,
+        max_work: WORK,
+    };
+    let stored = store_surface_plane_section_curve(&patch, [0., 0., 1.], 0., options)
+        .unwrap()
+        .outcome
+        .unwrap();
+    assert_eq!(stored.curve.degree, 1);
+    assert_eq!(stored.curve.domain(), [0., 1.]);
+    assert_eq!(stored.plane_residual_upper, q(0));
+    let exact = Q::new(1.into(), 3.into());
+    assert!(stored.curve.control_points.iter().all(|p| {
+        let delta = Q::from_float(p[0]).unwrap() - &exact;
+        delta.pow(2) <= stored.xyz_error_upper.pow(2) && p[2] == 0.
+    }));
+    let impossible = store_surface_plane_section_curve(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldPolylineOptions {
+            max_xyz_error: 1e-20,
+            ..options
+        },
+    )
+    .unwrap();
+    assert!(matches!(impossible.outcome, Err(Refusal::NotRepresentable)));
+}
+
+#[test]
+fn projects_all_controls_to_the_plane_and_keeps_exact_integer_knots() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let patch = Surface {
+        degree_u: 1,
+        degree_v: 2,
+        knots_u: vec![0., 0., 1., 1.],
+        knots_v: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![
+            vec![vec![0., 0., 0.], vec![0., 0.5, 0.], vec![0., 1., -1.]],
+            vec![vec![1., 0., 1.], vec![1., 0.5, 1.], vec![1., 1., 0.]],
+        ],
+        weights: vec![vec![1.; 3]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let options = SurfacePlaneWorldPolylineOptions {
+        span: [1, 2],
+        solve_axis: UvAxis::U,
+        max_xyz_error: 1. / 64.,
+        max_segments: 32,
+        max_work: WORK,
+    };
+    let report = store_surface_plane_section_curve(&patch, [0., 0., 1.], 0., options).unwrap();
+    let stored = report.outcome.unwrap();
+    let segments = stored.curve.control_points.len() - 1;
+    assert!(segments > 1);
+    assert_eq!(stored.curve.domain(), [0., segments as f64]);
+    assert!(stored.curve.knots.iter().all(|k| k.fract() == 0.));
+    assert_eq!(stored.plane_residual_upper, q(0));
+    assert!(stored.xyz_error_upper <= Q::from_float(options.max_xyz_error).unwrap());
+    let limited = store_surface_plane_section_curve(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldPolylineOptions {
+            max_work: report.work_used - 1,
+            ..options
+        },
+    )
+    .unwrap();
+    assert!(matches!(limited.outcome, Err(Refusal::ResourceLimit)));
 }

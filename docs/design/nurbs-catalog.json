@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 364,
-  "unallocatedCount": 636,
+  "specifiedCount": 365,
+  "unallocatedCount": 635,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9354,6 +9354,31 @@
       "remainingQualification": [
         "Construct a rational XYZ polyline with a continuous Euclidean error bound for a surface-plane graph.",
         "Rational quotient derivative bounds and the implicit graph derivative give a continuous world chord envelope. Exact surface evaluations use rational UV vertex coordinates and include their root uncertainty.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0365",
+      "name": "Сохранение пространственной секущей NURBS-кривой с проверкой проектирования и округления",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::store_surface_plane_section_curve",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs",
+        "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/world_polyline.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/store_curve.rs",
+        "crates/nurbs-geometry/src/curve.rs",
+        "docs/qualification/nurbs-curvature-field-365-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-365-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Store the certified surface-plane section as a degree-one core curve with exact integer knots and bounded XYZ error.",
+        "Orthogonal rational plane projection is nonexpansive relative to the true section. Exact binary64 rounding bounds cover the whole curve, whose integer knots retain the uniform transverse clock.",
         "WASM and application integration are separate."
       ]
     }
