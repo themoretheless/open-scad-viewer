@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0542",
+  "testedBase": "79e5ebfac8155a708d467cc4ed005ffc02372b1a",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 141,
+  "scope": [
+    "Compute exact rational area and centroid moments of a closed lifted UV polygon.",
+    "Compute rational first polygon moments alongside signed area and report the exact centroid when the area is nonzero."
+  ],
+  "logSha256": "dc91878271fd0bd4b8f2dd6e3ff7903017fdb49f5dfe2322e842d5294629c28b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "9a7287fd91060aefab0a67519318cc80de0d3450d3af40f497628a3d7f039289",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "805acf8af27049c90e8094b860c4f209ea8f764c0f07f5dfb06dc80c0a6d9143"
+  }
+}

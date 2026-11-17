@@ -3320,3 +3320,39 @@ fn periodic_path_area_refuses_a_loop_with_nonzero_winding() {
     );
     assert!(report.signed_area.is_none());
 }
+
+#[test]
+fn periodic_path_centroid_keeps_exact_rational_coordinates_across_seams() {
+    use num_rational::BigRational as Q;
+    use nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_path_centroid;
+    let source = doubly_periodic_tensor();
+    let path = [[3.5, 3.5], [0.5, 3.5], [3.5, 0.5], [3.5, 3.5]];
+    let report = exact_periodic_surface_path_centroid(&source, &path, 1_000_000).unwrap();
+    let centroid = Some([Q::new(23.into(), 6.into()), Q::new(23.into(), 6.into())]);
+    assert_eq!(report.centroid, centroid);
+    assert_eq!(report.signed_area, Some(Q::new(1.into(), 2.into())));
+    let reverse: Vec<_> = path.into_iter().rev().collect();
+    let reversed = exact_periodic_surface_path_centroid(&source, &reverse, 1_000_000).unwrap();
+    assert_eq!(reversed.centroid, centroid);
+    assert_eq!(reversed.signed_area, Some(Q::new((-1).into(), 2.into())));
+    assert!(
+        exact_periodic_surface_path_centroid(&source, &path, report.work_used - 1)
+            .unwrap()
+            .refusal
+            .is_some()
+    );
+}
+
+#[test]
+fn periodic_path_centroid_is_undefined_for_zero_algebraic_area() {
+    use num_rational::BigRational as Q;
+    use nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_path_centroid;
+    let path = [[3.5, 0.], [0.5, 0.], [1., 0.], [3.5, 0.]];
+    // Split the return edge into two unambiguous shortest steps.
+    let path = [path[0], path[1], path[2], path[1], path[3]];
+    let report =
+        exact_periodic_surface_path_centroid(&doubly_periodic_tensor(), &path, 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    assert_eq!(report.signed_area, Some(Q::from_integer(0.into())));
+    assert!(report.centroid.is_none());
+}

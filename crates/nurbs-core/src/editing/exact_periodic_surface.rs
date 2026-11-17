@@ -2152,14 +2152,52 @@ pub fn exact_periodic_surface_path_signed_area(
     native: &[[f64; 2]],
     max_work: u64,
 ) -> Result<PeriodicPathAreaReport> {
+    let moments = periodic_path_moments(source, native, max_work, false)?;
+    Ok(PeriodicPathAreaReport {
+        signed_area: moments.signed_area,
+        work_used: moments.work_used,
+        refused_coordinate: moments.refused_coordinate,
+        refusal: moments.refusal,
+    })
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicPathCentroidReport {
+    pub signed_area: Option<BigRational>,
+    /// Centroid in the lifted UV chart. Undefined when the signed area is zero.
+    pub centroid: Option<[BigRational; 2]>,
+    pub work_used: u64,
+    pub refused_coordinate: Option<[usize; 2]>,
+    pub refusal: Option<PeriodicPathAreaRefusal>,
+}
+
+/// Compute the algebraic area and exact UV centroid of a closed lifted
+/// polygon. The centroid is relative to the lift anchored at the first
+/// sample, and uses signed weighting for self-intersecting paths.
+pub fn exact_periodic_surface_path_centroid(
+    source: &Surface,
+    native: &[[f64; 2]],
+    max_work: u64,
+) -> Result<PeriodicPathCentroidReport> {
+    periodic_path_moments(source, native, max_work, true)
+}
+
+fn periodic_path_moments(
+    source: &Surface,
+    native: &[[f64; 2]],
+    max_work: u64,
+    compute_centroid: bool,
+) -> Result<PeriodicPathCentroidReport> {
     use PeriodicPathAreaRefusal as Failure;
+    use num_traits::Zero;
     crate::check(
         native.len() >= 4 && native.first() == native.last(),
         "Periodic path area needs a closed polygon with at least three edges",
     )?;
     let lift = lift_exact_periodic_surface_path(source, native, max_work)?;
-    let refused = |reason, work_used, refused_coordinate| PeriodicPathAreaReport {
+    let refused = |reason, work_used, refused_coordinate| PeriodicPathCentroidReport {
         signed_area: None,
+        centroid: None,
         work_used,
         refused_coordinate,
         refusal: Some(reason),
@@ -2181,7 +2219,8 @@ pub fn exact_periodic_surface_path_signed_area(
         used: lift.work_used,
         limit: max_work,
     };
-    let mut integrate = || -> std::result::Result<BigRational, ExactRefusal> {
+    let mut integrate = || -> std::result::Result<_, ExactRefusal> {
+        let mut moment: [BigRational; 2] = std::array::from_fn(|_| BigRational::zero());
         let mut twice_area = BigRational::from_integer(0.into());
         let [x, y] = points[0];
         let mut previous = [work.lift(x)?, work.lift(y)?];
@@ -2191,17 +2230,35 @@ pub fn exact_periodic_surface_path_signed_area(
             let backward = work.op(&previous[1], &current[0], |a, b| a * b)?;
             let cross = work.op(&forward, &backward, |a, b| a - b)?;
             twice_area = work.op(&twice_area, &cross, |a, b| a + b)?;
+            if compute_centroid {
+                for axis in 0..2 {
+                    let sum = work.op(&previous[axis], &current[axis], |a, b| a + b)?;
+                    let term = work.op(&sum, &cross, |a, b| a * b)?;
+                    moment[axis] = work.op(&moment[axis], &term, |a, b| a + b)?;
+                }
+            }
             previous = current;
         }
-        Ok(
-            work.op(&twice_area, &BigRational::from_integer(2.into()), |a, b| {
-                a / b
-            })?,
-        )
+        let area = work.op(&twice_area, &BigRational::from_integer(2.into()), |a, b| {
+            a / b
+        })?;
+        let centroid = if compute_centroid && !twice_area.is_zero() {
+            let divisor = work.op(&twice_area, &BigRational::from_integer(3.into()), |a, b| {
+                a * b
+            })?;
+            Some([
+                work.op(&moment[0], &divisor, |a, b| a / b)?,
+                work.op(&moment[1], &divisor, |a, b| a / b)?,
+            ])
+        } else {
+            None
+        };
+        Ok((area, centroid))
     };
     Ok(match integrate() {
-        Ok(area) => PeriodicPathAreaReport {
+        Ok((area, centroid)) => PeriodicPathCentroidReport {
             signed_area: Some(area),
+            centroid,
             work_used: work.used,
             refused_coordinate: None,
             refusal: None,
