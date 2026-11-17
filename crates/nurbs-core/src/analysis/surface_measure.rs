@@ -270,6 +270,7 @@ pub fn trimmed_surface_area(
         max_surface_cells,
         max_trim_cells,
     )
+    .map(|(report, _)| report)
 }
 
 /// Enclose the retained surface area inside a finite UV rectangle.
@@ -296,6 +297,7 @@ pub fn trimmed_surface_area_in_window(
         max_surface_cells,
         max_trim_cells,
     )
+    .map(|(report, _)| report)
 }
 
 fn trimmed_surface_area_in_domain(
@@ -305,7 +307,7 @@ fn trimmed_surface_area_in_domain(
     tolerance: f64,
     max_surface_cells: usize,
     max_trim_cells: usize,
-) -> Result<TrimmedAreaReport> {
+) -> Result<(TrimmedAreaReport, BinaryHeap<Cell>)> {
     surface.validate()?;
     check(
         tolerance.is_finite()
@@ -339,25 +341,31 @@ fn trimmed_surface_area_in_domain(
     );
     let minimum_surface_cells = u.len() * v.len();
     if minimum_surface_cells == 0 {
-        return Ok(TrimmedAreaReport {
-            area: Some(AreaReport {
-                value: 0.,
-                bounds: [0.; 2],
-                error_upper: 0.,
-                within_tolerance: true,
-                cells: 0,
-                stop_reason: StopReason::Tolerance,
-            }),
-            minimum_surface_cells,
-            trim_cells: 0,
-        });
+        return Ok((
+            TrimmedAreaReport {
+                area: Some(AreaReport {
+                    value: 0.,
+                    bounds: [0.; 2],
+                    error_upper: 0.,
+                    within_tolerance: true,
+                    cells: 0,
+                    stop_reason: StopReason::Tolerance,
+                }),
+                minimum_surface_cells,
+                trim_cells: 0,
+            },
+            BinaryHeap::new(),
+        ));
     }
     if minimum_surface_cells > max_surface_cells {
-        return Ok(TrimmedAreaReport {
-            area: None,
-            minimum_surface_cells,
-            trim_cells: 0,
-        });
+        return Ok((
+            TrimmedAreaReport {
+                area: None,
+                minimum_surface_cells,
+                trim_cells: 0,
+            },
+            BinaryHeap::new(),
+        ));
     }
 
     let mut trim_cells = 0;
@@ -440,9 +448,75 @@ fn trimmed_surface_area_in_domain(
         heap.push(left);
         heap.push(right);
     };
-    Ok(TrimmedAreaReport {
-        area: Some(area),
-        minimum_surface_cells,
-        trim_cells,
+    Ok((
+        TrimmedAreaReport {
+            area: Some(area),
+            minimum_surface_cells,
+            trim_cells,
+        },
+        heap,
+    ))
+}
+
+#[derive(Clone, Debug)]
+pub struct TrimmedCentroidReport {
+    pub measure: TrimmedAreaReport,
+    /// World-space bounds, present when the retained area is proved positive.
+    pub centroid_bounds: Option<[[f64; 2]; 3]>,
+}
+
+/// Bound the uniform-area centroid in world coordinates. The tolerance
+/// controls the area refinement; the centroid enclosure reports its own width.
+pub fn trimmed_surface_centroid(
+    surface: &Surface,
+    trim: &TrimDomain,
+    area_tolerance: f64,
+    max_surface_cells: usize,
+    max_trim_cells: usize,
+) -> Result<TrimmedCentroidReport> {
+    let (measure, cells) = trimmed_surface_area_in_domain(
+        surface,
+        trim,
+        None,
+        area_tolerance,
+        max_surface_cells,
+        max_trim_cells,
+    )?;
+    let Some(area) = measure.area.as_ref().filter(|area| area.bounds[0] > 0.) else {
+        return Ok(TrimmedCentroidReport {
+            measure,
+            centroid_bounds: None,
+        });
+    };
+    let denominator = Interval::new(area.bounds[0], area.bounds[1])?;
+    let origin = surface.control_points[0][0].as_slice();
+    let mut moment = [Interval::point(0.); 3];
+    let mut support = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
+    for cell in &cells {
+        if cell.area.hi == 0. {
+            continue;
+        }
+        let point = first_jets::calculate(surface, cell.span, cell.domain)?[0];
+        let anchor = &surface.control_points[cell.span[0] - surface.degree_u]
+            [cell.span[1] - surface.degree_v];
+        for axis in 0..3 {
+            let relative = point[axis]
+                .add(Interval::point(anchor[axis]).sub(Interval::point(origin[axis]))?)?;
+            support[axis][0] = support[axis][0].min(relative.lo);
+            support[axis][1] = support[axis][1].max(relative.hi);
+            moment[axis] = moment[axis].add(relative.mul(cell.area)?)?;
+        }
+    }
+    let mut centroid_bounds = [[0.; 2]; 3];
+    for (axis, output) in centroid_bounds.iter_mut().enumerate() {
+        let bound = moment[axis]
+            .div(denominator)?
+            .intersect(support[axis][0], support[axis][1])?
+            .add(Interval::point(origin[axis]))?;
+        *output = [bound.lo, bound.hi];
+    }
+    Ok(TrimmedCentroidReport {
+        measure,
+        centroid_bounds: Some(centroid_bounds),
     })
 }

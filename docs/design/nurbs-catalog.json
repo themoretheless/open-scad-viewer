@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 607,
-  "unallocatedCount": 393,
+  "specifiedCount": 608,
+  "unallocatedCount": 392,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15152,6 +15152,26 @@
       "remainingQualification": [
         "Integrate retained surface area inside a selected UV rectangle clipped against the active knot domain.",
         "Verify clipped knot spans across a seam, partial holes, disjoint windows, and intersection with the active support.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0608",
+      "name": "Гарантированные границы центра площади обрезанной NURBS-поверхности",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::trimmed_surface_centroid",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "docs/qualification/nurbs-curvature-field-608-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-608-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose a world-space area centroid using first moments on the certified trim partition.",
+        "Check the analytic centroid of a nonplanar seam-spanning patch with a hole and withhold coordinates without a positive area proof.",
         "WASM and application integration are separate."
       ]
     }

@@ -6237,3 +6237,74 @@ fn trimmed_surface_area_window_returns_zero_for_disjoint_and_clips_partial_suppo
     assert!(partial.bounds[0] <= 0.125 && 0.125 <= partial.bounds[1]);
     assert!(partial.within_tolerance);
 }
+
+#[test]
+fn trimmed_surface_centroid_encloses_nonplanar_centroid_with_a_hole() {
+    use nurbs_core::{
+        analysis::surface_measure::trimmed_surface_centroid,
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
+        trim_domain::TrimDomain,
+    };
+    let mut profile = periodic_unit_square();
+    for pole in &mut profile.control_points {
+        pole.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let hole = [
+        [0.125, 0.25],
+        [0.375, 0.25],
+        [0.375, 0.75],
+        [0.125, 0.75],
+        [0.125, 0.25],
+    ];
+    let patch = build_exact_periodic_surface_trim_patches(&source, &[&outer, &hole], 1_000_000)
+        .unwrap()
+        .patches
+        .unwrap()
+        .remove(0);
+    let trim = TrimDomain::new(&patch.trim.loops, 1e-10).unwrap();
+    let report = trimmed_surface_centroid(&patch.surface, &trim, 0.005, 10_000, 1_000_000).unwrap();
+    let bounds = report.centroid_bounds.unwrap();
+    for ([lo, hi], expected) in bounds.into_iter().zip([0.1, 0.15, 1.]) {
+        assert!(lo <= expected && expected <= hi, "{bounds:?}");
+        assert!(hi - lo < 0.6, "{bounds:?}");
+    }
+    assert!(report.measure.area.unwrap().bounds[0] > 0.);
+}
+
+#[test]
+fn trimmed_surface_centroid_requires_proved_positive_area() {
+    use nurbs_core::{
+        analysis::surface_measure::trimmed_surface_centroid,
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
+        trim_domain::TrimDomain,
+    };
+    let mut profile = periodic_unit_square();
+    for pole in &mut profile.control_points {
+        pole.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let patch = build_exact_periodic_surface_trim_patches(&source, &[&outer], 1_000_000)
+        .unwrap()
+        .patches
+        .unwrap()
+        .remove(0);
+    let trim = TrimDomain::new(&patch.trim.loops, 1e-10).unwrap();
+    let report = trimmed_surface_centroid(&patch.surface, &trim, 0.01, 2, 1).unwrap();
+    assert!(report.centroid_bounds.is_none());
+    assert_eq!(report.measure.area.unwrap().bounds[0], 0.);
+}

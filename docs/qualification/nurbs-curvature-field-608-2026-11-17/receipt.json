@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0608",
+  "testedBase": "d6e069b9dd93f360881414fc87b870ac5f1fbca5",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 194,
+  "scope": [
+    "Enclose a world-space area centroid using first moments on the certified trim partition.",
+    "Check the analytic centroid of a nonplanar seam-spanning patch with a hole and withhold coordinates without a positive area proof."
+  ],
+  "logSha256": "c7bc2ee95d1875b0523d9b4fab0f4ae1b78ab1a95f1ddd4f1e2de1869b7183a3",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "0eb2b9c2faf9494d2c755613a6509654296a7b9fae30b2e3f1f860a80d90862d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "926191643cf7ff5fd4af61c3bf0216381d29b8550c465627b83837967dcf7034",
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "0aebfd8ef8641ac369321f91b619ec6a6a6de8cd40d4c68f00e99ae89f9f3194"
+  }
+}
