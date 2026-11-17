@@ -603,7 +603,10 @@ pub fn trimmed_surface_area_inertia(
             inertia_bounds: None,
         });
     }
-    let inertia_bounds = enclose_trimmed_inertia(surface, &cells, origin.map(Interval::point))?;
+    let inertia_bounds = enclose_trimmed_inertia(
+        cells.iter().map(|cell| (surface, cell)),
+        origin.map(Interval::point),
+    )?;
     Ok(TrimmedInertiaReport {
         measure,
         inertia_bounds: Some(inertia_bounds),
@@ -682,13 +685,9 @@ fn trimmed_surface_central_inertia_in_domain(
         });
     };
     let centroid_bounds = enclose_trimmed_centroid(surface, &cells, area)?;
-    let [[x0, x1], [y0, y1], [z0, z1]] = centroid_bounds;
-    let center = [
-        Interval::new(x0, x1)?,
-        Interval::new(y0, y1)?,
-        Interval::new(z0, z1)?,
-    ];
-    let central_inertia_bounds = enclose_trimmed_inertia(surface, &cells, center)?;
+    let center = centroid_intervals(centroid_bounds)?;
+    let central_inertia_bounds =
+        enclose_trimmed_inertia(cells.iter().map(|cell| (surface, cell)), center)?;
     Ok(TrimmedCentralInertiaReport {
         centroid: TrimmedCentroidReport {
             measure,
@@ -698,13 +697,20 @@ fn trimmed_surface_central_inertia_in_domain(
     })
 }
 
-fn enclose_trimmed_inertia(
-    surface: &Surface,
-    cells: &BinaryHeap<Cell>,
+fn centroid_intervals([[x0, x1], [y0, y1], [z0, z1]]: [[f64; 2]; 3]) -> Result<[Interval; 3]> {
+    Ok([
+        Interval::new(x0, x1)?,
+        Interval::new(y0, y1)?,
+        Interval::new(z0, z1)?,
+    ])
+}
+
+fn enclose_trimmed_inertia<'a>(
+    cells: impl Iterator<Item = (&'a Surface, &'a Cell)>,
     origin: [Interval; 3],
 ) -> Result<[[[f64; 2]; 3]; 3]> {
     let mut tensor = [[Interval::point(0.); 3]; 3];
-    for cell in cells {
+    for (surface, cell) in cells {
         if cell.area.hi == 0. {
             continue;
         }
@@ -896,6 +902,65 @@ pub fn periodic_trim_patch_set_centroid(
     max_surface_cells: usize,
     max_trim_cells: usize,
 ) -> Result<TrimmedPatchSetCentroidReport> {
+    measure_periodic_patch_set_centroid(
+        patches,
+        tolerance,
+        tolerance_uv,
+        max_surface_cells,
+        max_trim_cells,
+        |_| {},
+    )
+}
+
+#[derive(Clone, Debug)]
+pub struct TrimmedPatchSetCentralInertiaReport {
+    pub centroid: TrimmedPatchSetCentroidReport,
+    /// Inertia of all components about their common area centroid at unit density.
+    pub central_inertia_bounds: Option<[[[f64; 2]; 3]; 3]>,
+}
+
+/// Enclose the central inertia of the complete patch set on a shared
+/// integration partition. Component offsets from the common centroid are included.
+pub fn periodic_trim_patch_set_central_inertia(
+    patches: &[crate::editing::exact_periodic_surface::PeriodicTrimPatch],
+    tolerance: f64,
+    tolerance_uv: f64,
+    max_surface_cells: usize,
+    max_trim_cells: usize,
+) -> Result<TrimmedPatchSetCentralInertiaReport> {
+    let mut partitions = Vec::new();
+    let centroid = measure_periodic_patch_set_centroid(
+        patches,
+        tolerance,
+        tolerance_uv,
+        max_surface_cells,
+        max_trim_cells,
+        |partition| partitions.push(partition),
+    )?;
+    let central_inertia_bounds = centroid
+        .centroid_bounds
+        .map(|bounds| {
+            let cells = patches
+                .iter()
+                .zip(&partitions)
+                .flat_map(|(patch, cells)| cells.iter().map(|cell| (&patch.surface, cell)));
+            enclose_trimmed_inertia(cells, centroid_intervals(bounds)?)
+        })
+        .transpose()?;
+    Ok(TrimmedPatchSetCentralInertiaReport {
+        centroid,
+        central_inertia_bounds,
+    })
+}
+
+fn measure_periodic_patch_set_centroid(
+    patches: &[crate::editing::exact_periodic_surface::PeriodicTrimPatch],
+    tolerance: f64,
+    tolerance_uv: f64,
+    max_surface_cells: usize,
+    max_trim_cells: usize,
+    mut save_partition: impl FnMut(BinaryHeap<Cell>),
+) -> Result<TrimmedPatchSetCentroidReport> {
     let mut moments = None;
     let measure = measure_periodic_patch_set(
         patches,
@@ -909,7 +974,9 @@ pub fn periodic_trim_patch_set_centroid(
                     [0, 1, 2].map(|axis| Interval::point(surface.control_points[0][0][axis]));
                 TrimmedFirstMoments::new(origin)
             });
-            moments.accumulate(surface, cells)
+            moments.accumulate(surface, &cells)?;
+            save_partition(cells);
+            Ok(())
         },
     )?;
     let centroid_bounds = match (measure.total.area.as_ref(), moments) {
@@ -928,7 +995,7 @@ fn measure_periodic_patch_set(
     tolerance_uv: f64,
     max_surface_cells: usize,
     max_trim_cells: usize,
-    mut consume_partition: impl FnMut(&Surface, &BinaryHeap<Cell>) -> Result<()>,
+    mut consume_partition: impl FnMut(&Surface, BinaryHeap<Cell>) -> Result<()>,
 ) -> Result<TrimmedPatchSetAreaReport> {
     check(
         (1..=256).contains(&patches.len())
@@ -993,7 +1060,7 @@ fn measure_periodic_patch_set(
                     / (patches.len() - index),
             (max_trim_cells - trim_cells) / (patches.len() - index),
         )?;
-        consume_partition(&patch.surface, &partition)?;
+        consume_partition(&patch.surface, partition)?;
         let area = measure
             .area
             .ok_or_else(|| crate::numeric_err("Missing prepared trim patch area"))?;
