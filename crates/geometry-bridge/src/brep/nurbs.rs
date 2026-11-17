@@ -579,23 +579,37 @@ pub fn tessellate_exact_periodic_trim_sheet(
 pub fn exact_periodic_trim_sheet_request(
     request: &value_codec::Value,
 ) -> Result<value_codec::Value> {
-    periodic_trim_sheet_response(request, false)
+    periodic_trim_sheet_response(request, PeriodicTrimBindings::None)
 }
 
 /// Build an exact sheet with the original contour, segment and interval of each edge.
 pub fn exact_periodic_trim_sheet_bindings_request(
     request: &value_codec::Value,
 ) -> Result<value_codec::Value> {
-    periodic_trim_sheet_response(request, true)
+    periodic_trim_sheet_response(request, PeriodicTrimBindings::Oriented)
+}
+
+/// Serialize directed parameters in caller sample order as exact rational strings.
+pub fn exact_periodic_trim_sheet_input_bindings_request(
+    request: &value_codec::Value,
+) -> Result<value_codec::Value> {
+    periodic_trim_sheet_response(request, PeriodicTrimBindings::Input)
+}
+
+enum PeriodicTrimBindings {
+    None,
+    Oriented,
+    Input,
 }
 
 fn periodic_trim_sheet_response(
     request: &value_codec::Value,
-    bind_edges: bool,
+    bindings: PeriodicTrimBindings,
 ) -> Result<value_codec::Value> {
     use crate::field;
     use brep_core::feature_ops::periodic_trim_sheet::{
         build_exact_periodic_trim_sheet, build_exact_periodic_trim_sheet_with_edge_bindings,
+        build_exact_periodic_trim_sheet_with_input_bindings,
     };
     use nurbs_core::editing::exact_periodic_surface::PeriodicTrimEdgeRefusal;
     use value_codec::json;
@@ -609,31 +623,56 @@ fn periodic_trim_sheet_response(
     }
 
     let contours = contours.iter().map(Vec::as_slice).collect::<Vec<_>>();
-    let (report, bindings) = if bind_edges {
-        let result = build_exact_periodic_trim_sheet_with_edge_bindings(
-            &source,
-            &contours,
-            tolerance_mm,
-            max_work,
-        )?;
-        let bindings = result
-            .edge_bindings
-            .into_iter()
-            .map(|binding| {
-                json!({
-                    "edgeId": binding.edge_id,
-                    "contour": binding.source.contour,
-                    "segment": binding.source.segment,
-                    "interval": binding.source.interval,
+    let (report, bindings) = match bindings {
+        PeriodicTrimBindings::Oriented => {
+            let result = build_exact_periodic_trim_sheet_with_edge_bindings(
+                &source,
+                &contours,
+                tolerance_mm,
+                max_work,
+            )?;
+            let bindings = result
+                .edge_bindings
+                .into_iter()
+                .map(|binding| {
+                    json!({
+                        "edgeId": binding.edge_id,
+                        "contour": binding.source.contour,
+                        "segment": binding.source.segment,
+                        "interval": binding.source.interval,
+                    })
                 })
-            })
-            .collect::<Vec<_>>();
-        (result.bound_sheet.sheet, Some(bindings))
-    } else {
-        (
+                .collect::<Vec<_>>();
+            (result.bound_sheet.sheet, Some(bindings))
+        }
+        PeriodicTrimBindings::Input => {
+            let result = build_exact_periodic_trim_sheet_with_input_bindings(
+                &source,
+                &contours,
+                tolerance_mm,
+                max_work,
+            )?;
+            let bindings = result
+                .edge_bindings
+                .into_iter()
+                .map(|binding| {
+                    json!({
+                        "edgeId": binding.edge_id,
+                        "contour": binding.source.contour,
+                        "segment": binding.source.segment,
+                        "parameters": binding.source.parameters.map(|t| json!({
+                            "numerator": t.numer().to_string(),
+                            "denominator": t.denom().to_string(),
+                        })),
+                    })
+                })
+                .collect::<Vec<_>>();
+            (result.bound_sheet.sheet, Some(bindings))
+        }
+        PeriodicTrimBindings::None => (
             build_exact_periodic_trim_sheet(&source, &contours, tolerance_mm, max_work)?,
             None,
-        )
+        ),
     };
     let refusal = report.refusal.map(|reason| match reason {
         PeriodicTrimEdgeRefusal::Patch(_) => "patch",

@@ -11,6 +11,8 @@ interface Kernel extends WebAssembly.Exports {
   abi_request: (op: number, pointer: number, length: number) => bigint
 }
 
+type Rational = { numerator: string; denominator: string }
+
 interface Report {
   model: {
     faces: { holes: number[] }[]
@@ -18,7 +20,7 @@ interface Report {
     bodies: unknown[]
     topologyIds: { edges: string[] }
   } | null
-  edgeBindings?: { edgeId: string; contour: number; segment: number; interval: [number, number] }[]
+  edgeBindings?: { edgeId: string; contour: number; segment: number; interval?: [number, number]; parameters?: [Rational, Rational] }[]
   workUsed: number
   refusalStage: string | null
 }
@@ -89,3 +91,21 @@ const refusedBound = call(1, bindingOp)
 assert.equal(refusedBound.model, null)
 assert.deepEqual(refusedBound.edgeBindings, [])
 console.log('WASM ABI retained persistent edge IDs and source intervals.')
+
+const inputOp = 'brep_build_exact_periodic_trim_sheet_with_input_bindings'
+const directed = call(request.maxWork, inputOp)
+assert.deepEqual(directed.model, result.model)
+assert.ok(directed.edgeBindings)
+assert.deepEqual(directed.edgeBindings.map(binding => binding.edgeId), result.model.topologyIds.edges)
+assert.deepEqual(directed.edgeBindings[0].parameters, [
+  { numerator: '0', denominator: '1' }, { numerator: '1', denominator: '2' },
+])
+const holeEdge = directed.edgeBindings.find(binding => binding.contour === 1)
+assert.equal(holeEdge?.segment, 3)
+assert.deepEqual(holeEdge?.parameters, [
+  { numerator: '1', denominator: '1' }, { numerator: '0', denominator: '1' },
+])
+const refusedDirected = call(1, inputOp)
+assert.equal(refusedDirected.model, null)
+assert.deepEqual(refusedDirected.edgeBindings, [])
+console.log('WASM ABI retained exact rational parameters in original contour direction.')

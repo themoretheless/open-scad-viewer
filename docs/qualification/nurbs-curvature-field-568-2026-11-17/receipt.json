@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0568",
+  "testedBase": "04db64ff4830a91fe87a66949ff58dd3570f97d4",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "brep-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_periodic_trim_binding_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 10,
+  "scope": [
+    "Serialize exact directed source parameters with persistent edge IDs in the geometry bridge.",
+    "Match edge identities and intervals to the emitted model through the WASM ABI and withhold bindings on refusal."
+  ],
+  "logSha256": "f43169a89151fdb4a84555dbb2d35b9fef8fffd696a4b2fc029280051e71c0cd",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "304ab83f64b37f43dc8bc0e2aeda263e238d000604645d7bedcb2cefe7d6097c",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "ed333168f9b5e2b72f23f057682c1d22f8471f64e01c4f41ed9cee6501ece6e6",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "05f6e3f64bde53cb4f0331202d9a11ef9be36d71b39f05c437b80d3f8c411d3b",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "bd2c03e9ec91b5a1aaeb4380bb05e3f32f6ee62068bd3cf6bac3fec97ea2521d"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}
