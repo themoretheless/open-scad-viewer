@@ -432,7 +432,7 @@ fn build_sheet_general_impl(
 mod section_sheets;
 pub use section_sheets::{
     BoundedSectionSheetReport, SectionSheetOptions, SectionSheetReport, build_section_sheets,
-    build_section_sheets_with_support_tolerance,
+    build_section_sheets_with_expanded_exact_support, build_section_sheets_with_support_tolerance,
 };
 
 mod attach_sections;

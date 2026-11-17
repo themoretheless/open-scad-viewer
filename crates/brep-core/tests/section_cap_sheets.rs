@@ -1030,3 +1030,51 @@ fn reports_inward_orientation_after_proving_the_boundary() {
     assert_eq!(geometry.orientations[0].outward, Some(false));
     assert!(report.admission.solid().is_none());
 }
+
+#[test]
+fn expands_the_support_to_keep_an_oblique_rim_exact() {
+    use brep_core::planar_cap::build_section_sheets_with_expanded_exact_support;
+    let points = [
+        [0., 0., 2.],
+        [2., -2., 2.],
+        [3., 0., 3.],
+        [1., 2., 3.],
+        [0., 0., 2.],
+    ];
+    let ring: Vec<_> = points
+        .windows(2)
+        .map(|p| Curve::from_polyline(p.iter().map(|p| p.to_vec()).collect()).unwrap())
+        .collect();
+    let normal = [-1., -1., 3.];
+    assert!(build_section_sheets(&[&ring], normal, 6., options()).is_err());
+    let report = build_section_sheets_with_expanded_exact_support(&[&ring], normal, 6., options())
+        .unwrap_or_else(|error| panic!("{error:?}"));
+    let agreement = brep_core::boundary_agreement::verify_exact(&report.model, 1_000_000).unwrap();
+    assert!(agreement.all_equal);
+    assert!(agreement.all_joins_exact);
+    for edge in &report.model.edges {
+        assert!(ring.contains(&edge.curve));
+    }
+    assert!(
+        build_section_sheets_with_expanded_exact_support(
+            &[&ring],
+            normal,
+            6.,
+            SectionSheetOptions {
+                max_exact_work: report.exact_work - 1,
+                ..options()
+            }
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn expanded_exact_support_refuses_a_nearby_rim_off_the_requested_plane() {
+    use brep_core::planar_cap::build_section_sheets_with_expanded_exact_support;
+    let outline = ring([0., 0.], [1., 1.], |_| 1. / 3.);
+    assert!(
+        build_section_sheets_with_expanded_exact_support(&[&outline], [0., 0., 3.], 1., options())
+            .is_err()
+    );
+}

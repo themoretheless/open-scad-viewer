@@ -4,7 +4,7 @@ use num_rational::BigRational as Q;
 use num_traits::Zero;
 use nurbs_core::{
     Error, Result,
-    analysis::exact_affine_hull::lift_planar_surface,
+    analysis::exact_affine_hull::{PlanarLiftRefusal, lift_planar_surface},
     curve::Curve,
     curve_surface_agreement::{self, Status},
     editing::exact_surface_derivative::{
@@ -38,7 +38,7 @@ pub fn build_section_sheets(
     offset: f64,
     options: SectionSheetOptions,
 ) -> Result<SectionSheetReport> {
-    build(rings, normal, offset, options, None).map(|report| report.sheet)
+    build(rings, normal, offset, options, Support::Tight).map(|report| report.sheet)
 }
 
 #[derive(Clone, Debug)]
@@ -64,15 +64,42 @@ pub fn build_section_sheets_with_support_tolerance(
             "Support tolerance must be finite and nonnegative",
         ));
     }
-    build(rings, normal, offset, options, Some(support_tolerance))
+    build(
+        rings,
+        normal,
+        offset,
+        options,
+        Support::Rounded(support_tolerance),
+    )
 }
+
+/// Author section sheets with exactly stored planar supports. If the tight
+/// Cartesian rectangle cannot be lifted exactly, expand it on a rational
+/// lattice anchored at a rim pole. The trim coordinates and edge clocks stay
+/// in the original Cartesian chart. The rim must be exactly on the plane.
+pub fn build_section_sheets_with_expanded_exact_support(
+    rings: &[&[Curve]],
+    normal: [f64; 3],
+    offset: f64,
+    options: SectionSheetOptions,
+) -> Result<SectionSheetReport> {
+    build(rings, normal, offset, options, Support::ExpandedExact).map(|report| report.sheet)
+}
+
+enum Support {
+    Tight,
+    ExpandedExact,
+    Rounded(f64),
+}
+
+mod expanded_support;
 
 fn build(
     rings: &[&[Curve]],
     normal: [f64; 3],
     offset: f64,
     options: SectionSheetOptions,
-    support_tolerance: Option<f64>,
+    support: Support,
 ) -> Result<BoundedSectionSheetReport> {
     if !(1e-10..=1e-2).contains(&options.tolerance)
         || !(1..=100_000).contains(&options.max_verification_cells)
@@ -103,7 +130,7 @@ fn build(
         }
         let budget = options.max_exact_work - exact_work;
         let projection = &region.cap.face.projection;
-        let (surface, error) = if let Some(tolerance) = support_tolerance {
+        let (surface, error) = if let Support::Rounded(tolerance) = support {
             let report = lift_planar_cap_support_bounded(projection, tolerance, budget)?;
             exact_work += report.work_used;
             let support = report
@@ -111,8 +138,28 @@ fn build(
                 .map_err(|reason| unresolved(format!("Section plane lift: {reason:?}")))?;
             (support.surface, support.error_upper)
         } else {
-            let lift = lift_planar_surface(projection, budget)?;
+            if matches!(support, Support::ExpandedExact) && !region.cap.boundary_gap_upper.is_zero()
+            {
+                return Err(unresolved(
+                    "Expanded exact support needs an exactly planar rim",
+                ));
+            }
+            let mut lift = lift_planar_surface(projection, budget)?;
             exact_work += lift.work_used;
+            if matches!(support, Support::ExpandedExact)
+                && lift.refusal == Some(PlanarLiftRefusal::NotRepresentable)
+            {
+                const EXPANSION_WORK: u64 = 32;
+                let remaining = options.max_exact_work - exact_work;
+                if remaining <= EXPANSION_WORK {
+                    return Err(unresolved("Section plane expansion budget exhausted"));
+                }
+                let anchor = &region.cap.face.loops[0][0].control_points[0];
+                let expanded = expanded_support::expand(projection, [anchor[0], anchor[1]])?;
+                exact_work += EXPANSION_WORK;
+                lift = lift_planar_surface(&expanded, remaining - EXPANSION_WORK)?;
+                exact_work += lift.work_used;
+            }
             let surface = lift
                 .surface
                 .ok_or_else(|| unresolved(format!("Section plane lift: {:?}", lift.refusal)))?;

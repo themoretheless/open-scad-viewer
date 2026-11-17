@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 390,
-  "unallocatedCount": 610,
+  "specifiedCount": 391,
+  "unallocatedCount": 609,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -10018,6 +10018,33 @@
       "remainingQualification": [
         "Expose capped candidate evidence and separate boundary verification failure from inward orientation.",
         "Capping and solid admission share the strict builder path. Unproved candidates expose exact boundary diagnostics, nesting and orientation evidence without granting qualified material ownership.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0391",
+      "name": "Точная наклонная крышка с расширенной плоской опорой",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::planar_cap::build_section_sheets_with_expanded_exact_support",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets/expanded_support.rs",
+        "crates/brep-core/src/contact/boundary_agreement.rs",
+        "docs/qualification/nurbs-curvature-field-391-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-391-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Expand an affine cap support on an exact rational lattice to retain edge identity without rounding the support plane.",
+        "Exact integer lattice increments around a rim pole cancel the odd slope denominators. The expanded support preserves the Cartesian trim chart and all original edge clocks. Unstorable outputs refuse.",
         "WASM and application integration are separate."
       ]
     }
