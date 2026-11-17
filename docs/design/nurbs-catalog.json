@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 488,
-  "unallocatedCount": 512,
+  "specifiedCount": 489,
+  "unallocatedCount": 511,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12742,6 +12742,26 @@
       "remainingQualification": [
         "Construct a qualified compact B-rep for positive-volume collinear extrusion overlap.",
         "Place the exact shared footprint at the common slab start, author compact caps and walls, and verify both closed-solid qualification and exact volume.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0489",
+      "name": "Точное разделение рациональной NURBS-кривой с сохранением исходного параметра",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_knot_insertion::split",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_knot_insertion.rs",
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-489-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-489-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Split an original nonperiodic NURBS curve into two exact restrictions with the original absolute parameter.",
+        "Exact Boehm refinement saturates the split knot, then structural restriction clamps both seam ends with the same weighted pole. Unstoreable refinements publish neither child.",
         "WASM and application integration are separate."
       ]
     }

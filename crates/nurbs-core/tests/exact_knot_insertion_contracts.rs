@@ -153,3 +153,46 @@ fn unclamped_support_and_three_coordinates_are_retained() {
     assert_eq!(c.knots, vec![-1., 0., 0.5, 1., 2.]);
     assert_eq!(c.control_points[1], vec![1., 3., 1.]);
 }
+
+#[test]
+fn exact_split_preserves_the_absolute_clock_and_rational_seam() {
+    use nurbs_core::editing::{exact_curve_merge::merge, exact_knot_insertion::split};
+    let mut source = line(3., vec![1., 2.]);
+    source.knots = vec![-2., -2., 6., 6.];
+    let report = split(&source, 2., 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let [left, right] = report.pieces.unwrap();
+    assert_eq!(left.domain(), [-2., 2.]);
+    assert_eq!(right.domain(), [2., 6.]);
+    assert_eq!(left.control_points[1], vec![2., 0.]);
+    assert_eq!(left.weights[1], right.weights[0]);
+    assert_eq!(
+        merge(&left, &right).unwrap().curve.unwrap(),
+        insert(&source, 2., 1, 1_000_000).unwrap().curve
+    );
+    assert!(
+        split(&source, 2., report.work_used)
+            .unwrap()
+            .pieces
+            .is_some()
+    );
+    assert!(
+        split(&source, 2., report.work_used - 1)
+            .unwrap()
+            .pieces
+            .is_none()
+    );
+}
+
+#[test]
+fn exact_split_reuses_a_saturated_knot_and_refuses_unstoreable_seams() {
+    use nurbs_core::editing::{exact_curve_merge::merge, exact_knot_insertion::split};
+    let source = quadratic();
+    let refined = insert(&source, 2., 2, 1_000_000).unwrap().curve;
+    let [left, right] = split(&refined, 2., 1_000_000).unwrap().pieces.unwrap();
+    assert_eq!(merge(&left, &right).unwrap().curve.unwrap(), refined);
+    let report = split(&line(2., vec![1., 2.]), 0.5, 1_000_000).unwrap();
+    assert!(report.pieces.is_none());
+    assert_eq!(report.refusal, Some(Refusal::NotRepresentable));
+    assert!(split(&source, -2., 1_000_000).is_err());
+}

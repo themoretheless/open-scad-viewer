@@ -164,3 +164,95 @@ pub(super) fn validate_request(
     )?;
     Ok(())
 }
+
+#[derive(Clone, Debug)]
+pub struct SplitReport {
+    /// Both restrictions are published together, in source parameter order.
+    pub pieces: Option<[Curve; 2]>,
+    pub work_used: u64,
+    pub refusal: Option<Refusal>,
+}
+
+/// Split a nonperiodic curve at an interior parameter without changing
+/// its geometry or its absolute parameter law. Exact knot refinement
+/// creates a shared seam control and both restrictions retain its weight.
+pub fn split(source: &Curve, parameter: f64, max_work: u64) -> Result<SplitReport> {
+    source.validate()?;
+    let degree = source.degree;
+    let [start, end] = source.domain();
+    check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact split work must be in 1..=1000000",
+    )?;
+    check(!source.periodic, "Exact split requires nonperiodic storage")?;
+    check(
+        parameter.is_finite() && start < parameter && parameter < end,
+        "Exact split parameter must be strictly inside the original domain",
+    )?;
+    let multiplicity = source
+        .knots
+        .iter()
+        .filter(|&&knot| knot == parameter)
+        .count();
+    check(
+        multiplicity <= degree,
+        "Exact split requires a continuous seam",
+    )?;
+    let count = degree - multiplicity;
+    let refused = |reason, work_used| SplitReport {
+        pieces: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    let copy_work = ((source.control_points.len() + count + 1)
+        * (source.control_points[0].len() + 2)
+        + source.knots.len()
+        + count
+        + 2) as u64;
+    if max_work < copy_work || (count > 0 && max_work == copy_work) {
+        return Ok(refused(Refusal::ResourceLimit, 0));
+    }
+    let refinement = if count == 0 {
+        None
+    } else {
+        let report = insert(source, parameter, count, max_work - copy_work)?;
+        if let Some(reason) = report.refusal {
+            return Ok(refused(reason, report.work_used));
+        }
+        Some(report)
+    };
+    let (refined, work_used) = refinement.as_ref().map_or((source, copy_work), |report| {
+        (&report.curve, report.work_used + copy_work)
+    });
+    let first_knot = refined.knots.partition_point(|&knot| knot < parameter);
+    let seam = first_knot - 1;
+
+    // Degree-fold multiplicity makes the seam a single shared pole.
+    // Add one copy of the seam knot to clamp each new endpoint.
+    let mut left_knots = refined.knots[..first_knot + degree].to_vec();
+    left_knots.push(parameter);
+    let mut right_knots = vec![parameter];
+    right_knots.extend_from_slice(&refined.knots[first_knot..]);
+    let left = Curve {
+        degree,
+        knots: left_knots,
+        control_points: refined.control_points[..=seam].to_vec(),
+        weights: refined.weights[..=seam].to_vec(),
+        periodic: false,
+    };
+    let right = Curve {
+        degree,
+        knots: right_knots,
+        control_points: refined.control_points[seam..].to_vec(),
+        weights: refined.weights[seam..].to_vec(),
+        periodic: false,
+    };
+    if left.validate().is_err() || right.validate().is_err() {
+        return Ok(refused(Refusal::InvalidOutput, work_used));
+    }
+    Ok(SplitReport {
+        pieces: Some([left, right]),
+        work_used,
+        refusal: None,
+    })
+}
