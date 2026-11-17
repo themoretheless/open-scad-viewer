@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0346",
+  "testedBase": "772938a3f74986bc3b7e47c76024ffceaa7ba129",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts",
+    "--test",
+    "exact_pcurve_line_contact_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 24,
+  "scope": [
+    "Classify interior/interior, boundary/boundary and both mixed face contact strata on the exact support clock.",
+    "Mixed classifications retain open winding limits and exact closed boundary points. A conservative upper cover retains contacts that cannot be assigned a proved stratum."
+  ],
+  "logSha256": "641973b67dc3c754b2aabe2f8c3fc8327782a30a7871c2170e704e3f18d434ce",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "d5e1181d2ed783cfed8a2cc04e142f526d56c0ec7328528a14e114f17210b353",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs": "149345d9651f964a37b07621c0580a5f3cafa05a5e1ae8a1e724cef31bf154fa",
+    "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs": "132b901792470feb62aecd0c57f8ebd1e424edf0e64edc224f6bcc8ebbacd237",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "a7bdf69376a844b919a78e16333b7046a329a5511124faccb1e15126b64a5776",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "461f068a38e77ea0b18e56c525cda2d41261bc2fb54b797aa1d2aed4147c84fb",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/contact_partition.rs": "00ffa1a4f4e1de48afe6163ba77dd6977facaaa1363028f224bf838d18b41981"
+  }
+}

@@ -5,9 +5,10 @@ use nurbs_core::{
             PlanarProjectionOutcome, PlanarSurfaceProjection, project_planar_surface,
         },
         exact_plane_intersection::{
-            ExactPlanarIntersectionSegment, PlanarBoundaryIntersection, PlanarIntersectionSegments,
-            PlanarSegmentStorage, StoredPlanarIntersection, SupportPlaneIntersection,
-            TrimmedPlanarIntersection, build_planar_intersection_segments,
+            ExactPlanarIntersectionSegment, PlanarBoundaryIntersection, PlanarFaceContactPartition,
+            PlanarIntersectionSegments, PlanarSegmentStorage, StoredPlanarIntersection,
+            SupportPlaneIntersection, TrimmedPlanarIntersection,
+            build_planar_intersection_segments, classify_planar_face_contacts,
             intersect_planar_face_boundaries, intersect_planar_face_boundary_contacts,
             intersect_planar_supports, intersect_trimmed_planar_faces,
             optimize_planar_intersection_segment_storage, store_planar_intersection_segment,
@@ -727,5 +728,77 @@ fn proves_a_quadratic_rational_tangency_without_promoting_irrational_roots() {
     let irrational = intersect_planar_face_boundary_contacts(&a, &b, WORK).unwrap();
     assert!(
         matches!(irrational.outcome, PlanarBoundaryIntersection::Transverse { shared_boundary, .. } if shared_boundary.is_empty())
+    );
+}
+
+#[test]
+fn distinguishes_open_mixed_intervals_from_common_boundary_points() {
+    let [a, mut b] = perpendicular_boundary_faces();
+    b.loops = vec![rectangle([-1., 1.], [-1., 1.], false)];
+    let opts = options(10_000);
+    let report = classify_planar_face_contacts(&a, &b, opts).unwrap();
+    let PlanarFaceContactPartition::Transverse(contact) = report.outcome else {
+        panic!("{:?}", report.outcome);
+    };
+    assert!(contact.interior.is_empty());
+    assert!(contact.right_boundary_in_left_interior.is_empty());
+    assert_eq!(
+        contact.common_boundary,
+        [[q(-1, 1), q(-1, 1)], [q(1, 1), q(1, 1)]]
+    );
+    let [mixed] = contact.left_boundary_in_right_interior.as_slice() else {
+        panic!("{:?}", contact.left_boundary_in_right_interior);
+    };
+    assert_eq!(mixed.closed, [false, false]);
+    assert!(mixed.parameter[0] < q(0, 1) && q(0, 1) < mixed.parameter[1]);
+    assert!(
+        contact
+            .possible
+            .iter()
+            .any(|r| r[0] <= q(-1, 1) && r[1] >= q(1, 1))
+    );
+    let exchange = classify_planar_face_contacts(&b, &a, opts).unwrap();
+    let PlanarFaceContactPartition::Transverse(reversed) = exchange.outcome else {
+        panic!("{:?}", exchange.outcome);
+    };
+    assert_eq!(
+        reversed.right_boundary_in_left_interior,
+        contact.left_boundary_in_right_interior
+    );
+    assert_eq!(reversed.common_boundary, contact.common_boundary);
+}
+
+#[test]
+fn retains_singleton_mixed_contacts_and_uncertainty_when_winding_is_limited() {
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.loops = vec![crossing_triangle()];
+    b.loops = vec![rectangle([-1., 1.], [-1., 1.], false)];
+    let report = classify_planar_face_contacts(&a, &b, options(10_000)).unwrap();
+    let PlanarFaceContactPartition::Transverse(contact) = report.outcome else {
+        panic!("{:?}", report.outcome);
+    };
+    assert_eq!(contact.left_boundary_in_right_interior.len(), 2);
+    assert_eq!(
+        contact.left_boundary_in_right_interior[1].parameter,
+        [q(1, 3), q(1, 3)]
+    );
+    assert_eq!(
+        contact.left_boundary_in_right_interior[1].closed,
+        [true, true]
+    );
+    assert!(contact.common_boundary.is_empty());
+    assert_eq!(contact.interior.len(), 1);
+    let limited = classify_planar_face_contacts(&a, &b, options(1)).unwrap();
+    let PlanarFaceContactPartition::Transverse(unresolved) = limited.outcome else {
+        panic!("{:?}", limited.outcome);
+    };
+    assert!(limited.winding_cells <= 1);
+    assert!(unresolved.interior.is_empty());
+    assert!(unresolved.left_boundary_in_right_interior.is_empty());
+    assert!(
+        unresolved
+            .possible
+            .iter()
+            .any(|r| r[0] <= q(0, 1) && r[1] >= q(1, 3))
     );
 }

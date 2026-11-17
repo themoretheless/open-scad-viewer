@@ -183,30 +183,39 @@ fn clip_support_line(
     work: &mut Work,
     winding_cells: &mut usize,
 ) -> Result<TrimmedPlanarIntersection> {
-    let mut partitions = Vec::with_capacity(2);
-    for face in [left, right] {
-        match partition_support_line(face, &line, options, work, winding_cells)? {
-            CoplanarRayPartitionOutcome::Partition(partition) => {
-                partitions.push(trim_ranges(partition))
-            }
-            CoplanarRayPartitionOutcome::Refused(reason) => {
-                return Ok(TrimmedPlanarIntersection::Refused(reason));
-            }
-            CoplanarRayPartitionOutcome::NotCoplanar => {
-                return Ok(TrimmedPlanarIntersection::Refused(
-                    Refusal::UnprovedIdentity,
-                ));
-            }
-        }
-    }
-    let [left, right] = partitions.as_slice() else {
-        unreachable!("two face partitions")
+    let [left, right] = match trim_both_faces(left, right, &line, options, work, winding_cells)? {
+        Ok(ranges) => ranges,
+        Err(reason) => return Ok(TrimmedPlanarIntersection::Refused(reason)),
     };
     Ok(TrimmedPlanarIntersection::Transverse {
         line,
         shared_interior: intersect_bands(&left.interior, &right.interior, false),
         possible: intersect_bands(&left.possible, &right.possible, true),
     })
+}
+
+fn trim_both_faces(
+    left: &ProjectedTrimmedFace,
+    right: &ProjectedTrimmedFace,
+    line: &ExactSupportLine,
+    options: CoplanarRayPartitionOptions,
+    work: &mut Work,
+    winding_cells: &mut usize,
+) -> Result<std::result::Result<[TrimRanges; 2], Refusal>> {
+    let mut ranges = |face| -> Result<std::result::Result<TrimRanges, Refusal>> {
+        Ok(
+            match partition_support_line(face, line, options, work, winding_cells)? {
+                CoplanarRayPartitionOutcome::Partition(partition) => Ok(trim_ranges(partition)),
+                CoplanarRayPartitionOutcome::Refused(reason) => Err(reason),
+                CoplanarRayPartitionOutcome::NotCoplanar => Err(Refusal::UnprovedIdentity),
+            },
+        )
+    };
+    let left = match ranges(left)? {
+        Ok(left) => left,
+        Err(reason) => return Ok(Err(reason)),
+    };
+    Ok(ranges(right)?.map(|right| [left, right]))
 }
 
 struct TrimRanges {
@@ -267,4 +276,10 @@ mod boundary;
 pub use boundary::{
     PlanarBoundaryIntersection, PlanarBoundaryIntersectionReport, intersect_planar_face_boundaries,
     intersect_planar_face_boundary_contacts,
+};
+
+mod contact_partition;
+pub use contact_partition::{
+    BoundaryInInterior, PlanarFaceContactPartition, PlanarFaceContactReport,
+    TransverseFaceContacts, classify_planar_face_contacts,
 };
