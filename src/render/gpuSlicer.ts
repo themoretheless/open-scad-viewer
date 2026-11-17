@@ -228,8 +228,8 @@ function sliceSingleTriangle(
   const dMin = Math.min(d0, d1, d2)
   const dMax = Math.max(d0, d1, d2)
 
-  let lStart = 0
-  let lEnd = numLayers - 1
+  let lStart: number
+  let lEnd: number
 
   if (layerStep > 1e-7 && numLayers > 1) {
     lStart = Math.max(0, Math.ceil((dMin - firstD) / layerStep))

@@ -1,5 +1,22 @@
 import { compileRushGraphNurbs } from './rushGraphNurbsCompiler'
 
+/** Fields of resolved SDF nodes read by the job extractor; values are produced by the compiler. */
+interface SdfNodeView {
+  op: string
+  center: number[]
+  radius: number
+  half_size: number[]
+  major_radius: number
+  minor_radius: number
+  inputs: [string, string]
+  input: string
+  distance: number
+  vector: number[]
+  min: number[]
+  max: number[]
+  cells: number[]
+}
+
 /** An sdf_tessellate job whose input subtree is pure SDF (no mesh inputs). */
 export interface SdfTessellationJob {
   field: import('../kernel/geometry/sdf').SdfField
@@ -16,7 +33,7 @@ export function collectSdfJobs(document: unknown): SdfTessellationJob[] {
   const pure = (key: string): SdfField | null => {
     const hit = memo.get(key)
     if (hit !== undefined) return hit
-    const n = nodes.get(key) as any
+    const n = nodes.get(key) as unknown as SdfNodeView | undefined
     const field: SdfField | null = !n
       ? null
       : n.op === 'sdf_sphere'
@@ -60,8 +77,8 @@ export function collectSdfJobs(document: unknown): SdfTessellationJob[] {
   }
   const jobs: SdfTessellationJob[] = []
   for (const n of compiled.resolved_document.nodes) {
-    if ((n as any).op !== 'sdf_tessellate') continue
-    const node = n as any
+    const node = n as unknown as SdfNodeView
+    if (node.op !== 'sdf_tessellate') continue
     const field = pure(node.input)
     if (field) jobs.push({ field, grid: { min: node.min, max: node.max, cells: node.cells } })
   }

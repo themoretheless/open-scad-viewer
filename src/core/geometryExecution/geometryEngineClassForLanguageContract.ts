@@ -150,7 +150,7 @@ export function computeGeometryManifestDigest(engine: GeometryEngineStaticManife
 export function geometryProviderAdmissionForManifest(
   manifest: GeometryEngineStaticManifest,
 ): GeometryProviderAdmissionDecision {
-  let integrityMatches = false
+  let integrityMatches: boolean
   try {
     integrityMatches = computeGeometryManifestDigest(manifest) === manifest.manifestDigest
   } catch {

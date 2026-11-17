@@ -168,7 +168,7 @@ export function useWorkspacePersistenceLifecycle(
     const snapshot = workspaceDocument.value
     workspacePersistenceStatus.value = 'saving'
     updateBeforeUnloadGuard()
-    let saved = false
+    let saved: boolean
     try {
       if (retryIndexedDb) {
         const result = await workspacePersistence.retry(snapshot)

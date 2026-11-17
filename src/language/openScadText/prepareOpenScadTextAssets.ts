@@ -168,10 +168,7 @@ export function safeFontName(
   const matches = entries.filter(entry => entry.nameId === nameId)
   const selected = matches.find(entry => /^en(?:-|$)/iu.test(entry.language)) ?? matches[0]
   if (!selected) return undefined
-  const value = face
-    .getName(nameId, selected.language)
-    .replace(/\u0000/gu, '')
-    .trim()
+  const value = face.getName(nameId, selected.language).replaceAll('\0', '').trim()
   if (value.length > 1_024) throw new Error(`name ID ${nameId} exceeds 1024 characters`)
   return value || undefined
 }

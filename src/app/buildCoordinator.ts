@@ -533,7 +533,7 @@ export class BuildCoordinator {
     }
     if ('execution' in event && event.execution !== undefined) {
       const execution = event.execution
-      let routeMatches = false
+      let routeMatches: boolean
       try {
         const route = parseGeometrySourceRoutingHeader(record.request.source)
         routeMatches =

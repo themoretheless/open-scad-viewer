@@ -324,7 +324,7 @@ export function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
       }
       const index = Math.trunc(finiteNumber(evaluate(expr.index), ctx, expr.p, 'index'))
       if (Array.isArray(value) || typeof value === 'string') return value[index] as Value
-      evaluationError(ctx, expr.p, 'Only vectors and strings can be indexed')
+      return evaluationError(ctx, expr.p, 'Only vectors and strings can be indexed')
     }
     case 'member': {
       const value = evaluate(expr.value)
@@ -333,7 +333,7 @@ export function evalExpression(expr: Expr, ctx: EvalContext, depth = 0): Value {
         const index = ({ x: 0, y: 1, z: 2 } as const)[expr.name as 'x' | 'y' | 'z']
         if (index !== undefined) return value[index]
       }
-      evaluationError(ctx, expr.p, `Value has no member ${expr.name}`)
+      return evaluationError(ctx, expr.p, `Value has no member ${expr.name}`)
     }
     case 'function': {
       const value: FunctionValue = {

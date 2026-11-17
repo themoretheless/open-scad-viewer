@@ -24,7 +24,8 @@ export function createMeshInteraction(context: MeshInteractionContext) {
     const list =
       kind === 'vertex' ? context.selectedVerts : kind === 'face' ? context.selectedFaces : context.selectedEdges
     const set = new Set(list.value)
-    set.has(id) ? set.delete(id) : set.add(id)
+    if (set.has(id)) set.delete(id)
+    else set.add(id)
     list.value = [...set]
   }
   function getEdgeList(mesh: PolygonMesh): Array<[number, number]> {

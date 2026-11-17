@@ -385,7 +385,6 @@ export function useCommandPalette(options: CommandPaletteOptions) {
     surfaceInputs,
     surfaceReversed,
     toggleSketchPane,
-    tool,
     twoSelectedBodies,
     undo,
     undoable,
@@ -445,7 +444,7 @@ export function useCommandPalette(options: CommandPaletteOptions) {
       run: () => void,
       extra: Partial<PaletteCommand> = {},
     ): SolidCommand => ({ id, label: label(ru, en), aliases: [ru, en], run, ...extra })
-    const toolCmd = (value: typeof tool.value, ru: string, en: string, shortcut?: string) =>
+    const toolCmd = (value: CommandPaletteOptions['tool']['value'], ru: string, en: string, shortcut?: string) =>
       cmd(`tool-${value}`, ru, en, () => beginSketch(value), { detail: label('Инструмент 2D', '2D tool'), shortcut })
     const list: SolidCommand[] = [
       cmd('focus-selection', 'Фокус на выбранном', 'Focus selection', () => fit(mode.value, true), {

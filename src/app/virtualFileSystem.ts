@@ -12,7 +12,10 @@ export interface VirtualSourceFile {
 function validateSegment(segment: string) {
   if (!segment || segment === '.') return false
   if (segment === '..') throw new Error('Virtual paths may not traverse above their project root')
-  if (segment.length > MAX_VIRTUAL_SEGMENT_LENGTH || /[\u0000-\u001f\u007f]/.test(segment))
+  if (
+    segment.length > MAX_VIRTUAL_SEGMENT_LENGTH ||
+    [...segment].some(char => char.charCodeAt(0) <= 0x1f || char.charCodeAt(0) === 0x7f)
+  )
     throw new Error('Virtual path segment is invalid')
   return true
 }

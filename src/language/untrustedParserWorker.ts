@@ -77,7 +77,7 @@ export class UntrustedParserWorkerClient {
     const id = this.nextId++
     return new Promise((resolve, reject) => {
       let settled = false
-      let timer: ReturnType<typeof setTimeout> | undefined
+      let timer: ReturnType<typeof setTimeout> | undefined = undefined
       const finish = (error?: Error, result?: UntrustedParserResult<K>, discard = false) => {
         if (settled) return
         settled = true

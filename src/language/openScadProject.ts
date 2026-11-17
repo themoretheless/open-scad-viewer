@@ -124,6 +124,14 @@ function utf8Length(value: string): number {
   return UTF8.encode(value).byteLength
 }
 
+function hasControlCharacter(value: string): boolean {
+  for (const char of value) {
+    const code = char.codePointAt(0)!
+    if (code <= 0x1f || code === 0x7f) return true
+  }
+  return false
+}
+
 function invalidPath(message: string, path?: string): never {
   throw new OpenScadProjectError('E_PROJECT_INVALID_PATH', message, path === undefined ? {} : { path })
 }
@@ -147,7 +155,7 @@ export function normalizeOpenScadProjectPath(value: string): string {
   }
   const segments = path.split('/')
   for (const segment of segments) {
-    if (segment.length === 0 || segment === '.' || segment === '..' || /[\u0000-\u001f\u007f]/u.test(segment)) {
+    if (segment.length === 0 || segment === '.' || segment === '..' || hasControlCharacter(segment)) {
       return invalidPath(
         'OpenSCAD project paths cannot contain empty, dot, parent, or control-character segments.',
         path,
@@ -179,7 +187,7 @@ export function resolveOpenScadProjectPath(importer: string, specifier: string):
     dependency.includes('\\') ||
     dependency.includes('//') ||
     /^[A-Za-z][A-Za-z0-9+.-]*:/u.test(dependency) ||
-    /[\u0000-\u001f\u007f]/u.test(dependency)
+    hasControlCharacter(dependency)
   ) {
     return invalidPath('OpenSCAD dependencies must be bounded, relative POSIX file paths.', dependency)
   }

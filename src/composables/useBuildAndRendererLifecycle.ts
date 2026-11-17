@@ -18,6 +18,7 @@ import type { CameraState } from '../render/cameraHistory'
 import { type EditorDiagnostic } from '../language/editorDiagnostics'
 import type {
   DisplayMode,
+  DistanceMeasurement,
   PickHit,
   RendererLifecycleEvent,
   SelectionMode,
@@ -57,7 +58,7 @@ export interface UseBuildAndRendererLifecycleOptions {
   selectedMesh: WritableComputedRef<number | null>
   selectedHit: WritableComputedRef<PickHit | null>
   isolated: WritableComputedRef<boolean>
-  measurement: ComputedRef<PickHit['point'] extends infer _ ? any : any>
+  measurement: ComputedRef<DistanceMeasurement | null>
   measureActive: ComputedRef<boolean>
   displayMode: Ref<DisplayMode>
   shadingModel: Ref<ShadingModel>

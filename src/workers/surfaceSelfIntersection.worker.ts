@@ -9,6 +9,8 @@ import {
 } from '../kernel/originalPatchContactsProtocol'
 import { isSurfaceIsoTargetReport, type SurfaceIsoTargetRequest } from '../kernel/surfaceIsoTargetProtocol'
 import { encodeBinary, decodeBinary } from '../core/valueBinaryCodec'
+
+type NativeAuditReply = { ok?: unknown; value?: unknown; error?: { code?: unknown; message?: unknown } } | null
 import { isSurfaceAuditReport, type SurfaceAuditRequest } from '../kernel/surfaceSelfIntersectionProtocol'
 let admitted = false
 self.addEventListener(
@@ -102,14 +104,14 @@ self.addEventListener(
       const data = encodeBinary(payload)
       const ptr = w.abi_alloc(data.length)
       if (!ptr) throw new Error('Surface audit allocation refused')
-      let reply: any
+      let reply: NativeAuditReply | undefined
       try {
         new Uint8Array(w.memory.buffer, ptr, data.length).set(data)
         const packed = w.abi_request(0, ptr, data.length),
           p = Number(packed & 0xffffffffn),
           n = Number(packed >> 32n)
         try {
-          reply = decodeBinary(new Uint8Array(w.memory.buffer, p, n))
+          reply = decodeBinary(new Uint8Array(w.memory.buffer, p, n)) as NativeAuditReply | undefined
         } finally {
           w.abi_free(p, n)
         }

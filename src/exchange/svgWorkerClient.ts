@@ -152,7 +152,7 @@ export class SvgWorkerClient {
     const id = this.nextId++
     return new Promise((resolve, reject) => {
       let settled = false
-      let timer: ReturnType<typeof setTimeout> | undefined
+      let timer: ReturnType<typeof setTimeout> | undefined = undefined
       const cleanup = () => {
         clearTimeout(timer)
         options.signal?.removeEventListener('abort', abort)
@@ -170,7 +170,8 @@ export class SvgWorkerClient {
           this.idleTimer = setTimeout(() => {
             if (!this.active) this.drop(worker)
           }, this.config.idleMs ?? 15000)
-        error ? reject(error) : resolve(result!)
+        if (error) reject(error)
+        else resolve(result!)
       }
       const fail = (error: Error, discard: boolean) => finish(error, undefined, discard)
       const abort = () => fail(aborted(), true)

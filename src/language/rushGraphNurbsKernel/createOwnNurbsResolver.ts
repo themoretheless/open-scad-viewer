@@ -1510,7 +1510,9 @@ export function createOwnNurbsResolver(
         error instanceof PendingProgressiveMiter
       )
         throw error
-      throw new Error(`Node ${key}: ${error instanceof Error ? error.message : 'NURBS operation failed.'}`)
+      throw new Error(`Node ${key}: ${error instanceof Error ? error.message : 'NURBS operation failed.'}`, {
+        cause: error,
+      })
     }
     if (result.kind === 'sdf') evaluateSdf(result.data, [0, 0, 0])
     if (result.kind === 'mesh' && (meshTriangles += result.data.indices.length / 3) > 60000)

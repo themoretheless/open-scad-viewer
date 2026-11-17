@@ -147,7 +147,9 @@ export async function runMcpServer(
     try {
       await close()
     } catch (closeError) {
-      throw new AggregateError([error, closeError], 'Could not start or clean up the OpenSCAD Viewer MCP server')
+      throw new AggregateError([error, closeError], 'Could not start or clean up the OpenSCAD Viewer MCP server', {
+        cause: closeError,
+      })
     }
     throw error
   }

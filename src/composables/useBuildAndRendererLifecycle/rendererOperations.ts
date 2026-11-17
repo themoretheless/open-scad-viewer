@@ -83,7 +83,8 @@ export function createRendererOperations(context: RendererOperationsContext) {
       if (context.options.viewportController.isRecovering || context.mainPreviewActive) return
       if (context.options.mainShiftSelection.value && index !== null) {
         const ids = new Set(context.options.mainSelectedIndices.value)
-        ids.has(index) ? ids.delete(index) : ids.add(index)
+        if (ids.has(index)) ids.delete(index)
+        else ids.add(index)
         context.options.mainSelectedIndices.value = [...ids]
         if (!ids.has(index)) {
           index = context.options.mainSelectedIndices.value.at(-1) ?? null

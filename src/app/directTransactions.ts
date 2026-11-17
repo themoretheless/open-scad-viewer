@@ -42,6 +42,7 @@ const sameEntity = (a: unknown, b: unknown): boolean => {
   return JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 }
 /** Work on an isolated document. Only the final validated result may be committed. */
+type JsonEntity = Record<string, unknown>
 export function executeDirectTransaction(document: DirectDocument, text: string): DirectDocument {
   if (typeof text !== 'string' || !withinScriptByteLimit(text)) throw Error('Action script exceeds 16 MiB.')
   const script: DirectActionScript = JSON.parse(text)
@@ -95,7 +96,7 @@ export function executeDirectTransaction(document: DirectDocument, text: string)
         case 'documentEdit': {
           if (!Array.isArray(action.edits) || !action.edits.length || action.edits.length > 1200)
             throw Error('Invalid document edit command.')
-          const value = JSON.parse(serializeDirectDocument(next)) as Record<string, any>
+          const value = JSON.parse(serializeDirectDocument(next)) as Record<string, unknown>
           for (const edit of action.edits) {
             if (
               !edit ||
@@ -111,20 +112,20 @@ export function executeDirectTransaction(document: DirectDocument, text: string)
               )
                 throw Error('Invalid recorded entity order.')
               const key = edit.id === 'groups' ? 'name' : 'id',
-                original = (next as any)[edit.id] ?? [],
-                list = value[edit.id] ?? [],
+                original = ((next as unknown as Record<string, unknown>)[edit.id] ?? []) as JsonEntity[],
+                list = (value[edit.id] ?? []) as JsonEntity[],
                 ids = edit.after as string[]
               if (
                 !sameEntity(
-                  original.map((e: any) => e[key]),
+                  original.map(e => e[key]),
                   edit.before,
                 ) ||
                 ids.length !== list.length ||
                 new Set(ids).size !== ids.length ||
-                ids.some(id => !list.some((e: any) => e[key] === id))
+                ids.some(id => !list.some(e => e[key] === id))
               )
                 throw Error('Recorded entity order does not match the source.')
-              value[edit.id] = ids.map(id => list.find((e: any) => e[key] === id))
+              value[edit.id] = ids.map(id => list.find(e => e[key] === id))
             } else if (edit.collection === 'metadata') {
               if (
                 !['interchange', 'blenderProjectId', 'units', 'pivots', 'cplane'].includes(edit.id) ||
@@ -134,7 +135,7 @@ export function executeDirectTransaction(document: DirectDocument, text: string)
               if (edit.after === null) delete value[edit.id]
               else value[edit.id] = edit.after
             } else {
-              const list: any[] = value[edit.collection] ?? [],
+              const list = (value[edit.collection] ?? []) as unknown[] as JsonEntity[],
                 key = edit.collection === 'groups' ? 'name' : 'id',
                 index = list.findIndex(e => e[key] === edit.id)
               if (!sameEntity(index < 0 ? null : list[index], edit.before))
@@ -142,16 +143,16 @@ export function executeDirectTransaction(document: DirectDocument, text: string)
               if (edit.after === null) {
                 if (index >= 0) list.splice(index, 1)
               } else {
-                if (typeof edit.after !== 'object' || (edit.after as any)[key] !== edit.id)
+                if (typeof edit.after !== 'object' || (edit.after as JsonEntity)[key] !== edit.id)
                   throw Error('Entity identity mismatch.')
-                if (index >= 0) list[index] = edit.after
+                if (index >= 0) list[index] = edit.after as JsonEntity
                 else {
                   if (
                     edit.index !== undefined &&
                     (!Number.isInteger(edit.index) || edit.index < 0 || edit.index > list.length)
                   )
                     throw Error('Invalid entity insertion position.')
-                  list.splice(edit.index ?? list.length, 0, edit.after)
+                  list.splice(edit.index ?? list.length, 0, edit.after as JsonEntity)
                 }
               }
               value[edit.collection] = list
@@ -169,7 +170,7 @@ export function executeDirectTransaction(document: DirectDocument, text: string)
       }
       if (!validated) next = parseDirectDocument(serializeDirectDocument(next))
     } catch (error) {
-      throw Error(`Action ${index + 1}: ${error instanceof Error ? error.message : String(error)}`)
+      throw Error(`Action ${index + 1}: ${error instanceof Error ? error.message : String(error)}`, { cause: error })
     }
   }
   return next
@@ -199,9 +200,9 @@ export function appendDirectDocumentEdit(
   const edits: DirectDocumentEdit[] = []
   for (const collection of ['sketches', 'bodies', 'curves', 'surfaces', 'groups'] as const) {
     const key = collection === 'groups' ? 'name' : 'id',
-      a = (before[collection] ?? []) as any[],
-      b = (after[collection] ?? []) as any[]
-    const ids = new Set([...a, ...b].map(e => e[key]))
+      a = (before[collection] ?? []) as unknown as JsonEntity[],
+      b = (after[collection] ?? []) as unknown as JsonEntity[]
+    const ids = new Set([...a, ...b].map(e => e[key] as string))
     for (const id of ids) {
       const old = a.find(e => e[key] === id) ?? null,
         index = b.findIndex(e => e[key] === id),

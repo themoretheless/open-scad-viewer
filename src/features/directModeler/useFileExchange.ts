@@ -47,7 +47,7 @@ export interface UseFileExchangeOptions {
   mode: Ref<'2d' | '3d'>
   sketchPaneOpen: Ref<boolean>
   operation: Ref<'extrude' | 'revolve' | 'fillet' | 'dogear' | 'array' | null>
-  advancedOp: Ref<any>
+  advancedOp: Ref<string | null>
   subtract: Ref<{ a: string[]; b: string[]; active: 'a' | 'b' } | null>
   boxSelect: Ref<boolean>
   activePlane: Ref<SketchPlane>

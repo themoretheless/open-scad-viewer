@@ -241,7 +241,7 @@ export function snapshotRuntimeValue<TPayloadFamily extends object>(
     if (payload === null || payload === undefined) throw invalid()
     const lease = record.get('lease')
     if (lease === null || (typeof lease !== 'object' && typeof lease !== 'function')) throw invalid()
-    let validPayload = false
+    let validPayload: boolean
     try {
       validPayload =
         session.validatePayload(semanticCarrierKey(expected), payload, lease as SemanticBackendPayloadLease) === true
@@ -361,7 +361,7 @@ export function executionFailure(error: unknown, node: number | null): SemanticP
   return failure
 }
 
-export function bindBackendMethod(value: object, name: string): (...args: any[]) => any {
+export function bindBackendMethod(value: object, name: string): (...args: never[]) => unknown {
   let owner: object | null = value
   while (owner !== null) {
     const descriptor = Object.getOwnPropertyDescriptor(owner, name)
@@ -431,7 +431,7 @@ export function captureCommittedDisposer(value: unknown): (() => Promise<void>) 
       typeof descriptor.value !== 'object'
     )
       return null
-    const dispose = bindBackendMethod(descriptor.value, 'dispose')
+    const dispose = bindBackendMethod(descriptor.value, 'dispose') as () => void
     return () => Promise.resolve().then(dispose)
   } catch {
     return null
