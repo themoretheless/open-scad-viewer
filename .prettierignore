@@ -17,3 +17,6 @@ src/render/shaders/generated/
 .kimi-worktrees/
 # Byte-frozen qualification generator copies (pinned by scripts/qualificationFrozenArchives.mjs).
 scripts/refresh-qualification-fingerprints-v*-v*.mjs
+# Byte-frozen qualification oracles (sha256 bound in docs/qualification/semantic-manifold-g1-plan-v124.json).
+tests/support/referenceFrozenLegacyOutcome.ts
+tests/support/referenceLegacyDirectEvaluatorOracle.ts
