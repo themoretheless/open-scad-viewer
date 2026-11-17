@@ -105,7 +105,8 @@ function applyContract(source: string, label: string, replacements: Array<[strin
     if (source.split(from).length !== 2) throw new Error(`Instance-step ${label} shader contract changed: ${from}`)
     source = source.replace(from, to)
   }
-  if (source.includes('fromPos')) throw new Error(`Instance-step ${label} shader contract changed: morph input still referenced`)
+  if (source.includes('fromPos'))
+    throw new Error(`Instance-step ${label} shader contract changed: morph input still referenced`)
   return source
 }
 
@@ -120,11 +121,17 @@ const INSTANCE_OBJ = 'let ob = instanceObj(mat4x4f(inst.m0, inst.m1, inst.m2, in
 export function instanceStepEdgeShader(source: string) {
   return applyContract(source, 'edge', [
     ['@group(1) @binding(0) var<uniform> ob: Obj;', INSTANCE_STEP_PRELUDE],
-    ['struct EdgeV {', 'struct EdgeV { @location(1) @interpolate(flat) icolor: vec4f, @location(2) @interpolate(flat) istyle: vec4f,'],
+    [
+      'struct EdgeV {',
+      'struct EdgeV { @location(1) @interpolate(flat) icolor: vec4f, @location(2) @interpolate(flat) istyle: vec4f,',
+    ],
     ['@location(1) fromPos: vec3f) -> EdgeV {', `inst: InstanceIn) -> EdgeV {\n  ${INSTANCE_OBJ}`],
     ['mix(fromPos, pos, ob.morph.x)', 'pos'],
     ['return EdgeV(', 'return EdgeV(ob.color, ob.style, '],
-    ['@fragment fn fs(v: EdgeV) -> @location(0) vec4f {', '@fragment fn fs(v: EdgeV) -> @location(0) vec4f {\n  let ob = instanceObj(mat4x4f(), v.icolor, v.istyle);'],
+    [
+      '@fragment fn fs(v: EdgeV) -> @location(0) vec4f {',
+      '@fragment fn fs(v: EdgeV) -> @location(0) vec4f {\n  let ob = instanceObj(mat4x4f(), v.icolor, v.istyle);',
+    ],
   ])
 }
 
@@ -136,7 +143,10 @@ export function instanceStepEdgeShader(source: string) {
 export function instanceStepShadowShader(source: string) {
   return applyContract(source, 'shadow', [
     ['@group(1) @binding(0) var<uniform> ob: Obj;', INSTANCE_STEP_PRELUDE],
-    ['@location(2) fromPos: vec3f) -> @builtin(position) vec4f {', `inst: InstanceIn) -> @builtin(position) vec4f {\n  ${INSTANCE_OBJ}`],
+    [
+      '@location(2) fromPos: vec3f) -> @builtin(position) vec4f {',
+      `inst: InstanceIn) -> @builtin(position) vec4f {\n  ${INSTANCE_OBJ}`,
+    ],
     ['mix(fromPos, pos, ob.morph.x)', 'pos'],
   ])
 }
