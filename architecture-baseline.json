@@ -557,8 +557,8 @@
     "benchmarks": 6,
     "benchmarks/own-cad": 12,
     "benchmarks/rush": 37,
-    "scripts": 495,
-    "tests": 1001,
+    "scripts": 451,
+    "tests": 8,
     "tools/browser-qualification": 19,
     "tools/refactor-audit": 3
   },
