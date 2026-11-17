@@ -57,7 +57,21 @@ export function extrudeSketchProfile(sketches: readonly DirectSketch[], height: 
     [plane.u[2],plane.v[2],n[2],plane.origin[2]], [0,0,0,1],
   ])
 }
-export interface DirectExtrusionOptions { sketchIds: string[]; height: number; offset: number; operation: 'new'|'union'|'difference'; targetId: string; id: string; segments?: number }
+export type DirectExtrusionOperation = 'new'|'union'|'difference'|'intersection'
+/**
+ * `targetIds` lists further bodies the same tool combines with in one command, after `targetId`,
+ * so one cutter can subtract from several parts. Each target is combined independently.
+ */
+export interface DirectExtrusionOptions { sketchIds: string[]; height: number; offset: number; operation: DirectExtrusionOperation; targetId: string; targetIds?: string[]; id: string; segments?: number }
+/** Ordered, de-duplicated combination targets; empty for a new body. */
+export function directExtrusionTargets(options: Pick<DirectExtrusionOptions,'operation'|'targetId'|'targetIds'>): string[] {
+  if(options.operation==='new')return []
+  const ids=[options.targetId,...(options.targetIds??[])].filter(id=>id)
+  const duplicates=ids.filter((id,i)=>ids.indexOf(id)!==i)
+  if(duplicates.length)throw new DirectInputError('DIRECT_TARGET_BODY','Each target body may be selected only once.',undefined,[...new Set(duplicates)])
+  if(!ids.length)throw new DirectInputError('DIRECT_TARGET_BODY','Select a target body.')
+  return ids
+}
 /** Shared preview/commit path; the input document is never changed. */
 export function buildDirectExtrusion(document: DirectDocument, options: DirectExtrusionOptions): DirectBody | null {
   const sketches=options.sketchIds.map(id=>{const s=document.sketches.find(s=>s.id===id);if(!s)throw new DirectInputError('DIRECT_PROFILE_MISSING','Profile contour no longer exists.',undefined,[id]);return s})
@@ -76,8 +90,16 @@ export function buildDirectExtrusion(document: DirectDocument, options: DirectEx
   }
   return {...(options.operation==='new'?{id:options.id,name:`${sketches[0].name} · 3D`}:target!),mesh:{positions,indices},...(brep?{brep}:{})}
 }
+/** All targets are computed before the document changes, so a refusal on any target leaves every body intact. */
 export function applyDirectExtrusionProfile(document: DirectDocument, options: DirectExtrusionOptions): DirectDocument {
-  const body=buildDirectExtrusion(document,options)
-  const next={...document,bodies:options.operation==='new'?[...document.bodies,...(body?[body]:[])]:document.bodies.flatMap(b=>b.id===options.targetId?(body?[body]:[]):[b])}
+  const targets=directExtrusionTargets(options)
+  if(options.operation==='new'){
+    const body=buildDirectExtrusion(document,options)
+    return parseDirectDocument(stringifyMeshJson({...document,bodies:[...document.bodies,...(body?[body]:[])]}))
+  }
+  const missing=targets.filter(id=>!document.bodies.some(b=>b.id===id))
+  if(missing.length)throw new DirectInputError('DIRECT_TARGET_BODY','Select a target body.',undefined,missing)
+  const results=new Map(targets.map(targetId=>[targetId,buildDirectExtrusion(document,{...options,targetId,targetIds:[]})]))
+  const next={...document,bodies:document.bodies.flatMap(b=>{if(!results.has(b.id))return [b];const body=results.get(b.id);return body?[body]:[]})}
   return parseDirectDocument(stringifyMeshJson(next))
 }

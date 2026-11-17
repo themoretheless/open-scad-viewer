@@ -150,3 +150,27 @@ describe('retained region offset',()=>{
   expect(()=>offsetSketch(original,-10)).toThrow('contains no material');expect(original).toEqual(before)
  })
 })
+
+describe('extrusion Boolean inside the command',()=>{
+ const box=(id:string,min:[number,number,number],max:[number,number,number])=>{const brep=createBrepBox(min,max),built=tessellateNurbsBrep(brep,2);return {id,name:id,brep,mesh:{positions:built.positions,indices:built.indices}}}
+ const document=():DirectDocument=>({version:1,sketches:[rectangle('cut',-1,4,22,2)],bodies:[box('a',[0,0,0],[10,10,10]),box('b',[11,0,0],[21,10,10]),box('c',[0,20,0],[10,30,10])]})
+ it('subtracts one tool from several targets and leaves other bodies alone',()=>{
+  const result=applyDirectExtrusionProfile(document(),{sketchIds:['cut'],height:12,offset:-1,operation:'difference',targetId:'a',targetIds:['b'],id:'unused'})
+  expect(result.bodies.map(b=>b.id)).toEqual(['a','b','c'])
+  expect(volume(result.bodies[0].brep!)).toBeCloseTo(800,5)
+  expect(volume(result.bodies[1].brep!)).toBeCloseTo(800,5)
+  expect(volume(result.bodies[2].brep!)).toBeCloseTo(1000,5)
+ })
+ it('intersects the tool with the target exactly',()=>{
+  const result=applyDirectExtrusionProfile(document(),{sketchIds:['cut'],height:12,offset:-1,operation:'intersection',targetId:'a',id:'unused'})
+  expect(volume(result.bodies[0].brep!)).toBeCloseTo(200,5)
+ })
+ it('removes a target whose result is empty and refuses duplicate or missing targets without changes',()=>{
+  const d=document(),before=JSON.stringify(d)
+  const result=applyDirectExtrusionProfile(d,{sketchIds:['cut'],height:12,offset:-1,operation:'intersection',targetId:'a',targetIds:['c'],id:'unused'})
+  expect(result.bodies.map(b=>b.id)).toEqual(['a','b'])
+  expect(()=>applyDirectExtrusionProfile(d,{sketchIds:['cut'],height:12,offset:-1,operation:'difference',targetId:'a',targetIds:['a'],id:'x'})).toThrow(expect.objectContaining({code:'DIRECT_TARGET_BODY',targetIds:['a']}))
+  expect(()=>applyDirectExtrusionProfile(d,{sketchIds:['cut'],height:12,offset:-1,operation:'difference',targetId:'a',targetIds:['gone'],id:'x'})).toThrow(expect.objectContaining({targetIds:['gone']}))
+  expect(JSON.stringify(d)).toBe(before)
+ })
+})
