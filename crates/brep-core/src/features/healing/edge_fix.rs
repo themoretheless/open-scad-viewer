@@ -1,5 +1,5 @@
 //! Atomic edge-fixing pipeline: snap, same-parameter, safe degenerate removal,
-//! and an explicit refusal boundary for topology-changing edge splits.
+//! and an atomic, re-proved edge split for untrimmed nonperiodic uses.
 
 use crate::defects::{DefectBudget, DefectKind, DefectReport, classify_defects};
 use crate::healing_report::{
@@ -400,12 +400,26 @@ fn degenerate_stage(model: &Model, budget: EdgeFixBudget) -> Result<(Model, Heal
     Ok((staged, stage))
 }
 
-/// Explicit edge-split boundary. The existing authorized kernel correctly
-/// refuses split recipes until child-loop authorship is implemented.
-pub fn split_edge(model: &Model, edge: usize, parameter: f64) -> Result<HealingStageReport> {
+/// Upper bound on continuous correspondence cells spent by one edge split.
+pub const EDGE_SPLIT_MAX_CELLS: usize = 100_000;
+
+/// Split one nonperiodic edge at a strictly interior natural parameter and
+/// update every face-local use atomically. Each use is cut at the same
+/// normalized clock as the 3D edge (mirrored for reversed uses), and the
+/// shared partition kernel re-proves every child against the original curve
+/// and support surfaces. Trimmed (subrange) uses and periodic edges stay
+/// typed refusals; any failure returns no model.
+pub fn split_edge(
+    model: &Model,
+    edge: usize,
+    parameter: f64,
+) -> Result<(Model, HealingStageReport)> {
     let Some(edge_model) = model.edges.get(edge) else {
         return Err(fail(EDGE_SPLIT_REFUSED, "Split edge is out of range"));
     };
+    if edge_model.degenerate {
+        return Err(fail(EDGE_SPLIT_REFUSED, "Degenerate edges are not split"));
+    }
     let [lo, hi] = edge_model.curve.domain();
     if !parameter.is_finite() || parameter <= lo || parameter >= hi {
         return Err(fail(
@@ -413,10 +427,38 @@ pub fn split_edge(model: &Model, edge: usize, parameter: f64) -> Result<HealingS
             "Split parameter must be finite and strictly interior",
         ));
     }
-    Err(fail(
-        EDGE_SPLIT_REFUSED,
-        "EdgeSplit lacks topology-preserving child-loop authorship",
-    ))
+    let fraction = (parameter - lo) / (hi - lo);
+    let mut cuts = Vec::new();
+    for (wire, w) in model.loops.iter().enumerate() {
+        for (coedge, c) in w.coedges.iter().enumerate() {
+            if c.edge != edge {
+                continue;
+            }
+            if c.trim().is_some() {
+                return Err(fail(
+                    EDGE_SPLIT_REFUSED,
+                    "Split of a use with an authored trim window is unsupported",
+                ));
+            }
+            let [p0, p1] = c.pcurve.domain();
+            let t = if c.reversed { 1. - fraction } else { fraction };
+            cuts.push(crate::edge_partition::PcurveCut {
+                wire,
+                coedge,
+                parameter: p0 + t * (p1 - p0),
+            });
+        }
+    }
+    if cuts.is_empty() {
+        return Err(fail(EDGE_SPLIT_REFUSED, "Split edge has no face-local use"));
+    }
+    let wrap = |error: Error| fail(EDGE_SPLIT_REFUSED, format!("{}: {}", error.code, error.message));
+    let split = crate::edge_partition::partition(model, edge, parameter, &cuts, EDGE_SPLIT_MAX_CELLS)
+        .map_err(wrap)?;
+    split.model.validate().map_err(wrap)?;
+    let mut stage = metric("edgeSplit");
+    stage.fixed = 1;
+    Ok((split.model, stage))
 }
 
 fn append_skip_reasons(report: &mut crate::healing_report::HealingReport) {
@@ -570,6 +612,51 @@ mod tests {
         assert!(!run.report.unresolved_defects.is_empty());
         let error = split_edge(&model, 0, 0.5).unwrap_err();
         assert_eq!(error.code, EDGE_SPLIT_REFUSED);
+    }
+
+    #[test]
+    fn interior_split_updates_both_face_uses_and_keeps_a_valid_closed_body() {
+        let model = crate::cuboid([0.; 3], [1.; 3]).unwrap();
+        let [lo, hi] = model.edges[0].curve.domain();
+        let parameter = lo + 0.25 * (hi - lo);
+        let uses = |m: &Model, e: usize| {
+            m.loops.iter().flat_map(|w| &w.coedges).filter(|c| c.edge == e).count()
+        };
+        assert_eq!(uses(&model, 0), 2);
+        let (split, stage) = split_edge(&model, 0, parameter).unwrap();
+        assert_eq!(stage.stage, "edgeSplit");
+        assert_eq!(stage.fixed, 1);
+        assert_eq!(split.edges.len(), model.edges.len() + 1);
+        assert_eq!(split.vertices.len(), model.vertices.len() + 1);
+        let coedges = |m: &Model| m.loops.iter().map(|w| w.coedges.len()).sum::<usize>();
+        assert_eq!(coedges(&split), coedges(&model) + 2);
+        split.validate().unwrap();
+        let expected = crate::curve_point(&model.edges[0].curve, 0.25).unwrap();
+        let new_vertex = &split.vertices[model.vertices.len()];
+        assert!(crate::distance(&new_vertex.point, &expected) <= model.tolerance_mm);
+        let new_edge = model.edges.len();
+        assert_eq!(uses(&split, new_edge), 2);
+        assert!(split.edges.iter().all(|e| !e.degenerate));
+        assert_eq!(model.edges.len(), crate::cuboid([0.; 3], [1.; 3]).unwrap().edges.len());
+    }
+
+    #[test]
+    fn split_refuses_trimmed_uses_degenerate_edges_and_boundary_parameters() {
+        let model = crate::cuboid([0.; 3], [1.; 3]).unwrap();
+        let [lo, hi] = model.edges[0].curve.domain();
+        for parameter in [lo, hi, f64::NAN, hi + 1.] {
+            assert_eq!(split_edge(&model, 0, parameter).unwrap_err().code, EDGE_SPLIT_REFUSED);
+        }
+        assert_eq!(
+            split_edge(&model, model.edges.len(), 0.5).unwrap_err().code,
+            EDGE_SPLIT_REFUSED
+        );
+        let mut degenerate = model.clone();
+        degenerate.edges[0].degenerate = true;
+        assert_eq!(
+            split_edge(&degenerate, 0, (lo + hi) * 0.5).unwrap_err().code,
+            EDGE_SPLIT_REFUSED
+        );
     }
 
     #[test]
