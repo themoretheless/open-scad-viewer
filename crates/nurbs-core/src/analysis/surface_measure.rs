@@ -482,17 +482,28 @@ pub fn trimmed_surface_centroid(
         max_surface_cells,
         max_trim_cells,
     )?;
-    let Some(area) = measure.area.as_ref().filter(|area| area.bounds[0] > 0.) else {
-        return Ok(TrimmedCentroidReport {
-            measure,
-            centroid_bounds: None,
-        });
-    };
+    let centroid_bounds = measure
+        .area
+        .as_ref()
+        .filter(|area| area.bounds[0] > 0.)
+        .map(|area| enclose_trimmed_centroid(surface, &cells, area))
+        .transpose()?;
+    Ok(TrimmedCentroidReport {
+        measure,
+        centroid_bounds,
+    })
+}
+
+fn enclose_trimmed_centroid(
+    surface: &Surface,
+    cells: &BinaryHeap<Cell>,
+    area: &AreaReport,
+) -> Result<[[f64; 2]; 3]> {
     let denominator = Interval::new(area.bounds[0], area.bounds[1])?;
-    let origin = surface.control_points[0][0].as_slice();
+    let origin = [0, 1, 2].map(|axis| Interval::point(surface.control_points[0][0][axis]));
     let mut moment = [Interval::point(0.); 3];
     let mut support = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
-    for cell in &cells {
+    for cell in cells {
         if cell.area.hi == 0. {
             continue;
         }
@@ -508,26 +519,22 @@ pub fn trimmed_surface_centroid(
         let bound = moment[axis]
             .div(denominator)?
             .intersect(support[axis][0], support[axis][1])?
-            .add(Interval::point(origin[axis]))?;
+            .add(origin[axis])?;
         *output = [bound.lo, bound.hi];
     }
-    Ok(TrimmedCentroidReport {
-        measure,
-        centroid_bounds: Some(centroid_bounds),
-    })
+    Ok(centroid_bounds)
 }
 
 fn cell_position_relative_to(
     surface: &Surface,
     cell: &Cell,
-    origin: &[f64],
+    origin: [Interval; 3],
 ) -> Result<[Interval; 3]> {
     let mut point = first_jets::calculate(surface, cell.span, cell.domain)?[0];
     let anchor =
         &surface.control_points[cell.span[0] - surface.degree_u][cell.span[1] - surface.degree_v];
     for axis in 0..3 {
-        point[axis] =
-            point[axis].add(Interval::point(anchor[axis]).sub(Interval::point(origin[axis]))?)?;
+        point[axis] = point[axis].add(Interval::point(anchor[axis]).sub(origin[axis])?)?;
     }
     Ok(point)
 }
@@ -568,12 +575,74 @@ pub fn trimmed_surface_area_inertia(
             inertia_bounds: None,
         });
     }
+    let inertia_bounds = enclose_trimmed_inertia(surface, &cells, origin.map(Interval::point))?;
+    Ok(TrimmedInertiaReport {
+        measure,
+        inertia_bounds: Some(inertia_bounds),
+    })
+}
+
+#[derive(Clone, Debug)]
+pub struct TrimmedCentralInertiaReport {
+    pub centroid: TrimmedCentroidReport,
+    /// Symmetric tensor about the true area centroid, for unit density.
+    pub central_inertia_bounds: Option<[[[f64; 2]; 3]; 3]>,
+}
+
+/// Enclose the centroid and its central inertia tensor on one certified
+/// trim partition. A positive area proof is required for both quantities.
+pub fn trimmed_surface_central_inertia(
+    surface: &Surface,
+    trim: &TrimDomain,
+    area_tolerance: f64,
+    max_surface_cells: usize,
+    max_trim_cells: usize,
+) -> Result<TrimmedCentralInertiaReport> {
+    let (measure, cells) = trimmed_surface_area_in_domain(
+        surface,
+        trim,
+        None,
+        area_tolerance,
+        max_surface_cells,
+        max_trim_cells,
+    )?;
+    let Some(area) = measure.area.as_ref().filter(|area| area.bounds[0] > 0.) else {
+        return Ok(TrimmedCentralInertiaReport {
+            centroid: TrimmedCentroidReport {
+                measure,
+                centroid_bounds: None,
+            },
+            central_inertia_bounds: None,
+        });
+    };
+    let centroid_bounds = enclose_trimmed_centroid(surface, &cells, area)?;
+    let [[x0, x1], [y0, y1], [z0, z1]] = centroid_bounds;
+    let center = [
+        Interval::new(x0, x1)?,
+        Interval::new(y0, y1)?,
+        Interval::new(z0, z1)?,
+    ];
+    let central_inertia_bounds = enclose_trimmed_inertia(surface, &cells, center)?;
+    Ok(TrimmedCentralInertiaReport {
+        centroid: TrimmedCentroidReport {
+            measure,
+            centroid_bounds: Some(centroid_bounds),
+        },
+        central_inertia_bounds: Some(central_inertia_bounds),
+    })
+}
+
+fn enclose_trimmed_inertia(
+    surface: &Surface,
+    cells: &BinaryHeap<Cell>,
+    origin: [Interval; 3],
+) -> Result<[[[f64; 2]; 3]; 3]> {
     let mut tensor = [[Interval::point(0.); 3]; 3];
-    for cell in &cells {
+    for cell in cells {
         if cell.area.hi == 0. {
             continue;
         }
-        let position = cell_position_relative_to(surface, cell, &origin)?;
+        let position = cell_position_relative_to(surface, cell, origin)?;
         let mut squares = [Interval::point(0.); 3];
         for (output, x) in squares.iter_mut().zip(position) {
             let square = x.mul(x)?;
@@ -597,8 +666,5 @@ pub fn trimmed_surface_area_inertia(
             bounds[j][i] = interval;
         }
     }
-    Ok(TrimmedInertiaReport {
-        measure,
-        inertia_bounds: Some(bounds),
-    })
+    Ok(bounds)
 }

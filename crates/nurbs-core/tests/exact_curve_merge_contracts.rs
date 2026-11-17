@@ -6390,3 +6390,84 @@ fn trimmed_surface_inertia_withholds_incomplete_basis_coverage() {
     assert!(coarse.inertia_bounds.is_some());
     assert_eq!(coarse.measure.area.unwrap().bounds[0], 0.);
 }
+
+#[test]
+fn trimmed_surface_central_inertia_encloses_analytic_values_on_one_partition() {
+    use nurbs_core::{
+        analysis::surface_measure::trimmed_surface_central_inertia,
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
+        trim_domain::TrimDomain,
+    };
+    let mut profile = periodic_unit_square();
+    for pole in &mut profile.control_points {
+        pole.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let hole = [
+        [0.125, 0.25],
+        [0.375, 0.25],
+        [0.375, 0.75],
+        [0.125, 0.75],
+        [0.125, 0.25],
+    ];
+    let patch = build_exact_periodic_surface_trim_patches(&source, &[&outer, &hole], 1_000_000)
+        .unwrap()
+        .patches
+        .unwrap()
+        .remove(0);
+    let trim = TrimDomain::new(&patch.trim.loops, 1e-10).unwrap();
+    let report =
+        trimmed_surface_central_inertia(&patch.surface, &trim, 0.002, 20_000, 1_000_000).unwrap();
+    let tensor = report.central_inertia_bounds.unwrap();
+    for (i, j, expected) in [
+        (2, 2, 259. / 3840.),
+        (0, 1, 3. / 160.),
+        (0, 2, 0.),
+        (1, 2, 0.),
+    ] {
+        let [lo, hi] = tensor[i][j];
+        assert!(lo <= expected && expected <= hi, "{tensor:?}");
+        assert_eq!(tensor[i][j], tensor[j][i]);
+    }
+    assert!(tensor[2][2][1] - tensor[2][2][0] < 0.2);
+    assert!(report.centroid.centroid_bounds.is_some());
+    assert!(report.centroid.measure.area.unwrap().cells <= 20_000);
+}
+
+#[test]
+fn trimmed_surface_central_inertia_requires_positive_area() {
+    use nurbs_core::{
+        analysis::surface_measure::trimmed_surface_central_inertia,
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
+        trim_domain::TrimDomain,
+    };
+    let mut profile = periodic_unit_square();
+    for pole in &mut profile.control_points {
+        pole.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let patch = build_exact_periodic_surface_trim_patches(&source, &[&outer], 1_000_000)
+        .unwrap()
+        .patches
+        .unwrap()
+        .remove(0);
+    let trim = TrimDomain::new(&patch.trim.loops, 1e-10).unwrap();
+    let report = trimmed_surface_central_inertia(&patch.surface, &trim, 0.01, 2, 1).unwrap();
+    assert!(report.centroid.centroid_bounds.is_none());
+    assert!(report.central_inertia_bounds.is_none());
+    assert_eq!(report.centroid.measure.area.unwrap().bounds[0], 0.);
+}
