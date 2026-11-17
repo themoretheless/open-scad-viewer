@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 334,
-  "unallocatedCount": 666,
+  "specifiedCount": 335,
+  "unallocatedCount": 665,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8655,6 +8655,26 @@
       "remainingQualification": [
         "Cast an exact rational ray-plane hit and certify whether its projected location lies in filled rational trim winding.",
         "Exact forward half-ray parameter and closed rational winding contours. Coplanar and boundary-band queries remain distinct outcomes.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0335",
+      "name": "Точная локализация контактов рационального UV-контура с наклонной прямой",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::isolate_pcurve_line",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs",
+        "crates/nurbs-core/tests/exact_pcurve_line_contact_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-335-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-335-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Isolate exact homogeneous roots for arbitrary planar line contacts with crossing parity, endpoint ownership and coincident spans.",
+        "Authored line coefficients are exact binary64 inputs. Roots are isolated in the original curve parameter; coincident spans are explicit.",
         "WASM and application integration are separate."
       ]
     }

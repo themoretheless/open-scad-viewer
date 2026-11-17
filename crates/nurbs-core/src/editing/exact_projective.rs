@@ -59,7 +59,7 @@ pub use pcurve_seam::{
 mod pcurve_seam_isolation;
 pub use pcurve_seam_isolation::{
     PcurveSeamIsolatedSpan, PcurveSeamIsolation, PcurveSeamIsolationReport, PcurveSeamRoot,
-    isolate_pcurve_seam,
+    isolate_pcurve_line, isolate_pcurve_seam,
 };
 mod pcurve_seam_split;
 pub use pcurve_seam_split::{

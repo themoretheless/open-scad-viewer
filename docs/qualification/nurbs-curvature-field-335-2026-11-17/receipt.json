@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0335",
+  "testedBase": "2f185afe4f2e987e17eea85b38030d4e5d175922",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_pcurve_line_contact_contracts",
+    "--test",
+    "exact_pcurve_seam_isolation_contracts",
+    "--test",
+    "exact_pcurve_seam_split_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 6,
+  "scope": [
+    "Isolate exact homogeneous roots for arbitrary planar line contacts with crossing parity, endpoint ownership and coincident spans.",
+    "Authored line coefficients are exact binary64 inputs. Roots are isolated in the original curve parameter; coincident spans are explicit."
+  ],
+  "logSha256": "148ad06ae79d56317716ce2f8a88a7527dbb03a48922eca8956c8f5dc9269c72",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "f50b614178311541c5f36ee3f4f3841eacb180134ab1c02a6245fd9da9449145",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "422bc24d3a711b7f9378d75b8e91de85cc86d91ff39e3587fc639b91d0cd767b",
+    "crates/nurbs-core/tests/exact_pcurve_line_contact_contracts.rs": "83ae2266ef962aed3416bb8de341b69dcf14e9ffe39411556986291ca38c2925"
+  }
+}

@@ -2,7 +2,8 @@
 use super::{
     UvAxis,
     chart_nonnegative::{SturmChain, interior_contact_factors},
-    pcurve_mobius::active_spans,
+    mobius::validate_clock,
+    pcurve_mobius::{active_spans, original_span, scale},
     pcurve_seam::{seam_power, validate_seam},
 };
 use crate::{
@@ -10,7 +11,7 @@ use crate::{
     core::bounded_rational::Work,
     curve::Curve,
     editing::{
-        exact_derivative::{PResult, Refusal},
+        exact_derivative::{PResult, Refusal, add},
         rational_factor::polynomial::Poly,
     },
 };
@@ -87,10 +88,77 @@ pub(super) fn isolate(
     work: &mut Work,
 ) -> PResult<Vec<PcurveSeamIsolatedSpan>> {
     let seam = work.lift(seam)?;
+    isolate_equation(source, max_width, work, |span, parameter, work| {
+        seam_power(source, span, parameter, coordinate, &seam, work)
+    })
+}
+
+/// Isolate contacts of a rational UV curve with a line a*u + b*v + c = 0.
+/// All finite authored coefficients are used exactly. Each span retains
+/// endpoint ownership, and coincident spans are reported as full intervals.
+pub fn isolate_pcurve_line(
+    source: &Curve,
+    coefficients: [f64; 3],
+    max_width: f64,
+    max_work: u64,
+) -> Result<PcurveSeamIsolationReport> {
+    source.validate()?;
+    check(
+        source.control_points[0].len() == 2
+            && coefficients.iter().all(|x| x.is_finite())
+            && (coefficients[0] != 0. || coefficients[1] != 0.)
+            && max_width.is_finite()
+            && max_width > 0.,
+        "Line contact needs a 2D curve, finite nonzero line normal and positive parameter width",
+    )?;
+    validate_clock(&[], max_work)?;
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let result = (|| {
+        let coefficients = [
+            work.lift(coefficients[0])?,
+            work.lift(coefficients[1])?,
+            work.lift(coefficients[2])?,
+        ];
+        isolate_equation(
+            source,
+            Some(max_width),
+            &mut work,
+            |span, parameter, work| {
+                let homogeneous = original_span(source, span, parameter, work)?;
+                homogeneous.iter().zip(&coefficients).try_fold(
+                    Poly::new(),
+                    |sum, (component, factor)| {
+                        let term = scale(component, factor, work)?;
+                        add(&sum, &term, false, work)
+                    },
+                )
+            },
+        )
+    })();
+    let (spans, refusal) = match result {
+        Ok(spans) => (Some(spans), None),
+        Err(reason) => (None, Some(reason)),
+    };
+    Ok(PcurveSeamIsolationReport {
+        spans,
+        refusal,
+        work_used: work.used,
+    })
+}
+
+fn isolate_equation(
+    source: &Curve,
+    max_width: Option<f64>,
+    work: &mut Work,
+    mut power_on_span: impl FnMut(usize, [f64; 2], &mut Work) -> PResult<Poly>,
+) -> PResult<Vec<PcurveSeamIsolatedSpan>> {
     let max_width = max_width.map(|width| work.lift(width)).transpose()?;
     active_spans(source)
         .map(|(span, parameter)| {
-            let power = seam_power(source, span, parameter, coordinate, &seam, work)?;
+            let power = power_on_span(span, parameter, work)?;
             let contact = if power.is_empty() {
                 PcurveSeamIsolation::Coincident
             } else {
