@@ -67,7 +67,7 @@ export function reachableNodes(nodes: readonly SemanticNode[], roots: readonly n
     const node = stack.pop()!
     if (reached[node]) continue
     reached[node] = 1
-    stack.push(...semanticNodeInputs(nodes[node]))
+    stack.push(...semanticNodeInputs(nodes[node]!))
   }
   return reached
 }
@@ -95,7 +95,7 @@ export function validateExecution(
     const node = integer(rawNode, `$.core.execution.evaluationOrder[${index}]`, 0, Math.max(0, nodes.length - 1))
     if (nodes.length === 0) fail('E_SEMANTIC_REFERENCE', `$.core.execution.evaluationOrder[${index}]`, 'evaluation order references absent node')
     if (position[node] !== -1) fail('E_SEMANTIC_ORDER', `$.core.execution.evaluationOrder[${index}]`, 'evaluation order contains a duplicate node')
-    for (const input of semanticNodeInputs(nodes[node])) {
+    for (const input of semanticNodeInputs(nodes[node]!)) {
       if (position[input] === -1) fail('E_SEMANTIC_DAG', `$.core.execution.evaluationOrder[${index}]`, 'a node is scheduled before one of its inputs')
     }
     position[node] = index
@@ -121,14 +121,14 @@ export function validateExecution(
     if (effect.tag !== 'legacy-difference-cutters') fail('E_SEMANTIC_FIELD', `${path}.tag`, 'unknown discarded effect kind')
     if (languageContract !== 'legacy/current') fail('E_SEMANTIC_TYPE', path, 'discarded legacy effects are forbidden for brep-1')
     const root = integer(effect.root, `${path}.root`, 0, Math.max(0, nodes.length - 1))
-    if (nodes.length === 0 || position[root] < 0) fail('E_SEMANTIC_REFERENCE', `${path}.root`, 'effect root is absent from evaluation order')
+    if (nodes.length === 0 || position[root]! < 0) fail('E_SEMANTIC_REFERENCE', `${path}.root`, 'effect root is absent from evaluation order')
     if (effectRoots.has(root)) fail('E_SEMANTIC_ORDER', `${path}.root`, 'effect roots must be unique')
-    if (position[root] <= priorEffectPosition) fail('E_SEMANTIC_ORDER', `${path}.root`, 'effects must follow kernel evaluation order')
+    if (position[root]! <= priorEffectPosition) fail('E_SEMANTIC_ORDER', `${path}.root`, 'effects must follow kernel evaluation order')
     effectRoots.add(root)
-    priorEffectPosition = position[root]
+    priorEffectPosition = position[root]!
     const ownerOccurrence = integer(effect.ownerOccurrence, `${path}.ownerOccurrence`, 0, Math.max(0, occurrences.length - 1))
     if (occurrences.length === 0) fail('E_SEMANTIC_REFERENCE', `${path}.ownerOccurrence`, 'effect owner occurrence is absent')
-    const owner = occurrences[ownerOccurrence]
+    const owner = occurrences[ownerOccurrence]!
     if (firstRowByOccurrenceId.get(owner.occurrenceId) !== ownerOccurrence) {
       fail('E_SEMANTIC_ORDER', `${path}.ownerOccurrence`, 'effect owner must use the canonical occurrence row')
     }
@@ -148,7 +148,7 @@ export function validateExecution(
       0,
       Math.max(0, templates.length - 1),
     )
-    if (templates.length === 0 || templates[diagnosticTemplate].severity !== 'error') {
+    if (templates.length === 0 || templates[diagnosticTemplate]!.severity !== 'error') {
       fail('E_SEMANTIC_REFERENCE', `${path}.diagnosticTemplate`, 'terminal must reference an error diagnostic template')
     }
     const occurrence = integer(
@@ -157,10 +157,10 @@ export function validateExecution(
       0,
       Math.max(0, occurrences.length - 1),
     )
-    if (occurrences.length === 0 || firstRowByOccurrenceId.get(occurrences[occurrence].occurrenceId) !== occurrence) {
+    if (occurrences.length === 0 || firstRowByOccurrenceId.get(occurrences[occurrence]!.occurrenceId) !== occurrence) {
       fail('E_SEMANTIC_ORDER', `${path}.occurrence`, 'terminal must reference the canonical interrupted occurrence row')
     }
-    const interruptedId = occurrences[occurrence].occurrenceId
+    const interruptedId = occurrences[occurrence]!.occurrenceId
     // A parent operation may fail after all of its children (and even after
     // materializing earlier map outputs), so "terminal is the final row" is
     // false. What the source-free graph can prove is that the claimed frame
@@ -168,7 +168,7 @@ export function validateExecution(
     // activation or its runtime subtree. Exact deepest-error provenance is a
     // trusted-lowerer property; structural SPE/SPC graphs are never executable.
     for (let index = occurrence + 1; index < occurrences.length; index++) {
-      if (occurrences[index].occurrenceId === interruptedId
+      if (occurrences[index]!.occurrenceId === interruptedId
         || occurrenceIsDescendantOf(index, occurrence, occurrences)) continue
       fail(
         'E_SEMANTIC_ORDER',
@@ -176,18 +176,18 @@ export function validateExecution(
         'no later sibling activation may exist outside the interrupted terminal subtree',
       )
     }
-    const template = templates[diagnosticTemplate]
-    if (template.operation !== occurrences[occurrence].operation) {
+    const template = templates[diagnosticTemplate]!
+    if (template.operation !== occurrences[occurrence]!.operation) {
       fail('E_SEMANTIC_IDENTITY', `${path}.diagnosticTemplate`, 'terminal template operation must equal the interrupted occurrence operation')
     }
     if (template.code !== 'LEGACY_LANGUAGE_ERROR'
       || template.arguments.length !== 2
-      || template.arguments[0].name !== 'errorName'
-      || template.arguments[0].value.tag !== 'string'
-      || !['OpenSCADParseError', 'TypeError'].includes(template.arguments[0].value.value)
-      || template.arguments[1].name !== 'detailSha256'
-      || template.arguments[1].value.tag !== 'string'
-      || !/^[a-f0-9]{64}$/.test(template.arguments[1].value.value)) {
+      || template.arguments[0]!.name !== 'errorName'
+      || template.arguments[0]!.value.tag !== 'string'
+      || !['OpenSCADParseError', 'TypeError'].includes(template.arguments[0]!.value.value)
+      || template.arguments[1]!.name !== 'detailSha256'
+      || template.arguments[1]!.value.tag !== 'string'
+      || !/^[a-f0-9]{64}$/.test(template.arguments[1]!.value.value)) {
       fail('E_SEMANTIC_IDENTITY', `${path}.diagnosticTemplate`, 'terminal requires the exact frozen legacy error template shape')
     }
     if (validatedEffects.length !== 0) {
@@ -205,15 +205,15 @@ export function validateExecution(
       let ownerOccurrence: number | null = null
       if (entry.ownerOccurrence !== null) {
         ownerOccurrence = integer(entry.ownerOccurrence, `${entryPath}.ownerOccurrence`, 0, Math.max(0, occurrences.length - 1))
-        if (occurrences.length === 0 || occurrences[ownerOccurrence].node !== root) {
+        if (occurrences.length === 0 || occurrences[ownerOccurrence]!.node !== root) {
           fail('E_SEMANTIC_IDENTITY', `${entryPath}.ownerOccurrence`, 'terminal prefix owner must materialize its root')
         }
       }
       const admittedProducers = new Set<number>()
       occurrences.forEach((candidate, _candidateIndex) => {
         if (candidate.node !== root || candidate.outputOrdinal === null) return
-        if (!semanticNodeProducerOperationNames(nodes[root]).includes(
-          operations[candidate.operation].name,
+        if (!semanticNodeProducerOperationNames(nodes[root]!).includes(
+          operations[candidate.operation]!.name,
         )) return
         const canonical = firstRowByOccurrenceId.get(candidate.occurrenceId)
         if (canonical !== undefined) admittedProducers.add(canonical)
@@ -224,7 +224,7 @@ export function validateExecution(
           fail('E_SEMANTIC_IDENTITY', `${entryPath}.ownerOccurrence`, 'terminal prefix root must name its exact materializer occurrence')
         }
       } else if (admittedProducers.size === 0
-        && nodes[root].kind === 'boolean' && nodes[root].operation === 'union') {
+        && nodes[root]!.kind === 'boolean' && nodes[root].operation === 'union') {
         if (ownerOccurrence !== null) {
           fail('E_SEMANTIC_IDENTITY', `${entryPath}.ownerOccurrence`, 'internal union reducer must have a null terminal prefix owner')
         }
@@ -237,7 +237,7 @@ export function validateExecution(
     nodes.forEach(node => semanticNodeInputs(node).forEach(input => { consumed[input] = 1 }))
     const maximal = order.filter(node => consumed[node as number] === 0) as number[]
     if (maximal.length !== validatedFrontier.length
-      || maximal.some((root, index) => root !== validatedFrontier[index].root)) {
+      || maximal.some((root, index) => root !== validatedFrontier[index]!.root)) {
       fail('E_SEMANTIC_DAG', `${path}.prefixFrontier`, 'terminal prefix must list every maximal completed node in evaluation order')
     }
     terminal = { tag: value.terminal.tag, occurrence, diagnosticTemplate, prefixFrontier: validatedFrontier }
@@ -264,7 +264,7 @@ export function semanticProductionRule(
   allowInterruptedUnsupported = false,
 ): SemanticProductionRule {
   const pair = `${operation.category}:${operation.name}`
-  const last = operation.structuralPath[operation.structuralPath.length - 1]
+  const last = operation.structuralPath[operation.structuralPath.length - 1]!
   const prior = operation.structuralPath[operation.structuralPath.length - 2]
   const authoredCall = last.kind === 'call'
   if (operation.category === 'geometry' && authoredCall && ['cube', 'sphere', 'cylinder', 'polyhedron', 'square', 'circle', 'polygon'].includes(operation.name)) return 'primitive'

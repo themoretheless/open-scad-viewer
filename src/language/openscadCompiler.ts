@@ -257,9 +257,9 @@ export class Parser {
     return result
   }
 
-  private peek(offset = 0) { return this.tokens[this.pos + offset] ?? this.tokens[this.tokens.length - 1] }
+  private peek(offset = 0) { return this.tokens[this.pos + offset] ?? this.tokens[this.tokens.length - 1]! }
   private advance() {
-    const token = this.tokens[this.pos++]
+    const token = this.tokens[this.pos++]!
     this.lastTokenEnd = token.end
     return token
   }
@@ -362,7 +362,7 @@ export class Parser {
     else node = this.call()
     if (viewportModifiers.length > 0) {
       if (node.type !== 'call' && node.type !== 'directive') {
-        const first = viewportModifiers[0]
+        const first = viewportModifiers[0]!
         this.fail(
           { t: TT.Eof, v: first.token, p: first.span.start, end: first.span.end },
           'Viewport modifiers may prefix only a module instantiation or an include/use directive',
@@ -805,7 +805,7 @@ export class Parser {
   private matchingRightParen(openIndex: number): number | undefined {
     let depth = 0
     for (let index = openIndex; index < this.tokens.length; index++) {
-      const type = this.tokens[index].t
+      const type = this.tokens[index]!.t
       if (type === TT.LParen) depth++
       else if (type === TT.RParen && --depth === 0) return index
     }
@@ -894,7 +894,7 @@ export class Parser {
     let brackets = 0
     let braces = 0
     for (let index = this.pos; index < this.tokens.length; index++) {
-      const type = this.tokens[index].t
+      const type = this.tokens[index]!.t
       if (type === TT.LParen) parens++
       else if (type === TT.RParen) {
         if (parens === 0 && brackets === 0 && braces === 0) return false

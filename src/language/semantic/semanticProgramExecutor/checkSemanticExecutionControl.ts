@@ -219,10 +219,10 @@ export function reduceEmptyInputs<TPayloadFamily extends object>(
 }> {
   const allPositions = Object.freeze(inputs.map((_, index) => index))
   const select = (predicate: (input: SemanticRuntimeValue<TPayloadFamily>, index: number) => boolean) => {
-    const positions = Object.freeze(allPositions.filter(index => predicate(inputs[index], index)))
+    const positions = Object.freeze(allPositions.filter(index => predicate(inputs[index]!, index)))
     return Object.freeze({
       positions,
-      inputs: Object.freeze(positions.map(index => inputs[index])),
+      inputs: Object.freeze(positions.map(index => inputs[index]!)),
     })
   }
   switch (node.kind) {

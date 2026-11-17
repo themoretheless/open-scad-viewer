@@ -146,7 +146,7 @@ export function validateSemanticProgramV1(value: unknown): asserts value is Sema
     const path = `$.tessellationIntents[${index}]`
     exactKeys(intent, ['occurrence', 'chordTolerance', 'angularToleranceDegrees', 'minSegments', 'maxSegments'], path)
     const occurrence = integer(intent.occurrence, `${path}.occurrence`, 0, Math.max(0, core.occurrences.length - 1))
-    if (core.occurrences.length === 0 || core.occurrences[occurrence].node === null) fail('E_SEMANTIC_REFERENCE', `${path}.occurrence`, 'tessellation intent needs a producing occurrence')
+    if (core.occurrences.length === 0 || core.occurrences[occurrence]!.node === null) fail('E_SEMANTIC_REFERENCE', `${path}.occurrence`, 'tessellation intent needs a producing occurrence')
     if (occurrence <= priorOccurrence) fail('E_SEMANTIC_ORDER', `${path}.occurrence`, 'intents must be unique and ordered by occurrence')
     priorOccurrence = occurrence
     nullablePositive(intent.chordTolerance, `${path}.chordTolerance`)
@@ -229,7 +229,7 @@ export function validateCanonicalStringBudget(value: unknown): void {
     } else if (isRecord(current.value)) {
       const entries = Object.entries(current.value)
       for (let index = entries.length - 1; index >= 0; index--) {
-        const [key, child] = entries[index]
+        const [key, child] = entries[index]!
         add(key, `${current.path}.<key>`)
         pending.push({ value: child, path: `${current.path}.${key}` })
       }

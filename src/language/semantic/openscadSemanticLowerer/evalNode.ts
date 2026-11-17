@@ -283,7 +283,7 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
         }], true)
       }
       if (base.dimension !== cutters.dimension) evaluationError(ctx, node.p, 'difference() cannot mix 2D and 3D children')
-      const inputType = ctx.builder.nodes[base.node].valueType
+      const inputType = ctx.builder.nodes[base.node]!.valueType
       // Cutting a single solid can split it into multiple disconnected solids.
       // The Boolean carrier is therefore SolidSet even when its base is Solid.
       const valueType: SemanticValueType = {
@@ -313,7 +313,7 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       if (shapes.length === 0) return []
       if (shapes.some(shape => shape.dimension !== 'region2')) evaluationError(ctx, node.p, 'linear_extrude() requires 2D children')
       const profile = unionReduceInternal(shapes, ctx, node.p)!
-      const inputType = ctx.builder.nodes[profile.node].valueType
+      const inputType = ctx.builder.nodes[profile.node]!.valueType
       return [ctx.builder.produce(occurrence, {
         kind: 'linear-extrude',
         valueType: { ...inputType, geometryKind: 'solid-set', space: 'd3' },
@@ -332,7 +332,7 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       if (shapes.some(shape => shape.dimension !== 'region2')) evaluationError(ctx, node.p, 'rotate_extrude() requires 2D children')
       const profile = unionReduceInternal(shapes, ctx, node.p)!
       const segments = semanticSegments(node, ctx, occurrence, 48, 3)
-      const valueType = { ...ctx.builder.nodes[profile.node].valueType, geometryKind: 'solid-set' as const, space: 'd3' as const }
+      const valueType = { ...ctx.builder.nodes[profile.node]!.valueType, geometryKind: 'solid-set' as const, space: 'd3' as const }
       return [ctx.builder.produce(occurrence, segments === null ? {
         kind: 'rotate-extrude-analytic', valueType, input: profile.node, angleDegrees,
       } : {
@@ -410,7 +410,7 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
             if (output.length > MAX_SHAPES) evaluationError(ctx, node.p, `Model exceeds the ${MAX_SHAPES.toLocaleString('en-US')} object limit`)
             return
           }
-          const binding = bindings[bindingIndex]
+          const binding = bindings[bindingIndex]!
           const values = stableIterable(evalExpression(binding.value, iterationContext), iterationContext, binding.p)
           if (binding.name === undefined) {
             stableWarning(ctx, binding.p, 'Ignoring for() iterator without variable name')
@@ -428,7 +428,7 @@ export function evalNode(node: CallNode, parent: EvalContext): SemanticShape[] {
       }
       const entries = Object.entries(node.args).filter(([name]) => !name.startsWith('_'))
       if (entries.length !== 1) evaluationError(ctx, node.p, 'for() currently requires one named iterator')
-      const [name, expression] = entries[0]
+      const [name, expression] = entries[0]!
       const values = evalExpression(expression, ctx)
       if (!Array.isArray(values)) evaluationError(ctx, node.p, 'for() iterator must be a vector or range')
       const output: SemanticShape[] = []

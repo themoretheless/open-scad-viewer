@@ -146,9 +146,9 @@ export function validateStructuralPath(value: unknown, path: string): readonly S
 
 export function samePath(left: readonly SemanticStructuralPathSegment[], right: readonly SemanticStructuralPathSegment[]): boolean {
   return left.length === right.length && left.every((segment, index) => (
-    segment.kind === right[index].kind
-    && segment.name === right[index].name
-    && segment.ordinal === right[index].ordinal
+    segment.kind === right[index]!.kind
+    && segment.name === right[index]!.name
+    && segment.ordinal === right[index]!.ordinal
   ))
 }
 
@@ -187,7 +187,7 @@ export function validateOperations(value: unknown): readonly SemanticStaticOpera
     }
     const category = operation.category as SemanticOperationCategory
     const structuralPath = validateStructuralPath(operation.structuralPath, `${path}.structuralPath`)
-    const last = structuralPath[structuralPath.length - 1]
+    const last = structuralPath[structuralPath.length - 1]!
     if (last.name !== name || last.ordinal !== childOrdinal) fail('E_SEMANTIC_IDENTITY', path, 'name and childOrdinal must match the final structural path segment')
     if (parent === null) {
       if (structuralPath.length !== 1) fail('E_SEMANTIC_IDENTITY', `${path}.structuralPath`, 'root operation path must have one segment')

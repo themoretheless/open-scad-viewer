@@ -83,7 +83,7 @@ export function flattenGlyph(
   let commandBudget = 0
 
   const finish = (): void => {
-    while (points.length > 1 && samePoint(points[0], points.at(-1)!)) points.pop()
+    while (points.length > 1 && samePoint(points[0]!, points.at(-1)!)) points.pop()
     if (points.length >= 3) contours.push(Object.freeze({ points: Object.freeze(points) }))
     points = []
   }
@@ -108,21 +108,21 @@ export function flattenGlyph(
       case 'M': {
         if (values.length !== 2) return textError('E_TEXT_FONT_INVALID', `text() glyph ${glyphId} has an invalid move command.`)
         finish()
-        pen = [values[0], values[1]]
+        pen = [values[0]!, values[1]!]
         add(pen[0], pen[1])
         break
       }
       case 'L': {
         if (values.length !== 2) return textError('E_TEXT_FONT_INVALID', `text() glyph ${glyphId} has an invalid line command.`)
-        pen = [values[0], values[1]]
+        pen = [values[0]!, values[1]!]
         add(pen[0], pen[1])
         break
       }
       case 'Q': {
         if (values.length !== 4) return textError('E_TEXT_FONT_INVALID', `text() glyph ${glyphId} has an invalid quadratic command.`)
         const from = pen
-        const control: readonly [number, number] = [values[0], values[1]]
-        const to: readonly [number, number] = [values[2], values[3]]
+        const control: readonly [number, number] = [values[0]!, values[1]!]
+        const to: readonly [number, number] = [values[2]!, values[3]!]
         for (let step = 1; step <= curveSegments; step++) {
           const t = step / curveSegments
           const inverse = 1 - t
@@ -137,9 +137,9 @@ export function flattenGlyph(
       case 'C': {
         if (values.length !== 6) return textError('E_TEXT_FONT_INVALID', `text() glyph ${glyphId} has an invalid cubic command.`)
         const from = pen
-        const control1: readonly [number, number] = [values[0], values[1]]
-        const control2: readonly [number, number] = [values[2], values[3]]
-        const to: readonly [number, number] = [values[4], values[5]]
+        const control1: readonly [number, number] = [values[0]!, values[1]!]
+        const control2: readonly [number, number] = [values[2]!, values[3]!]
+        const to: readonly [number, number] = [values[4]!, values[5]!]
         for (let step = 1; step <= curveSegments; step++) {
           const t = step / curveSegments
           const inverse = 1 - t

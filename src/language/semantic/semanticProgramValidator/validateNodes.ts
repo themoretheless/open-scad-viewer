@@ -101,9 +101,9 @@ export function validateNodes(value: unknown, contract: string): readonly Semant
         assertValueType(valueType, (nodes[input] as SemanticNode).valueType, `${path}.valueType`)
         const matrix = tupleNumbers(node.matrix, 16, `${path}.matrix`)
         if (matrix[3] !== 0 || matrix[7] !== 0 || matrix[11] !== 0 || matrix[15] !== 1) fail('E_SEMANTIC_TYPE', `${path}.matrix`, 'matrix must be affine column-major')
-        const determinant = matrix[0] * (matrix[5] * matrix[10] - matrix[9] * matrix[6])
-          - matrix[4] * (matrix[1] * matrix[10] - matrix[9] * matrix[2])
-          + matrix[8] * (matrix[1] * matrix[6] - matrix[5] * matrix[2])
+        const determinant = matrix[0]! * (matrix[5]! * matrix[10]! - matrix[9]! * matrix[6]!)
+          - matrix[4]! * (matrix[1]! * matrix[10]! - matrix[9]! * matrix[2]!)
+          + matrix[8]! * (matrix[1]! * matrix[6]! - matrix[5]! * matrix[2]!)
         if (contract === 'openscad-viewer/brep-1' && (!Number.isFinite(determinant) || determinant === 0)) {
           fail('E_SEMANTIC_TYPE', `${path}.matrix`, 'brep-1 transform linear part must be nonsingular; reflection is allowed')
         }
@@ -116,7 +116,7 @@ export function validateNodes(value: unknown, contract: string): readonly Semant
         const inputs = arrayValue(node.inputs, `${path}.inputs`, SEMANTIC_PROGRAM_LIMITS.nodes)
         if (inputs.length < 2) fail('E_SEMANTIC_TYPE', `${path}.inputs`, 'zero operands lower to empty and one operand lowers to an alias')
         const references = inputs.map((input, inputIndex) => nodeReference(input, `${path}.inputs[${inputIndex}]`, index))
-        const firstType = (nodes[references[0]] as SemanticNode).valueType
+        const firstType = (nodes[references[0]!] as SemanticNode).valueType
         references.forEach((reference, inputIndex) => {
           const candidate = (nodes[reference] as SemanticNode).valueType
           if (candidate.space !== firstType.space || !representationEvidenceEqual(candidate, firstType)) fail('E_SEMANTIC_TYPE', `${path}.inputs[${inputIndex}]`, 'operands must share space, representation, and evidence')
@@ -206,16 +206,16 @@ export function identityValueKey(value: SemanticIdentityValue): string {
 
 export function sameDynamicSlots(left: readonly SemanticDynamicSlot[], right: readonly SemanticDynamicSlot[]): boolean {
   return left.length === right.length && left.every((slot, index) => (
-    slot.name === right[index].name
-    && slot.duplicateOrdinal === right[index].duplicateOrdinal
-    && identityValueKey(slot.value) === identityValueKey(right[index].value)
+    slot.name === right[index]!.name
+    && slot.duplicateOrdinal === right[index]!.duplicateOrdinal
+    && identityValueKey(slot.value) === identityValueKey(right[index]!.value)
   ))
 }
 
 export function sameDynamicBindings(left: readonly SemanticDynamicSlot[], right: readonly SemanticDynamicSlot[]): boolean {
   return left.length === right.length && left.every((slot, index) => (
-    slot.name === right[index].name
-    && identityValueKey(slot.value) === identityValueKey(right[index].value)
+    slot.name === right[index]!.name
+    && identityValueKey(slot.value) === identityValueKey(right[index]!.value)
   ))
 }
 
@@ -242,7 +242,7 @@ export function moduleActivationAnchor(
     return null
   }
   const definitionOccurrence = occurrences[definitionOccurrenceIndex] as SemanticOccurrence
-  const definitionOperation = operations[definitionOccurrence.operation]
+  const definitionOperation = operations[definitionOccurrence.operation]!
   if (definitionOperation.parent !== null
     || definitionOperation.category !== 'module'
     || definitionOperation.name.startsWith('$')
@@ -250,7 +250,7 @@ export function moduleActivationAnchor(
   const bodyOccurrenceIndex = definitionOccurrence.parent
   if (bodyOccurrenceIndex === null) return reject()
   const bodyOccurrence = occurrences[bodyOccurrenceIndex] as SemanticOccurrence
-  const bodyOperation = operations[bodyOccurrence.operation]
+  const bodyOperation = operations[bodyOccurrence.operation]!
   const bodySegment = bodyOperation.structuralPath.at(-1)
   if (bodyOperation.category !== 'control'
     || bodyOperation.name !== '$body'
@@ -261,7 +261,7 @@ export function moduleActivationAnchor(
   const callOccurrenceIndex = bodyOccurrence.parent
   if (callOccurrenceIndex === null) return reject()
   const callOccurrence = occurrences[callOccurrenceIndex] as SemanticOccurrence
-  const callOperation = operations[callOccurrence.operation]
+  const callOperation = operations[callOccurrence.operation]!
   if (bodyOperation.parent !== callOccurrence.operation
     || callOperation.category !== 'module'
     || callOperation.name.startsWith('$')
@@ -274,8 +274,8 @@ export function moduleActivationAnchor(
   consumeOccurrenceProofBudget(validationIndex, staticBodies.length + staticExpansions.length)
   if (staticBodies.length !== 1 || staticBodies[0] !== bodyOccurrence.operation
     || staticExpansions.length !== 1) return reject()
-  const soleStaticExpansion = staticExpansions[0]
-  const expansionOperation = operations[soleStaticExpansion]
+  const soleStaticExpansion = staticExpansions[0]!
+  const expansionOperation = operations[soleStaticExpansion]!
   const expansionSegment = expansionOperation.structuralPath.at(-1)
   if (expansionOperation.category !== 'control'
     || expansionOperation.name !== '$expansion'

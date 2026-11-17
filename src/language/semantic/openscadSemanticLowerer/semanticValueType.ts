@@ -191,14 +191,14 @@ export function registerOperations(
       } else if (statement.type === 'module') {
         const body = addFrame(statement, id, structuralPath, '$body', 'body')
         bodyByStatement.set(statement, body)
-        visitSiblings(statement.children, body, operations[body].structuralPath)
+        visitSiblings(statement.children, body, operations[body]!.structuralPath)
       } else if (statement.name === 'if') {
         const thenFrame = addFrame(statement, id, structuralPath, '$then', 'branch')
         bodyByStatement.set(statement, thenFrame)
-        visitSiblings(statement.children, thenFrame, operations[thenFrame].structuralPath)
+        visitSiblings(statement.children, thenFrame, operations[thenFrame]!.structuralPath)
         const elseFrame = addFrame(statement, id, structuralPath, '$else', 'branch')
         alternativeByCall.set(statement, elseFrame)
-        visitSiblings(statement.alternative, elseFrame, operations[elseFrame].structuralPath)
+        visitSiblings(statement.alternative, elseFrame, operations[elseFrame]!.structuralPath)
       } else if ((statement.name === 'children' || statement.name === 'child')
         && detachedContinuations?.has(statement)) {
         // children() owns a runtime caller continuation rather than syntactic
@@ -210,7 +210,7 @@ export function registerOperations(
         visitSiblings(
           detachedContinuations.get(statement)!.statements,
           expansion,
-          operations[expansion].structuralPath,
+          operations[expansion]!.structuralPath,
         )
       } else {
         if (statement.children.length > 0 || category === 'module') {
@@ -218,10 +218,10 @@ export function registerOperations(
           bodyByStatement.set(statement, body)
           let childParent = body
           if (category === 'module') {
-            childParent = addFrame(statement, body, operations[body].structuralPath, '$expansion', 'control')
+            childParent = addFrame(statement, body, operations[body]!.structuralPath, '$expansion', 'control')
             expansionByCall.set(statement, childParent)
           }
-          visitSiblings(statement.children, childParent, operations[childParent].structuralPath)
+          visitSiblings(statement.children, childParent, operations[childParent]!.structuralPath)
         }
       }
     }

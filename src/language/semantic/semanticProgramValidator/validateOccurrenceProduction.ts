@@ -24,13 +24,13 @@ export function validateOccurrenceProduction(
   const canonicalGroups: number[] = []
   const rowsByCanonical = new Map<number, readonly number[]>()
   for (const indexes of indexesById.values()) {
-    const canonical = indexes[0]
+    const canonical = indexes[0]!
     canonicalGroups.push(canonical)
     rowsByCanonical.set(canonical, indexes)
     indexes.forEach(index => { canonicalByRow[index] = canonical })
-    const rows = indexes.map(index => occurrences[index])
-    const zero = rows.length === 1 && rows[0].node === null
-      && rows[0].outputOrdinal === null && rows[0].sceneEntityId === null
+    const rows = indexes.map(index => occurrences[index]!)
+    const zero = rows.length === 1 && rows[0]!.node === null
+      && rows[0]!.outputOrdinal === null && rows[0]!.sceneEntityId === null
     const output = rows.every((row, ordinal) => row.node !== null
       && row.outputOrdinal === ordinal && row.sceneEntityId !== null)
     if (!zero && !output) {
@@ -42,16 +42,16 @@ export function validateOccurrenceProduction(
   let interruptedGroup: number | null = null
   if (terminal !== null) {
     let cursor: number | null = terminal.occurrence
-    interruptedGroup = canonicalByRow[cursor]
+    interruptedGroup = canonicalByRow[cursor]!
     while (cursor !== null) {
-      const canonical: number = canonicalByRow[cursor]
+      const canonical: number = canonicalByRow[cursor]!
       activeGroups.add(canonical)
-      cursor = occurrences[canonical].parent
+      cursor = occurrences[canonical]!.parent
     }
   }
   const effectByOwner = new Map<number, ValidatedSemanticExecution['discardedEffects'][number]>()
   for (const effect of discardedEffects) {
-    const owner = canonicalByRow[effect.ownerOccurrence]
+    const owner = canonicalByRow[effect.ownerOccurrence]!
     if (effectByOwner.has(owner)) {
       fail('E_SEMANTIC_IDENTITY', '$.core.execution.discardedEffects', 'one difference occurrence can own only one discarded cutter effect')
     }
@@ -61,9 +61,9 @@ export function validateOccurrenceProduction(
   const terminalEffectRoots = new Set<number>()
   const children = new Map<number, number[]>()
   for (const canonical of canonicalGroups) {
-    const parent = occurrences[canonical].parent
+    const parent = occurrences[canonical]!.parent
     if (parent === null) continue
-    const parentCanonical = canonicalByRow[parent]
+    const parentCanonical = canonicalByRow[parent]!
     const list = children.get(parentCanonical) ?? []
     list.push(canonical)
     children.set(parentCanonical, list)
@@ -98,19 +98,19 @@ export function validateOccurrenceProduction(
     }
   }
   const requireNodeKind = (row: number, expected: readonly SemanticNode['kind'][]): SemanticNode => {
-    const reference = occurrences[row].node
-    if (reference === null || !expected.includes(nodes[reference].kind)) {
-      fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${row}].node`, `operation cannot materialize node kind ${reference === null ? 'null' : nodes[reference].kind}`)
+    const reference = occurrences[row]!.node
+    if (reference === null || !expected.includes(nodes[reference]!.kind)) {
+      fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${row}].node`, `operation cannot materialize node kind ${reference === null ? 'null' : nodes[reference]!.kind}`)
     }
-    return nodes[reference]
+    return nodes[reference]!
   }
 
   const evaluate = (canonical: number): SemanticProductionGroup => {
     const cached = productionByCanonical.get(canonical)
     if (cached) return cached
     const groupRows = rowsByCanonical.get(canonical)!
-    const outputRows = groupRows.filter(row => occurrences[row].node !== null)
-    const operation = operations[occurrences[canonical].operation]
+    const outputRows = groupRows.filter(row => occurrences[row]!.node !== null)
+    const operation = operations[occurrences[canonical]!.operation]!
     const active = activeGroups.has(canonical)
     const rule = semanticProductionRule(operation, canonical === interruptedGroup)
     const isCompilerFrontierFrame = operation.category === 'control'
@@ -131,7 +131,7 @@ export function validateOccurrenceProduction(
       } else {
         appendFrontier(frontier, visible)
       }
-      const childOperation = operations[occurrences[child].operation]
+      const childOperation = operations[occurrences[child]!.operation]!
       if (childOperation.category === 'control' && childOperation.name === '$body') {
         if (hasBody) {
           fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${canonical}]`, 'operation has more than one compiler-owned body frontier')
@@ -164,34 +164,34 @@ export function validateOccurrenceProduction(
       if ((hasBody && directGroups.length !== 1) || (!hasBody && directGroups.length !== 0)) {
         fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${canonical}]`, 'interrupted difference has an invalid compiler-owned body')
       }
-      const bodyGroup = hasBody ? directGroups[0] : null
-      const bodyOperation = bodyGroup === null ? null : occurrences[bodyGroup].operation
+      const bodyGroup = hasBody ? directGroups[0]! : null
+      const bodyOperation = bodyGroup === null ? null : occurrences[bodyGroup]!.operation
       const authoredBucketOperations = bodyOperation === null
         ? []
         : operations.filter(candidate => candidate.parent === bodyOperation).map(candidate => candidate.id)
       const runtimeBucketRoots = bodyGroup === null ? [] : children.get(bodyGroup) ?? []
       const authoredBucketSet = new Set(authoredBucketOperations)
-      if (runtimeBucketRoots.some(child => !authoredBucketSet.has(occurrences[child].operation))) {
+      if (runtimeBucketRoots.some(child => !authoredBucketSet.has(occurrences[child]!.operation))) {
         fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${canonical}]`, 'active difference runtime activation is not owned by an authored body statement')
       }
       const activeBuckets = authoredBucketOperations.map(bucketOperation => {
         const bucket: SemanticProductionItem[] = []
         for (const child of runtimeBucketRoots) {
-          if (occurrences[child].operation !== bucketOperation) continue
+          if (occurrences[child]!.operation !== bucketOperation) continue
           appendFrontier(bucket, productionByCanonical.get(child)!.terminalItems, child)
         }
         return bucket
       })
       const activeBucketSchedules = authoredBucketOperations.map(bucketOperation => (
         runtimeBucketRoots
-          .filter(child => occurrences[child].operation === bucketOperation)
+          .filter(child => occurrences[child]!.operation === bucketOperation)
           .map(child => ({ tag: 'group', group: child }) as const)
       ))
       const reconstructedFrontier: SemanticProductionItem[] = []
       for (const bucket of activeBuckets) appendFrontier(reconstructedFrontier, bucket)
       if (reconstructedFrontier.length !== frontier.length
         || reconstructedFrontier.some((item, index) => {
-          const expected = frontier[index]
+          const expected = frontier[index]!
           return item.node !== expected.node || item.row !== expected.row
             || item.identityOwner !== expected.identityOwner
             || item.directChild !== expected.directChild
@@ -200,18 +200,18 @@ export function validateOccurrenceProduction(
       }
       const rawBase = activeBuckets[0] ?? []
       const rawCutters: SemanticProductionItem[] = []
-      for (let bucket = 1; bucket < activeBuckets.length; bucket++) appendFrontier(rawCutters, activeBuckets[bucket])
+      for (let bucket = 1; bucket < activeBuckets.length; bucket++) appendFrontier(rawCutters, activeBuckets[bucket]!)
       const firstStaticStatement = authoredBucketOperations[0]
       const baseRuntimeStatements = firstStaticStatement === undefined
         ? []
-        : runtimeBucketRoots.filter(child => occurrences[child].operation === firstStaticStatement)
+        : runtimeBucketRoots.filter(child => occurrences[child]!.operation === firstStaticStatement)
       const baseActivationIsPresent = baseRuntimeStatements.length > 0
       const base = baseActivationIsPresent ? rawBase : []
       const cutters = baseActivationIsPresent ? rawCutters : frontier
       const baseCompleted = baseActivationIsPresent
         && baseRuntimeStatements.every(statement => !activeGroups.has(statement))
       const cutterStatements = runtimeBucketRoots.filter(statement => (
-        firstStaticStatement === undefined || occurrences[statement].operation !== firstStaticStatement
+        firstStaticStatement === undefined || occurrences[statement]!.operation !== firstStaticStatement
       ))
       const cuttersCompleted = canonical === interruptedGroup
         && cutterStatements.every(statement => !activeGroups.has(statement))
@@ -223,19 +223,19 @@ export function validateOccurrenceProduction(
         items: readonly SemanticProductionItem[],
       ): SemanticProductionItem[] => {
         if (items.length < 2) return [...items]
-        const space = nodes[items[0].node].valueType.space
-        if (items.some(item => nodes[item.node].valueType.space !== space)) return [...items]
+        const space = nodes[items[0]!.node]!.valueType.space
+        if (items.some(item => nodes[item.node]!.valueType.space !== space)) return [...items]
         const candidates = nodes.filter(candidate => !ownerByNode.has(candidate.id)
           && candidate.kind === 'boolean' && candidate.operation === 'union'
           && equalNumberList(candidate.inputs, items.map(item => item.node)))
         if (candidates.length !== 1) {
           fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${canonical}]`, 'completed interrupted partition requires one exact union reducer')
         }
-        scheduleNode(candidates[0].id)
+        scheduleNode(candidates[0]!.id)
         return [{
-          node: candidates[0].id,
-          row: items[0].row,
-          identityOwner: items[0].identityOwner,
+          node: candidates[0]!.id,
+          row: items[0]!.row,
+          identityOwner: items[0]!.identityOwner,
           group: canonical,
           directChild: canonical,
         }]
@@ -243,7 +243,7 @@ export function validateOccurrenceProduction(
       const reducedBase = baseCompleted ? completeReduction(base) : [...base]
       const firstCutterBucket = baseActivationIsPresent ? 1 : 0
       for (let bucket = firstCutterBucket; bucket < activeBucketSchedules.length; bucket++) {
-        schedule.push(...activeBucketSchedules[bucket])
+        schedule.push(...activeBucketSchedules[bucket]!)
       }
       const reducedCutters = cuttersCompleted ? completeReduction(cutters) : [...cutters]
       terminalItems = [...reducedBase, ...reducedCutters]
@@ -254,12 +254,12 @@ export function validateOccurrenceProduction(
       const commonParameters = new Map<string, string>()
       outputRows.forEach((row, index) => {
         const produced = requireNodeKind(row, semanticMapNodeKinds(rule))
-        if (!equalNumberList(semanticNodeInputs(produced), [frontier[index].node])) {
+        if (!equalNumberList(semanticNodeInputs(produced), [frontier[index]!.node])) {
           fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${row}].node`, 'partial map output must consume the matching ordered frontier item')
         }
         const parameters = semanticMapParameters(produced)
         const parameterBucket = rule === 'transform-map' && operation.name === 'rotate'
-          ? nodes[frontier[index].node].valueType.space
+          ? nodes[frontier[index]!.node]!.valueType.space
           : 'all'
         const priorParameters = commonParameters.get(parameterBucket)
         if (priorParameters !== undefined && parameters !== priorParameters) {
@@ -270,7 +270,7 @@ export function validateOccurrenceProduction(
         outputItems.push({
           node: produced.id,
           row,
-          identityOwner: rule === 'transform-map' ? frontier[index].identityOwner : row,
+          identityOwner: rule === 'transform-map' ? frontier[index]!.identityOwner : row,
           group: canonical,
           directChild: canonical,
         })
@@ -291,20 +291,20 @@ export function validateOccurrenceProduction(
         cylinder: ['cylinder-analytic', 'cylinder-polygonal'], polyhedron: ['polyhedron'],
         square: ['rectangle'], circle: ['circle-analytic', 'circle-polygonal'], polygon: ['polygon'],
       }
-      const produced = requireNodeKind(outputRows[0], expectedByName[operation.name])
-      own(outputRows[0], produced.id)
+      const produced = requireNodeKind(outputRows[0]!, expectedByName[operation.name]!)
+      own(outputRows[0]!, produced.id)
     } else if (isSemanticMapRule(rule)) {
       requireOutputCount(canonical, outputRows, frontier.length)
       const commonParameters = new Map<string, string>()
       outputRows.forEach((row, index) => {
         const produced = requireNodeKind(row, semanticMapNodeKinds(rule))
         const input = semanticNodeInputs(produced)
-        if (input.length !== 1 || input[0] !== frontier[index].node) {
+        if (input.length !== 1 || input[0] !== frontier[index]!.node) {
           fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${row}].node`, 'map output must consume its matching ordered frontier item')
         }
         const parameters = semanticMapParameters(produced)
         const parameterBucket = rule === 'transform-map' && operation.name === 'rotate'
-          ? nodes[frontier[index].node].valueType.space
+          ? nodes[frontier[index]!.node]!.valueType.space
           : 'all'
         const priorParameters = commonParameters.get(parameterBucket)
         if (priorParameters !== undefined && parameters !== priorParameters) {
@@ -316,7 +316,7 @@ export function validateOccurrenceProduction(
           outputItems.push({
             node: produced.id,
             row,
-            identityOwner: frontier[index].identityOwner,
+            identityOwner: frontier[index]!.identityOwner,
             group: canonical,
             directChild: canonical,
           })
@@ -326,25 +326,25 @@ export function validateOccurrenceProduction(
     } else if (rule === 'preserving-alias') {
       requireOutputCount(canonical, outputRows, frontier.length)
       outputRows.forEach((row, index) => {
-        if (occurrences[row].node !== frontier[index].node) {
+        if (occurrences[row]!.node !== frontier[index]!.node) {
           fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${row}].node`, 'alias output must equal its matching ordered frontier node')
         }
-        preserve(row, frontier[index])
+        preserve(row, frontier[index]!)
       })
     } else if (rule === 'boolean' || rule === 'hull') {
       if (frontier.length === 0) {
         requireOutputCount(canonical, outputRows, 0)
       } else if (frontier.length === 1) {
         requireOutputCount(canonical, outputRows, 1)
-        if (occurrences[outputRows[0]].node !== frontier[0].node) {
+        if (occurrences[outputRows[0]!]!.node !== frontier[0]!.node) {
           fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${outputRows[0]}].node`, 'one-item reduction must alias its sole frontier node')
         }
-        if (rule === 'hull') outputItems.push({ node: frontier[0].node, row: outputRows[0], identityOwner: outputRows[0], group: canonical, directChild: canonical })
-        else preserve(outputRows[0], frontier[0])
+        if (rule === 'hull') outputItems.push({ node: frontier[0]!.node, row: outputRows[0]!, identityOwner: outputRows[0]!, group: canonical, directChild: canonical })
+        else preserve(outputRows[0]!, frontier[0]!)
       } else {
         requireOutputCount(canonical, outputRows, 1)
         const expectedKind = rule === 'hull' ? ['hull'] as const : ['boolean'] as const
-        const produced = requireNodeKind(outputRows[0], expectedKind)
+        const produced = requireNodeKind(outputRows[0]!, expectedKind)
         if (produced.kind === 'boolean') {
           if (produced.operation !== operation.name) {
             fail('E_SEMANTIC_IDENTITY', `$.core.nodes[${produced.id}].operation`, 'Boolean node operation does not match its static operation')
@@ -353,14 +353,14 @@ export function validateOccurrenceProduction(
         if (!equalNumberList(semanticNodeInputs(produced), frontier.map(item => item.node))) {
           fail('E_SEMANTIC_IDENTITY', `$.core.nodes[${produced.id}]`, 'n-ary reduction inputs must exactly equal the ordered occurrence frontier')
         }
-        own(outputRows[0], produced.id)
+        own(outputRows[0]!, produced.id)
       }
     } else if (rule === 'difference') {
       const directChildren = children.get(canonical) ?? []
       const bodies = directChildren.filter(child => {
-        const childOperation = operations[occurrences[child].operation]
+        const childOperation = operations[occurrences[child]!.operation]!
         const last = childOperation.structuralPath.at(-1)
-        return childOperation.parent === occurrences[canonical].operation
+        return childOperation.parent === occurrences[canonical]!.operation
           && childOperation.category === 'control'
           && childOperation.name === '$body'
           && last?.kind === 'body'
@@ -371,19 +371,19 @@ export function validateOccurrenceProduction(
         fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${canonical}]`, 'difference runtime frontier requires at most one exact compiler $body child and no direct authored children')
       }
       const body = bodies[0]
-      const bodyOperation = body === undefined ? null : occurrences[body].operation
+      const bodyOperation = body === undefined ? null : occurrences[body]!.operation
       const authoredBucketOperations = bodyOperation === null
         ? []
         : operations.filter(candidate => candidate.parent === bodyOperation).map(candidate => candidate.id)
       const runtimeBucketRoots = body === undefined ? [] : children.get(body) ?? []
       const authoredBucketSet = new Set(authoredBucketOperations)
-      if (runtimeBucketRoots.some(child => !authoredBucketSet.has(occurrences[child].operation))) {
+      if (runtimeBucketRoots.some(child => !authoredBucketSet.has(occurrences[child]!.operation))) {
         fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${canonical}]`, 'difference runtime activation is not owned by a direct authored body statement')
       }
       const buckets = authoredBucketOperations.map(bucketOperation => {
         const bucket: SemanticProductionItem[] = []
         for (const child of runtimeBucketRoots) {
-          if (occurrences[child].operation !== bucketOperation) continue
+          if (occurrences[child]!.operation !== bucketOperation) continue
           const childProduction = productionByCanonical.get(child)!
           const visible = childProduction.outputItems.length > 0
             ? childProduction.outputItems
@@ -399,11 +399,11 @@ export function validateOccurrenceProduction(
       }
       const base = buckets[0] ?? []
       const cutters: SemanticProductionItem[] = []
-      for (let bucket = 1; bucket < buckets.length; bucket++) appendFrontier(cutters, buckets[bucket])
+      for (let bucket = 1; bucket < buckets.length; bucket++) appendFrontier(cutters, buckets[bucket]!)
       const bucketSchedules = authoredBucketOperations.map(bucketOperation => {
         const bucketSchedule: SemanticScheduleEvent[] = []
         for (const child of runtimeBucketRoots) {
-          if (occurrences[child].operation !== bucketOperation) continue
+          if (occurrences[child]!.operation !== bucketOperation) continue
           bucketSchedule.push({ tag: 'group', group: child })
         }
         return bucketSchedule
@@ -422,7 +422,7 @@ export function validateOccurrenceProduction(
         }
         consumedEffectOwners.add(canonical)
         if (cutters.length === 1) {
-          if (effect.root !== cutters[0].node) {
+          if (effect.root !== cutters[0]!.node) {
             fail('E_SEMANTIC_IDENTITY', '$.core.execution.discardedEffects', 'single cutter effect must preserve its exact frontier node')
           }
         } else {
@@ -441,7 +441,7 @@ export function validateOccurrenceProduction(
             fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${canonical}]`, 'empty-base difference must retain its eager cutter effect')
           }
           const root = cutters.length === 1
-            ? cutters[0].node
+            ? cutters[0]!.node
             : terminalPrefix.find(entry => {
               const candidate = nodes[entry.root]
               return candidate?.kind === 'boolean' && candidate.operation === 'union'
@@ -459,10 +459,10 @@ export function validateOccurrenceProduction(
         }
       } else if (cutters.length === 0) {
         requireOutputCount(canonical, outputRows, 1)
-        const outputNode = occurrences[outputRows[0]].node!
+        const outputNode = occurrences[outputRows[0]!]!.node!
         if (base.length === 1) {
-          if (outputNode !== base[0].node) fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${outputRows[0]}].node`, 'single-item difference base must alias its source node')
-          preserve(outputRows[0], base[0])
+          if (outputNode !== base[0]!.node) fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${outputRows[0]}].node`, 'single-item difference base must alias its source node')
+          preserve(outputRows[0]!, base[0]!)
         } else {
           const reducer = nodes[outputNode]
           if (reducer?.kind !== 'boolean' || reducer.operation !== 'union'
@@ -470,17 +470,17 @@ export function validateOccurrenceProduction(
             fail('E_SEMANTIC_IDENTITY', `$.core.occurrences[${outputRows[0]}].node`, 'multi-item difference base requires one canonical union reducer')
           }
           baseReducer = reducer.id
-          own(outputRows[0], reducer.id)
+          own(outputRows[0]!, reducer.id)
         }
       } else {
         requireOutputCount(canonical, outputRows, 1)
-        const produced = requireNodeKind(outputRows[0], ['boolean'])
+        const produced = requireNodeKind(outputRows[0]!, ['boolean'])
         if (produced.kind !== 'boolean' || produced.operation !== 'difference' || produced.inputs.length !== 2) {
           fail('E_SEMANTIC_IDENTITY', `$.core.nodes[${produced.id}]`, 'difference root must consume exactly reduced base and cutters')
         }
         const requireReduction = (reference: number, items: readonly SemanticProductionItem[], label: string) => {
           if (items.length === 1) {
-            if (reference !== items[0].node) fail('E_SEMANTIC_IDENTITY', `$.core.nodes[${produced.id}]`, `${label} reduction must preserve its sole frontier node`)
+            if (reference !== items[0]!.node) fail('E_SEMANTIC_IDENTITY', `$.core.nodes[${produced.id}]`, `${label} reduction must preserve its sole frontier node`)
             return
           }
           const reducer = nodes[reference]
@@ -492,10 +492,10 @@ export function validateOccurrenceProduction(
           if (label === 'difference base') baseReducer = reducer.id
           else cutterReducer = reducer.id
         }
-        requireReduction(produced.inputs[0], base, 'difference base')
-        requireReduction(produced.inputs[1], cutters, 'difference cutters')
+        requireReduction(produced.inputs[0]!, base, 'difference base')
+        requireReduction(produced.inputs[1]!, cutters, 'difference cutters')
         differenceRoot = produced.id
-        own(outputRows[0], produced.id)
+        own(outputRows[0]!, produced.id)
       }
       // A difference is the one rule whose compiler-owned reductions are
       // interleaved with child evaluation: the base is reduced before any
@@ -505,7 +505,7 @@ export function validateOccurrenceProduction(
       schedule.push(...(bucketSchedules[0] ?? []))
       if (baseReducer !== null) schedule.push({ tag: 'node', node: baseReducer })
       for (let bucket = 1; bucket < bucketSchedules.length; bucket++) {
-        schedule.push(...bucketSchedules[bucket])
+        schedule.push(...bucketSchedules[bucket]!)
       }
       if (cutterReducer !== null) schedule.push({ tag: 'node', node: cutterReducer })
       if (differenceRoot !== null) schedule.push({ tag: 'node', node: differenceRoot })
@@ -517,12 +517,12 @@ export function validateOccurrenceProduction(
         const expectedKind = rule === 'linear-extrude'
           ? ['linear-extrude'] as const
           : ['rotate-extrude-analytic', 'rotate-extrude-polygonal'] as const
-        const produced = requireNodeKind(outputRows[0], expectedKind)
+        const produced = requireNodeKind(outputRows[0]!, expectedKind)
         const directInput = semanticNodeInputs(produced)[0]
         if (frontier.length === 1) {
-          if (directInput !== frontier[0].node) fail('E_SEMANTIC_IDENTITY', `$.core.nodes[${produced.id}].input`, 'extrusion must consume its sole profile frontier node')
+          if (directInput !== frontier[0]!.node) fail('E_SEMANTIC_IDENTITY', `$.core.nodes[${produced.id}].input`, 'extrusion must consume its sole profile frontier node')
         } else {
-          const reducer = nodes[directInput]
+          const reducer = directInput === undefined ? undefined : nodes[directInput]
           if (reducer?.kind !== 'boolean' || reducer.operation !== 'union'
             || !equalNumberList(reducer.inputs, frontier.map(item => item.node))) {
             fail('E_SEMANTIC_IDENTITY', `$.core.nodes[${produced.id}].input`, 'multi-profile extrusion requires one canonical internal union reduction')
@@ -530,7 +530,7 @@ export function validateOccurrenceProduction(
           claimNode(reducer.id, canonical)
           schedule.push({ tag: 'node', node: reducer.id })
         }
-        own(outputRows[0], produced.id)
+        own(outputRows[0]!, produced.id)
       }
     }
 
@@ -552,7 +552,7 @@ export function validateOccurrenceProduction(
     return production
   }
 
-  for (let index = canonicalGroups.length - 1; index >= 0; index--) evaluate(canonicalGroups[index])
+  for (let index = canonicalGroups.length - 1; index >= 0; index--) evaluate(canonicalGroups[index]!)
   if ([...effectByOwner.keys()].some(owner => !consumedEffectOwners.has(owner))) {
     fail('E_SEMANTIC_IDENTITY', '$.core.execution.discardedEffects', 'discarded effect is not owned by an exact empty-base difference occurrence')
   }
@@ -563,8 +563,8 @@ export function validateOccurrenceProduction(
 
   const scheduleStack: SemanticScheduleEvent[] = []
   for (let index = canonicalGroups.length - 1; index >= 0; index--) {
-    const canonical = canonicalGroups[index]
-    if (occurrences[canonical].parent === null) {
+    const canonical = canonicalGroups[index]!
+    if (occurrences[canonical]!.parent === null) {
       scheduleStack.push({ tag: 'group', group: canonical })
     }
   }
@@ -587,7 +587,7 @@ export function validateOccurrenceProduction(
       fail('E_SEMANTIC_REFERENCE', '$.core.execution.evaluationOrder', 'occurrence-production schedule references an absent group')
     }
     for (let index = childSchedule.length - 1; index >= 0; index--) {
-      scheduleStack.push(childSchedule[index])
+      scheduleStack.push(childSchedule[index]!)
     }
   }
   if (authenticatedSchedule.length !== nodes.length
@@ -597,7 +597,7 @@ export function validateOccurrenceProduction(
 
   const programFrontier: SemanticProductionItem[] = []
   for (const canonical of canonicalGroups) {
-    if (occurrences[canonical].parent !== null) continue
+    if (occurrences[canonical]!.parent !== null) continue
     const production = productionByCanonical.get(canonical)!
     appendFrontier(programFrontier, production.terminalItems)
   }
@@ -609,7 +609,7 @@ export function validateOccurrenceProduction(
       fail('E_SEMANTIC_IDENTITY', '$.core.result', 'root result must exactly equal the synthetic program frontier')
     }
     rootOutputs.forEach((output, index) => {
-      const slot = programFrontier[index]
+      const slot = programFrontier[index]!
       if (slot.row !== output.producerOccurrence || slot.node !== output.node) {
         fail('E_SEMANTIC_IDENTITY', '$.core.result', 'root producer must be an exact output row derived by its occurrence production rule')
       }
@@ -627,7 +627,7 @@ export function validateOccurrenceProduction(
       ...terminalEffectRoots,
     ])].sort((left, right) => left - right)
     if (derivedRoots.length !== terminalPrefix.length
-      || derivedRoots.some((root, index) => root !== terminalPrefix[index].root)) {
+      || derivedRoots.some((root, index) => root !== terminalPrefix[index]!.root)) {
       fail('E_SEMANTIC_IDENTITY', '$.core.execution.terminal.prefixFrontier', 'terminal prefix must exactly equal the completed production frontier')
     }
     for (const slot of programFrontier) rootGroups.push(slot.group)

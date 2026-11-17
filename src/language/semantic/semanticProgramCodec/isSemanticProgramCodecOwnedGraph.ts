@@ -12,7 +12,7 @@ export function isSemanticProgramCodecOwnedGraph(value: unknown): boolean {
 
 export function compareBytes(left: Uint8Array, right: Uint8Array): number {
   const shared = Math.min(left.length, right.length)
-  for (let index = 0; index < shared; index++) if (left[index] !== right[index]) return left[index] - right[index]
+  for (let index = 0; index < shared; index++) if (left[index] !== right[index]) return left[index]! - right[index]!
   return left.length - right.length
 }
 
@@ -324,7 +324,7 @@ export function decodeSemanticTessellationPolicy(
     }
     if (policy.intents.length !== program.tessellationIntents.length
       || policy.intents.some((intent, index) => {
-        const expected = program.tessellationIntents[index]
+        const expected = program.tessellationIntents[index]!
         return intent.occurrence !== expected.occurrence
           || intent.chordTolerance !== expected.chordTolerance
           || intent.angularToleranceDegrees !== expected.angularToleranceDegrees
@@ -334,7 +334,7 @@ export function decodeSemanticTessellationPolicy(
       throw new SemanticProgramValidationError('E_SEMANTIC_IDENTITY', '$policy.intents', 'tessellation policy does not exactly match the source-bound program envelope')
     }
     policy.intents.forEach((intent, index) => {
-      if (intent.occurrence >= program.core.occurrences.length || program.core.occurrences[intent.occurrence].node === null) {
+      if (intent.occurrence >= program.core.occurrences.length || program.core.occurrences[intent.occurrence]!.node === null) {
         throw new SemanticProgramValidationError('E_SEMANTIC_REFERENCE', `$.policy.intents[${index}].occurrence`, 'policy references a non-producing occurrence')
       }
     })

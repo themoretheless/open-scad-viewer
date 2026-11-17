@@ -108,7 +108,7 @@ export function createStableExpressionEvaluators<C extends StableExpressionEvalC
             )
             return
           }
-          const binding = expr.args[bindingIndex]
+          const binding = expr.args[bindingIndex]!
           const iterable = stableIterable(
             host.evalExpression(binding.value, iterationContext, depth + 1),
             iterationContext,
@@ -356,7 +356,7 @@ export function createStableExpressionEvaluators<C extends StableExpressionEvalC
     for (const argument of args) callerValues.set(argument, host.evalExpression(argument.value, ctx, depth + 1))
     const env = new Map(fn.closure)
     for (let index = 0; index < fn.params.length; index++) {
-      const parameter = fn.params[index]
+      const parameter = fn.params[index]!
       const supplied = named.get(parameter.name) ?? positional[index]
       if (supplied) env.set(parameter.name, callerValues.get(supplied))
       else if (parameter.defaultValue) env.set(parameter.name, host.evalExpression(parameter.defaultValue, { ...ctx, env }, depth + 1))

@@ -27,7 +27,7 @@ export function checkRushGraphGeometry(checks: readonly GeometryCheck[], meshes:
       const parent = new Int32Array(vCount)
       for (let i = 0; i < vCount; i++) parent[i] = i
       const used = new Uint8Array(vCount)
-      const find = (v: number): number => { while (parent[v] !== v) { parent[v] = parent[parent[v]]; v = parent[v] } return v }
+      const find = (v: number): number => { while (parent[v] !== v) { parent[v] = parent[parent[v]!]!; v = parent[v]! } return v }
       for (let i = 0; i < part.indices.length; i += 3) {
         const a = part.indices[i]!, b = part.indices[i + 1]!, c = part.indices[i + 2]!
         const ra = find(a)
@@ -43,9 +43,9 @@ export function checkRushGraphGeometry(checks: readonly GeometryCheck[], meshes:
     for (let i = 0; i < idx.length; i++) {
       const base = idx[i]! * 3
       const vx = pos[base]!, vy = pos[base + 1]!, vz = pos[base + 2]!
-      if (vx < min[0]) min[0] = vx; if (vx > max[0]) max[0] = vx
-      if (vy < min[1]) min[1] = vy; if (vy > max[1]) max[1] = vy
-      if (vz < min[2]) min[2] = vz; if (vz > max[2]) max[2] = vz
+      if (vx < min[0]!) min[0] = vx; if (vx > max[0]!) max[0] = vx
+      if (vy < min[1]!) min[1] = vy; if (vy > max[1]!) max[1] = vy
+      if (vz < min[2]!) min[2] = vz; if (vz > max[2]!) max[2] = vz
     }
     return checks.map(check => {
       let actual: number | null = null

@@ -200,7 +200,7 @@ function hexRgba(hex: string): OpenScadRgba {
 function expandCssHex(value: string): string | null {
   const match = /^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/iu.exec(value)
   if (!match) return null
-  const digits = match[1]
+  const digits = match[1]!
   return digits.length <= 4
     ? [...digits].map(digit => `${digit}${digit}`).join('')
     : digits
@@ -220,7 +220,7 @@ function warnColorRanges(
   context: OpenScadStableModuleSemanticsContext,
 ): void {
   for (let index = 0; index < 3; index++) {
-    const value = rgba[index]
+    const value = rgba[index]!
     if (value < 0 || value > 1) context.warn({
       code: 'OPENSCAD_COLOR_CHANNEL_RANGE',
       message: `Color channel ${index} is outside the inclusive 0..1 range`,

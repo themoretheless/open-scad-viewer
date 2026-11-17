@@ -311,7 +311,7 @@ export function compileOpenScadProject(project: OpenScadProject): readonly State
     targetPath: string,
     target: Statement | 'end-of-block' | 'end-of-project',
   ): never => {
-    const first = pending[0]
+    const first = pending[0]!
     const targetName = typeof target === 'string'
       ? target
       : `${target.type} ${target.name}`

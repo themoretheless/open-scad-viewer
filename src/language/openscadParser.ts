@@ -546,7 +546,7 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
           warn(ctx, 'projection() ignored non-3D child geometry')
         }
         if (solids.length === 0) return []
-        const color = solids[0].color
+        const color = solids[0]!.color
         const geometry = cut
           ? ctx.kernel.projection(ctx.kernel.boolean3('union', solids.map(shape => shape.geometry)), true)
           : ctx.kernel.boolean2('union', solids.map(shape => ctx.kernel.projection(shape.geometry, false)))
@@ -670,7 +670,7 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
         if (selectorExpression === undefined) return await evalNodes(all, childContext)
         const output: Shape[] = []
         for (const [occurrence, childIndex] of selected.entries()) {
-          output.push(...await evalNodes([all[childIndex]], {
+          output.push(...await evalNodes([all[childIndex]!], {
             ...childContext,
             instancePath: `${childContext.instancePath}>children:${childIndex}#${occurrence}`,
           }))
@@ -752,7 +752,7 @@ async function evalFor(node: CallNode, ctx: EvalContext, diagnosticName: 'for' |
         }
         return
       }
-      const binding = bindings[bindingIndex]
+      const binding = bindings[bindingIndex]!
       const values = stableIterable(
         evalExpression(binding.value, iterationContext),
         iterationContext,
@@ -777,7 +777,7 @@ async function evalFor(node: CallNode, ctx: EvalContext, diagnosticName: 'for' |
   }
   const entries = Object.entries(node.args).filter(([name]) => !name.startsWith('_'))
   if (entries.length !== 1) evaluationError(ctx, node.p, `${diagnosticName}() currently requires one named iterator`)
-  const [name, expression] = entries[0]
+  const [name, expression] = entries[0]!
   const values = evalExpression(expression, ctx)
   if (!Array.isArray(values)) evaluationError(ctx, node.p, `${diagnosticName}() iterator must be a vector or range`)
   const output: Shape[] = []
@@ -862,7 +862,7 @@ async function evalUserModule(
   } else {
     const positional = Object.entries(call.args).filter(([name]) => name.startsWith('_')).sort(([a], [b]) => Number(a.slice(1)) - Number(b.slice(1)))
     for (let i = 0; i < module.params.length; i++) {
-      const param = module.params[i]
+      const param = module.params[i]!
       const expression = call.args[param.name] ?? positional[i]?.[1] ?? param.defaultValue
       env.set(param.name, expression ? evalExpression(expression, { ...ctx, env }) : undefined)
     }
@@ -1031,7 +1031,7 @@ async function parseInternal(
         for (let vertex = 0; vertex < mesh.numVert; vertex++) {
           const sourceOffset = vertex * mesh.numProp
           const targetOffset = vertex * 6
-          for (let channel = 0; channel < 6; channel++) vertices[targetOffset + channel] = mesh.vertProperties[sourceOffset + channel]
+          for (let channel = 0; channel < 6; channel++) vertices[targetOffset + channel] = mesh.vertProperties[sourceOffset + channel]!
           if ((vertex & 0x3fff) === 0x3fff) await control.yieldIfDue()
         }
       }
@@ -1042,7 +1042,7 @@ async function parseInternal(
         const triangleStart = (mesh.runIndex[run] ?? 0) / 3
         const triangleEnd = (mesh.runIndex[run + 1] ?? mesh.triVerts.length) / 3
         if (triangleEnd <= triangleStart) continue
-        const originalId = mesh.runOriginalID[run]
+        const originalId = mesh.runOriginalID[run]!
         provenance.push({
           triangleStart,
           triangleEnd,

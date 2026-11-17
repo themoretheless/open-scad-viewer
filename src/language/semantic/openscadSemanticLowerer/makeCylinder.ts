@@ -52,7 +52,7 @@ export function makePolyhedron(node: CallNode, ctx: EvalContext): SemanticShape[
   const vertices = points.map((point, index) => {
     const vector = vectorValue(point, ctx, node.p, `polyhedron point ${index}`)
     if (vector.length < 3) evaluationError(ctx, node.p, 'Each polyhedron point needs three coordinates')
-    return [vector[0], vector[1], vector[2]] as const
+    return [vector[0]!, vector[1]!, vector[2]!] as const
   })
   const triangles: Array<readonly [number, number, number]> = []
   for (const face of faces) {
@@ -63,7 +63,7 @@ export function makePolyhedron(node: CallNode, ctx: EvalContext): SemanticShape[
       if (index < 0 || index >= vertices.length) evaluationError(ctx, node.p, 'Polyhedron face index is out of bounds')
     }
     for (let index = 1; index < polygon.length - 1; index++) {
-      triangles.push([polygon[0], polygon[index + 1], polygon[index]])
+      triangles.push([polygon[0]!, polygon[index + 1]!, polygon[index]!])
     }
   }
   if (vertices.length < 4) {
@@ -90,7 +90,7 @@ export function makePolygon(node: CallNode, ctx: EvalContext): SemanticShape[] {
   const points = pointsValue.map(point => {
     const vector = vectorValue(point, ctx, node.p, 'polygon point')
     if (vector.length < 2) evaluationError(ctx, node.p, 'Each polygon point needs two coordinates')
-    return [vector[0], vector[1]] as const
+    return [vector[0]!, vector[1]!] as const
   })
   const pathsValue = arg(node, 'paths', 1, undefined, ctx)
   let rings: Array<readonly (readonly [number, number])[]>
@@ -173,7 +173,7 @@ export function evalDxfLinearExtrude(node: CallNode, ctx: EvalContext): Semantic
 
   let heightValue = evaluated.values.get('height')
   const first = evaluated.authored[0]
-  if (heightValue === undefined && first?.name === undefined) {
+  if (heightValue === undefined && first !== undefined && first.name === undefined) {
     const firstValue = evaluated.evaluated.get(first)
     if (typeof firstValue === 'number') heightValue = firstValue
   }
@@ -204,7 +204,7 @@ export function evalDxfLinearExtrude(node: CallNode, ctx: EvalContext): Semantic
   const shapes = compatibilityPlanarChildren(node, occurrence, ctx)
   if (height === 0 || shapes.length === 0) return []
   const profile = unionReduceInternal(shapes, ctx, node.p)!
-  const inputType = ctx.builder.nodes[profile.node].valueType
+  const inputType = ctx.builder.nodes[profile.node]!.valueType
   return [ctx.builder.produce(occurrence, {
     kind: 'linear-extrude',
     valueType: { ...inputType, geometryKind: 'solid-set', space: 'd3' },
@@ -240,7 +240,7 @@ export function evalDxfRotateExtrude(node: CallNode, ctx: EvalContext): Semantic
   const requested = compatibilityRequestedSegments(evaluated.values, node, ctx)
   const segments = semanticSegmentsFromRequested(node, ctx, occurrence, requested, 48, 3)
   const valueType = {
-    ...ctx.builder.nodes[profile.node].valueType,
+    ...ctx.builder.nodes[profile.node]!.valueType,
     geometryKind: 'solid-set' as const,
     space: 'd3' as const,
   }
@@ -263,15 +263,15 @@ export function evalPassedCallChildren(
   const currentOperation = ctx.builder.registered.byStatement.get(node)
   const expansionOperation = ctx.builder.registered.expansionByCall.get(node)
     ?? passed.expansionOperation
-  const expansionPath = ctx.builder.registered.operations[expansionOperation].structuralPath
+  const expansionPath = ctx.builder.registered.operations[expansionOperation]!.structuralPath
   const currentPath = currentOperation === undefined
     ? []
-    : ctx.builder.registered.operations[currentOperation].structuralPath
+    : ctx.builder.registered.operations[currentOperation]!.structuralPath
   const legacyReentry = !isStableProfile(ctx)
     && ctx.builder.languageContract === 'legacy/current'
     && expansionPath.length < currentPath.length
     && expansionPath.every((segment, index) => {
-      const candidate = currentPath[index]
+      const candidate = currentPath[index]!
       return segment.kind === candidate.kind
         && segment.name === candidate.name
         && segment.ordinal === candidate.ordinal

@@ -14,11 +14,11 @@ export function textError(
 }
 
 export function u16(bytes: Uint8Array, offset: number): number {
-  return bytes[offset] * 0x100 + bytes[offset + 1]
+  return bytes[offset]! * 0x100 + bytes[offset + 1]!
 }
 
 export function asciiTag(bytes: Uint8Array, offset: number): string {
-  return String.fromCharCode(bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3])
+  return String.fromCharCode(bytes[offset]!, bytes[offset + 1]!, bytes[offset + 2]!, bytes[offset + 3]!)
 }
 
 export function invalidFont(
@@ -59,8 +59,8 @@ export function validateSfntFace(bytes: Uint8Array, path: string, offset: number
   }
   occupied.sort((left, right) => left.start - right.start || left.end - right.end)
   for (let index = 1; index < occupied.length; index++) {
-    const previous = occupied[index - 1]
-    const current = occupied[index]
+    const previous = occupied[index - 1]!
+    const current = occupied[index]!
     if (current.start < previous.end) {
       invalidFont(path, `has overlapping ${JSON.stringify(previous.tag)} and ${JSON.stringify(current.tag)} tables.`)
     }
@@ -221,7 +221,7 @@ export async function prepareOpenScadTextAssets(
     try {
       const faces = validateFont(file.data, path)
       for (let faceIndex = 0; faceIndex < faces.length; faceIndex++) {
-        fonts.push(describeFace(hb!, file, faceIndex, faces[faceIndex]))
+        fonts.push(describeFace(hb!, file, faceIndex, faces[faceIndex]!))
       }
     } catch (error) {
       const typed = error instanceof OpenScadTextError

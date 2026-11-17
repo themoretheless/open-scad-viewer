@@ -64,7 +64,7 @@ export function evalUserModule(
       .filter(([name]) => name.startsWith('_'))
       .sort(([left], [right]) => Number(left.slice(1)) - Number(right.slice(1)))
     for (let index = 0; index < module.params.length; index++) {
-      const parameter = module.params[index]
+      const parameter = module.params[index]!
       const expression = call.args[parameter.name] ?? positional[index]?.[1] ?? parameter.defaultValue
       const value = expression ? evalExpression(expression, { ...ctx, env }) : undefined
       env.set(parameter.name, value)
@@ -115,7 +115,7 @@ export function resultFromShapes(shapes: readonly SemanticShape[]): SemanticProg
     color: [...shape.color] as SemanticColor,
   }))
   if (items.length === 0) return { tag: 'empty', type: 'never' }
-  if (items.length === 1) return { tag: 'single', item: items[0] }
+  if (items.length === 1) return { tag: 'single', item: items[0]! }
   return { tag: 'multi', items }
 }
 
@@ -158,15 +158,15 @@ export function canonicalizeCompletedDag(
     const stack: Array<{ node: number; nextInput: number; inputs: readonly number[] }> = [{
       node: root,
       nextInput: 0,
-      inputs: semanticNodeInputs(builder.nodes[root]),
+      inputs: semanticNodeInputs(builder.nodes[root]!),
     }]
     while (stack.length > 0) {
-      const frame = stack[stack.length - 1]
+      const frame = stack[stack.length - 1]!
       if (frame.nextInput < frame.inputs.length) {
-        const input = frame.inputs[frame.nextInput++]
+        const input = frame.inputs[frame.nextInput++]!
         if (!visited[input]) {
           visited[input] = 1
-          stack.push({ node: input, nextInput: 0, inputs: semanticNodeInputs(builder.nodes[input]) })
+          stack.push({ node: input, nextInput: 0, inputs: semanticNodeInputs(builder.nodes[input]!) })
         }
       } else {
         postorder.push(frame.node)
@@ -188,7 +188,7 @@ export function canonicalizeCompletedDag(
   oldToNew.fill(-1)
   postorder.forEach((oldId, newId) => { oldToNew[oldId] = newId })
   const canonicalNodes = postorder.map((oldId, newId) => (
-    remapSemanticNode(builder.nodes[oldId], newId, oldToNew)
+    remapSemanticNode(builder.nodes[oldId]!, newId, oldToNew)
   ))
   builder.nodes.splice(0, builder.nodes.length, ...canonicalNodes)
 
@@ -198,7 +198,7 @@ export function canonicalizeCompletedDag(
   // value DAG and occurrence frontier before validation.
   const removedOccurrenceIds = new Set<string>()
   for (const occurrence of builder.occurrences) {
-    if (occurrence.node !== null && oldToNew[occurrence.node] < 0) {
+    if (occurrence.node !== null && oldToNew[occurrence.node]! < 0) {
       removedOccurrenceIds.add(occurrence.occurrenceId)
     }
   }
@@ -223,14 +223,14 @@ export function canonicalizeCompletedDag(
     canonicalOccurrences.push(occurrence)
   }
   for (let index = 0; index < canonicalOccurrences.length; index++) {
-    const occurrence = canonicalOccurrences[index]
+    const occurrence = canonicalOccurrences[index]!
     const remapOccurrence = (reference: number | null): number | null => {
       if (reference === null) return null
-      const mapped = occurrenceOldToNew[reference]
+      const mapped = occurrenceOldToNew[reference]!
       if (mapped < 0) throw new Error('Semantic occurrence pruning retained a reference to a discarded branch')
       return mapped
     }
-    const mappedNode = occurrence.node === null ? null : oldToNew[occurrence.node]
+    const mappedNode = occurrence.node === null ? null : oldToNew[occurrence.node]!
     if (mappedNode !== null && mappedNode < 0) {
       throw new Error('Semantic occurrence pruning retained an unpublished node')
     }
@@ -247,14 +247,14 @@ export function canonicalizeCompletedDag(
     0,
     builder.tessellationIntents.length,
     ...builder.tessellationIntents.flatMap(intent => {
-      const occurrence = occurrenceOldToNew[intent.occurrence]
+      const occurrence = occurrenceOldToNew[intent.occurrence]!
       return occurrence < 0 ? [] : [{ ...intent, occurrence }]
     }),
   )
   const remapOutput = (item: SemanticOutputRef): SemanticOutputRef => {
-    const node = oldToNew[item.node]
-    const producerOccurrence = occurrenceOldToNew[item.producerOccurrence]
-    const identityOccurrence = occurrenceOldToNew[item.identityOccurrence]
+    const node = oldToNew[item.node]!
+    const producerOccurrence = occurrenceOldToNew[item.producerOccurrence]!
+    const identityOccurrence = occurrenceOldToNew[item.identityOccurrence]!
     if (node < 0 || producerOccurrence < 0 || identityOccurrence < 0) {
       throw new Error('Semantic DAG canonicalization discarded a published output reference')
     }
@@ -270,14 +270,14 @@ export function canonicalizeCompletedDag(
   const producerForRoot = (oldRoot: number): number | null => {
     for (const occurrence of builder.occurrences) {
       if (occurrence.node !== oldToNew[oldRoot]) continue
-      const operation = builder.registered.operations[occurrence.operation]
-      const node = builder.nodes[oldToNew[oldRoot]]
+      const operation = builder.registered.operations[occurrence.operation]!
+      const node = builder.nodes[oldToNew[oldRoot]!]!
       if (semanticNodeProducerOperationNames(node).includes(operation.name)) return occurrence.id
     }
     return null
   }
   const canonicalEvaluationOrder = builder.evaluationOrder.map(node => {
-    const mapped = oldToNew[node]
+    const mapped = oldToNew[node]!
     if (mapped < 0) throw new Error('Semantic evaluation order retained a discarded node')
     return mapped
   })
@@ -288,8 +288,8 @@ export function canonicalizeCompletedDag(
     throw new Error('Semantic DAG canonicalization did not preserve exact kernel evaluation order')
   }
   const canonicalEffects = (terminalDiagnostic === null ? builder.discardedEffects : []).map(effect => {
-    const root = oldToNew[effect.root]
-    const ownerOccurrence = occurrenceOldToNew[effect.ownerOccurrence]
+    const root = oldToNew[effect.root]!
+    const ownerOccurrence = occurrenceOldToNew[effect.ownerOccurrence]!
     if (root < 0 || ownerOccurrence < 0) {
       throw new Error('Semantic discarded effect lost its root or owner during canonicalization')
     }
@@ -297,10 +297,10 @@ export function canonicalizeCompletedDag(
   })
   const terminal = terminalDiagnostic === null ? null : {
     tag: 'legacy-language-error' as const,
-    occurrence: occurrenceOldToNew[terminalOccurrence!],
+    occurrence: occurrenceOldToNew[terminalOccurrence!]!,
     diagnosticTemplate: terminalDiagnostic,
     prefixFrontier: terminalRoots.map(oldRoot => {
-      const root = oldToNew[oldRoot]
+      const root = oldToNew[oldRoot]!
       if (root < 0) throw new Error('Semantic terminal prefix lost a root during canonicalization')
       return { root, ownerOccurrence: producerForRoot(oldRoot) }
     }),

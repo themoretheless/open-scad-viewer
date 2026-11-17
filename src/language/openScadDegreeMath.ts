@@ -17,7 +17,7 @@ const pairs=new Map<number|string,[number|undefined,number|undefined]>()
 let previous:{name:'sin'|'cos';key:number|string}|undefined
 export function evaluateDegreeScalar(name:DegreeFunction,args:readonly number[]):number {
  if(name==='sin'||name==='cos'){
-  const angle=args[0],key=encode(angle),slot=name==='sin'?0:1
+  const angle=args[0]!,key=encode(angle),slot=name==='sin'?0:1
   let pair=pairs.get(key)
   if(pair?.[slot]===undefined){
    // Pair only after observing alternating functions across angles. A sin-only
@@ -25,10 +25,10 @@ export function evaluateDegreeScalar(name:DegreeFunction,args:readonly number[])
    const paired=previous&&previous.name!==name&&previous.key!==key
    if(paired){
     const values=evaluateDegreeBatch([{function:'sin',args:[angle]},{function:'cos',args:[angle]}])
-    pair=[values[0],values[1]]
+    pair=[values[0]!,values[1]!]
    }else{
     pair=pair??[undefined,undefined]
-    pair[slot]=evaluateDegreeBatch([{function:name,args:[angle]}])[0]
+    pair[slot]=evaluateDegreeBatch([{function:name,args:[angle]}])[0]!
    }
    if(!pairs.has(key)&&pairs.size>=256)pairs.delete(pairs.keys().next().value!)
    pairs.set(key,pair)
@@ -37,5 +37,5 @@ export function evaluateDegreeScalar(name:DegreeFunction,args:readonly number[])
   return pair![slot]!
  }
  previous=undefined
- return evaluateDegreeBatch([{function:name,args}])[0]
+ return evaluateDegreeBatch([{function:name,args}])[0]!
 }

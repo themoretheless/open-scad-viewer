@@ -2,7 +2,7 @@ import type { SemanticNode } from '../../core/semanticProgram'
 
 export function remapSemanticNode(node: SemanticNode, id: number, oldToNew: Int32Array): SemanticNode {
   const remap = (input: number) => {
-    const mapped = oldToNew[input]
+    const mapped = oldToNew[input]!
     if (mapped < 0) throw new Error('Semantic DAG canonicalization encountered an unreachable input')
     return mapped
   }

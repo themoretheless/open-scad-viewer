@@ -59,7 +59,7 @@ export function evalPreparedNodes(nodes: readonly Statement[], ctx: EvalContext)
         if (operation === undefined) throw error
         let occurrence = -1
         for (let index = ctx.builder.occurrences.length - 1; index >= occurrenceStart; index--) {
-          const candidate = ctx.builder.occurrences[index]
+          const candidate = ctx.builder.occurrences[index]!
           if (candidate.operation === operation && candidate.parent === ctx.parentOccurrence) {
             occurrence = index
             break
@@ -105,8 +105,9 @@ export function multiplyMatrix(left: SemanticMatrix4, right: SemanticMatrix4): S
   const output = new Array<number>(16).fill(0)
   for (let column = 0; column < 4; column++) {
     for (let row = 0; row < 4; row++) {
-      for (let inner = 0; inner < 4; inner++) output[column * 4 + row] += left[inner * 4 + row] * right[column * 4 + inner]
-      output[column * 4 + row] = canonicalNumber(output[column * 4 + row])
+      let sum = 0
+      for (let inner = 0; inner < 4; inner++) sum += left[inner * 4 + row]! * right[column * 4 + inner]!
+      output[column * 4 + row] = canonicalNumber(sum)
     }
   }
   return output as unknown as SemanticMatrix4
@@ -217,7 +218,7 @@ export function parseColor(value: Value, ctx: EvalContext, position: number): RG
   if (named) return [...named]
   const match = value.match(/^#([0-9a-f]{6}|[0-9a-f]{8})$/i)
   if (!match) evaluationError(ctx, position, `Unknown color ${value}`)
-  const hex = match[1]
+  const hex = match[1]!
   return [
     parseInt(hex.slice(0, 2), 16) / 255,
     parseInt(hex.slice(2, 4), 16) / 255,
@@ -244,7 +245,7 @@ export function invoke(
 }
 
 export function nodeValueType(shape: SemanticShape, ctx: EvalContext): SemanticValueType {
-  return ctx.builder.nodes[shape.node].valueType
+  return ctx.builder.nodes[shape.node]!.valueType
 }
 
 export function requestedSegments(node: CallNode, ctx: EvalContext): number | null {
@@ -328,12 +329,12 @@ export function combineShapes(
   position: number,
 ): SemanticShape[] {
   if (shapes.length === 0) return []
-  const dimension = shapes[0].dimension
+  const dimension = shapes[0]!.dimension
   if (shapes.some(shape => shape.dimension !== dimension)) {
     evaluationError(ctx, position, `${operation}() cannot mix 2D and 3D children`)
   }
   if (shapes.length === 1) return ctx.builder.alias(occurrence, shapes, operation === 'hull')
-  const firstType = nodeValueType(shapes[0], ctx)
+  const firstType = nodeValueType(shapes[0]!, ctx)
   const valueType: SemanticValueType = {
     ...firstType,
     geometryKind: dimension === 'region2' ? 'region' : 'solid-set',
@@ -346,7 +347,7 @@ export function combineShapes(
   const semanticNode: SemanticNodeWithoutId = operation === 'hull'
     ? { kind: 'hull', ...common }
     : { kind: 'boolean', operation, ...common }
-  return [ctx.builder.produce(occurrence, semanticNode, shapes[0].color)]
+  return [ctx.builder.produce(occurrence, semanticNode, shapes[0]!.color)]
 }
 
 export function unionReduceInternal(
@@ -355,15 +356,15 @@ export function unionReduceInternal(
   position: number,
 ): SemanticReducedShape | null {
   if (shapes.length === 0) return null
-  const dimension = shapes[0].dimension
+  const dimension = shapes[0]!.dimension
   if (shapes.some(shape => shape.dimension !== dimension)) evaluationError(ctx, position, 'union() cannot mix 2D and 3D children')
   if (shapes.length === 1) return {
-    node: shapes[0].node,
+    node: shapes[0]!.node,
     dimension,
-    color: shapes[0].color,
-    identityOccurrence: shapes[0].identityOccurrence,
+    color: shapes[0]!.color,
+    identityOccurrence: shapes[0]!.identityOccurrence,
   }
-  const firstType = nodeValueType(shapes[0], ctx)
+  const firstType = nodeValueType(shapes[0]!, ctx)
   const node = ctx.builder.addInternalNode({
     kind: 'boolean',
     operation: 'union',
@@ -374,5 +375,5 @@ export function unionReduceInternal(
       space: dimension === 'region2' ? 'd2' : 'd3',
     },
   })
-  return { node, dimension, color: shapes[0].color, identityOccurrence: null }
+  return { node, dimension, color: shapes[0]!.color, identityOccurrence: null }
 }

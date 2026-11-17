@@ -261,7 +261,7 @@ export function compareUtf8(left: string, right: string): number {
   const rightBytes = UTF8.encode(right)
   const common = Math.min(leftBytes.length, rightBytes.length)
   for (let index = 0; index < common; index++) {
-    if (leftBytes[index] !== rightBytes[index]) return leftBytes[index] < rightBytes[index] ? -1 : 1
+    if (leftBytes[index] !== rightBytes[index]) return leftBytes[index]! < rightBytes[index]! ? -1 : 1
   }
   return leftBytes.length - rightBytes.length
 }

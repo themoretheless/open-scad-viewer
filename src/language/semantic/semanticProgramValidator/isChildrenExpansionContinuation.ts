@@ -15,9 +15,9 @@ export function isChildrenExpansionContinuation(
   validationIndex: SemanticOccurrenceValidationIndex,
 ): boolean {
   if (parent === null) return false
-  const expansionOperation = operations[operation]
+  const expansionOperation = operations[operation]!
   const childrenOccurrence = occurrences[parent] as SemanticOccurrence
-  const childrenOperation = operations[childrenOccurrence.operation]
+  const childrenOperation = operations[childrenOccurrence.operation]!
   const callerBodyOccurrence = occurrences[staticParent] as SemanticOccurrence
   const expansionSegment = expansionOperation.structuralPath.at(-1)
   const childrenSegment = childrenOperation.structuralPath.at(-1)
@@ -36,9 +36,9 @@ export function isChildrenExpansionContinuation(
   const childrenSlots = childrenOccurrence.dynamicSlots
   if (childrenSlots.length !== 1
     || slots.length !== 1
-    || childrenSlots[0].name !== '$index'
-    || slots[0].name !== '$index'
-    || identityValueKey(childrenSlots[0].value) !== identityValueKey(slots[0].value)) return false
+    || childrenSlots[0]!.name !== '$index'
+    || slots[0]!.name !== '$index'
+    || identityValueKey(childrenSlots[0]!.value) !== identityValueKey(slots[0]!.value)) return false
 
   // A selected `!children()` is detached from the module invocation that
   // supplied its dynamic continuation. The lowerer represents each bounded
@@ -59,7 +59,7 @@ export function isChildrenExpansionContinuation(
       && runtimeChildren.length === 1
       && runtimeChildren[0] === occurrenceIndex
       && expandedChildren.every(candidate => (
-        operations[(occurrences[candidate] as SemanticOccurrence).operation].parent === operation
+        operations[(occurrences[candidate] as SemanticOccurrence).operation]!.parent === operation
       ))
   }
 
@@ -67,13 +67,13 @@ export function isChildrenExpansionContinuation(
   let definitionOccurrence: SemanticOccurrence | null = null
   while (cursor !== null && cursor !== staticParent) {
     const candidate = occurrences[cursor] as SemanticOccurrence
-    const candidateOperation = operations[candidate.operation]
+    const candidateOperation = operations[candidate.operation]!
     const candidatePath = candidateOperation.structuralPath
     const childrenPath = childrenOperation.structuralPath
     consumeOccurrenceProofBudget(validationIndex, candidatePath.length)
     const lexicallyContainsChildren = candidatePath.length < childrenPath.length
       && candidatePath.every((segment, index) => {
-        const childSegment = childrenPath[index]
+        const childSegment = childrenPath[index]!
         return segment.kind === childSegment.kind
           && segment.name === childSegment.name
           && segment.ordinal === childSegment.ordinal
@@ -87,7 +87,7 @@ export function isChildrenExpansionContinuation(
     cursor = candidate.parent
   }
   if (!definitionOccurrence || definitionOccurrence.parent !== staticParent) return false
-  const definitionOperation = operations[definitionOccurrence.operation]
+  const definitionOperation = operations[definitionOccurrence.operation]!
   const activation = moduleActivationAnchor(definitionOccurrence.id, occurrences, operations, validationIndex)
   if (!activation
     || activation.bodyOccurrence !== staticParent
@@ -97,7 +97,7 @@ export function isChildrenExpansionContinuation(
   consumeOccurrenceProofBudget(validationIndex, definitionPath.length)
   const lexicallyContainsChildren = definitionPath.length < childrenPath.length
     && definitionPath.every((segment, index) => {
-      const candidate = childrenPath[index]
+      const candidate = childrenPath[index]!
       return segment.kind === candidate.kind
         && segment.name === candidate.name
         && segment.ordinal === candidate.ordinal
@@ -106,7 +106,7 @@ export function isChildrenExpansionContinuation(
   const expandedChildren = validationIndex.runtimeChildren[occurrenceIndex] ?? []
   consumeOccurrenceProofBudget(validationIndex, expansionRuntimeChildren.length + expandedChildren.length)
   const expandedChildrenStayInStaticSubtree = expandedChildren.every(candidate => (
-    operations[(occurrences[candidate] as SemanticOccurrence).operation].parent === operation
+    operations[(occurrences[candidate] as SemanticOccurrence).operation]!.parent === operation
   ))
   return lexicallyContainsChildren
     && expansionRuntimeChildren.length === 1
@@ -142,7 +142,7 @@ export function validateOccurrences(
     const operation = integer(occurrence.operation, `${path}.operation`, 0, Math.max(0, operations.length - 1))
     if (operations.length === 0) fail('E_SEMANTIC_REFERENCE', `${path}.operation`, 'occurrence requires an operation')
     const parent = occurrence.parent === null ? null : integer(occurrence.parent, `${path}.parent`, 0, index - 1)
-    const staticParent = operations[operation].parent
+    const staticParent = operations[operation]!.parent
     const staticParentOccurrence = occurrence.staticParent === null
       ? null
       : integer(occurrence.staticParent, `${path}.staticParent`, 0, index - 1)
@@ -160,7 +160,7 @@ export function validateOccurrences(
     if (staticParent === null) {
       if (staticParentOccurrence !== null) fail('E_SEMANTIC_IDENTITY', `${path}.staticParent`, 'root static operation requires null staticParent')
       if (parent !== null) {
-        const rootOperation = operations[operation]
+        const rootOperation = operations[operation]!
         if (rootOperation.category !== 'module'
           || rootOperation.structuralPath.at(-1)?.kind !== 'module') {
           fail('E_SEMANTIC_IDENTITY', `${path}.parent`, 'a static-root operation cannot have a runtime parent outside a module-definition activation')
@@ -179,11 +179,11 @@ export function validateOccurrences(
         if (cursor === null) fail('E_SEMANTIC_IDENTITY', `${path}.staticParent`, 'staticParent is not on the runtime ancestor chain')
         const skipped = occurrences[cursor] as SemanticOccurrence
         if (skipped.operation === staticParent) fail('E_SEMANTIC_IDENTITY', `${path}.staticParent`, 'staticParent must be the nearest matching ancestor')
-        const category = operations[skipped.operation].category
+        const category = operations[skipped.operation]!.category
         if (category !== 'control' && category !== 'module') crossedNonExpansionFrame = true
         cursor = skipped.parent
       }
-      const expansion = operations[operation].name === '$expansion'
+      const expansion = operations[operation]!.name === '$expansion'
       if (expansion) {
         pendingContinuations.push(Object.freeze({
           occurrence: index,
@@ -203,13 +203,13 @@ export function validateOccurrences(
     const expectedOccurrenceId = deriveSemanticOccurrenceId(
       parentOccurrenceId,
       staticParentOccurrenceId,
-      operations[operation].operationId,
+      operations[operation]!.operationId,
       slots as unknown as readonly SemanticDynamicSlot[],
     )
     if (occurrence.occurrenceId !== expectedOccurrenceId) fail('E_SEMANTIC_IDENTITY', `${path}.occurrenceId`, 'occurrence ID does not match operation, parent, and dynamic slots')
     const group = occurrenceGroups.get(expectedOccurrenceId) ?? []
     if (group.length > 0) {
-      const first = occurrences[group[0]] as SemanticOccurrence
+      const first = occurrences[group[0]!] as SemanticOccurrence
       if (first.operation !== operation || first.parent !== parent
         || first.staticParent !== staticParentOccurrence
         || !sameDynamicSlots(first.dynamicSlots, slots as unknown as readonly SemanticDynamicSlot[])) {
@@ -251,12 +251,12 @@ export function validateOccurrences(
 
   const operationChildren: number[][] = Array.from({ length: operations.length }, () => [])
   operations.forEach(operation => {
-    if (operation.parent !== null) operationChildren[operation.parent].push(operation.id)
+    if (operation.parent !== null) operationChildren[operation.parent]!.push(operation.id)
   })
   const runtimeChildren: number[][] = Array.from({ length: occurrences.length }, () => [])
   occurrences.forEach((rawOccurrence, index) => {
     const parent = (rawOccurrence as SemanticOccurrence).parent
-    if (parent !== null) runtimeChildren[parent].push(index)
+    if (parent !== null) runtimeChildren[parent]!.push(index)
   })
   const validationIndex: SemanticOccurrenceValidationIndex = {
     operationChildren,
@@ -315,7 +315,7 @@ export function validateOccurrences(
 
 export function occurrenceRoot(index: number, occurrences: readonly SemanticOccurrence[]): number {
   let current = index
-  while (occurrences[current].parent !== null) current = occurrences[current].parent!
+  while (occurrences[current]!.parent !== null) current = occurrences[current]!.parent!
   return current
 }
 
@@ -327,7 +327,7 @@ export function occurrenceIsDescendantOf(
   let current: number | null = candidate
   while (current !== null) {
     if (current === ancestor) return true
-    current = occurrences[current].parent
+    current = occurrences[current]!.parent
   }
   return false
 }
@@ -336,7 +336,7 @@ export function nodePreservesIdentity(root: number, target: number, nodes: reado
   let current = root
   while (true) {
     if (current === target) return true
-    const node = nodes[current]
+    const node = nodes[current]!
     if (node.kind !== 'transform') return false
     current = node.input
   }
@@ -354,20 +354,20 @@ export function validateOutputRef(
   const producerOccurrence = integer(value.producerOccurrence, `${path}.producerOccurrence`, 0, Math.max(0, occurrences.length - 1))
   const identityOccurrence = integer(value.identityOccurrence, `${path}.identityOccurrence`, 0, Math.max(0, occurrences.length - 1))
   if (nodes.length === 0 || occurrences.length === 0) fail('E_SEMANTIC_REFERENCE', path, 'output requires a node occurrence')
-  if (occurrences[producerOccurrence].node !== node) fail('E_SEMANTIC_IDENTITY', path, 'output node must match its producer occurrence')
-  if (occurrences[identityOccurrence].sceneEntityId === null) fail('E_SEMANTIC_IDENTITY', path, 'output identity occurrence must own a scene entity')
-  const identityNode = occurrences[identityOccurrence].node
-  const canonicalProducerOccurrence = canonicalOccurrenceRows[producerOccurrence]
+  if (occurrences[producerOccurrence]!.node !== node) fail('E_SEMANTIC_IDENTITY', path, 'output node must match its producer occurrence')
+  if (occurrences[identityOccurrence]!.sceneEntityId === null) fail('E_SEMANTIC_IDENTITY', path, 'output identity occurrence must own a scene entity')
+  const identityNode = occurrences[identityOccurrence]!.node
+  const canonicalProducerOccurrence = canonicalOccurrenceRows[producerOccurrence]!
   const identityIsInProducingBranch = occurrenceIsDescendantOf(
     identityOccurrence,
     producerOccurrence,
     occurrences,
   ) || (
-    occurrences[canonicalProducerOccurrence].occurrenceId === occurrences[producerOccurrence].occurrenceId
+    occurrences[canonicalProducerOccurrence]!.occurrenceId === occurrences[producerOccurrence]!.occurrenceId
     && occurrenceIsDescendantOf(identityOccurrence, canonicalProducerOccurrence, occurrences)
   )
   if (identityNode === null || !nodePreservesIdentity(node, identityNode, nodes)
-    || occurrenceRoot(canonicalProducerOccurrence, occurrences) !== occurrenceRoot(canonicalOccurrenceRows[identityOccurrence], occurrences)
+    || occurrenceRoot(canonicalProducerOccurrence, occurrences) !== occurrenceRoot(canonicalOccurrenceRows[identityOccurrence]!, occurrences)
     || !identityIsInProducingBranch) {
     fail('E_SEMANTIC_IDENTITY', `${path}.identityOccurrence`, 'output identity must belong to the producing evaluation branch and node lineage')
   }

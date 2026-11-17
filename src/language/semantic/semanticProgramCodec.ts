@@ -193,7 +193,7 @@ export class ByteReader {
     return output
   }
 
-  byte(path: string): number { return this.raw(1, path)[0] }
+  byte(path: string): number { return this.raw(1, path)[0]! }
   u16(path: string): number {
     const bytes = this.raw(2, path)
     return new DataView(bytes.buffer, bytes.byteOffset, 2).getUint16(0, false)

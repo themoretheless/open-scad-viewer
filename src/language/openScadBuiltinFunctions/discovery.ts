@@ -16,10 +16,10 @@ export function findClosestOpenScadBuiltinFunction(name:string,maxDistance=3):st
   let row=Array.from({length:candidate.length+1},(_,i)=>i)
   for(let i=0;i<name.length;i++){
    const next=[i+1]
-   for(let j=0;j<candidate.length;j++)next.push(Math.min(next[j]+1,row[j+1]+1,row[j]+Number(name[i]!==candidate[j])))
+   for(let j=0;j<candidate.length;j++)next.push(Math.min(next[j]!+1,row[j+1]!+1,row[j]!+Number(name[i]!==candidate[j])))
    row=next
   }
-  const distance=row[candidate.length]
+  const distance=row[candidate.length]!
   if(distance<bound){bound=distance;best=candidate}
  }
  return best

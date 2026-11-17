@@ -217,8 +217,8 @@ function boxPlan(
     reduced: false,
     reduction: null,
     dimensions: axes === 3
-      ? freeze3(values[0], values[1], values[2])
-      : freeze2(values[0], values[1]),
+      ? freeze3(values[0]!, values[1]!, values[2]!)
+      : freeze2(values[0]!, values[1]!),
     center: input.center === true,
     sizeSource,
   })
@@ -268,7 +268,7 @@ function radiusWarnings(
     if (present) warn(context, {
       code: 'OPENSCAD_PRIMITIVE_RADIUS_SHADOWED',
       message: `${kind} uses ${diameters[index]}; the paired ${fields[index]} value has no effect`,
-      primitive: kind, field: fields[index], value: input[fields[index]],
+      primitive: kind, field: fields[index]!, value: input[fields[index]!],
     })
   })
 }
@@ -324,7 +324,8 @@ function indexedPolicy(limits:OpenScadPrimitiveSafetyLimits|undefined,convexity:
   const values=[limits?.maximumPoints,limits?.maximumFacesOrPaths,limits?.maximumIndices]
   const response=languageRequest(30,{limits:values.map(value=>({missing:value===undefined,number:encode(value)})),convexity:encode(convexity)}) as {ok:boolean;field?:string;value:{limits:(number|string)[];convexity:number}}
   if(!response.ok)throw new RangeError(`${response.field} must be a non-negative safe integer`)
-  const [maximumPoints,maximumFacesOrPaths,maximumIndices]=response.value.limits.map(Number)
+  const limitValues=response.value.limits.map(Number)
+  const maximumPoints=limitValues[0]!,maximumFacesOrPaths=limitValues[1]!,maximumIndices=limitValues[2]!
   return Object.freeze({maximumPoints,maximumFacesOrPaths,maximumIndices,convexity:response.value.convexity})
 }
 
@@ -425,7 +426,7 @@ export function resolveOpenScadPolyhedron(
       primitive:'polyhedron',field:`points[${event.index}]`,index:event.index,value:points[event.index!],
     })
   }
-  const polygons=response.value.polygons.map(polygon=>polygon.map(point=>freeze3(point[0],point[1],point[2])))
+  const polygons=response.value.polygons.map(polygon=>polygon.map(point=>freeze3(point[0]!,point[1]!,point[2]!)))
   return Object.freeze({kind:'polyhedron',vertices:Object.freeze(response.value.vertices),indices:Object.freeze(response.value.indices),usable:response.value.usable,polygons:frozenPolygons3(polygons),facesSource,
     convexity:limits.convexity,aborted:response.value.aborted,sourcePointCount:points.length,
     empty:response.value.empty,reduced:limited!==null,reduction:limited})

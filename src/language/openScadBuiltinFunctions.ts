@@ -91,14 +91,15 @@ export class Mt19937 {
   constructor(seed: number) {
     this.state[0] = seed >>> 0
     for (let index = 1; index < this.state.length; index++) {
-      const previous = this.state[index - 1] ^ (this.state[index - 1] >>> 30)
+      const prior = this.state[index - 1]!
+      const previous = prior ^ (prior >>> 30)
       this.state[index] = (Math.imul(1_812_433_253, previous) + index) >>> 0
     }
   }
 
   next(): number {
     if (this.index >= this.state.length) this.twist()
-    let value = this.state[this.index++]
+    let value = this.state[this.index++]!
     value ^= value >>> 11
     value ^= (value << 7) & 0x9d2c5680
     value ^= (value << 15) & 0xefc60000
@@ -108,9 +109,9 @@ export class Mt19937 {
 
   private twist(): void {
     for (let index = 0; index < this.state.length; index++) {
-      const combined = (this.state[index] & 0x80000000)
-        | (this.state[(index + 1) % this.state.length] & 0x7fffffff)
-      this.state[index] = this.state[(index + 397) % this.state.length]
+      const combined = (this.state[index]! & 0x80000000)
+        | (this.state[(index + 1) % this.state.length]! & 0x7fffffff)
+      this.state[index] = this.state[(index + 397) % this.state.length]!
         ^ (combined >>> 1)
         ^ ((combined & 1) === 0 ? 0 : 0x9908b0df)
     }
@@ -363,9 +364,9 @@ const cross: BuiltinHandler = (args, context) => {
   const a = left.map((value, index) => finiteNumberValue(context, 'cross', value, index))
   const b = right.map((value, index) => finiteNumberValue(context, 'cross', value, index))
   return registerArray(context, 'cross', [
-    a[1] * b[2] - a[2] * b[1],
-    a[2] * b[0] - a[0] * b[2],
-    a[0] * b[1] - a[1] * b[0],
+    a[1]! * b[2]! - a[2]! * b[1]!,
+    a[2]! * b[0]! - a[0]! * b[2]!,
+    a[0]! * b[1]! - a[1]! * b[0]!,
   ])
 }
 

@@ -245,7 +245,7 @@ function scaleVector(
 function dot(left: readonly number[], right: readonly number[]): number | undefined {
   if (left.length !== right.length) return undefined
   let result = 0
-  for (let index = 0; index < left.length; index++) result += left[index] * right[index]
+  for (let index = 0; index < left.length; index++) result += left[index]! * right[index]!
   return result
 }
 
@@ -274,29 +274,29 @@ function multiply(
   }
 
   if (numericVector(left) && numericMatrix(right)) {
-    if (right.length !== left.length || right.some(row => row.length !== right[0].length)) {
+    if (right.length !== left.length || right.some(row => row.length !== right[0]!.length)) {
       context.warn('vector*matrix requires matching rectangular dimensions')
       return undefined
     }
-    return register(Array.from({ length: right[0].length }, (_, column) => {
+    return register(Array.from({ length: right[0]!.length }, (_, column) => {
       let value = 0
-      for (let row = 0; row < left.length; row++) value += left[row] * right[row][column]
+      for (let row = 0; row < left.length; row++) value += left[row]! * right[row]![column]!
       return value
     }), 'vector-matrix product', context)
   }
 
   if (numericMatrix(left) && numericMatrix(right)) {
-    const shared = left[0].length
+    const shared = left[0]!.length
     if (left.some(row => row.length !== shared)
       || right.length !== shared
-      || right.some(row => row.length !== right[0].length)) {
+      || right.some(row => row.length !== right[0]!.length)) {
       context.warn('matrix*matrix requires matching rectangular dimensions')
       return undefined
     }
     return register(left.map(row => register(
-      Array.from({ length: right[0].length }, (_, column) => {
+      Array.from({ length: right[0]!.length }, (_, column) => {
         let value = 0
-        for (let index = 0; index < shared; index++) value += row[index] * right[index][column]
+        for (let index = 0; index < shared; index++) value += row[index]! * right[index]![column]!
         return value
       }),
       'matrix product row',

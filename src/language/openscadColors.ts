@@ -15,7 +15,7 @@ const PALETTE: RGBA[] = [
 
 let paletteIndex = 0
 
-export function nextColor(): RGBA { return [...PALETTE[paletteIndex++ % PALETTE.length]] as RGBA }
+export function nextColor(): RGBA { return [...PALETTE[paletteIndex++ % PALETTE.length]!] as RGBA }
 
 export function resetPalette(): void { paletteIndex = 0 }
 

@@ -129,7 +129,7 @@ export function parseOpenScadSurfaceDat(file: OpenScadProjectFile): OpenScadSurf
   if (rows.length < 2 || (rows[0]?.length ?? 0) < 2) {
     return dataError('E_SURFACE_DAT_INVALID', 'surface() DAT input requires at least two non-empty rows and columns.')
   }
-  const columns = rows[0].length
+  const columns = rows[0]!.length
   if (rows.some(row => row.length !== columns)) {
     return dataError('E_SURFACE_DAT_INVALID', 'surface() DAT rows must contain the same number of heights.')
   }
@@ -139,7 +139,7 @@ export function parseOpenScadSurfaceDat(file: OpenScadProjectFile): OpenScadSurf
 
 export function pngCrc(bytes: Uint8Array, start: number, end: number): number {
   let crc = 0xffffffff
-  for (let index = start; index < end; index++) crc = CRC_TABLE[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8)
+  for (let index = start; index < end; index++) crc = CRC_TABLE[(crc ^ bytes[index]!) & 0xff]! ^ (crc >>> 8)
   return (crc ^ 0xffffffff) >>> 0
 }
 
@@ -246,30 +246,30 @@ export function unfilter(
   bytesPerPixel: number,
 ): void {
   for (let index = 0; index < encoded.length; index++) {
-    const left = index >= bytesPerPixel ? target[index - bytesPerPixel] : 0
+    const left = index >= bytesPerPixel ? target[index - bytesPerPixel]! : 0
     const up = previous[index] ?? 0
-    const upperLeft = index >= bytesPerPixel ? previous[index - bytesPerPixel] : 0
+    const upperLeft = index >= bytesPerPixel ? previous[index - bytesPerPixel]! : 0
     const predictor = filter === 0 ? 0
       : filter === 1 ? left
         : filter === 2 ? up
           : filter === 3 ? Math.floor((left + up) / 2)
             : filter === 4 ? paeth(left, up, upperLeft)
               : dataError('E_SURFACE_PNG_INVALID', `surface() PNG uses invalid scanline filter ${filter}.`)
-    target[index] = (encoded[index] + predictor) & 0xff
+    target[index] = (encoded[index]! + predictor) & 0xff
   }
 }
 
 export function sample(row: Uint8Array, index: number, bitDepth: number): number {
-  if (bitDepth === 8) return row[index]
+  if (bitDepth === 8) return row[index]!
   if (bitDepth === 16) {
     // lodepng's default OpenSCAD 2021 decode target is RGBA8: 16-bit
     // channels are narrowed by taking their most-significant byte.
-    return row[index * 2]
+    return row[index * 2]!
   }
   const bitOffset = index * bitDepth
   const shift = 8 - bitDepth - (bitOffset & 7)
   const mask = (1 << bitDepth) - 1
-  const value = (row[bitOffset >>> 3] >>> shift) & mask
+  const value = (row[bitOffset >>> 3]! >>> shift) & mask
   return Math.round(value * 255 / mask)
 }
 
@@ -289,9 +289,9 @@ export function pixelLuminance(
     if (palette === null || paletteOffset + 2 >= palette.length) {
       return dataError('E_SURFACE_PNG_INVALID', 'surface() PNG references a missing palette entry.')
     }
-    return 0.2126 * palette[paletteOffset]
-      + 0.7152 * palette[paletteOffset + 1]
-      + 0.0722 * palette[paletteOffset + 2]
+    return 0.2126 * palette[paletteOffset]!
+      + 0.7152 * palette[paletteOffset + 1]!
+      + 0.0722 * palette[paletteOffset + 2]!
   }
   const red = sample(row, first, bitDepth)
   const green = sample(row, first + 1, bitDepth)

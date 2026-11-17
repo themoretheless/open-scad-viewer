@@ -158,7 +158,7 @@ export function evalBuiltin(expr: Extract<Expr, { kind: 'call' }>, ctx: EvalCont
   const values = isStableProfile(ctx)
     ? createDeferredOpenScadBuiltinArguments(
         expr.args.length,
-        index => evaluateArgument(expr.args[index]),
+        index => evaluateArgument(expr.args[index]!),
       )
     : expr.args.map(evaluateArgument)
   let result: ReturnType<typeof evaluateOpenScadBuiltinFunction>
@@ -293,7 +293,7 @@ export function bindAssertArguments(node: CallNode, ctx: EvalContext): { conditi
   const messageKey = has('message') ? 'message' : has('_1') ? '_1' : null
   const span = node.argSpans[conditionKey]
   return {
-    condition: node.args[conditionKey],
+    condition: node.args[conditionKey]!,
     conditionText: compactDiagnosticText(span ? ctx.source.slice(span.start, span.end) : 'condition'),
     message: messageKey ? node.args[messageKey] : undefined,
   }

@@ -39,11 +39,11 @@ export async function decodeOpenScadSurfacePng(bytes: Uint8Array): Promise<Decod
       }
       width = u32(chunk, 0)
       height = u32(chunk, 4)
-      bitDepth = chunk[8]
-      colorType = chunk[9]
+      bitDepth = chunk[8]!
+      colorType = chunk[9]!
       const compression = chunk[10]
       const filtering = chunk[11]
-      interlace = chunk[12]
+      interlace = chunk[12]!
       if (width === 0 || height === 0 || compression !== 0 || filtering !== 0 || (interlace !== 0 && interlace !== 1)) {
         return dataError('E_SURFACE_PNG_UNSUPPORTED', 'surface() PNG has unsupported header settings.')
       }
@@ -69,7 +69,7 @@ export async function decodeOpenScadSurfacePng(bytes: Uint8Array): Promise<Decod
       sawEnd = true
       cursor = end + 4
       break
-    } else if ((bytes[typeOffset] & 0x20) === 0) {
+    } else if ((bytes[typeOffset]! & 0x20) === 0) {
       return dataError('E_SURFACE_PNG_UNSUPPORTED', `surface() PNG uses unsupported critical chunk ${type}.`)
     }
     cursor = end + 4
@@ -101,7 +101,7 @@ export async function decodeOpenScadSurfacePng(bytes: Uint8Array): Promise<Decod
     const bytesPerPixel = Math.max(1, Math.ceil(bitsPerPixel / 8))
     let previous = new Uint8Array(stride)
     for (let passY = 0; passY < passHeight; passY++) {
-      const filter = inflated[inputOffset++]
+      const filter = inflated[inputOffset++]!
       const encoded = inflated.subarray(inputOffset, inputOffset + stride)
       inputOffset += stride
       const row = new Uint8Array(stride)
@@ -164,7 +164,7 @@ export function pngHeightMap(decoded: DecodedPngLuminance, invert: boolean): Ope
   for (let y = 0; y < decoded.height; y++) {
     const targetY = decoded.height - 1 - y
     for (let x = 0; x < decoded.width; x++) {
-      const pixel = decoded.pixels[y * decoded.width + x]
+      const pixel = decoded.pixels[y * decoded.width + x]!
       // Preserve OpenSCAD 2021.01 exactly, including its historical
       // invert expression (1 - pixel), which places inverted PNGs below Z=0.
       values[targetY * decoded.width + x] = scale * (invert ? 1 - pixel : pixel)
@@ -245,17 +245,17 @@ export function triangulateOpenScadSurface(
   const gridIndex = (row: number, column: number) => row * columns + column
   for (let row = 0; row < rows; row++) {
     for (let column = 0; column < columns; column++) {
-      addVertex(ox + column, oy + row, values[gridIndex(row, column)])
+      addVertex(ox + column, oy + row, values[gridIndex(row, column)]!)
     }
   }
   const centerStart = vertex
   for (let row = 0; row < rows - 1; row++) {
     for (let column = 0; column < columns - 1; column++) {
       const average = (
-        values[gridIndex(row, column)]
-        + values[gridIndex(row, column + 1)]
-        + values[gridIndex(row + 1, column)]
-        + values[gridIndex(row + 1, column + 1)]
+        values[gridIndex(row, column)]!
+        + values[gridIndex(row, column + 1)]!
+        + values[gridIndex(row + 1, column)]!
+        + values[gridIndex(row + 1, column + 1)]!
       ) / 4
       addVertex(ox + column + 0.5, oy + row + 0.5, average)
     }
@@ -287,8 +287,8 @@ export function triangulateOpenScadSurface(
     }
   }
   for (let index = 0; index < perimeter.length; index++) {
-    const [rowA, columnA] = perimeter[index]
-    const [rowB, columnB] = perimeter[(index + 1) % perimeter.length]
+    const [rowA, columnA] = perimeter[index]!
+    const [rowB, columnB] = perimeter[(index + 1) % perimeter.length]!
     const topA = gridIndex(rowA, columnA)
     const topB = gridIndex(rowB, columnB)
     const baseA = baseByGrid.get(topA)!

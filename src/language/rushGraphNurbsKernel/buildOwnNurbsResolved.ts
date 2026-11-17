@@ -32,9 +32,9 @@ function computeMeshBounds(root: Extract<Value, { kind: 'mesh' }>) {
   const bounds = { min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity] }
   for (let i = 0; i < root.data.positions.length; i++) {
     const axis = i % 3
-    const v = root.data.positions[i]
-    bounds.min[axis] = Math.min(bounds.min[axis], v)
-    bounds.max[axis] = Math.max(bounds.max[axis], v)
+    const v = root.data.positions[i]!
+    bounds.min[axis] = Math.min(bounds.min[axis]!, v)
+    bounds.max[axis] = Math.max(bounds.max[axis]!, v)
   }
   return bounds
 }
@@ -45,8 +45,8 @@ function computePatchBounds(root: Extract<Value, { kind: 'patches' }>) {
   for (const patch of root.data.patches) {
     const surfaceBounds = nurbsSurfaceBounds(patch)
     for (let axis = 0; axis < 3; axis++) {
-      bounds.min[axis] = Math.min(bounds.min[axis], surfaceBounds.min[axis])
-      bounds.max[axis] = Math.max(bounds.max[axis], surfaceBounds.max[axis])
+      bounds.min[axis] = Math.min(bounds.min[axis]!, surfaceBounds.min[axis]!)
+      bounds.max[axis] = Math.max(bounds.max[axis]!, surfaceBounds.max[axis]!)
     }
   }
   return bounds

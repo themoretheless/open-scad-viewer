@@ -32,8 +32,8 @@ function parseMetadata(raw: string, value: CustomizerValue): Pick<CustomizerPara
   if (typeof value === 'number') {
     const range = comment.split(':').map(Number)
     if ((range.length === 2 || range.length === 3) && range.every(Number.isFinite)) {
-      const [min, middle, last] = range
-      const max = range.length === 2 ? middle : last
+      const min = range[0]!, middle = range[1]!, last = range[2]
+      const max = range.length === 2 ? middle : last!
       const step = range.length === 3 ? middle : undefined
       if (max >= min && (step === undefined || step > 0)) return { min, max, step }
     }
@@ -99,16 +99,16 @@ export function extractCustomizerParameters(source: string): CustomizerParameter
   }
 
   for (const match of source.matchAll(ASSIGNMENT)) {
-    const statementStart = (match.index ?? 0) + match[1].length
+    const statementStart = (match.index ?? 0) + match[1]!.length
     advanceTo(statementStart)
     if (depth !== 0 || quote || lineComment || blockComment) continue
-    const name = match[3]
+    const name = match[3]!
     if (name.startsWith('$')) continue
-    const rawValue = match[5]
+    const rawValue = match[5]!
     // Structural offset: indent + name + "=" run. The previous
     // indexOf(rawValue) could match INSIDE the variable name (`x1 = 1;`
     // found "1" at offset 1), corrupting the source on replacement.
-    const valueStart = statementStart + match[2].length + name.length + match[4].length
+    const valueStart = statementStart + match[2]!.length + name.length + match[4]!.length
     const value = decodeLiteral(rawValue)
     const label = name.replace(/[_-]+/g, ' ').replace(/^./, character => character.toUpperCase())
     parameters.push({
@@ -117,7 +117,7 @@ export function extractCustomizerParameters(source: string): CustomizerParameter
       value,
       valueStart,
       valueEnd: valueStart + rawValue.length,
-      ...parseMetadata(match[6], value),
+      ...parseMetadata(match[6]!, value),
     })
   }
   return parameters

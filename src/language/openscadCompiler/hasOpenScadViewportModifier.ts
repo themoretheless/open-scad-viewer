@@ -8,7 +8,7 @@ export function tokenize(source: string): Token[] {
   let i = 0
   let pendingDirective = false
   while (i < source.length) {
-    const ch = source[i]
+    const ch = source[i]!
     if (ch <= ' ') { i++; continue }
     if (ch === '/' && source[i + 1] === '/') {
       while (i < source.length && source[i] !== '\n') i++

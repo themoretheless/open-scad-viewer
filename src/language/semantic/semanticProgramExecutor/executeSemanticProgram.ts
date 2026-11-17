@@ -79,8 +79,8 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
   for (const occurrence of program.core.occurrences) {
     if (occurrence.node === null || occurrence.outputOrdinal === null
       || producerByNode[occurrence.node] !== null) continue
-    const operation = program.core.operations[occurrence.operation]
-    if (!semanticNodeProducerOperationNames(nodes[occurrence.node]).includes(operation.name)) continue
+    const operation = program.core.operations[occurrence.operation]!
+    if (!semanticNodeProducerOperationNames(nodes[occurrence.node]!).includes(operation.name)) continue
     producerByNode[occurrence.node] = Object.freeze({
       occurrenceIndex: occurrence.id,
       operationIndex: operation.id,
@@ -91,19 +91,19 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
   let activeNode: number | null = null
   try {
     for (const nodeIndex of program.core.execution.evaluationOrder) {
-      const node = nodes[nodeIndex]
+      const node = nodes[nodeIndex]!
       activeNode = node.id
       checkSemanticExecutionControl(control, node.id)
       const authoredInputNodeIndices = semanticNodeInputs(node)
-      const authoredInputs = Object.freeze(authoredInputNodeIndices.map(reference => values[reference]))
+      const authoredInputs = Object.freeze(authoredInputNodeIndices.map(reference => values[reference]!))
       const reduction = reduceEmptyInputs(node, authoredInputs)
       let value = reduction.result
       if (value === undefined) {
         const returned = await awaitBackendWithControl(() => session.evaluate(node, reduction.inputs, Object.freeze({
           nodeIndex: node.id,
           carrierKey: semanticCarrierKey(node.valueType),
-          inputNodeIndices: Object.freeze(reduction.positions.map(position => authoredInputNodeIndices[position])),
-          producer: producerByNode[node.id],
+          inputNodeIndices: Object.freeze(reduction.positions.map(position => authoredInputNodeIndices[position]!)),
+          producer: producerByNode[node.id]!,
           programHash: attestation.programHash,
           languageContract: program.core.language.contract,
           signal: executionController.signal,
@@ -163,8 +163,8 @@ export async function executeSemanticProgram<TPayloadFamily extends object>(
   try {
     const resultItems = semanticResultItems(program.core.result)
     outputs = Object.freeze(resultItems.map(output => Object.freeze({
-      value: values[output.node],
-      occurrence: program.core.occurrences[output.identityOccurrence],
+      value: values[output.node]!,
+      occurrence: program.core.occurrences[output.identityOccurrence]!,
       color: output.color,
     })))
     retained = Object.freeze([...new Set(resultItems

@@ -188,7 +188,7 @@ export class SemanticProgramBuilder {
   ) {}
 
   nextColor(): RGBA {
-    const color = PALETTE[this.paletteIndex++ % PALETTE.length]
+    const color = PALETTE[this.paletteIndex++ % PALETTE.length]!
     return [...color] as RGBA
   }
 
@@ -242,7 +242,7 @@ export class SemanticProgramBuilder {
     for (const template of source.diagnosticTemplates.slice(0, checkpoint.templates)) {
       const operation = template.operation === null
         ? null
-        : operationById.get(source.registered.operations[template.operation].operationId) ?? null
+        : operationById.get(source.registered.operations[template.operation]!.operationId) ?? null
       this.diagnosticTemplates.push({
         ...template,
         id: this.diagnosticTemplates.length,
@@ -298,20 +298,20 @@ export class SemanticProgramBuilder {
     node: number | null,
     outputOrdinal: number | null,
   ): number {
-    const parentId = parent === null ? null : this.occurrences[parent].occurrenceId
-    const staticOperationParent = this.registered.operations[operation].parent
+    const parentId = parent === null ? null : this.occurrences[parent]!.occurrenceId
+    const staticOperationParent = this.registered.operations[operation]!.parent
     let staticParent: number | null = null
     if (staticOperationParent !== null) {
       let cursor = parent
       let crossedNonExpansionFrame = false
-      while (cursor !== null && this.occurrences[cursor].operation !== staticOperationParent) {
-        const category = this.registered.operations[this.occurrences[cursor].operation].category
+      while (cursor !== null && this.occurrences[cursor]!.operation !== staticOperationParent) {
+        const category = this.registered.operations[this.occurrences[cursor]!.operation]!.category
         if (category !== 'control' && category !== 'module') crossedNonExpansionFrame = true
-        cursor = this.occurrences[cursor].parent
+        cursor = this.occurrences[cursor]!.parent
       }
       if (cursor === null) throw new Error('Semantic static parent occurrence is missing')
       staticParent = cursor
-      const isExpansion = this.registered.operations[operation].name === '$expansion'
+      const isExpansion = this.registered.operations[operation]!.name === '$expansion'
       if (isExpansion) {
         if (!this.isChildrenExpansionContinuation(operation, parent, staticParent, slots)) {
           throw new Error('Semantic children expansion is not bound to its caller continuation')
@@ -320,11 +320,11 @@ export class SemanticProgramBuilder {
         throw new Error('Semantic runtime frame cannot be bound to its static parent')
       }
     }
-    const staticParentId = staticParent === null ? null : this.occurrences[staticParent].occurrenceId
+    const staticParentId = staticParent === null ? null : this.occurrences[staticParent]!.occurrenceId
     const occurrenceId = deriveSemanticOccurrenceId(
       parentId,
       staticParentId,
-      this.registered.operations[operation].operationId,
+      this.registered.operations[operation]!.operationId,
       slots,
     )
     const id = this.occurrences.length
@@ -358,11 +358,11 @@ export class SemanticProgramBuilder {
   ): boolean {
     if (parent === null) return false
     const operations = this.registered.operations
-    const expansionOperation = operations[operation]
-    const childrenOccurrence = this.occurrences[parent]
-    const childrenOperation = operations[childrenOccurrence.operation]
-    const callerBodyOccurrence = this.occurrences[staticParent]
-    const callerBodyOperation = operations[callerBodyOccurrence.operation]
+    const expansionOperation = operations[operation]!
+    const childrenOccurrence = this.occurrences[parent]!
+    const childrenOperation = operations[childrenOccurrence.operation]!
+    const callerBodyOccurrence = this.occurrences[staticParent]!
+    const callerBodyOperation = operations[callerBodyOccurrence.operation]!
     const childrenSegment = childrenOperation.structuralPath.at(-1)
     const expansionSegment = expansionOperation.structuralPath.at(-1)
     const bodySegment = callerBodyOperation.structuralPath.at(-1)
@@ -400,23 +400,23 @@ export class SemanticProgramBuilder {
 
     const sameSlots = (left: readonly SemanticDynamicSlot[], right: readonly SemanticDynamicSlot[]) => (
       left.length === right.length
-      && left.every((slot, index) => slot.name === right[index].name
-        && JSON.stringify(slot.value) === JSON.stringify(right[index].value))
+      && left.every((slot, index) => slot.name === right[index]!.name
+        && JSON.stringify(slot.value) === JSON.stringify(right[index]!.value))
     )
     if (childrenOccurrence.dynamicSlots.length !== 1
-      || childrenOccurrence.dynamicSlots[0].name !== '$index'
+      || childrenOccurrence.dynamicSlots[0]!.name !== '$index'
       || !sameSlots(childrenOccurrence.dynamicSlots, slots)) return false
 
     let cursor = childrenOccurrence.parent
     let definitionOccurrence: SemanticOccurrence | null = null
     while (cursor !== null && cursor !== staticParent) {
-      const candidate = this.occurrences[cursor]
-      const candidateOperation = operations[candidate.operation]
+      const candidate = this.occurrences[cursor]!
+      const candidateOperation = operations[candidate.operation]!
       const candidatePath = candidateOperation.structuralPath
       const childrenPath = childrenOperation.structuralPath
       const lexicallyContainsChildren = candidatePath.length < childrenPath.length
         && candidatePath.every((segment, index) => {
-          const childSegment = childrenPath[index]
+          const childSegment = childrenPath[index]!
           return segment.kind === childSegment.kind
             && segment.name === childSegment.name
             && segment.ordinal === childSegment.ordinal
@@ -431,14 +431,14 @@ export class SemanticProgramBuilder {
     if (!definitionOccurrence || definitionOccurrence.parent !== staticParent) return false
     const callerOccurrenceIndex = callerBodyOccurrence.parent
     if (callerOccurrenceIndex === null) return false
-    const callerOccurrence = this.occurrences[callerOccurrenceIndex]
-    const callerOperation = operations[callerOccurrence.operation]
-    const definitionOperation = operations[definitionOccurrence.operation]
+    const callerOccurrence = this.occurrences[callerOccurrenceIndex]!
+    const callerOperation = operations[callerOccurrence.operation]!
+    const definitionOperation = operations[definitionOccurrence.operation]!
     const definitionPath = definitionOperation.structuralPath
     const childrenPath = childrenOperation.structuralPath
     const lexicallyContainsChildren = definitionPath.length < childrenPath.length
       && definitionPath.every((segment, index) => {
-        const candidate = childrenPath[index]
+        const candidate = childrenPath[index]!
         return segment.kind === candidate.kind
           && segment.name === candidate.name
           && segment.ordinal === candidate.ordinal
@@ -475,7 +475,7 @@ export class SemanticProgramBuilder {
     const id = this.nodes.length
     this.nodes.push({ ...node, id } as SemanticNode)
     this.evaluationOrder.push(id)
-    const base = this.occurrences[baseOccurrence]
+    const base = this.occurrences[baseOccurrence]!
     const expectedOrdinal = this.outputCounts.get(baseOccurrence) ?? 0
     const outputOrdinal = expectedOrdinal
     this.outputCounts.set(baseOccurrence, expectedOrdinal + 1)
@@ -502,7 +502,7 @@ export class SemanticProgramBuilder {
 
   alias(baseOccurrence: number, shapes: readonly SemanticShape[], reownIdentity: boolean): SemanticShape[] {
     return shapes.map((shape, outputOrdinal) => {
-      const base = this.occurrences[baseOccurrence]
+      const base = this.occurrences[baseOccurrence]!
       const producer = outputOrdinal === 0 ? baseOccurrence : this.occurrences.length
       const row: SemanticOccurrence = {
         ...base,
@@ -557,7 +557,7 @@ export class SemanticProgramBuilder {
       id,
       code: 'LEGACY_LANGUAGE_ERROR',
       severity: 'error',
-      operation: this.occurrences[occurrence].operation,
+      operation: this.occurrences[occurrence]!.operation,
       arguments: [
         {
           name: 'errorName',
