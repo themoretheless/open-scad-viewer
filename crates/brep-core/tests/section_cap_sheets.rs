@@ -1389,3 +1389,46 @@ fn refuses_to_commit_an_expanded_cap_when_a_later_plane_misses_its_rim() {
     );
     assert_eq!(source, before);
 }
+
+#[test]
+fn qualifies_a_solid_from_two_supplied_oblique_section_planes() {
+    use brep_core::planar_cap::{SectionPlane, build_expanded_section_solid};
+    let (mut source, _) = open_prism(false);
+    remove_prism_cap(&mut source, 0.);
+    map_prism_to_nonbinary_cap_support(&mut source);
+    let planes = [6., 0.].map(|offset| SectionPlane {
+        normal: [-1., -1., 3.],
+        offset,
+    });
+    let report = build_expanded_section_solid(&source, &planes, section_solid_options())
+        .unwrap_or_else(|error| panic!("{error:?}"));
+    let model = report.solid.model();
+    assert!(report.solid.geometry().proven);
+    assert!(report.solid.geometry().boundary.agreement.all_equal);
+    assert_eq!(report.cap_faces.len(), 2);
+    assert_eq!(model.edges, source.edges);
+    assert_eq!(model.vertices, source.vertices);
+    assert_eq!(model.bodies.len(), 1);
+    let interval = report.volume.volume_mm3;
+    assert!(0. < interval.lower && interval.lower <= 12. && 12. <= interval.upper);
+    assert!(interval.upper - interval.lower < 1e-4);
+}
+
+#[test]
+fn rejects_a_closed_but_inward_solid_from_supplied_exact_caps() {
+    use brep_core::planar_cap::{SectionPlane, build_expanded_section_solid};
+    let mut source = open_prism_with_nonbinary_cap_support();
+    for face in &mut source.shells[0].faces {
+        face.reversed = !face.reversed;
+    }
+    let before = source.clone();
+    let planes = [SectionPlane {
+        normal: [-1., -1., 3.],
+        offset: 6.,
+    }];
+    let error = build_expanded_section_solid(&source, &planes, section_solid_options())
+        .err()
+        .unwrap();
+    assert_eq!(error.code, "BREP_CLOSED_SOLID_UNPROVED");
+    assert_eq!(source, before);
+}

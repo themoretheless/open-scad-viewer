@@ -2,7 +2,8 @@ use super::{
     AttachedSectionCaps, BoundedSectionAttachment, BoundedSectionPlane, SectionAttachmentOptions,
     SectionPlane, attach_section_caps_with_expanded_exact_support,
     close_shell_with_bounded_inferred_section_caps, close_shell_with_bounded_section_caps,
-    close_shell_with_section_caps, discover::close_inferred, invalid,
+    close_shell_with_expanded_exact_section_caps, close_shell_with_section_caps,
+    discover::close_inferred, invalid,
 };
 use crate::{
     Body, Model,
@@ -38,6 +39,25 @@ pub fn build_section_solid(
 ) -> Result<SectionSolid> {
     require_standalone_shell(source)?;
     let attachment = close_shell_with_section_caps(
+        source,
+        0,
+        planes,
+        options.max_exact_work,
+        options.max_verification_cells,
+    )?;
+    qualify_attachment(source, attachment, options)
+}
+
+/// Close a standalone shell along the supplied planes with exact supports
+/// that may expand in UV. Return a solid only after boundary, material
+/// orientation and positive volume verification.
+pub fn build_expanded_section_solid(
+    source: &Model,
+    planes: &[SectionPlane],
+    options: SectionSolidOptions,
+) -> Result<SectionSolid> {
+    require_standalone_shell(source)?;
+    let attachment = close_shell_with_expanded_exact_section_caps(
         source,
         0,
         planes,

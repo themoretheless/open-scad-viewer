@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 397,
-  "unallocatedCount": 603,
+  "specifiedCount": 398,
+  "unallocatedCount": 602,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -10221,6 +10221,39 @@
       "remainingQualification": [
         "Close a shell over multiple supplied planes with expandable exact supports and cumulative budgets.",
         "Plane order determines cap order. Shared work limits cover every discovery and lift; the operation publishes a model only after complete closure.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0398",
+      "name": "Проверенное B-rep-тело с точными расширенными крышками по заданным плоскостям",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::planar_cap::build_expanded_section_solid",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets/expanded_support.rs",
+        "crates/brep-core/src/contact/boundary_agreement.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/solid.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets/expanded_support.rs",
+        "crates/brep-core/src/model/closed_solid.rs",
+        "crates/brep-core/src/body_analysis/analysis/certified_freeform_volume.rs",
+        "docs/qualification/nurbs-curvature-field-398-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-398-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Qualify a solid and enclose its positive volume after capping supplied planes with exact expanded supports.",
+        "Exact section closure preserves source topology. Solid admission requires an embedded outward boundary, and flux integration encloses the positive stored volume.",
         "WASM and application integration are separate."
       ]
     }
