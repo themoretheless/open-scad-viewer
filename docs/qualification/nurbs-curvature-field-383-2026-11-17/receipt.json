@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0383",
+  "testedBase": "abcad038680ea243d8ce2e19e6354557ee743edf",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 91,
+  "scope": [
+    "Discover complete free edge cycles inside a certified plane slab and attach independently bounded planar caps.",
+    "Exact squared rational residuals certify perpendicular control-point distances independently of plane scaling. Slab selection, support displacement and coedge agreement retain independent limits."
+  ],
+  "logSha256": "8fb86eb37f06e5b6357aaf9be1adb303cd5b73544f6fbfc38989bbec42044ccb",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4ae3630dec5d4b6e784b8120daf1b1fd567fbda2aef3d787b0feaee064073cd",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "06d66ad4e5376806ebb7fea5d587ba38298528904a7c624a5797f5a6f1c49ebc",
+    "crates/brep-core/tests/section_cap_sheets.rs": "16656504b8e858bd2282993ba5ba405b945df123ce9107392cb8db5b53b3d33d",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "c3e4839be964c1e92932e26f0c269ecf165b778cd299053d5ac50b5499e8336e",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "499a03ceb5fd1862c25f1c162df9b3c9f3290926ddfc935b7ee31ece11f5b5ab",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/support.rs": "77cb264370c548778e518b0470e05ae8d244fe21796b6a64cd5252316d729a70"
+  }
+}

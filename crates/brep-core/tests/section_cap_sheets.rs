@@ -531,3 +531,66 @@ fn refuses_exact_and_too_small_support_budgets_for_the_nonbinary_plane() {
     assert!(result.is_err());
     assert_eq!(source, before);
 }
+
+#[test]
+fn discovers_rounded_boundary_cycles_with_normal_scale_invariant_distance() {
+    use brep_core::planar_cap::{
+        SectionAttachmentOptions, SectionPlane,
+        discover_and_attach_section_caps_with_support_tolerance,
+    };
+    let (source, _) = open_third_height_prism();
+    let options = SectionAttachmentOptions {
+        max_exact_work: 1_000_000,
+        max_verification_cells: 10_000,
+        support_tolerance_mm: 1e-14,
+    };
+    for scale in [1., -8.] {
+        let plane = SectionPlane {
+            normal: [0., 0., 3. * scale],
+            offset: scale,
+        };
+        let report = discover_and_attach_section_caps_with_support_tolerance(
+            &source, 0, plane, 2e-17, options,
+        )
+        .unwrap();
+        assert_eq!(
+            report.rings.iter().map(Vec::len).collect::<Vec<_>>(),
+            [4, 4]
+        );
+        let result = report.bounded.attachment;
+        assert!(result.model.shells[0].closed);
+        assert_eq!(result.model.edges, source.edges);
+        assert_eq!(result.model.faces[result.cap_faces[0]].holes.len(), 1);
+        assert_eq!(report.bounded.support_error_upper.len(), 1);
+        assert!(
+            discover_and_attach_section_caps_with_support_tolerance(
+                &source, 0, plane, 1e-17, options,
+            )
+            .is_err()
+        );
+    }
+}
+
+#[test]
+fn rounded_cycle_selection_cannot_override_the_support_error_limit() {
+    use brep_core::planar_cap::{
+        SectionAttachmentOptions, SectionPlane,
+        discover_and_attach_section_caps_with_support_tolerance,
+    };
+    let (source, _) = open_third_height_prism();
+    let before = source.clone();
+    let plane = SectionPlane {
+        normal: [0., 0., 3.],
+        offset: 1.,
+    };
+    let options = SectionAttachmentOptions {
+        max_exact_work: 1_000_000,
+        max_verification_cells: 10_000,
+        support_tolerance_mm: 1e-18,
+    };
+    assert!(
+        discover_and_attach_section_caps_with_support_tolerance(&source, 0, plane, 2e-17, options,)
+            .is_err()
+    );
+    assert_eq!(source, before);
+}

@@ -262,8 +262,9 @@ fn invalid(message: &str) -> Error {
 
 mod discover;
 pub use discover::{
-    DiscoveredSectionCaps, SectionPlane, close_shell_with_section_caps,
-    discover_and_attach_section_caps,
+    DiscoveredBoundedSectionCaps, DiscoveredSectionCaps, SectionPlane,
+    close_shell_with_section_caps, discover_and_attach_section_caps,
+    discover_and_attach_section_caps_with_support_tolerance,
 };
 
 mod solid;

@@ -1,4 +1,7 @@
-use super::{AttachedSectionCaps, attach_section_caps, invalid};
+use super::{
+    AttachedSectionCaps, BoundedSectionAttachment, SectionAttachmentOptions, attach_section_caps,
+    attach_section_caps_with_support_tolerance, invalid,
+};
 use crate::Model;
 use num_rational::BigRational;
 use nurbs_core::{Error, Result};
@@ -25,12 +28,92 @@ pub fn discover_and_attach_section_caps(
     max_exact_work: u64,
     max_verification_cells: usize,
 ) -> Result<DiscoveredSectionCaps> {
+    let mut remaining = max_exact_work;
+    let rings = discover_rings(
+        source,
+        shell,
+        SectionPlane { normal, offset },
+        0.,
+        &mut remaining,
+    )?;
+    let addresses: Vec<_> = rings.iter().map(Vec::as_slice).collect();
+    let attachment = attach_section_caps(
+        source,
+        shell,
+        &addresses,
+        normal,
+        offset,
+        remaining,
+        max_verification_cells,
+    )?;
+    Ok(DiscoveredSectionCaps {
+        attachment,
+        rings,
+        discovery_work: max_exact_work - remaining,
+    })
+}
+
+#[derive(Clone, Debug)]
+pub struct DiscoveredBoundedSectionCaps {
+    pub bounded: BoundedSectionAttachment,
+    /// Source coedge addresses in shell traversal order, one list per ring.
+    pub rings: Vec<Vec<[usize; 2]>>,
+    pub discovery_work: u64,
+}
+
+/// Discover complete free cycles inside a slab about the requested plane, then
+/// attach certified planar caps within the independent support tolerance.
+/// Positive rational weights keep each admitted curve inside the slab because
+/// every spatial control point is within the specified perpendicular distance.
+pub fn discover_and_attach_section_caps_with_support_tolerance(
+    source: &Model,
+    shell: usize,
+    plane: SectionPlane,
+    selection_tolerance_mm: f64,
+    options: SectionAttachmentOptions,
+) -> Result<DiscoveredBoundedSectionCaps> {
+    let mut remaining = options.max_exact_work;
+    let rings = discover_rings(source, shell, plane, selection_tolerance_mm, &mut remaining)?;
+    let addresses: Vec<_> = rings.iter().map(Vec::as_slice).collect();
+    let bounded = attach_section_caps_with_support_tolerance(
+        source,
+        shell,
+        &addresses,
+        plane.normal,
+        plane.offset,
+        SectionAttachmentOptions {
+            max_exact_work: remaining,
+            ..options
+        },
+    )?;
+    Ok(DiscoveredBoundedSectionCaps {
+        bounded,
+        rings,
+        discovery_work: options.max_exact_work - remaining,
+    })
+}
+
+fn discover_rings(
+    source: &Model,
+    shell: usize,
+    plane: SectionPlane,
+    selection_tolerance_mm: f64,
+    remaining: &mut u64,
+) -> Result<Vec<Vec<[usize; 2]>>> {
+    let SectionPlane { normal, offset } = plane;
+    if !selection_tolerance_mm.is_finite()
+        || !(0. ..=source.tolerance_mm).contains(&selection_tolerance_mm)
+    {
+        return Err(invalid(
+            "Section selection tolerance must be within model tolerance",
+        ));
+    }
     if !normal.iter().all(|value| value.is_finite()) || normal == [0.; 3] || !offset.is_finite() {
         return Err(invalid(
             "A finite section plane with nonzero normal is required",
         ));
     }
-    if !(1..=1_000_000).contains(&max_exact_work) {
+    if !(1..=1_000_000).contains(remaining) {
         return Err(invalid("Section work budget must be 1..1000000"));
     }
     source.validate()?;
@@ -41,10 +124,12 @@ pub fn discover_and_attach_section_caps(
         .ok_or_else(|| invalid("Section discovery requires an open shell"))?;
     let exact_normal = normal.map(|value| BigRational::from_float(value).unwrap());
     let exact_offset = BigRational::from_float(offset).unwrap();
-    let mut remaining = max_exact_work;
+    let distance = BigRational::from_float(selection_tolerance_mm).unwrap();
+    let normal_squared: BigRational = exact_normal.iter().map(|n| n * n).sum();
+    let residual_squared = &distance * &distance * normal_squared;
     let mut incidence = vec![0_u8; source.edges.len()];
     for coedge in source.loops.iter().flat_map(|wire| &wire.coedges) {
-        charge(&mut remaining, 1)?;
+        charge(remaining, 1)?;
         incidence[coedge.edge] = incidence[coedge.edge].saturating_add(1);
     }
 
@@ -54,20 +139,21 @@ pub fn discover_and_attach_section_caps(
         let face = &source.faces[face_use.face];
         for wire in std::iter::once(face.outer).chain(face.holes.iter().copied()) {
             for (index, coedge) in source.loops[wire].coedges.iter().enumerate() {
-                charge(&mut remaining, 1)?;
+                charge(remaining, 1)?;
                 if incidence[coedge.edge] != 1 {
                     continue;
                 }
                 let edge = &source.edges[coedge.edge];
                 let mut coplanar = true;
                 for point in &edge.curve.control_points {
-                    charge(&mut remaining, 7)?;
+                    charge(remaining, 8)?;
                     let dot: BigRational = exact_normal
                         .iter()
                         .zip(point)
                         .map(|(n, x)| n * BigRational::from_float(*x).unwrap())
                         .sum();
-                    if dot != exact_offset {
+                    let residual = dot - &exact_offset;
+                    if &residual * &residual > residual_squared {
                         coplanar = false;
                         break;
                     }
@@ -90,7 +176,7 @@ pub fn discover_and_attach_section_caps(
         let mut ring = Vec::new();
         let mut current = start;
         loop {
-            charge(&mut remaining, 1)?;
+            charge(remaining, 1)?;
             let (end, address) = outgoing
                 .remove(&current)
                 .ok_or_else(|| invalid("Section boundary has an open chain"))?;
@@ -109,23 +195,11 @@ pub fn discover_and_attach_section_caps(
         }
     }
     if rings.is_empty() {
-        return Err(invalid("No free boundary cycles lie in the section plane"));
+        return Err(invalid(
+            "No free boundary cycles satisfy the section plane bound",
+        ));
     }
-    let addresses: Vec<_> = rings.iter().map(Vec::as_slice).collect();
-    let attachment = attach_section_caps(
-        source,
-        shell,
-        &addresses,
-        normal,
-        offset,
-        remaining,
-        max_verification_cells,
-    )?;
-    Ok(DiscoveredSectionCaps {
-        attachment,
-        rings,
-        discovery_work: max_exact_work - remaining,
-    })
+    Ok(rings)
 }
 
 fn charge(remaining: &mut u64, work: u64) -> Result<()> {
