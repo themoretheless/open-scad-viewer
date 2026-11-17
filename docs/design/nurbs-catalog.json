@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 401,
-  "unallocatedCount": 599,
+  "specifiedCount": 402,
+  "unallocatedCount": 598,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -10345,6 +10345,30 @@
       "remainingQualification": [
         "Integrate the oriented boundary of a qualified polyhedral solid and return its exact rational material volume.",
         "Exact rational determinant integration uses oriented planar boundaries, including holes, with no support-area approximation. Solid qualification and exact edge agreement are prerequisites.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0402",
+      "name": "Точный рациональный центр объёма плоскогранного B-rep-тела",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::exact_polyhedral_centroid",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/mod.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "docs/qualification/nurbs-curvature-field-402-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-402-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Integrate exact first moments of a qualified polyhedral solid with holes and return its rational centroid.",
+        "Oriented tetrahedral first moments over planar, piecewise-linear boundaries preserve exact rational world-space coordinates and subtract voids.",
         "WASM and application integration are separate."
       ]
     }

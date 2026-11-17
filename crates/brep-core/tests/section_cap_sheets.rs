@@ -1553,3 +1553,39 @@ fn measures_exact_volume_from_oblique_caps_with_expanded_supports() {
     let report = exact_polyhedral_volume(&result.section.solid, 1_000_000).unwrap();
     assert_eq!(report.volume_mm3, Q::from_integer(12.into()));
 }
+
+#[test]
+fn exact_centroid_accounts_for_an_off_center_hole() {
+    use brep_core::{
+        analysis::exact_polyhedral_centroid, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let report = exact_polyhedral_centroid(&result.section.solid, 1_000_000).unwrap();
+    assert_eq!(report.volume_mm3, Q::from_integer(30.into()));
+    let xy = Q::new(61.into(), 30.into());
+    assert_eq!(
+        report.centroid_mm,
+        [xy.clone(), xy, Q::from_integer(1.into())]
+    );
+    assert!(exact_polyhedral_centroid(&result.section.solid, report.exact_work).is_ok());
+    assert!(exact_polyhedral_centroid(&result.section.solid, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_centroid_follows_the_affine_map_of_an_oblique_solid() {
+    use brep_core::{
+        analysis::exact_polyhedral_centroid, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let source = open_prism_with_nonbinary_cap_support();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let report = exact_polyhedral_centroid(&result.section.solid, 1_000_000).unwrap();
+    assert_eq!(report.volume_mm3, Q::from_integer(12.into()));
+    let coordinate = Q::new(3.into(), 2.into());
+    assert_eq!(
+        report.centroid_mm,
+        [coordinate.clone(), Q::from_integer(0.into()), coordinate]
+    );
+}

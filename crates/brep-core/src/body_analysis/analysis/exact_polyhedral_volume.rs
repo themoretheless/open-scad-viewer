@@ -17,6 +17,51 @@ pub fn exact_polyhedral_volume(
     solid: &QualifiedClosedSolid,
     max_exact_work: u64,
 ) -> Result<ExactPolyhedralVolume> {
+    let (six_volume, exact_work) =
+        integrate_polyhedral_boundary(solid, max_exact_work, |_, _, _, _, _| Ok(()))?;
+    Ok(ExactPolyhedralVolume {
+        volume_mm3: six_volume / Q::from_integer(6.into()),
+        exact_work,
+    })
+}
+
+#[derive(Clone, Debug)]
+pub struct ExactPolyhedralCentroid {
+    pub volume_mm3: Q,
+    /// Center of volume in world coordinates, for uniform density.
+    pub centroid_mm: [Q; 3],
+    pub exact_work: u64,
+}
+
+/// Integrate first moments from the oriented polygonal boundary of a
+/// qualified planar solid. Holes and inward cavity shells subtract material.
+pub fn exact_polyhedral_centroid(
+    solid: &QualifiedClosedSolid,
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralCentroid> {
+    let mut moments = std::array::from_fn(|_| Q::zero());
+    let (six_volume, exact_work) =
+        integrate_polyhedral_boundary(solid, max_exact_work, |a, b, c, signed, remaining| {
+            spend(remaining, 12)?;
+            for i in 0..3 {
+                moments[i] += signed * (&a[i] + &b[i] + &c[i]);
+            }
+            Ok(())
+        })?;
+    // The fourth tetrahedron vertex is the world origin.
+    let denominator = &six_volume * Q::from_integer(4.into());
+    Ok(ExactPolyhedralCentroid {
+        volume_mm3: six_volume / Q::from_integer(6.into()),
+        centroid_mm: moments.map(|moment| moment / &denominator),
+        exact_work,
+    })
+}
+
+fn integrate_polyhedral_boundary(
+    solid: &QualifiedClosedSolid,
+    max_exact_work: u64,
+    mut integrate: impl FnMut(&[Q; 3], &[Q; 3], &[Q; 3], &Q, &mut u64) -> Result<()>,
+) -> Result<(Q, u64)> {
     if !(1..=1_000_000).contains(&max_exact_work) {
         return Err(Error::new(
             "BREP_INVALID_INPUT",
@@ -79,11 +124,13 @@ pub fn exact_polyhedral_volume(
                             }
                             let current = lift(pole);
                             let contribution = determinant(&origin, &previous, &current);
-                            if reversed {
-                                six_volume -= contribution;
+                            let signed = if reversed {
+                                -contribution
                             } else {
-                                six_volume += contribution;
-                            }
+                                contribution
+                            };
+                            integrate(&origin, &previous, &current, &signed, &mut remaining)?;
+                            six_volume += signed;
                             previous = current;
                         }
                     }
@@ -94,10 +141,7 @@ pub fn exact_polyhedral_volume(
     if !six_volume.is_positive() {
         return Err(refuse("Exact material volume must be positive"));
     }
-    Ok(ExactPolyhedralVolume {
-        volume_mm3: six_volume / Q::from_integer(6.into()),
-        exact_work: max_exact_work - remaining,
-    })
+    Ok((six_volume, max_exact_work - remaining))
 }
 
 fn lift(p: &[f64]) -> [Q; 3] {
