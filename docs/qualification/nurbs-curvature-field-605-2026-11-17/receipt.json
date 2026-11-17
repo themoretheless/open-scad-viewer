@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0605",
+  "testedBase": "f03ef8fdc7961436c89d68b3d48584abf8d05584",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 210,
+  "scope": [
+    "Expose retained surface area bounds and independent integration and trim classification budgets.",
+    "Verify true trimmed surface area, hole subtraction and independent budget accounting through a built WASM module."
+  ],
+  "logSha256": "fff6e58f4935f15faa3e6e90b9df3a5d456aaa442c231a20d40bc0150a86e16c",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "dbc40092c25a6c01c6f4ef7880ea626692906393dad31a3e9f1b0898a269af3e",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "dd0fe1cc77f7a96de4d39b5958753c23821d06cbbe681f2208f4399226ae92a5",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "9276c6389a0c34b248b0ad510cc74d548c22b96427bc23cd06101a919f637e89",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "57c48c4a298c94c26009e6ae4c3d9ecad52995b94b6a113bbb6149d9355e4be7"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

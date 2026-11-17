@@ -210,3 +210,20 @@ assert.equal(typeof areaLo, 'number')
 assert.equal(typeof areaHi, 'number')
 assert.ok(areaLo <= -1.25 / Math.sqrt(2) && -1.25 / Math.sqrt(2) <= areaHi)
 console.log('WASM ABI enclosed the signed area in an oblique projection.')
+
+const surfaceAreaOp = 'brep_measure_exact_periodic_trim_surface_area'
+const surfaceAreaOptions = { outerContour: 0, toleranceMm2: 0.05, toleranceUv: 1e-10 }
+const surfaceArea = call(request.maxWork, surfaceAreaOp, {
+  ...surfaceAreaOptions, maxSurfaceCells: 10_000, maxTrimCells: 1_000_000,
+})
+assert.equal(surfaceArea.status, 'tolerance')
+assert.ok(surfaceArea.boundsMm2)
+const [surfaceLo, surfaceHi] = surfaceArea.boundsMm2
+assert.ok(typeof surfaceLo === 'number' && typeof surfaceHi === 'number')
+assert.ok(surfaceLo <= 1.25 && 1.25 <= surfaceHi)
+const incompleteArea = call(request.maxWork, surfaceAreaOp, {
+  ...surfaceAreaOptions, maxSurfaceCells: 1, maxTrimCells: 1,
+})
+assert.equal(incompleteArea.status, 'workLimit')
+assert.equal(incompleteArea.boundsMm2, null)
+console.log('WASM ABI enclosed true trimmed surface area and refused incomplete coverage.')

@@ -1095,3 +1095,72 @@ fn periodic_trim_patch_area_response(
         "status": status,
     }))
 }
+
+/// Measure retained surface area on the patch identified by its outer contour.
+pub fn exact_periodic_trim_surface_area_request(
+    request: &value_codec::Value,
+) -> Result<value_codec::Value> {
+    use crate::field;
+    use nurbs_core::{
+        analysis::surface_measure::{StopReason, periodic_trim_patch_area},
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
+    };
+    use value_codec::json;
+
+    let source: nurbs_core::surface::Surface = field(request, "surface")?;
+    let contours: Vec<Vec<[f64; 2]>> = field(request, "contours")?;
+    let outer: usize = field(request, "outerContour")?;
+    let tolerance: f64 = field(request, "toleranceMm2")?;
+    let tolerance_uv: f64 = field(request, "toleranceUv")?;
+    let max_work: u64 = field(request, "maxWork")?;
+    let max_surface: usize = field(request, "maxSurfaceCells")?;
+    let max_trim: usize = field(request, "maxTrimCells")?;
+    if outer >= contours.len()
+        || [tolerance, tolerance_uv]
+            .iter()
+            .any(|t| !t.is_finite() || *t <= 0.)
+        || !(1..=100_000).contains(&max_surface)
+        || !(1..=1_000_000).contains(&max_trim)
+    {
+        return Err(input(
+            "Invalid contour, tolerance or cell limit for trimmed surface area",
+        ));
+    }
+    let contours = contours.iter().map(Vec::as_slice).collect::<Vec<_>>();
+    let build = build_exact_periodic_surface_trim_patches(&source, &contours, max_work)?;
+    let mut response = json!({
+        "boundsMm2": null,
+        "withinTolerance": false,
+        "surfaceCells": 0,
+        "minimumSurfaceCells": null,
+        "trimCells": 0,
+        "workUsed": build.work_used,
+        "status": "buildRefused",
+    });
+    let Some(patches) = build.patches else {
+        return Ok(response);
+    };
+    let Some(patch) = patches
+        .iter()
+        .find(|patch| patch.trim.contours.first() == Some(&outer))
+    else {
+        response["status"] = json!("unavailable");
+        return Ok(response);
+    };
+    let measure = periodic_trim_patch_area(patch, tolerance, tolerance_uv, max_surface, max_trim)?;
+    response["minimumSurfaceCells"] = json!(measure.minimum_surface_cells);
+    response["trimCells"] = json!(measure.trim_cells);
+    let Some(area) = measure.area else {
+        response["status"] = json!("workLimit");
+        return Ok(response);
+    };
+    response["boundsMm2"] = json!(area.bounds);
+    response["surfaceCells"] = json!(area.cells);
+    response["withinTolerance"] = json!(area.within_tolerance);
+    response["status"] = json!(match area.stop_reason {
+        StopReason::Tolerance => "tolerance",
+        StopReason::WorkLimit => "workLimit",
+        StopReason::PrecisionLimit => "precisionLimit",
+    });
+    Ok(response)
+}

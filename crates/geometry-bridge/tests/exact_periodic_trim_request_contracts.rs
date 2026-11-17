@@ -421,3 +421,42 @@ fn directional_area_operation_checks_normal_and_preserves_cell_shortage() {
     assert_eq!(response["value"]["status"], "workLimit");
     assert!(response["value"]["boundsMm2"].is_null());
 }
+
+fn surface_area_request(max_surface: usize, max_trim: usize) -> Value {
+    let mut request = request();
+    request["op"] = json!("brep_measure_exact_periodic_trim_surface_area");
+    request["outerContour"] = json!(0);
+    request["toleranceMm2"] = json!(0.05);
+    request["toleranceUv"] = json!(1e-10);
+    request["maxSurfaceCells"] = json!(max_surface);
+    request["maxTrimCells"] = json!(max_trim);
+    request
+}
+
+#[test]
+fn surface_area_operation_measures_retained_true_area_with_a_hole() {
+    let response = run(&surface_area_request(10_000, 1_000_000));
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    assert_eq!(report["status"], "tolerance");
+    let lo = report["boundsMm2"][0].as_f64().unwrap();
+    let hi = report["boundsMm2"][1].as_f64().unwrap();
+    assert!(lo <= 1.25 && 1.25 <= hi);
+    assert!(report["surfaceCells"].as_u64().unwrap() <= 10_000);
+    assert!(report["trimCells"].as_u64().unwrap() <= 1_000_000);
+}
+
+#[test]
+fn surface_area_operation_distinguishes_incomplete_coverage_and_coarse_bounds() {
+    let missing = run(&surface_area_request(1, 1));
+    assert_eq!(missing["value"]["status"], "workLimit");
+    assert!(missing["value"]["boundsMm2"].is_null());
+    assert_eq!(missing["value"]["minimumSurfaceCells"], 2);
+    let coarse = run(&surface_area_request(2, 1));
+    assert_eq!(coarse["value"]["trimCells"], 1);
+    assert_eq!(coarse["value"]["status"], "workLimit");
+    assert!(coarse["value"]["boundsMm2"][1].as_f64().unwrap() >= 1.25);
+    let mut request = surface_area_request(2, 1);
+    request["outerContour"] = json!(1);
+    assert_eq!(run(&request)["value"]["status"], "unavailable");
+}
