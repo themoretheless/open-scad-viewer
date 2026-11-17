@@ -17,6 +17,7 @@ import {
   serializeDirectDocument,
   type DirectSketch,
 } from '../src/app/directModeling'
+import { applySolidPointEdit } from '../src/kernel/solidPointEdit'
 
 const TOL = 1e-6
 const quad = (): DirectSketch => ({
@@ -119,5 +120,40 @@ describe('persistent sketch constraints', () => {
     expect(parsed.sketches[0].constraints).toEqual([{ kind: 'horizontal', a: 0, b: 1 }])
     const broken = { ...doc, sketches: [{ ...s, constraints: [{ kind: 'vertical', a: 0, b: 7 }] }] }
     expect(() => parseDirectDocument(JSON.stringify(broken))).toThrow()
+  })
+})
+
+describe('sketch constraints on vertex drag', () => {
+  const doc = (sketch: DirectSketch) => ({ ...emptyDirectDocument(), sketches: [sketch] })
+  const constraints: SketchConstraint[] = [
+    { kind: 'horizontal', a: 0, b: 1 },
+    { kind: 'vertical', a: 1, b: 2 },
+  ]
+  const constrained = () => constraints.reduce((s, c) => addSketchConstraint(s, c), quad())
+
+  it('re-solves constraints with the dragged vertex held at the pointer', () => {
+    const before = doc(constrained())
+    const after = applySolidPointEdit(before, { kind: 'sketch-vertex', id: 'q', index: 1, point: [12, 1] })
+    const points = after.sketches[0]!.points
+    expect(points[1]![0]).toBeCloseTo(12, 6)
+    expect(points[1]![1]).toBeCloseTo(1, 6)
+    for (const c of constraints) expect(sketchConstraintResidual(points, c)).toBeLessThan(TOL)
+    expect(after.sketches[0]!.constraints).toEqual(constraints)
+    expect(before.sketches[0]!.points[1]![0]).not.toBeCloseTo(12, 3)
+  })
+
+  it('rejects a drag the constraints cannot follow', () => {
+    const before = doc(addSketchConstraint(quad(), { kind: 'horizontal', a: 0, b: 1 }))
+    const p0 = before.sketches[0]!.points[0]!
+    // Holding p1 on p0 collapses the constrained segment.
+    expect(() =>
+      applySolidPointEdit(before, { kind: 'sketch-vertex', id: 'q', index: 1, point: [p0[0], p0[1]] }),
+    ).toThrow(/conflict/)
+  })
+
+  it('leaves unconstrained sketches as a plain move', () => {
+    const after = applySolidPointEdit(doc(quad()), { kind: 'sketch-vertex', id: 'q', index: 2, point: [20, 20] })
+    expect(after.sketches[0]!.points[2]).toEqual([20, 20])
+    expect(after.sketches[0]!.points[0]).toEqual(quad().points[0])
   })
 })

@@ -3,6 +3,7 @@ import {requirePolylineSketch} from '../app/retainedSketchProfile'
 import type {DirectDocument} from '../app/directModeling'
 import {updateSolidNurbsControlPoint} from './solidNurbs'
 import {bridgeNurbsCurves} from '../app/directDimensions'
+import {solveConstrainedPoints} from '../app/sketchConstraints'
 export type SolidPointEditOptions=
  | {kind:'cv';id:string;u:number;v:number;point:[number,number,number];weight?:number}
  | {kind:'sketch-vertex';id:string;index:number;point:[number,number]}
@@ -17,6 +18,8 @@ export function applySolidPointEdit(source:DirectDocument,p:SolidPointEditOption
    requirePolylineSketch(sketch)
    if(!Number.isInteger(p.index)||p.index<0||p.index>=sketch.points.length)throw Error('Sketch vertex is out of range.')
    delete sketch.analytic;sketch.points[p.index]=[...p.point]
+   // Persistent constraints are re-solved with the dragged vertex held at the pointer.
+   if(sketch.constraints?.length)sketch.points=solveConstrainedPoints(sketch.points,sketch.constraints,[{id:'drag',kind:'fix',point:`p${p.index}`,at:[...p.point]}])
   }else{
    const a=sketch.analytic;if(!a)throw Error('Select an analytic circle or arc.')
    if(p.handle==='center')a.center=[...p.point]
