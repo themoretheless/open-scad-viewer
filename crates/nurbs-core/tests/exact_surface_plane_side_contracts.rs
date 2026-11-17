@@ -2,7 +2,8 @@ use num_rational::BigRational as Q;
 use nurbs_core::{
     editing::exact_surface_derivative::{
         PlaneGraphPosition, Refusal, SurfacePlaneGraphSampleOptions, SurfacePlaneGraphStatus,
-        SurfacePlanePolylineOptions, SurfacePlaneSide, approximate_surface_plane_graph,
+        SurfacePlanePolylineOptions, SurfacePlaneSide, SurfacePlaneWorldPolylineOptions,
+        approximate_surface_plane_graph, approximate_surface_plane_graph_xyz,
         audit_surface_plane_graphs, audit_surface_plane_side, refine_surface_plane_side,
         sample_surface_plane_graph,
     },
@@ -345,4 +346,70 @@ fn represents_a_straight_graph_exactly_with_one_segment() {
     let result = report.outcome.unwrap();
     assert_eq!(result.uv, [[q(0), q(0)], [q(1), q(1)]]);
     assert_eq!(result.normalized_error_upper, q(0));
+}
+
+#[test]
+fn bounds_the_xyz_chord_error_on_a_curved_surface_plane_section() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let surface = Surface {
+        degree_u: 1,
+        degree_v: 2,
+        knots_u: vec![0., 0., 1., 1.],
+        knots_v: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![
+            vec![vec![0., 0., 0.], vec![0., 0.5, 0.], vec![0., 1., -1.]],
+            vec![vec![1., 0., 1.], vec![1., 0.5, 1.], vec![1., 1., 0.]],
+        ],
+        weights: vec![vec![1.; 3]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let options = SurfacePlaneWorldPolylineOptions {
+        span: [1, 2],
+        solve_axis: UvAxis::U,
+        max_xyz_error: 1. / 64.,
+        max_segments: 32,
+        max_work: WORK,
+    };
+    let report = approximate_surface_plane_graph_xyz(&surface, [0., 0., 1.], 0., options).unwrap();
+    let result = report.outcome.unwrap();
+    assert!(result.xyz.len() > 2);
+    assert!(result.xyz_error_upper <= Q::from_float(options.max_xyz_error).unwrap());
+    for edge in result.xyz.windows(2) {
+        let mid: [Q; 3] = std::array::from_fn(|i| (&edge[0][i] + &edge[1][i]) / q(2));
+        let squared_error = (&mid[0] - mid[1].pow(2)).pow(2) + mid[2].pow(2);
+        assert!(squared_error <= result.xyz_error_upper.pow(2));
+    }
+    let limited = approximate_surface_plane_graph_xyz(
+        &surface,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldPolylineOptions {
+            max_work: report.work_used - 1,
+            ..options
+        },
+    )
+    .unwrap();
+    assert_eq!(limited.outcome, Err(Refusal::ResourceLimit));
+}
+
+#[test]
+fn preserves_an_affine_xyz_section_as_one_exact_segment() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let mut patch = surface(1, vec![0., 0., 1., 1.], &[-1., 1.]);
+    patch.weights = vec![vec![1.; 2]; 2];
+    let options = SurfacePlaneWorldPolylineOptions {
+        span: [1, 1],
+        solve_axis: UvAxis::U,
+        max_xyz_error: 1e-22,
+        max_segments: 1,
+        max_work: WORK,
+    };
+    let result = approximate_surface_plane_graph_xyz(&patch, [0., 0., -1.], 0., options)
+        .unwrap()
+        .outcome
+        .unwrap();
+    let half = Q::new(1.into(), 2.into());
+    assert_eq!(result.xyz, [[half.clone(), q(0), q(0)], [half, q(1), q(0)]]);
+    assert_eq!(result.xyz_error_upper, q(0));
 }

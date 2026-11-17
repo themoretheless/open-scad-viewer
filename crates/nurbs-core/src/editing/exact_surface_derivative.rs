@@ -324,6 +324,8 @@ fn apply(source: &Surface, field: Field, max_work: u64) -> Result<Report> {
 
 mod plane_side;
 pub use plane_side::{
+    SurfacePlaneWorldPolyline, SurfacePlaneWorldPolylineOptions, SurfacePlaneWorldPolylineReport,
+    approximate_surface_plane_graph_xyz,
     SurfacePlanePolyline, SurfacePlanePolylineOptions, SurfacePlanePolylineReport,
     approximate_surface_plane_graph,
     SurfacePlaneGraphSample, SurfacePlaneGraphSampleOptions, SurfacePlaneGraphSampleReport,

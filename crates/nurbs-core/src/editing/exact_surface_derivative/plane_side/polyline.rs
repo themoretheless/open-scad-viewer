@@ -89,22 +89,45 @@ fn approximate(
     work: &mut Work,
 ) -> PResult<(Vec<[Q; 2]>, Q)> {
     let solved = usize::from(graph.solve_axis == UvAxis::V);
-    let curvature = second_derivative_bound(net, graph, solved, work)?;
+    let (_, curvature) = graph_derivative_bounds(net, graph, solved, work)?;
     let two = Q::from_integer(2.into());
     let half_tolerance = work.op(tolerance, &two, |a, b| a / b)?;
+    let (count, interpolation) = segment_count(&curvature, &half_tolerance, max_segments, work)?;
+    let (vertices, radius) = sample_vertices(net, graph, tolerance, count, work)?;
+    let total = work.op(&interpolation, &radius, |a, b| a + b)?;
+    Ok((vertices, total))
+}
+
+pub(super) fn segment_count(
+    curvature: &Q,
+    limit: &Q,
+    max_segments: usize,
+    work: &mut Work,
+) -> PResult<(usize, Q)> {
     let mut count = 1;
-    let interpolation = loop {
+    loop {
         work.charge(1)?;
         let divisor = Q::from_integer((8 * count * count).into());
-        let interpolation = work.op(&curvature, &divisor, |a, b| a / b)?;
-        if interpolation <= half_tolerance {
-            break interpolation;
+        let interpolation = work.op(curvature, &divisor, |a, b| a / b)?;
+        if interpolation <= *limit {
+            return Ok((count, interpolation));
         }
         if count == max_segments {
             return Err(Refusal::ResourceLimit);
         }
         count = (2 * count).min(max_segments);
-    };
+    }
+}
+
+pub(super) fn sample_vertices(
+    net: &PlaneNet,
+    graph: &SurfacePlaneGraph,
+    tolerance: &Q,
+    count: usize,
+    work: &mut Work,
+) -> PResult<(Vec<[Q; 2]>, Q)> {
+    let solved = usize::from(graph.solve_axis == UvAxis::V);
+    let two = Q::from_integer(2.into());
     let denominator = Q::from_integer(count.into());
     let mut vertices = Vec::with_capacity(count + 1);
     let mut max_radius = Q::default();
@@ -127,16 +150,15 @@ fn approximate(
             [transverse, root]
         });
     }
-    let total = work.op(&interpolation, &max_radius, |a, b| a + b)?;
-    Ok((vertices, total))
+    Ok((vertices, max_radius))
 }
 
-fn second_derivative_bound(
+pub(super) fn graph_derivative_bounds(
     net: &PlaneNet,
     graph: &SurfacePlaneGraph,
     s: usize,
     work: &mut Work,
-) -> PResult<Q> {
+) -> PResult<(Q, Q)> {
     let t = 1 - s;
     let minimum = graph.derivative[0].abs().min(graph.derivative[1].abs());
     let (dt, dt_size) = derivative(&net.numerator, net.size, t, work)?;
@@ -150,14 +172,14 @@ fn second_derivative_bound(
     let solved_term = work.op(&dss, &slope_squared, |a, b| a * b)?;
     let sum = work.op(&dtt, &twice_mixed, |a, b| a + b)?;
     let sum = work.op(&sum, &solved_term, |a, b| a + b)?;
-    Ok(work.op(&sum, &minimum, |a, b| a / b)?)
+    Ok((slope, work.op(&sum, &minimum, |a, b| a / b)?))
 }
 
-fn magnitude(net: &[Q]) -> Q {
+pub(super) fn magnitude(net: &[Q]) -> Q {
     net.iter().map(Signed::abs).max().unwrap_or_default()
 }
 
-fn derivative(
+pub(super) fn derivative(
     net: &[Q],
     [nu, nv]: [usize; 2],
     axis: usize,

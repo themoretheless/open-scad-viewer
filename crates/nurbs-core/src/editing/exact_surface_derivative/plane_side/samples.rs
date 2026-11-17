@@ -156,7 +156,7 @@ pub(super) fn slice(net: &PlaneNet, axis: UvAxis, t: &Q, work: &mut Work) -> PRe
     Ok(output)
 }
 
-fn evaluate(coefficients: &[Q], t: &Q, work: &mut Work) -> PResult<Q> {
+pub(super) fn evaluate(coefficients: &[Q], t: &Q, work: &mut Work) -> PResult<Q> {
     if t.is_zero() {
         return Ok(coefficients[0].clone());
     }

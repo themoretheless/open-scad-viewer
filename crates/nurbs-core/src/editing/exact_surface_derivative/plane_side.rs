@@ -126,13 +126,31 @@ fn extract_net(
     plane: &[Q; 4],
     work: &mut Work,
 ) -> PResult<PlaneNet> {
+    let homogeneous = homogeneous_cell(surface, [u, v], domain, work)?;
+    plane_net(surface, &homogeneous, plane, work)
+}
+
+fn homogeneous_cell(
+    surface: &Surface,
+    [u, v]: [usize; 2],
+    domain: [[f64; 2]; 2],
+    work: &mut Work,
+) -> PResult<Vec<Poly>> {
     let span_width = |[lo, hi]: [f64; 2], work: &mut Work| -> PResult<Q> {
         let lo = work.lift(lo)?;
         let hi = work.lift(hi)?;
         Ok(work.op(&hi, &lo, |a, b| a - b)?)
     };
     let widths = [span_width(domain[0], work)?, span_width(domain[1], work)?];
-    let homogeneous = extraction::cell(surface, u, v, domain, &widths, work)?;
+    extraction::cell(surface, u, v, domain, &widths, work)
+}
+
+fn plane_net(
+    surface: &Surface,
+    homogeneous: &[Poly],
+    plane: &[Q; 4],
+    work: &mut Work,
+) -> PResult<PlaneNet> {
     let mut residual_poly = Poly::new();
     for (channel, coefficient) in homogeneous.iter().zip(plane) {
         if coefficient.is_zero() {
@@ -216,4 +234,10 @@ mod polyline;
 pub use polyline::{
     SurfacePlanePolyline, SurfacePlanePolylineOptions, SurfacePlanePolylineReport,
     approximate_surface_plane_graph,
+};
+
+mod world_polyline;
+pub use world_polyline::{
+    SurfacePlaneWorldPolyline, SurfacePlaneWorldPolylineOptions, SurfacePlaneWorldPolylineReport,
+    approximate_surface_plane_graph_xyz,
 };
