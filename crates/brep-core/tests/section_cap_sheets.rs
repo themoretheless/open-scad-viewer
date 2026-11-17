@@ -3954,3 +3954,52 @@ fn exact_path_common_material_clip_distinguishes_touching_and_disjoint_solids() 
     );
     assert!(exact_polyhedral_path_common_material_clip(&[], &path, 1_000_000).is_err());
 }
+
+#[test]
+fn exact_path_union_material_clip_merges_overlap_and_contact_but_keeps_free_gaps() {
+    use brep_core::analysis::exact_polyhedral_path_union_material_clip;
+    use num_rational::BigRational as Q;
+    let a = shifted_oblique_solid(0.);
+    let overlap = shifted_oblique_solid(2.);
+    let touching = shifted_oblique_solid(5.);
+    let separated = shifted_oblique_solid(9.);
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |x| [q(x, 1), q(0, 1), q(1, 1)];
+    let path = [point(-1), point(13), point(-1)];
+    let solids = [&touching, &separated, &a, &overlap];
+    let report = exact_polyhedral_path_union_material_clip(&solids, &path, 1_000_000).unwrap();
+    assert_eq!(
+        report.span_intervals,
+        [
+            vec![[q(1, 14), q(9, 14)], [q(5, 7), q(13, 14)]],
+            vec![[q(1, 14), q(2, 7)], [q(5, 14), q(13, 14)]],
+        ]
+    );
+    assert_eq!(
+        exact_polyhedral_path_union_material_clip(&solids, &path, report.exact_work).unwrap(),
+        report
+    );
+    assert!(
+        exact_polyhedral_path_union_material_clip(&solids, &path, report.exact_work - 1).is_err()
+    );
+}
+
+#[test]
+fn exact_path_union_material_clip_keeps_isolated_contacts() {
+    use brep_core::{
+        analysis::exact_polyhedral_path_union_material_clip,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let distant = shifted_oblique_solid(4.);
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let path = [[q(-1, 1), q(1, 1), q(1, 1)], [q(1, 1), q(-1, 1), q(1, 1)]];
+    let report =
+        exact_polyhedral_path_union_material_clip(&[&distant, solid, solid], &path, 1_000_000)
+            .unwrap();
+    assert_eq!(report.span_intervals, [vec![[q(1, 2), q(1, 2)]]]);
+    assert!(exact_polyhedral_path_union_material_clip(&[], &path, 1_000_000).is_err());
+}

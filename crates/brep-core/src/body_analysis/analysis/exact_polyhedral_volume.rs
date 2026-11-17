@@ -924,8 +924,9 @@ pub use spatial_clip::{
     exact_polyhedral_path_boundary_contacts, exact_polyhedral_path_boundary_events,
     exact_polyhedral_path_common_material_clip, exact_polyhedral_path_exterior_clip,
     exact_polyhedral_path_interior_clip, exact_polyhedral_path_material_clip,
-    exact_polyhedral_path_partition, exact_polyhedral_point_location,
-    exact_polyhedral_segment_clip, exact_polyhedral_signed_distance,
-    exact_polyhedral_signed_distance_batch, exact_polyhedral_swept_ball_clearance,
-    exact_polyhedral_swept_path_clearance, exact_polyhedral_swept_path_material,
+    exact_polyhedral_path_partition, exact_polyhedral_path_union_material_clip,
+    exact_polyhedral_point_location, exact_polyhedral_segment_clip,
+    exact_polyhedral_signed_distance, exact_polyhedral_signed_distance_batch,
+    exact_polyhedral_swept_ball_clearance, exact_polyhedral_swept_path_clearance,
+    exact_polyhedral_swept_path_material,
 };

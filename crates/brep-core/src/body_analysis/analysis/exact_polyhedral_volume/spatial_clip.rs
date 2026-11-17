@@ -757,21 +757,11 @@ fn partition_path<T>(
     let mut span_intervals = Vec::new();
     for (span, pair) in points_mm.windows(2).enumerate() {
         let [start, end] = [&pair[0], &pair[1]];
-        let mut contacts: Vec<_> = span_face_contacts(&faces, span, start, end, &mut remaining)?
+        let contacts = span_face_contacts(&faces, span, start, end, &mut remaining)?
             .into_iter()
             .flat_map(|contact| contact.intervals)
             .collect();
-        let count = contacts.len() as u64;
-        spend(
-            &mut remaining,
-            count.saturating_mul(8 * (u64::from(count.checked_ilog2().unwrap_or(0)) + 1)),
-        )?;
-        contacts.sort_unstable();
-        spend(&mut remaining, count.saturating_mul(4))?;
-        let mut boundary = Vec::new();
-        for contact in contacts {
-            append_closed_interval(&mut boundary, contact);
-        }
+        let boundary = merge_closed_intervals(contacts, &mut remaining)?;
 
         let mut intervals = Vec::new();
         let mut cursor = Q::zero();
@@ -819,6 +809,21 @@ fn partition_path<T>(
         span_intervals.push(intervals);
     }
     Ok((span_intervals, max_exact_work - remaining))
+}
+
+fn merge_closed_intervals(mut intervals: Vec<[Q; 2]>, remaining: &mut u64) -> Result<Vec<[Q; 2]>> {
+    let count = intervals.len() as u64;
+    spend(
+        remaining,
+        count.saturating_mul(8 * (u64::from(count.checked_ilog2().unwrap_or(0)) + 1)),
+    )?;
+    intervals.sort_unstable();
+    spend(remaining, count.saturating_mul(4))?;
+    let mut merged = Vec::new();
+    for interval in intervals {
+        append_closed_interval(&mut merged, interval);
+    }
+    Ok(merged)
 }
 
 fn append_closed_interval(intervals: &mut Vec<[Q; 2]>, interval: [Q; 2]) {
@@ -1164,4 +1169,39 @@ pub fn exact_polyhedral_path_common_material_clip(
     }
     intersection.exact_work = max_exact_work - remaining;
     Ok(intersection)
+}
+
+/// Clip to the union of the closed material of all input solids.
+/// Closed intervals that meet at a shared path parameter are merged.
+pub fn exact_polyhedral_path_union_material_clip(
+    solids: &[&QualifiedClosedSolid],
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralPathMaterialClip> {
+    let Some((first, rest)) = solids.split_first() else {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Material union requires at least one solid",
+        ));
+    };
+    let mut union = exact_polyhedral_path_material_clip(first, points_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - union.exact_work;
+    for solid in rest {
+        if remaining == 0 {
+            return Err(super::work_exhausted());
+        }
+        let clip = exact_polyhedral_path_material_clip(solid, points_mm, remaining)?;
+        remaining -= clip.exact_work;
+        for (combined, next) in union.span_intervals.iter_mut().zip(clip.span_intervals) {
+            spend(&mut remaining, 1 + next.len() as u64)?;
+            combined.extend(next);
+        }
+    }
+    if !rest.is_empty() {
+        for combined in &mut union.span_intervals {
+            *combined = merge_closed_intervals(std::mem::take(combined), &mut remaining)?;
+        }
+    }
+    union.exact_work = max_exact_work - remaining;
+    Ok(union)
 }
