@@ -225,3 +225,44 @@ fn range_length_operation_reports_budget_and_rejects_zero_denominator() {
     request["range"][0]["denominator"] = json!("0");
     assert_eq!(run(&request)["ok"], false);
 }
+
+fn contour_station_request(distance: f64, cells: usize) -> Value {
+    let mut request = request();
+    request["op"] = json!("brep_locate_exact_periodic_trim_contour_station");
+    request["contour"] = json!(0);
+    request["distanceMm"] = json!(distance);
+    request["parameterTolerance"] = json!(1e-6);
+    request["maxCells"] = json!(cells);
+    request
+}
+
+#[test]
+fn contour_station_operation_contains_seam_and_original_vertex() {
+    for (distance, parameter) in [(0.5, 0.5), (1., 1.)] {
+        let response = run(&contour_station_request(distance, 1024));
+        assert_eq!(response["ok"], true, "{response}");
+        let report = &response["value"];
+        assert_eq!(report["status"], "tolerance");
+        let lo = report["parameterBounds"][0].as_f64().unwrap();
+        let hi = report["parameterBounds"][1].as_f64().unwrap();
+        assert!(lo <= parameter && parameter <= hi && hi - lo <= 1e-6);
+    }
+}
+
+#[test]
+fn contour_station_operation_distinguishes_limits_from_outside() {
+    for (distance, cells, status, bounds) in [
+        (0.5, 6, "workLimit", json!([0., 1.])),
+        (6., 6, "outside", Value::Null),
+    ] {
+        let response = run(&contour_station_request(distance, cells));
+        assert_eq!(response["ok"], true, "{response}");
+        assert_eq!(response["value"]["status"], status);
+        assert_eq!(response["value"]["parameterBounds"], bounds);
+    }
+    let mut request = contour_station_request(0.5, 6);
+    request["maxWork"] = json!(1);
+    let response = run(&request);
+    assert_eq!(response["value"]["status"], "buildRefused");
+    assert!(response["value"]["parameterBounds"].is_null());
+}

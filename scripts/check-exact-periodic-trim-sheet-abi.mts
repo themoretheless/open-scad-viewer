@@ -21,6 +21,8 @@ interface Report {
     topologyIds: { edges: string[] }
   } | null
   edgeBindings?: { edgeId: string; contour: number; segment: number; interval?: [number, number]; parameters?: [Rational, Rational] }[]
+  parameterBounds?: [number, number] | null
+  status?: string
   length?: { boundsMm: [number, number]; withinTolerance: boolean } | null
   minimumCells?: number | null
   joins?: { segment: number; parameter: Rational; kind: string }[] | null
@@ -138,3 +140,15 @@ assert.equal(short.length, null)
 assert.equal(short.minimumCells, 4)
 assert.equal(short.refusalStage, 'measure')
 console.log('WASM ABI enclosed a rational trim length and enforced its cell budget.')
+
+const stationOp = 'brep_locate_exact_periodic_trim_contour_station'
+const stationOptions = { contour: 0, distanceMm: 0.5, parameterTolerance: 1e-6 }
+const station = call(request.maxWork, stationOp, { ...stationOptions, maxCells: 1024 })
+assert.equal(station.status, 'tolerance')
+assert.ok(station.parameterBounds)
+assert.ok(station.parameterBounds[0] <= 0.5 && 0.5 <= station.parameterBounds[1])
+assert.ok(station.parameterBounds[1] - station.parameterBounds[0] <= 1e-6)
+const limitedStation = call(request.maxWork, stationOp, { ...stationOptions, maxCells: 6 })
+assert.equal(limitedStation.status, 'workLimit')
+assert.deepEqual(limitedStation.parameterBounds, [0, 1])
+console.log('WASM ABI located a seam station and retained its proved bracket at the cell limit.')

@@ -840,3 +840,65 @@ pub fn exact_periodic_trim_range_length_request(
         "refusalStage": refusal_stage,
     }))
 }
+
+/// Locate an arc-length station on an original closed periodic trim contour.
+pub fn exact_periodic_trim_contour_station_request(
+    request: &value_codec::Value,
+) -> Result<value_codec::Value> {
+    use crate::field;
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicTrimLengthLocationStatus as Status, build_exact_periodic_surface_trim_input_edges,
+    };
+    use value_codec::json;
+
+    let source: nurbs_core::surface::Surface = field(request, "surface")?;
+    let contours: Vec<Vec<[f64; 2]>> = field(request, "contours")?;
+    let contour: usize = field(request, "contour")?;
+    let distance: f64 = field(request, "distanceMm")?;
+    let length_tolerance: f64 = field(request, "toleranceMm")?;
+    let parameter_tolerance: f64 = field(request, "parameterTolerance")?;
+    let max_work: u64 = field(request, "maxWork")?;
+    let max_cells: usize = field(request, "maxCells")?;
+
+    if contour >= contours.len()
+        || !distance.is_finite()
+        || distance < 0.
+        || [length_tolerance, parameter_tolerance]
+            .iter()
+            .any(|t| !t.is_finite() || *t <= 0.)
+        || !(1..=100_000).contains(&max_cells)
+    {
+        return Err(input(
+            "Invalid contour, distance, tolerance or cell limit for periodic trim station",
+        ));
+    }
+    let contours = contours.iter().map(Vec::as_slice).collect::<Vec<_>>();
+    let edges = build_exact_periodic_surface_trim_input_edges(&source, &contours, max_work)?;
+    let work_used = edges.geometry.work_used;
+    if edges.geometry.patches.is_none() {
+        return Ok(json!({
+            "parameterBounds": null, "cells": 0, "workUsed": work_used, "status": "buildRefused",
+        }));
+    }
+    let report = edges.locate_input_contour_at_length(
+        contour,
+        distance,
+        length_tolerance,
+        parameter_tolerance,
+        max_cells,
+    )?;
+    let status = match report.status {
+        Status::Tolerance => "tolerance",
+        Status::WorkLimit => "workLimit",
+        Status::PrecisionLimit => "precisionLimit",
+        Status::LengthUncertainty => "lengthUncertainty",
+        Status::Outside => "outside",
+        Status::Unavailable => "unavailable",
+    };
+    Ok(json!({
+        "parameterBounds": report.parameter_bounds,
+        "cells": report.cells,
+        "workUsed": work_used,
+        "status": status,
+    }))
+}
