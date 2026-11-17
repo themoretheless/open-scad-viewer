@@ -3759,3 +3759,195 @@ pub fn extrude_exact_coplanar_planar_polyline_region_boolean(
         exact_work: max_exact_work - remaining,
     })
 }
+
+pub struct ExactCoplanarPolylineBooleanBrepExtrusion {
+    pub solid: QualifiedClosedSolid,
+    pub volume_mm3: Q,
+    pub exact_work: u64,
+}
+
+/// Extrude a regularized planar Boolean profile into qualified planar B-rep
+/// faces. Coordinates must be exactly representable by the model, and the
+/// constructed solid must reproduce the exact swept volume.
+pub fn extrude_exact_coplanar_polyline_boolean_brep(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    operation: CoplanarPolylineBoolean,
+    sweep_mm: &[Q; 3],
+    tolerance_mm: f64,
+    policy: crate::closed_solid::AdmissionPolicy,
+    max_exact_work: u64,
+) -> Result<ExactCoplanarPolylineBooleanBrepExtrusion> {
+    use crate::boolean::operations::{PlanarBoundary, model_from_trimmed_polygons};
+    use num_traits::ToPrimitive;
+    use std::collections::BTreeSet;
+
+    if !tolerance_mm.is_finite() || tolerance_mm <= 0.0 {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "B-rep tolerance must be finite and positive",
+        ));
+    }
+    validate_point(sweep_mm)?;
+    let report = loops_of_exact_coplanar_planar_polyline_region_boolean(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        operation,
+        max_exact_work,
+    )?;
+    let mut remaining = max_exact_work - report.exact_work;
+    let mut vertices = BTreeSet::new();
+    let mut rings = Vec::new();
+    let mut net_volume = Q::zero();
+    let mut normal = None;
+    for mut ring in report.loops_mm {
+        spend(&mut remaining, 8 * ring.len() as u64)?;
+        ring.pop();
+        let anchor = ring
+            .iter()
+            .enumerate()
+            .min_by_key(|(_, point)| *point)
+            .map(|(index, _)| index)
+            .ok_or_else(|| refuse("Empty extrusion contour"))?;
+        ring.rotate_left(anchor);
+        ring.push(ring[0].clone());
+        if remaining == 0 {
+            return Err(super::work_exhausted());
+        }
+        let simplified = simplify_exact_spatial_polyline(&ring, remaining)?;
+        remaining -= simplified.exact_work;
+        let ring = simplified.points_mm;
+        if remaining == 0 {
+            return Err(super::work_exhausted());
+        }
+        let area = exact_planar_spatial_polyline_area(&ring, remaining)?;
+        remaining -= area.exact_work;
+        let volume = dot(&area.area_vector_mm2, sweep_mm);
+        if volume.is_zero() {
+            return Err(refuse("Extrusion vector lies in the profile plane"));
+        }
+        net_volume += &volume;
+        normal.get_or_insert(area.area_vector_mm2);
+        let ring = &ring[..ring.len() - 1];
+        for point in ring {
+            spend(
+                &mut remaining,
+                8 * (u64::from((vertices.len() + 1).ilog2()) + 1),
+            )?;
+            if !vertices.insert(point.clone()) {
+                return Err(refuse("Extrusion boundary is pinched at a vertex"));
+            }
+        }
+        rings.push((ring.to_vec(), volume.is_positive()));
+    }
+    let Some(normal) = normal else {
+        return Err(refuse("An empty profile cannot produce a closed solid"));
+    };
+    let axes = plane_axes(&normal);
+    let along_sweep = net_volume.is_positive();
+    let mut components = Vec::new();
+    let mut holes = Vec::new();
+    for (mut ring, positive) in rings {
+        if !along_sweep {
+            ring.reverse();
+        }
+        if positive == along_sweep {
+            spend(&mut remaining, 8 * ring.len() as u64)?;
+            let edges = ring
+                .iter()
+                .zip(ring.iter().cycle().skip(1))
+                .map(|(a, b)| [a.clone(), b.clone()])
+                .collect::<Vec<_>>();
+            components.push((ring, edges, Vec::new()));
+        } else {
+            holes.push(ring);
+        }
+    }
+    for hole in holes {
+        let mut owner = None;
+        for (index, (_, edges, _)) in components.iter().enumerate() {
+            if point_in_face(edges, &hole[0], axes, &mut remaining)? == FaceLocation::Inside {
+                if owner.replace(index).is_some() {
+                    return Err(refuse(
+                        "Nested extrusion components require separate shells",
+                    ));
+                }
+            }
+        }
+        let owner = owner.ok_or_else(|| refuse("Extrusion hole has no exterior contour"))?;
+        components[owner].2.push(hole);
+    }
+
+    let encode = |point: &[Q; 3]| -> Result<[f64; 3]> {
+        let mut result = [0.0; 3];
+        for (coord, out) in point.iter().zip(&mut result) {
+            *out = coord
+                .to_f64()
+                .filter(|value| Q::from_float(*value).as_ref() == Some(coord))
+                .ok_or_else(|| {
+                    refuse("Extrusion vertex is not exactly representable in binary64")
+                })?;
+        }
+        Ok(result)
+    };
+    let mut polygons = Vec::new();
+    for (outer, _, holes) in components {
+        let mut lower = Vec::new();
+        let mut upper = Vec::new();
+        for ring in std::iter::once(outer).chain(holes) {
+            let mut bottom = Vec::new();
+            let mut top = Vec::new();
+            for point in ring {
+                spend(&mut remaining, 24)?;
+                bottom.push(encode(&point)?);
+                top.push(encode(&std::array::from_fn(|i| &point[i] + &sweep_mm[i]))?);
+            }
+            for index in 0..bottom.len() {
+                spend(&mut remaining, 4)?;
+                let next = (index + 1) % bottom.len();
+                polygons.push(PlanarBoundary {
+                    outer: vec![bottom[index], bottom[next], top[next], top[index]],
+                    holes: Vec::new(),
+                });
+            }
+            bottom.reverse();
+            lower.push(bottom);
+            upper.push(top);
+        }
+        polygons.push(PlanarBoundary {
+            outer: lower.remove(0),
+            holes: lower,
+        });
+        polygons.push(PlanarBoundary {
+            outer: upper.remove(0),
+            holes: upper,
+        });
+    }
+
+    let model = model_from_trimmed_polygons(polygons, tolerance_mm)?;
+    let admission = crate::closed_solid::qualify(model, policy)?;
+    let solid = admission.solid().cloned().ok_or_else(|| {
+        refuse(&format!(
+            "Extrusion B-rep closed-material proof failed (boundary={}, oriented shells={})",
+            admission.geometry().boundary.proven,
+            admission.geometry().orientations.len(),
+        ))
+    })?;
+    if remaining == 0 {
+        return Err(super::work_exhausted());
+    }
+    let volume = super::exact_polyhedral_volume(&solid, remaining)?;
+    remaining -= volume.exact_work;
+    if volume.volume_mm3 != net_volume.abs() {
+        return Err(refuse("Extrusion B-rep changed the exact swept volume"));
+    }
+    Ok(ExactCoplanarPolylineBooleanBrepExtrusion {
+        solid,
+        volume_mm3: volume.volume_mm3,
+        exact_work: max_exact_work - remaining,
+    })
+}

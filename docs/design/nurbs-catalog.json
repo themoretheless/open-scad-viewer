@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 477,
-  "unallocatedCount": 523,
+  "specifiedCount": 478,
+  "unallocatedCount": 522,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12419,6 +12419,36 @@
       "remainingQualification": [
         "Extrude exact planar Boolean regions as closed outward triangle shells with rational volume.",
         "Sweep a conforming exact cap mesh and emit walls on the directed boundary. Reject pinched vertices and tangential sweeps, and integrate rational volume from cap determinants.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0478",
+      "name": "Точное выдавливание плоского булева профиля в проверенное B-rep-тело",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::extrude_exact_coplanar_polyline_boolean_brep",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/boolean/operations/planar_model.rs",
+        "docs/qualification/nurbs-curvature-field-478-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-478-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Build planar B-rep caps and walls from exact Boolean contours and certify swept volume.",
+        "Build holed planar caps and oriented walls from exact Boolean contours. Require exact binary64 vertices, closed-solid admission and matching rational swept volume.",
         "WASM and application integration are separate."
       ]
     }

@@ -6163,3 +6163,65 @@ fn exact_coplanar_boolean_extrusion_rejects_pinched_and_tangential_sweeps() {
     assert!(empty.triangles.is_empty());
     assert_eq!(empty.volume_mm3, q(0));
 }
+
+#[test]
+fn exact_coplanar_boolean_brep_extrusion_qualifies_compact_holed_caps() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Difference, extrude_exact_coplanar_polyline_boolean_brep,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y| [q(x), q(y), q(0)];
+    let rect = |lo, hi| [p(lo, lo), p(hi, lo), p(hi, hi), p(lo, hi), p(lo, lo)];
+    let outer = rect(0, 6);
+    let cut = rect(2, 4);
+    let result = extrude_exact_coplanar_polyline_boolean_brep(
+        &outer,
+        &[],
+        &cut,
+        &[],
+        Difference,
+        &[q(0), q(0), q(2)],
+        1e-8,
+        section_solid_options().admission,
+        1_000_000,
+    )
+    .unwrap_or_else(|e| panic!("{e:?}"));
+    assert_eq!(result.volume_mm3, q(64));
+    assert!(result.solid.geometry().proven);
+    assert_eq!(
+        result
+            .solid
+            .model()
+            .faces
+            .iter()
+            .filter(|face| face.holes.len() == 1)
+            .count(),
+        2
+    );
+}
+
+#[test]
+fn exact_coplanar_boolean_brep_extrusion_refuses_rounded_vertices() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Intersection, extrude_exact_coplanar_polyline_boolean_brep,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y| [q(x), q(y), q(0)];
+    let a = [p(0, 0), p(2, 0), p(2, 2), p(0, 2), p(0, 0)];
+    let error = extrude_exact_coplanar_polyline_boolean_brep(
+        &a,
+        &[],
+        &a,
+        &[],
+        Intersection,
+        &[q(0), q(0), Q::new(1.into(), 3.into())],
+        1e-8,
+        section_solid_options().admission,
+        1_000_000,
+    )
+    .err()
+    .expect("nonbinary coordinate must be refused");
+    assert!(error.message.contains("binary64"));
+}

@@ -1,0 +1,40 @@
+{
+  "id": "NURBS-0478",
+  "testedBase": "b2f52733580039f284b90b95cd5eb2370eaab2a9",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 280,
+  "scope": [
+    "Build planar B-rep caps and walls from exact Boolean contours and certify swept volume.",
+    "Build holed planar caps and oriented walls from exact Boolean contours. Require exact binary64 vertices, closed-solid admission and matching rational swept volume."
+  ],
+  "logSha256": "1a58710e8c65412024956fd11560d5cb57d38ffe3fefbab08bec184c190eb4bb",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "2bfb260f9ebad020f5d3c16c724336ddeae78470e3dd3ca2efcdcde8612d02d5",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "2d32e3f73dc1e2c164aedbc486379fc6d43295ac10f7cd1a8f4caf0e58cb3b4f",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs": "31696daf5c0b688d2c0af02321c849d5d2c45e2c047fe46ea56947a757d76c85",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs": "8ede062350dde59a85651b267d276bf360e29d8b374169c9e434cf3e7b9805f7",
+    "crates/brep-core/src/boolean/operations/planar_model.rs": "80bd8e6277ba32cf10a57f9ab3aa474b722bde26ca3a70be1a8833f73bb977d3"
+  }
+}
