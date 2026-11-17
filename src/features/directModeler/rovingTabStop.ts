@@ -16,3 +16,18 @@ export function rovingTabStopKey(event: KeyboardEvent, values: readonly string[]
   void nextTick(() => row?.querySelector?.<HTMLElement>(`[data-roving="${next}"]`)?.focus())
   return next
 }
+
+/**
+ * One Tab stop per scene row: the row's secondary buttons (isolate, hide, lock) leave the Tab order and
+ * ArrowLeft/ArrowRight move focus between all enabled buttons of the row (the handler sits on the row).
+ */
+export function rowButtonArrowKey(event: KeyboardEvent) {
+  const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
+  const row = event.currentTarget as HTMLElement | null
+  if (!step || !row?.querySelectorAll) return
+  const buttons = [...row.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')]
+  const at = buttons.indexOf(event.target as HTMLButtonElement)
+  if (at < 0 || !buttons.length) return
+  event.preventDefault()
+  buttons[(at + step + buttons.length) % buttons.length]?.focus()
+}

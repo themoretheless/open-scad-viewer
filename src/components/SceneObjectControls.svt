@@ -1,11 +1,12 @@
 <script setup lang="ts">
-defineProps<{name:string;hidden:boolean;locked:boolean;locale:string}>()
+// Secondary row buttons: reached with ArrowRight from the row; `tabbable` keeps a stop when the row name is disabled.
+defineProps<{name:string;hidden:boolean;locked:boolean;locale:string;tabbable?:boolean}>()
 defineEmits<{visibility:[];lock:[]}>()
 </script>
 <template>
   <span class="object-controls">
-    <button type="button" :aria-label="(locale==='ru'?(hidden?'Показать: ':'Скрыть: '):(hidden?'Show: ':'Hide: '))+name" :aria-pressed="hidden" @click="$emit('visibility')">{{ hidden?'○':'●' }}</button>
-    <button type="button" :aria-label="(locale==='ru'?(locked?'Разблокировать: ':'Заблокировать: '):(locked?'Unlock: ':'Lock: '))+name" :aria-pressed="locked" @click="$emit('lock')">{{ locked?'🔒':'◇' }}</button>
+    <button type="button" :aria-label="(locale==='ru'?(hidden?'Показать: ':'Скрыть: '):(hidden?'Show: ':'Hide: '))+name" :aria-pressed="hidden" :tabindex="tabbable?0:-1" @click="$emit('visibility')">{{ hidden?'○':'●' }}</button>
+    <button type="button" :aria-label="(locale==='ru'?(locked?'Разблокировать: ':'Заблокировать: '):(locked?'Unlock: ':'Lock: '))+name" :aria-pressed="locked" tabindex="-1" @click="$emit('lock')">{{ locked?'🔒':'◇' }}</button>
   </span>
 </template>
 <style scoped>

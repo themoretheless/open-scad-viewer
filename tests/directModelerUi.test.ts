@@ -119,6 +119,7 @@ vi.mock('../src/kernel/solidPreviewWorker', async () => {
   const { applySolidSceneEdit } = await import('../src/kernel/solidSceneEdit')
   const { applySolidBrepTool } = await import('../src/kernel/solidBrepTool')
   const { applySolidNurbsEdit } = await import('../src/kernel/solidNurbsEdit')
+  const { offsetSolidCurve } = await import('../src/kernel/solidCurveOffset')
   return {
     createSolidPreviewWorker: () => ({
       run: (job: any, options: any) =>
@@ -194,60 +195,62 @@ vi.mock('../src/kernel/solidPreviewWorker', async () => {
                                               ? prepareSolidDisplay(job.mesh, job.brep, job.segments)
                                               : job.kind === 'restoreDocument'
                                                 ? parseDirectDocument(job.text)
-                                                : job.kind === 'brepTool'
-                                                  ? applySolidBrepTool(job.document, job.options)
-                                                  : job.kind === 'nurbsEdit'
-                                                    ? applySolidNurbsEdit(job.document, job.options)
-                                                    : job.kind === 'pointEdit'
-                                                      ? applySolidPointEdit(job.document, job.options)
-                                                      : job.kind === 'sketchEdit'
-                                                        ? applySolidSketchEdit(job.document, job.options)
-                                                        : job.kind === 'minkowski3d'
-                                                          ? applySolidMinkowski(job.document, job.options)
-                                                          : job.kind === 'boolean'
-                                                            ? applySolidBoolean(job.document, job.options)
-                                                            : job.kind === 'sceneEdit'
-                                                              ? applySolidSceneEdit(
-                                                                  typeof job.document === 'string'
-                                                                    ? parseDirectDocument(job.document)
-                                                                    : job.document,
-                                                                  job.options,
-                                                                )
-                                                              : job.kind === 'curveMatch'
-                                                                ? matchSolidCurve(...job.args)
-                                                                : job.kind === 'surfaceMatch'
-                                                                  ? matchSolidSurface(...job.args)
-                                                                  : job.kind === 'seamPrepare'
-                                                                    ? prepareSolidSurfaceSeams(...job.args)
-                                                                    : job.kind === 'surfaceBuild'
-                                                                      ? buildSolidSurface(job.document, job.options)
-                                                                      : job.kind === 'nurbsRefit'
-                                                                        ? refitSolidNurbs(job.document, job.options)
-                                                                        : job.kind === 'profilePrepare'
-                                                                          ? prepareSolidProfile(
-                                                                              job.document,
-                                                                              job.ids,
-                                                                              job.tolerance,
-                                                                            )
-                                                                          : job.kind === 'profileEdit'
-                                                                            ? applySolidProfileEdit(
+                                                : job.kind === 'curveOffset'
+                                                  ? offsetSolidCurve(job.document, job.options)
+                                                  : job.kind === 'brepTool'
+                                                    ? applySolidBrepTool(job.document, job.options)
+                                                    : job.kind === 'nurbsEdit'
+                                                      ? applySolidNurbsEdit(job.document, job.options)
+                                                      : job.kind === 'pointEdit'
+                                                        ? applySolidPointEdit(job.document, job.options)
+                                                        : job.kind === 'sketchEdit'
+                                                          ? applySolidSketchEdit(job.document, job.options)
+                                                          : job.kind === 'minkowski3d'
+                                                            ? applySolidMinkowski(job.document, job.options)
+                                                            : job.kind === 'boolean'
+                                                              ? applySolidBoolean(job.document, job.options)
+                                                              : job.kind === 'sceneEdit'
+                                                                ? applySolidSceneEdit(
+                                                                    typeof job.document === 'string'
+                                                                      ? parseDirectDocument(job.document)
+                                                                      : job.document,
+                                                                    job.options,
+                                                                  )
+                                                                : job.kind === 'curveMatch'
+                                                                  ? matchSolidCurve(...job.args)
+                                                                  : job.kind === 'surfaceMatch'
+                                                                    ? matchSolidSurface(...job.args)
+                                                                    : job.kind === 'seamPrepare'
+                                                                      ? prepareSolidSurfaceSeams(...job.args)
+                                                                      : job.kind === 'surfaceBuild'
+                                                                        ? buildSolidSurface(job.document, job.options)
+                                                                        : job.kind === 'nurbsRefit'
+                                                                          ? refitSolidNurbs(job.document, job.options)
+                                                                          : job.kind === 'profilePrepare'
+                                                                            ? prepareSolidProfile(
                                                                                 job.document,
-                                                                                job.options,
+                                                                                job.ids,
+                                                                                job.tolerance,
                                                                               )
-                                                                            : job.kind === 'bodyEdit'
-                                                                              ? applySolidBodyEdit(
+                                                                            : job.kind === 'profileEdit'
+                                                                              ? applySolidProfileEdit(
                                                                                   job.document,
                                                                                   job.options,
                                                                                 )
-                                                                              : job.kind === 'revolve'
-                                                                                ? applySolidRevolve(
+                                                                              : job.kind === 'bodyEdit'
+                                                                                ? applySolidBodyEdit(
                                                                                     job.document,
                                                                                     job.options,
                                                                                   )
-                                                                                : applyDirectExtrusionProfile(
-                                                                                    job.document,
-                                                                                    job.options,
-                                                                                  ),
+                                                                                : job.kind === 'revolve'
+                                                                                  ? applySolidRevolve(
+                                                                                      job.document,
+                                                                                      job.options,
+                                                                                    )
+                                                                                  : applyDirectExtrusionProfile(
+                                                                                      job.document,
+                                                                                      job.options,
+                                                                                    ),
         ),
       cancel: () => {},
       dispose: () => {},
@@ -11375,7 +11378,14 @@ const MATRIX_STEPS = [
 // Known defects found by the matrix and recorded in the C2 roadmap row: "<command>:<step>".
 const MATRIX_KNOWN_FAILURES = new Set<string>([])
 type MatrixUi = Awaited<ReturnType<typeof mount>>
-type MatrixFixture = { name: string; other: string; draft?: string; setup: (ui: MatrixUi) => Promise<void> }
+// `panel` fills command fields a user would set for this input after the command opens.
+type MatrixFixture = {
+  name: string
+  other: string
+  draft?: string
+  setup: (ui: MatrixUi) => Promise<void>
+  panel?: (ui: MatrixUi) => Promise<void>
+}
 const MATRIX_FIXTURES: MatrixFixture[] = [
   { name: 'empty selection', other: 'Cube', setup: async () => {} },
   {
@@ -11576,6 +11586,17 @@ const MATRIX_FIXTURES: MatrixFixture[] = [
     name: 'runout source, planar end and spatial curve',
     other: 'Other surface',
     draft: matrixDraft(matrixRunout()),
+    // The 90 % seam and 0.1 mm tangents fit a 0.1 mm end curve; this 0.5 mm curve needs 50 % and 0.5 mm.
+    panel: async ui => {
+      ui.all()
+        .find(n => n.props['aria-label'] === 'Seam position, %')
+        ?.props['onUpdate:modelValue'](50)
+      const length = ui
+        .all()
+        .find(n => n.props['aria-label'] === 'Tangent length, mm' && n.props['onUpdate:modelValue'])
+      length?.props['onUpdate:modelValue']('0.5 mm')
+      await settle(150)
+    },
     setup: async ui => {
       await ui.click('Source runout')
       await ui.click('End runout', true)
@@ -11596,7 +11617,7 @@ const MATRIX_FIXTURES: MatrixFixture[] = [
       // Both boxes share a name: add the unselected tree entry to the selection.
       for (const row of ui
         .all()
-        .filter(n => n.tag === 'button' && ui.text(n) === name && n.props['aria-pressed'] === false))
+        .filter(n => n.tag === 'button' && ui.text(n).startsWith(name) && n.props['aria-pressed'] === false))
         row.props.onClick({ shiftKey: true })
       await settle()
     },
@@ -11624,7 +11645,154 @@ const MATRIX_FIXTURES: MatrixFixture[] = [
       await settle()
     },
   },
+  // Apply inputs for commands whose first enabling fixture is valid but outside their tolerance or domain.
+  {
+    name: 'straight cubic NURBS curve',
+    other: 'Other curve',
+    draft: matrixDraft({ curves: [matrixLine('straight-cubic', 'Straight cubic', 3), matrixOtherCurve()] }),
+    setup: async ui => {
+      await ui.click('Straight cubic')
+    },
+  },
+  {
+    name: 'planar biquadratic NURBS surface',
+    other: 'Other surface',
+    draft: matrixDraft({
+      surfaces: [matrixPlane('plane', 'Plane', 0), matrixPlane('other-surface', 'Other surface', 20)],
+    }),
+    setup: async ui => {
+      await ui.click('Plane')
+    },
+  },
+  {
+    name: 'overlapping closed profiles',
+    other: 'Other profile',
+    draft: matrixDraft({
+      sketches: [
+        { id: 'plate', name: 'Plate', closed: true, points: matrixSquare(-4, 4) },
+        { id: 'inset', name: 'Inset', closed: true, points: matrixSquare(0, 6) },
+        { id: 'other-profile', name: 'Other profile', closed: true, points: matrixSquare(20, 22) },
+      ],
+    }),
+    setup: async ui => {
+      await ui.click('Plate')
+      await ui.click('Inset', true)
+    },
+  },
+  {
+    name: 'open profile chain',
+    other: 'Other profile',
+    draft: matrixDraft({
+      sketches: [
+        {
+          id: 'chain-a',
+          name: 'Chain A',
+          closed: false,
+          points: [
+            [0, 0],
+            [10, 0],
+            [10, 10],
+          ],
+        },
+        {
+          id: 'chain-b',
+          name: 'Chain B',
+          closed: false,
+          points: [
+            [10, 10],
+            [0, 10],
+            [0, 0],
+          ],
+        },
+        { id: 'other-profile', name: 'Other profile', closed: true, points: matrixSquare(20, 22) },
+      ],
+    }),
+    setup: async ui => {
+      await ui.click('Chain A')
+      await ui.click('Chain B', true)
+    },
+  },
+  {
+    name: 'two polygon sections',
+    other: 'Other profile',
+    draft: matrixDraft({
+      sketches: [
+        { id: 'lower', name: 'Lower section', closed: true, points: matrixSquare(0, 2) },
+        {
+          id: 'upper',
+          name: 'Upper section',
+          closed: true,
+          points: matrixSquare(0, 2),
+          plane: { origin: [0, 0, 3], u: [1, 0, 0], v: [0, 1, 0] },
+        },
+        { id: 'other-profile', name: 'Other profile', closed: true, points: matrixSquare(20, 22) },
+      ],
+    }),
+    setup: async ui => {
+      await ui.click('Lower section')
+      await ui.click('Upper section', true)
+    },
+  },
 ]
+// Commands whose first enabling fixture blocks Apply run on the fixture with valid input instead.
+const MATRIX_PREFERRED_FIXTURE: Record<string, string> = {
+  'nurbs-rebuild': 'straight cubic NURBS curve',
+  'nurbs-reduce': 'straight cubic NURBS curve',
+  'nurbs-surface-rebuild': 'planar biquadratic NURBS surface',
+  'nurbs-surface-reduce': 'planar biquadratic NURBS surface',
+  'profile-intersection': 'overlapping closed profiles',
+  'profile-prepare': 'open profile chain',
+  loft: 'two polygon sections',
+  'brep-difference': 'two B-rep bodies',
+}
+function matrixSquare(from: number, to: number) {
+  return [
+    [from, from],
+    [to, from],
+    [to, to],
+    [from, to],
+  ]
+}
+function matrixLine(id: string, name: string, degree: number) {
+  return {
+    id,
+    name,
+    curve: {
+      degree,
+      knots: [...Array(degree + 1).fill(0), ...Array(degree + 1).fill(1)],
+      controlPoints: Array.from({ length: degree + 1 }, (_, i) => [i, 0, 0]),
+      weights: Array(degree + 1).fill(1),
+    },
+  }
+}
+function matrixOtherCurve() {
+  return {
+    ...matrixLine('other-curve', 'Other curve', 1),
+    curve: {
+      ...matrixLine('', '', 1).curve,
+      controlPoints: [
+        [0, 20, 0],
+        [10, 20, 0],
+      ],
+    },
+  }
+}
+function matrixPlane(id: string, name: string, offset: number) {
+  return {
+    id,
+    name,
+    segmentsU: 4,
+    segmentsV: 4,
+    surface: {
+      degreeU: 2,
+      degreeV: 2,
+      knotsU: [0, 0, 0, 1, 1, 1],
+      knotsV: [0, 0, 0, 1, 1, 1],
+      controlPoints: Array.from({ length: 3 }, (_, i) => Array.from({ length: 3 }, (_, j) => [i, j + offset, 0])),
+      weights: Array.from({ length: 3 }, () => [1, 1, 1]),
+    },
+  }
+}
 function matrixDraft(extra: Record<string, unknown>) {
   return JSON.stringify({ version: 1, sketches: [], bodies: [], ...extra })
 }
@@ -11652,7 +11820,7 @@ function matrixSurfaces() {
   c.surface.controlPoints.forEach(row => row.forEach(p => (p[1] += 20)))
   return [a, b, c]
 }
-function matrixRunout() {
+function matrixRunout(height = 0.5) {
   const source = {
     degreeU: 1,
     degreeV: 1,
@@ -11685,12 +11853,13 @@ function matrixRunout() {
       {
         id: 'runout-curve',
         name: 'Runout curve',
+        // A 0.5 mm transition stays under the 10/mm curvature guard; 0.1 mm exceeds it.
         curve: {
           degree: 1,
           knots: [0, 0, 1, 1],
           controlPoints: [
-            [0, 1, 0.1],
-            [1, 1, 0.1],
+            [0, 1, height],
+            [1, 1, height],
           ],
           weights: [1, 1],
         },
@@ -11804,6 +11973,7 @@ async function runSolidRow(id: string, fixture: MatrixFixture): Promise<MatrixRo
   let before = ui.doc()
   const paletteError = await openSolidCommandFromPalette(ui, id)
   set('palette', paletteError ? 'fail' : 'pass', paletteError || undefined)
+  if (applyButton(ui)) await fixture.panel?.(ui)
   const kind = applyButton(ui) ? 'modal' : same(ui.doc(), before) ? 'view' : 'document'
   if (kind === 'modal') {
     const { enabled, reason } = await awaitApply(ui)
@@ -11847,6 +12017,7 @@ async function runSolidRow(id: string, fixture: MatrixFixture): Promise<MatrixRo
   await ui.click(label)
   await settle(kind === 'modal' ? 250 : 120)
   if (kind === 'modal') {
+    await fixture.panel?.(ui)
     await awaitApply(ui)
     const panel = applyButton(ui)?.parent?.parent
     // First editable non-zero quantity: integers step down by one (counts, degrees), decimals scale to 80 %.
@@ -11944,13 +12115,16 @@ async function runSolidRow(id: string, fixture: MatrixFixture): Promise<MatrixRo
         )
         let repeat = ui.commands().find(c => c.id === 'repeat')!
         // Most commands consume their input; pick the fixture again as a user would before repeating.
+        let consumed = ''
         if (repeat.enabled === false) {
-          await fixture.setup(ui)
+          // Commands that replace their inputs (profile Booleans, preparation) leave nothing to pick again.
+          await fixture.setup(ui).catch((e: Error) => (consumed = e.message))
           await settle()
           repeat = ui.commands().find(c => c.id === 'repeat')!
         }
         const repeatBase = ui.doc()
-        if (repeat.enabled === false) set('repeat', 'skip', `Repeat disabled: ${repeat.disabledReason}`)
+        if (consumed) set('repeat', 'skip', `Apply replaced the fixture input (${consumed})`)
+        else if (repeat.enabled === false) set('repeat', 'skip', `Repeat disabled: ${repeat.disabledReason}`)
         else {
           await commandKey(ui, 'R', undefined, { shiftKey: true })
           await settle()
@@ -12055,6 +12229,7 @@ async function runSolidRow(id: string, fixture: MatrixFixture): Promise<MatrixRo
     before = ui.doc()
     await ui.click(label)
     await settle(250)
+    await fixture.panel?.(ui)
     const apply = applyButton(ui)
     if (apply && !apply.props.disabled) {
       await commandKey(ui, 'Enter')
@@ -12075,6 +12250,67 @@ async function runSolidRow(id: string, fixture: MatrixFixture): Promise<MatrixRo
   return { source: 'solid', id, label, kind, fixture: fixture.name, steps }
 }
 let lastJobs: string[] = []
+// Viewer (registry) commands act on the viewport, section, panels and files of the Source workspace. The real
+// dispatcher runs against recording handles, so each command must reach exactly the effect its category names.
+async function viewerCommandEffects() {
+  const { useCommandDispatch } = await import('../src/composables/useAppCommands')
+  const log: string[] = []
+  const recorder = (prefix: string, refs: Record<string, unknown>) =>
+    new Proxy({} as Record<string, unknown>, {
+      get: (_, key: string) =>
+        key in refs ? refs[key] : (...args: unknown[]) => log.push(`${prefix}.${key}(${args.map(String).join(',')})`),
+    })
+  const watched = (name: string, value: unknown) => {
+    const state = shallowRef(value)
+    return {
+      get value() {
+        return state.value
+      },
+      set value(next: unknown) {
+        log.push(`${name}=${String(next)}`)
+        state.value = next
+      },
+    }
+  }
+  const paletteOpen = watched('paletteOpen', false),
+    shortcutHelpOpen = watched('shortcutHelpOpen', false),
+    dockOpen = watched('dockOpen', true),
+    measureActive = shallowRef(false)
+  const dispatch = useCommandDispatch({
+    palette: {
+      paletteCommands: shallowRef([]),
+      recordCommandUsage: () => {},
+      isCommandEnabled: () => true,
+    } as never,
+    paletteOpen: paletteOpen as never,
+    shortcutHelpOpen: shortcutHelpOpen as never,
+    blockingSurfaceOpen: () => false,
+    mainTools: () => null,
+    openFunctionReferenceFromCommand: () => log.push('panel.functionReference()'),
+    openCommandPalette: () => log.push('panel.commandPalette()'),
+    renderFull: () => log.push('file.render()'),
+    toggleTheme: () => log.push('display.toggleTheme()'),
+    dockOpen: dockOpen as never,
+    measureActive,
+    selectedMesh: shallowRef(0),
+    meshVisibility: shallowRef([true]),
+    viewport: recorder('viewport', { selectionMode: shallowRef('point') }) as never,
+    section: recorder('section', {
+      sectionEnabled: shallowRef(false),
+      sectionFlip: shallowRef(false),
+      scanPanelOpen: watched('section.scanPanelOpen', false),
+    }) as never,
+    files: recorder('file', {}) as never,
+    openEditorFind: (replace: boolean) => log.push(`editor.find(${replace})`),
+  })
+  return {
+    run(id: string) {
+      log.length = 0
+      dispatch.executeCommand(id)
+      return [...log]
+    },
+  }
+}
 
 it('C2 matrix: drives every palette command through palette, shortcut, input, preview, Apply, Esc, Undo/Redo, repeat, selection change and worker error', async () => {
   const { COMMAND_REGISTRY, resolveKeyboardCommand } = await import('../src/app/commandRegistry')
@@ -12090,7 +12326,12 @@ it('C2 matrix: drives every palette command through palette, shortcut, input, pr
     await fixture.setup(ui)
     for (const c of ui.commands()) {
       if (!labels.has(c.id)) labels.set(c.id, { label: c.label, reason: c.disabledReason })
-      if (c.enabled !== false && !fixtureFor.has(c.id)) fixtureFor.set(c.id, fixture)
+      if (
+        c.enabled !== false &&
+        (!fixtureFor.has(c.id) || MATRIX_PREFERRED_FIXTURE[c.id] === fixture.name) &&
+        (!MATRIX_PREFERRED_FIXTURE[c.id] || fixtureFor.get(c.id)?.name !== MATRIX_PREFERRED_FIXTURE[c.id])
+      )
+        fixtureFor.set(c.id, fixture)
     }
     unmountAll()
   }
@@ -12148,7 +12389,8 @@ it('C2 matrix: drives every palette command through palette, shortcut, input, pr
       unmountAll()
     }
   }
-  // Registry commands: palette rendering and keyboard routing; their effects live in the viewer.
+  // Registry commands: palette rendering, keyboard routing and the viewer effect the dispatcher reaches.
+  const viewer = await viewerCommandEffects()
   for (const definition of COMMAND_REGISTRY) {
     const steps: Record<string, MatrixCell> = {}
     if (definition.palette) {
@@ -12209,6 +12451,10 @@ it('C2 matrix: drives every palette command through palette, shortcut, input, pr
         ? { status: 'fail', note: `unresolved: ${misses.map(b => b.key ?? b.code).join(', ')}` }
         : { status: 'pass', note: `${bindings.length} binding(s)` }
     } else steps.shortcut = { status: 'skip', note: 'no shortcut assigned' }
+    const effects = viewer.run(definition.id).filter(effect => effect !== 'paletteOpen=false')
+    steps.apply = effects.length
+      ? { status: 'pass', note: `effect ${effects.join('; ')}` }
+      : { status: 'fail', note: 'the dispatcher reached no viewer effect' }
     for (const step of MATRIX_STEPS)
       if (!steps[step])
         steps[step] = { status: 'skip', note: 'viewer command: view or file state, no Solid document or preview' }
@@ -12252,6 +12498,63 @@ it('C2 matrix: drives every palette command through palette, shortcut, input, pr
   expect(rows.filter(row => row.source === 'solid').length).toBeGreaterThan(80)
   expect(failures.filter(failure => !MATRIX_KNOWN_FAILURES.has(failure))).toEqual([])
 }, 1800000)
+
+it.each([
+  ['nurbs-rebuild', 'straight cubic NURBS curve'],
+  ['nurbs-reduce', 'straight cubic NURBS curve'],
+  ['nurbs-surface-rebuild', 'planar biquadratic NURBS surface'],
+  ['nurbs-surface-reduce', 'planar biquadratic NURBS surface'],
+  ['nurbs-offset', 'NURBS curve'],
+  ['nurbs-runout', 'runout source, planar end and spatial curve'],
+  ['profile-intersection', 'overlapping closed profiles'],
+  ['profile-prepare', 'open profile chain'],
+  ['loft', 'two polygon sections'],
+  ['brep-difference', 'two B-rep bodies'],
+  ['brep-xor', 'two B-rep bodies'],
+])(
+  'C2 apply fixture: %s applies on %s with one Undo step',
+  async (id, name) => {
+    const row = await runSolidRow(
+      id,
+      MATRIX_FIXTURES.find(fixture => fixture.name === name)!,
+    )
+    expect(row.steps.apply, JSON.stringify(row.steps)).toMatchObject({ status: 'pass' })
+    expect(row.steps.undoRedo).toEqual({ status: 'pass', note: 'one Undo step' })
+    expect(row.steps.workerError.status).toBe('pass')
+  },
+  120000,
+)
+
+it('C2 viewer commands: camera, display, panel and file commands reach their viewer effect', async () => {
+  const { COMMAND_REGISTRY } = await import('../src/app/commandRegistry')
+  const viewer = await viewerCommandEffects()
+  const effect = (id: string) => viewer.run(id).filter(entry => entry !== 'paletteOpen=false')
+  // Camera
+  expect(effect('top')).toEqual(['viewport.setStandardView(top)'])
+  expect(effect('iso')).toEqual(['viewport.setStandardView(iso)'])
+  expect(effect('fit')).toEqual(['viewport.fitView()'])
+  expect(effect('reset')).toEqual(['viewport.resetView()'])
+  expect(effect('previous-view')).toEqual(['viewport.previousView()'])
+  expect(effect('projection')).toEqual(['viewport.toggleProjection()'])
+  // Display
+  expect(effect('xray')).toEqual(['viewport.setDisplayMode(xray)'])
+  expect(effect('shading-pbr')).toEqual(['viewport.setShadingModel(pbr)'])
+  expect(effect('render-theme-light')).toEqual(['viewport.setRenderTheme(light)'])
+  expect(effect('grid')).toEqual(['viewport.toggleGrid()'])
+  expect(effect('cycle-selection-mode')).toEqual(['viewport.setSelectionMode(face)'])
+  expect(effect('hide-selected')).toEqual(['viewport.setSceneMeshVisibility(0,false)'])
+  expect(effect('section')).toEqual(['section.scanPanelOpen=true', 'section.setSectionEnabled(true)'])
+  expect(effect('sidebar')).toEqual(['dockOpen=false'])
+  // Files
+  expect(effect('open')).toEqual(['file.triggerOpen()'])
+  expect(effect('save')).toEqual(['file.saveSource()'])
+  expect(effect('export-stl')).toEqual(['file.exportStl()'])
+  expect(effect('export-obj')).toEqual(['file.exportObj()'])
+  expect(effect('convert-mesh')).toEqual(['file.triggerConvert()'])
+  expect(effect('share')).toEqual(['file.shareSource()'])
+  // Every registry command reaches some effect; none is a silent no-op.
+  expect(COMMAND_REGISTRY.filter(definition => !effect(definition.id).length).map(d => d.id)).toEqual([])
+})
 
 it.each([
   ['en', 'Sphere', 'The calculation stopped unexpectedly (CAD_CRASH). The model is unchanged.'],
@@ -12386,6 +12689,57 @@ it('C2 tab order: sketch tools and gizmo modes take one Tab stop each and arrows
   expect(at('Gizmo: rotate').props.tabindex).toBe(0)
   // Before the roving stops the workspace exposed 8 more stops (7 sketch tools and 3 gizmo modes as separate stops).
   expect(tabStops(ui, ui.all()[0]).length).toBe(stops.length)
+})
+
+it('C2 tab order: pick modes and scene rows take one Tab stop each; arrows reach the other buttons', async () => {
+  const ui = await mount()
+  const stops = () => tabStops(ui, ui.all()[0])
+  const modes = ['Bodies', 'Faces', 'Vertices', 'Edges']
+  expect(stops().filter(stop => modes.some(mode => stop === 'button:' + mode))).toEqual(['button:Bodies'])
+  const mode = (name: string) =>
+    ui.all().find(n => n.tag === 'button' && n.props['data-roving'] !== undefined && n.props['aria-label'] === name)!
+  const prevented = vi.fn()
+  mode('Bodies').props.onKeydown({
+    key: 'ArrowRight',
+    currentTarget: mode('Bodies'),
+    preventDefault: prevented,
+    stopPropagation() {},
+  })
+  await flushClearance()
+  expect(prevented).toHaveBeenCalled()
+  expect(mode('Faces').props['aria-pressed']).toBe(true)
+  expect(mode('Faces').props.tabindex).toBe(0)
+  expect(mode('Bodies').props.tabindex).toBe(-1)
+  // Scene rows: the object name is the stop; isolate/hide/lock leave the Tab order and stay reachable by arrows.
+  expect(stops().filter(stop => /^button:(Hide|Lock): /.test(stop))).toEqual([])
+  expect(stops()).toContain('button:Cube')
+  const row = ui.all().find(n => n.tag === 'li' && ui.all(n).some(c => c.props['aria-label'] === 'Hide: Cube'))!
+  const buttons = ui.all(row).filter(n => n.tag === 'button' && !n.props.disabled)
+  expect(buttons.map(n => n.props['aria-label'])).toEqual(['Cube', 'Hide: Cube', 'Lock: Cube'])
+  // The handler queries the row's enabled buttons and moves focus from the event target.
+  const elements = buttons.map(() => ({ focus: vi.fn() })),
+    focus = elements.map(element => element.focus)
+  const arrow = (key: string, from: number) => {
+    const event = {
+      key,
+      currentTarget: { querySelectorAll: () => elements },
+      target: elements[from],
+      preventDefault: vi.fn(),
+    }
+    row.props.onKeydown(event)
+    return event.preventDefault
+  }
+  expect(arrow('ArrowRight', 0)).toHaveBeenCalled()
+  expect(focus[1]).toHaveBeenCalled()
+  arrow('ArrowLeft', 0)
+  expect(focus[2]).toHaveBeenCalled()
+  expect(arrow('ArrowDown', 0)).not.toHaveBeenCalled()
+  // A locked object cannot be picked by name, so its visibility toggle keeps the row's single stop.
+  await ui.click('Lock: Cube')
+  const locked = stops()
+  expect(locked).not.toContain('button:Cube')
+  expect(locked).toContain('button:Hide: Cube')
+  expect(locked.filter(stop => stop.startsWith('button:Unlock: '))).toEqual([])
 })
 
 it('C2 context switch: active group, model and panel changes during a command keep the document and history consistent', async () => {
