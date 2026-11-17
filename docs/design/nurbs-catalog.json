@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 461,
-  "unallocatedCount": 539,
+  "specifiedCount": 462,
+  "unallocatedCount": 538,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -11953,6 +11953,35 @@
       "remainingQualification": [
         "Find exact closest points on filled planar contours, including concave regions.",
         "Orthogonally project onto the exact support and classify the projected point. For exterior projections, compare exact squared distances along all boundary segments.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0462",
+      "name": "Точная триангуляция простого плоского пространственного контура",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::triangulate_exact_planar_spatial_polyline",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "docs/qualification/nurbs-curvature-field-462-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-462-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Triangulate a simple planar profile using exact predicates and source vertex indices.",
+        "Certify a simple planar contour, then clip oriented ears whose interior and boundary contain no remaining vertex. Preserve collinear boundary indices and winding.",
         "WASM and application integration are separate."
       ]
     }

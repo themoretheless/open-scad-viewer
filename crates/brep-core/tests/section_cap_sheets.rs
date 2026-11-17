@@ -4876,3 +4876,70 @@ fn exact_planar_polyline_region_projection_falls_back_to_concave_boundary() {
     assert_eq!(report.distance_squared_mm2, q(4));
     assert_eq!(report.location, Boundary);
 }
+
+#[test]
+fn exact_planar_polyline_triangulation_preserves_concavity_and_boundary_vertices() {
+    use brep_core::analysis::triangulate_exact_planar_spatial_polyline;
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x: i64, y: i64| [q(x), q(y), q(2 * x + y)];
+    let contour = [
+        p(0, 0),
+        p(2, 0),
+        p(4, 0),
+        p(4, 1),
+        p(1, 1),
+        p(1, 4),
+        p(0, 4),
+        p(0, 0),
+    ];
+    let report = triangulate_exact_planar_spatial_polyline(&contour, 1_000_000).unwrap();
+    assert_eq!(report.triangles.len(), 5);
+    let mut indices = std::collections::BTreeSet::new();
+    let mut area = q(0);
+    for [a, b, c] in &report.triangles {
+        indices.extend([*a, *b, *c]);
+        let [a, b, c] = [&contour[*a], &contour[*b], &contour[*c]];
+        let twice = (&b[0] - &a[0]) * (&c[1] - &a[1]) - (&b[1] - &a[1]) * (&c[0] - &a[0]);
+        assert!(twice > q(0));
+        area += twice;
+    }
+    assert_eq!(
+        indices.into_iter().collect::<Vec<_>>(),
+        (0..7).collect::<Vec<_>>()
+    );
+    assert_eq!(area, q(14));
+    assert_eq!(
+        triangulate_exact_planar_spatial_polyline(&contour, report.exact_work).unwrap(),
+        report
+    );
+    assert!(triangulate_exact_planar_spatial_polyline(&contour, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_planar_polyline_triangulation_keeps_reversed_winding_and_ignores_duplicates() {
+    use brep_core::analysis::triangulate_exact_planar_spatial_polyline;
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |y, z| [q(2), q(y), q(z)];
+    let contour = [
+        p(0, 0),
+        p(0, 2),
+        p(0, 2),
+        p(3, 2),
+        p(3, 0),
+        p(0, 0),
+        p(0, 0),
+    ];
+    let report = triangulate_exact_planar_spatial_polyline(&contour, 1_000_000).unwrap();
+    assert_eq!(report.triangles.len(), 2);
+    let mut area = q(0);
+    for indices in report.triangles {
+        assert!(indices.into_iter().all(|i| [0, 1, 3, 4].contains(&i)));
+        let [a, b, c] = indices.map(|i| &contour[i]);
+        let twice = (&b[1] - &a[1]) * (&c[2] - &a[2]) - (&b[2] - &a[2]) * (&c[1] - &a[1]);
+        assert!(twice < q(0));
+        area += twice;
+    }
+    assert_eq!(area, q(-12));
+}

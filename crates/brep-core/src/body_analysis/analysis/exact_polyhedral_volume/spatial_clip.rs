@@ -2395,3 +2395,86 @@ pub fn project_point_to_exact_planar_polyline_region(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPlanarPolylineTriangulation {
+    /// Positive-area triangles in contour orientation, indexing the input.
+    /// Consecutive duplicates use their first occurrence.
+    pub triangles: Vec<[usize; 3]>,
+    pub exact_work: u64,
+}
+
+/// Triangulate a simple planar polygon using exact orientation and visibility
+/// predicates. Collinear boundary vertices participate in the triangulation.
+pub fn triangulate_exact_planar_spatial_polyline(
+    contour_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPlanarPolylineTriangulation> {
+    let area = exact_planar_spatial_polyline_area(contour_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - area.exact_work;
+    let [u, v] = plane_axes(&area.area_vector_mm2);
+    let positive = area.area_vector_mm2[3 - u - v].is_positive();
+    let side = |a: usize, b: usize, c: usize| {
+        let [a, b, c] = [&contour_mm[a], &contour_mm[b], &contour_mm[c]];
+        (&b[u] - &a[u]) * (&c[v] - &a[v]) - (&b[v] - &a[v]) * (&c[u] - &a[u])
+    };
+    let is_forward = |value: &Q| !value.is_zero() && value.is_positive() == positive;
+    let mut ring = vec![0];
+    for index in 1..contour_mm.len() - 1 {
+        spend(&mut remaining, 4)?;
+        if contour_mm[index] != contour_mm[index - 1] {
+            ring.push(index);
+        }
+    }
+    if contour_mm[*ring.last().unwrap()] == contour_mm[0] && ring.len() > 1 {
+        ring.pop();
+    }
+    let mut triangles = Vec::new();
+    while ring.len() > 3 {
+        let mut ear = None;
+        for index in 0..ring.len() {
+            let triangle = [
+                ring[(index + ring.len() - 1) % ring.len()],
+                ring[index],
+                ring[(index + 1) % ring.len()],
+            ];
+            spend(&mut remaining, 12)?;
+            if !is_forward(&side(triangle[0], triangle[1], triangle[2])) {
+                continue;
+            }
+            let mut blocked = false;
+            for &point in &ring {
+                spend(&mut remaining, 24)?;
+                if triangle.contains(&point) {
+                    continue;
+                }
+                if [(0, 1), (1, 2), (2, 0)].into_iter().all(|(a, b)| {
+                    let signed = side(triangle[a], triangle[b], point);
+                    signed.is_zero() || is_forward(&signed)
+                }) {
+                    blocked = true;
+                    break;
+                }
+            }
+            if !blocked {
+                ear = Some((index, triangle));
+                break;
+            }
+        }
+        let (index, triangle) = ear.ok_or_else(|| refuse("No valid triangulation ear"))?;
+        spend(&mut remaining, (ring.len() - index) as u64)?;
+        ring.remove(index);
+        triangles.push(triangle);
+    }
+    spend(&mut remaining, 12)?;
+    let [a, b, c] =
+        <[usize; 3]>::try_from(ring).map_err(|_| refuse("Expected three terminal vertices"))?;
+    if !is_forward(&side(a, b, c)) {
+        return Err(refuse("Degenerate terminal triangle"));
+    }
+    triangles.push([a, b, c]);
+    Ok(ExactPlanarPolylineTriangulation {
+        triangles,
+        exact_work: max_exact_work - remaining,
+    })
+}
