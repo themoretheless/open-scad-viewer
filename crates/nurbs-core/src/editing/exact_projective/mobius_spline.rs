@@ -65,18 +65,59 @@ fn apply_curve(source: &Curve, clock: Clock, max_work: u64) -> Result<Report<Cur
             clock,
             &mut work,
         )?;
-        let mut weights = Vec::with_capacity(source.weights.len());
-        for (&weight, factor) in source.weights.iter().zip(basis.factors) {
-            let weight = work.lift(weight)?;
-            weights.push(work.op(&weight, &factor, |a, b| a * b)?);
-        }
-        let mut out = source.clone();
-        out.knots = basis.knots;
-        out.weights = exact_weights(&weights, &mut work)?;
-        out.validate().map_err(|_| Refusal::InvalidOutput)?;
-        Ok(out)
+        reweight_curve(source, basis, &mut work)
     })();
     Ok(finish(out, work))
+}
+
+fn reweight_curve(source: &Curve, basis: ClockBasis, work: &mut Work) -> PResult<Curve> {
+    let mut weights = Vec::with_capacity(source.weights.len());
+    for (&weight, factor) in source.weights.iter().zip(basis.factors) {
+        let weight = work.lift(weight)?;
+        weights.push(work.op(&weight, &factor, |a, b| a * b)?);
+    }
+    let mut out = source.clone();
+    out.knots = basis.knots;
+    out.weights = exact_weights(&weights, work)?;
+    out.validate().map_err(|_| Refusal::InvalidOutput)?;
+    Ok(out)
+}
+
+/// Map an old offset x to speed*x/(1-c*x), measured from the new start.
+/// For an increasing pole-free map the inverse has denominator 1/(1-c*x)
+/// at each transformed knot, in the normalization with start weight one.
+pub(in crate::editing) fn match_curve_seam_clock(
+    source: &Curve,
+    start: f64,
+    speed: &Q,
+    acceleration: &Q,
+    work: &mut Work,
+) -> PResult<Curve> {
+    let one = Q::one();
+    let two = Q::from_integer(2.into());
+    let twice_speed = work.op(speed, &two, |a, b| a * b)?;
+    let c = work.op(acceleration, &twice_speed, |a, b| a / b)?;
+    let old_start = work.lift(source.domain()[0])?;
+    let new_start = work.lift(start)?;
+    let mut knots = Vec::with_capacity(source.knots.len());
+    let mut denominators = Vec::with_capacity(source.knots.len());
+    for &knot in &source.knots {
+        let knot = work.lift(knot)?;
+        let offset = work.op(&knot, &old_start, |a, b| a - b)?;
+        let delta = work.op(&c, &offset, |a, b| a * b)?;
+        let denominator = work.op(&one, &delta, |a, b| a - b)?;
+        if !denominator.is_positive() {
+            return Err(Refusal::UnprovedDenominator);
+        }
+        let weight = work.op(&one, &denominator, |a, b| a / b)?;
+        let scaled = work.op(speed, &offset, |a, b| a * b)?;
+        let mapped = work.op(&scaled, &weight, |a, b| a * b)?;
+        let absolute = work.op(&new_start, &mapped, |a, b| a + b)?;
+        knots.push(work.float(&absolute)?);
+        denominators.push(weight);
+    }
+    let factors = basis_factors(&denominators, source.degree, source.weights.len(), work)?;
+    reweight_curve(source, ClockBasis { knots, factors }, work)
 }
 
 /// Apply independent fractional-linear clocks to both absolute knot axes
@@ -199,20 +240,24 @@ fn basis(
             denominators.push(w.op(&one, &ct, |a, b| a + b)?);
         }
     }
+    Ok(ClockBasis {
+        knots: transformed,
+        factors: basis_factors(&denominators, degree, count, w)?,
+    })
+}
+
+fn basis_factors(denominators: &[Q], degree: usize, count: usize, w: &mut Work) -> PResult<Vec<Q>> {
     // Cox–de Boor recurrence: each level adds the denominator at the
     // missing knot. B_i^p(f(t)) = B'_i^p(t) Π D(k'_{i+j}) / D(t)^p.
     let mut factors = Vec::with_capacity(count);
     for i in 0..count {
-        let mut product = one.clone();
+        let mut product = Q::one();
         for d in &denominators[i + 1..=i + degree] {
             product = w.op(&product, d, |a, b| a * b)?;
         }
         factors.push(product);
     }
-    Ok(ClockBasis {
-        knots: transformed,
-        factors,
-    })
+    Ok(factors)
 }
 
 fn validate_landmark(landmark: MobiusLandmark, [a, b]: [f64; 2]) -> Result<()> {

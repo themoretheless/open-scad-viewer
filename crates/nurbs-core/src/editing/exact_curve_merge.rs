@@ -160,6 +160,7 @@ pub fn merge_chain(sources: &[Curve]) -> Result<ChainReport> {
 pub enum GaugeMergeRefusal {
     Join(Refusal),
     Exact(super::rational_factor::Refusal),
+    Clock(super::exact_projective::Refusal),
 }
 
 #[derive(Clone, Debug)]
@@ -675,7 +676,7 @@ pub fn merge_with_exact_c1_clock(
     right: &Curve,
     max_work: u64,
 ) -> Result<GaugeMergeReport> {
-    merge_with_exact_affine_clock(left, right, max_work, false)
+    merge_with_matching_clock(left, right, max_work, ClockMatch::AffineC1)
 }
 
 /// Merge clamped curves whose regular seam can reach C2 by a positive
@@ -687,19 +688,40 @@ pub fn merge_with_exact_c2_clock(
     right: &Curve,
     max_work: u64,
 ) -> Result<GaugeMergeReport> {
-    merge_with_exact_affine_clock(left, right, max_work, true)
+    merge_with_matching_clock(left, right, max_work, ClockMatch::AffineC2)
 }
 
-fn merge_with_exact_affine_clock(
+/// Match a regular G2 seam to C2 with an exact fractional-linear change
+/// of the right clock. The map must be increasing and pole-free over the
+/// whole right domain, with exactly storable knots and weights.
+pub fn merge_with_exact_projective_c2_clock(
     left: &Curve,
     right: &Curve,
     max_work: u64,
-    require_second_derivative: bool,
+) -> Result<GaugeMergeReport> {
+    merge_with_matching_clock(left, right, max_work, ClockMatch::ProjectiveC2)
+}
+
+#[derive(Clone, Copy)]
+enum ClockMatch {
+    AffineC1,
+    AffineC2,
+    ProjectiveC2,
+}
+
+fn merge_with_matching_clock(
+    left: &Curve,
+    right: &Curve,
+    max_work: u64,
+    matching: ClockMatch,
 ) -> Result<GaugeMergeReport> {
     use num_traits::Zero;
 
     use super::{
-        exact_projective::affine_curve::scale_curve_clock, rational_edit::Work,
+        exact_projective::{
+            affine_curve::scale_curve_clock, mobius_spline::match_curve_seam_clock,
+        },
+        rational_edit::Work,
         rational_factor::Refusal as ExactRefusal,
     };
 
@@ -712,7 +734,13 @@ fn merge_with_exact_affine_clock(
     if let Some(reason) = seam.refusal {
         return Ok(refused(reason, seam.work_used));
     }
-    if require_second_derivative && !seam.acceleration_scale.as_ref().is_some_and(Zero::is_zero) {
+    let acceleration = seam.acceleration_scale;
+    let compatible = match matching {
+        ClockMatch::AffineC1 => true,
+        ClockMatch::AffineC2 => acceleration.as_ref().is_some_and(Zero::is_zero),
+        ClockMatch::ProjectiveC2 => acceleration.is_some(),
+    };
+    if !compatible {
         return Ok(refused(
             GaugeMergeRefusal::Join(Refusal::SeamMismatch),
             seam.work_used,
@@ -728,9 +756,19 @@ fn merge_with_exact_affine_clock(
         used: seam.work_used,
         limit: max_work,
     };
-    let aligned = match scale_curve_clock(right, left.domain()[1], scale, &mut work) {
+    let start = left.domain()[1];
+    let transformed = match acceleration
+        .filter(|a| matches!(matching, ClockMatch::ProjectiveC2) && !a.is_zero())
+    {
+        Some(acceleration) => {
+            match_curve_seam_clock(right, start, &scale, &acceleration, &mut work)
+                .map_err(GaugeMergeRefusal::Clock)
+        }
+        None => scale_curve_clock(right, start, scale, &mut work).map_err(GaugeMergeRefusal::Exact),
+    };
+    let aligned = match transformed {
         Ok(curve) => curve,
-        Err(reason) => return Ok(refused(GaugeMergeRefusal::Exact(reason), work.used)),
+        Err(reason) => return Ok(refused(reason, work.used)),
     };
     if work.used == max_work {
         return Ok(refused(

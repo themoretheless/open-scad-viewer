@@ -811,3 +811,64 @@ fn c2_clock_merge_refuses_g2_with_a_nonzero_tangential_correction() {
             .is_some()
     );
 }
+
+#[test]
+fn projective_c2_clock_matches_nonzero_tangential_acceleration() {
+    use nurbs_core::editing::exact_curve_merge::{
+        compare_exact_curve_seam_jets, merge_with_exact_projective_c2_clock,
+    };
+    let (left, mut right) = quadratic_clock_seam();
+    right.control_points[2] = vec![2.5, 5.];
+    let report = merge_with_exact_projective_c2_clock(&left, &right, 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let curve = report.curve.unwrap();
+    assert_eq!(curve.domain(), [0., 3.]);
+    let [a, b] = curve.split(1.).unwrap();
+    assert_eq!(
+        compare_exact_curve_seam_jets(&a, &b, 1_000_000)
+            .unwrap()
+            .continuity_order,
+        Some(2)
+    );
+    for offset in [0., 0.5, 1., 1.5, 2.] {
+        let old = 10. + offset;
+        let new = 1. + 0.5 * offset / (1. - 0.25 * offset);
+        let expected = right.evaluate(old).unwrap().point;
+        let actual = curve.evaluate(new).unwrap().point;
+        for (a, b) in expected.into_iter().zip(actual) {
+            assert!((a - b).abs() < 1e-13);
+        }
+    }
+    assert!(
+        merge_with_exact_projective_c2_clock(&left, &right, report.work_used)
+            .unwrap()
+            .curve
+            .is_some()
+    );
+    assert!(
+        merge_with_exact_projective_c2_clock(&left, &right, report.work_used - 1)
+            .unwrap()
+            .curve
+            .is_none()
+    );
+}
+
+#[test]
+fn projective_c2_clock_refuses_a_pole_at_or_inside_the_right_domain() {
+    use nurbs_core::editing::{
+        exact_curve_merge::{GaugeMergeRefusal, merge_with_exact_projective_c2_clock},
+        exact_projective,
+    };
+    let (left, mut right) = quadratic_clock_seam();
+    for x in [3., 3.5] {
+        right.control_points[2] = vec![x, 2. * x];
+        let report = merge_with_exact_projective_c2_clock(&left, &right, 1_000_000).unwrap();
+        assert!(report.curve.is_none());
+        assert_eq!(
+            report.refusal,
+            Some(GaugeMergeRefusal::Clock(
+                exact_projective::Refusal::UnprovedDenominator
+            ))
+        );
+    }
+}

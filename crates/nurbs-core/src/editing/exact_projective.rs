@@ -20,7 +20,7 @@ pub use mobius_piecewise::{
     BezierSpanLayout, mobius_piecewise_bezier_curve, mobius_piecewise_bezier_surface,
     relayout_bezier_curve, relayout_bezier_surface,
 };
-mod mobius_spline;
+pub(super) mod mobius_spline;
 pub use mobius_spline::{
     MobiusLandmark, fit_mobius_spline_curve, fit_mobius_spline_surface, mobius_spline_curve,
     mobius_spline_surface,
