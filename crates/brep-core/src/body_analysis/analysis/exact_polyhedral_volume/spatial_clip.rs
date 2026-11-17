@@ -2217,3 +2217,55 @@ pub fn exact_planar_spatial_polyline_centroid(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PlanarPolylinePointLocation {
+    Interior,
+    Boundary,
+    Exterior,
+    OffPlane,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPlanarPolylinePointLocations {
+    /// Locations in query input order.
+    pub locations: Vec<PlanarPolylinePointLocation>,
+    pub exact_work: u64,
+}
+
+/// Classify a batch of rational points relative to a simple planar contour.
+/// The support and contour are certified once for the whole batch.
+pub fn locate_points_in_exact_planar_spatial_polyline(
+    points_mm: &[[Q; 3]],
+    queries_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPlanarPolylinePointLocations> {
+    let area = exact_planar_spatial_polyline_area(points_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - area.exact_work;
+    let axes = plane_axes(&area.area_vector_mm2);
+    spend(&mut remaining, 8 * (points_mm.len() as u64 - 1))?;
+    let boundary: Vec<_> = points_mm
+        .windows(2)
+        .map(|pair| [pair[0].clone(), pair[1].clone()])
+        .collect();
+    let mut locations = Vec::new();
+    for query in queries_mm {
+        spend(&mut remaining, 16)?;
+        validate_point(query)?;
+        let offset = std::array::from_fn(|i| &query[i] - &points_mm[0][i]);
+        let location = if dot(&offset, &area.area_vector_mm2).is_zero() {
+            match point_in_face(&boundary, query, axes, &mut remaining)? {
+                FaceLocation::Inside => PlanarPolylinePointLocation::Interior,
+                FaceLocation::Boundary => PlanarPolylinePointLocation::Boundary,
+                FaceLocation::Outside => PlanarPolylinePointLocation::Exterior,
+            }
+        } else {
+            PlanarPolylinePointLocation::OffPlane
+        };
+        locations.push(location);
+    }
+    Ok(ExactPlanarPolylinePointLocations {
+        locations,
+        exact_work: max_exact_work - remaining,
+    })
+}

@@ -4695,3 +4695,65 @@ fn exact_planar_polyline_centroid_supports_vertical_profiles_and_refuses_warp() 
     let warped = [p(2, 0, 0), p(2, 1, 0), p(2, 1, 1), p(3, 0, 1), p(2, 0, 0)];
     assert!(exact_planar_spatial_polyline_centroid(&warped, 1_000_000).is_err());
 }
+
+#[test]
+fn exact_planar_polyline_point_locations_distinguish_concavity_boundary_and_plane() {
+    use brep_core::analysis::{
+        PlanarPolylinePointLocation::*, locate_points_in_exact_planar_spatial_polyline,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x: i64, y: i64| [q(x), q(y), q(x + y)];
+    let path = [
+        p(0, 0),
+        p(4, 0),
+        p(4, 2),
+        p(2, 2),
+        p(2, 4),
+        p(0, 4),
+        p(0, 0),
+    ];
+    let queries = [
+        p(1, 3),
+        p(3, 3),
+        p(2, 2),
+        p(2, 3),
+        [q(1), q(3), q(5)],
+        p(-1, 0),
+    ];
+    let report =
+        locate_points_in_exact_planar_spatial_polyline(&path, &queries, 1_000_000).unwrap();
+    assert_eq!(
+        report.locations,
+        [Interior, Exterior, Boundary, Boundary, OffPlane, Exterior]
+    );
+    assert_eq!(
+        locate_points_in_exact_planar_spatial_polyline(&path, &queries, report.exact_work).unwrap(),
+        report
+    );
+    assert!(
+        locate_points_in_exact_planar_spatial_polyline(&path, &queries, report.exact_work - 1)
+            .is_err()
+    );
+}
+
+#[test]
+fn exact_planar_polyline_point_locations_ignore_winding_and_duplicate_vertices() {
+    use brep_core::analysis::{
+        PlanarPolylinePointLocation::*, locate_points_in_exact_planar_spatial_polyline,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |y, z| [q(0), q(y), q(z)];
+    let path = [p(0, 0), p(0, 4), p(0, 4), p(4, 4), p(4, 0), p(0, 0)];
+    let queries = [p(2, 2), p(0, 4), p(0, 5), p(2, 4)];
+    let reversed = path.clone().into_iter().rev().collect::<Vec<_>>();
+    for contour in [&path[..], &reversed] {
+        let report =
+            locate_points_in_exact_planar_spatial_polyline(contour, &queries, 1_000_000).unwrap();
+        assert_eq!(report.locations, [Interior, Boundary, Exterior, Boundary]);
+    }
+    assert!(
+        locate_points_in_exact_planar_spatial_polyline(&path[..5], &queries, 1_000_000).is_err()
+    );
+}
