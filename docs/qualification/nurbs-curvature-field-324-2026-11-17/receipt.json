@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0324",
+  "testedBase": "efa0781fff054eedcf30606b8427068f407f8a67",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_world_plane_mass_contracts",
+    "--test",
+    "exact_planar_inertia_contracts",
+    "--test",
+    "exact_projected_face_area_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 5,
+  "scope": [
+    "Transform exact signed planar area and integral moments to XYZ while retaining the exact algebraic area factor.",
+    "Polynomial and rational-linear contours with signed winding. Integral moments carry one exact square-root scale; the centroid is rational XYZ."
+  ],
+  "logSha256": "df0f37ce87f04925ea916fb9341fc5b06afd793949ce0cd0c9df5e3401d5d944",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis.rs": "ca06bb4882cd5188e0096f6d397635249f7f8ec7f8ac76c698afdb176ab8686c",
+    "crates/nurbs-core/src/analysis/exact_planar_face_mass.rs": "214418caa8e4fae678566ea8e7a8266880ef1a07e039ba1a16bfe63ac56dcd73",
+    "crates/nurbs-core/src/editing/exact_derivative/planar_integral.rs": "b96ea8ab8826eea8f144efb1235e18601f9833c3072247c9e1cf0236acf8fd25",
+    "crates/nurbs-core/tests/exact_world_plane_mass_contracts.rs": "98886a91da5b5bc9488d5c2e6ef2d6da3a55f423836a2368069c7787b5e44304"
+  }
+}

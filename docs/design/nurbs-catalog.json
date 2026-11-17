@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 323,
-  "unallocatedCount": 677,
+  "specifiedCount": 324,
+  "unallocatedCount": 676,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8431,6 +8431,27 @@
       "remainingQualification": [
         "Integrate exact signed planar second moments and shift them to the centroid using the parallel-axis identity.",
         "Positive-weight polynomial and rational-linear closed contours. Winding is signed; zero area yields no centroidal tensor.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0324",
+      "name": "Точные массовые характеристики плоской NURBS-грани в мировых координатах",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::analysis::exact_planar_face_mass::exact_projected_face_mass",
+      "evidence": [
+        "crates/nurbs-core/src/analysis.rs",
+        "crates/nurbs-core/src/analysis/exact_planar_face_mass.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/planar_integral.rs",
+        "crates/nurbs-core/tests/exact_world_plane_mass_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-324-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-324-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Transform exact signed planar area and integral moments to XYZ while retaining the exact algebraic area factor.",
+        "Polynomial and rational-linear contours with signed winding. Integral moments carry one exact square-root scale; the centroid is rational XYZ.",
         "WASM and application integration are separate."
       ]
     }

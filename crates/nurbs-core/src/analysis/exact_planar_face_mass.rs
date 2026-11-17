@@ -1,0 +1,161 @@
+//! Algebraic world-space mass properties of a projected planar face.
+use super::{
+    exact_affine_hull::{PlanarSurfaceProjection, validate_projection_axes},
+    planar_trim_projection::ProjectedTrimmedFace,
+};
+use crate::{
+    Result,
+    core::bounded_rational::Work,
+    editing::exact_derivative::{
+        ExactPlanarMass, ExactPlanarMassOutcome, ExactPlanarSecondMoments, Refusal,
+        exact_planar_boundary_inertia,
+    },
+};
+use num_rational::BigRational as Q;
+use num_traits::{One, Zero};
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactWorldPlaneMass {
+    /// Multiply area and all integral moments by sqrt(area_scale_squared).
+    pub area_scale_squared: Q,
+    pub signed_area: Q,
+    pub first_moments: [Q; 3],
+    pub centroid: Option<[Q; 3]>,
+    /// Signed integrals of coordinate products, about the world origin.
+    pub second_moments: [[Q; 3]; 3],
+    pub centroidal_second_moments: Option<[[Q; 3]; 3]>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ExactWorldPlaneMassOutcome {
+    Mass(ExactWorldPlaneMass),
+    BoundaryRefused(ExactPlanarMassOutcome),
+    TransformRefused(Refusal),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactWorldPlaneMassReport {
+    pub outcome: ExactWorldPlaneMassOutcome,
+    pub work_used: u64,
+}
+
+/// Transform exact signed boundary moments to XYZ. The rational moments
+/// share the exact square-root factor of the plane metric. The centroid is
+/// already in XYZ because that factor cancels. Supported trim spans are
+/// polynomial or rational-linear. Winding supplies the material signs.
+pub fn exact_projected_face_mass(
+    face: &ProjectedTrimmedFace,
+    max_work: u64,
+) -> Result<ExactWorldPlaneMassReport> {
+    validate_projection_axes(&face.projection)?;
+    let report = exact_planar_boundary_inertia(&face.loops, max_work)?;
+    let mut work = Work {
+        used: report.work_used,
+        limit: max_work,
+    };
+    let outcome = match (report.mass, report.second_moments) {
+        (ExactPlanarMassOutcome::Mass(mass), Some(inertia)) => {
+            transform(&face.projection, mass, inertia, &mut work)
+                .map(ExactWorldPlaneMassOutcome::Mass)
+                .unwrap_or_else(ExactWorldPlaneMassOutcome::TransformRefused)
+        }
+        (reason, _) => ExactWorldPlaneMassOutcome::BoundaryRefused(reason),
+    };
+    Ok(ExactWorldPlaneMassReport {
+        outcome,
+        work_used: work.used,
+    })
+}
+
+type Exact<T> = std::result::Result<T, Refusal>;
+
+fn transform(
+    projection: &PlanarSurfaceProjection,
+    mass: ExactPlanarMass,
+    inertia: ExactPlanarSecondMoments,
+    work: &mut Work,
+) -> Exact<ExactWorldPlaneMass> {
+    let [x, y] = projection.retained_axes;
+    let z = projection.omitted_axis;
+    let mut rows = std::array::from_fn(|_| std::array::from_fn(|_| Q::zero()));
+    rows[x][1] = Q::one();
+    rows[y][2] = Q::one();
+    rows[z] = [
+        projection.offset.clone(),
+        projection.slopes[0].clone(),
+        projection.slopes[1].clone(),
+    ];
+    let [a, b] = &projection.slopes;
+    let a2 = work.op(a, a, |a, b| a * b)?;
+    let b2 = work.op(b, b, |a, b| a * b)?;
+    let area_scale_squared = work.op(&a2, &b2, |a, b| a + b + Q::one())?;
+
+    let [mx, my] = &mass.first_moments;
+    let area_vector = [&mass.signed_area, mx, my];
+    let first_moments = [
+        dot(&rows[0], area_vector, work)?,
+        dot(&rows[1], area_vector, work)?,
+        dot(&rows[2], area_vector, work)?,
+    ];
+    let centroid = match &mass.centroid {
+        Some([cx, cy]) => {
+            let one = Q::one();
+            let center = [&one, cx, cy];
+            Some([
+                dot(&rows[0], center, work)?,
+                dot(&rows[1], center, work)?,
+                dot(&rows[2], center, work)?,
+            ])
+        }
+        None => None,
+    };
+    let [xx, xy, yy] = &inertia.about_origin;
+    let second_moments = transform_tensor(&rows, [area_vector, [mx, xx, xy], [my, xy, yy]], work)?;
+    let centroidal_second_moments = match &inertia.about_centroid {
+        Some([xx, xy, yy]) => {
+            let zero = Q::zero();
+            Some(transform_tensor(
+                &rows,
+                [[&zero; 3], [&zero, xx, xy], [&zero, xy, yy]],
+                work,
+            )?)
+        }
+        None => None,
+    };
+    Ok(ExactWorldPlaneMass {
+        area_scale_squared,
+        signed_area: mass.signed_area,
+        first_moments,
+        centroid,
+        second_moments,
+        centroidal_second_moments,
+    })
+}
+
+fn transform_tensor(
+    rows: &[[Q; 3]; 3],
+    tensor: [[&Q; 3]; 3],
+    work: &mut Work,
+) -> Exact<[[Q; 3]; 3]> {
+    let mut result = std::array::from_fn(|_| std::array::from_fn(|_| Q::zero()));
+    for (i, row) in rows.iter().enumerate() {
+        let projected = [
+            dot(row, tensor[0], work)?,
+            dot(row, tensor[1], work)?,
+            dot(row, tensor[2], work)?,
+        ];
+        for j in i..3 {
+            let value = dot(&rows[j], projected.each_ref(), work)?;
+            result[i][j] = value.clone();
+            result[j][i] = value;
+        }
+    }
+    Ok(result)
+}
+
+fn dot(row: &[Q; 3], values: [&Q; 3], work: &mut Work) -> Exact<Q> {
+    row.iter().zip(values).try_fold(Q::zero(), |sum, (a, b)| {
+        let product = work.op(a, b, |a, b| a * b)?;
+        Ok(work.op(&sum, &product, |a, b| a + b)?)
+    })
+}
