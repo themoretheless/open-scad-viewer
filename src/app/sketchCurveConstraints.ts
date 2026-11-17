@@ -19,7 +19,8 @@ import type { DirectSketch } from './directModeling'
 export type SketchCurveConstraint =
   | { kind: 'concentric' | 'equal_radius'; ref: string }
   | { kind: 'tangent_circle'; ref: string; internal: boolean }
-  | { kind: 'tangent_line'; ref: string; a: number; b: number }
+  /** `point` (one of `a`, `b`) also keeps the arc's start point on that polyline vertex (a tangent arc). */
+  | { kind: 'tangent_line'; ref: string; a: number; b: number; point?: number }
   | SketchCoincidentConstraint
 
 export type SketchCoincidentConstraint = { kind: 'coincident'; ref: string; point: number; target: number | 'center' }
@@ -81,8 +82,10 @@ export function validateSketchCurveConstraints(sketch: CurveSketch, sketches: re
     } else if (c.kind === 'tangent_line') {
       const n = ref.points.length
       const ok = (v: unknown) => Number.isInteger(v) && (v as number) >= 0 && (v as number) < n
-      if (keys !== 'a,b,kind,ref' || !isPolyline(ref) || !ok(c.a) || !ok(c.b))
+      if (!(keys === 'a,b,kind,ref' || keys === 'a,b,kind,point,ref') || !isPolyline(ref) || !ok(c.a) || !ok(c.b))
         throw Error('Invalid sketch curve constraints.')
+      if (c.point !== undefined && ((c.point !== c.a && c.point !== c.b) || sketch.analytic.kind !== 'arc'))
+        throw Error('A tangent arc start needs an arc and an end of the tangent segment.')
       const segment = Math.abs(c.a - c.b) === 1 || (ref.closed === true && Math.abs(c.a - c.b) === n - 1)
       if (!segment) throw Error('A tangent constraint needs a segment of the reference polyline.')
     } else throw Error('Invalid sketch curve constraints.')
@@ -114,7 +117,7 @@ export function sketchConstraintOwnerResidual(sketch: CurveSketch, c: SketchCurv
 
 /** Residual of one curve constraint in millimetres for the given circle. */
 export function sketchCurveConstraintResidual(
-  curve: Pick<AnalyticCurve, 'center' | 'radius'>,
+  curve: Pick<AnalyticCurve, 'center' | 'radius'> & { start?: number },
   c: Exclude<SketchCurveConstraint, SketchCoincidentConstraint>,
   ref: CurveSketch,
 ): number {
@@ -126,7 +129,13 @@ export function sketchCurveConstraintResidual(
       dy = b[1] - a[1],
       len = Math.hypot(dx, dy)
     if (!(len > 0)) return Infinity
-    return Math.abs(Math.abs((cx - a[0]) * dy - (cy - a[1]) * dx) / len - curve.radius)
+    const tangency = Math.abs(Math.abs((cx - a[0]) * dy - (cy - a[1]) * dx) / len - curve.radius)
+    const p = c.point === undefined ? undefined : ref.points[c.point]
+    if (!p) return c.point === undefined ? tangency : Infinity
+    if (curve.start === undefined) return Infinity
+    const rad = (curve.start * Math.PI) / 180
+    const start = Math.hypot(cx + curve.radius * Math.cos(rad) - p[0], cy + curve.radius * Math.sin(rad) - p[1])
+    return Math.max(tangency, start)
   }
   const other = ref.analytic!
   const d = Math.hypot(cx - other.center[0], cy - other.center[1])
@@ -153,6 +162,8 @@ export function solveSketchCurveConstraints<T extends CurveSketch>(
   if (all.length && !curve) return solveCoincidentPolyline(sketch, sketches, held)
   const list = all.filter(c => c.kind !== 'coincident')
   if (!list.length || !curve) return sketch
+  const anchored = list.find(c => c.kind === 'tangent_line' && c.point !== undefined)
+  if (anchored) return solveAnchoredTangentArc(sketch, anchored as TangentLine, list, sketches)
   const points: SketchPoint[] = [{ id: 'c', position: [...curve.center] as Point2 }]
   const circles: SketchCircle[] = [{ id: 'k', center: 'c', radius: curve.radius }]
   const constraints: SolverConstraint[] = []
@@ -209,6 +220,44 @@ export function solveSketchCurveConstraints<T extends CurveSketch>(
         analytic,
         c,
         sketches.find(s => s.id === c.ref)!,
+      ) > 1e-5
+    )
+      throw Error('Sketch curve constraints conflict or did not converge.')
+  return { ...sketch, analytic, points: sampleCurve(analytic) }
+}
+
+type TangentLine = Extract<SketchCurveConstraint, { kind: 'tangent_line' }>
+
+/**
+ * A tangent arc anchored at a polyline vertex has a closed form: the arc starts at the vertex, leaves it along the
+ * segment direction, keeps its radius and sweep, and its centre sits on the side given by the sweep sign. Any other
+ * curve constraint on the same arc must already hold at that position, otherwise the edit is refused.
+ */
+function solveAnchoredTangentArc<T extends CurveSketch>(
+  sketch: T,
+  c: TangentLine,
+  list: readonly SketchCurveConstraint[],
+  sketches: readonly CurveSketch[],
+): T {
+  const curve = sketch.analytic!
+  const ref = sketches.find(s => s.id === c.ref)!
+  const p = ref.points[c.point!]!,
+    q = ref.points[c.point === c.a ? c.b : c.a]!
+  const len = Math.hypot(p[0] - q[0], p[1] - q[1])
+  if (!(len > 1e-9)) throw Error('Sketch curve constraints conflict or did not converge.')
+  const tx = (p[0] - q[0]) / len,
+    ty = (p[1] - q[1]) / len,
+    signed = curve.sweep > 0 ? curve.radius : -curve.radius
+  const center: Point2 = [p[0] - ty * signed, p[1] + tx * signed]
+  const start = (Math.atan2(p[1] - center[1], p[0] - center[0]) * 180) / Math.PI
+  const analytic: AnalyticCurve = { ...curve, center, start }
+  for (const other of list)
+    if (
+      other.kind !== 'coincident' &&
+      sketchCurveConstraintResidual(
+        analytic,
+        other,
+        sketches.find(s => s.id === other.ref)!,
       ) > 1e-5
     )
       throw Error('Sketch curve constraints conflict or did not converge.')

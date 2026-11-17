@@ -50,6 +50,38 @@ export interface SlotDefinition {
   width: number
 }
 
+/**
+ * Whether every point of a sketch lies on the boundary of `slot` (its distance to the centre segment is half the
+ * width), so a stored slot definition still describes the sketch and can rebuild it exactly.
+ */
+export function slotMatchesSketch(slot: SlotDefinition, points: readonly Point2[], tolerance = 1e-6): boolean {
+  const d = slotDimensions(slot)
+  if (!d || points.length < 4) return false
+  const { a, b } = slot,
+    r = d.width / 2
+  const ux = (b[0] - a[0]) / d.centerDistance,
+    uy = (b[1] - a[1]) / d.centerDistance
+  return points.every(p => {
+    const t = Math.min(d.centerDistance, Math.max(0, (p[0] - a[0]) * ux + (p[1] - a[1]) * uy))
+    return Math.abs(Math.hypot(p[0] - a[0] - ux * t, p[1] - a[1] - uy * t) - r) <= tolerance
+  })
+}
+
+/** Structural check of a stored slot definition; throws on anything but `{ a, b, width }` with a valid slot. */
+export function validateSlotDefinition(slot: unknown): asserts slot is SlotDefinition {
+  const s = slot as SlotDefinition
+  const point = (p: unknown) => Array.isArray(p) && p.length === 2
+  if (
+    !s ||
+    typeof s !== 'object' ||
+    Object.keys(s).sort().join(',') !== 'a,b,width' ||
+    !point(s.a) ||
+    !point(s.b) ||
+    !slotDimensions(s)
+  )
+    throw Error('Invalid sketch slot.')
+}
+
 /** Overall length (tip to tip) and full width of a center-line slot. */
 export function slotDimensions(slot: SlotDefinition): { length: number; width: number; centerDistance: number } | null {
   const { a, b, width } = slot
@@ -145,7 +177,7 @@ export function tangentArc(
 
 /**
  * Persistent tangency stored on a tangent arc: the arc circle stays tangent to the end segment of the
- * polyline it continues, so edits of the polyline re-solve the arc (or refuse) through the curve-constraint solver.
+ * polyline it continues and the arc keeps starting at the polyline end (`point`), so edits of the polyline re-solve the arc (or refuse) through the curve-constraint solver.
  */
 export function tangentArcConstraint(
   sketch: Pick<DirectSketch, 'id' | 'points'>,
@@ -153,6 +185,6 @@ export function tangentArcConstraint(
 ): Extract<SketchCurveConstraint, { kind: 'tangent_line' }> {
   const n = sketch.points.length
   return end === 'end'
-    ? { kind: 'tangent_line', ref: sketch.id, a: n - 2, b: n - 1 }
-    : { kind: 'tangent_line', ref: sketch.id, a: 0, b: 1 }
+    ? { kind: 'tangent_line', ref: sketch.id, a: n - 2, b: n - 1, point: n - 1 }
+    : { kind: 'tangent_line', ref: sketch.id, a: 0, b: 1, point: 0 }
 }

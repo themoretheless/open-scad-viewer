@@ -219,6 +219,23 @@ describe('persistent constraints across sketch geometry edits', () => {
     expect(droppedConstraintsNotice([], 'ru')).toBe('')
   })
 
+  it('C7 dropped dimensions notice names each dimension in both locales', async () => {
+    const { droppedDimensionsNotice } = await import('../src/app/sketchConstraints')
+    expect(droppedDimensionsNotice([], 'en')).toBe('')
+    expect(
+      droppedDimensionsNotice(
+        [
+          { kind: 'length', a: 0, b: 1 },
+          { kind: 'angle', a: 0, b: 1, c: 2 },
+        ],
+        'en',
+      ),
+    ).toBe('Trim removed sketch dimensions (2): length (1–2); angle (1–2–3).')
+    expect(droppedDimensionsNotice([{ kind: 'horizontal', a: 2, b: 3 }], 'ru')).toBe(
+      'Обрезка сняла размеры эскиза (1): по горизонтали (3–4).',
+    )
+  })
+
   it('trim carries sketch dimensions onto surviving points and reports the dropped ones', async () => {
     const { trimSketchConstraints } = await import('../src/app/directSketchGeometry')
     const { sketchDimensions } = await import('../src/app/directDimensions')

@@ -33,6 +33,7 @@ import type { NurbsBrep } from '../kernel/geometry/brep'
 import type { DirectStepDisplay, DirectStepSceneProduct, DirectStepSceneTree } from '../kernel/cadNurbsStep'
 import { BrepInspectionCache } from '../kernel/brepInspectionCache'
 import { isDocumentLengthUnit, type DocumentLengthUnit } from './documentUnits'
+import { validateSlotDefinition, type SlotDefinition } from './sketchPrimitives'
 
 export type Point2 = [number, number]
 export interface DirectSketch {
@@ -49,6 +50,8 @@ export interface DirectSketch {
   dimensions?: SketchDimension[]
   constraints?: SketchConstraint[]
   curveConstraints?: SketchCurveConstraint[]
+  /** Centre-line definition of an exact slot (retained profile), so its length and width stay editable. */
+  slot?: SlotDefinition
 }
 /** `group` names a flat, optional grouping shown in the scene list. Bodies built from
  * source share one, so a rebuild can be recognised, replaced or deleted as a unit. */
@@ -322,6 +325,10 @@ function* directDocumentValidation(
     if (s.supportBodyId !== undefined && (typeof s.supportBodyId !== 'string' || s.supportBodyId.length > 200))
       throw new Error('Invalid sketch support body.')
     if (s.editablePath !== undefined) Object.assign(s, withEditableSketchPath(s, s.editablePath))
+    if (s.slot !== undefined) {
+      if (!s.retainedProfile) throw Error('A slot definition needs an exact slot profile.')
+      validateSlotDefinition(s.slot)
+    }
     if (s.retainedProfile) {
       if (s.analytic || s.dimensions?.length || s.constraints?.length)
         throw Error('Retained profiles cannot carry polygon dimensions or a second analytic definition.')

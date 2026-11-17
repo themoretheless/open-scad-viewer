@@ -1,4 +1,5 @@
 import type { Point2 } from './directModeling'
+import type { SketchDimension } from './directDimensions'
 import { solveRushGraphSketch, type SketchConstraint as SolverConstraint } from '../language/rushGraphSketch'
 
 /** Persistent direction constraints of a polyline sketch; indices name sketch points. */
@@ -261,4 +262,27 @@ export function droppedConstraintsNotice(dropped: readonly SketchConstraint[], l
   return ru
     ? `Обрезка сняла ограничения эскиза (${dropped.length}): ${names.join('; ')}.`
     : `Trim removed sketch constraints (${dropped.length}): ${names.join('; ')}.`
+}
+
+const DIMENSION_NAMES: Record<SketchDimension['kind'], [string, string]> = {
+  length: ['длина', 'length'],
+  horizontal: ['по горизонтали', 'horizontal distance'],
+  vertical: ['по вертикали', 'vertical distance'],
+  angle: ['угол', 'angle'],
+  radius: ['радиус', 'radius'],
+  diameter: ['диаметр', 'diameter'],
+}
+
+/** User-facing notice for sketch dimensions an edit removed (for example trim); empty when nothing was dropped. */
+export function droppedDimensionsNotice(dropped: readonly SketchDimension[], locale: string): string {
+  if (!dropped.length) return ''
+  const ru = locale === 'ru'
+  const names = dropped.map(d => {
+    const name = DIMENSION_NAMES[d.kind]?.[ru ? 0 : 1] ?? d.kind
+    if (!('a' in d)) return name
+    return `${name} (${('c' in d ? [d.a, d.b, d.c] : [d.a, d.b]).map(k => k + 1).join('–')})`
+  })
+  return ru
+    ? `Обрезка сняла размеры эскиза (${dropped.length}): ${names.join('; ')}.`
+    : `Trim removed sketch dimensions (${dropped.length}): ${names.join('; ')}.`
 }

@@ -189,3 +189,12 @@ it('C7 coincident: a main sketch vertex drag keeps the coincident vertex on its 
  expect(ui.text(ui.all().find(n=>n.props.role==='status')!)).toContain('edit was refused')
  svg.props.onPointerup();await nextTick();expect(line().props.points).toEqual(before)
 })
+it('C7 trim notice: the main sketch tool names dimensions the trim dropped',async()=>{
+ const {warmGeometryKernel}=await import('../src/kernel/geometry/kernel');await warmGeometryKernel()
+ const stored=JSON.stringify({version:1,bodies:[],sketches:[{id:'L',name:'L',closed:false,points:[[0,0],[2,0],[8,0]],dimensions:[{kind:'length',a:1,b:2}]},{id:'B',name:'B',closed:false,points:[[5,-10],[5,10]]}]})
+ const ui=await mount(MainSketchTools,{plane:null,project:(p:number[])=>[p[0],p[1]],ray:(x:number,y:number)=>({origin:[x,y,100],direction:[0,0,-1]}),revision:0,locale:'en'},stored)
+ await ui.click('trim');const line=ui.all().filter(n=>n.tag==='polyline'&&n.props['stroke-width']==='3')[0]!
+ line.props.onPointerdown(ui.event(line,7,0));await nextTick()
+ const status=ui.all().find(n=>n.props.role==='status')
+ expect(status&&ui.text(status)).toContain('Trim removed sketch dimensions (1): length (2–3).')
+})

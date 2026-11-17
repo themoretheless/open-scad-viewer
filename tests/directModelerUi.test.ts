@@ -4679,7 +4679,7 @@ it.each(['en','ru'])('keeps the complete command registry identified and explain
  for(const selection of [null,'Cube','Profile']){
   if(selection)await ui.click(selection)
   const commands=ui.commands(),current=commands.map(c=>c.id)
-  expect(commands).toHaveLength(100);expect(new Set(current).size).toBe(current.length)
+  expect(commands).toHaveLength(101);expect(new Set(current).size).toBe(current.length)
   if(ids.length)expect(current).toEqual(ids);else ids=current
   for(const command of commands){
    expect(command.label.trim(),command.id).not.toBe('')
@@ -6098,7 +6098,7 @@ it('C7 tangent arc: starts from the first point and stores tangency to that segm
  field('Point coordinate X').props['onUpdate:modelValue'](-10);field('Point coordinate Y').props['onUpdate:modelValue'](10);await nextTick()
  await ui.click('Create tangent arc');const arc=ui.doc().sketches.at(-1)!
  expect(arc.analytic!.center[0]).toBeCloseTo(0,9);expect(arc.analytic!.center[1]).toBeCloseTo(10,9);expect(arc.analytic!.radius).toBeCloseTo(10,9)
- expect(arc.curveConstraints).toEqual([{kind:'tangent_line',ref:'path',a:0,b:1}])
+ expect(arc.curveConstraints).toEqual([{kind:'tangent_line',ref:'path',a:0,b:1,point:0}])
  expect(arc.plane).toBeUndefined()
 })
 
@@ -6114,4 +6114,70 @@ it('C7 coincident vertices: the panel joins two vertices of one polyline and ref
  expect(next.constraints).toEqual([{kind:'coincident',a:0,b:3}])
  expect(Math.hypot(next.points[3]![0]-next.points[0]![0],next.points[3]![1]-next.points[0]![1])).toBeLessThan(1e-6)
  await ui.click('↶');expect(ui.doc().sketches[0]!.constraints).toBeUndefined()
+})
+
+it('C7 project sketch: the palette command projects the selected sketch onto the active plane',async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const xz={origin:[0,0,0],u:[1,0,0],v:[0,0,1]}
+ const ui=await mount({initialDocument:{version:1,bodies:[],sketches:[{id:'base',name:'Base',closed:false,plane:{origin:[0,0,0],u:[1,0,0],v:[0,1,0]},points:[[0,0],[1,1]]},{id:'side',name:'Side',closed:false,plane:xz,points:[[0,1],[4,3]]},{id:'ring',name:'Ring',closed:true,plane:xz,analytic:{kind:'circle',center:[0,0],radius:2,start:0,sweep:360},points:sampleCurve({kind:'circle',center:[0,0],radius:2,start:0,sweep:360})}]},initialSelection:'side'})
+ await ui.click('Project sketch')
+ const projected=ui.doc().sketches.at(-1)!
+ expect(ui.doc().sketches).toHaveLength(4)
+ expect(projected.points).toEqual([[0,0],[4,0]]);expect(projected.closed).toBe(false);expect(projected.plane?.v).toEqual([0,1,0])
+ await ui.click('↶');expect(ui.doc().sketches.map(s=>s.id)).toEqual(['base','side','ring'])
+ // Shift-selected sketches go onto the plane of the first selected sketch; a circle on a crossing plane is refused.
+ await ui.click('Base');await ui.click('Side',true);await ui.click('Project sketch')
+ expect(ui.doc().sketches.at(-1)!.points).toEqual([[0,0],[4,0]]);expect(ui.doc().sketches.at(-1)!.plane).toEqual(ui.doc().sketches[0]!.plane)
+ await ui.click('↶');await ui.click('Base');await ui.click('Ring',true);const before=ui.doc();await ui.click('Project sketch')
+ expect(ui.doc()).toEqual(before)
+ expect(ui.all().some(n=>n.children.length===0&&/ellipse|эллипс|parallel|параллел/i.test(n.text))).toBe(true)
+})
+
+it('C7 project sketch: projects the edges of the selected body face exactly',async()=>{
+ const ui=await mount();await ui.click('Cube');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon')!);await ui.click('Sketch on face')
+ await ui.click('Select · V');await ui.click('Cube');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon')!)
+ const count=ui.doc().sketches.length;await ui.click('Project sketch');await flushClearance()
+ const sketches=ui.doc().sketches
+ expect(sketches.length).toBeGreaterThan(count)
+ const added=sketches.slice(count)
+ expect(added).toHaveLength(1);expect(added[0]!.closed).toBe(true);expect(added[0]!.points).toHaveLength(4);expect(added[0]!.analytic).toBeUndefined()
+ await ui.click('↶');expect(ui.doc().sketches).toHaveLength(count)
+})
+
+it('C7 trim notice: DirectModeler names the dimensions a trim dropped',async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const ui=await mount({initialDocument:{version:1,bodies:[],sketches:[{id:'line',name:'Line',closed:false,points:[[0,-5],[2,-5],[8,-5]],dimensions:[{kind:'length',a:1,b:2}]},{id:'boundary',name:'Boundary',closed:false,points:[[5,-10],[5,0]]}]},initialSelection:'line'})
+ await ui.click('Trim');const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
+ const path=ui.all(svg).find(n=>n.tag==='path'&&String(n.props.d).includes('8,5'))!
+ await ui.pointer(path,7,5);await flushClearance()
+ expect(ui.doc().sketches.find(s=>s.id==='line')!.points.at(-1)).toEqual([5,-5])
+ expect(ui.all().some(n=>ui.text(n).includes('Trim removed sketch dimensions (1): length (2–3).'))).toBe(true)
+})
+
+it('C7 slot dimensions: editing length or width later rebuilds the exact slot and undo restores it',async()=>{
+ const ui=await mount();await ui.click('Slot')
+ const field=(name:string)=>ui.all().find(n=>n.props['aria-label']===name)!
+ field('Origin coordinate X').props['onUpdate:modelValue'](0);field('Origin coordinate Y').props['onUpdate:modelValue'](0);field('End coordinate X').props['onUpdate:modelValue'](10);field('End coordinate Y').props['onUpdate:modelValue'](0);field('Slot width, mm').props['onUpdate:modelValue'](4);await flushClearance()
+ await ui.click('Create slot');const id=ui.doc().sketches.at(-1)!.id
+ const slot=()=>ui.doc().sketches.find(s=>s.id===id)!
+ expect(slot().slot).toEqual({a:[0,0],b:[10,0],width:4})
+ await ui.click('Sketch dimensions');await vi.waitFor(()=>expect(field('Selected slot length, mm')).toBeDefined())
+ field('Selected slot length, mm').props['onUpdate:modelValue'](30);await vi.waitFor(()=>expect(slot().slot!.b[0]).toBeCloseTo(26,9))
+ expect(Math.max(...slot().points.map(p=>p[0]))).toBeCloseTo(28,6);expect(slot().retainedProfile!.areaMm2).toBeCloseTo(26*4+4*Math.PI,8)
+ field('Selected slot width, mm').props['onUpdate:modelValue'](6);await vi.waitFor(()=>expect(slot().slot!.width).toBe(6))
+ expect(slot().slot!.b[0]).toBeCloseTo(24,9);expect(Math.max(...slot().points.map(p=>p[0]))).toBeCloseTo(27,6)
+ const before=ui.doc();field('Selected slot length, mm').props['onUpdate:modelValue'](5);await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props.role==='alert'&&ui.text(n).includes('Slot length must exceed the width'))).toBe(true)
+ await ui.click('↶');expect(slot().slot).toEqual({a:[0,0],b:[26,0],width:4})
+ await ui.click('↶');expect(slot().slot).toEqual({a:[0,0],b:[10,0],width:4})
+})
+
+it('C7 tangent arc: stores the start point on the polyline end and keeps it when the polyline is edited',async()=>{
+ await geometryKernel.warmGeometryKernel();const ui=await mount({initialDocument:{version:1,bodies:[],sketches:[{id:'path',name:'Path',closed:false,points:[[0,0],[10,0]]}]},initialSelection:'path'});await ui.click('Arc')
+ const field=(name:string)=>ui.all().find(n=>n.props['aria-label']===name)!
+ field('Point coordinate X').props['onUpdate:modelValue'](20);field('Point coordinate Y').props['onUpdate:modelValue'](10);await nextTick()
+ await ui.click('Create tangent arc');const arc=ui.doc().sketches.at(-1)!
+ expect(arc.curveConstraints).toEqual([{kind:'tangent_line',ref:'path',a:0,b:1,point:1}])
+ const a=arc.analytic!,t=a.start*Math.PI/180
+ expect(a.center[0]+a.radius*Math.cos(t)).toBeCloseTo(10,9);expect(a.center[1]+a.radius*Math.sin(t)).toBeCloseTo(0,9)
 })

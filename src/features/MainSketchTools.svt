@@ -8,7 +8,7 @@ import {storageGet,storageSet} from '../core/safeStorage'
 import type {Ray3} from '../kernel/geometry/math3d'
 import {DirectHistory,emptyDirectDocument,parseDirectDocument,extrudeDirectSketch,type Point2,type DirectSketch} from '../app/directModeling'
 import {sampleCurve,worldPoint,worldPoints,xyPlane,cross3,dot3,offsetSketch,trimSketchConstraints,extendSketch,carrySketchConstraints,type SketchPlane} from '../app/directSketchGeometry'
-import {droppedConstraintsNotice} from '../app/sketchConstraints'
+import {droppedConstraintsNotice,droppedDimensionsNotice} from '../app/sketchConstraints'
 import {resolveDependentCurveSketches,dropCurveConstraintsTo,droppedCurveConstraintsNotice,solveDraggedCurveSketch,curveDragRefusedNotice,CURVE_DRAG_REFUSED_MESSAGE,carryCoincidentConstraints,coincidentEditRefusedNotice,COINCIDENT_EDIT_REFUSED_MESSAGE} from '../app/sketchCurveConstraints'
 import {sketchConstraintGlyphs,isSketchConstraintRef,removeSketchConstraintRef,type SketchConstraintRef} from '../app/sketchConstraintGlyphs'
 const props=defineProps<{plane:SketchPlane|null;project:(p:readonly number[])=>[number,number]|null;ray:(x:number,y:number)=>Ray3|null;revision:number;locale:string;sessionKey?:string;snapPoints?:number[][]}>()
@@ -48,7 +48,7 @@ function down(e:PointerEvent){if(e.button!==0)return;svg.value?.focus();const p=
 }
 function pick(e:PointerEvent,s:DirectSketch){e.stopPropagation();selected.value=s.id
  if(tool.value==='trim'){if(s.editablePath){error.value=label('Для Bézier используйте редактирование узлов.','Use anchor editing for Bézier paths.');return}run(()=>{const p=at(e);if(!p)return;let edge=0,best=Infinity,bestT=0.5;for(let i=0;i<s.points.length-(s.closed?0:1);i++){const a=s.points[i],b=s.points[(i+1)%s.points.length],v=[b[0]-a[0],b[1]-a[1]],t=Math.max(0,Math.min(1,((p[0]-a[0])*v[0]+(p[1]-a[1])*v[1])/(v[0]*v[0]+v[1]*v[1]))),dist=Math.hypot(p[0]-a[0]-v[0]*t,p[1]-a[1]-v[1]*t);if(dist<best){best=dist;edge=i;bestT=t}}
- const {sketches:result,dropped,droppedCurve}=trimSketchConstraints(clone(s),edge,bestT,clone(document.value.sketches)),curves=dropCurveConstraintsTo(document.value.sketches,s.id);notice.value=[droppedConstraintsNotice(dropped,props.locale),droppedCurveConstraintsNotice([...curves.dropped,...droppedCurve],props.locale)].filter(Boolean).join(' ');document.value={...document.value,sketches:curves.sketches.filter(o=>o.id!==s.id).concat(result.map((o,i)=>({...o,id:i?crypto.randomUUID():s.id})))};commit()})}
+ const {sketches:result,dropped,droppedCurve,droppedDimensions}=trimSketchConstraints(clone(s),edge,bestT,clone(document.value.sketches)),curves=dropCurveConstraintsTo(document.value.sketches,s.id);notice.value=[droppedConstraintsNotice(dropped,props.locale),droppedDimensionsNotice(droppedDimensions,props.locale),droppedCurveConstraintsNotice([...curves.dropped,...droppedCurve],props.locale)].filter(Boolean).join(' ');document.value={...document.value,sketches:curves.sketches.filter(o=>o.id!==s.id).concat(result.map((o,i)=>({...o,id:i?crypto.randomUUID():s.id})))};commit()})}
 }
 function beginHandle(e:PointerEvent,kind:string,vertex=0){e.stopPropagation();svg.value?.focus();before=clone(document.value);activeNode.value=vertex;handle={kind,vertex};svg.value?.setPointerCapture(e.pointerId)}
 function move(e:PointerEvent){const p=at(e);if(!p)return;const pointerPoint=p

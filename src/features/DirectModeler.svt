@@ -32,7 +32,9 @@ import { connectedEdgeChain } from '../app/edgeSelection'
 import CadQuantityInput from '../components/CadQuantityInput.svt'
 import RunoutControls from '../components/RunoutControls.svt'
 import {numericRectangle,numericSlotSources} from '../app/numericSketchAuthoring'
-import {ellipseSketchCurve,resizeSlot,slotDimensions,tangentArc,tangentArcConstraint} from '../app/sketchPrimitives'
+import {ellipseSketchCurve,resizeSlot,slotDimensions,slotMatchesSketch,tangentArc,tangentArcConstraint,type SlotDefinition} from '../app/sketchPrimitives'
+import {projectSketchToPlane,type ProjectedSketch} from '../app/sketchProjection'
+import {projectSolidFaceToPlane} from '../kernel/solidFaceSketch'
 import {type SurfaceBoundaryReport,type SurfaceBoundaryOptions} from '../kernel/solidSurfaceDiagnostics'
 import { computed, nextTick, onUnmounted, reactive, ref, shallowRef, watch, watchEffect } from 'svet'
 import {solidVertexCount} from '../kernel/solidMeasurements'
@@ -62,7 +64,7 @@ import type {NurbsCurve,NurbsScreenProjection} from '../kernel/nurbsCurve'
 import { bodyPoints, DirectHistory, directBodiesScad, parseDirectDocument, serializeDirectDocument, type DirectBody, type DirectDocument, type DirectSketch, type Point2 } from '../app/directModeling'
 import type {SolidSketchEditOptions} from '../kernel/solidSketchEdit'
 import { validateSimpleSketch, slotSketch, sampleCurve, bakeSketch, trimSketchConstraints, worldPoint, xyPlane, unit3, cross3, type SketchPlane, type Vec3 } from '../app/directSketchGeometry'
-import { droppedConstraintsNotice } from '../app/sketchConstraints'
+import { droppedConstraintsNotice, droppedDimensionsNotice } from '../app/sketchConstraints'
 import { pruneSketchCurveConstraints, dropCurveConstraintsTo, droppedCurveConstraintsNotice } from '../app/sketchCurveConstraints'
 import { sketchConstraintGlyphs, removeSketchConstraintRef, isSketchConstraintRef, type SketchConstraintRef } from '../app/sketchConstraintGlyphs'
 import { storageGet, storageSet } from '../core/safeStorage'
@@ -161,6 +163,26 @@ function createEllipse(){ellipseError.value='';if(!draftPointValid.value.every(B
 const tangentArcEnd=ref<'start'|'end'>('end')
 const tangentArcCurve=computed(()=>{const s=selectedSketch.value;return tool.value==='arc'&&s&&!s.closed&&!s.analytic&&!s.retainedProfile&&draftPointValid.value.every(Boolean)?tangentArc(s,tangentArcEnd.value,[...draftPoint.value] as Point2):null})
 // The arc lives in the polyline's plane and keeps a persistent tangency to the end segment it continues.
+// Projection adds exact sketches without changing the sources: Shift-selected sketches go onto the plane of the first
+// selected sketch, a lone sketch on another plane goes onto the active plane, and a selected body face goes onto the
+// active plane. Refusals keep the document unchanged.
+function projectSketch(){
+ error.value=''
+ const sketch=selectedSketch.value,body=selectedBody.value,lang=props.locale==='ru'?'ru':'en'
+ const sources=document.value.sketches.filter(o=>extraSelection.value.includes(o.id))
+ let projected:ProjectedSketch[]
+ try{
+  if(sketch&&sources.length){const target=sketch.plane??xyPlane();projected=sources.map(o=>projectSketchToPlane(o,target))}
+  else if(sketch){if(samePlane(sketch.plane,activePlane.value))throw new DirectInputError('DIRECT_SKETCH_PROJECTION_INPUT','Select the target sketch first, then Shift-select the sketches to project.');projected=[projectSketchToPlane(sketch,activePlane.value)]}
+  else projected=body&&selectedFace.value?projectSolidFaceToPlane(body,faceIndex.value,activePlane.value):[]
+ }catch(e){error.value=presentKernelError(e,lang).message;return}
+ if(!projected.length)return
+ run(()=>{
+  projected.forEach(p=>validateSimpleSketch(p.points,p.closed))
+  const ids=projected.map(()=>crypto.randomUUID()),supportBodyId=workplaneBodyId.value
+  void commitInWorker(()=>{const d=history.document;projected.forEach((p,i)=>d.sketches.push({id:ids[i]!,name:label('Проекция ','Projection ')+(d.sketches.length+1),points:p.points,closed:p.closed,...(p.analytic?{analytic:p.analytic}:{}),plane:JSON.parse(JSON.stringify(p.plane)),...(supportBodyId?{supportBodyId}:{})}));return d},()=>pickObject(ids[0]!,'2d'))
+ })
+}
 function createTangentArc(){const curve=tangentArcCurve.value,s=selectedSketch.value;if(!curve||!s)return;run(()=>addSketch(sampleCurve(curve),false,curve,undefined,()=>{draft.value=[];draftCursor.value=null;tool.value='select'},{plane:s.plane,curveConstraints:[tangentArcConstraint(s,tangentArcEnd.value)]}))}
 const draftPoint=ref<Point2>([0,0]),draftPointValid=ref([true,true])
 const draftRadius=ref(10),draftRadiusValid=ref(true),draftArcStart=ref(0),draftArcSweep=ref(180),draftArcValid=ref([true,true])
@@ -179,7 +201,29 @@ let numericSlotGeneration=0,numericSlotAutoApply=false
 function cancelNumericSlot(){numericSlotGeneration++;numericSlotWorker.cancel();numericSlotPending.value=false;numericSlotResult.value=null;numericSlotError.value=false;numericSlotAutoApply=false}
 onUnmounted(()=>{cancelNumericSlot();numericSlotWorker.dispose()})
 const numericSlotInput=computed(()=>draftPointValid.value.every(Boolean)&&draftEndValid.value.every(Boolean)&&slotWidthValid.value?numericSlotSources(draftPoint.value,draftEnd.value,slotWidth.value,activePlane.value):null)
-function createExactSlot(){const sketch=numericSlotResult.value;if(tool.value!=='slot'||numericSlotPending.value||!sketch?.retainedProfile||!numericSlotInput.value)return;run(()=>{addSketch(sketch.points,true,undefined,sketch.retainedProfile,()=>{draft.value=[];draftCursor.value=null;tool.value='select'})})}
+function createExactSlot(){const sketch=numericSlotResult.value;if(tool.value!=='slot'||numericSlotPending.value||!sketch?.retainedProfile||!numericSlotInput.value)return;const slot:SlotDefinition={a:[...draftPoint.value] as Point2,b:[...draftEnd.value] as Point2,width:slotWidth.value};run(()=>{addSketch(sketch.points,true,undefined,sketch.retainedProfile,()=>{draft.value=[];draftCursor.value=null;tool.value='select'},{slot})})}
+// A stored slot definition rebuilds the exact slot profile when its length or width is edited later; one history step, so undo restores it.
+const slotEditWorker=createSolidPreviewWorker(),slotEditError=ref(''),slotEditPending=ref(false)
+let slotEditGeneration=0
+onUnmounted(()=>{slotEditGeneration++;slotEditWorker.cancel();slotEditWorker.dispose()})
+const selectedSlot=computed(()=>{const s=selectedSketch.value;return s?.slot&&s.retainedProfile?slotDimensions(s.slot):null})
+async function editSlot(change:{length?:number;width?:number}){
+ const s=selectedSketch.value,generation=++slotEditGeneration;slotEditError.value=''
+ if(!s?.slot)return
+ const refuse=()=>{slotEditError.value=label('Длина паза должна быть больше ширины, ширина — от 0,02 мм.','Slot length must exceed the width; width starts at 0.02 mm.')}
+ if(!slotMatchesSketch(s.slot,s.points)){slotEditError.value=label('Контур паза изменён после создания; размеры паза к нему не применяются.','The slot outline changed after creation; slot dimensions no longer apply.');return}
+ const next=Number.isFinite(change.length??0)&&Number.isFinite(change.width??0)?resizeSlot(s.slot,change):null,input=next&&numericSlotSources(next.a,next.b,next.width,s.plane??xyPlane())
+ if(!next||!input){refuse();return}
+ const source=document.value;slotEditPending.value=true
+ try{
+  const result=await slotEditWorker.run({kind:'profilePrepare',...input,tolerance:1e-7})
+  if(generation!==slotEditGeneration||document.value!==source)return
+  const built=result.document.sketches.find(o=>o.id===result.id)
+  if(!result.report.accepted||!built?.retainedProfile)throw Error('Slot profile preparation failed')
+  await commitInWorker(()=>{const d=history.document,t=d.sketches.find(o=>o.id===s.id);if(!t)return undefined;t.points=built.points;t.closed=true;t.retainedProfile=built.retainedProfile;t.slot=next;return d})
+ }catch{if(generation===slotEditGeneration)refuse()}
+ finally{if(generation===slotEditGeneration)slotEditPending.value=false}
+}
 function refreshNumericSlot(){
  const autoApply=numericSlotAutoApply;cancelNumericSlot()
  if(!props.open||tool.value!=='slot'||!numericSlotInput.value)return
@@ -1141,7 +1185,7 @@ function trimAt(id:string,p:Point2){void commitInWorker(()=>{
  const d=history.document,s=d.sketches.find(s=>s.id===id);if(!s)return
  let best=Infinity,index=0,t=0
  for(let i=0;i<(s.closed?s.points.length:s.points.length-1);i++){const a=s.points[i],b=s.points[(i+1)%s.points.length],vx=b[0]-a[0],vy=b[1]-a[1],f=Math.max(0,Math.min(1,((p[0]-a[0])*vx+(p[1]-a[1])*vy)/(vx*vx+vy*vy))),dist=Math.hypot(p[0]-a[0]-f*vx,p[1]-a[1]-f*vy);if(dist<best){best=dist;index=i;t=f}}
- const {sketches:pieces,dropped,droppedCurve}=trimSketchConstraints(s,index,t,d.sketches.filter(o=>samePlane(o.plane,s.plane)));const curves=dropCurveConstraintsTo(d.sketches,id);if(dropped.length||curves.dropped.length||droppedCurve.length)notice.value=[droppedConstraintsNotice(dropped,props.locale),droppedCurveConstraintsNotice([...curves.dropped,...droppedCurve],props.locale)].filter(Boolean).join(' ');pieces.forEach((p,i)=>{if(i)p.id=crypto.randomUUID()});d.sketches=curves.sketches.filter(o=>o.id!==id);d.sketches.push(...pieces);return d
+ const {sketches:pieces,dropped,droppedCurve,droppedDimensions}=trimSketchConstraints(s,index,t,d.sketches.filter(o=>samePlane(o.plane,s.plane)));const curves=dropCurveConstraintsTo(d.sketches,id);if(dropped.length||droppedDimensions.length||curves.dropped.length||droppedCurve.length)notice.value=[droppedConstraintsNotice(dropped,props.locale),droppedDimensionsNotice(droppedDimensions,props.locale),droppedCurveConstraintsNotice([...curves.dropped,...droppedCurve],props.locale)].filter(Boolean).join(' ');pieces.forEach((p,i)=>{if(i)p.id=crypto.randomUUID()});d.sketches=curves.sketches.filter(o=>o.id!==id);d.sketches.push(...pieces);return d
 })}
 
 function run(action: () => void) { error.value = ''; try { action() } catch (e) { error.value = e instanceof Error ? e.message : String(e) } }
@@ -1305,12 +1349,12 @@ watch(()=>[props.open,document.value,lockedIds.value.join(','),activeGroup.value
 onUnmounted(()=>{cancelHistoryRestore();historyWorker.dispose();commitWorker.dispose()})
 /** Validates the outline here (throws like before), commits in the worker, then selects the new
  * sketch and runs `after` (draft reset, tool switch) only once the commit landed. */
-function addSketch(points: Point2[], closed: boolean, analytic?: import('../app/directSketchGeometry').AnalyticCurve,retainedProfile?:import('../kernel/geometry/brepProfile').BrepProfile,after?:()=>void,extra?:{plane?:unknown;curveConstraints?:import('../app/sketchCurveConstraints').SketchCurveConstraint[]}) {
+function addSketch(points: Point2[], closed: boolean, analytic?: import('../app/directSketchGeometry').AnalyticCurve,retainedProfile?:import('../kernel/geometry/brepProfile').BrepProfile,after?:()=>void,extra?:{plane?:unknown;curveConstraints?:import('../app/sketchCurveConstraints').SketchCurveConstraint[];slot?:SlotDefinition}) {
   validateSimpleSketch(points,closed)
   const id = crypto.randomUUID(), plane = JSON.parse(JSON.stringify(extra&&'plane' in extra?extra.plane??null:activePlane.value)), supportBodyId = workplaneBodyId.value
   void commitInWorker(() => {
     const d = history.document
-    d.sketches.push({ id, name: label('Эскиз ', 'Sketch ') + (d.sketches.length + 1), points, closed, analytic, ...(retainedProfile?{retainedProfile}:{}), ...(plane?{plane}:{}), ...(supportBodyId?{supportBodyId}:{}), ...(extra?.curveConstraints?.length?{curveConstraints:extra.curveConstraints}:{}) })
+    d.sketches.push({ id, name: label('Эскиз ', 'Sketch ') + (d.sketches.length + 1), points, closed, analytic, ...(retainedProfile?{retainedProfile}:{}), ...(plane?{plane}:{}), ...(supportBodyId?{supportBodyId}:{}), ...(extra?.curveConstraints?.length?{curveConstraints:extra.curveConstraints}:{}), ...(extra?.slot?{slot:extra.slot}:{}) })
     return d
   }, () => { pickObject(id,'2d'); after?.() })
 }
@@ -2330,7 +2374,7 @@ function up(e: PointerEvent) {
   if (error.value && stringifyMeshJson(history.document) === stringifyMeshJson(before)) document.value = before
 }
 
-const { paletteOpen, notice, createOpen, dockOpen, dockTab, exactCardOpen, captureCommand, lastCommand, repeatEntry, repeatReason, repeatCommand, solidCommands, executeSolidCommand } = useCommandPalette({ applyMinkowski, addNurbs: kind => addNurbs(kind), addPrimitive: kind => addPrimitive(kind), advanced, advancedOp, appendBodies, applyBrepBoolean, baseZ, beginAdvanced, beginCorner, beginExtrude, beginSketch, beginSubtract, boxSelect, brepSegments, camera, canExtrudeSketch, cancelCommand, clearanceOpen, commandActive, commitDirectTransform, copyCount, copySweep, copyX, copyY, cornerRadius, diagnosticPanel, diagnosticsOpen, document, downloadProject, duplicate, edgeIndex, exportBlender, exportBodySvg, extraSelection, extrusionMode, faceSketch, filletSegments, fit, floorVisible, gizmoMode, height, kernelReady, kernelLoadError, profileBridgePanel, label, measureSelectedBrep, measureTarget, measurementOpen, mode, movingBody, operation, pickMode, pickObject, pointTrimCut, pointTrimPick, primitiveLabel: kind => primitiveLabel(kind), props, redoable, remove, restoringDraft, retessellateSelectedBrep, revolveAngle, revolveAxis, revolveGeometry, revolveOffset, revolveSegments, run, selectEdgeChain, selectedBody, selectedBrepBodies, selectedCurvePair, selectedFace, selectedIds, selectedNurbs, selectedNurbsCurve, selectedNurbsSurface, selectedSketch, selectedSurfacePair, selection, sendToMesh, showHelp, sketchPaneOpen, smoothDisplay, snapDocument, subtract, surfaceInputs, surfaceReversed, toggleSketchPane, tool, twoSelectedBodies, undo, undoable, workspace })
+const { paletteOpen, notice, createOpen, dockOpen, dockTab, exactCardOpen, captureCommand, lastCommand, repeatEntry, repeatReason, repeatCommand, solidCommands, executeSolidCommand } = useCommandPalette({ applyMinkowski, addNurbs: kind => addNurbs(kind), addPrimitive: kind => addPrimitive(kind), advanced, advancedOp, appendBodies, applyBrepBoolean, baseZ, beginAdvanced, beginCorner, beginExtrude, beginSketch, beginSubtract, boxSelect, brepSegments, camera, canExtrudeSketch, cancelCommand, clearanceOpen, commandActive, commitDirectTransform, copyCount, copySweep, copyX, copyY, cornerRadius, diagnosticPanel, diagnosticsOpen, document, downloadProject, duplicate, edgeIndex, exportBlender, exportBodySvg, extraSelection, extrusionMode, faceSketch, projectSketch, filletSegments, fit, floorVisible, gizmoMode, height, kernelReady, kernelLoadError, profileBridgePanel, label, measureSelectedBrep, measureTarget, measurementOpen, mode, movingBody, operation, pickMode, pickObject, pointTrimCut, pointTrimPick, primitiveLabel: kind => primitiveLabel(kind), props, redoable, remove, restoringDraft, retessellateSelectedBrep, revolveAngle, revolveAxis, revolveGeometry, revolveOffset, revolveSegments, run, selectEdgeChain, selectedBody, selectedBrepBodies, selectedCurvePair, selectedFace, selectedIds, selectedNurbs, selectedNurbsCurve, selectedNurbsSurface, selectedSketch, selectedSurfacePair, selection, sendToMesh, showHelp, sketchPaneOpen, smoothDisplay, snapDocument, subtract, surfaceInputs, surfaceReversed, toggleSketchPane, tool, twoSelectedBodies, undo, undoable, workspace })
 // Tests and the App shell drive the workspace through the same command list the palette shows.
 defineExpose({ solidCommands, executeSolidCommand })
 
@@ -3439,6 +3483,11 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       </template>
       <button v-if="selectedBody?.material" @click="resetBodyMaterial">{{ label('Сбросить материал','Reset material') }}</button>
       <SketchDimensionPanel v-if="selectedSketch && !selectedSketch.retainedProfile" :key="selectedSketch.id" :sketch="selectedSketch" :sketches="document.sketches" :locale="locale" @change="updateDimensionSketch" />
+      <section v-if="selectedSlot" :key="'slot-'+selectedSketch!.id" :aria-label="label('Размеры паза','Slot dimensions')">
+        <label>{{ label('Длина паза, мм','Slot length, mm') }}<CadQuantityInput :model-value="selectedSlot.length" :locale="locale" :min=".02" :max="2000000" :aria-label="label('Длина выбранного паза, мм','Selected slot length, mm')" @update:model-value="value=>editSlot({length:value})" /></label>
+        <label>{{ label('Ширина паза, мм','Slot width, mm') }}<CadQuantityInput :model-value="selectedSlot.width" :locale="locale" :min=".02" :max="1000000" :aria-label="label('Ширина выбранного паза, мм','Selected slot width, mm')" @update:model-value="value=>editSlot({width:value})" /></label>
+        <small v-if="slotEditError" role="alert">{{ slotEditError }}</small>
+      </section>
       <section v-if="selectedBody" class="body-diagnostics" :aria-label="label('Измерения','Measurements')">
         <button @click="measurementOpen=!measurementOpen" :aria-pressed="measurementOpen">{{ label('Измерения','Measurements') }}</button>
         <template v-if="measurementOpen">

@@ -7,6 +7,8 @@ import {
   slotDimensions,
   tangentArc,
   tangentArcConstraint,
+  slotMatchesSketch,
+  validateSlotDefinition,
 } from '../src/app/sketchPrimitives'
 import { resolveDependentCurveSketches, sketchCurveConstraintResidual } from '../src/app/sketchCurveConstraints'
 import { DirectInputError, presentKernelError } from '../src/i18n/kernelErrors'
@@ -210,7 +212,7 @@ describe('persistent tangent arc', () => {
   }
 
   it('stores tangency to the end segment it continues, from either end', () => {
-    expect(tangentArcConstraint(path, 'end')).toEqual({ kind: 'tangent_line', ref: 'path', a: 0, b: 1 })
+    expect(tangentArcConstraint(path, 'end')).toEqual({ kind: 'tangent_line', ref: 'path', a: 0, b: 1, point: 1 })
     const three = {
       id: 'p3',
       points: [
@@ -219,8 +221,8 @@ describe('persistent tangent arc', () => {
         [5, 5],
       ] as Point2[],
     }
-    expect(tangentArcConstraint(three, 'end')).toEqual({ kind: 'tangent_line', ref: 'p3', a: 1, b: 2 })
-    expect(tangentArcConstraint(three, 'start')).toEqual({ kind: 'tangent_line', ref: 'p3', a: 0, b: 1 })
+    expect(tangentArcConstraint(three, 'end')).toEqual({ kind: 'tangent_line', ref: 'p3', a: 1, b: 2, point: 2 })
+    expect(tangentArcConstraint(three, 'start')).toEqual({ kind: 'tangent_line', ref: 'p3', a: 0, b: 1, point: 0 })
     const fromStart = tangentArc(path, 'start', [-10, 10])!
     expect(fromStart.center[0]).toBeCloseTo(0, 9)
     expect(fromStart.center[1]).toBeCloseTo(10, 9)
@@ -261,5 +263,51 @@ describe('persistent tangent arc', () => {
       ] as Point2[],
     }
     expect(() => resolveDependentCurveSketches([far, wall, pinned], ['path'])).toThrow(/not applied/)
+  })
+  it('C7 tangent arc keeps its start point on the polyline end when the polyline moves', () => {
+    const arc = arcSketch('end', [20, 10])
+    const moved = {
+      ...path,
+      points: [
+        [0, 3],
+        [12, 8],
+      ] as Point2[],
+    }
+    const [, next] = resolveDependentCurveSketches([moved, arc], ['path'])
+    const a = next!.analytic!
+    const t = (a.start * Math.PI) / 180
+    expect(
+      Math.hypot(a.center[0] + a.radius * Math.cos(t) - 12, a.center[1] + a.radius * Math.sin(t) - 8),
+    ).toBeLessThan(1e-9)
+    expect(a.radius).toBeCloseTo(10, 12)
+    expect(a.sweep).toBeCloseTo(arc.analytic.sweep, 12)
+    expect(sketchCurveConstraintResidual(a, arc.curveConstraints[0]!, moved)).toBeLessThan(1e-9)
+    // Tangent direction at the start equals the segment direction.
+    const dir = [12 / 13, 5 / 13]
+    const tangent = [-Math.sin(t), Math.cos(t)]
+    expect(tangent[0]! * dir[0]! + tangent[1]! * dir[1]!).toBeCloseTo(1, 12)
+    // A start constraint on a vertex outside the tangent segment is invalid.
+    const bad = { ...arc, curveConstraints: [{ kind: 'tangent_line' as const, ref: 'path', a: 0, b: 1, point: 5 }] }
+    expect(() => resolveDependentCurveSketches([moved, bad], ['path'])).toThrow(/not applied/)
+  })
+})
+
+describe('C7 slot definition', () => {
+  const slot = { a: [0, 0] as Point2, b: [10, 0] as Point2, width: 4 }
+  it('matches the outline it describes and validates its shape', () => {
+    const outline = analyticSlotBoundary(slot)!
+    const points = [...outline.lines.flat(), [12, 0], [-2, 0], [10, 2]] as Point2[]
+    expect(slotMatchesSketch(slot, points)).toBe(true)
+    expect(slotMatchesSketch(slot, [...points, [5, 0]])).toBe(false)
+    expect(slotMatchesSketch({ ...slot, width: 4.1 }, points)).toBe(false)
+    expect(() => validateSlotDefinition(slot)).not.toThrow()
+    for (const bad of [
+      null,
+      { ...slot, extra: 1 },
+      { ...slot, a: null },
+      { ...slot, b: [0, 0] },
+      { ...slot, width: 0 },
+    ])
+      expect(() => validateSlotDefinition(bad)).toThrow(/Invalid sketch slot/)
   })
 })
