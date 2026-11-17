@@ -14,7 +14,7 @@ async function hasPrimaryKey(db: DuckDbExecutor, tableName: string): Promise<boo
     "SELECT count(*) AS pk_count FROM duckdb_constraints() WHERE table_name = $table AND constraint_type = 'PRIMARY KEY'",
     { table: tableName },
   )
-  return safeInteger(rows[0], 'pk_count') > 0
+  return safeInteger(rows[0] ?? {}, 'pk_count') > 0
 }
 
 async function createArtifactsTable(
@@ -144,7 +144,7 @@ async function applyMigration4(db: DuckDbExecutor): Promise<void> {
     FROM mcp_builds
     WHERE json_extract_string(execution_json, '$.manifestDigest') IS NULL
   `)
-  if (safeInteger(rows[0], 'invalid_count') !== 0) {
+  if (safeInteger(rows[0] ?? {}, 'invalid_count') !== 0) {
     throw new TypeError('DuckDB migration found execution provenance with an unknown manifest')
   }
 }

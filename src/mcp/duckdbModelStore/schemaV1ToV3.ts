@@ -10,7 +10,7 @@ export async function tableExists(db: DuckDbExecutor, table: string): Promise<bo
   `,
     { table },
   )
-  return safeInteger(rows[0], 'table_count') > 0
+  return safeInteger(rows[0] ?? {}, 'table_count') > 0
 }
 
 export async function columnExists(db: DuckDbExecutor, table: string, column: string): Promise<boolean> {
@@ -24,7 +24,7 @@ export async function columnExists(db: DuckDbExecutor, table: string, column: st
   `,
     { table, column },
   )
-  return safeInteger(rows[0], 'column_count') > 0
+  return safeInteger(rows[0] ?? {}, 'column_count') > 0
 }
 
 export async function columnIsNullable(db: DuckDbExecutor, table: string, column: string): Promise<boolean> {

@@ -106,7 +106,8 @@ export async function resolveSource(
 
 export function analysisDimensions(analysis: GeometryAnalysis): [number, number, number] {
   if (!analysis.bounds) return [0, 0, 0]
-  return analysis.bounds.max.map((value, index) => value - analysis.bounds!.min[index]) as [number, number, number]
+  const { min, max } = analysis.bounds
+  return max.map((value, index) => value - (min[index] ?? NaN)) as [number, number, number]
 }
 
 export function comparisonSide(selected: Awaited<ReturnType<typeof resolveSource>>, analysis: GeometryAnalysis) {
@@ -137,7 +138,11 @@ export function comparisonDelta(left: ReturnType<typeof comparisonSide>, right: 
     triangle_count: right.triangle_count - left.triangle_count,
     volume: right.volume - left.volume,
     surface_area: right.surface_area - left.surface_area,
-    dimensions: right.dimensions.map((value, index) => value - left.dimensions[index]) as [number, number, number],
+    dimensions: right.dimensions.map((value, index) => value - (left.dimensions[index] ?? NaN)) as [
+      number,
+      number,
+      number,
+    ],
     topology: {
       boundary: right.topology.boundary - left.topology.boundary,
       crease: right.topology.crease - left.topology.crease,

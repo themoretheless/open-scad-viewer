@@ -57,9 +57,9 @@ export function validateFiniteGeometry(result: GeometryBuildResult['result']): v
     const vertices = mesh.vertices
     const m = mesh.transform
     for (let offset = 0; offset + 5 < vertices.length; offset += 6) {
-      const x = vertices[offset]
-      const y = vertices[offset + 1]
-      const z = vertices[offset + 2]
+      const x = vertices[offset] ?? NaN
+      const y = vertices[offset + 1] ?? NaN
+      const z = vertices[offset + 2] ?? NaN
       if (
         !Number.isFinite(x) ||
         !Number.isFinite(y) ||
@@ -72,12 +72,12 @@ export function validateFiniteGeometry(result: GeometryBuildResult['result']): v
       }
       // Scalar equivalent of transformPoint(mesh.transform, [x, y, z]) with the
       // same homogeneous-division fallback, checked without allocating Vec3.
-      const w = m[12] * x + m[13] * y + m[14] * z + m[15]
+      const w = (m[12] ?? NaN) * x + (m[13] ?? NaN) * y + (m[14] ?? NaN) * z + (m[15] ?? NaN)
       const iw = Number.isFinite(w) && Math.abs(w) > 1e-12 ? 1 / w : 1
       if (
-        !Number.isFinite((m[0] * x + m[1] * y + m[2] * z + m[3]) * iw) ||
-        !Number.isFinite((m[4] * x + m[5] * y + m[6] * z + m[7]) * iw) ||
-        !Number.isFinite((m[8] * x + m[9] * y + m[10] * z + m[11]) * iw)
+        !Number.isFinite(((m[0] ?? NaN) * x + (m[1] ?? NaN) * y + (m[2] ?? NaN) * z + (m[3] ?? NaN)) * iw) ||
+        !Number.isFinite(((m[4] ?? NaN) * x + (m[5] ?? NaN) * y + (m[6] ?? NaN) * z + (m[7] ?? NaN)) * iw) ||
+        !Number.isFinite(((m[8] ?? NaN) * x + (m[9] ?? NaN) * y + (m[10] ?? NaN) * z + (m[11] ?? NaN)) * iw)
       ) {
         throw new InvalidGeometryError(`Mesh ${meshIndex} has a non-finite world-space vertex`)
       }

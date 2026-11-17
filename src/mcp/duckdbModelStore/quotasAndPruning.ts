@@ -17,7 +17,7 @@ export async function ensureSourceQuota(db: DuckDbExecutor, source: string): Pro
       (SELECT coalesce(sum(strlen(source)), 0) FROM mcp_model_revisions)
       + (SELECT coalesce(sum(strlen(source_snapshot)), 0) FROM mcp_builds) AS source_bytes
   `)
-  const storedBytes = safeInteger(rows[0], 'source_bytes')
+  const storedBytes = safeInteger(rows[0] ?? {}, 'source_bytes')
   const additionalBytes = Buffer.byteLength(source, 'utf8')
   if (storedBytes + additionalBytes > MAX_STORED_MODEL_SOURCE_BYTES) {
     throw new CatalogQuotaError(
@@ -37,14 +37,14 @@ export async function ensureRevisionQuota(db: DuckDbExecutor, modelId: string): 
   `,
     { model_id: modelId },
   )
-  if (safeInteger(rows[0], 'total_count') >= MAX_STORED_MODEL_REVISION_COUNT) {
+  if (safeInteger(rows[0] ?? {}, 'total_count') >= MAX_STORED_MODEL_REVISION_COUNT) {
     throw new CatalogQuotaError(
       `Model catalog is limited to ${MAX_STORED_MODEL_REVISION_COUNT.toLocaleString('en-US')} source revisions`,
       'revisions',
       MAX_STORED_MODEL_REVISION_COUNT,
     )
   }
-  if (safeInteger(rows[0], 'model_count') >= MAX_STORED_REVISIONS_PER_MODEL) {
+  if (safeInteger(rows[0] ?? {}, 'model_count') >= MAX_STORED_REVISIONS_PER_MODEL) {
     throw new CatalogQuotaError(
       `Model ${modelId} is limited to ${MAX_STORED_REVISIONS_PER_MODEL.toLocaleString('en-US')} source revisions`,
       'revisions_per_model',

@@ -31,7 +31,7 @@ export async function modifyRushGraph(
   const measured = await geometry.analyze(compiled.source, 'full', signal)
   if (!measured.bounds) throw new Error('Modification requires a nonempty solid.')
   const { min, max } = measured.bounds
-  const size = max.map((v, i) => v - min[i])
+  const size = max.map((v, i) => v - (min[i] ?? NaN))
   if (size.some(v => !Number.isFinite(v) || v <= 0))
     throw new Error('Modification requires a nonempty solid with positive bounds.')
   const ids = new Set(compiled.document.nodes.map(n => n.id))
@@ -56,16 +56,16 @@ export async function modifyRushGraph(
     return { ...result, analysis }
   }
   if (modification.operation === 'resize') {
-    const scale = modification.size.map((v, i) => v / size[i])
+    const scale = modification.size.map((v, i) => v / (size[i] ?? NaN))
     const anchor = min.map((v, i) =>
-      modification.anchor === 'origin' ? 0 : modification.anchor === 'center' ? (v + max[i]) / 2 : v,
+      modification.anchor === 'origin' ? 0 : modification.anchor === 'center' ? (v + (max[i] ?? NaN)) / 2 : v,
     )
     const result = await build([
       {
         id: id(),
         op: 'affine',
         input: compiled.document.root,
-        rows: scale.map((v, i) => [...scale.map((_, j) => (i === j ? v : 0)), anchor[i] * (1 - v)]),
+        rows: scale.map((v, i) => [...scale.map((_, j) => (i === j ? v : 0)), (anchor[i] ?? NaN) * (1 - v)]),
       },
     ])
     return {
@@ -76,7 +76,7 @@ export async function modifyRushGraph(
     }
   }
   const axis = ['x', 'y', 'z'].indexOf(modification.axis)
-  if (modification.position <= min[axis] || modification.position >= max[axis])
+  if (modification.position <= (min[axis] ?? NaN) || modification.position >= (max[axis] ?? NaN))
     throw new Error('Split plane must lie strictly inside the measured bounds.')
   const margin = Math.max(...size) * 0.01 + 0.001
   const results = []
@@ -89,7 +89,7 @@ export async function modifyRushGraph(
       b = id(),
       c = id()
     const result = await build([
-      { id: a, op: 'box', size: high.map((v, i) => v - low[i]) },
+      { id: a, op: 'box', size: high.map((v, i) => v - (low[i] ?? NaN)) },
       { id: b, op: 'translate', input: a, vector: low },
       { id: c, op: 'intersection', inputs: [compiled.document.root, b] },
     ])

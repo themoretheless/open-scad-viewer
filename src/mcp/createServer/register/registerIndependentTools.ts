@@ -109,7 +109,7 @@ export function registerIndependentTools(ctx: McpServerContext): void {
       return {
         ...result,
         content: [
-          result.content[0],
+          ...result.content,
           {
             type: 'resource_link' as const,
             uri: artifactWire.resource_uri,

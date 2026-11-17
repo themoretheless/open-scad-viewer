@@ -7,7 +7,7 @@ import { publicToolError } from './publicToolError'
 import { truncateWellFormed } from '../../core/unicode'
 
 export function parseErrorMessage(error: OpenSCADParseError): string {
-  return error.message.split('\n', 1)[0]
+  return error.message.split('\n', 1)[0] ?? ''
 }
 
 export function isAbortError(error: unknown): boolean {

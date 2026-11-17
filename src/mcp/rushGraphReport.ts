@@ -19,7 +19,7 @@ function lineNumberAtOffset(lineStarts: number[], offset: number): number {
   let hi = lineStarts.length - 1
   while (lo <= hi) {
     const mid = (lo + hi) >>> 1
-    if (lineStarts[mid] <= offset) lo = mid + 1
+    if ((lineStarts[mid] ?? Infinity) <= offset) lo = mid + 1
     else hi = mid - 1
   }
   return Math.max(1, lo)
@@ -31,8 +31,9 @@ function findSourceMapEntry<T extends { line: number }>(sourceMap: readonly T[],
   let best: T | undefined
   while (lo <= hi) {
     const mid = (lo + hi) >>> 1
-    if (sourceMap[mid].line <= line) {
-      best = sourceMap[mid]
+    const entry = sourceMap[mid]
+    if (entry !== undefined && entry.line <= line) {
+      best = entry
       lo = mid + 1
     } else {
       hi = mid - 1

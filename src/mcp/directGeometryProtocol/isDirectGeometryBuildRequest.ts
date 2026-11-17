@@ -328,6 +328,7 @@ export function isDirectGeometryCapabilities(
       const engine = record(engineValue)
       const manifest = manifests[index]
       if (engine === null
+        || manifest === undefined
         || !exactDataKeys(engine, [...Object.keys(manifest), 'availability', 'unavailableReason'])
         || (engine.availability !== 'available' && engine.availability !== 'unavailable')
         || (engine.availability === 'available'

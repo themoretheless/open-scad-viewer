@@ -169,8 +169,8 @@ export class DuckDbModelStore implements ModelStore {
           if (input.expectedRevision !== undefined && input.expectedRevision !== 0) {
             throw new ModelRevisionConflictError(id, input.expectedRevision, null)
           }
-          const [{ model_count }] = await this.rows('SELECT count(*) AS model_count FROM mcp_models')
-          if (safeInteger({ model_count }, 'model_count') >= MAX_STORED_MODEL_COUNT) {
+          const [countRow = {}] = await this.rows('SELECT count(*) AS model_count FROM mcp_models')
+          if (safeInteger(countRow, 'model_count') >= MAX_STORED_MODEL_COUNT) {
             throw new CatalogQuotaError(
               `Model catalog is limited to ${MAX_STORED_MODEL_COUNT.toLocaleString('en-US')} models`,
               'models',

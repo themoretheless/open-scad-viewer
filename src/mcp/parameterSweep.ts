@@ -147,10 +147,10 @@ function rankVariants(variants: ParameterSweepVariantResult[], rankBy: SweepRank
   })
   const rankMap = new Map<number, number>()
   succeeded.forEach((variant, rankIdx) => rankMap.set(variant.index, rankIdx + 1))
-  for (let i = 0; i < variants.length; i++) {
-    const rank = rankMap.get(variants[i].index) ?? null
-    if (rank !== null) variants[i] = { ...variants[i], rank }
-  }
+  variants.forEach((variant, i) => {
+    const rank = rankMap.get(variant.index) ?? null
+    if (rank !== null) variants[i] = { ...variant, rank }
+  })
   return succeeded.map(v => v.index)
 }
 

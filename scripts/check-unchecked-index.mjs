@@ -16,6 +16,9 @@ export const CLEAN_PATHS = Object.freeze([
   'src/parser/',
 ])
 
+/** Path prefixes checked through `tsconfig.mcp.json`, which the root project does not include. */
+export const MCP_CLEAN_PATHS = Object.freeze(['src/mcp/'])
+
 const ERROR_LINE = /^(.+?)\(\d+,\d+\): error TS\d+:/
 
 /** Returns tsc error lines whose file falls under one of the clean path prefixes. */
@@ -29,19 +32,23 @@ export function regressions(tscOutput, cleanPaths = CLEAN_PATHS) {
   })
 }
 
-function main() {
-  const tsc = spawnSync('npx', ['tsc', '--noEmit', '--pretty', 'false', '--noUncheckedIndexedAccess'], {
+function tscOutput(extraArgs) {
+  const tsc = spawnSync('npx', ['tsc', '--noEmit', '--pretty', 'false', '--noUncheckedIndexedAccess', ...extraArgs], {
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
   })
   if (tsc.error) throw tsc.error
-  const found = regressions(`${tsc.stdout}\n${tsc.stderr}`)
+  return `${tsc.stdout}\n${tsc.stderr}`
+}
+
+function main() {
+  const found = [...regressions(tscOutput([])), ...regressions(tscOutput(['-p', 'tsconfig.mcp.json']), MCP_CLEAN_PATHS)]
   if (found.length) {
     console.error(`noUncheckedIndexedAccess regressions in clean paths (${found.length}):`)
     for (const line of found) console.error(line)
     process.exit(1)
   }
-  console.log(`unchecked index ratchet ok (${CLEAN_PATHS.join(', ')})`)
+  console.log(`unchecked index ratchet ok (${[...CLEAN_PATHS, ...MCP_CLEAN_PATHS].join(', ')})`)
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main()
