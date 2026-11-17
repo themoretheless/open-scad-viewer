@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 495,
-  "unallocatedCount": 505,
+  "specifiedCount": 496,
+  "unallocatedCount": 504,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12883,6 +12883,27 @@
       "remainingQualification": [
         "Join adjacent NURBS curves of different degree without changing the source parameter laws.",
         "Prove exact elevation of the lower-degree curve, then reconcile the seam weights under the remaining work budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0496",
+      "name": "Точная склейка NURBS-кривых с удалением избыточных узлов стыка",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::merge_and_simplify_exact_seam",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_knot_removal.rs",
+        "docs/qualification/nurbs-curvature-field-496-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-496-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Join curves and remove only proven redundant seam knots under a shared budget.",
+        "Use exact merge and prove each subsequent seam-knot removal over the complete curve. Preserve the last verified curve on a removal refusal.",
         "WASM and application integration are separate."
       ]
     }

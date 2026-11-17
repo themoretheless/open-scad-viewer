@@ -513,3 +513,43 @@ fn exact_degree_merge_refuses_an_unstoreable_elevated_pole() {
         Some(GaugeMergeRefusal::Exact(ExactRefusal::NotRepresentable))
     );
 }
+
+#[test]
+fn compact_exact_seam_merge_recovers_the_original_quadratic() {
+    use nurbs_core::editing::{
+        exact_curve_merge::merge_and_simplify_exact_seam, exact_knot_insertion::split,
+    };
+    let source = quadratic();
+    let [left, right] = split(&source, 3.5, 1_000_000).unwrap().pieces.unwrap();
+    let report = merge_and_simplify_exact_seam(&left, &right, 1_000_000).unwrap();
+    assert_eq!(report.seam_multiplicity, Some(0));
+    assert_eq!(report.removal_refusal, None);
+    assert_eq!(report.curve, Some(source));
+    let bounded = merge_and_simplify_exact_seam(&left, &right, report.work_used).unwrap();
+    assert_eq!(bounded.curve, report.curve);
+    let limited = merge_and_simplify_exact_seam(&left, &right, report.work_used - 1).unwrap();
+    assert!(limited.seam_multiplicity.unwrap() > 0);
+    assert!(limited.removal_refusal.is_some());
+}
+
+#[test]
+fn compact_exact_seam_merge_preserves_a_geometrically_necessary_corner() {
+    use nurbs_core::editing::exact_curve_merge::merge_and_simplify_exact_seam;
+    let a = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![1., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let b = Curve {
+        knots: vec![1., 1., 2., 2.],
+        control_points: vec![vec![1., 0.], vec![1., 1.]],
+        ..a.clone()
+    };
+    let report = merge_and_simplify_exact_seam(&a, &b, 1_000_000).unwrap();
+    assert_eq!(report.seam_multiplicity, Some(1));
+    assert!(report.join_refusal.is_none());
+    assert!(report.removal_refusal.is_some());
+    assert_eq!(report.curve.unwrap(), merge(&a, &b).unwrap().curve.unwrap());
+}

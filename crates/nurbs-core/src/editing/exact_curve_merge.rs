@@ -350,3 +350,61 @@ pub fn merge_with_exact_degree_elevation(
     report.work_used += elevation.work_used;
     Ok(report)
 }
+
+#[derive(Clone, Debug)]
+pub struct CompactSeamMergeReport {
+    pub curve: Option<Curve>,
+    /// Remaining copies of the shared parameter after proven removals.
+    pub seam_multiplicity: Option<usize>,
+    pub work_used: u64,
+    pub join_refusal: Option<GaugeMergeRefusal>,
+    /// First failed removal, if the seam did not disappear completely.
+    pub removal_refusal: Option<super::exact_knot_removal::Refusal>,
+}
+
+/// Join adjacent rational curves, then remove redundant copies of the seam.
+/// Each accepted removal proves full parameter identity. If a removal is
+/// refused, the curve retains all completed, verified edits.
+pub fn merge_and_simplify_exact_seam(
+    left: &Curve,
+    right: &Curve,
+    max_work: u64,
+) -> Result<CompactSeamMergeReport> {
+    use super::exact_knot_removal::{Refusal as RemovalRefusal, remove};
+
+    let joined = merge_with_exact_degree_elevation(left, right, max_work)?;
+    let mut work_used = joined.work_used;
+    let Some(mut curve) = joined.curve else {
+        return Ok(CompactSeamMergeReport {
+            curve: None,
+            seam_multiplicity: None,
+            work_used,
+            join_refusal: joined.refusal,
+            removal_refusal: None,
+        });
+    };
+    let seam = left.domain()[1];
+    let mut multiplicity = curve.knots.iter().filter(|&&knot| knot == seam).count();
+    let mut removal_refusal = None;
+    while multiplicity > 0 {
+        if work_used == max_work {
+            removal_refusal = Some(RemovalRefusal::ResourceLimit);
+            break;
+        }
+        let report = remove(&curve, seam, max_work - work_used)?;
+        work_used += report.work_used;
+        if !report.removed {
+            removal_refusal = report.refusal;
+            break;
+        }
+        curve = report.curve;
+        multiplicity -= 1;
+    }
+    Ok(CompactSeamMergeReport {
+        curve: Some(curve),
+        seam_multiplicity: Some(multiplicity),
+        work_used,
+        join_refusal: None,
+        removal_refusal,
+    })
+}
