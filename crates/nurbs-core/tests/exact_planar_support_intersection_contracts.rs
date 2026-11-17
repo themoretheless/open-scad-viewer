@@ -8,15 +8,16 @@ use nurbs_core::{
             AdaptiveBoundaryOptions, AlgebraicBoundaryClock, AlgebraicPlanarContacts,
             BoundaryResolution, BoundedPlanarBoundaryIntersection, ClassifiedPlanarSection,
             ExactPlanarIntersectionSegment, PlanarBoundaryIntersection, PlanarFaceContactPartition,
-            PlanarIntersectionSegments, PlanarSectionMaterial, PlanarSectionOutcome,
-            PlanarSectionWindingOptions, PlanarSegmentStorage, StoredPlanarIntersection,
-            SupportPlaneIntersection, TrimmedPlanarIntersection,
+            PlanarIntersectionSegments, PlanarSectionLength, PlanarSectionMaterial,
+            PlanarSectionOutcome, PlanarSectionWindingOptions, PlanarSegmentStorage,
+            StoredPlanarIntersection, SupportPlaneIntersection, TrimmedPlanarIntersection,
             assemble_quadratic_planar_section_material, bound_planar_face_boundary_intersection,
             build_planar_intersection_segments, classify_planar_face_contacts,
             classify_quadratic_planar_section, enclose_algebraic_planar_boundary_point,
             intersect_planar_face_boundaries, intersect_planar_face_boundary_contacts,
             intersect_planar_supports, intersect_trimmed_planar_faces,
             isolate_ordered_algebraic_boundary_clocks, match_quadratic_planar_boundary_contacts,
+            measure_quadratic_planar_section_material,
             optimize_planar_intersection_segment_storage, order_algebraic_boundary_clocks,
             partition_quadratic_planar_section, refine_planar_face_boundary_extents,
             resolve_planar_face_boundary_intersection, store_planar_intersection_segment,
@@ -1500,4 +1501,75 @@ fn preserves_an_isolated_tangent_contact_inside_the_other_face() {
         AlgebraicBoundaryClock::Rational(q(1, 3))
     );
     assert_eq!(section.events[1].on_boundary, [true, false]);
+}
+
+#[test]
+fn measures_the_sum_of_two_components_and_scales_to_xyz() {
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.projection.slopes = [q(1, 1), q(0, 1)];
+    a.loops = vec![
+        rectangle([-2., 2.], [-1., 1.], false),
+        rectangle([-0.5, 0.5], [-0.5, 0.5], true),
+    ];
+    b.loops = vec![rectangle([-1., 1.], [-1., 1.], false)];
+    for point in b
+        .loops
+        .iter_mut()
+        .flatten()
+        .flat_map(|curve| &mut curve.control_points)
+    {
+        point[1] += point[0];
+    }
+    let report =
+        measure_quadratic_planar_section_material(&a, &b, section_winding_options(10_000), 1e-12)
+            .unwrap();
+    assert_eq!(
+        report.outcome,
+        PlanarSectionLength::Transverse {
+            clock_length: [q(1, 1), q(1, 1)],
+            xyz_length_squared: [q(2, 1), q(2, 1)],
+        }
+    );
+    let limited =
+        measure_quadratic_planar_section_material(&a, &b, section_winding_options(1), 1e-12)
+            .unwrap();
+    assert_eq!(
+        limited.outcome,
+        PlanarSectionLength::Transverse {
+            clock_length: [q(0, 1), q(4, 1)],
+            xyz_length_squared: [q(0, 1), q(32, 1)],
+        }
+    );
+}
+
+#[test]
+fn bounds_the_length_between_irrational_endpoints() {
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.loops = vec![irrational_contact_loop(0.5, 1., false)];
+    b.loops = vec![irrational_contact_loop(0.5, 1., true)];
+    let options = section_winding_options(10_000);
+    let report = measure_quadratic_planar_section_material(&a, &b, options, 1e-12).unwrap();
+    let PlanarSectionLength::Transverse {
+        xyz_length_squared: [lo, hi],
+        ..
+    } = report.outcome
+    else {
+        panic!("{:?}", report.outcome);
+    };
+    assert!(lo < q(2, 9) && q(2, 9) < hi);
+    assert!(hi - lo < q(1, 1_000_000_000));
+    let limited = measure_quadratic_planar_section_material(
+        &a,
+        &b,
+        PlanarSectionWindingOptions {
+            max_work: report.work_used - 1,
+            ..options
+        },
+        1e-12,
+    )
+    .unwrap();
+    assert_eq!(
+        limited.outcome,
+        PlanarSectionLength::Refused(nurbs_core::editing::exact_derivative::Refusal::ResourceLimit)
+    );
 }

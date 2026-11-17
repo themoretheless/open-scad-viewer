@@ -234,3 +234,8 @@ pub use section::{
     PlanarSectionWindingOptions, assemble_quadratic_planar_section_material,
     classify_quadratic_planar_section, partition_quadratic_planar_section,
 };
+
+mod section_length;
+pub use section_length::{
+    PlanarSectionLength, PlanarSectionLengthReport, measure_quadratic_planar_section_material,
+};

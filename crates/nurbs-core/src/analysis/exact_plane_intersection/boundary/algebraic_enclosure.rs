@@ -62,26 +62,8 @@ fn enclose(
 ) -> Checked<AlgebraicBoundaryEnclosure> {
     let tolerance = work.lift(xyz_tolerance)?;
     let tolerance_squared = work.op(&tolerance, &tolerance, |a, b| a * b)?;
-    let mut scale_squared = Q::zero();
-    for direction in &line.direction {
-        let square = work.op(direction, direction, |a, b| a * b)?;
-        scale_squared = work.op(&scale_squared, &square, |a, b| a + b)?;
-    }
-    let parameter = match point {
-        AlgebraicBoundaryClock::Rational(value) => [value.clone(), value.clone()],
-        AlgebraicBoundaryClock::Quadratic {
-            linear,
-            constant,
-            upper_root,
-        } => quadratic_range(
-            linear,
-            constant,
-            *upper_root,
-            &scale_squared,
-            &tolerance_squared,
-            work,
-        )?,
-    };
+    let scale_squared = support_scale_squared(line, work)?;
+    let parameter = algebraic_parameter_range(point, &scale_squared, &tolerance_squared, work)?;
     let mut bounds = Vec::with_capacity(3);
     for (origin, direction) in line.origin.iter().zip(&line.direction) {
         let calculate = |t: &Q, work: &mut Work| -> Checked<Q> {
@@ -102,6 +84,38 @@ fn enclose(
         parameter,
         xyz,
         diameter_squared,
+    })
+}
+
+pub(super) fn support_scale_squared(line: &ExactSupportLine, work: &mut Work) -> Checked<Q> {
+    let mut scale_squared = Q::zero();
+    for direction in &line.direction {
+        let square = work.op(direction, direction, |a, b| a * b)?;
+        scale_squared = work.op(&scale_squared, &square, |a, b| a + b)?;
+    }
+    Ok(scale_squared)
+}
+
+pub(super) fn algebraic_parameter_range(
+    point: &AlgebraicBoundaryClock,
+    scale_squared: &Q,
+    tolerance_squared: &Q,
+    work: &mut Work,
+) -> Checked<[Q; 2]> {
+    Ok(match point {
+        AlgebraicBoundaryClock::Rational(value) => [value.clone(), value.clone()],
+        AlgebraicBoundaryClock::Quadratic {
+            linear,
+            constant,
+            upper_root,
+        } => quadratic_range(
+            linear,
+            constant,
+            *upper_root,
+            scale_squared,
+            tolerance_squared,
+            work,
+        )?,
     })
 }
 
