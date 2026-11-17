@@ -479,10 +479,10 @@ function changeMaterialParameter(key:'metallic'|'roughness'|'opacity',event:Even
 }
 function resetBodyMaterial(){void commitInWorker(()=>assignSolidMaterial(snapDocument.value,selectedIds.value))}
 const selectedBody = computed(() => document.value.bodies.find(s => s.id === selection.value))
-/** The array source is the selected independent body; a selected sketch is the path. */
+/** The array source is the selected independent body; a selected sketch or NURBS curve is the path. */
 function instanceArrayOptions(source:DirectDocument,options:typeof advanced.value){
  const ids=selectedIds.value,sourceId=source.bodies.find(b=>b.id===selection.value&&!b.instance)?.id??source.bodies.find(b=>ids.includes(b.id)&&!b.instance)?.id??selection.value
- const pathId=source.sketches.find(s=>ids.includes(s.id))?.id
+ const pathId=source.sketches.find(s=>ids.includes(s.id))?.id??source.curves?.find(c=>ids.includes(c.id))?.id
  return {sourceId,array:{kind:options.arrayKind,count:options.arrayCount,distance:options.distance,pathId,align:options.arrayAlign}}
 }
 const selectedNurbsCurve = computed(() => document.value.curves?.find(s => s.id === selection.value))
@@ -692,7 +692,7 @@ function beginAdvanced(kind:typeof advancedOp.value) {
  if(kind==='nurbs-runout'){loftPreviewId.value=crypto.randomUUID();mode.value='3d';surfaceInputs.value=[...selectedIds.value.filter(id=>document.value.surfaces?.some(s=>s.id===id)),...selectedIds.value.filter(id=>document.value.curves?.some(c=>c.id===id))];advanced.value.matchBoundaryA='vMax';surfaceReversed.value=[]}
  if(kind==='loft'||kind==='nurbs-loft'||kind==='nurbs-sweep'||kind==='nurbs-patch'){loftPreviewId.value=crypto.randomUUID();mode.value='3d';surfaceInputs.value=[...selectedIds.value];surfaceReversed.value=surfaceInputs.value.map(()=>false)}
  if(kind==='instance-create'){loftPreviewId.value=crypto.randomUUID();advanced.value={...advanced.value,x:10,y:0,z:0};mode.value='3d'}
- if(kind==='instance-array'){loftPreviewId.value=crypto.randomUUID();advanced.value={...advanced.value,distance:10,axis:'x',arrayKind:document.value.sketches.some(s=>selectedIds.value.includes(s.id))?'path':'step'};mode.value='3d'}
+ if(kind==='instance-array'){loftPreviewId.value=crypto.randomUUID();advanced.value={...advanced.value,distance:10,axis:'x',arrayKind:[...document.value.sketches,...document.value.curves??[]].some(s=>selectedIds.value.includes(s.id))?'path':'step'};mode.value='3d'}
  if(kind==='instance-place'&&selectedBody.value?.instance){const m=selectedBody.value.instance.matrix;advanced.value={...advanced.value,x:m[0][3],y:m[1][3],z:m[2][3]};mode.value='3d'}
  if(kind==='curve'&&selectedSketch.value?.analytic){const a=selectedSketch.value.analytic;advanced.value={...advanced.value,cx:a.center[0],cy:a.center[1],radius:a.radius,start:a.start,sweep:a.sweep}}
 }
@@ -3113,7 +3113,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <small v-if="advancedOp==='curve' && invalidQuantities['curve.sweep-range']" id="curve-sweep-error" role="alert">{{ label('Модуль угла дуги должен быть от 0,1° до 360°. Измените угол; знак задаёт направление.','Arc sweep magnitude must be between 0.1° and 360°. Change the sweep; its sign sets the direction.') }}</small>
               <label v-if="advancedOp==='extend'">{{ label('Конец','Endpoint') }}<select v-model="advanced.end"><option value="start">{{ label('Начало','Start') }}</option><option value="end">{{ label('Конец','End') }}</option></select></label>
               <template v-if="advancedOp==='instance-array'">
-                <small>{{ label('Копии связаны с источником. Для массива по пути выберите вместе с телом линию эскиза.','Copies stay linked to the source. For a path array, select a sketch line together with the body.') }}</small>
+                <small>{{ label('Копии связаны с источником. Для массива по пути выберите вместе с телом линию эскиза или NURBS-кривую.','Copies stay linked to the source. For a path array, select a sketch line or a NURBS curve together with the body.') }}</small>
                 <label>{{ label('Тип массива','Array type') }}<select v-model="advanced.arrayKind"><option value="step">{{ label('По шагу','By step') }}</option><option value="extent">{{ label('По общему охвату','By total extent') }}</option><option value="path">{{ label('По пути','Along path') }}</option></select></label>
                 <label>{{ label('Количество','Count') }}<CadQuantityInput :aria-label="label('Количество','Count')" v-model="advanced.arrayCount" kind="scalar" :locale="locale" @validity="quantityValidity('array.count',$event)" :min="2" :max="256" step="1" /></label>
                 <template v-if="advanced.arrayKind!=='path'">

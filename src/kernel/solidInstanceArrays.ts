@@ -9,12 +9,14 @@ type Vec3 = [number, number, number]
  * Linked-instance arrays. `step` repeats at a fixed spacing, `extent` spreads
  * `count` placements over a total span, `path` spaces them by arc length along
  * a polyline (for example a sampled curve), optionally turning each copy with
- * the path tangent. Placements exclude the source itself.
+ * the path tangent. A `closed` path spreads `count` placements evenly around the
+ * loop so the last copy does not land on the source. Placements exclude the
+ * source itself.
  */
 export type SolidInstanceArraySpec =
   | { kind: 'step'; direction: Vec3; step: number; count: number }
   | { kind: 'extent'; direction: Vec3; extent: number; count: number }
-  | { kind: 'path'; points: Vec3[]; count: number; align?: boolean }
+  | { kind: 'path'; points: Vec3[]; count: number; align?: boolean; closed?: boolean }
 
 export const MAX_LINKED_INSTANCES = 1000
 const MAX_ARRAY_COUNT = 256
@@ -104,7 +106,7 @@ export function solidInstanceArrayPlacements(spec: SolidInstanceArraySpec): numb
   const start = points[0],
     startTangent = tangentAt(1)
   return Array.from({ length: spec.count - 1 }, (_, n) => {
-    const distance = (total * (n + 1)) / (spec.count - 1),
+    const distance = (total * (n + 1)) / (spec.closed ? spec.count : spec.count - 1),
       i = segmentAt(distance)
     const a = points[i - 1],
       b = points[i],

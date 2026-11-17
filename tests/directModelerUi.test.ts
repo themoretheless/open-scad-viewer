@@ -1561,6 +1561,29 @@ it('creates a linked instance array by step from the palette with undo and redo'
  await ui.click('↷');expect(ui.doc().bodies.filter(b=>b.instance)).toHaveLength(2)
 })
 
+it('C8 acceptance: flange with a hole array and fastener instances along a NURBS bolt circle',async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const body=(id:string,name:string,brep:ReturnType<typeof createBrepCylinder>)=>{const built=tessellateNurbsBrep(brep,2);return {id,name,brep,mesh:{positions:built.positions,indices:built.indices}}}
+ const at20=[[1,0,0,20],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+ const circle={id:'bolt-circle',name:'Bolt circle',curve:{degree:2,knots:[0,0,0,.25,.25,.5,.5,.75,.75,1,1,1],controlPoints:[[1,0,0],[1,1,0],[0,1,0],[-1,1,0],[-1,0,0],[-1,-1,0],[0,-1,0],[1,-1,0],[1,0,0]].map(p=>p.map(v=>v*20)),weights:Array.from({length:9},(_,i)=>i%2?Math.SQRT1_2:1)}}
+ const seed:DirectDocument={version:1,sketches:[],curves:[circle],bodies:[body('flange','Flange',createBrepTube(30,10,6)),body('hole','Hole cutter',transformNurbsBrep(createBrepCylinder(2,6),at20)),body('bolt','Bolt',transformNurbsBrep(createBrepCylinder(1.8,10),at20))]}
+ const ui=await mount({seedDocument:seed});await flushClearance();const flange=ui.doc().bodies.find(b=>b.id==='flange')
+ const expected=[1,2,3,4,5].map(k=>[20*Math.cos(k*Math.PI/3)-20,20*Math.sin(k*Math.PI/3)])
+ const placed=(sourceId:string)=>ui.doc().bodies.filter(b=>b.instance?.sourceId===sourceId).map(b=>[b.instance!.matrix[0][3],b.instance!.matrix[1][3]])
+ const array=async(name:string)=>{
+  await ui.click(name);await ui.click('Bolt circle',true);await ui.click('Linked instance array')
+  quantityField(ui,'Count').props['onUpdate:modelValue']('6');await flushClearance();await commandKey(ui,'Enter')
+ }
+ await array('Hole cutter')
+ const holes=placed('hole');expect(holes).toHaveLength(5)
+ holes.forEach((h,i)=>{expect(h[0]).toBeCloseTo(expected[i][0],1);expect(h[1]).toBeCloseTo(expected[i][1],1)})
+ await array('Bolt')
+ const bolts=placed('bolt');expect(bolts).toEqual(holes)
+ expect(ui.doc().bodies.find(b=>b.id==='flange')).toEqual(flange)
+ await ui.click('↶');expect(placed('bolt')).toHaveLength(0);expect(placed('hole')).toEqual(holes)
+ await ui.click('↷');expect(placed('bolt')).toEqual(bolts)
+})
+
 it('refuses direct instance geometry edits and source edits affecting a locked instance',async()=>{
  await geometryKernel.warmGeometryKernel()
  const ui=await mount();await ui.click('Cube');await ui.click('Create linked instance');await commandKey(ui,'Enter')

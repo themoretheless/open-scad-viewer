@@ -167,3 +167,35 @@ it('creates step, extent and path arrays through the scene edit, with undo and r
   expect(history.undo().bodies).toHaveLength(1)
   expect(history.redo().bodies.filter(b => b.instance?.sourceId === 'source')).toHaveLength(3)
 })
+
+it('samples a NURBS curve path within the tolerance and spaces a closed loop evenly', async () => {
+  const { sampleCurveArrayPath } = await import('../src/kernel/solidInstanceArrayCurvePath')
+  const circle = {
+    degree: 2,
+    knots: [0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1],
+    controlPoints: [
+      [1, 0, 0],
+      [1, 1, 0],
+      [0, 1, 0],
+      [-1, 1, 0],
+      [-1, 0, 0],
+      [-1, -1, 0],
+      [0, -1, 0],
+      [1, -1, 0],
+      [1, 0, 0],
+    ].map(p => p.map(v => v * 10)),
+    weights: Array.from({ length: 9 }, (_, i) => (i % 2 ? Math.SQRT1_2 : 1)),
+  }
+  const coarse = sampleCurveArrayPath(circle, 0.1),
+    fine = sampleCurveArrayPath(circle, 0.001)
+  expect(coarse.closed).toBe(true)
+  expect(fine.points.length).toBeGreaterThan(coarse.points.length)
+  for (const p of fine.points) expect(Math.hypot(p[0], p[1])).toBeCloseTo(10, 9)
+  const placements = solidInstanceArrayPlacements({ kind: 'path', points: fine.points, closed: true, count: 4 })
+  expect(offsets(placements).map(o => o.map(v => Math.round(v * 100) / 100 + 0))).toEqual([
+    [-10, 10, 0],
+    [-20, 0, 0],
+    [-10, -10, 0],
+  ])
+  expect(() => sampleCurveArrayPath(circle, 0)).toThrow('tolerance')
+})

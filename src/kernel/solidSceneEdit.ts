@@ -6,12 +6,13 @@ import {transformSelection} from '../app/directSolidTools'
 import {createSolidInstance,transformSolidInstance,resolveSolidInstances,detachSolidInstances} from './solidInstances'
 import {createSolidInstanceArray,solidInstanceArrayPlacements,type SolidInstanceArraySpec} from './solidInstanceArrays'
 import {worldPoints} from '../app/directSketchGeometry'
+import {sampleCurveArrayPath} from './solidInstanceArrayCurvePath'
 import {createRuledSketchLoft} from './geometry/brep'
 import {stringifyMeshJson} from '../exchange/meshJson'
 export type SolidSceneEditOperation='duplicate'|'sketch-transform'|'transform'|'instance-create'|'instance-transform'|'instance-place'|'instance-detach'|'instance-array'|'group-create'|'group-move'|'loft'
 export interface SolidSceneEditOptions {operation:SolidSceneEditOperation;id:string;ids:string[];createdId:string;x:number;y:number;z:number;axis:'x'|'y'|'z'|[number,number,number];angle:number;scale:number;group?:string;copyIds?:string[];array?:SolidSceneInstanceArray}
-/** Linked-instance array of `id`: `step`/`extent` run along `axis` with `distance` as the spacing or the total span; `path` follows the sketch `pathId`. Copies get ids `${createdId}:n`. */
-export interface SolidSceneInstanceArray {kind:'step'|'extent'|'path';count:number;distance:number;pathId?:string;align?:boolean}
+/** Linked-instance array of `id`: `step`/`extent` run along `axis` with `distance` as the spacing or the total span; `path` follows the sketch or NURBS curve `pathId` (a curve is sampled within `toleranceMm`, default 0.01 mm). Copies get ids `${createdId}:n`. */
+export interface SolidSceneInstanceArray {kind:'step'|'extent'|'path';count:number;distance:number;pathId?:string;align?:boolean;toleranceMm?:number}
 export function isSolidSceneEdit(operation:unknown):operation is SolidSceneEditOperation{return ['duplicate','sketch-transform','transform','instance-create','instance-transform','instance-place','instance-detach','instance-array','group-create','group-move','loft'].includes(String(operation))}
 export function applySolidSceneEdit(document:DirectDocument,p:SolidSceneEditOptions,instanceCache?:SolidInstanceBatchCache):DirectDocument {
  if(p.operation==='duplicate'){
@@ -64,8 +65,10 @@ function instanceArraySpec(document:DirectDocument,p:SolidSceneEditOptions,direc
  const a=p.array
  if(!a)throw new DirectInputError('DIRECT_PATTERN_ARRAY','Array parameters are missing.','patternCount',[])
  if(a.kind!=='path')return a.kind==='step'?{kind:'step',direction,step:a.distance,count:a.count}:{kind:'extent',direction,extent:a.distance,count:a.count}
+ const curve=document.curves?.find(c=>c.id===a.pathId)
+ if(curve){const path=sampleCurveArrayPath(curve.curve,a.toleranceMm);return {kind:'path',points:path.points,closed:path.closed,count:a.count,align:!!a.align}}
  const sketch=document.sketches.find(s=>s.id===a.pathId)
- if(!sketch||sketch.points.length<2)throw new DirectInputError('DIRECT_PATTERN_ARRAY','Select a sketch line as the array path.','patternCount',[])
+ if(!sketch||sketch.points.length<2)throw new DirectInputError('DIRECT_PATTERN_ARRAY','Select a sketch line or a NURBS curve as the array path.','patternCount',[])
  const points=worldPoints(sketch.points,sketch.plane)
- return {kind:'path',points:sketch.closed?[...points,points[0]]:points,count:a.count,align:!!a.align}
+ return {kind:'path',points:sketch.closed?[...points,points[0]]:points,closed:!!sketch.closed,count:a.count,align:!!a.align}
 }
