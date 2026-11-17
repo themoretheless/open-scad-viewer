@@ -50,7 +50,7 @@ import ModelingFloorGrid from '../components/ModelingFloorGrid.svt'
 import ModelingGridControls from '../components/ModelingGridControls.svt'
 import WorkspaceActionBar from '../components/WorkspaceActionBar.svt'
 import {createSolidPreviewWorker} from '../kernel/solidPreviewWorker'
-import { previewTargetBodies, sameSketchPlane, type DirectExtrusionOperation as ExtrusionMode } from '../app/directExtrusion'
+import { extrudeHeightUpToBody, previewTargetBodies, sameSketchPlane, type DirectExtrusionOperation as ExtrusionMode } from '../app/directExtrusion'
 import type { SweepResultMode } from '../kernel/solidSweepBody'
 import { useModelingGrid } from '../app/modelingGrid'
 import { resolveModelingSnap, type SnapKind, type SnapGeometry } from '../app/modelingSnaps'
@@ -1273,6 +1273,18 @@ function beginExtrude(kind: 'extrude'|'revolve' = 'extrude') {
 const profileChoices=computed(()=>document.value.sketches.filter(s=>s.closed&&samePlane(s.plane,selectedSketch.value?.plane)))
 /** C9: further bodies the same tool combines with, never repeating the primary target. */
 const extraTargetIds=computed(()=>extrusionMode.value==='new'?[]:extraTargetBodies.value.filter(id=>id!==targetBody.value&&document.value.bodies.some(b=>b.id===id)))
+const upToChoice = ref(''), upToError = ref('')
+/** C9: sets the extrusion height so the profile reaches the near or far side of a chosen body. */
+function extrudeUpTo(value: string) {
+  upToChoice.value = ''; upToError.value = ''
+  const [side, id] = [value.slice(0, value.indexOf(':')), value.slice(value.indexOf(':') + 1)]
+  const body = document.value.bodies.find(b => b.id === id), sketch = document.value.sketches.find(s => s.id === (profileIds.value[0] ?? selection.value))
+  if (!body || !sketch || (side !== 'near' && side !== 'far')) return
+  try { height.value = Number(extrudeHeightUpToBody(sketch.plane, baseZ.value, body, side).toFixed(6)) }
+  catch { upToError.value = label('Тело лежит в плоскости профиля: высота была бы нулевой.', 'The body lies on the profile plane: the height would be zero.') }
+}
+const upToOptions = computed(() => document.value.bodies.flatMap(b => [{ value: `near:${b.id}`, text: `${b.name} · ${label('ближняя сторона', 'near side')}` }, { value: `far:${b.id}`, text: `${b.name} · ${label('дальняя сторона', 'far side')}` }]))
+watch(upToChoice, value => { if (value) extrudeUpTo(value) })
 const extraTargetChoices=computed(()=>document.value.bodies.filter(b=>b.id!==targetBody.value))
 // C9 Sweep result step: 'surface' keeps the open NURBS surface; other modes build a capped solid and combine it.
 function sweepBodyOptions(operation:string|null,a:typeof advanced.value){
@@ -3145,6 +3157,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <small v-if="previewPending" role="status">{{ label('Вычисление предпросмотра… Esc — отмена.', 'Calculating preview… Esc to cancel.') }}</small>
               <small v-if="previewEmpty">{{ label('Вырез полностью удалит выбранное тело.', 'The cut will remove the entire target body.') }}</small>
               <label v-if="operation === 'extrude'">{{ label('Высота, мм', 'Height, mm') }}<CadQuantityInput data-field="height" :aria-invalid="errorField==='height'?'true':undefined" :aria-describedby="errorField==='height'?'solid-preview-error':undefined" :aria-label="label('Высота, мм', 'Height, mm')" v-model="height" kind="length" :locale="locale" @validity="quantityValidity('height', $event)" step="1" /></label>
+              <label v-if="operation === 'extrude' && document.bodies.length" data-extrude-up-to>{{ label('Высота до тела', 'Height up to body') }}<select v-model="upToChoice"><option value="">{{ label('Выберите тело и сторону', 'Choose a body and side') }}</option><option v-for="o in upToOptions" :key="o.value" :value="o.value">{{ o.text }}</option></select></label>
+              <small v-if="upToError" role="alert" data-up-to-error>{{ upToError }}</small>
               <label v-if="operation === 'extrude'">{{ label('Смещение от плоскости, мм', 'Plane offset, mm') }}<CadQuantityInput :aria-label="label('Смещение от плоскости, мм', 'Plane offset, mm')" v-model="baseZ" kind="length" :locale="locale" @validity="quantityValidity('baseZ', $event)" step="1" /></label>
               <template v-if="operation === 'revolve'">
                 <label>{{ label('Ось в эскизе', 'Sketch axis') }}<select v-model="revolveAxis"><option value="y">Y · {{ label('вертикаль', 'vertical') }}</option><option value="x">X · {{ label('горизонталь', 'horizontal') }}</option></select></label>

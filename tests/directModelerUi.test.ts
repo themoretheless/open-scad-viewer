@@ -43,6 +43,7 @@ import {sampleCurve} from '../src/app/directSketchGeometry'
 import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 import {stringifyMeshJson} from '../src/exchange/meshJson'
 import {createBrepBox,createBrepTube,analyzeNurbsBrep,createBrepCylinder,createBrepSphere,transformNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {extrudeHeightUpToBody} from '../src/app/directExtrusion'
 vi.mock('../src/kernel/solidDraftHeadStore',()=>({readSolidDraftHead:async()=>null,writeSolidDraftHead:async(key:string,_expected:string|null,text:string)=>({key,revision:crypto.randomUUID(),text})}))
 const previewWorkerRun=vi.hoisted(()=>vi.fn())
 const downloadArtifactBytes=vi.hoisted(()=>vi.fn())
@@ -3899,6 +3900,32 @@ it.each(['Extrude · E','Revolve'])('C9: %s offers Intersect and sends extra tar
   expect(requests.at(-1)!.options).toMatchObject({operation:'intersection',targetId:primary,targetIds:[boxes[0].props.value]})
   await ui.click('New');await vi.advanceTimersByTimeAsync(100)
   expect(requests.at(-1)!.options).toMatchObject({operation:'new',targetIds:[]})
+ }finally{vi.useRealTimers()}
+})
+it.each(['en','ru'])('C9: Extrude sets its height up to the near or far side of a chosen body (%s)',async locale=>{
+ const requests:Array<{kind:string;options:{height:number;offset:number;sketchIds:string[]}}>=[]
+ const ui=await mount({locale});await ui.click('Cube');await ui.click(locale==='ru'?'Разрезать':'Split');await commandKey(ui,'Enter');await settle();await ui.click('Profile')
+ previewWorkerRun.mockImplementation(job=>{if(job.kind==='extrusion')requests.push(job as never);return undefined})
+ const before=ui.doc()
+ vi.useFakeTimers()
+ try{
+  await ui.click(locale==='ru'?'Выдавить · E':'Extrude · E');await vi.advanceTimersByTimeAsync(100)
+  const field=ui.all().find(n=>n.props['data-extrude-up-to']!==undefined)!
+  expect(ui.text(field)).toContain(locale==='ru'?'Высота до тела':'Height up to body')
+  const select=ui.all(field).find(n=>n.tag==='select')!
+  const options=ui.all(select).filter(n=>n.tag==='option').map(n=>n.props.value as string).filter(Boolean)
+  expect(options).toEqual(before.bodies.flatMap(b=>[`near:${b.id}`,`far:${b.id}`]))
+  const sketch=before.sketches.find(s=>s.id===requests.at(-1)!.options.sketchIds[0])!
+  let exercised=0
+  for(const side of ['near','far'] as const){
+   const body=before.bodies.find(b=>{try{return Math.abs(extrudeHeightUpToBody(sketch.plane,0,b,side))>1e-3}catch{return false}})
+   if(!body)continue
+   exercised++
+   select.props['onUpdate:modelValue'](`${side}:${body.id}`);await nextTick();await vi.advanceTimersByTimeAsync(100)
+   expect(requests.at(-1)!.options.height).toBeCloseTo(extrudeHeightUpToBody(sketch.plane,0,body,side),5)
+  }
+  expect(exercised).toBe(2)
+  expect(ui.doc()).toEqual(before)
  }finally{vi.useRealTimers()}
 })
 it('C9: the viewport preview replaces extra target bodies before Apply',async()=>{

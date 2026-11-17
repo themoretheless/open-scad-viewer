@@ -1,5 +1,33 @@
 import { describe,expect,it } from 'vitest'
-import { applyDirectExtrusionProfile, previewTargetBodies, extrudeSketchProfile, buildDirectExtrusion } from '../src/app/directExtrusion'
+
+describe('C9 extrude up to a body',()=>{
+  // Body spanning z = 3..5 above the XY profile plane.
+  const box={id:'box',mesh:{positions:new Float64Array([0,0,3, 1,0,3, 0,1,5, 1,1,5]),indices:new Uint32Array([0,1,2])}}
+  it('reaches the near and far sides along the plane normal, honouring the plane offset',()=>{
+    expect(extrudeHeightUpToBody(undefined,0,box,'near')).toBeCloseTo(3)
+    expect(extrudeHeightUpToBody(undefined,0,box,'far')).toBeCloseTo(5)
+    expect(extrudeHeightUpToBody(undefined,1,box,'near')).toBeCloseTo(2)
+  })
+  it('extrudes downward to a body below the plane',()=>{
+    const below={...box,mesh:{...box.mesh,positions:box.mesh.positions.map((v,i)=>i%3===2?-v:v)}}
+    expect(extrudeHeightUpToBody(undefined,0,below,'near')).toBeCloseTo(-3)
+    expect(extrudeHeightUpToBody({origin:[0,0,0],u:[1,0,0],v:[0,1,0]},0,below,'far')).toBeCloseTo(-5)
+  })
+  it('measures along a tilted workplane normal and the extruded solid ends on the far face',()=>{
+    const plane={origin:[-2,0,0],u:[0,1,0],v:[0,0,1]}
+    const h=extrudeHeightUpToBody(plane,0,box,'far')
+    expect(h).toBeCloseTo(3)
+    const sketch={id:'s',name:'s',closed:true,plane,points:[[0,0],[1,0],[1,1],[0,1]]} as unknown as DirectSketch
+    const mesh=tessellateNurbsBrep(extrudeSketchProfile([sketch],h),8)
+    const xs=[...mesh.positions].filter((_,i)=>i%3===0)
+    expect(Math.max(...xs)).toBeCloseTo(1);expect(Math.min(...xs)).toBeCloseTo(-2)
+  })
+  it('refuses a body that lies on the profile plane',()=>{
+    const flat={id:'f',mesh:{positions:new Float64Array([0,0,0, 1,0,0, 0,1,0]),indices:new Uint32Array([0,1,2])}}
+    expect(()=>extrudeHeightUpToBody(undefined,0,flat,'near')).toThrow(/nonzero/)
+  })
+})
+import { applyDirectExtrusionProfile, previewTargetBodies, extrudeHeightUpToBody, extrudeSketchProfile, buildDirectExtrusion } from '../src/app/directExtrusion'
 import { analyzeNurbsBrep, createBrepBox, tessellateNurbsBrep } from '../src/kernel/geometry/brep'
 import { type DirectDocument, type DirectSketch } from '../src/app/directModeling'
 import { facePlane, solidTopology } from '../src/app/directSolidTools'

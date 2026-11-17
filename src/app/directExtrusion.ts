@@ -57,6 +57,25 @@ export function extrudeSketchProfile(sketches: readonly DirectSketch[], height: 
     [plane.u[2],plane.v[2],n[2],plane.origin[2]], [0,0,0,1],
   ])
 }
+export type ExtrudeUpToSide = 'near'|'far'
+/**
+ * C9 "build up to selected geometry": the signed extrusion height that brings the profile plane
+ * (shifted by `offset` along its normal) to the near or far side of a body, measured on the body's
+ * mesh vertices along the plane normal. Exact for planar faces; curved faces use their tessellation.
+ * A body that crosses the profile plane is reached at its extent on the normal side.
+ */
+export function extrudeHeightUpToBody(plane: SketchPlane|undefined, offset: number, body: Pick<DirectBody,'id'|'mesh'>, side: ExtrudeUpToSide): number {
+  const p=plane??xyPlane(), n=cross3(p.u,p.v), len=Math.hypot(n[0],n[1],n[2])
+  const pos=body.mesh.positions
+  if(!(len>0)||pos.length<3)throw new DirectInputError('DIRECT_TARGET_BODY','Select a target body.',undefined,[body.id])
+  const base=p.origin[0]*n[0]/len+p.origin[1]*n[1]/len+p.origin[2]*n[2]/len+offset
+  let min=Infinity,max=-Infinity
+  for(let i=0;i+2<pos.length;i+=3){const d=(pos[i]*n[0]+pos[i+1]*n[1]+pos[i+2]*n[2])/len-base;if(d<min)min=d;if(d>max)max=d}
+  const eps=1e-7
+  const height=max<=eps&&min<-eps?(side==='near'?max:min):min>=-eps?(side==='near'?min:max):max
+  if(!Number.isFinite(height)||Math.abs(height)<.00001)throw new DirectInputError('DIRECT_EXTRUDE_HEIGHT','Extrusion height must be finite and nonzero.','height')
+  return height
+}
 export type DirectExtrusionOperation = 'new'|'union'|'difference'|'intersection'
 /**
  * `targetIds` lists further bodies the same tool combines with in one command, after `targetId`,
