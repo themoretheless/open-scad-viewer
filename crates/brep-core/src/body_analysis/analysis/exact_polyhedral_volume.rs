@@ -945,5 +945,6 @@ pub use spatial_clip::{
     exact_polyhedral_signed_distance, exact_polyhedral_signed_distance_batch,
     exact_polyhedral_swept_ball_clearance, exact_polyhedral_swept_path_clearance,
     exact_polyhedral_swept_path_material, intersect_exact_spatial_polylines,
-    project_point_to_exact_spatial_polyline, simplify_exact_spatial_polyline,
+    project_point_to_exact_spatial_polyline, self_intersections_exact_spatial_polyline,
+    simplify_exact_spatial_polyline,
 };

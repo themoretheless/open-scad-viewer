@@ -1802,3 +1802,53 @@ fn intersect_spatial_segments(a: &[[Q; 3]], b: &[[Q; 3]]) -> Option<([[Q; 2]; 2]
         .map(|q| (&q[b_axis] - &b[0][b_axis]) / &v[b_axis]);
     Some(([[lo, hi], on_b], points))
 }
+
+/// Find spatial self-intersections and retraced intervals, using original
+/// span indices. Stationary spans are ignored when deciding adjacency.
+/// The shared vertex of adjacent spans, including the seam of a closed path,
+/// is omitted when it is their only intersection.
+pub fn self_intersections_exact_spatial_polyline(
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactSpatialPolylineIntersections> {
+    super::validate_work(max_exact_work)?;
+    if points_mm.len() < 2 {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Self-intersection path requires at least two points",
+        ));
+    }
+    let mut remaining = max_exact_work;
+    for point in points_mm {
+        spend(&mut remaining, 4)?;
+        validate_point(point)?;
+    }
+    let mut spans = Vec::new();
+    for (index, pair) in points_mm.windows(2).enumerate() {
+        spend(&mut remaining, 4)?;
+        if pair[0] != pair[1] {
+            spans.push((index, pair));
+        }
+    }
+    let closed = points_mm.first() == points_mm.last();
+    let mut intersections = Vec::new();
+    for (i, &(first, a)) in spans.iter().enumerate() {
+        for (j, &(second, b)) in spans.iter().enumerate().skip(i + 1) {
+            spend(&mut remaining, 64)?;
+            let adjacent = j == i + 1 || (closed && i == 0 && j + 1 == spans.len());
+            if let Some((parameters, points_mm)) = intersect_spatial_segments(a, b)
+                && (!adjacent || points_mm[0] != points_mm[1])
+            {
+                intersections.push(SpatialPolylineIntersection {
+                    spans: [first, second],
+                    parameters,
+                    points_mm,
+                });
+            }
+        }
+    }
+    Ok(ExactSpatialPolylineIntersections {
+        intersections,
+        exact_work: max_exact_work - remaining,
+    })
+}

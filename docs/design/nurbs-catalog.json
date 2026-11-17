@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 452,
-  "unallocatedCount": 548,
+  "specifiedCount": 453,
+  "unallocatedCount": 547,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -11691,6 +11691,35 @@
       "remainingQualification": [
         "Find exact spatial path intersections and overlaps with parameters on both paths.",
         "Solve rational segment intersections and verify every spatial coordinate. Collinear and stationary overlaps retain both parameter ranges.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0453",
+      "name": "Точные самопересечения пространственных ломаных",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::self_intersections_exact_spatial_polyline",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "docs/qualification/nurbs-curvature-field-453-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-453-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Find spatial self-crossings, nonlocal touches and retraced intervals.",
+        "Check each distinct nonstationary span pair with exact rational predicates. Exclude ordinary adjacent joins, including the closed seam, while retaining retracing and nonlocal point contacts.",
         "WASM and application integration are separate."
       ]
     }

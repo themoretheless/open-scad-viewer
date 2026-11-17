@@ -4424,3 +4424,54 @@ fn exact_spatial_polyline_intersections_preserve_reversed_and_stationary_overlap
         ],
     );
 }
+
+#[test]
+fn exact_spatial_polyline_self_intersections_ignore_closed_seam_and_stationary_joins() {
+    use brep_core::analysis::self_intersections_exact_spatial_polyline;
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y| [q(x), q(y), q(x + y)];
+    let square = [
+        p(0, 0),
+        p(0, 0),
+        p(2, 0),
+        p(2, 0),
+        p(2, 2),
+        p(0, 2),
+        p(0, 0),
+    ];
+    let report = self_intersections_exact_spatial_polyline(&square, 1_000_000).unwrap();
+    assert!(report.intersections.is_empty());
+    let crossing = [p(0, 0), p(0, 0), p(2, 2), p(0, 2), p(2, 0), p(0, 0)];
+    let report = self_intersections_exact_spatial_polyline(&crossing, 1_000_000).unwrap();
+    assert_eq!(report.intersections.len(), 1);
+    let hit = &report.intersections[0];
+    assert_eq!(hit.spans, [1, 3]);
+    assert_eq!(hit.points_mm, [p(1, 1), p(1, 1)]);
+    assert_eq!(
+        self_intersections_exact_spatial_polyline(&crossing, report.exact_work).unwrap(),
+        report
+    );
+    assert!(self_intersections_exact_spatial_polyline(&crossing, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_spatial_polyline_self_intersections_keep_adjacent_retracing_and_remote_touch() {
+    use brep_core::analysis::self_intersections_exact_spatial_polyline;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y| [q(x, 1), q(y, 1), q(0, 1)];
+    let retracted = [p(0, 0), p(4, 0), p(4, 0), p(2, 0)];
+    let report = self_intersections_exact_spatial_polyline(&retracted, 1_000_000).unwrap();
+    assert_eq!(report.intersections.len(), 1);
+    assert_eq!(report.intersections[0].spans, [0, 2]);
+    assert_eq!(
+        report.intersections[0].parameters,
+        [[q(1, 2), q(1, 1)], [q(1, 1), q(0, 1)]]
+    );
+    let touching = [p(0, 0), p(4, 0), p(4, 2), p(2, 0)];
+    let report = self_intersections_exact_spatial_polyline(&touching, 1_000_000).unwrap();
+    assert_eq!(report.intersections.len(), 1);
+    assert_eq!(report.intersections[0].spans, [0, 2]);
+    assert_eq!(report.intersections[0].points_mm, [p(2, 0), p(2, 0)]);
+}
