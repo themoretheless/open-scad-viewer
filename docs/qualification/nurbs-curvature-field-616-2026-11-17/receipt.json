@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0616",
+  "testedBase": "e2213391a4a2981fa06025a78ff277ff2318234d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 206,
+  "scope": [
+    "Accumulate first moments across all trimmed components under shared budgets and enclose their common centroid.",
+    "Check an analytic centroid with an island and suppress centroid bounds when total positive area has not been proved."
+  ],
+  "logSha256": "bcfb06f0accb0da00da599b9e8e6a01cb373ea602162eb6bacda97040f5e7888",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "0eb2b9c2faf9494d2c755613a6509654296a7b9fae30b2e3f1f860a80d90862d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "72cea1d840154d8b7f4c3545c543b6ec71ecfad7fb8373ed3d511f3ece1a0d01",
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "3e56b212328d59dc97583c78ef70c308de0a9a5a5c082eeea9636646332d0034"
+  }
+}

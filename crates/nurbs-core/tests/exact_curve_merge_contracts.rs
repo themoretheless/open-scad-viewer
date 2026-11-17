@@ -6742,3 +6742,82 @@ fn periodic_trim_patch_set_area_never_returns_partial_component_coverage() {
     assert_eq!(coarse.total.trim_cells, 2);
     assert!(coarse.total.area.unwrap().bounds[1] >= 0.25);
 }
+
+#[test]
+fn periodic_trim_patch_set_centroid_weights_islands_by_area() {
+    use nurbs_core::{
+        analysis::surface_measure::periodic_trim_patch_set_centroid,
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
+    };
+    let mut profile = periodic_unit_square();
+    for pole in &mut profile.control_points {
+        pole.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let hole = [
+        [0.125, 0.25],
+        [0.375, 0.25],
+        [0.375, 0.75],
+        [0.125, 0.75],
+        [0.125, 0.25],
+    ];
+    let island = [
+        [0.1875, 0.375],
+        [0.3125, 0.375],
+        [0.3125, 0.625],
+        [0.1875, 0.625],
+        [0.1875, 0.375],
+    ];
+    let patches =
+        build_exact_periodic_surface_trim_patches(&source, &[&outer, &hole, &island], 1_000_000)
+            .unwrap()
+            .patches
+            .unwrap();
+    let report =
+        periodic_trim_patch_set_centroid(&patches, 0.005, 1e-10, 20_000, 1_000_000).unwrap();
+    for ([lo, hi], expected) in
+        report
+            .centroid_bounds
+            .unwrap()
+            .into_iter()
+            .zip([3. / 28., 1. / 7., 1.])
+    {
+        assert!(lo <= expected && expected <= hi);
+        assert!(hi - lo < 0.6);
+    }
+    assert_eq!(report.measure.components.len(), 2);
+}
+
+#[test]
+fn periodic_trim_patch_set_centroid_withholds_when_total_area_is_uncertain() {
+    use nurbs_core::{
+        analysis::surface_measure::periodic_trim_patch_set_centroid,
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
+    };
+    let mut profile = periodic_unit_square();
+    for pole in &mut profile.control_points {
+        pole.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let patches = build_exact_periodic_surface_trim_patches(&source, &[&outer], 1_000_000)
+        .unwrap()
+        .patches
+        .unwrap();
+    let report = periodic_trim_patch_set_centroid(&patches, 0.01, 1e-10, 2, 1).unwrap();
+    assert!(report.centroid_bounds.is_none());
+    assert_eq!(report.measure.total.area.unwrap().bounds[0], 0.);
+}

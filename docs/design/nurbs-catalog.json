@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 615,
-  "unallocatedCount": 385,
+  "specifiedCount": 616,
+  "unallocatedCount": 384,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15314,6 +15314,26 @@
       "remainingQualification": [
         "Enclose total and component retained areas under shared integration and trim work limits.",
         "Verify total area with a nested island, separate component enclosures and refusal of incomplete coverage under either shared budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0616",
+      "name": "Гарантированный общий центр площади компонент периодической обрезки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::periodic_trim_patch_set_centroid",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "docs/qualification/nurbs-curvature-field-616-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-616-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Accumulate first moments across all trimmed components under shared budgets and enclose their common centroid.",
+        "Check an analytic centroid with an island and suppress centroid bounds when total positive area has not been proved.",
         "WASM and application integration are separate."
       ]
     }

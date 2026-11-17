@@ -503,30 +503,54 @@ fn enclose_trimmed_centroid(
     cells: &BinaryHeap<Cell>,
     area: &AreaReport,
 ) -> Result<[[f64; 2]; 3]> {
-    let denominator = Interval::new(area.bounds[0], area.bounds[1])?;
     let origin = [0, 1, 2].map(|axis| Interval::point(surface.control_points[0][0][axis]));
-    let mut moment = [Interval::point(0.); 3];
-    let mut support = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
-    for cell in cells {
-        if cell.area.hi == 0. {
-            continue;
-        }
-        let position = cell_position_relative_to(surface, cell, origin)?;
-        for (axis, relative) in position.into_iter().enumerate() {
-            support[axis][0] = support[axis][0].min(relative.lo);
-            support[axis][1] = support[axis][1].max(relative.hi);
-            moment[axis] = moment[axis].add(relative.mul(cell.area)?)?;
+    let mut moments = TrimmedFirstMoments::new(origin);
+    moments.accumulate(surface, cells)?;
+    moments.centroid(area)
+}
+
+struct TrimmedFirstMoments {
+    origin: [Interval; 3],
+    moment: [Interval; 3],
+    support: [[f64; 2]; 3],
+}
+
+impl TrimmedFirstMoments {
+    fn new(origin: [Interval; 3]) -> Self {
+        Self {
+            origin,
+            moment: [Interval::point(0.); 3],
+            support: [[f64::INFINITY, f64::NEG_INFINITY]; 3],
         }
     }
-    let mut centroid_bounds = [[0.; 2]; 3];
-    for (axis, output) in centroid_bounds.iter_mut().enumerate() {
-        let bound = moment[axis]
-            .div(denominator)?
-            .intersect(support[axis][0], support[axis][1])?
-            .add(origin[axis])?;
-        *output = [bound.lo, bound.hi];
+
+    fn accumulate(&mut self, surface: &Surface, cells: &BinaryHeap<Cell>) -> Result<()> {
+        for cell in cells {
+            if cell.area.hi == 0. {
+                continue;
+            }
+            let position = cell_position_relative_to(surface, cell, self.origin)?;
+            for (axis, relative) in position.into_iter().enumerate() {
+                self.support[axis][0] = self.support[axis][0].min(relative.lo);
+                self.support[axis][1] = self.support[axis][1].max(relative.hi);
+                self.moment[axis] = self.moment[axis].add(relative.mul(cell.area)?)?;
+            }
+        }
+        Ok(())
     }
-    Ok(centroid_bounds)
+
+    fn centroid(&self, area: &AreaReport) -> Result<[[f64; 2]; 3]> {
+        let denominator = Interval::new(area.bounds[0], area.bounds[1])?;
+        let mut bounds = [[0.; 2]; 3];
+        for (axis, output) in bounds.iter_mut().enumerate() {
+            let bound = self.moment[axis]
+                .div(denominator)?
+                .intersect(self.support[axis][0], self.support[axis][1])?
+                .add(self.origin[axis])?;
+            *output = [bound.lo, bound.hi];
+        }
+        Ok(bounds)
+    }
 }
 
 fn cell_position_relative_to(
@@ -847,6 +871,65 @@ pub fn periodic_trim_patch_set_area(
     max_surface_cells: usize,
     max_trim_cells: usize,
 ) -> Result<TrimmedPatchSetAreaReport> {
+    measure_periodic_patch_set(
+        patches,
+        tolerance,
+        tolerance_uv,
+        max_surface_cells,
+        max_trim_cells,
+        |_, _| Ok(()),
+    )
+}
+
+#[derive(Clone, Debug)]
+pub struct TrimmedPatchSetCentroidReport {
+    pub measure: TrimmedPatchSetAreaReport,
+    pub centroid_bounds: Option<[[f64; 2]; 3]>,
+}
+
+/// Enclose the common area centroid of all patches under shared work limits.
+/// The combined area must be separated from zero.
+pub fn periodic_trim_patch_set_centroid(
+    patches: &[crate::editing::exact_periodic_surface::PeriodicTrimPatch],
+    tolerance: f64,
+    tolerance_uv: f64,
+    max_surface_cells: usize,
+    max_trim_cells: usize,
+) -> Result<TrimmedPatchSetCentroidReport> {
+    let mut moments = None;
+    let measure = measure_periodic_patch_set(
+        patches,
+        tolerance,
+        tolerance_uv,
+        max_surface_cells,
+        max_trim_cells,
+        |surface, cells| {
+            let moments = moments.get_or_insert_with(|| {
+                let origin =
+                    [0, 1, 2].map(|axis| Interval::point(surface.control_points[0][0][axis]));
+                TrimmedFirstMoments::new(origin)
+            });
+            moments.accumulate(surface, cells)
+        },
+    )?;
+    let centroid_bounds = match (measure.total.area.as_ref(), moments) {
+        (Some(area), Some(moments)) if area.bounds[0] > 0. => Some(moments.centroid(area)?),
+        _ => None,
+    };
+    Ok(TrimmedPatchSetCentroidReport {
+        measure,
+        centroid_bounds,
+    })
+}
+
+fn measure_periodic_patch_set(
+    patches: &[crate::editing::exact_periodic_surface::PeriodicTrimPatch],
+    tolerance: f64,
+    tolerance_uv: f64,
+    max_surface_cells: usize,
+    max_trim_cells: usize,
+    mut consume_partition: impl FnMut(&Surface, &BinaryHeap<Cell>) -> Result<()>,
+) -> Result<TrimmedPatchSetAreaReport> {
     check(
         (1..=256).contains(&patches.len())
             && [tolerance, tolerance_uv]
@@ -899,14 +982,18 @@ pub fn periodic_trim_patch_set_area(
     let mut stop = StopReason::PrecisionLimit;
     for (index, (patch, minimum)) in patches.iter().zip(minima).enumerate() {
         remaining_minimum -= minimum;
-        let measure = periodic_trim_patch_area(
-            patch,
+        let trim = TrimDomain::new(&patch.trim.loops, tolerance_uv)?;
+        let (measure, partition) = trimmed_surface_area_in_domain(
+            &patch.surface,
+            &trim,
+            None,
             share,
-            tolerance_uv,
-            minimum + (max_surface_cells - surface_cells - remaining_minimum - minimum)
-                / (patches.len() - index),
+            minimum
+                + (max_surface_cells - surface_cells - remaining_minimum - minimum)
+                    / (patches.len() - index),
             (max_trim_cells - trim_cells) / (patches.len() - index),
         )?;
+        consume_partition(&patch.surface, &partition)?;
         let area = measure
             .area
             .ok_or_else(|| crate::numeric_err("Missing prepared trim patch area"))?;
