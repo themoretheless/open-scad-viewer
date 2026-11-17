@@ -1969,3 +1969,62 @@ fn exact_plane_distance_is_invariant_under_rescaling_and_orientation() {
     );
     assert!(exact_polyhedral_plane_relation(&solid, [0.; 3], 8., 1_000_000).is_err());
 }
+
+#[test]
+fn exact_edge_plane_intersection_preserves_nonbinary_crossing_coordinates() {
+    use brep_core::analysis::{
+        PolyhedralEdgePlaneContact, exact_polyhedral_edge_plane_intersection,
+    };
+    use num_rational::BigRational as Q;
+    let solid = shifted_oblique_solid(0.);
+    let report =
+        exact_polyhedral_edge_plane_intersection(&solid, [-1., -1., 3.], 2., 1_000_000).unwrap();
+    assert_eq!(report.hits.len(), 4);
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    for hit in &report.hits {
+        let PolyhedralEdgePlaneContact::Point { fraction, point_mm } = &hit.contact else {
+            panic!("expected a crossing point");
+        };
+        assert!(*fraction == q(1, 3) || *fraction == q(2, 3));
+        assert_eq!(
+            -&point_mm[0] - &point_mm[1] + &point_mm[2] * q(3, 1),
+            q(2, 1)
+        );
+    }
+    assert!(
+        exact_polyhedral_edge_plane_intersection(&solid, [-1., -1., 3.], 2., report.exact_work)
+            .is_ok()
+    );
+    assert!(
+        exact_polyhedral_edge_plane_intersection(&solid, [-1., -1., 3.], 2., report.exact_work - 1)
+            .is_err()
+    );
+}
+
+#[test]
+fn reports_coplanar_spans_alongside_incident_endpoint_hits() {
+    use brep_core::analysis::{
+        PolyhedralEdgePlaneContact, exact_polyhedral_edge_plane_intersection,
+    };
+    use num_traits::Zero;
+    let solid = shifted_oblique_solid(0.);
+    let report =
+        exact_polyhedral_edge_plane_intersection(&solid, [-1., -1., 3.], 6., 1_000_000).unwrap();
+    let mut counts = [0; 2];
+    for hit in report.hits {
+        match hit.contact {
+            PolyhedralEdgePlaneContact::Coplanar { .. } => counts[0] += 1,
+            PolyhedralEdgePlaneContact::Point { fraction, .. } => {
+                assert!(fraction.is_zero() || fraction.is_integer());
+                counts[1] += 1;
+            }
+        }
+    }
+    assert_eq!(counts, [4, 4]);
+    assert!(
+        exact_polyhedral_edge_plane_intersection(&solid, [-1., -1., 3.], 7., 1_000_000)
+            .unwrap()
+            .hits
+            .is_empty()
+    );
+}

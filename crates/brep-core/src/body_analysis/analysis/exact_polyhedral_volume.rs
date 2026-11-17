@@ -238,43 +238,131 @@ pub fn bounded_polyhedral_edge_length(
     max_exact_work: u64,
 ) -> Result<BoundedPolyhedralEdgeLength> {
     let tolerance = enclosure_width(max_width_mm)?;
-    validate_work(max_exact_work)?;
+    let mut remaining = max_exact_work;
+    let mut squares = Vec::new();
+    let edge_count = visit_polyhedral_edges(solid, &mut remaining, |_, _, a, b, remaining| {
+        spend(remaining, 9)?;
+        squares.push(a.iter().zip(b).map(|(a, b)| (a - b).pow(2)).sum());
+        Ok(())
+    })?;
+    let bounds_mm = bound_root_sum(squares, tolerance, &mut remaining)?;
+    Ok(BoundedPolyhedralEdgeLength {
+        bounds_mm,
+        edge_count,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PolyhedralEdgePlaneContact {
+    Point {
+        /// Geometric interpolation fraction along the control segment.
+        fraction: Q,
+        point_mm: [Q; 3],
+    },
+    Coplanar {
+        endpoints_mm: [[Q; 3]; 2],
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PolyhedralEdgePlaneHit {
+    pub edge: usize,
+    /// Zero-based span in the edge's stored direction.
+    pub span: usize,
+    pub contact: PolyhedralEdgePlaneContact,
+}
+
+#[derive(Clone, Debug)]
+pub struct ExactPolyhedralEdgePlaneIntersection {
+    /// Hits are attributed to spans. A shared endpoint may occur in multiple hits.
+    pub hits: Vec<PolyhedralEdgePlaneHit>,
+    pub exact_work: u64,
+}
+
+/// Intersect the unique linear material edges of a qualified solid with a
+/// plane. Reports exact rational points and whole coplanar spans.
+pub fn exact_polyhedral_edge_plane_intersection(
+    solid: &QualifiedClosedSolid,
+    normal: [f64; 3],
+    offset: f64,
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralEdgePlaneIntersection> {
+    if !normal.iter().all(|value| value.is_finite()) || normal == [0.; 3] || !offset.is_finite() {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Expected a finite plane with nonzero normal",
+        ));
+    }
+    let normal = lift(&normal);
+    let offset = Q::from_float(offset).unwrap();
+    let residual =
+        |point: &[Q; 3]| -> Q { normal.iter().zip(point).map(|(n, p)| n * p).sum::<Q>() - &offset };
+    let mut hits = Vec::new();
+    let mut remaining = max_exact_work;
+    visit_polyhedral_edges(solid, &mut remaining, |edge, span, a, b, remaining| {
+        spend(remaining, 14)?;
+        let ra = residual(a);
+        let rb = residual(b);
+        let contact = if ra.is_zero() && rb.is_zero() {
+            PolyhedralEdgePlaneContact::Coplanar {
+                endpoints_mm: [a.clone(), b.clone()],
+            }
+        } else if ra.is_zero() || rb.is_zero() || ra.is_negative() != rb.is_negative() {
+            spend(remaining, 12)?;
+            let fraction = &ra / (&ra - &rb);
+            let point_mm = std::array::from_fn(|i| &a[i] + &fraction * (&b[i] - &a[i]));
+            PolyhedralEdgePlaneContact::Point { fraction, point_mm }
+        } else {
+            return Ok(());
+        };
+        hits.push(PolyhedralEdgePlaneHit {
+            edge,
+            span,
+            contact,
+        });
+        Ok(())
+    })?;
+    Ok(ExactPolyhedralEdgePlaneIntersection {
+        hits,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn visit_polyhedral_edges(
+    solid: &QualifiedClosedSolid,
+    remaining: &mut u64,
+    mut visit: impl FnMut(usize, usize, &[Q; 3], &[Q; 3], &mut u64) -> Result<()>,
+) -> Result<usize> {
+    validate_work(*remaining)?;
     let agreement = &solid.geometry().boundary.agreement;
     if !agreement.all_equal || !agreement.all_joins_exact {
         return Err(refuse(
-            "Exact edge length requires exact boundary identity and joins",
+            "Exact polyhedral edge queries require exact boundary identity and joins",
         ));
     }
     let model = solid.model();
-    let mut remaining = max_exact_work;
     let mut visited = std::collections::BTreeSet::new();
-    let mut squares = Vec::new();
     for body in &model.bodies {
         for shell in std::iter::once(&body.outer_shell).chain(&body.inner_shells) {
             for face_use in &model.shells[*shell].faces {
                 let face = &model.faces[face_use.face];
                 for wire in std::iter::once(&face.outer).chain(&face.holes) {
                     for coedge in &model.loops[*wire].coedges {
-                        spend(&mut remaining, 1)?;
+                        spend(remaining, 1)?;
                         let edge = &model.edges[coedge.edge];
                         require_linear_edge(edge, coedge)?;
                         if !visited.insert(coedge.edge) {
                             continue;
                         }
                         let curve = &edge.curve;
-                        spend(&mut remaining, 3)?;
+                        spend(remaining, 3)?;
                         let mut previous = lift(&curve.control_points[0]);
                         for (i, pole) in curve.control_points.iter().enumerate().skip(1) {
-                            spend(&mut remaining, 12)?;
+                            spend(remaining, 3)?;
                             require_linear_span(&curve.knots, i)?;
                             let current = lift(pole);
-                            squares.push(
-                                previous
-                                    .iter()
-                                    .zip(&current)
-                                    .map(|(a, b)| (a - b).pow(2))
-                                    .sum(),
-                            );
+                            visit(coedge.edge, i - 1, &previous, &current, remaining)?;
                             previous = current;
                         }
                     }
@@ -282,12 +370,7 @@ pub fn bounded_polyhedral_edge_length(
             }
         }
     }
-    let bounds_mm = bound_root_sum(squares, tolerance, &mut remaining)?;
-    Ok(BoundedPolyhedralEdgeLength {
-        bounds_mm,
-        edge_count: visited.len(),
-        exact_work: max_exact_work - remaining,
-    })
+    Ok(visited.len())
 }
 
 fn enclosure_width(width: f64) -> Result<Q> {

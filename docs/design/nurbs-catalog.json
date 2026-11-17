@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 410,
-  "unallocatedCount": 590,
+  "specifiedCount": 411,
+  "unallocatedCount": 589,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -10561,6 +10561,30 @@
       "remainingQualification": [
         "Classify strict side, tangent support and crossing of a plane against one connected polyhedral body.",
         "Sharp rational plane residual bounds determine one-sidedness, touching, or crossing. The squared body-plane distance is exact and invariant under equivalent plane scaling.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0411",
+      "name": "Точное пересечение секущей плоскости с линейными кромками B-rep-тела",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::exact_polyhedral_edge_plane_intersection",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/mod.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "docs/qualification/nurbs-curvature-field-411-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-411-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Intersect a finite plane with unique material edge spans using exact rational point and coplanar interval evidence.",
+        "Exact plane residuals classify each unique linear span as disjoint, intersecting at a rational point, or coplanar. Source edge and span addresses are retained.",
         "WASM and application integration are separate."
       ]
     }
