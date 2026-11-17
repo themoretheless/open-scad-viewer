@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 522,
-  "unallocatedCount": 478,
+  "specifiedCount": 523,
+  "unallocatedCount": 477,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13438,6 +13438,27 @@
       "remainingQualification": [
         "Reconcile proportional boundary weights using one exact scale per strip before periodic assembly.",
         "Reconcile the rational weights with one exact scale across each complete tensor and verify the internal joins and final wrap.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0523",
+      "name": "Сборка дважды периодической NURBS-сетки с точным согласованием весов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::assemble_doubly_periodic_surface_with_exact_weight_scaling",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-523-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-523-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Align proportional rational weights across both periodic surface axes while preserving every patch law.",
+        "Reconcile exact patch scales across V and then across the U strips, requiring both periodic wraps before returning a result.",
         "WASM and application integration are separate."
       ]
     }

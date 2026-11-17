@@ -659,6 +659,24 @@ pub fn assemble_exact_doubly_periodic_surface(
     patches: &[Vec<Surface>],
     max_work: u64,
 ) -> Result<PeriodicGridAssemblyReport> {
+    assemble_periodic_grid(patches, max_work, false)
+}
+
+/// Assemble a periodic grid with independently scaled weights on each
+/// patch. One positive scale per complete patch preserves its rational
+/// parameter law. Every internal boundary and both wraps must agree.
+pub fn assemble_doubly_periodic_surface_with_exact_weight_scaling(
+    patches: &[Vec<Surface>],
+    max_work: u64,
+) -> Result<PeriodicGridAssemblyReport> {
+    assemble_periodic_grid(patches, max_work, true)
+}
+
+fn assemble_periodic_grid(
+    patches: &[Vec<Surface>],
+    max_work: u64,
+    scale_weights: bool,
+) -> Result<PeriodicGridAssemblyReport> {
     let columns = patches.first().map_or(0, Vec::len);
     crate::check(
         (1..=256).contains(&patches.len())
@@ -684,7 +702,7 @@ pub fn assemble_exact_doubly_periodic_surface(
         if work_used == max_work {
             return Ok(reject(Some(index), work_used, exhausted));
         }
-        let result = assemble_surface_axis(row, Axis::V, max_work - work_used, false)?;
+        let result = assemble_surface_axis(row, Axis::V, max_work - work_used, scale_weights)?;
         work_used += result.work_used;
         let Some(strip) = result.surface else {
             return Ok(reject(Some(index), work_used, result.refusal));
@@ -694,7 +712,7 @@ pub fn assemble_exact_doubly_periodic_surface(
     if work_used == max_work {
         return Ok(reject(None, work_used, exhausted));
     }
-    let result = assemble_surface_axis(&strips, Axis::U, max_work - work_used, false)?;
+    let result = assemble_surface_axis(&strips, Axis::U, max_work - work_used, scale_weights)?;
     Ok(PeriodicGridAssemblyReport {
         surface: result.surface,
         work_used: work_used + result.work_used,

@@ -2214,3 +2214,72 @@ fn periodic_strip_assembly_refuses_nonproportional_boundary_weights() {
         Some(PeriodicAssemblyRefusal::Join { strip: 1, .. })
     ));
 }
+
+#[test]
+fn periodic_grid_assembly_reconciles_patch_gauges_on_both_axes() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        assemble_doubly_periodic_surface_with_exact_weight_scaling,
+        partition_exact_doubly_periodic_surface,
+    };
+    let mut source = doubly_periodic_tensor();
+    for (row, u_weight) in source.weights.iter_mut().zip([1., 1., 2., 4., 1.]) {
+        for (weight, v_weight) in row.iter_mut().zip([1., 1., 4., 2., 1.]) {
+            *weight = u_weight * v_weight;
+        }
+    }
+    let mut patches =
+        partition_exact_doubly_periodic_surface(&source, [0., 0.], &[2.], &[2.], 1_000_000)
+            .unwrap()
+            .patches
+            .unwrap();
+    for (patch, scale) in patches.iter_mut().flatten().zip([3., 7., 11., 13.]) {
+        for weight in patch.weights.iter_mut().flatten() {
+            *weight *= scale;
+        }
+    }
+    let report =
+        assemble_doubly_periodic_surface_with_exact_weight_scaling(&patches, 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let assembled = report.surface.unwrap();
+    assert!(assembled.periodic_u && assembled.periodic_v);
+    for u in [0., 0.25, 1.5, 2., 2.75, 4.] {
+        for v in [0., 0.75, 2., 3.25, 4.] {
+            let a = assembled.evaluate(u, v).unwrap().point;
+            let b = source.evaluate(u, v).unwrap().point;
+            assert!(a.into_iter().zip(b).all(|(a, b)| (a - b).abs() < 1e-13));
+        }
+    }
+    assert!(
+        assemble_doubly_periodic_surface_with_exact_weight_scaling(&patches, report.work_used - 1)
+            .unwrap()
+            .surface
+            .is_none()
+    );
+}
+
+#[test]
+fn periodic_grid_gauge_assembly_rejects_nonproportional_final_join() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicAssemblyRefusal, assemble_doubly_periodic_surface_with_exact_weight_scaling,
+        partition_exact_doubly_periodic_surface,
+    };
+    let mut patches = partition_exact_doubly_periodic_surface(
+        &doubly_periodic_tensor(),
+        [0., 0.],
+        &[2.],
+        &[2.],
+        1_000_000,
+    )
+    .unwrap()
+    .patches
+    .unwrap();
+    patches[1][0].weights[0][1] = 2.;
+    let result =
+        assemble_doubly_periodic_surface_with_exact_weight_scaling(&patches, 1_000_000).unwrap();
+    assert!(result.surface.is_none());
+    assert_eq!(result.refused_row, None);
+    assert!(matches!(
+        result.refusal,
+        Some(PeriodicAssemblyRefusal::Join { strip: 1, .. })
+    ));
+}
