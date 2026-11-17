@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 379,
-  "unallocatedCount": 621,
+  "specifiedCount": 380,
+  "unallocatedCount": 620,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9726,6 +9726,30 @@
       "remainingQualification": [
         "Find free boundary cycles on an exact section plane and attach validated caps without a manual edge list.",
         "Exact rational pole residuals identify eligible free edges, and source vertex identities assemble complete cycles. Discovery and attachment share a work budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0380",
+      "name": "Атомарное закрытие оболочки крышками в нескольких плоскостях",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::planar_cap::close_shell_with_section_caps",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
+        "docs/qualification/nurbs-curvature-field-380-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-380-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Close a shell across multiple exact section planes under common arithmetic and verification limits.",
+        "Caps are staged under cumulative work and pcurve verification limits. The selected shell must validate as closed after the last plane. Original edges and vertices are retained.",
         "WASM and application integration are separate."
       ]
     }

@@ -189,4 +189,7 @@ fn invalid(message: &str) -> Error {
 }
 
 mod discover;
-pub use discover::{DiscoveredSectionCaps, discover_and_attach_section_caps};
+pub use discover::{
+    DiscoveredSectionCaps, SectionPlane, close_shell_with_section_caps,
+    discover_and_attach_section_caps,
+};

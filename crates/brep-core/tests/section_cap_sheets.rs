@@ -115,6 +115,10 @@ fn supports_zero_tolerance_for_an_exactly_storable_plane() {
 }
 
 fn open_hollow_prism() -> (brep_core::Model, Vec<Vec<[usize; 2]>>) {
+    open_prism(true)
+}
+
+fn open_prism(with_hole: bool) -> (brep_core::Model, Vec<Vec<[usize; 2]>>) {
     use brep_core::prism::extrude;
     let outline = |lo, hi| {
         ring(lo, hi, |_| 0.)
@@ -137,7 +141,17 @@ fn open_hollow_prism() -> (brep_core::Model, Vec<Vec<[usize; 2]>>) {
         .rev()
         .map(|curve| curve.reverse().unwrap())
         .collect();
-    let mut source = extrude(&[outer, hole], 0., 2.).unwrap();
+    let rings = if with_hole {
+        vec![outer, hole]
+    } else {
+        vec![outer]
+    };
+    let mut source = extrude(&rings, 0., 2.).unwrap();
+    let addresses = remove_prism_cap(&mut source, 2.);
+    (source, addresses)
+}
+
+fn remove_prism_cap(source: &mut brep_core::Model, height: f64) -> Vec<Vec<[usize; 2]>> {
     let cap = source
         .faces
         .iter()
@@ -146,7 +160,7 @@ fn open_hollow_prism() -> (brep_core::Model, Vec<Vec<[usize; 2]>>) {
                 .control_points
                 .iter()
                 .flatten()
-                .all(|p| p[2] == 2.)
+                .all(|p| p[2] == height)
         })
         .unwrap();
     let removed = source.faces.remove(cap);
@@ -187,7 +201,7 @@ fn open_hollow_prism() -> (brep_core::Model, Vec<Vec<[usize; 2]>>) {
     source.bodies.clear();
     source.rebuild_topology_ids();
     source.validate().unwrap();
-    let addresses = edge_rings
+    edge_rings
         .into_iter()
         .map(|edges| {
             edges
@@ -207,8 +221,7 @@ fn open_hollow_prism() -> (brep_core::Model, Vec<Vec<[usize; 2]>>) {
                 })
                 .collect()
         })
-        .collect();
-    (source, addresses)
+        .collect()
 }
 
 #[test]
@@ -308,5 +321,79 @@ fn refuses_empty_and_partial_section_cycles_atomically() {
     assert!(
         discover_and_attach_section_caps(&source, 0, [1., 0., 0.], 0., 1_000_000, 10_000).is_err()
     );
+    assert_eq!(source, before);
+}
+
+#[test]
+fn closes_both_ends_of_a_shell_with_a_shared_budget() {
+    use brep_core::planar_cap::{SectionPlane, close_shell_with_section_caps};
+    let (mut source, _) = open_prism(false);
+    remove_prism_cap(&mut source, 0.);
+    assert_eq!(source.validate().unwrap().boundary_edge_count, 8);
+    let planes = [2., 0.].map(|offset| SectionPlane {
+        normal: [0., 0., 1.],
+        offset,
+    });
+    let report = close_shell_with_section_caps(&source, 0, &planes, 1_000_000, 10_000).unwrap();
+    assert!(report.model.shells[0].closed);
+    assert_eq!(report.cap_faces.len(), 2);
+    assert_eq!(report.model.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(report.model.edges, source.edges);
+    assert_eq!(report.model.vertices, source.vertices);
+    for (&face, plane) in report.cap_faces.iter().zip(planes) {
+        let cap = &report.model.faces[face];
+        assert!(cap.holes.is_empty());
+        assert!(
+            cap.surface
+                .control_points
+                .iter()
+                .flatten()
+                .all(|p| p[2] == plane.offset)
+        );
+    }
+    assert!(
+        close_shell_with_section_caps(
+            &source,
+            0,
+            &planes,
+            report.exact_work,
+            report.verification_cells
+        )
+        .is_ok()
+    );
+    assert!(
+        close_shell_with_section_caps(
+            &source,
+            0,
+            &planes,
+            report.exact_work - 1,
+            report.verification_cells
+        )
+        .is_err()
+    );
+    assert!(
+        close_shell_with_section_caps(
+            &source,
+            0,
+            &planes,
+            report.exact_work,
+            report.verification_cells - 1
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn refuses_partial_closure_and_a_late_invalid_plane_atomically() {
+    use brep_core::planar_cap::{SectionPlane, close_shell_with_section_caps};
+    let (mut source, _) = open_prism(false);
+    remove_prism_cap(&mut source, 0.);
+    let before = source.clone();
+    let planes = [2., 1.].map(|offset| SectionPlane {
+        normal: [0., 0., 1.],
+        offset,
+    });
+    assert!(close_shell_with_section_caps(&source, 0, &planes[..1], 1_000_000, 10_000).is_err());
+    assert!(close_shell_with_section_caps(&source, 0, &planes, 1_000_000, 10_000).is_err());
     assert_eq!(source, before);
 }

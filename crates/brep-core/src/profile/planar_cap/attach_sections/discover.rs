@@ -140,3 +140,63 @@ fn charge(remaining: &mut u64, work: u64) -> Result<()> {
         })?;
     Ok(())
 }
+
+/// A plane expressed as `normal · point = offset`.
+#[derive(Clone, Copy, Debug)]
+pub struct SectionPlane {
+    pub normal: [f64; 3],
+    pub offset: f64,
+}
+
+/// Close one shell using all supplied section planes in order.
+/// The budgets cover the entire operation. Partial closure is an error.
+/// Cap face indices in the result follow the input plane order.
+pub fn close_shell_with_section_caps(
+    source: &Model,
+    shell: usize,
+    planes: &[SectionPlane],
+    max_exact_work: u64,
+    max_verification_cells: usize,
+) -> Result<AttachedSectionCaps> {
+    if !(1..=256).contains(&planes.len()) {
+        return Err(invalid("Shell closure requires 1..256 section planes"));
+    }
+
+    let mut current = source;
+    let mut staged = None;
+    let mut cap_faces = Vec::new();
+    let mut exact_work = 0;
+    let mut verification_cells = 0;
+    for plane in planes {
+        if exact_work == max_exact_work || verification_cells == max_verification_cells {
+            return Err(Error::new(
+                "BREP_RESOURCE_LIMIT",
+                "Shell closure exhausted the shared section budget",
+            ));
+        }
+        let report = discover_and_attach_section_caps(
+            current,
+            shell,
+            plane.normal,
+            plane.offset,
+            max_exact_work - exact_work,
+            max_verification_cells - verification_cells,
+        )?;
+        let attachment = report.attachment;
+        exact_work += report.discovery_work + attachment.exact_work;
+        verification_cells += attachment.verification_cells;
+        cap_faces.extend(attachment.cap_faces);
+        current = staged.insert(attachment.model);
+    }
+    if !current.shells[shell].closed {
+        return Err(invalid(
+            "Section planes leave free edges on the selected shell",
+        ));
+    }
+    Ok(AttachedSectionCaps {
+        model: staged.expect("nonempty section planes produced a staged model"),
+        cap_faces,
+        exact_work,
+        verification_cells,
+    })
+}
