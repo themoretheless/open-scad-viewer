@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 553,
-  "unallocatedCount": 447,
+  "specifiedCount": 554,
+  "unallocatedCount": 446,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14089,6 +14089,27 @@
       "remainingQualification": [
         "Compute exact central second moments per periodic UV component with aligned holes.",
         "Align holes to each outer lift, combine exact second moments by the parallel-axis formula, and center them at the filled component centroid.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0554",
+      "name": "Точная UV-развёртка компонент периодической области вместе с отверстиями",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::lift_exact_periodic_surface_region_components",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-554-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-554-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Export rational lifted components with holes translated into the same UV chart.",
+        "Reuse the certified contour forest and translate every hole vertex exactly into its outer component chart.",
         "WASM and application integration are separate."
       ]
     }

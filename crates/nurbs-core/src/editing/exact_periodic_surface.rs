@@ -3134,6 +3134,14 @@ pub fn exact_periodic_surface_contour_forest(
     contours: &[&[[f64; 2]]],
     max_work: u64,
 ) -> Result<PeriodicContourForestReport> {
+    Ok(prepare_periodic_contour_forest(source, contours, max_work)?.0)
+}
+
+fn prepare_periodic_contour_forest(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    max_work: u64,
+) -> Result<(PeriodicContourForestReport, Vec<LiftedPolygon>)> {
     use PeriodicContourForestRefusal as Failure;
 
     crate::check(
@@ -3159,10 +3167,15 @@ pub fn exact_periodic_surface_contour_forest(
         used: 0,
         limit: max_work,
     };
-    let refused = |reason, work_used| PeriodicContourForestReport {
-        nodes: None,
-        work_used,
-        refusal: Some(reason),
+    let refused = |reason, work_used| {
+        (
+            PeriodicContourForestReport {
+                nodes: None,
+                work_used,
+                refusal: Some(reason),
+            },
+            Vec::new(),
+        )
     };
     let mut polygons = Vec::with_capacity(contours.len());
     for (contour, path) in contours.iter().enumerate() {
@@ -3203,11 +3216,14 @@ pub fn exact_periodic_surface_contour_forest(
         }
     }
     match build_periodic_contour_forest(&polygons, contours, &mut work) {
-        Ok(nodes) => Ok(PeriodicContourForestReport {
-            nodes: Some(nodes),
-            work_used: work.used,
-            refusal: None,
-        }),
+        Ok(nodes) => Ok((
+            PeriodicContourForestReport {
+                nodes: Some(nodes),
+                work_used: work.used,
+                refusal: None,
+            },
+            polygons,
+        )),
         Err(reason) => Ok(refused(reason, work.used)),
     }
 }
@@ -3599,4 +3615,126 @@ fn shift_uv_second_moments(
         *moment = work.op(moment, &shift, |a, b| a + b)?;
     }
     Ok(())
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LiftedPeriodicContour {
+    pub contour: usize,
+    /// Integer periods added to the contour's own shortest-step lift.
+    pub translation: [i64; 2],
+    /// Closed rational polygon in the component's chart.
+    pub vertices: Vec<[BigRational; 2]>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LiftedPeriodicComponent {
+    pub outer: LiftedPeriodicContour,
+    pub holes: Vec<LiftedPeriodicContour>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicRegionLiftReport {
+    pub components: Option<Vec<LiftedPeriodicComponent>>,
+    pub work_used: u64,
+    pub refusal: Option<PeriodicContourForestRefusal>,
+}
+
+/// Export a rational UV chart for each filled component of a simple
+/// periodic contour forest. Put each direct hole in the same lift as
+/// its outer polygon. Input edge order and contour indices are preserved.
+pub fn lift_exact_periodic_surface_region_components(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    max_work: u64,
+) -> Result<PeriodicRegionLiftReport> {
+    use PeriodicContourForestRefusal as Failure;
+
+    let (forest, polygons) = prepare_periodic_contour_forest(source, contours, max_work)?;
+    let Some(nodes) = forest.nodes else {
+        return Ok(PeriodicRegionLiftReport {
+            components: None,
+            work_used: forest.work_used,
+            refusal: forest.refusal,
+        });
+    };
+    let mut work = Work {
+        used: forest.work_used,
+        limit: max_work,
+    };
+    let mut components = Vec::new();
+    for (index, node) in nodes.iter().enumerate() {
+        if node.depth % 2 != 0 {
+            continue;
+        }
+        let outer = &polygons[index];
+        let mut component = LiftedPeriodicComponent {
+            outer: LiftedPeriodicContour {
+                contour: index,
+                translation: [0; 2],
+                vertices: outer.points.clone(),
+            },
+            holes: Vec::new(),
+        };
+        for (hole, _) in nodes
+            .iter()
+            .enumerate()
+            .filter(|(_, node)| node.parent == Some(index))
+        {
+            match lift_hole_into_component(
+                outer,
+                &polygons[hole],
+                hole,
+                contours[hole][0],
+                &mut work,
+            ) {
+                Ok(hole) => component.holes.push(hole),
+                Err(reason) => {
+                    return Ok(PeriodicRegionLiftReport {
+                        components: None,
+                        work_used: work.used,
+                        refusal: Some(Failure::Arithmetic(reason)),
+                    });
+                }
+            }
+        }
+        components.push(component);
+    }
+    Ok(PeriodicRegionLiftReport {
+        components: Some(components),
+        work_used: work.used,
+        refusal: None,
+    })
+}
+
+fn lift_hole_into_component(
+    outer: &LiftedPolygon,
+    hole: &LiftedPolygon,
+    contour: usize,
+    witness: [f64; 2],
+    work: &mut Work,
+) -> std::result::Result<LiftedPeriodicContour, ExactRefusal> {
+    let (location, translation) = classify_lifted_polygon_with_shift(outer, witness, work)?;
+    if location != PeriodicPathLocation::Inside {
+        return Err(ExactRefusal::InvalidOutput);
+    }
+    let mut shift = [BigRational::default(), BigRational::default()];
+    for i in 0..2 {
+        if let Some(period) = &outer.periods[i] {
+            shift[i] = work.op(
+                period,
+                &BigRational::from_integer(translation[i].into()),
+                |a, b| a * b,
+            )?;
+        }
+    }
+    let vertices = hole
+        .points
+        .iter()
+        .map(|p| translate_polygon_vertex(p, &shift, work))
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    Ok(LiftedPeriodicContour {
+        contour,
+        translation,
+        vertices,
+    })
 }

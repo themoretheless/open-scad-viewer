@@ -4009,3 +4009,73 @@ fn periodic_region_inertia_rejects_contact_between_contours() {
         Some(PeriodicContourForestRefusal::Contact { .. })
     ));
 }
+
+#[test]
+fn periodic_region_lift_exports_holes_in_the_outer_chart_and_islands_separately() {
+    use num_rational::BigRational as Q;
+    use nurbs_core::editing::exact_periodic_surface::lift_exact_periodic_surface_region_components;
+    let source = doubly_periodic_tensor();
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let hole = [
+        [0.125, 0.125],
+        [0.625, 0.125],
+        [0.625, 0.625],
+        [0.125, 0.625],
+        [0.125, 0.125],
+    ];
+    let island = [
+        [0.25, 0.25],
+        [0.5, 0.25],
+        [0.5, 0.5],
+        [0.25, 0.5],
+        [0.25, 0.25],
+    ];
+    let contours = [&island[..], &outer[..], &hole[..]];
+    let report =
+        lift_exact_periodic_surface_region_components(&source, &contours, 1_000_000).unwrap();
+    let charts = report.components.unwrap();
+    assert_eq!(charts.len(), 2);
+    assert_eq!(charts[0].outer.contour, 0);
+    assert!(charts[0].holes.is_empty());
+    assert_eq!(charts[1].outer.contour, 1);
+    let hole = &charts[1].holes[0];
+    assert_eq!(hole.contour, 2);
+    assert_eq!(hole.translation, [1, 1]);
+    assert_eq!(
+        hole.vertices[0],
+        [Q::new(33.into(), 8.into()), Q::new(33.into(), 8.into())]
+    );
+    assert_eq!(hole.vertices.first(), hole.vertices.last());
+    assert!(
+        lift_exact_periodic_surface_region_components(&source, &contours, report.work_used - 1)
+            .unwrap()
+            .components
+            .is_none()
+    );
+}
+
+#[test]
+fn periodic_region_lift_refuses_touching_boundaries() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicContourForestRefusal, lift_exact_periodic_surface_region_components,
+    };
+    let a = [[0., 0.], [1., 0.], [1., 1.], [0., 1.], [0., 0.]];
+    let b = [[1., 0.], [2., 0.], [2., 1.], [1., 1.], [1., 0.]];
+    let report = lift_exact_periodic_surface_region_components(
+        &doubly_periodic_tensor(),
+        &[&a, &b],
+        1_000_000,
+    )
+    .unwrap();
+    assert!(report.components.is_none());
+    assert!(matches!(
+        report.refusal,
+        Some(PeriodicContourForestRefusal::Contact { .. })
+    ));
+}
