@@ -1630,3 +1630,39 @@ fn exact_inertia_matches_the_affine_covariance_of_an_oblique_prism() {
         expected.map(|row| row.map(|n| Q::from_integer(n.into())))
     );
 }
+
+#[test]
+fn exact_area_subtracts_cap_holes_and_counts_their_walls() {
+    use brep_core::{
+        analysis::exact_polyhedral_area, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let report = exact_polyhedral_area(solid, 1_000_000).unwrap();
+    let mut expected = [4, 4, 4, 4, 64, 64, 64, 64, 225, 225].map(|n| Q::from_integer(n.into()));
+    expected.sort();
+    let mut actual = report.face_area_squared_mm4;
+    actual.sort();
+    assert_eq!(actual, expected);
+    assert!(exact_polyhedral_area(solid, report.exact_work).is_ok());
+    assert!(exact_polyhedral_area(solid, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_oblique_area_retains_irrational_face_areas_as_square_roots() {
+    use brep_core::{
+        analysis::exact_polyhedral_area, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let source = open_prism_with_nonbinary_cap_support();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let report = exact_polyhedral_area(&result.section.solid, 1_000_000).unwrap();
+    let mut actual = report.face_area_squared_mm4;
+    actual.sort();
+    assert_eq!(
+        actual,
+        [20, 20, 32, 32, 44, 44].map(|n| Q::from_integer(n.into()))
+    );
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 403,
-  "unallocatedCount": 597,
+  "specifiedCount": 404,
+  "unallocatedCount": 596,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -10393,6 +10393,30 @@
       "remainingQualification": [
         "Integrate the exact centroidal inertia tensor of a qualified polyhedral solid with voids.",
         "Signed tetrahedral second moments yield an exact symmetric tensor in world axes at unit density. Centering uses the exact rational centroid, and void contributions are subtracted.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0404",
+      "name": "Точная площадь плоскогранного B-rep-тела с отверстиями",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::exact_polyhedral_area",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/mod.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "docs/qualification/nurbs-curvature-field-404-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-404-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Measure retained planar face areas exactly as rational square roots, including trimmed holes and oblique faces.",
+        "Exact oriented boundary cross products accumulate per face, subtracting hole loops before forming the squared area. The returned rational radicands retain irrational areas without rounding.",
         "WASM and application integration are separate."
       ]
     }

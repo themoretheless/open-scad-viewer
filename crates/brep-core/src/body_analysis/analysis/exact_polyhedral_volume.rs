@@ -125,35 +125,115 @@ fn integrate_polyhedral_boundary(
     max_exact_work: u64,
     mut integrate: impl FnMut(&[Q; 3], &[Q; 3], &[Q; 3], &Q, &mut u64) -> Result<()>,
 ) -> Result<(Q, u64)> {
-    if !(1..=1_000_000).contains(&max_exact_work) {
+    let mut six_volume = Q::zero();
+    let mut remaining = max_exact_work;
+    visit_polyhedral_boundary(solid, &mut remaining, |_, a, b, c, reversed, remaining| {
+        spend(remaining, 21)?;
+        let contribution = determinant(a, b, c);
+        let signed = if reversed {
+            -contribution
+        } else {
+            contribution
+        };
+        integrate(a, b, c, &signed, remaining)?;
+        six_volume += signed;
+        Ok(())
+    })?;
+    if !six_volume.is_positive() {
+        return Err(refuse("Exact material volume must be positive"));
+    }
+    Ok((six_volume, max_exact_work - remaining))
+}
+
+#[derive(Clone, Debug)]
+pub struct ExactPolyhedralArea {
+    /// Indexed by B-rep face. Each value is the square of that face's
+    /// retained area. The total area is the sum of the positive square roots.
+    pub face_area_squared_mm4: Vec<Q>,
+    pub exact_work: u64,
+}
+
+/// Measure retained planar faces with linear boundaries, including hole
+/// subtraction. Irrational areas retain an exact square-root representation.
+pub fn exact_polyhedral_area(
+    solid: &QualifiedClosedSolid,
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralArea> {
+    let mut remaining = max_exact_work;
+    let mut vectors =
+        vec![std::array::from_fn::<Q, 3, _>(|_| Q::zero()); solid.model().faces.len()];
+    visit_polyhedral_boundary(
+        solid,
+        &mut remaining,
+        |face, a, b, c, reversed, remaining| {
+            spend(remaining, 18)?;
+            let u: [Q; 3] = std::array::from_fn(|i| &b[i] - &a[i]);
+            let v: [Q; 3] = std::array::from_fn(|i| &c[i] - &a[i]);
+            for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)] {
+                let cross = &u[j] * &v[k] - &u[k] * &v[j];
+                if reversed {
+                    vectors[face][i] -= cross;
+                } else {
+                    vectors[face][i] += cross;
+                }
+            }
+            Ok(())
+        },
+    )?;
+    let four = Q::from_integer(4.into());
+    let mut face_area_squared_mm4 = Vec::with_capacity(vectors.len());
+    for vector in vectors {
+        spend(&mut remaining, 7)?;
+        let squared: Q = vector.iter().map(|x| x * x).sum();
+        if squared.is_zero() {
+            return Err(refuse(
+                "Exact polyhedral area requires a positive area for each face",
+            ));
+        }
+        face_area_squared_mm4.push(squared / &four);
+    }
+    Ok(ExactPolyhedralArea {
+        face_area_squared_mm4,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn visit_polyhedral_boundary(
+    solid: &QualifiedClosedSolid,
+    remaining: &mut u64,
+    mut visit: impl FnMut(usize, &[Q; 3], &[Q; 3], &[Q; 3], bool, &mut u64) -> Result<()>,
+) -> Result<()> {
+    if !(1..=1_000_000).contains(remaining) {
         return Err(Error::new(
             "BREP_INVALID_INPUT",
-            "Exact volume work must be in 1..1000000",
+            "Exact polyhedral work must be in 1..1000000",
         ));
     }
     let agreement = &solid.geometry().boundary.agreement;
     if !agreement.all_equal || !agreement.all_joins_exact {
         return Err(refuse(
-            "Exact volume requires exact boundary identity and joins",
+            "Exact polyhedral integration requires exact boundary identity and joins",
         ));
     }
     let model = solid.model();
-    let mut remaining = max_exact_work;
-    let mut six_volume = Q::zero();
     for body in &model.bodies {
         for shell in std::iter::once(&body.outer_shell).chain(&body.inner_shells) {
             for face_use in &model.shells[*shell].faces {
                 let face = &model.faces[face_use.face];
-                spend(&mut remaining, 1)?;
-                if remaining == 0 {
+                spend(remaining, 1)?;
+                if *remaining == 0 {
                     return Err(work_exhausted());
                 }
-                let affine = classify_surface_affine_hull(&face.surface, remaining)?;
-                remaining -= affine.work_used;
+                let affine = classify_surface_affine_hull(&face.surface, *remaining)?;
+                *remaining -= affine.work_used;
                 match affine.hull {
                     SurfaceAffineHull::Plane(_) => {}
                     SurfaceAffineHull::ResourceLimit => return Err(work_exhausted()),
-                    _ => return Err(refuse("Exact polyhedral volume requires planar supports")),
+                    _ => {
+                        return Err(refuse(
+                            "Exact polyhedral integration requires planar supports",
+                        ));
+                    }
                 }
 
                 let outer = &model.loops[face.outer];
@@ -173,27 +253,29 @@ fn integrate_polyhedral_boundary(
                             || knots[n] != knots[n + 1]
                         {
                             return Err(refuse(
-                                "Exact volume requires full clamped degree-one edges",
+                                "Exact polyhedral integration requires full clamped degree-one edges",
                             ));
                         }
 
                         let reversed = coedge.reversed ^ face_use.reversed;
-                        spend(&mut remaining, 3)?;
+                        spend(remaining, 3)?;
                         let mut previous = lift(&curve.control_points[0]);
                         for (i, pole) in curve.control_points.iter().enumerate().skip(1) {
-                            spend(&mut remaining, 24)?;
+                            spend(remaining, 3)?;
                             if knots[i] >= knots[i + 1] {
-                                return Err(refuse("Exact volume requires nonzero linear spans"));
+                                return Err(refuse(
+                                    "Exact polyhedral integration requires nonzero linear spans",
+                                ));
                             }
                             let current = lift(pole);
-                            let contribution = determinant(&origin, &previous, &current);
-                            let signed = if reversed {
-                                -contribution
-                            } else {
-                                contribution
-                            };
-                            integrate(&origin, &previous, &current, &signed, &mut remaining)?;
-                            six_volume += signed;
+                            visit(
+                                face_use.face,
+                                &origin,
+                                &previous,
+                                &current,
+                                reversed,
+                                remaining,
+                            )?;
                             previous = current;
                         }
                     }
@@ -201,10 +283,7 @@ fn integrate_polyhedral_boundary(
             }
         }
     }
-    if !six_volume.is_positive() {
-        return Err(refuse("Exact material volume must be positive"));
-    }
-    Ok((six_volume, max_exact_work - remaining))
+    Ok(())
 }
 
 fn lift(p: &[f64]) -> [Q; 3] {
