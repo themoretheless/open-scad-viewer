@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 535,
-  "unallocatedCount": 465,
+  "specifiedCount": 536,
+  "unallocatedCount": 464,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13711,6 +13711,27 @@
       "remainingQualification": [
         "Partition full and partial surface turns at ordered absolute cuts under one work budget.",
         "Prepare exact cyclic support once and extract ordered clamped strips while preserving the transverse axis.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0536",
+      "name": "Точное разбиение многовитковой NURBS-поверхности на сетку",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::partition_exact_doubly_periodic_surface_over_turns",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-536-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-536-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Partition a lifted multi-turn rectangle into exact patches at absolute U and V cuts.",
+        "Build exact clamped patches on both lifted axes and return the grid only after all intervals succeed under one work budget.",
         "WASM and application integration are separate."
       ]
     }

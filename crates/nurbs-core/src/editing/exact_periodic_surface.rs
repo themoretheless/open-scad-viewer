@@ -537,11 +537,47 @@ pub fn partition_exact_doubly_periodic_surface(
     v_cuts: &[f64],
     max_work: u64,
 ) -> Result<PeriodicGridReport> {
+    partition_periodic_grid(source, seams, [None, None], [u_cuts, v_cuts], max_work)
+}
+
+/// Partition a lifted rectangle spanning full or partial turns on both
+/// axes. Cuts are absolute coordinates inside each requested interval.
+pub fn partition_exact_doubly_periodic_surface_over_turns(
+    source: &Surface,
+    u: [f64; 2],
+    v: [f64; 2],
+    u_cuts: &[f64],
+    v_cuts: &[f64],
+    max_work: u64,
+) -> Result<PeriodicGridReport> {
+    crate::check(
+        [u, v]
+            .iter()
+            .all(|[start, end]| start.is_finite() && end.is_finite() && start < end),
+        "Periodic grid needs increasing finite intervals",
+    )?;
+    partition_periodic_grid(
+        source,
+        [u[0], v[0]],
+        [Some(u[1]), Some(v[1])],
+        [u_cuts, v_cuts],
+        max_work,
+    )
+}
+
+fn partition_periodic_grid(
+    source: &Surface,
+    seams: [f64; 2],
+    ends: [Option<f64>; 2],
+    [u_cuts, v_cuts]: [&[f64]; 2],
+    max_work: u64,
+) -> Result<PeriodicGridReport> {
     crate::check(
         u_cuts.len() < 256 && v_cuts.len() < 256 && (u_cuts.len() + 1) * (v_cuts.len() + 1) <= 256,
         "Periodic surface grid supports at most 256 patches",
     )?;
-    let u = partition_exact_periodic_surface_axis(source, Axis::U, seams[0], u_cuts, max_work)?;
+    let u =
+        partition_periodic_surface_interval(source, Axis::U, seams[0], ends[0], u_cuts, max_work)?;
     let mut work_used = u.work_used;
     let Some(strips) = u.strips else {
         return Ok(PeriodicGridReport {
@@ -562,10 +598,11 @@ pub fn partition_exact_doubly_periodic_surface(
                 refusal: Some(GaugeMergeRefusal::Exact(ExactRefusal::ResourceLimit)),
             });
         }
-        let v = partition_exact_periodic_surface_axis(
+        let v = partition_periodic_surface_interval(
             strip,
             Axis::V,
             seams[1],
+            ends[1],
             v_cuts,
             max_work - work_used,
         )?;

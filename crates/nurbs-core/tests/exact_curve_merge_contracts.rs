@@ -3037,3 +3037,75 @@ fn multiturn_surface_partition_refuses_out_of_range_and_unordered_cuts() {
         );
     }
 }
+
+#[test]
+fn multiturn_periodic_grid_preserves_the_absolute_rectangle_and_every_patch() {
+    use nurbs_core::editing::exact_periodic_surface::partition_exact_doubly_periodic_surface_over_turns;
+    let source = doubly_periodic_tensor();
+    let u = [3.5, 13.25];
+    let v = [3.75, 12.25];
+    let report = partition_exact_doubly_periodic_surface_over_turns(
+        &source,
+        u,
+        v,
+        &[8.5],
+        &[4.25, 9.],
+        1_000_000,
+    )
+    .unwrap();
+    let grid = report.patches.unwrap();
+    assert_eq!(grid.len(), 2);
+    for (row, u) in grid.iter().zip([[3.5, 8.5], [8.5, 13.25]]) {
+        assert_eq!(row.len(), 3);
+        for (patch, v) in row.iter().zip([[3.75, 4.25], [4.25, 9.], [9., 12.25]]) {
+            assert!(!patch.periodic_u && !patch.periodic_v);
+            assert_eq!(
+                [patch.knots_u[1], patch.knots_u[patch.control_points.len()]],
+                u
+            );
+            assert_eq!(
+                [
+                    patch.knots_v[1],
+                    patch.knots_v[patch.control_points[0].len()]
+                ],
+                v
+            );
+            for a in [u[0], (u[0] + u[1]) / 2., u[1]] {
+                for b in [v[0], (v[0] + v[1]) / 2., v[1]] {
+                    assert_eq!(
+                        patch.evaluate(a, b).unwrap().point,
+                        source.evaluate(a % 4., b % 4.).unwrap().point
+                    );
+                }
+            }
+        }
+    }
+    let limited = partition_exact_doubly_periodic_surface_over_turns(
+        &source,
+        u,
+        v,
+        &[8.5],
+        &[4.25, 9.],
+        report.work_used - 1,
+    )
+    .unwrap();
+    assert_eq!(limited.refused_intervals, [Some(1), Some(2)]);
+    assert!(limited.patches.is_none());
+}
+
+#[test]
+fn multiturn_periodic_grid_rejects_out_of_range_second_axis_cuts() {
+    use nurbs_core::editing::exact_periodic_surface::partition_exact_doubly_periodic_surface_over_turns;
+    let source = doubly_periodic_tensor();
+    assert!(
+        partition_exact_doubly_periodic_surface_over_turns(
+            &source,
+            [3.5, 13.25],
+            [3.75, 12.25],
+            &[8.5],
+            &[12.25],
+            1_000_000
+        )
+        .is_err()
+    );
+}
