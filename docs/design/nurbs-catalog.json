@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 337,
-  "unallocatedCount": 663,
+  "specifiedCount": 338,
+  "unallocatedCount": 662,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8717,6 +8717,26 @@
       "remainingQualification": [
         "Partition a coplanar ray into certified contact-free material or exterior intervals and conservative contact bands.",
         "Closed rational contours with nonzero winding. Merged contact bands remain conservative, and exhausted classification yields unresolved gaps.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0338",
+      "name": "Точная линия пересечения опорных плоскостей двух NURBS-граней",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::analysis::exact_plane_intersection::intersect_planar_supports",
+      "evidence": [
+        "crates/nurbs-core/src/analysis.rs",
+        "crates/nurbs-core/src/analysis/exact_plane_intersection.rs",
+        "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-338-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-338-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Solve the exact affine plane intersection with a canonical rational line clock and distinguish coincident and parallel supports.",
+        "Exact support charts. The line is independent of argument order and retains rational coefficients. Trim clipping is separate.",
         "WASM and application integration are separate."
       ]
     }
