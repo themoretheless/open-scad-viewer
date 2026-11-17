@@ -1,26 +1,51 @@
-import {transformRetainedSketch,offsetRetainedSketch,requirePolylineSketch} from './retainedSketchProfile'
-import {callGeometryRust} from '../kernel/geometry/kernel'
+import { transformRetainedSketch, offsetRetainedSketch, requirePolylineSketch } from './retainedSketchProfile'
+import { callGeometryRust } from '../kernel/geometry/kernel'
+import { remapSketchConstraints, resolveEditedSketchConstraints } from './sketchConstraints'
 import type { DirectSketch, Point2 } from './directModeling'
 import { dot3, cross3, unit3, type Vec3 } from '../kernel/geometry/math3d'
 export { dot3, cross3, unit3, type Vec3 }
-export interface SketchPlane { origin:Vec3; u:Vec3; v:Vec3 }
-export interface AnalyticCurve { kind:'circle'|'arc'; center:Point2; radius:number; start:number; sweep:number }
-export const xyPlane=():SketchPlane=>({origin:[0,0,0],u:[1,0,0],v:[0,1,0]})
+export interface SketchPlane {
+  origin: Vec3
+  u: Vec3
+  v: Vec3
+}
+export interface AnalyticCurve {
+  kind: 'circle' | 'arc'
+  center: Point2
+  radius: number
+  start: number
+  sweep: number
+}
+export const xyPlane = (): SketchPlane => ({ origin: [0, 0, 0], u: [1, 0, 0], v: [0, 1, 0] })
 export function worldPoint(p: number[], plane: SketchPlane = xyPlane()): Vec3 {
   if (!Array.isArray(p) || (p.length !== 2 && p.length !== 3)) {
     throw new Error('Sketch placement requires 2D or 3D points.')
   }
-  const o = plane.origin, u = plane.u, v = plane.v
+  const o = plane.origin,
+    u = plane.u,
+    v = plane.v
   const nx = u[1] * v[2] - u[2] * v[1]
   const ny = u[2] * v[0] - u[0] * v[2]
   const nz = u[0] * v[1] - u[1] * v[0]
-  const x = p[0], y = p[1], z = p.length === 3 ? p[2] : 0
+  const x = p[0],
+    y = p[1],
+    z = p.length === 3 ? p[2] : 0
   if (
-    !Number.isFinite(o[0]) || !Number.isFinite(o[1]) || !Number.isFinite(o[2]) ||
-    !Number.isFinite(u[0]) || !Number.isFinite(u[1]) || !Number.isFinite(u[2]) ||
-    !Number.isFinite(v[0]) || !Number.isFinite(v[1]) || !Number.isFinite(v[2]) ||
-    !Number.isFinite(nx) || !Number.isFinite(ny) || !Number.isFinite(nz) ||
-    !Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)
+    !Number.isFinite(o[0]) ||
+    !Number.isFinite(o[1]) ||
+    !Number.isFinite(o[2]) ||
+    !Number.isFinite(u[0]) ||
+    !Number.isFinite(u[1]) ||
+    !Number.isFinite(u[2]) ||
+    !Number.isFinite(v[0]) ||
+    !Number.isFinite(v[1]) ||
+    !Number.isFinite(v[2]) ||
+    !Number.isFinite(nx) ||
+    !Number.isFinite(ny) ||
+    !Number.isFinite(nz) ||
+    !Number.isFinite(x) ||
+    !Number.isFinite(y) ||
+    !Number.isFinite(z)
   ) {
     throw new Error('Sketch geometry exceeds finite numeric range.')
   }
@@ -35,15 +60,25 @@ export function worldPoint(p: number[], plane: SketchPlane = xyPlane()): Vec3 {
 
 export function worldPoints(points: number[][], plane: SketchPlane = xyPlane()): Vec3[] {
   if (points.length > 300000) throw new Error('Sketch placement point budget exceeded.')
-  const o = plane.origin, u = plane.u, v = plane.v
+  const o = plane.origin,
+    u = plane.u,
+    v = plane.v
   const nx = u[1] * v[2] - u[2] * v[1]
   const ny = u[2] * v[0] - u[0] * v[2]
   const nz = u[0] * v[1] - u[1] * v[0]
   if (
-    !Number.isFinite(o[0]) || !Number.isFinite(o[1]) || !Number.isFinite(o[2]) ||
-    !Number.isFinite(u[0]) || !Number.isFinite(u[1]) || !Number.isFinite(u[2]) ||
-    !Number.isFinite(v[0]) || !Number.isFinite(v[1]) || !Number.isFinite(v[2]) ||
-    !Number.isFinite(nx) || !Number.isFinite(ny) || !Number.isFinite(nz)
+    !Number.isFinite(o[0]) ||
+    !Number.isFinite(o[1]) ||
+    !Number.isFinite(o[2]) ||
+    !Number.isFinite(u[0]) ||
+    !Number.isFinite(u[1]) ||
+    !Number.isFinite(u[2]) ||
+    !Number.isFinite(v[0]) ||
+    !Number.isFinite(v[1]) ||
+    !Number.isFinite(v[2]) ||
+    !Number.isFinite(nx) ||
+    !Number.isFinite(ny) ||
+    !Number.isFinite(nz)
   ) {
     throw new Error('Sketch geometry exceeds finite numeric range.')
   }
@@ -53,7 +88,9 @@ export function worldPoints(points: number[][], plane: SketchPlane = xyPlane()):
     if (!Array.isArray(p) || (p.length !== 2 && p.length !== 3)) {
       throw new Error('Sketch placement requires 2D or 3D points.')
     }
-    const x = p[0], y = p[1], z = p.length === 3 ? p[2] : 0
+    const x = p[0],
+      y = p[1],
+      z = p.length === 3 ? p[2] : 0
     if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
       throw new Error('Sketch geometry exceeds finite numeric range.')
     }
@@ -120,7 +157,13 @@ export function bakeSketch(s: DirectSketch): DirectSketch {
   return next
 }
 
-export function transformSketch(s: DirectSketch, delta: Point2, angle: number, scale: number, pivot?: Point2): DirectSketch {
+export function transformSketch(
+  s: DirectSketch,
+  delta: Point2,
+  angle: number,
+  scale: number,
+  pivot?: Point2,
+): DirectSketch {
   if (s.editablePath) requirePolylineSketch(s)
   if (s.retainedProfile) return transformRetainedSketch(s, delta, angle, scale, pivot)
   if (
@@ -184,7 +227,12 @@ export function transformSketch(s: DirectSketch, delta: Point2, angle: number, s
     const center = apply(next.analytic.center)
     const radius = next.analytic.radius * scale
     const start = next.analytic.start + angle
-    if (!Number.isFinite(center[0]) || !Number.isFinite(center[1]) || !Number.isFinite(radius) || !Number.isFinite(start)) {
+    if (
+      !Number.isFinite(center[0]) ||
+      !Number.isFinite(center[1]) ||
+      !Number.isFinite(radius) ||
+      !Number.isFinite(start)
+    ) {
       throw new Error('Sketch geometry exceeds finite numeric range.')
     }
     next.analytic.center = center
@@ -203,20 +251,35 @@ export function validateSimpleSketch(points: Point2[], closed = true) {
 export function offsetSketch(s: DirectSketch, distance: number): DirectSketch {
   if (s.editablePath) requirePolylineSketch(s)
   if (s.retainedProfile) return offsetRetainedSketch(s, distance)
-  return callGeometryRust('cad_offset_sketch', { sketch: s, distance })
+  return carrySketchConstraints(s, callGeometryRust<DirectSketch>('cad_offset_sketch', { sketch: s, distance }))
+}
+
+/**
+ * Keeps persistent constraints valid across a geometry edit: same point count re-solves them with the
+ * moved points held; a changed point count remaps them by surviving points and drops the rest.
+ */
+export function carrySketchConstraints(before: DirectSketch, after: DirectSketch): DirectSketch {
+  if (!before.constraints?.length) return after
+  if (after.points.length === before.points.length) return resolveEditedSketchConstraints(before, after)
+  return remapSketchConstraints(before, [after]).sketches[0]!
 }
 
 /** Trim a clicked segment between intersections, retaining remaining chains. */
 export function trimSketch(s: DirectSketch, edge: number, at: number, boundaries: DirectSketch[]): DirectSketch[] {
   requirePolylineSketch(s)
   boundaries.forEach(requirePolylineSketch)
-  return callGeometryRust('cad_trim_sketch', { sketch: s, edge, at, boundaries })
+  // Trim renumbers points: constraints follow surviving points and the rest are dropped.
+  return remapSketchConstraints(
+    s,
+    callGeometryRust<DirectSketch[]>('cad_trim_sketch', { sketch: s, edge, at, boundaries }),
+  ).sketches
 }
 
 export function extendSketch(s: DirectSketch, end: 'start' | 'end', boundaries: DirectSketch[]): DirectSketch {
   requirePolylineSketch(s)
   boundaries.forEach(requirePolylineSketch)
-  return callGeometryRust('cad_extend_sketch', { sketch: s, end, boundaries })
+  // The extended endpoint is held while the other points satisfy the persistent constraints again.
+  return carrySketchConstraints(s, callGeometryRust<DirectSketch>('cad_extend_sketch', { sketch: s, end, boundaries }))
 }
 
 /** Tessellated closed slot; width is the full end-cap diameter. */

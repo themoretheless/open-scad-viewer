@@ -16,6 +16,7 @@ interface ConstrainedSketch {
   analytic?: unknown
   retainedProfile?: unknown
   editablePath?: unknown
+  closed?: boolean
   constraints?: SketchConstraint[]
 }
 
@@ -128,4 +129,79 @@ export function addSketchConstraint<T extends ConstrainedSketch>(
   const constraints = [...(sketch.constraints ?? []), constraint]
   validateSketchConstraints({ ...sketch, constraints })
   return { ...sketch, constraints, points: solveConstrainedPoints(sketch.points, constraints, extra) }
+}
+
+const SAME_POINT_MM = 1e-9
+const samePoint = (p: Point2, q: Point2) =>
+  Math.abs(p[0] - q[0]) <= SAME_POINT_MM && Math.abs(p[1] - q[1]) <= SAME_POINT_MM
+
+/**
+ * Re-solves persistent constraints after an edit that kept the point count (vertex drag, extend,
+ * offset). Points the edit moved are held fixed; when every point moved (offset) none is held and the
+ * solver starts from the edited shape. Throws a conflict error instead of returning a violating sketch.
+ */
+export function resolveEditedSketchConstraints<T extends ConstrainedSketch>(before: ConstrainedSketch, after: T): T {
+  const constraints = after.constraints
+  if (!constraints?.length) return after
+  if (after.points.length !== before.points.length)
+    throw Error('Sketch constraints need an index remap when the point count changes.')
+  validateSketchConstraints(after)
+  const moved = after.points.flatMap((p, i) => (samePoint(p, before.points[i]!) ? [] : [i]))
+  const fixed: SolverConstraint[] =
+    moved.length === after.points.length
+      ? []
+      : moved.map(i => ({ id: `edit-${i}`, kind: 'fix', point: `p${i}`, at: [...after.points[i]!] as Point2 }))
+  return { ...after, points: solveConstrainedPoints(after.points, constraints, fixed) }
+}
+
+/** Result of carrying persistent constraints onto sketches whose points were split or renumbered. */
+export interface RemappedSketchConstraints<T> {
+  sketches: T[]
+  /** Source constraints that no longer name surviving points; they are removed, never kept stale. */
+  dropped: SketchConstraint[]
+}
+
+/**
+ * Carries constraints from `before` onto `pieces` (for example the chains left by trim). A source point
+ * survives in a piece when exactly one point of that piece has the same coordinates; a constraint is kept
+ * on the first piece where all of its points survive and the piece can carry it, otherwise it is dropped.
+ */
+export function remapSketchConstraints<T extends ConstrainedSketch>(
+  before: ConstrainedSketch,
+  pieces: readonly T[],
+): RemappedSketchConstraints<T> {
+  const source = before.constraints ?? []
+  const kept = new Set<number>()
+  const sketches = pieces.map(piece => {
+    const next = { ...piece }
+    delete next.constraints
+    if (!source.length) return next
+    const map = before.points.map(p => {
+      const hits = piece.points.flatMap((q, j) => (samePoint(p, q) ? [j] : []))
+      return hits.length === 1 ? hits[0]! : -1
+    })
+    const list: SketchConstraint[] = []
+    source.forEach((c, i) => {
+      if (kept.has(i)) return
+      const to = ('c' in c ? [c.a, c.b, c.c, c.d] : [c.a, c.b]).map(k => map[k] ?? -1)
+      if (to.some(k => k < 0)) return
+      // Constraints name segments: both ends must still bound one segment of the piece.
+      const n = piece.points.length
+      const segment = (i: number, j: number) =>
+        Math.abs(i - j) === 1 || (piece.closed === true && Math.abs(i - j) === n - 1)
+      if (!segment(to[0]!, to[1]!) || (to.length === 4 && !segment(to[2]!, to[3]!))) return
+      const candidate: SketchConstraint =
+        'c' in c ? { kind: c.kind, a: to[0]!, b: to[1]!, c: to[2]!, d: to[3]! } : { kind: c.kind, a: to[0]!, b: to[1]! }
+      try {
+        validateSketchConstraints({ ...piece, constraints: [...list, candidate] })
+      } catch {
+        return
+      }
+      list.push(candidate)
+      kept.add(i)
+    })
+    if (list.length) next.constraints = list
+    return next
+  })
+  return { sketches, dropped: source.filter((_, i) => !kept.has(i)) }
 }
