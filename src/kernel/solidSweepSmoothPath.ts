@@ -166,7 +166,12 @@ export function sampleSweepPath(
   const h = (b - a) * 1e-5
   const [s0, s1, s2, e2, e1, e0] = evaluateNurbsCurvePoints(curve, [a, a + h, a + 2 * h, b - 2 * h, b - h, b]).map(lift)
   const oneSided = (q0: Vec3, q1: Vec3, q2: Vec3) => unit(add(add(q0, q1, -4 / 3), q2, 1 / 3).map(v => -v) as Vec3)
-  return { points, closed, startTangent: oneSided(s0!, s1!, s2!), endTangent: oneSided(e0!, e1!, e2!).map(v => -v) as Vec3 }
+  return {
+    points,
+    closed,
+    startTangent: oneSided(s0!, s1!, s2!),
+    endTangent: oneSided(e0!, e1!, e2!).map(v => -v) as Vec3,
+  }
 }
 
 const transformCurve = (curve: NurbsCurve, map: (q: Vec3) => Vec3): NurbsCurve => ({

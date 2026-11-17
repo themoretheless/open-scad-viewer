@@ -142,7 +142,11 @@ it('C9 sweep smooth: helix frames are rotation-minimizing and never flip', () =>
   // (pitch angle α, cos α = 10/√109) r sits at -4π·sin α about the tangent from the normal.
   const end = frames.at(-1)!,
     normal: Vec3 = [-1, 0, 0],
-    binormal: Vec3 = [end.t[1] * normal[2] - end.t[2] * normal[1], end.t[2] * normal[0] - end.t[0] * normal[2], end.t[0] * normal[1] - end.t[1] * normal[0]]
+    binormal: Vec3 = [
+      end.t[1] * normal[2] - end.t[2] * normal[1],
+      end.t[2] * normal[0] - end.t[0] * normal[2],
+      end.t[0] * normal[1] - end.t[1] * normal[0],
+    ]
   const sinA = 3 / Math.hypot(10, 3)
   const expected = -4 * Math.PI * sinA
   const angle = Math.atan2(dot(end.r, binormal), dot(end.r, normal))
@@ -166,7 +170,9 @@ it('C9 sweep smooth: refuses self-intersecting paths and swept tubes that cut th
     [15, 15, 0],
   ])
   // A tiny profile, so only the crossing itself is in play.
-  expect(code(() => sampleSweepPath(crossing, 1e-4, ['path']))).toBe('DIRECT_SWEEP_PATH: The sweep path crosses itself.')
+  expect(code(() => sampleSweepPath(crossing, 1e-4, ['path']))).toBe(
+    'DIRECT_SWEEP_PATH: The sweep path crosses itself.',
+  )
   // The same loop lifted 1 mm at its far end: the path no longer crosses, but its stretches
   // pass 0.95 mm apart, so a 0.5 mm profile would cut through the swept tube.
   const nearMiss = bezierNurbsCurve([
