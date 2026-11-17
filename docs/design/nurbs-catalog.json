@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 459,
-  "unallocatedCount": 541,
+  "specifiedCount": 460,
+  "unallocatedCount": 540,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -11894,6 +11894,36 @@
       "remainingQualification": [
         "Classify rational points as interior, boundary, exterior or off-plane.",
         "Qualify a simple planar contour once. Exact support and winding tests distinguish four locations for the complete batch.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0460",
+      "name": "Точное отсечение пространственной ломаной плоским контуром",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::clip_spatial_path_to_exact_planar_polyline",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops/clip.rs",
+        "docs/qualification/nurbs-curvature-field-460-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-460-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Intersect spatial paths with simple planar regions, including coplanar and transverse cases.",
+        "Qualify a simple planar region and share the rational spatial contact routine with polyhedral face queries. Preserve multiple coplanar intervals and isolated transverse contacts.",
         "WASM and application integration are separate."
       ]
     }

@@ -4757,3 +4757,66 @@ fn exact_planar_polyline_point_locations_ignore_winding_and_duplicate_vertices()
         locate_points_in_exact_planar_spatial_polyline(&path[..5], &queries, 1_000_000).is_err()
     );
 }
+
+#[test]
+fn exact_planar_polyline_path_clip_keeps_disjoint_coplanar_intervals() {
+    use brep_core::analysis::clip_spatial_path_to_exact_planar_polyline;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x: i64, y: i64| [q(x, 1), q(y, 1), q(x + y, 1)];
+    let contour = [
+        p(0, 0),
+        p(4, 0),
+        p(4, 4),
+        p(3, 4),
+        p(3, 1),
+        p(1, 1),
+        p(1, 4),
+        p(0, 4),
+        p(0, 0),
+    ];
+    let path = [p(-1, 2), p(5, 2), p(-1, 2)];
+    let report = clip_spatial_path_to_exact_planar_polyline(&contour, &path, 1_000_000).unwrap();
+    let expected = vec![[q(1, 6), q(1, 3)], [q(2, 3), q(5, 6)]];
+    assert_eq!(report.span_intervals, [expected.clone(), expected]);
+    assert_eq!(
+        clip_spatial_path_to_exact_planar_polyline(&contour, &path, report.exact_work).unwrap(),
+        report
+    );
+    assert!(
+        clip_spatial_path_to_exact_planar_polyline(&contour, &path, report.exact_work - 1).is_err()
+    );
+}
+
+#[test]
+fn exact_planar_polyline_path_clip_keeps_transverse_and_stationary_contacts() {
+    use brep_core::analysis::clip_spatial_path_to_exact_planar_polyline;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y, z| [q(x, 1), q(y, 1), q(z, 1)];
+    let contour = [p(0, 0, 0), p(0, 2, 0), p(0, 2, 2), p(0, 0, 2), p(0, 0, 0)];
+    let crossing = [p(-1, 1, 1), p(2, 1, 1)];
+    let report =
+        clip_spatial_path_to_exact_planar_polyline(&contour, &crossing, 1_000_000).unwrap();
+    assert_eq!(report.span_intervals, [vec![[q(1, 3), q(1, 3)]]]);
+    let boundary = [
+        p(1, 0, 1),
+        p(0, 0, 1),
+        p(0, 0, 1),
+        p(-1, 0, 1),
+        p(-1, 2, 3),
+        p(1, 2, 3),
+    ];
+    let report =
+        clip_spatial_path_to_exact_planar_polyline(&contour, &boundary, 1_000_000).unwrap();
+    assert_eq!(
+        report.span_intervals,
+        [
+            vec![[q(1, 1), q(1, 1)]],
+            vec![[q(0, 1), q(1, 1)]],
+            vec![[q(0, 1), q(0, 1)]],
+            vec![],
+            vec![],
+        ]
+    );
+}

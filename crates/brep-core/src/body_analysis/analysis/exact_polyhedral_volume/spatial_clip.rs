@@ -601,45 +601,12 @@ fn span_face_contacts(
     end: &[Q; 3],
     remaining: &mut u64,
 ) -> Result<Vec<PolyhedralPathFaceContacts>> {
-    use super::section_loops::clip::clip_planar_segment;
-
     let mut contacts = Vec::new();
     let direction: [Q; 3] = std::array::from_fn(|i| &end[i] - &start[i]);
     spend(remaining, 3)?;
     for (&face, boundary) in faces {
-        spend(remaining, 24)?;
-        let normal = face_normal(boundary)?;
-        let delta = std::array::from_fn(|i| &boundary.origin[i] - &start[i]);
-        let numerator = dot(normal, &delta);
-        let denominator = dot(normal, &direction);
-        let axes = plane_axes(normal);
-        let intervals = if denominator.is_zero() {
-            if !numerator.is_zero() {
-                continue;
-            }
-            clip_planar_segment(
-                boundary.segments.iter().map(|[a, b]| (a, b)),
-                axes,
-                start,
-                end,
-                remaining,
-                |point, remaining| {
-                    Ok(point_in_face(&boundary.segments, point, axes, remaining)?
-                        != FaceLocation::Outside)
-                },
-            )?
-        } else {
-            let t = numerator / denominator;
-            if t.is_negative() || t > Q::one() {
-                continue;
-            }
-            let point = std::array::from_fn(|i| &start[i] + &t * &direction[i]);
-            if point_in_face(&boundary.segments, &point, axes, remaining)? == FaceLocation::Outside
-            {
-                continue;
-            }
-            vec![[t.clone(), t]]
-        };
+        let intervals =
+            spatial_segment_region_contacts(boundary, start, end, &direction, remaining)?;
         if !intervals.is_empty() {
             contacts.push(PolyhedralPathFaceContacts {
                 span,
@@ -649,6 +616,48 @@ fn span_face_contacts(
         }
     }
     Ok(contacts)
+}
+
+fn spatial_segment_region_contacts(
+    boundary: &FaceBoundary,
+    start: &[Q; 3],
+    end: &[Q; 3],
+    direction: &[Q; 3],
+    remaining: &mut u64,
+) -> Result<Vec<[Q; 2]>> {
+    use super::section_loops::clip::clip_planar_segment;
+
+    spend(remaining, 24)?;
+    let normal = face_normal(boundary)?;
+    let delta = std::array::from_fn(|i| &boundary.origin[i] - &start[i]);
+    let numerator = dot(normal, &delta);
+    let denominator = dot(normal, direction);
+    let axes = plane_axes(normal);
+    if denominator.is_zero() {
+        if !numerator.is_zero() {
+            return Ok(Vec::new());
+        }
+        return clip_planar_segment(
+            boundary.segments.iter().map(|[a, b]| (a, b)),
+            axes,
+            start,
+            end,
+            remaining,
+            |point, remaining| {
+                Ok(point_in_face(&boundary.segments, point, axes, remaining)?
+                    != FaceLocation::Outside)
+            },
+        );
+    }
+    let t = numerator / denominator;
+    if t.is_negative() || t > Q::one() {
+        return Ok(Vec::new());
+    }
+    let point = std::array::from_fn(|i| &start[i] + &t * &direction[i]);
+    if point_in_face(&boundary.segments, &point, axes, remaining)? == FaceLocation::Outside {
+        return Ok(Vec::new());
+    }
+    Ok(vec![[t.clone(), t]])
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -2266,6 +2275,60 @@ pub fn locate_points_in_exact_planar_spatial_polyline(
     }
     Ok(ExactPlanarPolylinePointLocations {
         locations,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPlanarPolylinePathClip {
+    /// Closed local parameter intervals per path span, including single points.
+    pub span_intervals: Vec<Vec<[Q; 2]>>,
+    pub exact_work: u64,
+}
+
+/// Intersect a spatial path with the closed planar region of a simple
+/// contour. Coplanar spans can produce intervals; transverse spans can
+/// produce isolated points. Both include the contour boundary.
+pub fn clip_spatial_path_to_exact_planar_polyline(
+    contour_mm: &[[Q; 3]],
+    path_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPlanarPolylinePathClip> {
+    if path_mm.len() < 2 {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Clip path requires at least two vertices",
+        ));
+    }
+    let area = exact_planar_spatial_polyline_area(contour_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - area.exact_work;
+    for point in path_mm {
+        spend(&mut remaining, 4)?;
+        validate_point(point)?;
+    }
+    spend(&mut remaining, 8 * (contour_mm.len() as u64 - 1))?;
+    let boundary = FaceBoundary {
+        origin: contour_mm[0].clone(),
+        normal: Some(area.area_vector_mm2),
+        segments: contour_mm
+            .windows(2)
+            .map(|pair| [pair[0].clone(), pair[1].clone()])
+            .collect(),
+    };
+    let mut span_intervals = Vec::new();
+    for pair in path_mm.windows(2) {
+        spend(&mut remaining, 3)?;
+        let direction = std::array::from_fn(|i| &pair[1][i] - &pair[0][i]);
+        span_intervals.push(spatial_segment_region_contacts(
+            &boundary,
+            &pair[0],
+            &pair[1],
+            &direction,
+            &mut remaining,
+        )?);
+    }
+    Ok(ExactPlanarPolylinePathClip {
+        span_intervals,
         exact_work: max_exact_work - remaining,
     })
 }
