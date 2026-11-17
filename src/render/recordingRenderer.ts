@@ -581,6 +581,15 @@ export class RecordingRenderer implements PublicRenderer {
   getDisplayBudget(): DisplayBudget {
     return this.displayBudget
   }
+  private instancing = false
+  isInstancingEnabled(): boolean {
+    return this.instancing
+  }
+  setInstancingEnabled(enabled: boolean) {
+    this.record('setInstancingEnabled')
+    this.instancing = enabled
+    this.requestRender()
+  }
   getTransparencyMode(): 'sorted' | 'wboit' {
     return this.transparency
   }

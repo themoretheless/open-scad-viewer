@@ -238,7 +238,7 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
     const indexOf = (mesh: GMesh) => (meshIndex ??= new Map(meshes.map((entry, index) => [entry, index]))).get(mesh) ?? -1
     // Shared assets draw as instance-step batches; morph/LOD/material entities
     // stay per-entity (`perEntity`) and go through the bundle below.
-    const instanced = !customOpaque && !transitioning && frame.instancedOpaque.prepare(dev, frame.opaqueDraws, indexOf)
+    const instanced = frame.instancing === true && !customOpaque && !transitioning && frame.instancedOpaque.prepare(dev, frame.opaqueDraws, indexOf)
     if (!instanced) frame.instancedOpaque.reset()
     if (instanced) {
       const shadowBG = textures.shadowBG ?? undefined

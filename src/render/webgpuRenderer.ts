@@ -75,7 +75,7 @@ import { TransparentSortBuffer } from './transparentOrdering'
 import { MeshDrawBundle } from './meshDrawBundle'
 import { ViewFrustum } from './viewFrustum'
 import { MeshInstances } from '../kernel/meshInstances'
-import { InstancedOpaquePass } from './instancedOpaquePass'
+import { InstancedOpaquePass, instancingRequested } from './instancedOpaquePass'
 import { computeOrbitCameraFrame } from './orbitCameraProjection'
 import type { DisplayBudget } from './displayScheduler'
 import { MeshDisplayController } from './meshDisplayController'
@@ -237,6 +237,8 @@ export class WebGPURenderer {
   private wboit: GpuWboitRenderer | null = null
   private gpuBufferArena: GpuBufferArena | null = null
   private transparencyMode: 'sorted' | 'wboit' = 'sorted'
+  /** Instanced opaque path: opt-in (`?instancing=1` or `setInstancingEnabled`) until checked on a real GPU. */
+  private instancingEnabled = instancingRequested()
 
   private meshes: GMesh[] = []
   private readonly nativePicking = new NativePickingCache()
@@ -542,6 +544,18 @@ export class WebGPURenderer {
 
   getTransparencyMode(): 'sorted' | 'wboit' {
     return this.transparencyMode
+  }
+
+  isInstancingEnabled(): boolean {
+    return this.instancingEnabled
+  }
+
+  setInstancingEnabled(enabled: boolean): void {
+    if (this.instancingEnabled !== enabled) {
+      this.instancingEnabled = enabled
+      this.instancedOpaque.reset()
+      this.requestRender()
+    }
   }
 
   setTransparencyMode(mode: 'sorted' | 'wboit'): void {
@@ -1424,6 +1438,7 @@ export class WebGPURenderer {
       bounds: this.bounds,
       displayMode: this.displayMode,
       transparencyMode: this.transparencyMode,
+      instancing: this.instancingEnabled,
       selectionMode: this.selectionMode,
       selected: this.selected,
       selectedHit: this.selectedHit,

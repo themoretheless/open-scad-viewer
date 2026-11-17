@@ -204,6 +204,8 @@ export interface EncodeFramePassContext {
   readonly bounds: Bounds | null
   readonly displayMode: DisplayMode
   readonly transparencyMode: 'sorted' | 'wboit'
+  /** Opt-in instanced opaque path; off keeps the per-entity/MeshInstances path. */
+  readonly instancing?: boolean
   readonly selectionMode: SelectionMode
   readonly selected: number | null
   readonly selectedHit: PickHit | null

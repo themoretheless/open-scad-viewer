@@ -25,6 +25,9 @@ import {
 } from '../src/render/instancedScene'
 import { identityMat4 } from '../src/render/gpuCsgPreview'
 
+/** Loosely typed fake-device records (index, call and iterate freely). */
+type Loose = { [key: string]: Loose } & ((...args: unknown[]) => Loose) & Loose[]
+
 function balanced(code: string, open: string, close: string) {
   return code.split(open).length === code.split(close).length
 }
@@ -81,13 +84,13 @@ describe('instance-step shader variant', () => {
 })
 
 function fakeFactoryDevice() {
-  const pipelines: any[] = []
+  const pipelines: Loose[] = []
   const modules: string[] = []
-  const dev: any = {
-    createBindGroupLayout: (desc: any) => ({ kind: 'bgl', desc }),
-    createPipelineLayout: (desc: any) => ({ kind: 'layout', desc }),
+  const dev: Loose = {
+    createBindGroupLayout: (desc: Loose) => ({ kind: 'bgl', desc }),
+    createPipelineLayout: (desc: Loose) => ({ kind: 'layout', desc }),
     createShaderModule: (desc: { code: string }) => (modules.push(desc.code), { code: desc.code }),
-    createRenderPipeline: (desc: any) => (pipelines.push(desc), { desc }),
+    createRenderPipeline: (desc: Loose) => (pipelines.push(desc), { desc }),
   }
   return { dev: dev as GPUDevice, pipelines, modules }
 }
@@ -98,17 +101,20 @@ describe('pipeline factory: instance-step variant', () => {
     const { dev } = fakeFactoryDevice()
     const factory = new PipelineFactory()
     factory.build(dev, 'bgra8unorm')
-    const pipeline = factory.getRenderPipeline(dev, 'mesh', { variant: 'instanceStep' }) as unknown as { desc: any }
+    const pipeline = factory.getRenderPipeline(dev, 'mesh', { variant: 'instanceStep' }) as unknown as { desc: Loose }
     const desc = pipeline.desc
     expect(desc.layout).toBe(factory.instanceStepLayout)
-    expect((factory.instanceStepLayout as any).desc.bindGroupLayouts).toEqual([factory.sceneBGL, factory.shadowBGL])
+    expect((factory.instanceStepLayout as unknown as Loose).desc.bindGroupLayouts).toEqual([
+      factory.sceneBGL,
+      factory.shadowBGL,
+    ])
     expect(desc.vertex.module.code).toBe(instanceStepObjectShader(MESH_WGSL))
     const [vertices, instances] = desc.vertex.buffers
     expect(vertices.stepMode ?? 'vertex').toBe('vertex')
-    expect(vertices.attributes.map((a: any) => a.shaderLocation)).toEqual([0, 1])
+    expect(vertices.attributes.map((a: Loose) => a.shaderLocation)).toEqual([0, 1])
     expect(instances.stepMode).toBe('instance')
     expect(instances.arrayStride).toBe(INSTANCE_RECORD_BYTES)
-    expect(instances.attributes.map((a: any) => [a.shaderLocation, a.offset])).toEqual([
+    expect(instances.attributes.map((a: Loose) => [a.shaderLocation, a.offset])).toEqual([
       [3, 0],
       [4, 16],
       [5, 32],
@@ -117,7 +123,7 @@ describe('pipeline factory: instance-step variant', () => {
       [8, 80],
     ])
     // The per-entity variant is unchanged: object group at 1, morph slot at 1.
-    const uniform = (factory.getRenderPipeline(dev, 'mesh') as unknown as { desc: any }).desc
+    const uniform = (factory.getRenderPipeline(dev, 'mesh') as unknown as { desc: Loose }).desc
     expect(uniform.layout).toBe(factory.objectLayout)
     expect(uniform.vertex.buffers[1].attributes[0].shaderLocation).toBe(2)
     expect(uniform.vertex.buffers[1].stepMode).toBeUndefined()
@@ -160,9 +166,9 @@ function gmesh(vb: GPUBuffer, x: number, extra: Partial<InstanceableMesh> = {}):
 }
 
 function fakeDevice() {
-  const created: any[] = []
-  const device: any = {
-    createBuffer: vi.fn((desc: any) => {
+  const created: Loose[] = []
+  const device: Loose = {
+    createBuffer: vi.fn((desc: Loose) => {
       const created_ = { ...desc, destroy: vi.fn() }
       created.push(created_)
       return created_
@@ -186,7 +192,7 @@ describe('instanced opaque pass', () => {
   it('packs row-major transforms column-major with color and style per record', () => {
     const meshes = [{ ...gmesh(buffer('vb'), 3), styleSelected: 1, styleHovered: 1, styleAlpha: 0.5 }]
     const plan = planInstanceBatches(meshes)
-    const record = packInstanceRecords(plan.batches[0]!, meshes as any)
+    const record = packInstanceRecords(plan.batches[0]!, meshes as unknown as Loose)
     expect(record.length).toBe(24)
     expect(Array.from(record.subarray(12, 16))).toEqual([3, 0, 0, 1])
     expect(Array.from(record.subarray(16, 20))).toEqual([0.5, 0.6, 0.7, 1].map(Math.fround))
@@ -275,22 +281,22 @@ describe('GPU picker: instanced id math', () => {
   it('draws covered meshes as instanced batches with pickBase in the batch uniform', async () => {
     stubGpuGlobals()
     let readback = 0
-    const passes: any[] = []
+    const passes: Loose[] = []
     const writes: Array<[unknown, number, ArrayBufferView]> = []
-    const dev: any = {
+    const dev: Loose = {
       createTexture: () => ({ createView: () => ({}), destroy: vi.fn() }),
-      createBuffer: (desc: any) => ({
+      createBuffer: (desc: Loose) => ({
         desc,
         getMappedRange: () => new Uint32Array([readback, 0, 0, 0]).buffer,
         mapAsync: vi.fn(async () => {}),
         unmap: vi.fn(),
         destroy: vi.fn(),
       }),
-      createBindGroupLayout: (desc: any) => ({ desc }),
-      createPipelineLayout: (desc: any) => ({ desc }),
-      createShaderModule: (desc: any) => ({ desc }),
-      createRenderPipeline: (desc: any) => ({ desc }),
-      createBindGroup: (desc: any) => ({ desc }),
+      createBindGroupLayout: (desc: Loose) => ({ desc }),
+      createPipelineLayout: (desc: Loose) => ({ desc }),
+      createShaderModule: (desc: Loose) => ({ desc }),
+      createRenderPipeline: (desc: Loose) => ({ desc }),
+      createBindGroup: (desc: Loose) => ({ desc }),
       createCommandEncoder: () => ({
         beginRenderPass: () => {
           const pass = {
@@ -324,14 +330,14 @@ describe('GPU picker: instanced id math', () => {
     const sceneBuffers = new InstancedSceneBuffers({
       createBuffer: dev.createBuffer,
       queue: { writeBuffer: vi.fn() },
-    } as any)
+    } as unknown as Loose)
     const vb = {} as GPUBuffer,
       ib = {} as GPUBuffer
     const sources = [1, 2].map(x => ({
       vertices: new Float32Array(18),
       indices: new Uint32Array(36),
       edgeIndices: new Uint32Array(0),
-      transform: translation(x) as any,
+      transform: translation(x) as unknown as Loose,
       gpu: { vb, ib, ic: 36 },
     }))
     sceneBuffers.stage(sources)

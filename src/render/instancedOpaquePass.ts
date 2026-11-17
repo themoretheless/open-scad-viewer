@@ -35,6 +35,12 @@ export interface InstanceableMesh {
 export const isInstanceable = (mesh: InstanceableMesh) =>
   !mesh.morph && !mesh.lod && !mesh.material && mesh.shadingModel === 'phong' && mesh.ic > 0
 
+/** `?instancing=1` opts into the instanced opaque path (off by default). */
+export function instancingRequested(search: string | undefined = globalThis.location?.search): boolean {
+  if (!search) return false
+  return new URLSearchParams(search).get('instancing') === '1'
+}
+
 type PassDevice = Pick<GPUDevice, 'createBuffer' | 'queue'>
 type Pass = Pick<
   GPURenderPassEncoder,
