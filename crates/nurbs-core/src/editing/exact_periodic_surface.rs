@@ -1195,3 +1195,48 @@ pub fn simplify_exact_periodic_surface_axis(
         refusal: None,
     })
 }
+
+/// Remove one occurrence of the original seam knot by moving the seam to
+/// an existing strictly interior anchor first. The returned parameter
+/// window starts at the anchor and keeps the exact original period.
+pub fn remove_exact_periodic_surface_seam_knot(
+    source: &Surface,
+    axis: Axis,
+    anchor: f64,
+    max_work: u64,
+) -> Result<PeriodicKnotRemovalReport> {
+    use PeriodicKnotRemovalRefusal as Failure;
+
+    source.validate()?;
+    let [start, end] = row(source, axis, 0).domain();
+    crate::check(
+        start < anchor && anchor < end,
+        "The new seam must be strictly inside the original period",
+    )?;
+    let rotated = rotate_periodic_surface_at_exact_knot(source, axis, anchor, max_work)?;
+    let Some(surface) = rotated.surface else {
+        return Ok(PeriodicKnotRemovalReport {
+            surface: None,
+            work_used: rotated.work_used,
+            refusal: Some(Failure::Open(
+                rotated
+                    .refusal
+                    .unwrap_or(GaugeMergeRefusal::Exact(ExactRefusal::InvalidOutput)),
+            )),
+        });
+    };
+    if rotated.work_used == max_work {
+        return Ok(PeriodicKnotRemovalReport {
+            surface: None,
+            work_used: rotated.work_used,
+            refusal: Some(Failure::Remove(
+                super::exact_surface_knot_removal::Refusal::ResourceLimit,
+            )),
+        });
+    }
+    // The original right endpoint is the next exact copy of the old seam.
+    let mut report =
+        remove_exact_periodic_surface_knot(&surface, axis, end, max_work - rotated.work_used)?;
+    report.work_used += rotated.work_used;
+    Ok(report)
+}

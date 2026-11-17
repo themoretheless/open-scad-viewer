@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0529",
+  "testedBase": "0edd3ec87ce5b5848db8e8b86517e28a621a1239",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 115,
+  "scope": [
+    "Move a periodic seam to an existing interior anchor and remove an exact redundant copy of the old seam.",
+    "Rotate to the exact anchor, remove the lifted old seam inside the new period, and restore the cyclic representation."
+  ],
+  "logSha256": "7314ae3824988fd4c6b21f2c8885c5f2b8c7939a73dd766a50ec4ca888c138d1",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "f65424d94dcc651d5d8d61ad2748b4ca85220d986cfa053e4b5f116e5832b2fa",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "201965b2e1ecf6897351cea5041ee45a06542d5c54a833810f211719c9915bd8"
+  }
+}

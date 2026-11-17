@@ -2622,3 +2622,52 @@ fn periodic_surface_simplification_returns_the_literal_source_if_no_knot_can_be_
     assert_eq!(result.removed, 0);
     assert_eq!(result.surface, Some(source));
 }
+
+#[test]
+fn periodic_surface_seam_removal_recovers_the_unsubdivided_cycle() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::{
+            insert_and_rotate_periodic_surface_seam, remove_exact_periodic_surface_seam_knot,
+            rotate_periodic_surface_at_exact_knot,
+        },
+        surface::Axis,
+    };
+    let source = doubly_periodic_tensor();
+    for axis in [Axis::U, Axis::V] {
+        let refined = insert_and_rotate_periodic_surface_seam(&source, axis, 0.5, 1_000_000)
+            .unwrap()
+            .surface
+            .unwrap();
+        let expected = rotate_periodic_surface_at_exact_knot(&source, axis, 1., 1_000_000)
+            .unwrap()
+            .surface
+            .unwrap();
+        let report =
+            remove_exact_periodic_surface_seam_knot(&refined, axis, 1., 1_000_000).unwrap();
+        assert_eq!(report.refusal, None);
+        assert_eq!(report.surface, Some(expected));
+        assert!(
+            remove_exact_periodic_surface_seam_knot(&refined, axis, 1., report.work_used - 1)
+                .unwrap()
+                .surface
+                .is_none()
+        );
+    }
+}
+
+#[test]
+fn periodic_surface_seam_removal_keeps_a_geometric_corner() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::{
+            PeriodicKnotRemovalRefusal, remove_exact_periodic_surface_seam_knot,
+        },
+        surface::Axis,
+    };
+    let source = doubly_periodic_tensor();
+    let report = remove_exact_periodic_surface_seam_knot(&source, Axis::U, 1., 1_000_000).unwrap();
+    assert!(report.surface.is_none());
+    assert!(matches!(
+        report.refusal,
+        Some(PeriodicKnotRemovalRefusal::Remove(_))
+    ));
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 528,
-  "unallocatedCount": 472,
+  "specifiedCount": 529,
+  "unallocatedCount": 471,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13564,6 +13564,27 @@
       "remainingQualification": [
         "Prove and remove redundant interior knots in one cyclic-axis pass with exact reclosure.",
         "Open once, prove each removal in a bounded tensor pass, and publish a net reduction only after exact reclosure.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0529",
+      "name": "Точное удаление узла на периодическом шве NURBS-поверхности",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::remove_exact_periodic_surface_seam_knot",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-529-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-529-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Move a periodic seam to an existing interior anchor and remove an exact redundant copy of the old seam.",
+        "Rotate to the exact anchor, remove the lifted old seam inside the new period, and restore the cyclic representation.",
         "WASM and application integration are separate."
       ]
     }
