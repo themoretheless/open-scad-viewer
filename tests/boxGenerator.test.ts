@@ -225,7 +225,7 @@ describe('box generator', () => {
       hook_chamfer: false,
     })
     const built = await engine.buildSource(scad, { quality: 'preview', purpose: 'preview' })
-    const [mFloor, mFront, mLeft, mRight, mRear] = built.result.meshes
+    const [, mFront, mLeft, mRight, mRear] = built.result.meshes
     const zRangesAt = (m: typeof mFront, pred: (x: number, y: number) => boolean) => {
       const zs: number[] = []
       for (let i = 0; i < m.vertices.length; i += 6) {

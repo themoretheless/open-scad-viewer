@@ -1,5 +1,8 @@
 import { expect, it } from 'vitest'
-import { validFaceContacts } from '../src/kernel/solidFaceContacts'
+import { validFaceContacts, type faceContactExpectation } from '../src/kernel/solidFaceContacts'
+type Expectation = ReturnType<typeof faceContactExpectation>
+type ContactPair = { sharedBoundary: Record<string, unknown> } & Record<string, unknown>
+type ContactReport = { pairs: ContactPair[] } & Record<string, unknown>
 function fixture() {
   const limits = {
     maxPairs: 1,
@@ -9,7 +12,7 @@ function fixture() {
     domainCellsPerPair: 1000,
     maxBoxes: 0,
   }
-  const e: any = {
+  const e: Expectation = {
     toleranceUv: 1e-8,
     limits,
     domains: [0, 1].map(() => ({
@@ -36,7 +39,7 @@ function fixture() {
     ],
     rowWeights: [1, 1],
   }
-  const r: any = {
+  const r: ContactReport = {
     method: 'interval-trimmed-face-contacts',
     scope: 'distinct-face-pairs',
     solidGeometryStatus: 'not-certified',

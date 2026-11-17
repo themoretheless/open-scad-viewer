@@ -1,20 +1,38 @@
 import { createRenderer, nextTick, ref, h } from 'svet'
-import { it, expect, vi } from 'vitest'
-const state = vi.hoisted(() => ({ tasks: [] as any[], worker: null as any }))
+import { it, expect, vi, type Mock } from 'vitest'
+type Task = { resolve: (value: unknown) => void; reject: (reason: unknown) => void; job: unknown }
+type FakeWorker = { cancel: Mock; dispose: Mock; run: Mock }
+type FakeNode = {
+  type: string
+  tagName: string
+  children: FakeNode[]
+  props: Record<string, unknown>
+  parent: FakeNode | null
+  text: string
+  _value?: unknown
+  value?: unknown
+  readonly options: FakeNode[]
+  addEventListener(): void
+  removeEventListener(): void
+  getRootNode(): object
+  setAttribute(): void
+  removeAttribute(): void
+}
+const state = vi.hoisted(() => ({ tasks: [] as Task[], worker: null as FakeWorker | null }))
 vi.mock('../src/kernel/solidPreviewWorker', () => ({
   createSolidPreviewWorker: () => {
     state.tasks = []
     state.worker = {
       cancel: vi.fn(),
       dispose: vi.fn(),
-      run: vi.fn((job: any) => new Promise((resolve, reject) => state.tasks.push({ resolve, reject, job }))),
+      run: vi.fn((job: unknown) => new Promise((resolve, reject) => state.tasks.push({ resolve, reject, job }))),
     }
     return state.worker
   },
 }))
 import Panel from '../src/components/FrozenGraphBodyPanel.svt'
 it('loads a display-only body, selects an edge and invalidates late data on cancel', async () => {
-  const node = (type: string): any => ({
+  const node = (type: string): FakeNode => ({
     type,
     tagName: type.toUpperCase(),
     children: [],
@@ -22,7 +40,7 @@ it('loads a display-only body, selects an edge and invalidates late data on canc
     parent: null,
     text: '',
     get options() {
-      return this.children.filter((n: any) => n.type === 'option')
+      return this.children.filter((n: FakeNode) => n.type === 'option')
     },
     addEventListener() {},
     removeEventListener() {},
@@ -32,7 +50,7 @@ it('loads a display-only body, selects an edge and invalidates late data on canc
     setAttribute() {},
     removeAttribute() {},
   })
-  const renderer = createRenderer<any, any>({
+  const renderer = createRenderer<FakeNode, FakeNode>({
     createElement: node,
     createText: t => ({ ...node('text'), text: t }),
     createComment: node,
@@ -66,7 +84,7 @@ it('loads a display-only body, selects an edge and invalidates late data on canc
   const root = node('root'),
     active = ref(true),
     selected = ref<number | null>(null),
-    displays: any[] = []
+    displays: unknown[] = []
   const app = renderer.createApp({
     render: () =>
       h(Panel, {
@@ -74,18 +92,23 @@ it('loads a display-only body, selects an edge and invalidates late data on canc
         ru: false,
         selectedEdge: selected.value,
         'onUpdate:selectedEdge': (v: number | null) => (selected.value = v),
-        onDisplay: (v: any) => displays.push(v),
+        onDisplay: (v: unknown) => displays.push(v),
       }),
   })
   app.mount(root)
-  const all = (n: any): any[] => [n, ...n.children.flatMap(all)],
+  const all = (n: FakeNode): FakeNode[] => [n, ...n.children.flatMap(all)],
     button = (s: string) => all(root).find(n => n.type === 'button' && n.text === s)
+  const call = (n: FakeNode | undefined, key: string, ...args: unknown[]): unknown => {
+    const handler = n?.props[key]
+    if (typeof handler !== 'function') throw new TypeError(`missing ${key} handler`)
+    return handler(...args)
+  }
   const flush = async () => {
     for (let i = 0; i < 20; i++) await Promise.resolve()
     await nextTick()
     await nextTick()
   }
-  const response: any = {
+  const response = {
     report: { faces: 9, edges: 27, curvatureLimitPerMm: 10 },
     artifact: { geometry: { identityLinks: { edges: [{ edge: 0, sourceId: 'original-edge' }] } } },
     display: {
@@ -102,9 +125,11 @@ it('loads a display-only body, selects an edge and invalidates late data on canc
     },
   }
   try {
-    all(root)
-      .find(n => n.type === 'details')
-      .props.onToggle({ target: { open: true } })
+    call(
+      all(root).find(n => n.type === 'details'),
+      'onToggle',
+      { target: { open: true } },
+    )
     await flush()
     const input = all(root).find(n => n.type === 'input' && n.props.type === 'file')
     const file = {
@@ -118,21 +143,23 @@ it('loads a display-only body, selects an edge and invalidates late data on canc
           },
         }),
     }
-    void input.props.onChange({ target: { files: [file], value: 'test.json' } })
+    void call(input, 'onChange', { target: { files: [file], value: 'test.json' } })
     await flush()
     expect(state.tasks).toHaveLength(1)
-    button('Cancel · Esc').props.onClick()
+    call(button('Cancel · Esc'), 'onClick')
     state.tasks[0].resolve(response)
     await flush()
     expect(displays.at(-1)).toBe(null)
-    void button('Retry · Enter').props.onClick()
+    void call(button('Retry · Enter'), 'onClick')
     await flush()
     state.tasks[1].resolve(response)
     await flush()
     expect(displays.at(-1)).toBe(response)
-    all(root)
-      .find(n => n.type === 'select')
-      .props['onUpdate:modelValue'](0)
+    call(
+      all(root).find(n => n.type === 'select'),
+      'onUpdate:modelValue',
+      0,
+    )
     await flush()
     expect(selected.value).toBe(0)
     active.value = false
@@ -141,6 +168,6 @@ it('loads a display-only body, selects an edge and invalidates late data on canc
     expect(selected.value).toBe(null)
   } finally {
     app.unmount()
-    expect(state.worker.dispose).toHaveBeenCalledOnce()
+    expect(state.worker?.dispose).toHaveBeenCalledOnce()
   }
 })

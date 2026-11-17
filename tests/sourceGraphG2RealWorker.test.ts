@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import { afterEach, expect, it } from 'vitest'
 import { MainSolidWorkerClient, type MainSolidPort } from '../src/kernel/mainSolidWorkerClient'
 import type { MainSolidRequest, MainSolidJob } from '../src/kernel/mainSolidProtocol'
+import type { NurbsSurface } from '../src/kernel/nurbsSurface'
 import identity from '../src/generated/geometry-kernels/identity'
 const bytes = readFileSync('public/wasm/geometry-kernel.wasm')
 const expectedArtifact = { sha256: createHash('sha256').update(bytes).digest('hex'), byteLength: bytes.length }
@@ -67,7 +68,7 @@ function job(): Extract<MainSolidJob, { kind: 'sourceGraphG2Preview' }> {
         [1, 1],
         [1, 1],
       ],
-    })) as any,
+    })) as [NurbsSurface, NurbsSurface],
     width: {
       degree: 1,
       knots: [0, 0, 1, 1],

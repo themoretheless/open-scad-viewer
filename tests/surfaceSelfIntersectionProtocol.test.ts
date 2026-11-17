@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { isSurfaceAuditReport } from '../src/kernel/surfaceSelfIntersectionProtocol'
-function present(): any {
+function present() {
   return {
     schema: 'nurbs-surface-self-intersection/1',
     status: 'present',
@@ -38,7 +38,7 @@ describe('surface audit Worker boundary', () => {
       { numerator: '1', denominator: '2'.repeat(4097) },
     ]) {
       const r = present()
-      r.exactWitness[0][0] = scalar
+      r.exactWitness[0][0] = scalar as unknown as (typeof r.exactWitness)[0][0]
       expect(isSurfaceAuditReport(r)).toBe(false)
     }
   })
