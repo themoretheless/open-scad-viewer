@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 596,
-  "unallocatedCount": 404,
+  "specifiedCount": 597,
+  "unallocatedCount": 403,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14934,6 +14934,25 @@
       "remainingQualification": [
         "Integrate the Bernstein cross product exactly for polynomial Bézier trim edges.",
         "Verify a quadratic contribution with an analytic rational result, preserve straight-edge behavior, and refuse unsupported varying weights.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0597",
+      "name": "Гарантированные площади проекций замкнутых периодических контуров с рациональными весами",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::bound_input_contour_projected_area",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-597-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-597-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose signed projected areas of positive-weight rational trim curves with interval quadrature.",
+        "Verify interval projections on a varying-weight curved edge, known polygon areas, and completeness under cell exhaustion.",
         "WASM and application integration are separate."
       ]
     }

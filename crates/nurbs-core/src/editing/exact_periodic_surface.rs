@@ -5996,3 +5996,133 @@ fn integrate_polynomial_trim_cross(
     }
     Ok(())
 }
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimProjectedAreaBounds {
+    /// Signed YZ, ZX and XY areas in original contour direction.
+    pub bounds: Option<[[f64; 2]; 3]>,
+    pub cells: usize,
+    pub minimum_cells: usize,
+    /// True when each reported interval has width at most the requested tolerance.
+    pub within_tolerance: bool,
+}
+
+impl PeriodicTrimInputEdges {
+    /// Enclose the projection areas of a closed rational Bézier trim contour.
+    /// Refinement may stop at the cell limit while retaining complete bounds.
+    pub fn bound_input_contour_projected_area(
+        &self,
+        contour: usize,
+        tolerance: f64,
+        max_cells: usize,
+    ) -> Result<PeriodicTrimProjectedAreaBounds> {
+        use crate::distance_bounds::Interval;
+        crate::check(
+            tolerance.is_finite() && tolerance > 0. && (1..=100_000).contains(&max_cells),
+            "Periodic trim area needs positive finite tolerance and 1..100000 cells",
+        )?;
+        let pieces = self.input_contour_pieces(contour)?;
+        let minimum_cells = pieces.len();
+        let mut report = PeriodicTrimProjectedAreaBounds {
+            bounds: None,
+            cells: 0,
+            minimum_cells,
+            within_tolerance: false,
+        };
+        if pieces.is_empty() || minimum_cells > max_cells {
+            return Ok(report);
+        }
+
+        let reversed = pieces[0].1.parameters[0] > pieces[0].1.parameters[1];
+        let mut stack = Vec::with_capacity(minimum_cells);
+        let share = tolerance / minimum_cells as f64;
+        for ((curve, source), (next, _)) in pieces.iter().zip(pieces.iter().cycle().skip(1)) {
+            curve.validate()?;
+            let count = curve.control_points.len();
+            let [lo, hi] = curve.domain();
+            crate::check(
+                !curve.periodic
+                    && count == curve.degree + 1
+                    && curve.control_points[0].len() == 3
+                    && curve.knots[..count].iter().all(|&k| k == lo)
+                    && curve.knots[count..].iter().all(|&k| k == hi)
+                    && curve.control_points.last() == next.control_points.first()
+                    && source.parameters[0] != source.parameters[1]
+                    && reversed == (source.parameters[0] > source.parameters[1]),
+                "Periodic trim area needs a closed, consistently directed spatial Bézier contour",
+            )?;
+            stack.push((
+                *curve,
+                [lo, hi],
+                trim_projected_area_cell(curve, [lo, hi])?,
+                share,
+            ));
+            report.cells += 1;
+        }
+
+        let mut sum = [Interval::point(0.); 3];
+        while let Some((curve, [lo, hi], bounds, share)) = stack.pop() {
+            let mid = crate::distance_bounds::midpoint(lo, hi);
+            if report.cells + 2 <= max_cells
+                && lo < mid
+                && mid < hi
+                && bounds.iter().any(|b| (b.hi - b.lo).next_up() > share)
+            {
+                for domain in [[lo, mid], [mid, hi]] {
+                    stack.push((
+                        curve,
+                        domain,
+                        trim_projected_area_cell(curve, domain)?,
+                        share * 0.5,
+                    ));
+                }
+                report.cells += 2;
+            } else {
+                for (sum, bound) in sum.iter_mut().zip(bounds) {
+                    *sum = sum.add(bound)?;
+                }
+            }
+        }
+        let bounds = sum.map(|b| {
+            if reversed {
+                [-b.hi, -b.lo]
+            } else {
+                [b.lo, b.hi]
+            }
+        });
+        report.within_tolerance = bounds
+            .iter()
+            .all(|[lo, hi]| (hi - lo).next_up() <= tolerance);
+        report.bounds = Some(bounds);
+        Ok(report)
+    }
+}
+
+fn trim_projected_area_cell(
+    curve: &Curve,
+    domain: [f64; 2],
+) -> Result<[crate::distance_bounds::Interval; 3]> {
+    use crate::distance_bounds::Interval;
+    let span = curve.degree;
+    // The evaluator differentiates in local cell coordinates on [0,1].
+    let jets = crate::curve_jets::enclose(curve, span, domain)?;
+    let start = crate::curve_jets::endpoint(curve, span, domain, false)?;
+    let end = crate::curve_jets::endpoint(curve, span, domain, true)?;
+    let mut bounds = [Interval::point(0.); 3];
+    for (axis, output) in bounds.iter_mut().enumerate() {
+        let i = (axis + 1) % 3;
+        let j = (axis + 2) % 3;
+        let cross = |a: &[Interval], b: &[Interval]| a[i].mul(b[j])?.sub(a[j].mul(b[i])?);
+        let trapezoid = cross(&start[0], &start[1])?
+            .add(cross(&end[0], &end[1])?)?
+            .mul(Interval::point(0.5))?;
+        // (r × r')'' = r' × r'' + r × r'''. The trapezoid error
+        // is at most the supremum of its magnitude divided by 12.
+        let second = cross(&jets[1], &jets[2])?.add(cross(&jets[0], &jets[3])?)?;
+        let remainder = (second.lo.abs().max(second.hi.abs()) / 12.).next_up();
+        *output = trapezoid
+            .add(Interval::new(-remainder, remainder)?)?
+            .mul(Interval::point(0.5))?;
+    }
+    Ok(bounds)
+}

@@ -5629,3 +5629,76 @@ fn periodic_trim_polynomial_projected_area_integrates_curved_bezier_exactly() {
     assert!(rational.projected_area.is_none());
     assert_eq!(rational.refusal, Some(Failure::NonlinearEdge));
 }
+
+#[test]
+fn periodic_trim_rational_area_bounds_enclose_a_weighted_curved_edge() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let mut result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    let first = &mut result.geometry.patches.as_mut().unwrap()[0].loops[0][0].curve;
+    first.degree = 2;
+    first.knots = vec![0., 0., 0., 0.5, 0.5, 0.5];
+    first.control_points.insert(1, vec![0.375, 0.25, 0.25]);
+    first.weights = vec![1., 0.5, 1.];
+    let mut xy = 0.;
+    let mut last = first.evaluate(0.).unwrap().point;
+    for i in 1..=8192 {
+        let point = first.evaluate(0.5 * i as f64 / 8192.).unwrap().point;
+        xy += (last[0] * point[1] - last[1] * point[0]) * 0.5;
+        last = point;
+    }
+    let report = result
+        .bound_input_contour_projected_area(0, 1e-4, 20_000)
+        .unwrap();
+    assert!(report.within_tolerance, "{report:?}");
+    for ([lo, hi], expected) in report.bounds.unwrap().into_iter().zip([-0.75, -0.75, xy]) {
+        assert!(
+            lo <= expected && expected <= hi,
+            "{lo} <= {expected} <= {hi}"
+        );
+    }
+}
+
+#[test]
+fn periodic_trim_rational_area_bounds_cover_entire_contour_at_cell_limit() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    let limited = result
+        .bound_input_contour_projected_area(0, 1e-30, 6)
+        .unwrap();
+    assert_eq!(limited.cells, 6);
+    assert!(!limited.within_tolerance);
+    for ([lo, hi], expected) in limited.bounds.unwrap().into_iter().zip([-0.75, -0.75, 0.]) {
+        assert!(lo <= expected && expected <= hi);
+    }
+    let short = result
+        .bound_input_contour_projected_area(0, 1e-6, 5)
+        .unwrap();
+    assert!(short.bounds.is_none());
+    assert_eq!(short.minimum_cells, 6);
+}
