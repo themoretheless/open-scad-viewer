@@ -943,6 +943,7 @@ pub use spatial_clip::{
     clip_spatial_path_to_exact_planar_polyline, clip_spatial_path_to_exact_planar_polyline_region,
     distance_between_exact_spatial_polylines, exact_planar_spatial_polyline_area,
     exact_planar_spatial_polyline_centroid, exact_planar_spatial_polyline_region_mass,
+    exact_planar_spatial_polyline_region_second_moments,
     exact_planar_spatial_polyline_second_moments, exact_polyhedral_ball_clearance,
     exact_polyhedral_boundary_distance, exact_polyhedral_material_path_components,
     exact_polyhedral_path_boundary_contacts, exact_polyhedral_path_boundary_events,

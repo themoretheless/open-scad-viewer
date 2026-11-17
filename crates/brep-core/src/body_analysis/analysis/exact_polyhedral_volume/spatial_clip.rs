@@ -2528,35 +2528,96 @@ pub fn exact_planar_spatial_polyline_second_moments(
 ) -> Result<ExactPlanarPolylineSecondMoments> {
     let properties = exact_planar_spatial_polyline_centroid(contour_mm, max_exact_work)?;
     let mut remaining = max_exact_work - properties.exact_work;
-    spend(&mut remaining, 24)?;
-    let centroid = properties.centroid_mm;
-    let [u, v] = plane_axes(&properties.area.area_vector_mm2);
-    let denominator = &properties.area.area_vector_mm2[3 - u - v] * Q::from_integer(24.into());
-    let mut moments: [[Q; 3]; 3] = std::array::from_fn(|_| std::array::from_fn(|_| Q::zero()));
-    for pair in contour_mm.windows(2) {
-        spend(&mut remaining, 96)?;
-        let a: [Q; 3] = std::array::from_fn(|i| &pair[0][i] - &centroid[i]);
-        let b: [Q; 3] = std::array::from_fn(|i| &pair[1][i] - &centroid[i]);
-        let twice_area = &a[u] * &b[v] - &a[v] * &b[u];
-        for i in 0..3 {
-            for j in i..3 {
-                let diagonal_terms = &a[i] * &a[j] + &b[i] * &b[j];
-                let mixed_terms = &a[i] * &b[j] + &b[i] * &a[j];
-                moments[i][j] +=
-                    (&diagonal_terms + diagonal_terms.clone() + mixed_terms) * &twice_area;
-            }
-        }
-    }
-    spend(&mut remaining, 16)?;
-    let normalized_central_moments_mm2 = std::array::from_fn(|i| {
-        std::array::from_fn(|j| &moments[i.min(j)][i.max(j)] / &denominator)
-    });
+    let normalized_central_moments_mm2 = planar_region_central_moments(
+        contour_mm,
+        &[],
+        &properties.centroid_mm,
+        &properties.area.area_vector_mm2,
+        &mut remaining,
+    )?;
     Ok(ExactPlanarPolylineSecondMoments {
-        centroid_mm: centroid,
+        centroid_mm: properties.centroid_mm,
         area_squared_mm4: properties.area.area_squared_mm4,
         normalized_central_moments_mm2,
         exact_work: max_exact_work - remaining,
     })
+}
+
+/// Integrate the area-normalized central second moments of a planar profile
+/// with disjoint holes. Hole order and orientation do not affect the tensor.
+pub fn exact_planar_spatial_polyline_region_second_moments(
+    outer_mm: &[[Q; 3]],
+    holes_mm: &[&[[Q; 3]]],
+    max_exact_work: u64,
+) -> Result<ExactPlanarPolylineSecondMoments> {
+    if holes_mm.is_empty() {
+        return exact_planar_spatial_polyline_second_moments(outer_mm, max_exact_work);
+    }
+    let properties = exact_planar_spatial_polyline_region_mass(outer_mm, holes_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - properties.exact_work;
+    let normalized_central_moments_mm2 = planar_region_central_moments(
+        outer_mm,
+        holes_mm,
+        &properties.centroid_mm,
+        &properties.area_vector_mm2,
+        &mut remaining,
+    )?;
+    Ok(ExactPlanarPolylineSecondMoments {
+        centroid_mm: properties.centroid_mm,
+        area_squared_mm4: properties.area_squared_mm4,
+        normalized_central_moments_mm2,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn planar_region_central_moments(
+    outer: &[[Q; 3]],
+    holes: &[&[[Q; 3]]],
+    centroid: &[Q; 3],
+    area_vector: &[Q; 3],
+    remaining: &mut u64,
+) -> Result<[[Q; 3]; 3]> {
+    let [u, v] = plane_axes(area_vector);
+    let normal_area = &area_vector[3 - u - v];
+    let denominator = normal_area.abs() * Q::from_integer(24.into());
+    let zero_matrix = || std::array::from_fn(|_| std::array::from_fn(|_| Q::zero()));
+    let mut net: [[Q; 3]; 3] = zero_matrix();
+    for (index, contour) in std::iter::once(outer)
+        .chain(holes.iter().copied())
+        .enumerate()
+    {
+        spend(remaining, 24)?;
+        let mut projected_area = Q::zero();
+        let mut moments: [[Q; 3]; 3] = zero_matrix();
+        for pair in contour.windows(2) {
+            spend(remaining, 96)?;
+            let a: [Q; 3] = std::array::from_fn(|i| &pair[0][i] - &centroid[i]);
+            let b: [Q; 3] = std::array::from_fn(|i| &pair[1][i] - &centroid[i]);
+            let twice_area = &a[u] * &b[v] - &a[v] * &b[u];
+            projected_area += &twice_area;
+            for i in 0..3 {
+                for j in i..3 {
+                    let diagonal = &a[i] * &a[j] + &b[i] * &b[j];
+                    let mixed = &a[i] * &b[j] + &b[i] * &a[j];
+                    moments[i][j] += (&diagonal + &diagonal + mixed) * &twice_area;
+                }
+            }
+        }
+        let add = projected_area.is_positive() == (index == 0);
+        for (net_row, row) in net.iter_mut().zip(moments) {
+            for (total, value) in net_row.iter_mut().zip(row) {
+                if add {
+                    *total += value;
+                } else {
+                    *total -= value;
+                }
+            }
+        }
+    }
+    spend(remaining, 16)?;
+    Ok(std::array::from_fn(|i| {
+        std::array::from_fn(|j| &net[i.min(j)][i.max(j)] / &denominator)
+    }))
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

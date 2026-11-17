@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 466,
-  "unallocatedCount": 534,
+  "specifiedCount": 467,
+  "unallocatedCount": 533,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12099,6 +12099,35 @@
       "remainingQualification": [
         "Clip coplanar and transverse paths to a closed planar polygon with holes.",
         "Qualify the outer contour and disjoint coplanar holes, then use exact parity and boundary predicates for both coplanar and transverse contacts.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0467",
+      "name": "Точные центральные вторые моменты площади профиля с отверстиями",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::exact_planar_spatial_polyline_region_second_moments",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "docs/qualification/nurbs-curvature-field-467-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-467-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Compute area-normalized central second moments of a profile with disjoint holes.",
+        "Integrate all rings about the exact net centroid. Normalize each ring orientation before subtracting holes and divide by the net projected area to obtain a rational tensor.",
         "WASM and application integration are separate."
       ]
     }

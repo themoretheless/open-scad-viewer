@@ -5180,3 +5180,69 @@ fn exact_planar_polyline_region_path_clip_checks_transverse_hole_intersections()
             .is_err()
     );
 }
+
+#[test]
+fn exact_planar_polyline_region_second_moments_account_for_an_eccentric_hole() {
+    use brep_core::analysis::exact_planar_spatial_polyline_region_second_moments;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y| [q(x, 1), q(y, 1), q(0, 1)];
+    let rect = |lo, hi| [p(lo, lo), p(hi, lo), p(hi, hi), p(lo, hi), p(lo, lo)];
+    let outer = rect(0, 4);
+    let hole = rect(1, 2);
+    let report =
+        exact_planar_spatial_polyline_region_second_moments(&outer, &[&hole], 1_000_000).unwrap();
+    assert_eq!(report.area_squared_mm4, q(225, 1));
+    assert_eq!(report.centroid_mm, [q(61, 30), q(61, 30), q(0, 1)]);
+    assert_eq!(
+        report.normalized_central_moments_mm2,
+        [
+            [q(1259, 900), q(-4, 225), q(0, 1)],
+            [q(-4, 225), q(1259, 900), q(0, 1)],
+            [q(0, 1), q(0, 1), q(0, 1)],
+        ],
+    );
+    assert_eq!(
+        exact_planar_spatial_polyline_region_second_moments(&outer, &[&hole], report.exact_work)
+            .unwrap(),
+        report
+    );
+    assert!(
+        exact_planar_spatial_polyline_region_second_moments(
+            &outer,
+            &[&hole],
+            report.exact_work - 1
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn exact_planar_polyline_region_second_moments_are_winding_independent_and_validate_holes() {
+    use brep_core::analysis::exact_planar_spatial_polyline_region_second_moments;
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x: i64, y: i64| [q(x), q(y), q(x + y)];
+    let rect = |lo, hi| [p(lo, lo), p(hi, lo), p(hi, hi), p(lo, hi), p(lo, lo)];
+    let outer = rect(0, 6);
+    let hole = rect(1, 4);
+    let reversed_outer = outer.clone().into_iter().rev().collect::<Vec<_>>();
+    let reversed_hole = hole.clone().into_iter().rev().collect::<Vec<_>>();
+    let forward =
+        exact_planar_spatial_polyline_region_second_moments(&outer, &[&hole], 1_000_000).unwrap();
+    for (outline, cut) in [
+        (&outer[..], &reversed_hole[..]),
+        (&reversed_outer[..], &hole[..]),
+    ] {
+        let reversed =
+            exact_planar_spatial_polyline_region_second_moments(outline, &[cut], 1_000_000)
+                .unwrap();
+        assert_eq!(
+            reversed.normalized_central_moments_mm2,
+            forward.normalized_central_moments_mm2
+        );
+    }
+    assert!(
+        exact_planar_spatial_polyline_region_second_moments(&outer, &[&outer], 1_000_000).is_err()
+    );
+}
