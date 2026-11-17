@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 329,
-  "unallocatedCount": 671,
+  "specifiedCount": 330,
+  "unallocatedCount": 670,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8553,6 +8553,25 @@
       "remainingQualification": [
         "Represent exact world-space principal axis lines by algebraic orthogonal projectors and retain the full plane under isotropy.",
         "Exact polynomial or rational-linear boundaries. Distinct signed principal moments select unoriented lines; equal moments select the entire supporting plane.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0330",
+      "name": "Гарантированные интервалы главных направлений для плоских граней с рациональными контурами",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::analysis::bounded_planar_face_mass::bound_projected_face_principal_directions",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/bounded_planar_face_mass.rs",
+        "crates/nurbs-core/tests/bounded_world_plane_mass_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-330-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-330-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose both world-space principal axis projectors when the in-plane moment gap is proven positive.",
+        "Exact closure and rational planar contours. Area uncertainty and unresolved spectral gaps withhold the axis projectors.",
         "WASM and application integration are separate."
       ]
     }

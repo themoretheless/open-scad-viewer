@@ -138,7 +138,16 @@ pub fn bound_projected_face_principal_moments(
 }
 
 fn principal_spectrum(data: [[[f64; 2]; 3]; 3]) -> Result<BoundedPrincipalPlaneMoments> {
-    let t = data.map(|row| row.map(|[lo, hi]| Interval { lo, hi }));
+    let tensor = tensor_intervals(data);
+    let (center, gap, trace) = spectrum_invariants(&tensor)?;
+    spectrum_from_invariants(center, gap, trace)
+}
+
+fn tensor_intervals(data: [[[f64; 2]; 3]; 3]) -> [[Interval; 3]; 3] {
+    data.map(|row| row.map(|[lo, hi]| Interval { lo, hi }))
+}
+
+fn spectrum_invariants(t: &[[Interval; 3]; 3]) -> Result<(Interval, Interval, Interval)> {
     let trace = t[0][0].add(t[1][1])?.add(t[2][2])?;
     let mut product = Interval::point(0.);
     for (i, j) in [(0, 1), (0, 2), (1, 2)] {
@@ -153,6 +162,14 @@ fn principal_spectrum(data: [[[f64; 2]; 3]; 3]) -> Result<BoundedPrincipalPlaneM
         gap_squared.lo.max(0.).sqrt().next_down().max(0.),
         gap_squared.hi.sqrt().next_up(),
     )?;
+    Ok((center, gap, trace))
+}
+
+fn spectrum_from_invariants(
+    center: Interval,
+    gap: Interval,
+    trace: Interval,
+) -> Result<BoundedPrincipalPlaneMoments> {
     Ok(BoundedPrincipalPlaneMoments {
         principal: [bounds(center.sub(gap)?), bounds(center.add(gap)?)],
         polar: bounds(trace),
@@ -162,4 +179,81 @@ fn principal_spectrum(data: [[[f64; 2]; 3]; 3]) -> Result<BoundedPrincipalPlaneM
 fn square(value: Interval) -> Result<Interval> {
     let result = value.mul(value)?;
     Interval::new(result.lo.max(0.), result.hi)
+}
+
+pub type PrincipalAxisProjectorBounds = [[[f64; 2]; 3]; 3];
+
+#[derive(Clone, Debug)]
+pub struct BoundedPrincipalDirectionReport {
+    pub signed_area: [f64; 2],
+    pub spectrum: Option<BoundedPrincipalPlaneMoments>,
+    /// Enclosures for the two orthogonal rank-one projectors, in ascending
+    /// moment order. Absent unless the moment gap is proved positive.
+    pub axes: Option<[PrincipalAxisProjectorBounds; 2]>,
+    pub projected_converged: bool,
+    pub cells: usize,
+}
+
+/// Enclose the two unoriented principal axes of a rationally trimmed planar
+/// face. A strictly positive lower bound on the spectral gap is required
+/// for directions. Inconclusive direction bounds still retain the spectrum
+/// if the signed area was separated from zero.
+pub fn bound_projected_face_principal_directions(
+    face: &ProjectedTrimmedFace,
+    origin: [f64; 2],
+    tolerances: [f64; 3],
+    max_cells: usize,
+) -> Result<BoundedPrincipalDirectionReport> {
+    let mass = bound_projected_face_mass(face, origin, tolerances, max_cells)?;
+    let mut spectrum = None;
+    let mut axes = None;
+    if let Some(data) = mass.centroidal {
+        let tensor = tensor_intervals(data.second_moments);
+        let (center, gap, trace) = spectrum_invariants(&tensor)?;
+        spectrum = Some(spectrum_from_invariants(center, gap, trace)?);
+        if gap.lo > 0. {
+            axes = Some(axis_projectors(face, &tensor, center, gap)?);
+        }
+    }
+    Ok(BoundedPrincipalDirectionReport {
+        signed_area: mass.signed_area,
+        spectrum,
+        axes,
+        projected_converged: mass.projected_converged,
+        cells: mass.cells,
+    })
+}
+
+fn axis_projectors(
+    face: &ProjectedTrimmedFace,
+    tensor: &[[Interval; 3]; 3],
+    center: Interval,
+    gap: Interval,
+) -> Result<[PrincipalAxisProjectorBounds; 2]> {
+    let (scale, slopes) = plane_metric(&face.projection.slopes)?;
+    let scale_squared = square(scale)?;
+    let [x, y] = face.projection.retained_axes;
+    let mut normal = [Interval::point(1.); 3];
+    normal[x] = Interval::new(-slopes[0].hi, -slopes[0].lo)?;
+    normal[y] = Interval::new(-slopes[1].hi, -slopes[1].lo)?;
+    let mut axes = [[[[0.; 2]; 3]; 3]; 2];
+    for i in 0..3 {
+        for j in i..3 {
+            let diagonal = i == j;
+            let identity = Interval::point(if diagonal { 1. } else { 0. });
+            let plane = identity.sub(normal[i].mul(normal[j])?.div(scale_squared)?)?;
+            let deviation = tensor[i][j].sub(center.mul(plane)?)?.div(gap)?;
+            let half = Interval::point(0.5);
+            let [lo, hi] = if diagonal { [0., 1.] } else { [-0.5, 0.5] };
+            for (axis, value) in axes
+                .iter_mut()
+                .zip([plane.sub(deviation)?, plane.add(deviation)?])
+            {
+                let entry = bounds(value.mul(half)?.intersect(lo, hi)?);
+                axis[i][j] = entry;
+                axis[j][i] = entry;
+            }
+        }
+    }
+    Ok(axes)
 }

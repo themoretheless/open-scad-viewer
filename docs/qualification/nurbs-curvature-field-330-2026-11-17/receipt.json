@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0330",
+  "testedBase": "5910c2d6086d6ced1b4eb11f8845f389ffd165af",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "bounded_world_plane_mass_contracts",
+    "--test",
+    "exact_principal_plane_moment_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 9,
+  "scope": [
+    "Enclose both world-space principal axis projectors when the in-plane moment gap is proven positive.",
+    "Exact closure and rational planar contours. Area uncertainty and unresolved spectral gaps withhold the axis projectors."
+  ],
+  "logSha256": "0001168e56516b8e8ae764e2a44041e3953d18efe77c57e39ab266ca8a9ff03b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/bounded_planar_face_mass.rs": "a09d8bd4f7041c7642138a251a14a27720368ccde3de6bc679ef7196b9dad5f9",
+    "crates/nurbs-core/tests/bounded_world_plane_mass_contracts.rs": "6f4bacd55e1046a5c75f4808d148511c577c570d1eae5368ae3d4238e94931a1"
+  }
+}

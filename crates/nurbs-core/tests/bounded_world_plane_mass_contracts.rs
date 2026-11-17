@@ -143,3 +143,57 @@ fn spectrum_is_unresolved_when_signed_area_cannot_be_separated_from_zero() {
     contains(result.signed_area, 0.);
     assert!(result.spectrum.is_none());
 }
+
+#[test]
+fn encloses_principal_axis_projectors_for_a_rational_ellipse() {
+    use num_rational::BigRational as Q;
+    use nurbs_core::analysis::bounded_planar_face_mass::bound_projected_face_principal_directions;
+    let mut chart = face();
+    chart.projection.slopes = [Q::from_integer(0.into()), Q::from_integer(0.into())];
+    for pole in chart.projection.surface.control_points.iter_mut().flatten() {
+        pole[2] = 0.;
+    }
+    let result =
+        bound_projected_face_principal_directions(&chart, [3., -2.], [0.002; 3], 8192).unwrap();
+    assert!(result.projected_converged);
+    let projectors = result.axes.unwrap();
+    for (axis, expected) in projectors.into_iter().zip([1, 0]) {
+        for (i, row) in axis.into_iter().enumerate() {
+            for (j, entry) in row.into_iter().enumerate() {
+                contains(
+                    entry,
+                    if i == expected && j == expected {
+                        1.
+                    } else {
+                        0.
+                    },
+                );
+                assert!(entry[1] - entry[0] < 0.05);
+            }
+        }
+    }
+}
+
+#[test]
+fn retains_moment_intervals_when_isotropy_prevents_axis_separation() {
+    use num_rational::BigRational as Q;
+    use nurbs_core::analysis::bounded_planar_face_mass::bound_projected_face_principal_directions;
+    let mut chart = face();
+    chart.projection.slopes = [Q::from_integer(0.into()), Q::from_integer(0.into())];
+    for p in chart
+        .loops
+        .iter_mut()
+        .flatten()
+        .flat_map(|c| &mut c.control_points)
+    {
+        p[0] = 3. + (p[0] - 3.) / 2.;
+    }
+    let result =
+        bound_projected_face_principal_directions(&chart, [3., -2.], [0.02; 3], 8192).unwrap();
+    assert!(result.projected_converged);
+    assert!(result.axes.is_none());
+    let spectrum = result.spectrum.unwrap();
+    for moment in spectrum.principal {
+        contains(moment, std::f64::consts::PI / 4.);
+    }
+}
