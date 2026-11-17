@@ -333,6 +333,60 @@ fn bound_root_sum(squares: Vec<Q>, tolerance: Q, remaining: &mut u64) -> Result<
     Ok([lower, upper])
 }
 
+#[derive(Clone, Debug)]
+pub struct ExactPolyhedralProjection {
+    /// Minimum and maximum of the unnormalized dot product with the direction.
+    pub dot_bounds: [Q; 2],
+    /// Points on the material boundary attaining the corresponding extrema.
+    pub witnesses_mm: [[Q; 3]; 2],
+    pub exact_work: u64,
+}
+
+/// Find the exact directional range of a qualified planar solid with full
+/// piecewise-linear edges. A linear functional on each retained planar
+/// region attains its extrema on the polygonal boundary.
+pub fn exact_polyhedral_projection(
+    solid: &QualifiedClosedSolid,
+    direction: [f64; 3],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralProjection> {
+    if !direction.iter().all(|value| value.is_finite()) || direction == [0.; 3] {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Projection needs a finite nonzero direction",
+        ));
+    }
+    let direction = lift(&direction);
+    let mut minimum: Option<(Q, [Q; 3])> = None;
+    let mut maximum: Option<(Q, [Q; 3])> = None;
+    let mut remaining = max_exact_work;
+    visit_polyhedral_boundary(solid, &mut remaining, |_, _, a, b, _, remaining| {
+        spend(remaining, 14)?;
+        for point in [a, b] {
+            let value: Q = direction
+                .iter()
+                .zip(point)
+                .map(|(axis, coordinate)| axis * coordinate)
+                .sum();
+            if minimum.as_ref().is_none_or(|(bound, _)| value < *bound) {
+                minimum = Some((value.clone(), point.clone()));
+            }
+            if maximum.as_ref().is_none_or(|(bound, _)| value > *bound) {
+                maximum = Some((value, point.clone()));
+            }
+        }
+        Ok(())
+    })?;
+    let (Some((lo, lo_point)), Some((hi, hi_point))) = (minimum, maximum) else {
+        return Err(refuse("Exact projection requires material boundary edges"));
+    };
+    Ok(ExactPolyhedralProjection {
+        dot_bounds: [lo, hi],
+        witnesses_mm: [lo_point, hi_point],
+        exact_work: max_exact_work - remaining,
+    })
+}
+
 fn visit_polyhedral_boundary(
     solid: &QualifiedClosedSolid,
     remaining: &mut u64,

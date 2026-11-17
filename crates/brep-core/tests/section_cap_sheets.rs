@@ -1753,3 +1753,55 @@ fn bounds_irrational_oblique_edge_lengths() {
     assert!(lower < expected && expected < upper);
     assert!(upper - lower <= Q::from_float(1e-9).unwrap());
 }
+
+#[test]
+fn exact_directional_bounds_ignore_the_unused_expanded_cap_support() {
+    use brep_core::{
+        analysis::exact_polyhedral_projection, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let source = open_prism_with_nonbinary_cap_support();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let section = &result.section;
+    let solid = &section.solid;
+    let cap = &solid.model().faces[section.cap_faces[0]];
+    assert!(
+        cap.surface
+            .control_points
+            .iter()
+            .flatten()
+            .any(|p| p[1].abs() > 2.)
+    );
+    let report = exact_polyhedral_projection(solid, [0., 1., 0.], 1_000_000).unwrap();
+    let expected = [-2, 2].map(|n| Q::from_integer(n.into()));
+    assert_eq!(report.dot_bounds, expected);
+    assert_eq!(report.witnesses_mm.map(|p| p[1].clone()), expected);
+    assert!(exact_polyhedral_projection(solid, [0., 1., 0.], report.exact_work).is_ok());
+    assert!(exact_polyhedral_projection(solid, [0., 1., 0.], report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_projection_scales_and_reverses_an_oblique_direction() {
+    use brep_core::{
+        analysis::exact_polyhedral_projection, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let source = open_prism_with_nonbinary_cap_support();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let direction = [0.5, 0.5, -1.5];
+    let report = exact_polyhedral_projection(solid, direction, 1_000_000).unwrap();
+    assert_eq!(
+        report.dot_bounds,
+        [-3, 0].map(|n| Q::from_integer(n.into()))
+    );
+    for (point, bound) in report.witnesses_mm.iter().zip(report.dot_bounds) {
+        let value: Q = point
+            .iter()
+            .zip(direction)
+            .map(|(p, d)| p * Q::from_float(d).unwrap())
+            .sum();
+        assert_eq!(value, bound);
+    }
+    assert!(exact_polyhedral_projection(solid, [0.; 3], 1_000_000).is_err());
+}
