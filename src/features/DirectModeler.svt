@@ -32,7 +32,7 @@ import { connectedEdgeChain } from '../app/edgeSelection'
 import CadQuantityInput from '../components/CadQuantityInput.svt'
 import RunoutControls from '../components/RunoutControls.svt'
 import {numericRectangle,numericSlotSources} from '../app/numericSketchAuthoring'
-import {ellipseSketchCurve,resizeSlot,slotDimensions,tangentArc} from '../app/sketchPrimitives'
+import {ellipseSketchCurve,resizeSlot,slotDimensions,tangentArc,tangentArcConstraint} from '../app/sketchPrimitives'
 import {type SurfaceBoundaryReport,type SurfaceBoundaryOptions} from '../kernel/solidSurfaceDiagnostics'
 import { computed, nextTick, onUnmounted, reactive, ref, shallowRef, watch, watchEffect } from 'svet'
 import {solidVertexCount} from '../kernel/solidMeasurements'
@@ -158,8 +158,10 @@ const ellipseRadiusB=ref(10),ellipseRotation=ref(0),ellipseValid=ref([true,true]
 function createEllipse(){ellipseError.value='';if(!draftPointValid.value.every(Boolean)||!draftRadiusValid.value||!ellipseValid.value.every(Boolean)){ellipseError.value=presentKernelError(new DirectInputError('DIRECT_SKETCH_ELLIPSE_INPUT','x','ellipse'),props.locale==='ru'?'ru':'en').message;return}
  let curve;try{curve=ellipseSketchCurve({center:[...draftPoint.value] as Point2,radiusA:draftRadius.value,radiusB:ellipseRadiusB.value,rotation:ellipseRotation.value})}catch(e){ellipseError.value=presentKernelError(e,props.locale==='ru'?'ru':'en').message;return}
  run(()=>addSketch(sampleCurve(curve),true,curve,undefined,()=>{draft.value=[];draftCursor.value=null;tool.value='select'}))}
-const tangentArcCurve=computed(()=>{const s=selectedSketch.value;return tool.value==='arc'&&s&&!s.closed&&!s.analytic&&!s.retainedProfile&&draftPointValid.value.every(Boolean)?tangentArc(s,'end',[...draftPoint.value] as Point2):null})
-function createTangentArc(){const curve=tangentArcCurve.value;if(!curve)return;run(()=>addSketch(sampleCurve(curve),false,curve,undefined,()=>{draft.value=[];draftCursor.value=null;tool.value='select'}))}
+const tangentArcEnd=ref<'start'|'end'>('end')
+const tangentArcCurve=computed(()=>{const s=selectedSketch.value;return tool.value==='arc'&&s&&!s.closed&&!s.analytic&&!s.retainedProfile&&draftPointValid.value.every(Boolean)?tangentArc(s,tangentArcEnd.value,[...draftPoint.value] as Point2):null})
+// The arc lives in the polyline's plane and keeps a persistent tangency to the end segment it continues.
+function createTangentArc(){const curve=tangentArcCurve.value,s=selectedSketch.value;if(!curve||!s)return;run(()=>addSketch(sampleCurve(curve),false,curve,undefined,()=>{draft.value=[];draftCursor.value=null;tool.value='select'},{plane:s.plane,curveConstraints:[tangentArcConstraint(s,tangentArcEnd.value)]}))}
 const draftPoint=ref<Point2>([0,0]),draftPointValid=ref([true,true])
 const draftRadius=ref(10),draftRadiusValid=ref(true),draftArcStart=ref(0),draftArcSweep=ref(180),draftArcValid=ref([true,true])
 const exactRoundCurve=computed(()=>{
@@ -1303,12 +1305,12 @@ watch(()=>[props.open,document.value,lockedIds.value.join(','),activeGroup.value
 onUnmounted(()=>{cancelHistoryRestore();historyWorker.dispose();commitWorker.dispose()})
 /** Validates the outline here (throws like before), commits in the worker, then selects the new
  * sketch and runs `after` (draft reset, tool switch) only once the commit landed. */
-function addSketch(points: Point2[], closed: boolean, analytic?: import('../app/directSketchGeometry').AnalyticCurve,retainedProfile?:import('../kernel/geometry/brepProfile').BrepProfile,after?:()=>void) {
+function addSketch(points: Point2[], closed: boolean, analytic?: import('../app/directSketchGeometry').AnalyticCurve,retainedProfile?:import('../kernel/geometry/brepProfile').BrepProfile,after?:()=>void,extra?:{plane?:unknown;curveConstraints?:import('../app/sketchCurveConstraints').SketchCurveConstraint[]}) {
   validateSimpleSketch(points,closed)
-  const id = crypto.randomUUID(), plane = JSON.parse(JSON.stringify(activePlane.value)), supportBodyId = workplaneBodyId.value
+  const id = crypto.randomUUID(), plane = JSON.parse(JSON.stringify(extra&&'plane' in extra?extra.plane??null:activePlane.value)), supportBodyId = workplaneBodyId.value
   void commitInWorker(() => {
     const d = history.document
-    d.sketches.push({ id, name: label('Эскиз ', 'Sketch ') + (d.sketches.length + 1), points, closed, analytic, ...(retainedProfile?{retainedProfile}:{}), plane, ...(supportBodyId?{supportBodyId}:{}) })
+    d.sketches.push({ id, name: label('Эскиз ', 'Sketch ') + (d.sketches.length + 1), points, closed, analytic, ...(retainedProfile?{retainedProfile}:{}), ...(plane?{plane}:{}), ...(supportBodyId?{supportBodyId}:{}), ...(extra?.curveConstraints?.length?{curveConstraints:extra.curveConstraints}:{}) })
     return d
   }, () => { pickObject(id,'2d'); after?.() })
 }
@@ -3053,7 +3055,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                   <small v-if="ellipseError" role="alert" aria-label="ellipse-refusal">{{ ellipseError }}</small>
                 </template>
                 <template v-if="tool==='arc'&&selectedSketch&&!selectedSketch.closed&&!selectedSketch.analytic">
-                  <small>{{ label('Касательная дуга: продолжает выбранную ломаную от последней точки до точки X/Y.','Tangent arc: continues the selected polyline from its last point to point X/Y.') }}</small>
+                  <small>{{ label('Касательная дуга: продолжает выбранную ломаную от выбранного конца до точки X/Y и остаётся касательной к концевому отрезку при правке ломаной.','Tangent arc: continues the selected polyline from the chosen end to point X/Y and stays tangent to that end segment when the polyline is edited.') }}</small>
+                  <select v-model="tangentArcEnd" :aria-label="label('Конец ломаной для касательной дуги','Tangent arc polyline end')"><option value="end">{{ label('Последняя точка','Last point') }}</option><option value="start">{{ label('Первая точка','First point') }}</option></select>
                   <button :disabled="!tangentArcCurve" @click="createTangentArc">{{ label('Создать касательную дугу','Create tangent arc') }}</button>
                   <small v-if="!tangentArcCurve" role="alert">{{ label('Касательная дуга невозможна: точка лежит на продолжении отрезка или радиус вне 0,01–1 000 000 мм.','Tangent arc is impossible: the point lies on the segment line or the radius is outside 0.01–1,000,000 mm.') }}</small>
                 </template>

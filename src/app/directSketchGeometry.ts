@@ -5,7 +5,7 @@ import {
   resolveEditedSketchConstraints,
   type RemappedSketchConstraints,
 } from './sketchConstraints'
-import { dimensionSolverExtras } from './directDimensions'
+import { dimensionSolverExtras, type SketchDimension } from './directDimensions'
 import type { DirectSketch, Point2 } from './directModeling'
 import type { SketchCurveConstraint } from './sketchCurveConstraints'
 import { dot3, cross3, unit3, type Vec3 } from '../kernel/geometry/math3d'
@@ -290,7 +290,10 @@ export function trimSketchConstraints(
   edge: number,
   at: number,
   boundaries: DirectSketch[],
-): RemappedSketchConstraints<DirectSketch> & { droppedCurve: SketchCurveConstraint[] } {
+): RemappedSketchConstraints<DirectSketch> & {
+  droppedCurve: SketchCurveConstraint[]
+  droppedDimensions: SketchDimension[]
+} {
   requirePolylineSketch(s)
   boundaries.forEach(requirePolylineSketch)
   // Trim renumbers points: constraints follow surviving points and the rest are dropped.
@@ -303,8 +306,32 @@ export function trimSketchConstraints(
   const carried = remapped.sketches.map(piece => {
     const next = { ...piece }
     delete next.curveConstraints
+    delete next.dimensions
     return next
   })
+  // Dimensions are measured, not stored values: a dimension whose points all survive (same coordinates,
+  // exactly one match) in one piece keeps measuring the same distance or angle there; the rest are dropped.
+  const droppedDimensions: SketchDimension[] = []
+  for (const d of s.dimensions ?? []) {
+    const ends = 'a' in d ? ('c' in d ? [d.a, d.b, d.c] : [d.a, d.b]) : []
+    const hit = ends.length
+      ? carried.flatMap(piece => {
+          const to = ends.map(k => {
+            const p = s.points[k]
+            const at = p ? piece.points.flatMap((q, j) => (q[0] === p[0] && q[1] === p[1] ? [j] : [])) : []
+            return at.length === 1 ? at[0]! : -1
+          })
+          return to.every(k => k >= 0) ? [{ piece, to }] : []
+        })[0]
+      : undefined
+    if (!hit) {
+      droppedDimensions.push(d)
+      continue
+    }
+    const [a, b, c] = hit.to as [number, number, number]
+    const moved = ('c' in d ? { ...d, a, b, c } : { ...d, a, b }) as SketchDimension
+    hit.piece.dimensions = [...(hit.piece.dimensions ?? []), moved]
+  }
   for (const c of s.curveConstraints ?? []) {
     const p = c.kind === 'coincident' ? s.points[c.point] : undefined
     const hit =
@@ -320,7 +347,7 @@ export function trimSketchConstraints(
     }
     hit.piece.curveConstraints = [...(hit.piece.curveConstraints ?? []), { ...c, point: hit.point }]
   }
-  return { ...remapped, sketches: carried, droppedCurve }
+  return { ...remapped, sketches: carried, droppedCurve, droppedDimensions }
 }
 
 export function extendSketch(s: DirectSketch, end: 'start' | 'end', boundaries: DirectSketch[]): DirectSketch {

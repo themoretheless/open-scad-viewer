@@ -1,6 +1,7 @@
 import { DirectInputError } from '../i18n/kernelErrors'
 import type { DirectSketch, Point2 } from './directModeling'
 import type { AnalyticCurve } from './directSketchGeometry'
+import type { SketchCurveConstraint } from './sketchCurveConstraints'
 
 const LIMIT = 1e6
 const finite = (...values: number[]) => values.every(v => Number.isFinite(v) && Math.abs(v) <= LIMIT)
@@ -140,4 +141,18 @@ export function tangentArc(
   if (signed < 0) sweep -= 360
   if (Math.abs(sweep) < 0.1 || Math.abs(sweep) >= 360) return null
   return { kind: 'arc', center, radius, start, sweep }
+}
+
+/**
+ * Persistent tangency stored on a tangent arc: the arc circle stays tangent to the end segment of the
+ * polyline it continues, so edits of the polyline re-solve the arc (or refuse) through the curve-constraint solver.
+ */
+export function tangentArcConstraint(
+  sketch: Pick<DirectSketch, 'id' | 'points'>,
+  end: 'start' | 'end',
+): Extract<SketchCurveConstraint, { kind: 'tangent_line' }> {
+  const n = sketch.points.length
+  return end === 'end'
+    ? { kind: 'tangent_line', ref: sketch.id, a: n - 2, b: n - 1 }
+    : { kind: 'tangent_line', ref: sketch.id, a: 0, b: 1 }
 }

@@ -6090,3 +6090,28 @@ it('C7 tangent arc: continues the selected polyline tangent to its last segment'
  expect(arc.kind).toBe('arc');expect(arc.center[0]).toBeCloseTo(10,9);expect(arc.center[1]).toBeCloseTo(10,9);expect(arc.radius).toBeCloseTo(10,9);expect(arc.start).toBeCloseTo(-90,9);expect(arc.sweep).toBeCloseTo(90,9)
  await ui.click('↶');expect(ui.doc().sketches.map(s=>s.id)).toEqual(['path'])
 })
+
+it('C7 tangent arc: starts from the first point and stores tangency to that segment',async()=>{
+ await geometryKernel.warmGeometryKernel();const ui=await mount({initialDocument:{version:1,bodies:[],sketches:[{id:'path',name:'Path',closed:false,points:[[0,0],[10,0],[10,5]]}]},initialSelection:'path'});await ui.click('Arc')
+ const field=(name:string)=>ui.all().find(n=>n.props['aria-label']===name)!
+ field('Tangent arc polyline end').props['onUpdate:modelValue']('start');await nextTick()
+ field('Point coordinate X').props['onUpdate:modelValue'](-10);field('Point coordinate Y').props['onUpdate:modelValue'](10);await nextTick()
+ await ui.click('Create tangent arc');const arc=ui.doc().sketches.at(-1)!
+ expect(arc.analytic!.center[0]).toBeCloseTo(0,9);expect(arc.analytic!.center[1]).toBeCloseTo(10,9);expect(arc.analytic!.radius).toBeCloseTo(10,9)
+ expect(arc.curveConstraints).toEqual([{kind:'tangent_line',ref:'path',a:0,b:1}])
+ expect(arc.plane).toBeUndefined()
+})
+
+it('C7 coincident vertices: the panel joins two vertices of one polyline and refuses neighbours',async()=>{
+ await geometryKernel.warmGeometryKernel();const ui=await mount({initialDocument:{version:1,bodies:[],sketches:[{id:'loop',name:'Loop',closed:false,points:[[0,0],[10,0],[10,10],[0.5,0.4]]}]},initialSelection:'loop'})
+ await ui.click('Sketch dimensions');await vi.waitFor(()=>expect(ui.all().some(n=>n.tag==='select'&&n.props['aria-label']==='Constraint kind')).toBe(true))
+ const select=(name:string)=>ui.all().find(n=>n.tag==='select'&&n.props['aria-label']===name)!
+ select('Constraint kind').props['onUpdate:modelValue']('coincident');await nextTick()
+ select('Constraint vertex A').props['onUpdate:modelValue'](0);select('Constraint vertex B').props['onUpdate:modelValue'](1);await nextTick()
+ const before=ui.doc();await ui.click('Add constraint');expect(ui.doc()).toEqual(before)
+ select('Constraint vertex B').props['onUpdate:modelValue'](3);await nextTick();await ui.click('Add constraint')
+ const next=ui.doc().sketches[0]!
+ expect(next.constraints).toEqual([{kind:'coincident',a:0,b:3}])
+ expect(Math.hypot(next.points[3]![0]-next.points[0]![0],next.points[3]![1]-next.points[0]![1])).toBeLessThan(1e-6)
+ await ui.click('↶');expect(ui.doc().sketches[0]!.constraints).toBeUndefined()
+})

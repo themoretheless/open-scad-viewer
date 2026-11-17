@@ -55,6 +55,23 @@ export function sketchConstraintGlyphs(sketches: readonly GlyphSketch[], offset:
   for (const s of sketches) {
     const stack = new Map<string, number>()
     s.constraints?.forEach((c, index) => {
+      if (c.kind === 'coincident') {
+        const p = s.points[c.a]
+        if (!p) return
+        const level = (stack.get(`v${c.a}`) ?? 0) + 1
+        stack.set(`v${c.a}`, level)
+        const d = (offset * level) / Math.SQRT2
+        out.push({
+          key: `${s.id}:p${index}:0`,
+          sketchId: s.id,
+          source: 'polyline',
+          index,
+          kind: 'coincident',
+          symbol: SYMBOLS.coincident,
+          at: [p[0] + d, p[1] - d],
+        })
+        return
+      }
       const segments: [number, number][] = [[c.a, c.b]]
       if ('c' in c) segments.push([c.c, c.d])
       segments.forEach(([i, j], part) => {

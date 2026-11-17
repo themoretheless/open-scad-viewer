@@ -4,11 +4,13 @@ import { solveRushGraphSketch, type SketchConstraint as SolverConstraint } from 
 /** Persistent direction constraints of a polyline sketch; indices name sketch points. */
 export type SketchConstraint =
   | { kind: 'horizontal' | 'vertical'; a: number; b: number }
+  /** Two non-adjacent vertices of the same polyline share one position. */
+  | { kind: 'coincident'; a: number; b: number }
   | { kind: 'parallel' | 'perpendicular' | 'equal_length'; a: number; b: number; c: number; d: number }
 
 export const MAX_SKETCH_CONSTRAINTS = 32
 export const SKETCH_CONSTRAINT_TOLERANCE_MM = 1e-6
-const PAIR = new Set(['horizontal', 'vertical'])
+const PAIR = new Set(['horizontal', 'vertical', 'coincident'])
 const QUAD = new Set(['parallel', 'perpendicular', 'equal_length'])
 
 interface ConstrainedSketch {
@@ -41,6 +43,22 @@ export function validateSketchConstraints(sketch: ConstrainedSketch): void {
     if (PAIR.has(c.kind)) {
       const keys = Object.keys(c).sort().join(',')
       if (keys !== 'a,b,kind' || !index(c.a) || !index(c.b) || c.a === c.b) throw Error('Invalid sketch constraints.')
+      if (c.kind === 'coincident') {
+        const gap = Math.abs(c.a - c.b)
+        // Neighbouring vertices would collapse their segment.
+        if (gap === 1 || (sketch.closed === true && gap === n - 1))
+          throw Error('Sketch constraints conflict: coincident vertices bound one segment.')
+        if (
+          list.some(
+            o =>
+              o !== c &&
+              o.kind === 'coincident' &&
+              Math.min(o.a, o.b) === Math.min(c.a, c.b) &&
+              Math.max(o.a, o.b) === Math.max(c.a, c.b),
+          )
+        )
+          throw Error('Duplicate coincident constraint.')
+      }
     } else if (QUAD.has(c.kind)) {
       const q = c as { a: number; b: number; c: number; d: number }
       const keys = Object.keys(c).sort().join(',')
@@ -100,8 +118,13 @@ export function solveConstrainedPoints(
   if (extras.check && !extras.check(result)) throw Error('Sketch constraints conflict or did not converge.')
   // A segment collapsed to a point satisfies every direction equation; treat it as a conflict.
   const length = (a: number, b: number) => Math.hypot(result[b]![0] - result[a]![0], result[b]![1] - result[a]![1])
-  if (constraints.some(c => length(c.a, c.b) <= 1e-4 || ('c' in c && length(c.c, c.d) <= 1e-4)))
-    throw Error('Sketch constraints conflict: a constrained segment collapsed to a point.')
+  const n = result.length
+  const collapsed = constraints.some(c =>
+    c.kind === 'coincident'
+      ? [c.a, c.b].some(k => (k + 1 < n && length(k, k + 1) <= 1e-4) || (k > 0 && length(k - 1, k) <= 1e-4))
+      : length(c.a, c.b) <= 1e-4 || ('c' in c && length(c.c, c.d) <= 1e-4),
+  )
+  if (collapsed) throw Error('Sketch constraints conflict: a constrained segment collapsed to a point.')
   return result
 }
 
@@ -109,6 +132,7 @@ export function solveConstrainedPoints(
 export function sketchConstraintResidual(points: readonly Point2[], c: SketchConstraint): number {
   const v = (a: number, b: number): Point2 => [points[b]![0] - points[a]![0], points[b]![1] - points[a]![1]]
   const u = v(c.a, c.b)
+  if (c.kind === 'coincident') return Math.hypot(u[0], u[1])
   if (!('c' in c)) return Math.abs(c.kind === 'horizontal' ? u[1] : u[0])
   const w = v(c.c, c.d)
   const lu = Math.hypot(u[0], u[1]),
@@ -199,7 +223,7 @@ export function remapSketchConstraints<T extends ConstrainedSketch>(
       const n = piece.points.length
       const segment = (i: number, j: number) =>
         Math.abs(i - j) === 1 || (piece.closed === true && Math.abs(i - j) === n - 1)
-      if (!segment(to[0]!, to[1]!) || (to.length === 4 && !segment(to[2]!, to[3]!))) return
+      if ((c.kind !== 'coincident' && !segment(to[0]!, to[1]!)) || (to.length === 4 && !segment(to[2]!, to[3]!))) return
       const candidate: SketchConstraint =
         'c' in c ? { kind: c.kind, a: to[0]!, b: to[1]!, c: to[2]!, d: to[3]! } : { kind: c.kind, a: to[0]!, b: to[1]! }
       try {
@@ -222,6 +246,7 @@ const CONSTRAINT_NAMES: Record<SketchConstraint['kind'], [string, string]> = {
   parallel: ['параллельность', 'parallel'],
   perpendicular: ['перпендикулярность', 'perpendicular'],
   equal_length: ['равная длина', 'equal length'],
+  coincident: ['совпадение вершин', 'coincident vertices'],
 }
 
 /** User-facing notice for constraints an edit removed (for example trim); empty when nothing was dropped. */

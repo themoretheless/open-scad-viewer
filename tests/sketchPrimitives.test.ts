@@ -6,7 +6,9 @@ import {
   resizeSlot,
   slotDimensions,
   tangentArc,
+  tangentArcConstraint,
 } from '../src/app/sketchPrimitives'
+import { resolveDependentCurveSketches, sketchCurveConstraintResidual } from '../src/app/sketchCurveConstraints'
 import { DirectInputError, presentKernelError } from '../src/i18n/kernelErrors'
 
 const TOL = 1e-9
@@ -181,5 +183,83 @@ describe('C7 tangent arc', () => {
     ).toBeNull()
     expect(tangentArc({ points: [[0, 0]], closed: false }, 'end', [5, 5])).toBeNull()
     expect(tangentArc(line, 'end', [10, 0.001])).toBeNull()
+  })
+})
+
+describe('persistent tangent arc', () => {
+  const path = {
+    id: 'path',
+    name: 'Path',
+    closed: false,
+    points: [
+      [0, 0],
+      [10, 0],
+    ] as Point2[],
+  }
+  const arcSketch = (end: 'start' | 'end', target: Point2, extra: object = {}) => {
+    const analytic = tangentArc(path, end, target)!
+    return {
+      id: 'arc',
+      name: 'Arc',
+      closed: false,
+      points: [] as Point2[],
+      analytic,
+      curveConstraints: [tangentArcConstraint(path, end)],
+      ...extra,
+    }
+  }
+
+  it('stores tangency to the end segment it continues, from either end', () => {
+    expect(tangentArcConstraint(path, 'end')).toEqual({ kind: 'tangent_line', ref: 'path', a: 0, b: 1 })
+    const three = {
+      id: 'p3',
+      points: [
+        [0, 0],
+        [5, 0],
+        [5, 5],
+      ] as Point2[],
+    }
+    expect(tangentArcConstraint(three, 'end')).toEqual({ kind: 'tangent_line', ref: 'p3', a: 1, b: 2 })
+    expect(tangentArcConstraint(three, 'start')).toEqual({ kind: 'tangent_line', ref: 'p3', a: 0, b: 1 })
+    const fromStart = tangentArc(path, 'start', [-10, 10])!
+    expect(fromStart.center[0]).toBeCloseTo(0, 9)
+    expect(fromStart.center[1]).toBeCloseTo(10, 9)
+    expect(fromStart.radius).toBeCloseTo(10, 9)
+  })
+
+  it('re-solves the arc tangent when the polyline moves and refuses an unreachable edit', () => {
+    const arc = arcSketch('end', [20, 10])
+    const moved = {
+      ...path,
+      points: [
+        [0, 3],
+        [10, 5],
+      ] as Point2[],
+    }
+    const [, next] = resolveDependentCurveSketches([moved, arc], ['path'])
+    expect(sketchCurveConstraintResidual(next!.analytic!, arc.curveConstraints[0]!, moved)).toBeLessThan(1e-6)
+    // A held radius plus tangency to a far parallel line cannot both hold: the whole edit is refused.
+    const wall = {
+      id: 'wall',
+      name: 'Wall',
+      closed: false,
+      points: [
+        [0, 20],
+        [10, 20],
+      ] as Point2[],
+    }
+    const pinned = {
+      ...arc,
+      dimensions: [{ kind: 'radius' }],
+      curveConstraints: [...arc.curveConstraints, { kind: 'tangent_line' as const, ref: 'wall', a: 0, b: 1 }],
+    }
+    const far = {
+      ...path,
+      points: [
+        [0, -30],
+        [10, -30],
+      ] as Point2[],
+    }
+    expect(() => resolveDependentCurveSketches([far, wall, pinned], ['path'])).toThrow(/not applied/)
   })
 })
