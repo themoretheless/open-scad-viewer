@@ -872,3 +872,82 @@ fn projective_c2_clock_refuses_a_pole_at_or_inside_the_right_domain() {
         );
     }
 }
+
+fn stationary_clock_seam() -> (Curve, Curve) {
+    let left = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![vec![1., 0.], vec![0., 0.], vec![0., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let right = Curve {
+        knots: vec![10., 10., 10., 12., 12., 12.],
+        control_points: vec![vec![0., 0.], vec![0., 0.], vec![1., 0.]],
+        ..left.clone()
+    };
+    (left, right)
+}
+
+#[test]
+fn stationary_c2_clock_matches_exact_second_derivatives() {
+    use nurbs_core::editing::exact_curve_merge::{
+        compare_exact_curve_seam_jets, merge_with_exact_stationary_c2_clock,
+    };
+    let (left, right) = stationary_clock_seam();
+    let report = merge_with_exact_stationary_c2_clock(&left, &right, 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let curve = report.curve.unwrap();
+    assert_eq!(curve.domain(), [0., 2.]);
+    let [a, b] = curve.split(1.).unwrap();
+    assert_eq!(
+        compare_exact_curve_seam_jets(&a, &b, 1_000_000)
+            .unwrap()
+            .continuity_order,
+        Some(2)
+    );
+    for t in [0_f64, 0.5, 1., 1.5, 2.] {
+        assert_eq!(curve.evaluate(t).unwrap().point, vec![(t - 1.).powi(2), 0.]);
+    }
+    assert!(
+        merge_with_exact_stationary_c2_clock(&left, &right, report.work_used)
+            .unwrap()
+            .curve
+            .is_some()
+    );
+    assert!(
+        merge_with_exact_stationary_c2_clock(&left, &right, report.work_used - 1)
+            .unwrap()
+            .curve
+            .is_none()
+    );
+}
+
+#[test]
+fn stationary_c2_clock_distinguishes_flat_irrational_and_incompatible_jets() {
+    use nurbs_core::editing::{
+        exact_curve_merge::{GaugeMergeRefusal, merge_with_exact_stationary_c2_clock},
+        rational_factor::Refusal as ExactRefusal,
+    };
+    let (mut left, mut right) = stationary_clock_seam();
+    for (endpoint, refusal) in [
+        (
+            vec![2., 0.],
+            GaugeMergeRefusal::Exact(ExactRefusal::NotRepresentable),
+        ),
+        (
+            vec![-1., 0.],
+            GaugeMergeRefusal::Join(Refusal::SeamMismatch),
+        ),
+        (vec![1., 1.], GaugeMergeRefusal::Join(Refusal::SeamMismatch)),
+        (vec![0., 0.], GaugeMergeRefusal::Join(Refusal::SeamMismatch)),
+    ] {
+        right.control_points[2] = endpoint;
+        let report = merge_with_exact_stationary_c2_clock(&left, &right, 1_000_000).unwrap();
+        assert!(report.curve.is_none());
+        assert_eq!(report.refusal, Some(refusal));
+    }
+    left.control_points[0] = vec![0., 0.];
+    let flat = merge_with_exact_stationary_c2_clock(&left, &right, 1_000_000).unwrap();
+    assert_eq!(flat.curve.unwrap().domain(), [0., 3.]);
+}

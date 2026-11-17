@@ -722,7 +722,6 @@ fn merge_with_matching_clock(
             affine_curve::scale_curve_clock, mobius_spline::match_curve_seam_clock,
         },
         rational_edit::Work,
-        rational_factor::Refusal as ExactRefusal,
     };
 
     let seam = compare_exact_curve_geometric_seam(left, right, max_work)?;
@@ -770,13 +769,105 @@ fn merge_with_matching_clock(
         Ok(curve) => curve,
         Err(reason) => return Ok(refused(reason, work.used)),
     };
-    if work.used == max_work {
-        return Ok(refused(
-            GaugeMergeRefusal::Exact(ExactRefusal::ResourceLimit),
-            work.used,
-        ));
+    finish_clock_merge(left, aligned, work)
+}
+
+fn finish_clock_merge(
+    left: &Curve,
+    right: Curve,
+    work: super::rational_edit::Work,
+) -> Result<GaugeMergeReport> {
+    if work.used == work.limit {
+        return Ok(GaugeMergeReport {
+            curve: None,
+            work_used: work.used,
+            refusal: Some(GaugeMergeRefusal::Exact(
+                super::rational_factor::Refusal::ResourceLimit,
+            )),
+        });
     }
-    let mut merged = merge_with_exact_degree_elevation(left, &aligned, max_work - work.used)?;
+    let mut merged = merge_with_exact_degree_elevation(left, &right, work.limit - work.used)?;
     merged.work_used += work.used;
     Ok(merged)
+}
+
+/// Merge curves whose two seam tangents vanish. Match the second derivatives
+/// by a positive affine right clock; if both second derivatives also vanish,
+/// translate the right clock with unit scale.
+pub fn merge_with_exact_stationary_c2_clock(
+    left: &Curve,
+    right: &Curve,
+    max_work: u64,
+) -> Result<GaugeMergeReport> {
+    use super::{exact_projective::affine_curve::scale_curve_clock, rational_edit::Work};
+
+    left.validate()?;
+    right.validate()?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact stationary seam work must be in 1..=1000000",
+    )?;
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let mut transform = || {
+        if let Some(reason) = seam_geometry_incompatibility(left, right) {
+            return Err(GaugeMergeRefusal::Join(reason));
+        }
+        let scale = stationary_seam_scale(left, right, &mut work)?;
+        scale_curve_clock(right, left.domain()[1], scale, &mut work)
+            .map_err(GaugeMergeRefusal::Exact)
+    };
+    match transform() {
+        Ok(aligned) => finish_clock_merge(left, aligned, work),
+        Err(reason) => Ok(GaugeMergeReport {
+            curve: None,
+            work_used: work.used,
+            refusal: Some(reason),
+        }),
+    }
+}
+
+fn stationary_seam_scale(
+    left: &Curve,
+    right: &Curve,
+    work: &mut super::rational_edit::Work,
+) -> std::result::Result<num_rational::BigRational, GaugeMergeRefusal> {
+    use super::rational_factor::Refusal as ExactRefusal;
+    use num_rational::BigRational as Q;
+    use num_traits::{One, Signed, Zero};
+
+    let [a, da, dda] = exact_endpoint_jets(left, true, work).map_err(GaugeMergeRefusal::Exact)?;
+    let [b, db, ddb] = exact_endpoint_jets(right, false, work).map_err(GaugeMergeRefusal::Exact)?;
+    let mismatch = GaugeMergeRefusal::Join(Refusal::SeamMismatch);
+    if a != b || da.iter().chain(&db).any(|value| !value.is_zero()) {
+        return Err(mismatch);
+    }
+    let Some(axis) = dda.iter().position(|value| !value.is_zero()) else {
+        return if ddb.iter().all(Zero::is_zero) {
+            Ok(Q::one())
+        } else {
+            Err(mismatch)
+        };
+    };
+    let solve = || {
+        let ratio = work.op(&ddb[axis], &dda[axis], |a, b| a / b)?;
+        if !ratio.is_positive() {
+            return Ok(None);
+        }
+        for (a, b) in dda.iter().zip(ddb) {
+            if work.op(a, &ratio, |a, ratio| a * ratio)? != b {
+                return Ok(None);
+            }
+        }
+        let numerator = work.int(ratio.numer(), ratio.numer(), |n, _| n.sqrt())?;
+        let denominator = work.int(ratio.denom(), ratio.denom(), |d, _| d.sqrt())?;
+        let scale = Q::new(numerator, denominator);
+        if work.op(&scale, &scale, |a, b| a * b)? != ratio {
+            return Err(ExactRefusal::NotRepresentable);
+        }
+        Ok(Some(scale))
+    };
+    solve().map_err(GaugeMergeRefusal::Exact)?.ok_or(mismatch)
 }
