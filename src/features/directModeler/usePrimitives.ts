@@ -13,7 +13,7 @@ import { computed, ref, watch, onUnmounted, type Ref, type ShallowRef, type Comp
 
 export interface PrimitivesOptions {
   activeGroup: Ref<string>
-  advancedOp: Ref<"split" | "push" | "shell" | "curve" | "transform" | "offset" | "loft" | "chamfer" | "instance-create" | "instance-transform" | "instance-place" | "instance-array" | "nurbs-loft" | "nurbs-sweep" | "nurbs-patch" | "nurbs-runout" | "nurbs-rebuild" | "nurbs-reduce" | "nurbs-surface-rebuild" | "nurbs-surface-reduce" | "profile-union" | "profile-difference" | "profile-intersection" | "extend" | "edge-fillet" | "profile-prepare" | "nurbs-offset" | "nurbs-point-trim" | "nurbs-match" | "nurbs-prepare" | "nurbs-curve-match" | null>
+  advancedOp: Ref<"split" | "push" | "shell" | "curve" | "transform" | "offset" | "loft" | "chamfer" | "instance-create" | "instance-transform" | "instance-place" | "instance-array" | "nurbs-loft" | "nurbs-sweep" | "nurbs-patch" | "nurbs-runout" | "nurbs-rebuild" | "nurbs-reduce" | "nurbs-surface-rebuild" | "nurbs-surface-reduce" | "profile-union" | "profile-difference" | "profile-intersection" | "profile-xor" | "extend" | "edge-fillet" | "profile-prepare" | "nurbs-offset" | "nurbs-point-trim" | "nurbs-match" | "nurbs-prepare" | "nurbs-curve-match" | null>
   brepSegments: Ref<number>
   cancelCommand: () => void
   commitInWorker: CommitInWorker

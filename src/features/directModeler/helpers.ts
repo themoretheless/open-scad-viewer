@@ -35,8 +35,8 @@ export function collectDragNodes(svg: SVGSVGElement | undefined, ids: readonly s
   return [...seen]
 }
 
-export function profileBooleanOperation(id:string|null):'union'|'difference'|'intersection'|null {
- return id==='profile-union'?'union':id==='profile-difference'?'difference':id==='profile-intersection'?'intersection':null
+export function profileBooleanOperation(id:string|null):'union'|'difference'|'intersection'|'xor'|null {
+ return id==='profile-union'?'union':id==='profile-difference'?'difference':id==='profile-intersection'?'intersection':id==='profile-xor'?'xor':null
 }
 
 export function isProfileCommand(id:string|null){return id==='profile-prepare'||!!profileBooleanOperation(id)}

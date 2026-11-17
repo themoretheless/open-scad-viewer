@@ -28,7 +28,7 @@ export function withRetainedProfile(sketch:DirectSketch,profile:BrepProfile):Dir
  return next
 }
 export function combineSketchProfiles(sketches:DirectSketch[],operation:BrepProfileBooleanOperation):DirectSketch {
- if(!['union','difference','intersection'].includes(operation))throw Error('Unsupported sketch profile operation.')
+ if(!['union','difference','intersection','xor'].includes(operation))throw Error('Unsupported sketch profile operation.')
  if(sketches.length<2)throw Error('Select at least two closed profiles.')
  const plane=sketches[0].plane??{origin:[0,0,0],u:[1,0,0],v:[0,1,0]}
  const po=plane.origin,pu=plane.u,pv=plane.v

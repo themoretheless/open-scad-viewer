@@ -2,21 +2,21 @@ import {parseDirectDocument,type DirectDocument} from '../app/directModeling'
 import {combineSketchProfiles,selectSketchProfileRegions} from '../app/retainedSketchProfile'
 import {offsetSketch,extendSketch,sampleCurve,xyPlane} from '../app/directSketchGeometry'
 import {stringifyMeshJson} from '../exchange/meshJson'
-export type SolidProfileEditOperation='profile-union'|'profile-difference'|'profile-intersection'|'offset'|'extend'|'curve'
+export type SolidProfileEditOperation='profile-union'|'profile-difference'|'profile-intersection'|'profile-xor'|'offset'|'extend'|'curve'
 export interface SolidProfileEditOptions {
  operation:SolidProfileEditOperation;id:string;inputs:string[];distance:number;end:'start'|'end';cx:number;cy:number;radius:number;start:number;sweep:number
  /** Region indexes of the Boolean result to drop before committing; empty keeps every region. */
  profileExcludedRegions?:number[]
 }
 export function isSolidProfileEdit(operation:unknown):operation is SolidProfileEditOperation {
- return ['profile-union','profile-difference','profile-intersection','offset','extend','curve'].includes(String(operation))
+ return ['profile-union','profile-difference','profile-intersection','profile-xor','offset','extend','curve'].includes(String(operation))
 }
 /** Produce a complete candidate document without mutating the worker request. */
 export function applySolidProfileEdit(document:DirectDocument,p:SolidProfileEditOptions):DirectDocument {
  const d=parseDirectDocument(stringifyMeshJson(document))
  if(p.operation.startsWith('profile-')){
   const sketches=p.inputs.map(id=>{const sketch=d.sketches.find(s=>s.id===id);if(!sketch)throw Error('Profile input no longer exists.');return sketch})
-  const operation=p.operation==='profile-union'?'union':p.operation==='profile-difference'?'difference':'intersection'
+  const operation=p.operation==='profile-union'?'union':p.operation==='profile-difference'?'difference':p.operation==='profile-xor'?'xor':'intersection'
   const result=selectSketchProfileRegions(combineSketchProfiles(sketches,operation),p.profileExcludedRegions??[])
   d.sketches=d.sketches.filter(s=>!p.inputs.includes(s.id)).concat(result)
  }else{

@@ -4632,7 +4632,7 @@ it.each(['en','ru'])('keeps the complete command registry identified and explain
  for(const selection of [null,'Cube','Profile']){
   if(selection)await ui.click(selection)
   const commands=ui.commands(),current=commands.map(c=>c.id)
-  expect(commands).toHaveLength(99);expect(new Set(current).size).toBe(current.length)
+  expect(commands).toHaveLength(100);expect(new Set(current).size).toBe(current.length)
   if(ids.length)expect(current).toEqual(ids);else ids=current
   for(const command of commands){
    expect(command.label.trim(),command.id).not.toBe('')
@@ -5976,4 +5976,36 @@ it.each(['en','ru'])('C9 region pick: hover, click and keyboard toggle Boolean r
  await commandKey(ui,'Enter')
  const committed=parseDirectDocument(JSON.stringify(ui.doc()))
  expect(committed.sketches).toHaveLength(1);expect(committed.sketches[0].retainedProfile!.areaMm2).toBeCloseTo(16,6)
+})
+
+it.each(['en','ru'])('C9 profile xor: keeps regions covered by one profile, picks them in the viewport and undoes (%s)',async locale=>{
+ await geometryKernel.warmGeometryKernel()
+ const a={id:'a',name:'Xor left',closed:true,points:[[0,0],[10,0],[10,4],[0,4]]}
+ const b={id:'b',name:'Xor right',closed:true,points:[[6,0],[16,0],[16,4],[6,4]]}
+ const ui=await mount({locale},JSON.stringify(parseDirectDocument(JSON.stringify({version:1,sketches:[a,b],bodies:[]}))))
+ const normalized=()=>parseDirectDocument(JSON.stringify(ui.doc()))
+ await ui.click(a.name);await ui.click(b.name,true);const before=normalized()
+ await ui.click(locale==='ru'?'Исключающее объединение профилей':'Exclusive-or profiles');await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain(locale==='ru'?'ровно одному':'exactly one')
+ expect(new Set(ui.all().filter(n=>n.props['data-region-index']!==undefined).map(n=>n.props['data-region-index']))).toEqual(new Set([0,1]))
+ const first=ui.all().find(n=>n.props['data-region-index']===0)!
+ for(const h of [first.props.onPointerdown].flat())(h as (e:unknown)=>void)({button:0,stopPropagation(){},preventDefault(){}})
+ await flushClearance()
+ expect(ui.all().find(n=>n.props['data-region-index']===0)!.props['aria-checked']).toBe(false)
+ await commandKey(ui,'Enter')
+ const committed=normalized();expect(committed.sketches).toHaveLength(1)
+ expect(Math.abs(committed.sketches[0].retainedProfile!.areaMm2-24)).toBeLessThan(1e-6)
+ await ui.click('↶');expect(normalized()).toEqual(before)
+})
+
+it('C9 profile xor: identical profiles are refused without changing the document',async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const a={id:'a',name:'Same one',closed:true,points:[[0,0],[4,0],[4,4],[0,4]]}
+ const b={id:'b',name:'Same two',closed:true,points:[[0,0],[4,0],[4,4],[0,4]]}
+ const ui=await mount({},JSON.stringify(parseDirectDocument(JSON.stringify({version:1,sketches:[a,b],bodies:[]}))))
+ const normalized=()=>parseDirectDocument(JSON.stringify(ui.doc()))
+ await ui.click(a.name);await ui.click(b.name,true);const before=normalized()
+ await ui.click('Exclusive-or profiles');await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain('Empty result')
+ await commandKey(ui,'Enter');expect(normalized()).toEqual(before)
 })
