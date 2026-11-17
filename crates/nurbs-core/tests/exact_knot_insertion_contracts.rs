@@ -297,3 +297,50 @@ fn exact_partition_reports_late_refusal_and_rejects_invalid_cut_order() {
         Some(vec![source])
     );
 }
+
+#[test]
+fn exact_elevation_preserves_weighted_bezier_and_absolute_domain() {
+    use nurbs_core::editing::exact_knot_insertion::elevate_exact;
+    let mut source = line(3., vec![1., 2.]);
+    source.knots = vec![-2., -2., 6., 6.];
+    let report = elevate_exact(&source, 2, 1_000_000).unwrap();
+    let elevated = report.curve.unwrap();
+    assert_eq!(elevated.domain(), [-2., 6.]);
+    assert_eq!(
+        elevated.control_points,
+        [vec![0., 0.], vec![2., 0.], vec![3., 0.]]
+    );
+    assert_eq!(elevated.weights, [0.5, 0.75, 1.]);
+    assert_eq!(
+        elevate_exact(&source, 2, report.work_used).unwrap().curve,
+        Some(elevated)
+    );
+    assert!(
+        elevate_exact(&source, 2, report.work_used - 1)
+            .unwrap()
+            .curve
+            .is_none()
+    );
+}
+
+#[test]
+fn exact_elevation_refines_multiple_spans_and_refuses_unstoreable_poles() {
+    use nurbs_core::editing::exact_knot_insertion::elevate_exact;
+    let source = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 2., 2., 2.],
+        control_points: [0., 3., 6., 9.].map(|x| vec![x, 0.]).to_vec(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let report = elevate_exact(&source, 3, 1_000_000).unwrap();
+    let elevated = report.curve.unwrap();
+    assert_eq!(elevated.knots, [0., 0., 0., 0., 1., 1., 1., 2., 2., 2., 2.]);
+    assert_eq!(
+        elevated.control_points,
+        [0., 2., 3.5, 4.5, 5.5, 7., 9.].map(|x| vec![x, 0.])
+    );
+    let refused = elevate_exact(&line(2., vec![1., 2.]), 2, 1_000_000).unwrap();
+    assert_eq!(refused.refusal, Some(Refusal::NotRepresentable));
+    assert!(refused.curve.is_none());
+}

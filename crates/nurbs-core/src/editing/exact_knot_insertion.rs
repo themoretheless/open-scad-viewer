@@ -21,12 +21,11 @@ pub(super) fn homogeneous(
 ) -> PResult<(Vec<Vec<Q>>, Vec<f64>)> {
     let p = source.degree;
     let dim = source.control_points[0].len();
-    let u = w.lift(parameter)?;
     let mut knots = source.knots.clone();
-    let mut net = Vec::new();
+    let mut net = Vec::with_capacity(source.control_points.len());
     for (cp, &weight) in source.control_points.iter().zip(&source.weights) {
         let weight = w.lift(weight)?;
-        let mut row = Vec::new();
+        let mut row = Vec::with_capacity(dim + 1);
         for &x in cp {
             let x = w.lift(x)?;
             row.push(w.op(&x, &weight, |a, b| a * b)?);
@@ -34,6 +33,20 @@ pub(super) fn homogeneous(
         row.push(weight);
         net.push(row);
     }
+    refine_homogeneous(&mut net, &mut knots, p, parameter, count, w)?;
+    Ok((net, knots))
+}
+
+fn refine_homogeneous(
+    net: &mut Vec<Vec<Q>>,
+    knots: &mut Vec<f64>,
+    p: usize,
+    parameter: f64,
+    count: usize,
+    w: &mut Work,
+) -> PResult<()> {
+    let dim = net[0].len() - 1;
+    let u = w.lift(parameter)?;
     for _ in 0..count {
         let k = knots.partition_point(|x| *x <= parameter) - 1;
         let s = knots.iter().filter(|x| **x == parameter).count();
@@ -61,9 +74,9 @@ pub(super) fn homogeneous(
             }
         }
         knots.insert(k + 1, parameter);
-        net = refined;
+        *net = refined;
     }
-    Ok((net, knots))
+    Ok(())
 }
 fn proposal(source: &Curve, parameter: f64, count: usize, w: &mut Work) -> PResult<Curve> {
     let (net, knots) = homogeneous(source, parameter, count, w)?;
@@ -382,4 +395,133 @@ pub fn partition(source: &Curve, parameters: &[f64], max_work: u64) -> Result<Pa
         refused_cut: None,
         refusal: None,
     })
+}
+
+/// Elevate a clamped nonperiodic NURBS curve in exact homogeneous
+/// arithmetic. The output uses a common gauge and degree-fold internal
+/// knots. It retains the full original rational parameter law.
+pub fn elevate_exact(source: &Curve, degree: usize, max_work: u64) -> Result<RestrictionReport> {
+    source.validate()?;
+    check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact elevation work must be in 1..=1000000",
+    )?;
+    let p = source.degree;
+    check(
+        degree >= p && degree <= 25,
+        "Exact elevation degree must be between the source degree and 25",
+    )?;
+    let [start, end] = source.domain();
+    check(
+        !source.periodic
+            && source.knots[..=p].iter().all(|&u| u == start)
+            && source.knots[source.control_points.len()..]
+                .iter()
+                .all(|&u| u == end),
+        "Exact elevation requires clamped nonperiodic storage",
+    )?;
+    if p == degree {
+        return Ok(RestrictionReport {
+            curve: Some(source.clone()),
+            work_used: 0,
+            refusal: None,
+        });
+    }
+    let mut breaks = source.knots.clone();
+    breaks.dedup();
+    let refused = |reason, work_used| RestrictionReport {
+        curve: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    if (breaks.len() - 1) * degree + 1 > 256 {
+        return Ok(refused(Refusal::ResourceLimit, 0));
+    }
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let candidate = match elevated_exact_proposal(source, degree, &breaks, &mut work) {
+        Ok(curve) => curve,
+        Err(reason) => return Ok(refused(reason, work.used)),
+    };
+    if work.used == max_work {
+        return Ok(refused(Refusal::ResourceLimit, work.used));
+    }
+    let proof = compare_definitions(source, &candidate, start, max_work - work.used, false)?;
+    work.used += proof.work_used;
+    let refusal = match proof.outcome {
+        cad_predicates::BezierIdentity::Equal => None,
+        cad_predicates::BezierIdentity::Different => Some(Refusal::DifferentDefinition),
+        cad_predicates::BezierIdentity::Indeterminate(cad_predicates::Reason::ResourceLimit) => {
+            Some(Refusal::ResourceLimit)
+        }
+        cad_predicates::BezierIdentity::Indeterminate(reason) => {
+            Some(Refusal::PredicateIndeterminate(reason))
+        }
+    };
+    Ok(RestrictionReport {
+        curve: refusal.is_none().then_some(candidate),
+        work_used: work.used,
+        refusal,
+    })
+}
+
+fn elevated_exact_proposal(
+    source: &Curve,
+    degree: usize,
+    breaks: &[f64],
+    work: &mut Work,
+) -> PResult<Curve> {
+    let p = source.degree;
+    let (mut net, mut knots) = homogeneous(source, breaks[0], 0, work)?;
+    for &parameter in &breaks[1..breaks.len() - 1] {
+        let count = p
+            .checked_sub(knots.iter().filter(|&&knot| knot == parameter).count())
+            .ok_or(Refusal::InvalidOutput)?;
+        if count > 0 {
+            refine_homogeneous(&mut net, &mut knots, p, parameter, count, work)?;
+        }
+    }
+    let dim = source.control_points[0].len();
+    let mut channels = vec![Vec::new(); dim + 1];
+    let mut elevated_knots = vec![breaks[0]; degree + 1];
+    for (index, &end) in breaks.iter().skip(1).enumerate() {
+        let mut poles = net[index * p..=(index + 1) * p].to_vec();
+        for order in p..degree {
+            let mut next = vec![poles[0].clone()];
+            for i in 1..=order {
+                let alpha = Q::new(i.into(), (order + 1).into());
+                let beta = work.op(&Q::one(), &alpha, |a, b| a - b)?;
+                let mut pole = Vec::new();
+                for (a, b) in poles[i - 1].iter().zip(&poles[i]) {
+                    let a = work.op(a, &alpha, |a, b| a * b)?;
+                    let b = work.op(b, &beta, |a, b| a * b)?;
+                    pole.push(work.op(&a, &b, |a, b| a + b)?);
+                }
+                next.push(pole);
+            }
+            next.push(poles[order].clone());
+            poles = next;
+        }
+        for pole in poles.into_iter().skip(usize::from(index != 0)) {
+            for (channel, value) in channels.iter_mut().zip(pole) {
+                channel.push(value);
+            }
+        }
+        elevated_knots.extend(std::iter::repeat_n(
+            end,
+            degree + usize::from(index + 2 == breaks.len()),
+        ));
+    }
+    let (control_points, weights) = store(&channels, work)?;
+    let curve = Curve {
+        degree,
+        knots: elevated_knots,
+        control_points,
+        weights,
+        periodic: false,
+    };
+    curve.validate().map_err(|_| Refusal::InvalidOutput)?;
+    Ok(curve)
 }

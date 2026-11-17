@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 493,
-  "unallocatedCount": 507,
+  "specifiedCount": 494,
+  "unallocatedCount": 506,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12842,6 +12842,26 @@
       "remainingQualification": [
         "Join an ordered chain of NURBS curves using one exact global weight gauge.",
         "Compose exact weight scales at every join and store the complete chain only once. Any structural or representability refusal leaves no partially joined output.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0494",
+      "name": "Точное повышение степени рациональной NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_knot_insertion::elevate_exact",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_knot_insertion.rs",
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/tests/exact_knot_insertion_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-494-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-494-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Elevate clamped NURBS curves with exact homogeneous Bézier arithmetic and full definition proof.",
+        "Extract Bézier spans in exact homogeneous arithmetic, elevate each, and store the joined net with one rational gauge. Verify identity on the actual output bits.",
         "WASM and application integration are separate."
       ]
     }
