@@ -2651,3 +2651,36 @@ fn section_path_length_encloses_an_irrational_oblique_chord() {
     assert!(lower.pow(2) < q(8, 1) && q(8, 1) < upper.pow(2));
     assert!(upper - lower <= Q::from_float(1e-12).unwrap());
 }
+
+#[test]
+fn spatial_line_clip_recovers_material_intervals_and_an_inside_start() {
+    use brep_core::{
+        analysis::exact_polyhedral_segment_clip, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |a: i64, b: i64| Q::new(a.into(), b.into());
+    let point = |x: i64| [q(x, 2), q(3, 2), q(1, 1)];
+    let endpoints = [point(-2), point(10)];
+    let report = exact_polyhedral_segment_clip(solid, &endpoints, 1_000_000).unwrap();
+    assert_eq!(report.intervals, [[q(1, 6), q(1, 3)], [q(1, 2), q(5, 6)]]);
+    assert!(exact_polyhedral_segment_clip(solid, &endpoints, report.exact_work).is_ok());
+    assert!(exact_polyhedral_segment_clip(solid, &endpoints, report.exact_work - 1).is_err());
+    let inside = exact_polyhedral_segment_clip(solid, &[point(1), point(3)], 1_000_000).unwrap();
+    assert_eq!(inside.intervals, [[q(0, 1), q(1, 2)]]);
+}
+
+#[test]
+fn spatial_line_clip_preserves_oblique_fractions_and_refuses_edge_contacts() {
+    use brep_core::analysis::exact_polyhedral_segment_clip;
+    use num_rational::BigRational as Q;
+    let solid = shifted_oblique_solid(0.);
+    let q = |a: i64, b: i64| Q::new(a.into(), b.into());
+    let path = [[q(3, 2), q(0, 1), q(-1, 2)], [q(3, 2), q(0, 1), q(7, 2)]];
+    let report = exact_polyhedral_segment_clip(&solid, &path, 1_000_000).unwrap();
+    assert_eq!(report.intervals, [[q(1, 4), q(3, 4)]]);
+    let edge_path = [[q(0, 1), q(0, 1), q(-1, 1)], [q(0, 1), q(0, 1), q(3, 1)]];
+    assert!(exact_polyhedral_segment_clip(&solid, &edge_path, 1_000_000).is_err());
+}

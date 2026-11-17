@@ -879,3 +879,6 @@ fn refuse(message: &str) -> Error {
 
 mod section_loops;
 pub use section_loops::*;
+
+mod spatial_clip;
+pub use spatial_clip::{ExactPolyhedralSegmentClip, exact_polyhedral_segment_clip};
