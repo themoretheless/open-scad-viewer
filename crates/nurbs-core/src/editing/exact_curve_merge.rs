@@ -871,3 +871,75 @@ fn stationary_seam_scale(
     };
     solve().map_err(GaugeMergeRefusal::Exact)?.ok_or(mismatch)
 }
+
+#[derive(Clone, Debug)]
+pub struct C2ClockChainReport {
+    pub curve: Option<Curve>,
+    pub joins_verified: usize,
+    pub work_used: u64,
+    /// Zero-based index of the right source at the first failed join.
+    pub refusal: Option<(usize, GaugeMergeRefusal)>,
+}
+
+/// Concatenate an ordered chain with regular C2 seams, preserving each
+/// source's shape. Each right clock is matched against the accumulated
+/// curve. All joins share one budget; a failed join emits no partial curve.
+pub fn merge_chain_with_exact_projective_c2_clock(
+    sources: &[&Curve],
+    max_work: u64,
+) -> Result<C2ClockChainReport> {
+    crate::check(
+        (1..=256).contains(&sources.len()),
+        "C2 curve chain needs 1..=256 sources",
+    )?;
+    let controls = sources
+        .iter()
+        .try_fold(0usize, |n, curve| n.checked_add(curve.control_points.len()));
+    crate::check(
+        controls.is_some_and(|total| total <= 512),
+        "C2 curve chain source controls must not exceed 512",
+    )?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "C2 curve chain work must be in 1..=1000000",
+    )?;
+    for source in sources {
+        source.validate()?;
+    }
+    let mut curve = sources[0].clone();
+    let mut work_used = 0;
+    for (index, right) in sources.iter().enumerate().skip(1) {
+        let joined = if work_used == max_work {
+            GaugeMergeReport {
+                curve: None,
+                work_used: 0,
+                refusal: Some(GaugeMergeRefusal::Exact(
+                    super::rational_factor::Refusal::ResourceLimit,
+                )),
+            }
+        } else {
+            merge_with_exact_projective_c2_clock(&curve, right, max_work - work_used)?
+        };
+        work_used += joined.work_used;
+        let Some(merged) = joined.curve else {
+            return Ok(C2ClockChainReport {
+                curve: None,
+                joins_verified: index - 1,
+                work_used,
+                refusal: Some((
+                    index,
+                    joined
+                        .refusal
+                        .unwrap_or(GaugeMergeRefusal::Join(Refusal::InvalidOutput)),
+                )),
+            });
+        };
+        curve = merged;
+    }
+    Ok(C2ClockChainReport {
+        curve: Some(curve),
+        joins_verified: sources.len() - 1,
+        work_used,
+        refusal: None,
+    })
+}

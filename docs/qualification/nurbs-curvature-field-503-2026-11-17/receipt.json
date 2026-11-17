@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0503",
+  "testedBase": "f7eb45051dc42e6bd2d21fe3501e6f0d82030a02",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 60,
+  "scope": [
+    "Compose regular C2 seam clocks across an ordered chain and publish a single curve only after every join is proved.",
+    "Align each incoming seam to the accumulated exact curve under one work budget. Report the failing right source and withhold partial geometry."
+  ],
+  "logSha256": "74993b8ca8c41b9ad22a561e6790c26da2be88e9bff2f7036b66bc197e4aca13",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "d9d64a42f827349ccca48cc0f6cec3728de4225a0e1fce6950872fd33342ff27",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "e75e3545bffe75cf2904836818929ec2c989d6f16709d8cd040a63afbb8fe8f4"
+  }
+}

@@ -951,3 +951,56 @@ fn stationary_c2_clock_distinguishes_flat_irrational_and_incompatible_jets() {
     let flat = merge_with_exact_stationary_c2_clock(&left, &right, 1_000_000).unwrap();
     assert_eq!(flat.curve.unwrap().domain(), [0., 3.]);
 }
+
+#[test]
+fn projective_c2_chain_matches_later_seams_in_the_accumulated_clock() {
+    use nurbs_core::editing::exact_curve_merge::{
+        compare_exact_curve_seam_jets, merge_chain_with_exact_projective_c2_clock,
+    };
+    let (a, mut b) = quadratic_clock_seam();
+    b.control_points[2] = vec![2.5, 5.];
+    let c = Curve {
+        knots: vec![40., 40., 40., 41., 41., 41.],
+        control_points: vec![vec![2.5, 5.], vec![3., 6.5], vec![3.625, 8.5]],
+        ..b.clone()
+    };
+    let sources = [&a, &b, &c];
+    let report = merge_chain_with_exact_projective_c2_clock(&sources, 1_000_000).unwrap();
+    assert_eq!(report.joins_verified, 2);
+    assert_eq!(report.refusal, None);
+    let merged = report.curve.unwrap();
+    assert_eq!(merged.domain(), [0., 7.]);
+    for seam in [1., 3.] {
+        let [left, right] = merged.split(seam).unwrap();
+        assert_eq!(
+            compare_exact_curve_seam_jets(&left, &right, 1_000_000)
+                .unwrap()
+                .continuity_order,
+            Some(2)
+        );
+    }
+    let exact_budget =
+        merge_chain_with_exact_projective_c2_clock(&sources, report.work_used).unwrap();
+    assert!(exact_budget.curve.is_some());
+    let short = merge_chain_with_exact_projective_c2_clock(&sources, report.work_used - 1).unwrap();
+    assert!(short.curve.is_none());
+    assert_eq!(short.refusal.unwrap().0, 2);
+}
+
+#[test]
+fn projective_c2_chain_discards_partial_output_on_a_late_mismatch() {
+    use nurbs_core::editing::exact_curve_merge::{
+        GaugeMergeRefusal, merge_chain_with_exact_projective_c2_clock,
+    };
+    let (a, b) = quadratic_clock_seam();
+    let report = merge_chain_with_exact_projective_c2_clock(&[&a, &b, &a], 1_000_000).unwrap();
+    assert!(report.curve.is_none());
+    assert_eq!(report.joins_verified, 1);
+    assert_eq!(
+        report.refusal,
+        Some((2, GaugeMergeRefusal::Join(Refusal::SeamMismatch)))
+    );
+    let singleton = merge_chain_with_exact_projective_c2_clock(&[&b], 1).unwrap();
+    assert_eq!(singleton.curve, Some(b));
+    assert_eq!(singleton.work_used, 0);
+}
