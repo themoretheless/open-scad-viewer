@@ -2028,3 +2028,61 @@ fn reports_coplanar_spans_alongside_incident_endpoint_hits() {
             .is_empty()
     );
 }
+
+#[test]
+fn transverse_section_preserves_the_gap_where_a_cap_is_trimmed_by_a_hole() {
+    use brep_core::{
+        analysis::exact_polyhedral_transverse_section,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let section = &result.section;
+    let cut =
+        exact_polyhedral_transverse_section(&section.solid, [1., 0., 0.], 1.5, 1_000_000).unwrap();
+    let cap = cut
+        .faces
+        .iter()
+        .find(|f| f.face == section.cap_faces[0])
+        .unwrap();
+    let point = |y: i64| {
+        [
+            Q::new(3.into(), 2.into()),
+            Q::from_integer(y.into()),
+            Q::from_integer(2.into()),
+        ]
+    };
+    assert_eq!(
+        cap.segments_mm,
+        [[point(0), point(1)], [point(2), point(4)]]
+    );
+    assert_eq!(
+        cut.faces.iter().map(|f| f.segments_mm.len()).sum::<usize>(),
+        8
+    );
+    assert!(
+        exact_polyhedral_transverse_section(&section.solid, [1., 0., 0.], 1.5, cut.exact_work)
+            .is_ok()
+    );
+    assert!(
+        exact_polyhedral_transverse_section(&section.solid, [1., 0., 0.], 1.5, cut.exact_work - 1)
+            .is_err()
+    );
+}
+
+#[test]
+fn transverse_section_preserves_nonbinary_positions_and_refuses_endpoint_contacts() {
+    use brep_core::analysis::exact_polyhedral_transverse_section;
+    use num_rational::BigRational as Q;
+    let solid = shifted_oblique_solid(0.);
+    let cut = exact_polyhedral_transverse_section(&solid, [-1., -1., 3.], 2., 1_000_000).unwrap();
+    assert_eq!(cut.faces.len(), 4);
+    for face in cut.faces {
+        assert_eq!(face.segments_mm.len(), 1);
+        assert!(face.segments_mm[0].iter().all(|p| -&p[0] - &p[1]
+            + &p[2] * Q::from_integer(3.into())
+            == Q::from_integer(2.into())));
+    }
+    assert!(exact_polyhedral_transverse_section(&solid, [-1., -1., 3.], 6., 1_000_000).is_err());
+}

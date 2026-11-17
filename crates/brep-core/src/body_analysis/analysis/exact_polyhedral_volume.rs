@@ -329,6 +329,84 @@ pub fn exact_polyhedral_edge_plane_intersection(
     })
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PolyhedralFaceSection {
+    pub face: usize,
+    /// Exact endpoints in lexicographic world-coordinate order.
+    pub segments_mm: Vec<[[Q; 3]; 2]>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ExactPolyhedralTransverseSection {
+    /// Intersected retained faces, ordered by source face index.
+    pub faces: Vec<PolyhedralFaceSection>,
+    pub exact_work: u64,
+}
+
+/// Intersect the retained planar regions with a transverse plane. On each
+/// face the ordered proper crossings alternate between entering and leaving
+/// material, including across holes. Endpoint and coplanar contacts refuse.
+pub fn exact_polyhedral_transverse_section(
+    solid: &QualifiedClosedSolid,
+    normal: [f64; 3],
+    offset: f64,
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralTransverseSection> {
+    if !normal.iter().all(|value| value.is_finite()) || normal == [0.; 3] || !offset.is_finite() {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Expected a finite plane with nonzero normal",
+        ));
+    }
+    let normal = lift(&normal);
+    let offset = Q::from_float(offset).unwrap();
+    let residual =
+        |point: &[Q; 3]| -> Q { normal.iter().zip(point).map(|(n, p)| n * p).sum::<Q>() - &offset };
+    let mut remaining = max_exact_work;
+    let mut crossings = std::collections::BTreeMap::<usize, Vec<[Q; 3]>>::new();
+    visit_polyhedral_boundary(solid, &mut remaining, |face, _, a, b, _, remaining| {
+        spend(remaining, 14)?;
+        let ra = residual(a);
+        let rb = residual(b);
+        if ra.is_zero() || rb.is_zero() {
+            return Err(refuse(
+                "Transverse section requires the plane to miss every edge pole",
+            ));
+        }
+        if ra.is_negative() != rb.is_negative() {
+            spend(remaining, 12)?;
+            let fraction = &ra / (&ra - &rb);
+            let point = std::array::from_fn(|i| &a[i] + &fraction * (&b[i] - &a[i]));
+            crossings.entry(face).or_default().push(point);
+        }
+        Ok(())
+    })?;
+
+    let mut faces = Vec::with_capacity(crossings.len());
+    for (face, mut points) in crossings {
+        let n = points.len();
+        let comparisons = n as u64 * u64::from(n.ilog2() + 1) * 4;
+        spend(&mut remaining, comparisons + n as u64)?;
+        points.sort_unstable();
+        if n % 2 != 0 || points.windows(2).any(|pair| pair[0] == pair[1]) {
+            return Err(refuse(
+                "Transverse section crossings must be distinct and paired",
+            ));
+        }
+        let mut points = points.into_iter();
+        let segments_mm = std::iter::from_fn(|| {
+            let start = points.next()?;
+            Some([start, points.next().expect("even number of crossings")])
+        })
+        .collect();
+        faces.push(PolyhedralFaceSection { face, segments_mm });
+    }
+    Ok(ExactPolyhedralTransverseSection {
+        faces,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
 fn visit_polyhedral_edges(
     solid: &QualifiedClosedSolid,
     remaining: &mut u64,
