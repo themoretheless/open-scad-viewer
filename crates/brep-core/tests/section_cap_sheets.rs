@@ -2479,3 +2479,51 @@ fn uses_true_orthogonal_projection_on_an_oblique_section() {
         })
     );
 }
+
+#[test]
+fn clips_section_material_into_exact_intervals_around_a_hole() {
+    use brep_core::{
+        analysis::exact_polyhedral_section_clip, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let normal = [0., 0., 1.];
+    let segment = [[q(-1, 1), q(3, 2), q(1, 1)], [q(5, 1), q(3, 2), q(1, 1)]];
+    let report = exact_polyhedral_section_clip(solid, normal, 1., &segment, 1_000_000).unwrap();
+    assert_eq!(report.intervals, [[q(1, 6), q(1, 3)], [q(1, 2), q(5, 6)]]);
+    assert!(exact_polyhedral_section_clip(solid, normal, 1., &segment, report.exact_work).is_ok());
+    assert!(
+        exact_polyhedral_section_clip(solid, normal, 1., &segment, report.exact_work - 1).is_err()
+    );
+}
+
+#[test]
+fn section_clip_preserves_boundary_overlap_and_isolated_vertex_contact() {
+    use brep_core::{
+        analysis::exact_polyhedral_section_clip, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let normal = [0., 0., 1.];
+    let overlap = [[q(1, 2), q(1, 1), q(1, 1)], [q(5, 2), q(1, 1), q(1, 1)]];
+    let tangent = [[q(-1, 1), q(1, 1), q(1, 1)], [q(1, 1), q(-1, 1), q(1, 1)]];
+    assert_eq!(
+        exact_polyhedral_section_clip(solid, normal, 1., &overlap, 1_000_000)
+            .unwrap()
+            .intervals,
+        [[q(0, 1), q(1, 1)]]
+    );
+    assert_eq!(
+        exact_polyhedral_section_clip(solid, normal, 1., &tangent, 1_000_000)
+            .unwrap()
+            .intervals,
+        [[q(1, 2), q(1, 2)]]
+    );
+    assert!(exact_polyhedral_section_clip(solid, normal, 2.5, &tangent, 1_000_000).is_err());
+}

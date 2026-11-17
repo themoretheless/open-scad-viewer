@@ -579,3 +579,6 @@ fn validate_query_point(point_mm: &[Q; 3]) -> Result<()> {
     }
     Ok(())
 }
+
+mod clip;
+pub use clip::{ExactPolyhedralSectionClip, exact_polyhedral_section_clip};
