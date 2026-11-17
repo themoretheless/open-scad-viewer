@@ -8,7 +8,8 @@ use nurbs_core::{
             ExactPlanarIntersectionSegment, PlanarIntersectionSegments, PlanarSegmentStorage,
             SupportPlaneIntersection, TrimmedPlanarIntersection,
             build_planar_intersection_segments, intersect_planar_supports,
-            intersect_trimmed_planar_faces, store_planar_intersection_segment,
+            intersect_trimmed_planar_faces, optimize_planar_intersection_segment_storage,
+            store_planar_intersection_segment,
         },
         planar_coplanar_ray::CoplanarRayPartitionOptions,
         planar_trim_projection::ProjectedTrimmedFace,
@@ -402,4 +403,99 @@ fn refuses_inconsistent_or_collapsed_nets_and_bounds_work() {
         PlanarSegmentStorage::Refused(Refusal::ResourceLimit)
     ));
     assert!(limited.work_used <= 1);
+}
+
+#[test]
+fn finds_coordinated_rounding_when_nearest_storage_exceeds_tolerance() {
+    let a = plane(|x, y| x + y);
+    let b = plane(|x, y| 2. * x - y + 1.);
+    let charts = [&a, &b];
+    let segment = exact_segment(
+        [[q(-2, 9), q(7, 18), q(1, 6)], [q(0, 1), q(1, 2), q(1, 2)]],
+        charts,
+    );
+    let tolerance = 2.1e-17;
+    let nearest = store_planar_intersection_segment(&segment, charts, tolerance, WORK).unwrap();
+    assert!(matches!(
+        nearest.outcome,
+        PlanarSegmentStorage::ToleranceExceeded(_)
+    ));
+    let optimized =
+        optimize_planar_intersection_segment_storage(&segment, charts, tolerance, WORK).unwrap();
+    let PlanarSegmentStorage::Stored {
+        spatial,
+        pcurves,
+        squared_error,
+    } = optimized.outcome
+    else {
+        panic!("{:?}", optimized.outcome);
+    };
+    assert_eq!(spatial.control_points[1], vec![0., 0.5, 0.5]);
+    let limit = Q::from_float(tolerance).unwrap().pow(2);
+    for error in std::iter::once(&squared_error.spatial)
+        .chain(&squared_error.lifted_pcurves)
+        .chain(&squared_error.correspondence)
+    {
+        assert!(error <= &limit);
+    }
+    let swapped_segment = exact_segment(segment.xyz.clone(), [&b, &a]);
+    let swapped =
+        optimize_planar_intersection_segment_storage(&swapped_segment, [&b, &a], tolerance, WORK)
+            .unwrap();
+    let PlanarSegmentStorage::Stored {
+        spatial: swapped_xyz,
+        pcurves: swapped_uv,
+        ..
+    } = swapped.outcome
+    else {
+        panic!("{:?}", swapped.outcome);
+    };
+    assert_eq!(swapped_xyz.control_points, spatial.control_points);
+    assert_eq!(swapped_uv[0].control_points, pcurves[1].control_points);
+    assert_eq!(swapped_uv[1].control_points, pcurves[0].control_points);
+}
+
+#[test]
+fn adjacent_search_preserves_nonzero_segments_and_respects_budget() {
+    use nurbs_core::editing::exact_derivative::Refusal;
+    let a = plane(|x, _| x);
+    let b = plane(|_, y| y);
+    let charts = [&a, &b];
+    let point = q(1, 1) + q(1, 1 << 54);
+    let segment = exact_segment(
+        [
+            [q(1, 1), q(1, 1), q(1, 1)],
+            [point.clone(), point.clone(), point],
+        ],
+        charts,
+    );
+    let optimized =
+        optimize_planar_intersection_segment_storage(&segment, charts, 1e-14, WORK).unwrap();
+    let PlanarSegmentStorage::Stored {
+        spatial, pcurves, ..
+    } = optimized.outcome
+    else {
+        panic!("{:?}", optimized.outcome);
+    };
+    assert!(
+        spatial.control_points[0]
+            .iter()
+            .zip(&spatial.control_points[1])
+            .all(|(a, b)| a <= b)
+    );
+    for pcurve in pcurves {
+        assert_ne!(pcurve.control_points[0], pcurve.control_points[1]);
+    }
+    let limited = optimize_planar_intersection_segment_storage(
+        &segment,
+        charts,
+        1e-14,
+        optimized.work_used - 1,
+    )
+    .unwrap();
+    assert!(matches!(
+        limited.outcome,
+        PlanarSegmentStorage::Refused(Refusal::ResourceLimit)
+    ));
+    assert!(limited.work_used < optimized.work_used);
 }

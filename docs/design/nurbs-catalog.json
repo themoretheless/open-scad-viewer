@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 341,
-  "unallocatedCount": 659,
+  "specifiedCount": 342,
+  "unallocatedCount": 658,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8802,6 +8802,28 @@
       "remainingQualification": [
         "Store rational intersection control nets as binary64 NURBS under exact continuous XYZ error bounds.",
         "Exact squared endpoint errors bound the entire normalized parameter interval by convexity. Storage checks spatial deviation, both lifted trim deviations and their correspondence to the stored spatial curve.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0342",
+      "name": "Согласованное округление отрезка пересечения и парных NURBS-кривых",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Пересечения",
+      "nativeApi": "nurbs_core::analysis::exact_plane_intersection::optimize_planar_intersection_segment_storage",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/exact_plane_intersection.rs",
+        "crates/nurbs-core/src/analysis/exact_plane_intersection/segments.rs",
+        "crates/nurbs-core/src/analysis/exact_plane_intersection/storage.rs",
+        "crates/nurbs-geometry/src/bounded_rational.rs",
+        "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-342-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-342-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Minimize the worst continuous spatial, lifted and correspondence error over admissible adjacent binary64 endpoint pairs.",
+        "Search at most 64 endpoint pairs, preserving coordinate order and nondegeneracy in both charts. Endpoint certificates bound the entire normalized interval. Optimality is over the tested adjacent binary64 values.",
         "WASM and application integration are separate."
       ]
     }

@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0342",
+  "testedBase": "3a3374a2c8245fcd225e07136eb83d68f22a451b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 14,
+  "scope": [
+    "Minimize the worst continuous spatial, lifted and correspondence error over admissible adjacent binary64 endpoint pairs.",
+    "Search at most 64 endpoint pairs, preserving coordinate order and nondegeneracy in both charts. Endpoint certificates bound the entire normalized interval. Optimality is over the tested adjacent binary64 values."
+  ],
+  "logSha256": "b7cfe394d8d63dd1c13721c318b4b886dc41476c6de80ea1f1559fdeab1a6fec",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "3dde0ee2d8ead04d0894008f0f69b8df53601c20a98308e98a6b2a88463fe24b",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/segments.rs": "4262ac11c8990a00b77b2237e7f28da0b69939df05ab4df0e01f695512781608",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/storage.rs": "198bec22482e39a529074b224ccf7f58eba195ef75ad96f60ac842f3855cd8e3",
+    "crates/nurbs-geometry/src/bounded_rational.rs": "488907faa4c7086f601e29ba392a1addbd5f90bc6f8cc1cf57c4a098e81f0d4e",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "bf52d2ba5a70afcfa9ef9605f739532f2a37460b47d4d69fc25a6caef41f1528"
+  }
+}

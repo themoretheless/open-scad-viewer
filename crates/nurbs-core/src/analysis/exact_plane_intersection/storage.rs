@@ -6,6 +6,7 @@ use super::{
 use crate::{Result, check, curve::Curve};
 use num_rational::BigRational as Q;
 use num_traits::{ToPrimitive, Zero};
+use std::cmp::Ordering;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PlanarSegmentError {
@@ -45,6 +46,29 @@ pub fn store_planar_intersection_segment(
     tolerance: f64,
     max_work: u64,
 ) -> Result<PlanarSegmentStorageReport> {
+    store_with(segment, projections, tolerance, max_work, false)
+}
+
+/// Minimize the largest squared error over the adjacent binary64 endpoints
+/// bracketing each exact coordinate. Candidate pairs preserve coordinate order
+/// and keep all three segments nondegenerate. Ties prefer the original nearest
+/// rounding. This is a bounded search over at most 64 endpoint pairs.
+pub fn optimize_planar_intersection_segment_storage(
+    segment: &ExactPlanarIntersectionSegment,
+    projections: [&PlanarSurfaceProjection; 2],
+    tolerance: f64,
+    max_work: u64,
+) -> Result<PlanarSegmentStorageReport> {
+    store_with(segment, projections, tolerance, max_work, true)
+}
+
+fn store_with(
+    segment: &ExactPlanarIntersectionSegment,
+    projections: [&PlanarSurfaceProjection; 2],
+    tolerance: f64,
+    max_work: u64,
+    optimize: bool,
+) -> Result<PlanarSegmentStorageReport> {
     for projection in projections {
         validate_projection_axes(projection)?;
     }
@@ -58,7 +82,7 @@ pub fn store_planar_intersection_segment(
         used: 0,
         limit: max_work,
     };
-    let outcome = store(segment, projections, tolerance, &mut work)
+    let outcome = store(segment, projections, tolerance, optimize, &mut work)
         .unwrap_or_else(PlanarSegmentStorage::Refused);
     Ok(PlanarSegmentStorageReport {
         outcome,
@@ -72,58 +96,33 @@ fn store(
     segment: &ExactPlanarIntersectionSegment,
     projections: [&PlanarSurfaceProjection; 2],
     tolerance: f64,
+    optimize: bool,
     work: &mut Work,
 ) -> Checked<PlanarSegmentStorage> {
     let tolerance = work.lift(tolerance)?;
     let limit = work.op(&tolerance, &tolerance, |a, b| a * b)?;
-    let mut errors = PlanarSegmentError {
-        spatial: Q::zero(),
-        lifted_pcurves: [Q::zero(), Q::zero()],
-        correspondence: [Q::zero(), Q::zero()],
+    let first = candidates(segment, 0, projections, optimize, work)?;
+    let last = candidates(segment, 1, projections, optimize, work)?;
+    let [start, end] = if optimize {
+        best_pair(segment, projections, &first, &last, work)?
+    } else {
+        [&first[0], &last[0]]
     };
-    let mut coordinates = [[0.; 3]; 2];
-    for (end, original) in segment.xyz.iter().enumerate() {
-        let mut stored = [Q::zero(), Q::zero(), Q::zero()];
-        for (axis, q) in original.iter().enumerate() {
-            work.charge(1 + (q.numer().bits() + q.denom().bits()) / 64)?;
-            let value = q
-                .to_f64()
-                .filter(|x| x.is_finite())
-                .ok_or(Refusal::NotRepresentable)?;
-            coordinates[end][axis] = value;
-            stored[axis] = work.lift(value)?;
-        }
-        raise(
-            &mut errors.spatial,
-            squared_distance(original, &stored, work)?,
-        );
-        for (i, projection) in projections.iter().enumerate() {
-            let [u, v] = projection.retained_axes;
-            let [a, b] = &segment.pcurves[i][end];
-            let omitted = projection.omitted_axis;
-            if a != &original[u]
-                || b != &original[v]
-                || lift(projection, a, b, work)? != original[omitted]
-            {
-                return Err(Refusal::UnprovedIdentity);
-            }
-            let mut lifted = stored.clone();
-            lifted[omitted] = lift(projection, &stored[u], &stored[v], work)?;
-            raise(
-                &mut errors.lifted_pcurves[i],
-                squared_distance(original, &lifted, work)?,
-            );
-            raise(
-                &mut errors.correspondence[i],
-                squared_distance(&stored, &lifted, work)?,
-            );
-        }
-    }
-    if std::iter::once(&errors.spatial)
-        .chain(&errors.lifted_pcurves)
-        .chain(&errors.correspondence)
-        .any(|error| error > &limit)
-    {
+    let coordinates = [start.coordinates, end.coordinates];
+    let errors = PlanarSegmentError {
+        spatial: start.error.spatial.clone().max(end.error.spatial.clone()),
+        lifted_pcurves: std::array::from_fn(|i| {
+            start.error.lifted_pcurves[i]
+                .clone()
+                .max(end.error.lifted_pcurves[i].clone())
+        }),
+        correspondence: std::array::from_fn(|i| {
+            start.error.correspondence[i]
+                .clone()
+                .max(end.error.correspondence[i].clone())
+        }),
+    };
+    if errors.worst() > &limit {
         return Ok(PlanarSegmentStorage::ToleranceExceeded(errors));
     }
     let spatial = curve(coordinates)?;
@@ -168,8 +167,137 @@ fn squared_distance(a: &[Q; 3], b: &[Q; 3], work: &mut Work) -> Checked<Q> {
     Ok(sum)
 }
 
-fn raise(bound: &mut Q, value: Q) {
-    if value > *bound {
-        *bound = value;
+impl PlanarSegmentError {
+    fn worst(&self) -> &Q {
+        std::iter::once(&self.spatial)
+            .chain(&self.lifted_pcurves)
+            .chain(&self.correspondence)
+            .max()
+            .expect("spatial error is present")
     }
+}
+
+struct Candidate {
+    coordinates: [f64; 3],
+    error: PlanarSegmentError,
+}
+
+fn candidates(
+    segment: &ExactPlanarIntersectionSegment,
+    end: usize,
+    projections: [&PlanarSurfaceProjection; 2],
+    optimize: bool,
+    work: &mut Work,
+) -> Checked<Vec<Candidate>> {
+    let original = &segment.xyz[end];
+    for (i, projection) in projections.iter().enumerate() {
+        let [u, v] = projection.retained_axes;
+        let [a, b] = &segment.pcurves[i][end];
+        if a != &original[u]
+            || b != &original[v]
+            || lift(projection, a, b, work)? != original[projection.omitted_axis]
+        {
+            return Err(Refusal::UnprovedIdentity);
+        }
+    }
+    let x = rounding(&original[0], optimize, work)?;
+    let y = rounding(&original[1], optimize, work)?;
+    let z = rounding(&original[2], optimize, work)?;
+    let mut out = Vec::new();
+    for &x in &x {
+        for &y in &y {
+            for &z in &z {
+                let coordinates = [x, y, z];
+                if !optimize || coordinates.iter().all(|x| x.abs() <= 1e9) {
+                    out.push(Candidate {
+                        coordinates,
+                        error: endpoint_error(original, coordinates, projections, work)?,
+                    });
+                }
+            }
+        }
+    }
+    Ok(out)
+}
+
+fn rounding(q: &Q, optimize: bool, work: &mut Work) -> Checked<Vec<f64>> {
+    work.charge(1 + (q.numer().bits() + q.denom().bits()) / 64)?;
+    let f = q
+        .to_f64()
+        .filter(|x| x.is_finite())
+        .ok_or(Refusal::NotRepresentable)?;
+    let mut candidates = vec![f];
+    if optimize {
+        let ordering = work.lift(f)?.cmp(q);
+        let neighbor = match ordering {
+            Ordering::Less => f.next_up(),
+            Ordering::Greater => f.next_down(),
+            Ordering::Equal => return Ok(candidates),
+        };
+        if work.lift(neighbor)?.cmp(q) == ordering {
+            return Err(Refusal::NotRepresentable);
+        }
+        candidates.push(neighbor);
+    }
+    Ok(candidates)
+}
+
+fn endpoint_error(
+    original: &[Q; 3],
+    [x, y, z]: [f64; 3],
+    projections: [&PlanarSurfaceProjection; 2],
+    work: &mut Work,
+) -> Checked<PlanarSegmentError> {
+    let stored = [work.lift(x)?, work.lift(y)?, work.lift(z)?];
+    let mut error = PlanarSegmentError {
+        spatial: squared_distance(original, &stored, work)?,
+        lifted_pcurves: [Q::zero(), Q::zero()],
+        correspondence: [Q::zero(), Q::zero()],
+    };
+    for (i, projection) in projections.iter().enumerate() {
+        let [u, v] = projection.retained_axes;
+        let mut lifted = stored.clone();
+        lifted[projection.omitted_axis] = lift(projection, &stored[u], &stored[v], work)?;
+        error.lifted_pcurves[i] = squared_distance(original, &lifted, work)?;
+        error.correspondence[i] = squared_distance(&stored, &lifted, work)?;
+    }
+    Ok(error)
+}
+
+fn best_pair<'a>(
+    segment: &ExactPlanarIntersectionSegment,
+    projections: [&PlanarSurfaceProjection; 2],
+    first: &'a [Candidate],
+    last: &'a [Candidate],
+    work: &mut Work,
+) -> Checked<[&'a Candidate; 2]> {
+    let ordering: [_; 3] = std::array::from_fn(|i| segment.xyz[0][i].cmp(&segment.xyz[1][i]));
+    let mut best = None;
+    for start in first {
+        for end in last {
+            work.charge(1)?;
+            let direction = std::array::from_fn::<_, 3, _>(|i| {
+                start.coordinates[i]
+                    .partial_cmp(&end.coordinates[i])
+                    .expect("finite coordinates")
+            });
+            if direction
+                .iter()
+                .zip(ordering)
+                .any(|(&actual, expected)| actual != Ordering::Equal && actual != expected)
+                || projections.iter().any(|p| {
+                    p.retained_axes
+                        .iter()
+                        .all(|&i| direction[i] == Ordering::Equal)
+                })
+            {
+                continue;
+            }
+            let score = start.error.worst().max(end.error.worst());
+            if best.is_none_or(|(_, bound)| score < bound) {
+                best = Some(([start, end], score));
+            }
+        }
+    }
+    best.map(|(pair, _)| pair).ok_or(Refusal::InvalidOutput)
 }
