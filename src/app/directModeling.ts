@@ -535,6 +535,9 @@ export class DirectHistory {
   }
   /** Immutable identity for consumers caching a committed snapshot across document copies. */
   get snapshotKey() { return unpackHistoryText(this.current) }
+  /** Object identity of the current history state: it stays the same while that state moves
+   * between the Undo, current and Redo positions, and differs for every committed edit. */
+  get stateToken():object { return this.current.chunks }
   get canUndo() { return this.past.length > 0 }
   get canRedo() { return this.future.length > 0 }
   get storageStats() {

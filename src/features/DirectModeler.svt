@@ -10,6 +10,7 @@ const {
 }=createAsyncPanels()
 import {useBooleanOperations} from './directModeler/useBooleanOperations'
 import {prepareDocumentCommit} from './directModeler/prepareDocumentCommit'
+import {createSelectionHistory} from './directModeler/selectionHistory'
 import {primitiveCreationError} from '../app/primitiveCreationError'
 import RoundSolidOptions from '../components/RoundSolidOptions.svt'
 import {sourceBodyRecordInspectionOptions} from '../kernel/sourceBodyArchive'
@@ -356,6 +357,16 @@ function translationPreviewIds(ids:string[]){return [...new Set([...ids,...docum
 
 
 const extraSelection=ref<string[]>([]),pickMode=ref<'body'|'face'|'edge'|'vertex'>('body'),vertexIndexes=ref<number[]>([]),faceIndex=ref(-1),edgeIndex=ref(-1),edgeIndexes=ref<number[]>([]),openingFaces=ref<number[]>([])
+// The object selection of each history state, so Undo/Redo restores what was selected there.
+const selectionHistory=createSelectionHistory()
+watch([selection,extraSelection],([primary,extra])=>selectionHistory.remember(history.stateToken,{primary,extra}),{immediate:true})
+function recallHistorySelection(){
+ const ids=new Set([...documentObjects(document.value),...document.value.sourceBodies??[]].map(o=>o.id))
+ const saved=selectionHistory.recall(history.stateToken,id=>ids.has(id))
+ if(!saved)return
+ if(saved.primary!==selection.value){faceIndex.value=edgeIndex.value=-1;edgeIndexes.value=[];openingFaces.value=[]}
+ selection.value=saved.primary;extraSelection.value=[...saved.extra]
+}
 const workplaneOutline=ref<Point2[][]>([])
 const workplaneBodyId=ref(''), choosingSketchFace=ref(false)
 const faceDrawing = computed(()=>!!workplaneBodyId.value && tool.value!=='select' && tool.value!=='trim')
@@ -1212,7 +1223,7 @@ async function undo(redo = false) {
   const applied=await target.restoreAsync(redo?'redo':'undo',async text=>restored=await historyWorker.run({kind:'restoreDocument',text,...(baseText!==undefined?{base:baseText}:{})},{restoreBase:base}))
   if(generation!==historyGeneration||target!==history||!props.open)return
   historyPending.value=false
-  if(applied&&restored)sync(restored)
+  if(applied&&restored){sync(restored);recallHistorySelection()}
  }catch(e){if(generation===historyGeneration)error.value=e instanceof Error?e.message:String(e)}
  finally{if(generation===historyGeneration)historyPending.value=false}
 }
