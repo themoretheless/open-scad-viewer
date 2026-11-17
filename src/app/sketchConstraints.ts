@@ -61,17 +61,31 @@ export function solverConstraints(constraints: readonly SketchConstraint[]): Sol
 }
 
 /**
+ * Extra solver terms held together with persistent constraints. Auxiliary points are named `x<i>`
+ * and dropped from the result; `check` rejects solutions on the wrong branch (for example a sign flip).
+ */
+export interface SolverExtras {
+  constraints: readonly SolverConstraint[]
+  points?: readonly Point2[]
+  check?: (points: readonly Point2[]) => boolean
+}
+
+/**
  * Solves points so every persistent constraint and the given extra constraints hold.
  * Throws a conflict error when the set is inconsistent or the solver does not converge.
  */
 export function solveConstrainedPoints(
   points: readonly Point2[],
   constraints: readonly SketchConstraint[],
-  extra: readonly SolverConstraint[] = [],
+  extra: readonly SolverConstraint[] | SolverExtras = [],
 ): Point2[] {
+  const extras: SolverExtras = Array.isArray(extra) ? { constraints: extra } : (extra as SolverExtras)
   const solved = solveRushGraphSketch(
-    points.map((position, i) => ({ id: `p${i}`, position: [...position] as Point2 })),
-    [...solverConstraints(constraints), ...extra],
+    [
+      ...points.map((position, i) => ({ id: `p${i}`, position: [...position] as Point2 })),
+      ...(extras.points ?? []).map((position, i) => ({ id: `x${i}`, position: [...position] as Point2 })),
+    ],
+    [...solverConstraints(constraints), ...extras.constraints],
     SKETCH_CONSTRAINT_TOLERANCE_MM,
   )
   if (
@@ -81,7 +95,8 @@ export function solveConstrainedPoints(
     solved.maximum_residual_mm > SKETCH_CONSTRAINT_TOLERANCE_MM
   )
     throw Error('Sketch constraints conflict or did not converge.')
-  const result = solved.points.map(p => p.position)
+  const result = solved.points.slice(0, points.length).map(p => p.position)
+  if (extras.check && !extras.check(result)) throw Error('Sketch constraints conflict or did not converge.')
   // A segment collapsed to a point satisfies every direction equation; treat it as a conflict.
   const length = (a: number, b: number) => Math.hypot(result[b]![0] - result[a]![0], result[b]![1] - result[a]![1])
   if (constraints.some(c => length(c.a, c.b) <= 1e-4 || ('c' in c && length(c.c, c.d) <= 1e-4)))
@@ -108,7 +123,7 @@ export function sketchConstraintResidual(points: readonly Point2[], c: SketchCon
 export function addSketchConstraint<T extends ConstrainedSketch>(
   sketch: T,
   constraint: SketchConstraint,
-  extra: readonly SolverConstraint[] = [],
+  extra: readonly SolverConstraint[] | SolverExtras = [],
 ): T {
   const constraints = [...(sketch.constraints ?? []), constraint]
   validateSketchConstraints({ ...sketch, constraints })

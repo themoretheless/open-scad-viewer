@@ -7,7 +7,7 @@ import {
 } from '../src/app/sketchConstraints'
 import {
   editSketchDimension,
-  lengthDimensionConstraints,
+  dimensionSolverExtras,
   sketchDimensionStatus,
   sketchDimensions,
 } from '../src/app/directDimensions'
@@ -56,11 +56,7 @@ describe('persistent sketch constraints', () => {
   it('holds other length dimensions while adding a constraint', () => {
     const base: DirectSketch = { ...quad(), dimensions: [{ kind: 'length', a: 1, b: 2 }] }
     const before = sketchDimensions(base).measurements[0].value!
-    const s = addSketchConstraint(
-      base,
-      { kind: 'equal_length', a: 0, b: 1, c: 2, d: 3 },
-      lengthDimensionConstraints(base),
-    )
+    const s = addSketchConstraint(base, { kind: 'equal_length', a: 0, b: 1, c: 2, d: 3 }, dimensionSolverExtras(base))
     expect(allHold(s)).toBe(true)
     expect(sketchDimensions(s).measurements[0].value!).toBeCloseTo(before, 6)
   })
@@ -111,6 +107,55 @@ describe('persistent sketch constraints', () => {
       ],
     }
     expect(() => editSketchDimension(s, 0, 12)).toThrow(/conflict/)
+  })
+
+  it('edits a horizontal dimension while keeping constraints and other offsets', () => {
+    const base = [
+      { kind: 'horizontal', a: 0, b: 1 },
+      { kind: 'vertical', a: 1, b: 2 },
+      { kind: 'parallel', a: 0, b: 1, c: 2, d: 3 },
+      { kind: 'perpendicular', a: 2, b: 3, c: 3, d: 0 },
+    ] as SketchConstraint[]
+    const rect = base.reduce((s, c) => addSketchConstraint(s, c), quad())
+    const s: DirectSketch = {
+      ...rect,
+      dimensions: [
+        { kind: 'horizontal', a: 0, b: 1 },
+        { kind: 'vertical', a: 1, b: 2 },
+      ],
+    }
+    const heightBefore = s.points[2][1] - s.points[1][1]
+    const edited = editSketchDimension(s, 0, 18)
+    expect(edited.points[1][0] - edited.points[0][0]).toBeCloseTo(18, 6)
+    expect(edited.points[2][1] - edited.points[1][1]).toBeCloseTo(heightBefore, 6)
+    expect(allHold(edited)).toBe(true)
+    const state = sketchDimensionStatus(edited)
+    expect(state).not.toBeNull()
+    expect(state!.status).not.toBe('inconsistent')
+  })
+
+  it('flips a vertical offset sign and refuses a horizontal offset the constraints forbid', () => {
+    const s: DirectSketch = {
+      ...addSketchConstraint(quad(), { kind: 'vertical', a: 1, b: 2 }),
+      dimensions: [{ kind: 'vertical', a: 1, b: 2 }],
+    }
+    const flipped = editSketchDimension(s, 0, -4)
+    expect(flipped.points[2][1] - flipped.points[1][1]).toBeCloseTo(-4, 6)
+    expect(allHold(flipped)).toBe(true)
+    const locked: DirectSketch = {
+      ...addSketchConstraint(quad(), { kind: 'vertical', a: 1, b: 2 }),
+      dimensions: [{ kind: 'horizontal', a: 1, b: 2 }],
+    }
+    expect(() => editSketchDimension(locked, 0, 3)).toThrow(/conflict/)
+    expect(editSketchDimension(locked, 0, 0).points[2][0]).toBeCloseTo(locked.points[1][0], 6)
+  })
+
+  it('holds a horizontal dimension while adding a constraint', () => {
+    const base: DirectSketch = { ...quad(), dimensions: [{ kind: 'horizontal', a: 0, b: 2 }] }
+    const dx = base.points[2][0] - base.points[0][0]
+    const s = addSketchConstraint(base, { kind: 'vertical', a: 1, b: 2 }, dimensionSolverExtras(base))
+    expect(s.points[2][0] - s.points[0][0]).toBeCloseTo(dx, 6)
+    expect(allHold(s)).toBe(true)
   })
 
   it('round-trips through the document and rejects out-of-range indices on load', () => {

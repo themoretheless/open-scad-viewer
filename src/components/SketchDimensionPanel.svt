@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'svet'
 import CadQuantityInput from './CadQuantityInput.svt'
 import type { DirectSketch } from '../app/directModeling'
-import { sketchDimensions, sketchDimensionStatus, editSketchDimension, lengthDimensionConstraints, type SketchDimension } from '../app/directDimensions'
+import { sketchDimensions, sketchDimensionStatus, editSketchDimension, dimensionSolverExtras, type SketchDimension } from '../app/directDimensions'
 import { addSketchConstraint, sketchConstraintResidual, SKETCH_CONSTRAINT_TOLERANCE_MM, type SketchConstraint } from '../app/sketchConstraints'
 const props=defineProps<{sketch:DirectSketch;locale:string}>()
 const emit=defineEmits<{change:[sketch:DirectSketch]}>()
@@ -21,7 +21,7 @@ const constrainable=computed(()=>!props.sketch.analytic&&!props.sketch.retainedP
 const segments=computed(()=>{const n=props.sketch.points.length;return Array.from({length:props.sketch.closed?n:n-1},(_,i)=>[i,(i+1)%n] as [number,number])})
 const pairKind=computed(()=>constraintKind.value!=='horizontal'&&constraintKind.value!=='vertical')
 const constraintSymbol=(kind:SketchConstraint['kind'])=>kind==='horizontal'?'—':kind==='vertical'?'|':kind==='parallel'?'∥':kind==='perpendicular'?'⊥':'='
-function addConstraint(){apply(()=>{const s1=segments.value[segmentA.value],s2=segments.value[segmentB.value];if(!s1||(pairKind.value&&!s2))throw Error(label('Выберите отрезки эскиза.','Choose sketch segments.'));const constraint:SketchConstraint=pairKind.value?{kind:constraintKind.value as 'parallel',a:s1[0],b:s1[1],c:s2![0],d:s2![1]}:{kind:constraintKind.value as 'horizontal',a:s1[0],b:s1[1]};return addSketchConstraint(props.sketch,constraint,lengthDimensionConstraints(props.sketch))})}
+function addConstraint(){apply(()=>{const s1=segments.value[segmentA.value],s2=segments.value[segmentB.value];if(!s1||(pairKind.value&&!s2))throw Error(label('Выберите отрезки эскиза.','Choose sketch segments.'));const constraint:SketchConstraint=pairKind.value?{kind:constraintKind.value as 'parallel',a:s1[0],b:s1[1],c:s2![0],d:s2![1]}:{kind:constraintKind.value as 'horizontal',a:s1[0],b:s1[1]};return addSketchConstraint(props.sketch,constraint,dimensionSolverExtras(props.sketch))})}
 function removeConstraint(index:number){apply(()=>({...props.sketch,constraints:props.sketch.constraints?.filter((_,i)=>i!==index)}))}
 function remove(index:number){apply(()=>({...props.sketch,dimensions:props.sketch.dimensions?.filter((_,i)=>i!==index)}))}
 </script>
