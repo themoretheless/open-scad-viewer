@@ -10,6 +10,7 @@ use std::collections::BTreeSet;
 pub mod edge_partition;
 pub mod edge_transition;
 pub mod freeform;
+pub mod periodic_trim_sheet;
 mod full_round_caps;
 pub mod full_round_curved;
 pub use full_round_curved::admitted::{AdmittedFullRound, build_admitted as full_round_exact};

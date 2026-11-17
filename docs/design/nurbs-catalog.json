@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 557,
-  "unallocatedCount": 443,
+  "specifiedCount": 558,
+  "unallocatedCount": 442,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14173,6 +14173,26 @@
       "remainingQualification": [
         "Materialize exact world edges and matching pcurve restrictions on periodic trim patches.",
         "Lift pcurves exactly through the support tensor cells and pair each spatial piece with the exact UV restriction on its original clock.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0558",
+      "name": "Открытые B-rep-грани с точной обрезкой через периодические швы",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "brep_core::feature_ops::periodic_trim_sheet::build_exact_periodic_trim_sheet",
+      "evidence": [
+        "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs",
+        "crates/brep-core/tests/exact_periodic_trim_sheet_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-558-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-558-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Author open B-rep topology with exact periodic trim edge pairs and retained holes.",
+        "Retain exact paired edge geometry, validate ordered wire incidence, and build one open shell per filled chart component.",
         "WASM and application integration are separate."
       ]
     }
