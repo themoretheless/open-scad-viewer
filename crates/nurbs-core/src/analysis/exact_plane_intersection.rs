@@ -1,8 +1,17 @@
 //! Exact line of intersection of two affine support planes.
-use super::exact_affine_hull::{PlanarSurfaceProjection, validate_projection_axes};
+use super::{
+    exact_affine_hull::{PlanarSurfaceProjection, validate_projection_axes},
+    planar_coplanar_ray::{
+        CoplanarRayPartition, CoplanarRayPartitionOptions, CoplanarRayPartitionOutcome,
+        merge_bands, partition_support_line, validate_partition_options,
+    },
+    planar_trim_projection::ProjectedTrimmedFace,
+};
 use crate::{
     Result, check,
     core::bounded_rational::{Error, Work},
+    editing::exact_derivative::Refusal,
+    trim::trim_domain::Location,
 };
 use num_rational::BigRational as Q;
 use num_traits::{One, Signed, Zero};
@@ -111,4 +120,131 @@ fn solve(
         direction,
         clock_axis,
     }))
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TrimmedPlanarIntersection {
+    Transverse {
+        line: ExactSupportLine,
+        /// Open intervals proved to be strictly interior to both faces.
+        shared_interior: Vec<[Q; 2]>,
+        /// Closed enclosures covering all common material and boundary contacts.
+        possible: Vec<[Q; 2]>,
+    },
+    Parallel,
+    Coincident,
+    Refused(Refusal),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TrimmedPlanarIntersectionReport {
+    pub outcome: TrimmedPlanarIntersection,
+    pub work_used: u64,
+    pub winding_cells: usize,
+}
+
+/// Clip the exact support intersection to two bounded nonzero-winding faces.
+/// The arithmetic and winding budgets are shared by both trims.
+pub fn intersect_trimmed_planar_faces(
+    left: &ProjectedTrimmedFace,
+    right: &ProjectedTrimmedFace,
+    options: CoplanarRayPartitionOptions,
+) -> Result<TrimmedPlanarIntersectionReport> {
+    validate_partition_options(options)?;
+    let supports =
+        intersect_planar_supports(&left.projection, &right.projection, options.max_work)?;
+    let mut work = Work {
+        used: supports.work_used,
+        limit: options.max_work,
+    };
+    let mut winding_cells = 0;
+    let outcome = match supports.outcome {
+        SupportPlaneIntersection::Line(line) => {
+            clip_support_line(left, right, line, options, &mut work, &mut winding_cells)?
+        }
+        SupportPlaneIntersection::Parallel => TrimmedPlanarIntersection::Parallel,
+        SupportPlaneIntersection::Coincident => TrimmedPlanarIntersection::Coincident,
+        SupportPlaneIntersection::ResourceLimit => {
+            TrimmedPlanarIntersection::Refused(Refusal::ResourceLimit)
+        }
+    };
+    Ok(TrimmedPlanarIntersectionReport {
+        outcome,
+        work_used: work.used,
+        winding_cells,
+    })
+}
+
+fn clip_support_line(
+    left: &ProjectedTrimmedFace,
+    right: &ProjectedTrimmedFace,
+    line: ExactSupportLine,
+    options: CoplanarRayPartitionOptions,
+    work: &mut Work,
+    winding_cells: &mut usize,
+) -> Result<TrimmedPlanarIntersection> {
+    let mut partitions = Vec::with_capacity(2);
+    for face in [left, right] {
+        match partition_support_line(face, &line, options, work, winding_cells)? {
+            CoplanarRayPartitionOutcome::Partition(partition) => {
+                partitions.push(trim_ranges(partition))
+            }
+            CoplanarRayPartitionOutcome::Refused(reason) => {
+                return Ok(TrimmedPlanarIntersection::Refused(reason));
+            }
+            CoplanarRayPartitionOutcome::NotCoplanar => {
+                return Ok(TrimmedPlanarIntersection::Refused(
+                    Refusal::UnprovedIdentity,
+                ));
+            }
+        }
+    }
+    let [left, right] = partitions.as_slice() else {
+        unreachable!("two face partitions")
+    };
+    Ok(TrimmedPlanarIntersection::Transverse {
+        line,
+        shared_interior: intersect_bands(&left.interior, &right.interior, false),
+        possible: intersect_bands(&left.possible, &right.possible, true),
+    })
+}
+
+struct TrimRanges {
+    interior: Vec<[Q; 2]>,
+    possible: Vec<[Q; 2]>,
+}
+
+fn trim_ranges(partition: CoplanarRayPartition) -> TrimRanges {
+    let mut possible = partition.contact_bands;
+    let mut interior = Vec::new();
+    for gap in partition.gaps {
+        if gap.location == Location::Inside {
+            interior.push(gap.parameter.clone());
+        }
+        if gap.location != Location::Outside {
+            possible.push(gap.parameter);
+        }
+    }
+    TrimRanges {
+        interior,
+        possible: merge_bands(possible),
+    }
+}
+
+fn intersect_bands(left: &[[Q; 2]], right: &[[Q; 2]], include_points: bool) -> Vec<[Q; 2]> {
+    let mut ranges = Vec::new();
+    let (mut i, mut j) = (0, 0);
+    while let (Some(a), Some(b)) = (left.get(i), right.get(j)) {
+        let lo = (&a[0]).max(&b[0]);
+        let hi = (&a[1]).min(&b[1]);
+        if lo < hi || (include_points && lo == hi) {
+            ranges.push([lo.clone(), hi.clone()]);
+        }
+        if a[1] <= b[1] {
+            i += 1;
+        } else {
+            j += 1;
+        }
+    }
+    ranges
 }

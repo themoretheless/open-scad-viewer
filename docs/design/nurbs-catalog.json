@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 338,
-  "unallocatedCount": 662,
+  "specifiedCount": 339,
+  "unallocatedCount": 661,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8737,6 +8737,28 @@
       "remainingQualification": [
         "Solve the exact affine plane intersection with a canonical rational line clock and distinguish coincident and parallel supports.",
         "Exact support charts. The line is independent of argument order and retains rational coefficients. Trim clipping is separate.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0339",
+      "name": "Пересечение двух непараллельных плоских NURBS-граней с обрезкой по контурам",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::analysis::exact_plane_intersection::intersect_trimmed_planar_faces",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/exact_plane_intersection.rs",
+        "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs",
+        "crates/nurbs-core/src/trim/trim_domain.rs",
+        "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-339-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-339-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clip the exact support line against both rational trim domains, preserving proven shared interior and conservative contact enclosures.",
+        "Both signs of the canonical rational parameter are retained. Proven interior intervals are open. Possible intervals include contact-only and unresolved winding. Coincident supports are classified separately.",
         "WASM and application integration are separate."
       ]
     }

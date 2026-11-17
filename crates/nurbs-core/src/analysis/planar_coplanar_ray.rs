@@ -1,6 +1,7 @@
 //! Certified contour contacts of a ray lying in a planar rational face.
 use super::{
     exact_affine_hull::validate_projection_axes,
+    exact_plane_intersection::ExactSupportLine,
     planar_face_ray::{PlaneIntersection, intersect_plane},
     planar_trim_projection::ProjectedTrimmedFace,
 };
@@ -18,7 +19,7 @@ use crate::{
     trim::trim_domain::exact_loop_joins,
 };
 use num_rational::BigRational as Q;
-use num_traits::Signed;
+use num_traits::{Signed, Zero};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CoplanarRayContactKind {
@@ -88,7 +89,7 @@ pub fn contact_coplanar_face_ray(
     let outcome = match intersect_plane(face, origin, direction, &mut work) {
         Ok(PlaneIntersection::Coplanar) => {
             match RayClock::new(face.projection.retained_axes, origin, direction, &mut work) {
-                Ok(clock) => contacts(face, clock, max_width, &mut work)?,
+                Ok(clock) => contacts(face, clock, max_width, true, &mut work)?,
                 Err(reason) => CoplanarRayOutcome::Refused(reason),
             }
         }
@@ -118,11 +119,19 @@ impl RayClock {
         let [x, y] = axes;
         let [u, v] = [work.lift(origin[x])?, work.lift(origin[y])?];
         let [du, dv] = [work.lift(direction[x])?, work.lift(direction[y])?];
+        Self::from_exact([u, v], [du, dv], work)
+    }
+
+    fn from_exact(
+        [u, v]: [Q; 2],
+        [du, dv]: [Q; 2],
+        work: &mut Work,
+    ) -> std::result::Result<Self, Refusal> {
         let a = -&dv;
         let p = work.op(&u, &dv, |a, b| a * b)?;
         let q = work.op(&v, &du, |a, b| a * b)?;
         let c = work.op(&p, &q, |a, b| a - b)?;
-        let axis = usize::from(direction[y].abs() > direction[x].abs());
+        let axis = usize::from(dv.abs() > du.abs());
         let (origin, step) = if axis == 0 { (u, du.clone()) } else { (v, dv) };
         Ok(Self {
             equation: [a, du, c],
@@ -154,6 +163,7 @@ fn contacts(
     face: &ProjectedTrimmedFace,
     clock: RayClock,
     width: f64,
+    forward_only: bool,
     work: &mut Work,
 ) -> Result<CoplanarRayOutcome> {
     let mut out = Vec::new();
@@ -199,7 +209,7 @@ fn contacts(
                         Ok(parameter) => parameter,
                         Err(reason) => return Ok(CoplanarRayOutcome::Refused(reason)),
                     };
-                    if !ray_parameter[1].is_negative() {
+                    if !forward_only || !ray_parameter[1].is_negative() {
                         out.push(CoplanarRayContact {
                             contour,
                             curve,
@@ -263,12 +273,7 @@ pub fn partition_coplanar_face_ray(
     direction: [f64; 3],
     options: CoplanarRayPartitionOptions,
 ) -> Result<CoplanarRayPartitionReport> {
-    check(
-        (1..=100_000).contains(&options.max_winding_cells)
-            && options.winding_tolerance.is_finite()
-            && options.winding_tolerance > 0.,
-        "Coplanar ray partition requires a positive winding tolerance and bounded winding work",
-    )?;
+    validate_partition_options(options)?;
     let contacts = contact_coplanar_face_ray(
         face,
         origin,
@@ -285,17 +290,25 @@ pub fn partition_coplanar_face_ray(
         CoplanarRayOutcome::Contacts(events) => {
             let domain =
                 crate::trim::trim_domain::TrimDomain::new(&face.loops, options.winding_tolerance)?;
-            let axis = face.projection.retained_axes;
-            let projected = [axis.map(|i| origin[i]), axis.map(|i| direction[i])];
-            let bands = merge_contact_bands(events);
-            partition_gaps(
-                bands,
-                &domain,
-                projected,
-                options.max_winding_cells,
-                &mut work,
-                &mut winding_cells,
-            )?
+            let [u, v] = face.projection.retained_axes;
+            let projected = (|| -> std::result::Result<_, Refusal> {
+                Ok([
+                    [work.lift(origin[u])?, work.lift(origin[v])?],
+                    [work.lift(direction[u])?, work.lift(direction[v])?],
+                ])
+            })();
+            match projected {
+                Ok(projected) => partition_gaps(
+                    contact_bands(events, true),
+                    &domain,
+                    &projected,
+                    Q::zero(),
+                    options.max_winding_cells,
+                    &mut work,
+                    &mut winding_cells,
+                )?,
+                Err(reason) => CoplanarRayPartitionOutcome::Refused(reason),
+            }
         }
         CoplanarRayOutcome::NotCoplanar => CoplanarRayPartitionOutcome::NotCoplanar,
         CoplanarRayOutcome::Refused(reason) => CoplanarRayPartitionOutcome::Refused(reason),
@@ -307,15 +320,76 @@ pub fn partition_coplanar_face_ray(
     })
 }
 
-fn merge_contact_bands(events: Vec<CoplanarRayContact>) -> Vec<[Q; 2]> {
-    use num_traits::Zero;
-    let mut intervals: Vec<_> = events
-        .into_iter()
-        .map(|event| {
-            let [lo, hi] = event.ray_parameter;
-            [lo.max(Q::zero()), hi]
-        })
-        .collect();
+pub(super) fn validate_partition_options(options: CoplanarRayPartitionOptions) -> Result<()> {
+    check(
+        (1..=100_000).contains(&options.max_winding_cells)
+            && options.winding_tolerance.is_finite()
+            && options.winding_tolerance > 0.
+            && options.max_curve_parameter_width.is_finite()
+            && options.max_curve_parameter_width > 0.,
+        "Coplanar ray partition requires a positive winding tolerance and bounded winding work",
+    )
+}
+
+pub(super) fn partition_support_line(
+    face: &ProjectedTrimmedFace,
+    line: &ExactSupportLine,
+    options: CoplanarRayPartitionOptions,
+    work: &mut Work,
+    winding_cells: &mut usize,
+) -> Result<CoplanarRayPartitionOutcome> {
+    check(
+        (1..=256).contains(&face.loops.len()),
+        "Support line needs bounded contours",
+    )?;
+    for contour in &face.loops {
+        check(
+            exact_loop_joins(contour)? == Some(true),
+            "Support line needs exact closed contours",
+        )?;
+    }
+    let domain = crate::trim::trim_domain::TrimDomain::new(&face.loops, options.winding_tolerance)?;
+    let axes = face.projection.retained_axes;
+    let projected = [
+        axes.map(|i| line.origin[i].clone()),
+        axes.map(|i| line.direction[i].clone()),
+    ];
+    let clock = match RayClock::from_exact(projected[0].clone(), projected[1].clone(), work) {
+        Ok(clock) => clock,
+        Err(reason) => return Ok(CoplanarRayPartitionOutcome::Refused(reason)),
+    };
+    match contacts(face, clock, options.max_curve_parameter_width, false, work)? {
+        CoplanarRayOutcome::Contacts(events) => {
+            let bands = contact_bands(events, false);
+            let start = bands.first().map_or_else(Q::zero, |band| band[0].clone());
+            partition_gaps(
+                bands,
+                &domain,
+                &projected,
+                start,
+                options.max_winding_cells,
+                work,
+                winding_cells,
+            )
+        }
+        CoplanarRayOutcome::NotCoplanar => Ok(CoplanarRayPartitionOutcome::NotCoplanar),
+        CoplanarRayOutcome::Refused(reason) => Ok(CoplanarRayPartitionOutcome::Refused(reason)),
+    }
+}
+
+fn contact_bands(events: Vec<CoplanarRayContact>, forward_only: bool) -> Vec<[Q; 2]> {
+    merge_bands(
+        events
+            .into_iter()
+            .map(|event| {
+                let [lo, hi] = event.ray_parameter;
+                [if forward_only { lo.max(Q::zero()) } else { lo }, hi]
+            })
+            .collect(),
+    )
+}
+
+pub(super) fn merge_bands(mut intervals: Vec<[Q; 2]>) -> Vec<[Q; 2]> {
     intervals.sort_unstable();
     let mut bands: Vec<[Q; 2]> = Vec::new();
     for [lo, hi] in intervals {
@@ -335,15 +409,14 @@ fn merge_contact_bands(events: Vec<CoplanarRayContact>) -> Vec<[Q; 2]> {
 fn partition_gaps(
     contact_bands: Vec<[Q; 2]>,
     domain: &crate::trim::trim_domain::TrimDomain,
-    projected_ray: [[f64; 2]; 2],
+    projected_ray: &[[Q; 2]; 2],
+    mut previous: Q,
     max_winding_cells: usize,
     work: &mut Work,
     winding_cells: &mut usize,
 ) -> Result<CoplanarRayPartitionOutcome> {
     use crate::trim::trim_domain::Location;
-    use num_traits::Zero;
     let mut gaps = Vec::new();
-    let mut previous = Q::zero();
     for [lo, hi] in &contact_bands {
         if &previous < lo {
             let mut location = Location::Unresolved;
@@ -378,7 +451,7 @@ fn partition_gaps(
 }
 
 fn gap_midpoint(
-    [origin, direction]: [[f64; 2]; 2],
+    [origin, direction]: &[[Q; 2]; 2],
     lo: &Q,
     hi: &Q,
     work: &mut Work,
@@ -387,10 +460,8 @@ fn gap_midpoint(
     let cap = Q::from_integer(1_000_000_000.into());
     let mut result = [[0.; 2]; 2];
     for i in 0..2 {
-        let origin = work.lift(origin[i])?;
-        let direction = work.lift(direction[i])?;
-        let offset = work.op(&direction, &parameter, |a, b| a * b)?;
-        let point = work.op(&origin, &offset, |a, b| a + b)?;
+        let offset = work.op(&direction[i], &parameter, |a, b| a * b)?;
+        let point = work.op(&origin[i], &offset, |a, b| a + b)?;
         if point.abs() > cap {
             return Ok(None);
         }
