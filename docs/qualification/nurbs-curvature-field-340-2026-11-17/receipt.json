@@ -1,0 +1,31 @@
+{
+  "id": "NURBS-0340",
+  "testedBase": "63fc34fceb77ef7931cb4f4b531eabcfc107b4a6",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 9,
+  "scope": [
+    "Construct exact rational degree-one segments and synchronized planar pcurves on certified shared material intervals.",
+    "Unit-weight rational control nets share a normalized clock. Unresolved contact bounds are retained in the exact support clock. Budget exhaustion refuses the whole net."
+  ],
+  "logSha256": "463cc758aa7a186b5cc177959cffae398028dc88ce6db26521d2bb23998f57dc",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "102636a9954ea50c241b8e51d7d655ada3c53ef1cf5366db624dcf532ba69f08",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/segments.rs": "4262ac11c8990a00b77b2237e7f28da0b69939df05ab4df0e01f695512781608",
+    "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs": "5fdd26fd36f335373743d07685c7dc264483620fe148aed00761d8b6e7810373",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "8a1cefa77500337d22560cc73a6dbf2e123aa72db1de72a987d647acf4821575"
+  }
+}

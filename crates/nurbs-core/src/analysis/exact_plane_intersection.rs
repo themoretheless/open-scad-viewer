@@ -248,3 +248,9 @@ fn intersect_bands(left: &[[Q; 2]], right: &[[Q; 2]], include_points: bool) -> V
     }
     ranges
 }
+
+mod segments;
+pub use segments::{
+    ExactPlanarIntersectionSegment, PlanarIntersectionSegmentReport, PlanarIntersectionSegments,
+    build_planar_intersection_segments,
+};

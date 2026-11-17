@@ -5,7 +5,8 @@ use nurbs_core::{
             PlanarProjectionOutcome, PlanarSurfaceProjection, project_planar_surface,
         },
         exact_plane_intersection::{
-            SupportPlaneIntersection, TrimmedPlanarIntersection, intersect_planar_supports,
+            PlanarIntersectionSegments, SupportPlaneIntersection, TrimmedPlanarIntersection,
+            build_planar_intersection_segments, intersect_planar_supports,
             intersect_trimmed_planar_faces,
         },
         planar_coplanar_ray::CoplanarRayPartitionOptions,
@@ -193,5 +194,98 @@ fn preserves_a_boundary_only_contact_and_proves_disjoint_trims() {
     assert!(
         matches!(result.outcome, TrimmedPlanarIntersection::Transverse { shared_interior, possible, .. }
         if shared_interior.is_empty() && possible.is_empty())
+    );
+}
+
+#[test]
+fn builds_matching_spatial_and_chart_segments_without_rounding() {
+    let a = ProjectedTrimmedFace {
+        projection: plane(|x, y| x + y),
+        loops: vec![rectangle([-2., 2.], [-2., 2.], false)],
+    };
+    let b = ProjectedTrimmedFace {
+        projection: plane(|x, y| 2. * x - y + 1.),
+        loops: vec![rectangle([-1.5, 1.5], [-1.5, 1.5], false)],
+    };
+    let clipped = intersect_trimmed_planar_faces(&a, &b, options(10_000)).unwrap();
+    let report = build_planar_intersection_segments(&a, &b, options(10_000)).unwrap();
+    let PlanarIntersectionSegments::Transverse {
+        line,
+        segments,
+        possible,
+    } = report.outcome
+    else {
+        panic!("{:?}", report.outcome);
+    };
+    let TrimmedPlanarIntersection::Transverse {
+        shared_interior,
+        possible: expected_possible,
+        ..
+    } = clipped.outcome
+    else {
+        panic!("{:?}", clipped.outcome);
+    };
+    assert_eq!(possible, expected_possible);
+    assert_eq!(segments.len(), 1);
+    let segment = &segments[0];
+    assert_eq!(segment.parameter, shared_interior[0]);
+    assert_eq!(
+        segment.xyz.clone().map(|p| p[line.clock_axis].clone()),
+        segment.parameter
+    );
+    // Interpolate at the canonical clock zero, where neither x nor y is binary.
+    let s = -&segment.parameter[0] / (&segment.parameter[1] - &segment.parameter[0]);
+    assert!(q(0, 1) < s && s < q(1, 1));
+    let xyz = std::array::from_fn(|i| {
+        &segment.xyz[0][i] + &s * (&segment.xyz[1][i] - &segment.xyz[0][i])
+    });
+    assert_eq!(xyz, [q(-1, 3), q(1, 3), q(0, 1)]);
+    for (i, face) in [&a, &b].into_iter().enumerate() {
+        let chart = &face.projection;
+        let uv: [Q; 2] = std::array::from_fn(|k| {
+            let [start, end] = &segment.pcurves[i];
+            &start[k] + &s * (&end[k] - &start[k])
+        });
+        assert_eq!(uv, chart.retained_axes.map(|axis| xyz[axis].clone()));
+        assert_eq!(
+            &chart.offset + &chart.slopes[0] * &uv[0] + &chart.slopes[1] * &uv[1],
+            xyz[chart.omitted_axis]
+        );
+    }
+
+    let mut bounded = options(10_000);
+    bounded.max_work = clipped.work_used;
+    let limited = build_planar_intersection_segments(&a, &b, bounded).unwrap();
+    assert_eq!(
+        limited.outcome,
+        PlanarIntersectionSegments::Refused(
+            nurbs_core::editing::exact_derivative::Refusal::ResourceLimit
+        )
+    );
+    assert!(limited.work_used <= bounded.max_work);
+}
+
+#[test]
+fn unresolved_contacts_do_not_generate_spatial_segments() {
+    let a = ProjectedTrimmedFace {
+        projection: plane(|_, _| 0.),
+        loops: vec![rectangle([-1., 1.], [0., 1.], false)],
+    };
+    let mut b = a.clone();
+    b.projection.retained_axes = [0, 2];
+    b.projection.omitted_axis = 1;
+    b.loops = vec![rectangle([-0.5, 0.5], [-1., 1.], false)];
+    let report = build_planar_intersection_segments(&a, &b, options(10_000)).unwrap();
+    let PlanarIntersectionSegments::Transverse {
+        segments, possible, ..
+    } = report.outcome
+    else {
+        panic!("{:?}", report.outcome);
+    };
+    assert!(segments.is_empty());
+    assert!(
+        possible
+            .iter()
+            .any(|band| band[0] <= q(-1, 2) && band[1] >= q(1, 2))
     );
 }
