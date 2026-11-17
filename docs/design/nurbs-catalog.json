@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 327,
-  "unallocatedCount": 673,
+  "specifiedCount": 328,
+  "unallocatedCount": 672,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8515,6 +8515,25 @@
       "remainingQualification": [
         "Recover the exact in-plane signed spectrum of the centroidal world tensor without rounding its square roots.",
         "Exact polynomial and rational-linear boundaries and nonzero signed area. Returns the algebraic spectrum without selecting directions.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0328",
+      "name": "Гарантированные интервалы главных моментов плоской грани с рациональными контурами",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::analysis::bounded_planar_face_mass::bound_projected_face_principal_moments",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/bounded_planar_face_mass.rs",
+        "crates/nurbs-core/tests/bounded_world_plane_mass_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-328-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-328-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose both world-space in-plane principal moments and their sum from certified rational boundary moment bounds.",
+        "Closed rational planar contours. Signed area must be separated from zero. Width targets apply to the underlying projected integrals.",
         "WASM and application integration are separate."
       ]
     }

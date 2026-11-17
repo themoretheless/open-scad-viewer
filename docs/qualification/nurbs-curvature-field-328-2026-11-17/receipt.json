@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0328",
+  "testedBase": "58e52abeb52b62187a44770af1b315ef651a4f1b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "bounded_world_plane_mass_contracts",
+    "--test",
+    "exact_principal_plane_moment_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 5,
+  "scope": [
+    "Enclose both world-space in-plane principal moments and their sum from certified rational boundary moment bounds.",
+    "Closed rational planar contours. Signed area must be separated from zero. Width targets apply to the underlying projected integrals."
+  ],
+  "logSha256": "4ff3c51067d7638da68c02f126c5bbaec494873bec9b2560979b327ef37986e3",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/bounded_planar_face_mass.rs": "f6302bd5a6c3de5b935a51bd9828c25ee450eead5fcd0ebb048c1a5fe3c60794",
+    "crates/nurbs-core/tests/bounded_world_plane_mass_contracts.rs": "1e065bee0fcbcce266ac7de5b5bbb718d2e4edcc4fb30a261d8ca9d9d03a589b"
+  }
+}

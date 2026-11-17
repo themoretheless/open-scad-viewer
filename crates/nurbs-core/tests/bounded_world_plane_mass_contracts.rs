@@ -105,3 +105,41 @@ fn withholds_centroid_when_opposite_windings_cancel_area() {
     assert!(result.centroidal.is_none());
     assert!(result.cells <= 4096);
 }
+
+#[test]
+fn bounds_the_two_physical_principal_moments_of_a_rational_ellipse() {
+    use nurbs_core::analysis::bounded_planar_face_mass::bound_projected_face_principal_moments;
+    let face = face();
+    let result =
+        bound_projected_face_principal_moments(&face, [3., -2.], [0.002; 3], 8192).unwrap();
+    assert!(result.projected_converged);
+    let spectrum = result.spectrum.unwrap();
+    let scale = 21_f64.sqrt() / 4. * std::f64::consts::PI;
+    let trace = 97. / 32.;
+    let gap = 4033_f64.sqrt() / 32.;
+    for (range, expected) in spectrum
+        .principal
+        .into_iter()
+        .zip([(trace - gap) * scale / 2., (trace + gap) * scale / 2.])
+    {
+        contains(range, expected);
+        assert!(range[1] - range[0] < 0.05);
+    }
+    contains(spectrum.polar, trace * scale);
+}
+
+#[test]
+fn spectrum_is_unresolved_when_signed_area_cannot_be_separated_from_zero() {
+    use nurbs_core::analysis::bounded_planar_face_mass::bound_projected_face_principal_moments;
+    let mut face = face();
+    let opposite = face.loops[0]
+        .iter()
+        .rev()
+        .map(|curve| curve.reverse().unwrap())
+        .collect();
+    face.loops.push(opposite);
+    let result = bound_projected_face_principal_moments(&face, [3., -2.], [0.01; 3], 8).unwrap();
+    assert_eq!(result.cells, 8);
+    contains(result.signed_area, 0.);
+    assert!(result.spectrum.is_none());
+}

@@ -96,3 +96,70 @@ fn transform_tensor(
     }
     Ok(out)
 }
+
+#[derive(Clone, Debug)]
+pub struct BoundedPrincipalPlaneMoments {
+    /// Two signed in-plane moments, in ascending order.
+    pub principal: [[f64; 2]; 2],
+    /// Sum of the two principal moments.
+    pub polar: [f64; 2],
+}
+
+#[derive(Clone, Debug)]
+pub struct BoundedPrincipalPlaneReport {
+    pub signed_area: [f64; 2],
+    pub spectrum: Option<BoundedPrincipalPlaneMoments>,
+    pub projected_converged: bool,
+    pub cells: usize,
+}
+
+/// Enclose the principal second area moments of a rationally trimmed planar
+/// face. The third, normal eigenvalue of the central coordinate-product
+/// tensor is zero. Each bound excludes numerical eigensolver error through
+/// outward arithmetic on the two nontrivial characteristic coefficients.
+/// The tolerances apply to the underlying projected moment integration.
+pub fn bound_projected_face_principal_moments(
+    face: &ProjectedTrimmedFace,
+    origin: [f64; 2],
+    tolerances: [f64; 3],
+    max_cells: usize,
+) -> Result<BoundedPrincipalPlaneReport> {
+    let mass = bound_projected_face_mass(face, origin, tolerances, max_cells)?;
+    let spectrum = mass
+        .centroidal
+        .map(|data| principal_spectrum(data.second_moments))
+        .transpose()?;
+    Ok(BoundedPrincipalPlaneReport {
+        signed_area: mass.signed_area,
+        spectrum,
+        projected_converged: mass.projected_converged,
+        cells: mass.cells,
+    })
+}
+
+fn principal_spectrum(data: [[[f64; 2]; 3]; 3]) -> Result<BoundedPrincipalPlaneMoments> {
+    let t = data.map(|row| row.map(|[lo, hi]| Interval { lo, hi }));
+    let trace = t[0][0].add(t[1][1])?.add(t[2][2])?;
+    let mut product = Interval::point(0.);
+    for (i, j) in [(0, 1), (0, 2), (1, 2)] {
+        let minor = t[i][i].mul(t[j][j])?.sub(square(t[i][j])?)?;
+        product = product.add(minor)?;
+    }
+    let center = trace.mul(Interval::point(0.5))?;
+    let gap_squared = square(center)?.sub(product)?;
+    // A real symmetric tensor has real roots, so the true discriminant
+    // is nonnegative even when the interval arithmetic extends below zero.
+    let gap = Interval::new(
+        gap_squared.lo.max(0.).sqrt().next_down().max(0.),
+        gap_squared.hi.sqrt().next_up(),
+    )?;
+    Ok(BoundedPrincipalPlaneMoments {
+        principal: [bounds(center.sub(gap)?), bounds(center.add(gap)?)],
+        polar: bounds(trace),
+    })
+}
+
+fn square(value: Interval) -> Result<Interval> {
+    let result = value.mul(value)?;
+    Interval::new(result.lo.max(0.), result.hi)
+}
