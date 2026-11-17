@@ -2153,3 +2153,37 @@ fn builds_two_disjoint_vertical_section_loops_and_allows_empty_sections() {
             .is_empty()
     );
 }
+
+#[test]
+fn exact_section_area_subtracts_nested_holes_and_adds_disjoint_components() {
+    use brep_core::{
+        analysis::exact_polyhedral_section_area, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let mut horizontal = exact_polyhedral_section_area(solid, [0., 0., 1.], 1., 1_000_000).unwrap();
+    horizontal.depths.sort();
+    assert_eq!(horizontal.depths, [0, 1]);
+    assert_eq!(horizontal.area_squared_mm4, Q::from_integer(225.into()));
+    let vertical = exact_polyhedral_section_area(solid, [1., 0., 0.], 1.5, 1_000_000).unwrap();
+    assert_eq!(vertical.depths, [0, 0]);
+    assert_eq!(vertical.area_squared_mm4, Q::from_integer(36.into()));
+    assert!(exact_polyhedral_section_area(solid, [1., 0., 0.], 1.5, vertical.exact_work).is_ok());
+    assert!(
+        exact_polyhedral_section_area(solid, [1., 0., 0.], 1.5, vertical.exact_work - 1).is_err()
+    );
+}
+
+#[test]
+fn exact_oblique_section_area_has_the_correct_metric_scale() {
+    use brep_core::analysis::exact_polyhedral_section_area;
+    use num_rational::BigRational as Q;
+    let solid = shifted_oblique_solid(0.);
+    for (normal, offset) in [([-1., -1., 3.], 2.), ([2., 2., -6.], -4.)] {
+        let report = exact_polyhedral_section_area(&solid, normal, offset, 1_000_000).unwrap();
+        assert_eq!(report.depths, [0]);
+        assert_eq!(report.area_squared_mm4, Q::from_integer(44.into()));
+    }
+}

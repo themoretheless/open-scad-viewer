@@ -114,3 +114,97 @@ pub fn exact_polyhedral_section_loops(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug)]
+pub struct ExactPolyhedralSectionArea {
+    /// Squared material area in the original 3D plane.
+    pub area_squared_mm4: Q,
+    /// Nesting depths in the same order as the returned section loops.
+    pub depths: Vec<usize>,
+    pub loops: Vec<PolyhedralSectionLoop>,
+    pub exact_work: u64,
+}
+
+/// Measure the material area of a strict transverse section, subtracting
+/// holes and adding islands. The area is the nonnegative square root of the
+/// returned rational value.
+pub fn exact_polyhedral_section_area(
+    solid: &QualifiedClosedSolid,
+    normal: [f64; 3],
+    offset: f64,
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralSectionArea> {
+    use num_traits::{Signed, Zero};
+
+    let section = exact_polyhedral_section_loops(solid, normal, offset, max_exact_work)?;
+    let mut remaining = max_exact_work - section.exact_work;
+    let omitted = (0..3)
+        .max_by(|&i, &j| normal[i].abs().total_cmp(&normal[j].abs()))
+        .unwrap();
+    let axes = [(omitted + 1) % 3, (omitted + 2) % 3];
+    let mut polygons = Vec::with_capacity(section.loops.len());
+    for ring in &section.loops {
+        spend(&mut remaining, ring.points_mm.len() as u64)?;
+        polygons.push(
+            ring.points_mm
+                .iter()
+                .map(|p| axes.map(|i| p[i].clone()))
+                .collect::<Vec<_>>(),
+        );
+    }
+
+    let mut depths = Vec::with_capacity(polygons.len());
+    let mut twice_area = Q::zero();
+    for (index, ring) in polygons.iter().enumerate() {
+        spend(&mut remaining, 5 * ring.len() as u64)?;
+        let unsigned_area = edges(ring)
+            .map(|(a, b)| &a[0] * &b[1] - &b[0] * &a[1])
+            .sum::<Q>()
+            .abs();
+        if unsigned_area.is_zero() {
+            return Err(refuse("Section ring has zero projected area"));
+        }
+        let mut depth = 0;
+        for (other, boundary) in polygons.iter().enumerate() {
+            if other != index && contains_point(boundary, &ring[0], &mut remaining)? {
+                depth += 1;
+            }
+        }
+        if depth % 2 == 0 {
+            twice_area += unsigned_area;
+        } else {
+            twice_area -= unsigned_area;
+        }
+        depths.push(depth);
+    }
+
+    spend(&mut remaining, 16)?;
+    let normal = super::lift(&normal);
+    let norm_squared: Q = normal.iter().map(|n| n * n).sum();
+    let area_squared_mm4 =
+        twice_area.pow(2) * norm_squared / (Q::from_integer(4.into()) * normal[omitted].pow(2));
+    Ok(ExactPolyhedralSectionArea {
+        area_squared_mm4,
+        depths,
+        loops: section.loops,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn edges(ring: &[[Q; 2]]) -> impl Iterator<Item = (&[Q; 2], &[Q; 2])> {
+    ring.iter().zip(ring.iter().cycle().skip(1))
+}
+
+fn contains_point(ring: &[[Q; 2]], [x, y]: &[Q; 2], remaining: &mut u64) -> Result<bool> {
+    let mut inside = false;
+    for (a, b) in edges(ring) {
+        spend(remaining, 10)?;
+        if (&a[1] > y) != (&b[1] > y) {
+            let intersection = &a[0] + (y - &a[1]) * (&b[0] - &a[0]) / (&b[1] - &a[1]);
+            if &intersection > x {
+                inside = !inside;
+            }
+        }
+    }
+    Ok(inside)
+}
