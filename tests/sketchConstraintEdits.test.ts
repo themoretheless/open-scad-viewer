@@ -135,4 +135,87 @@ describe('persistent constraints across sketch geometry edits', () => {
     expect(offset.constraints).toBeDefined()
     expect(satisfied(offset)).toBe(true)
   })
+
+  it('extend holds length dimensions with constraints, offset refuses a dimensioned sketch', async () => {
+    const { extendSketch, offsetSketch, carrySketchConstraints } = await import('../src/app/directSketchGeometry')
+    const open: DirectSketch = {
+      id: 'open',
+      name: 'Open',
+      closed: false,
+      points: [
+        [0, 0],
+        [0, 2],
+        [2, 2],
+      ],
+      constraints: [{ kind: 'vertical', a: 0, b: 1 }],
+      dimensions: [{ kind: 'length', a: 0, b: 1 }],
+    }
+    const wall: DirectSketch = {
+      id: 'wall',
+      name: 'Wall',
+      closed: false,
+      points: [
+        [5, -10],
+        [5, 10],
+      ],
+    }
+    const extended = extendSketch(open, 'end', [wall])
+    expect(extended.points[2]![0]).toBeCloseTo(5, 6)
+    expect(satisfied(extended)).toBe(true)
+    const len = Math.hypot(
+      extended.points[1]![0] - extended.points[0]![0],
+      extended.points[1]![1] - extended.points[0]![1],
+    )
+    expect(len).toBeCloseTo(2, 5)
+    // Without the dimension the same vertex drag stretches the constrained segment; with it the length holds.
+    const dragged = { ...open, points: open.points.map((p, i) => (i === 1 ? [0.5, 5] : p)) as Point2[] }
+    const held = carrySketchConstraints(open, dragged)
+    expect(held.points[1]![1]).toBeCloseTo(5, 6)
+    expect(Math.hypot(held.points[1]![0] - held.points[0]![0], held.points[1]![1] - held.points[0]![1])).toBeCloseTo(
+      2,
+      5,
+    )
+    expect(satisfied(held)).toBe(true)
+    const pinned = { ...dragged, points: dragged.points.map((p, i) => (i === 0 ? [0, -4] : p)) as Point2[] }
+    expect(() => carrySketchConstraints(open, pinned)).toThrow(/conflict/)
+    const rect = {
+      ...square([{ kind: 'equal_length', a: 0, b: 1, c: 1, d: 2 }]),
+      dimensions: [{ kind: 'length' as const, a: 0, b: 1 }],
+    }
+    expect(() => offsetSketch(rect, 1)).toThrow(/dimensions/)
+  })
+
+  it('trim reports dropped constraints and the notice names them in both locales', async () => {
+    const { trimSketchConstraints } = await import('../src/app/directSketchGeometry')
+    const { droppedConstraintsNotice } = await import('../src/app/sketchConstraints')
+    const cuts = [3, 7].map((x, i): DirectSketch => ({
+      id: `cut${i}`,
+      name: 'Cut',
+      closed: false,
+      points: [
+        [x, -1],
+        [x, 1],
+      ],
+    }))
+    const result = trimSketchConstraints(
+      square([
+        { kind: 'horizontal', a: 0, b: 1 },
+        { kind: 'vertical', a: 1, b: 2 },
+      ]),
+      0,
+      0.5,
+      cuts,
+    )
+    expect(result.dropped).toEqual([{ kind: 'horizontal', a: 0, b: 1 }])
+    expect(droppedConstraintsNotice(result.dropped, 'en')).toBe(
+      'Trim removed sketch constraints (1): horizontal (1–2).',
+    )
+    expect(droppedConstraintsNotice(result.dropped, 'ru')).toBe(
+      'Обрезка сняла ограничения эскиза (1): горизонталь (1–2).',
+    )
+    expect(droppedConstraintsNotice([{ kind: 'parallel', a: 0, b: 1, c: 2, d: 3 }], 'en')).toContain(
+      'parallel (1–2, 3–4)',
+    )
+    expect(droppedConstraintsNotice([], 'ru')).toBe('')
+  })
 })

@@ -140,7 +140,11 @@ const samePoint = (p: Point2, q: Point2) =>
  * offset). Points the edit moved are held fixed; when every point moved (offset) none is held and the
  * solver starts from the edited shape. Throws a conflict error instead of returning a violating sketch.
  */
-export function resolveEditedSketchConstraints<T extends ConstrainedSketch>(before: ConstrainedSketch, after: T): T {
+export function resolveEditedSketchConstraints<T extends ConstrainedSketch>(
+  before: ConstrainedSketch,
+  after: T,
+  extras: SolverExtras = { constraints: [] },
+): T {
   const constraints = after.constraints
   if (!constraints?.length) return after
   if (after.points.length !== before.points.length)
@@ -151,7 +155,13 @@ export function resolveEditedSketchConstraints<T extends ConstrainedSketch>(befo
     moved.length === after.points.length
       ? []
       : moved.map(i => ({ id: `edit-${i}`, kind: 'fix', point: `p${i}`, at: [...after.points[i]!] as Point2 }))
-  return { ...after, points: solveConstrainedPoints(after.points, constraints, fixed) }
+  return {
+    ...after,
+    points: solveConstrainedPoints(after.points, constraints, {
+      ...extras,
+      constraints: [...extras.constraints, ...fixed],
+    }),
+  }
 }
 
 /** Result of carrying persistent constraints onto sketches whose points were split or renumbered. */
@@ -204,4 +214,26 @@ export function remapSketchConstraints<T extends ConstrainedSketch>(
     return next
   })
   return { sketches, dropped: source.filter((_, i) => !kept.has(i)) }
+}
+
+const CONSTRAINT_NAMES: Record<SketchConstraint['kind'], [string, string]> = {
+  horizontal: ['горизонталь', 'horizontal'],
+  vertical: ['вертикаль', 'vertical'],
+  parallel: ['параллельность', 'parallel'],
+  perpendicular: ['перпендикулярность', 'perpendicular'],
+  equal_length: ['равная длина', 'equal length'],
+}
+
+/** User-facing notice for constraints an edit removed (for example trim); empty when nothing was dropped. */
+export function droppedConstraintsNotice(dropped: readonly SketchConstraint[], locale: string): string {
+  if (!dropped.length) return ''
+  const ru = locale === 'ru'
+  const names = dropped.map(c => {
+    const name = CONSTRAINT_NAMES[c.kind]?.[ru ? 0 : 1] ?? c.kind
+    const seg = (a: number, b: number) => `${a + 1}–${b + 1}`
+    return `${name} (${'c' in c ? `${seg(c.a, c.b)}, ${seg(c.c, c.d)}` : seg(c.a, c.b)})`
+  })
+  return ru
+    ? `Обрезка сняла ограничения эскиза (${dropped.length}): ${names.join('; ')}.`
+    : `Trim removed sketch constraints (${dropped.length}): ${names.join('; ')}.`
 }

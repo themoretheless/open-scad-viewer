@@ -1,6 +1,11 @@
 import { transformRetainedSketch, offsetRetainedSketch, requirePolylineSketch } from './retainedSketchProfile'
 import { callGeometryRust } from '../kernel/geometry/kernel'
-import { remapSketchConstraints, resolveEditedSketchConstraints } from './sketchConstraints'
+import {
+  remapSketchConstraints,
+  resolveEditedSketchConstraints,
+  type RemappedSketchConstraints,
+} from './sketchConstraints'
+import { dimensionSolverExtras } from './directDimensions'
 import type { DirectSketch, Point2 } from './directModeling'
 import { dot3, cross3, unit3, type Vec3 } from '../kernel/geometry/math3d'
 export { dot3, cross3, unit3, type Vec3 }
@@ -256,23 +261,42 @@ export function offsetSketch(s: DirectSketch, distance: number): DirectSketch {
 
 /**
  * Keeps persistent constraints valid across a geometry edit: same point count re-solves them with the
- * moved points held; a changed point count remaps them by surviving points and drops the rest.
+ * moved points held and the sketch's dimensions held at their values before the edit; a changed point
+ * count remaps them by surviving points and drops the rest. When every point moved (offset) the held
+ * dimensions would undo the edit, so a dimensioned sketch is refused instead.
  */
 export function carrySketchConstraints(before: DirectSketch, after: DirectSketch): DirectSketch {
   if (!before.constraints?.length) return after
-  if (after.points.length === before.points.length) return resolveEditedSketchConstraints(before, after)
+  if (after.points.length === before.points.length) {
+    if (!before.dimensions?.length) return resolveEditedSketchConstraints(before, after)
+    if (after.points.every((p, i) => p[0] !== before.points[i]![0] || p[1] !== before.points[i]![1]))
+      throw Error(
+        'This edit moves every point of a sketch with dimensions and constraints; remove the dimensions first.',
+      )
+    return resolveEditedSketchConstraints(before, after, dimensionSolverExtras(before))
+  }
   return remapSketchConstraints(before, [after]).sketches[0]!
 }
 
 /** Trim a clicked segment between intersections, retaining remaining chains. */
 export function trimSketch(s: DirectSketch, edge: number, at: number, boundaries: DirectSketch[]): DirectSketch[] {
+  return trimSketchConstraints(s, edge, at, boundaries).sketches
+}
+
+/** Trim that also reports the persistent constraints it dropped, so the caller can tell the user. */
+export function trimSketchConstraints(
+  s: DirectSketch,
+  edge: number,
+  at: number,
+  boundaries: DirectSketch[],
+): RemappedSketchConstraints<DirectSketch> {
   requirePolylineSketch(s)
   boundaries.forEach(requirePolylineSketch)
   // Trim renumbers points: constraints follow surviving points and the rest are dropped.
   return remapSketchConstraints(
     s,
     callGeometryRust<DirectSketch[]>('cad_trim_sketch', { sketch: s, edge, at, boundaries }),
-  ).sketches
+  )
 }
 
 export function extendSketch(s: DirectSketch, end: 'start' | 'end', boundaries: DirectSketch[]): DirectSketch {
