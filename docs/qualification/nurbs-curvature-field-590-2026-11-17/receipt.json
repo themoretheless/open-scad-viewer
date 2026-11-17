@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0590",
+  "testedBase": "99f77fa5d43b1cceb607608f6079f7f45061c32a",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 181,
+  "scope": [
+    "Expose certified world-space station bounds without changing the existing parameter-only operation.",
+    "Verify seam boxes and absence of boxes for unavailable stations through the WASM ABI without changing the legacy response."
+  ],
+  "logSha256": "07fef44b261e7b676d56537e452a02c08d577a050fc161b5942608a270a6b6f5",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "9d83c3d9d934aa9e25c914805ed30fdd492682ee9ea69c0c835e96b6c2a7b351",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "5cd23a35ce80de2aed41e02c5d3cc5b902a8ba4dc47d3db519d27c61f764a3ee",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "083e9c5352ce77bf59104a2d4175b854f6b9316e787bfaa086470db7d19ef6d1",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "367af0fee61cc2252e16fc23f07f5429bda6e738b4703c7e5f39307c55e1c340"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

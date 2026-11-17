@@ -266,3 +266,45 @@ fn contour_station_operation_distinguishes_limits_from_outside() {
     assert_eq!(response["value"]["status"], "buildRefused");
     assert!(response["value"]["parameterBounds"].is_null());
 }
+
+#[test]
+fn contour_station_bounds_operation_encloses_world_point_and_keeps_parameter_contract() {
+    let mut request = contour_station_request(0.5, 1024);
+    let original = run(&request);
+    assert!(original["value"].get("pointBoundsMm").is_none());
+    request["op"] = json!("brep_enclose_exact_periodic_trim_contour_station");
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    assert_eq!(
+        report["parameterBounds"],
+        original["value"]["parameterBounds"]
+    );
+    assert_eq!(report["status"], "tolerance");
+    let axes = report["pointBoundsMm"].as_array().unwrap();
+    assert_eq!(axes.len(), 3);
+    for (axis, expected) in axes.iter().zip([0., 0., 0.25]) {
+        let lo = axis[0].as_f64().unwrap();
+        let hi = axis[1].as_f64().unwrap();
+        assert!(lo <= expected && expected <= hi && hi - lo < 1e-5);
+    }
+}
+
+#[test]
+fn contour_station_bounds_operation_encloses_coarse_brackets_only_when_proved() {
+    let mut request = contour_station_request(0.5, 6);
+    request["op"] = json!("brep_enclose_exact_periodic_trim_contour_station");
+    let response = run(&request);
+    assert_eq!(response["value"]["status"], "workLimit");
+    assert!(response["value"]["pointBoundsMm"][0][1].as_f64().unwrap() >= 0.5);
+
+    request["distanceMm"] = json!(6.);
+    let outside = run(&request);
+    assert_eq!(outside["value"]["status"], "outside");
+    assert!(outside["value"]["pointBoundsMm"].is_null());
+
+    request["maxWork"] = json!(1);
+    let refused = run(&request);
+    assert_eq!(refused["value"]["status"], "buildRefused");
+    assert!(refused["value"]["pointBoundsMm"].is_null());
+}

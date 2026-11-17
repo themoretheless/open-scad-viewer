@@ -21,6 +21,7 @@ interface Report {
     topologyIds: { edges: string[] }
   } | null
   edgeBindings?: { edgeId: string; contour: number; segment: number; interval?: [number, number]; parameters?: [Rational, Rational] }[]
+  pointBoundsMm?: [number, number][] | null
   parameterBounds?: [number, number] | null
   status?: string
   length?: { boundsMm: [number, number]; withinTolerance: boolean } | null
@@ -152,3 +153,19 @@ const limitedStation = call(request.maxWork, stationOp, { ...stationOptions, max
 assert.equal(limitedStation.status, 'workLimit')
 assert.deepEqual(limitedStation.parameterBounds, [0, 1])
 console.log('WASM ABI located a seam station and retained its proved bracket at the cell limit.')
+
+const stationBoundsOp = 'brep_enclose_exact_periodic_trim_contour_station'
+const worldStation = call(request.maxWork, stationBoundsOp, { ...stationOptions, maxCells: 1024 })
+assert.deepEqual(worldStation.parameterBounds, station.parameterBounds)
+assert.ok(worldStation.pointBoundsMm)
+assert.equal(worldStation.pointBoundsMm.length, 3)
+for (const [index, [lo, hi]] of worldStation.pointBoundsMm.entries()) {
+  const value = [0, 0, 0.25][index]
+  assert.ok(lo <= value && value <= hi && hi - lo < 1e-5)
+}
+const outsideStation = call(request.maxWork, stationBoundsOp, {
+  ...stationOptions, distanceMm: 6, maxCells: 6,
+})
+assert.equal(outsideStation.status, 'outside')
+assert.equal(outsideStation.pointBoundsMm, null)
+console.log('WASM ABI returned a certified world box for an available seam station.')

@@ -845,6 +845,20 @@ pub fn exact_periodic_trim_range_length_request(
 pub fn exact_periodic_trim_contour_station_request(
     request: &value_codec::Value,
 ) -> Result<value_codec::Value> {
+    periodic_trim_contour_station_response(request, false)
+}
+
+/// Locate a station and enclose its possible world coordinates.
+pub fn exact_periodic_trim_contour_station_bounds_request(
+    request: &value_codec::Value,
+) -> Result<value_codec::Value> {
+    periodic_trim_contour_station_response(request, true)
+}
+
+fn periodic_trim_contour_station_response(
+    request: &value_codec::Value,
+    include_bounds: bool,
+) -> Result<value_codec::Value> {
     use crate::field;
     use nurbs_core::editing::exact_periodic_surface::{
         PeriodicTrimLengthLocationStatus as Status, build_exact_periodic_surface_trim_input_edges,
@@ -876,17 +890,35 @@ pub fn exact_periodic_trim_contour_station_request(
     let edges = build_exact_periodic_surface_trim_input_edges(&source, &contours, max_work)?;
     let work_used = edges.geometry.work_used;
     if edges.geometry.patches.is_none() {
-        return Ok(json!({
+        let mut response = json!({
             "parameterBounds": null, "cells": 0, "workUsed": work_used, "status": "buildRefused",
-        }));
+        });
+        if include_bounds {
+            response["pointBoundsMm"] = value_codec::Value::Null;
+        }
+        return Ok(response);
     }
-    let report = edges.locate_input_contour_at_length(
-        contour,
-        distance,
-        length_tolerance,
-        parameter_tolerance,
-        max_cells,
-    )?;
+    let (report, point_bounds) = if include_bounds {
+        let result = edges.enclose_input_contour_station(
+            contour,
+            distance,
+            length_tolerance,
+            parameter_tolerance,
+            max_cells,
+        )?;
+        (result.location, result.point_bounds)
+    } else {
+        (
+            edges.locate_input_contour_at_length(
+                contour,
+                distance,
+                length_tolerance,
+                parameter_tolerance,
+                max_cells,
+            )?,
+            None,
+        )
+    };
     let status = match report.status {
         Status::Tolerance => "tolerance",
         Status::WorkLimit => "workLimit",
@@ -895,10 +927,14 @@ pub fn exact_periodic_trim_contour_station_request(
         Status::Outside => "outside",
         Status::Unavailable => "unavailable",
     };
-    Ok(json!({
+    let mut response = json!({
         "parameterBounds": report.parameter_bounds,
         "cells": report.cells,
         "workUsed": work_used,
         "status": status,
-    }))
+    });
+    if include_bounds {
+        response["pointBoundsMm"] = json!(point_bounds);
+    }
+    Ok(response)
 }
