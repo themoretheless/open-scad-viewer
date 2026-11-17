@@ -1321,3 +1321,73 @@ fn periodic_seam_insertion_refuses_nonrepresentable_cartesian_refinement() {
         Some(GaugeMergeRefusal::Exact(ExactRefusal::NotRepresentable))
     );
 }
+
+#[test]
+fn opening_periodic_curve_clamps_single_knots_without_changing_the_clock() {
+    use nurbs_core::editing::exact_curve_merge::open_exact_periodic_curve;
+    let curve = Curve {
+        degree: 2,
+        knots: vec![-2., -1., 0., 1., 2., 3., 4., 5., 6.],
+        control_points: vec![
+            vec![0., 0.],
+            vec![1., 0.],
+            vec![1., 1.],
+            vec![0., 1.],
+            vec![0., 0.],
+            vec![1., 0.],
+        ],
+        weights: vec![1., 1., 2., 2., 1., 1.],
+        periodic: true,
+    };
+    let report = open_exact_periodic_curve(&curve, 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let opened = report.curve.unwrap();
+    assert!(!opened.periodic);
+    assert_eq!(opened.knots, vec![0., 0., 0., 1., 2., 3., 4., 4., 4.]);
+    for i in 0..=32 {
+        let t = i as f64 / 8.;
+        let actual = opened.evaluate(t).unwrap().point;
+        let expected = curve.evaluate(t).unwrap().point;
+        for (a, b) in actual.into_iter().zip(expected) {
+            assert!((a - b).abs() < 1e-13);
+        }
+    }
+    assert!(
+        open_exact_periodic_curve(&curve, report.work_used)
+            .unwrap()
+            .curve
+            .is_some()
+    );
+    assert!(
+        open_exact_periodic_curve(&curve, report.work_used - 1)
+            .unwrap()
+            .curve
+            .is_none()
+    );
+}
+
+#[test]
+fn opening_periodic_curve_refuses_a_nonrepresentable_endpoint_pole() {
+    use nurbs_core::editing::exact_curve_merge::{GaugeMergeRefusal, open_exact_periodic_curve};
+    use nurbs_core::editing::rational_factor::Refusal as ExactRefusal;
+    let curve = Curve {
+        degree: 2,
+        knots: vec![-2., -1., 0., 1., 2., 3., 4., 5., 6.],
+        control_points: vec![
+            vec![0., 0.],
+            vec![1., 0.],
+            vec![1., 1.],
+            vec![0., 1.],
+            vec![0., 0.],
+            vec![1., 0.],
+        ],
+        weights: vec![1., 2., 1., 1., 1., 2.],
+        periodic: true,
+    };
+    let report = open_exact_periodic_curve(&curve, 1_000_000).unwrap();
+    assert!(report.curve.is_none());
+    assert_eq!(
+        report.refusal,
+        Some(GaugeMergeRefusal::Exact(ExactRefusal::NotRepresentable))
+    );
+}

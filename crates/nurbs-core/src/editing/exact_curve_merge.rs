@@ -1345,3 +1345,88 @@ fn insert_periodic_seam(
     refined.validate().map_err(|_| Refusal::InvalidOutput)?;
     rotate_periodic_storage(&refined, 1, work)
 }
+
+/// Open one complete period at the current seam by exactly clamping the
+/// two endpoint spans. The active interval and interior knots stay fixed.
+pub fn open_exact_periodic_curve(source: &Curve, max_work: u64) -> Result<GaugeMergeReport> {
+    use super::rational_edit::Work;
+
+    source.validate()?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact periodic opening work must be in 1..=1000000",
+    )?;
+    if !crate::analysis::curve_partition_agreement::verify_periodic_source_closure(source)? {
+        return Ok(GaugeMergeReport {
+            curve: None,
+            work_used: 0,
+            refusal: Some(GaugeMergeRefusal::Join(Refusal::InvalidOutput)),
+        });
+    }
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let result = clamp_periodic_curve(source, &mut work);
+    Ok(match result {
+        Ok(curve) => GaugeMergeReport {
+            curve: Some(curve),
+            work_used: work.used,
+            refusal: None,
+        },
+        Err(reason) => GaugeMergeReport {
+            curve: None,
+            work_used: work.used,
+            refusal: Some(GaugeMergeRefusal::Exact(reason)),
+        },
+    })
+}
+
+fn clamp_periodic_curve(
+    source: &Curve,
+    work: &mut super::rational_edit::Work,
+) -> std::result::Result<Curve, super::rational_factor::Refusal> {
+    use super::{
+        exact_knot_insertion::{homogeneous, refine_homogeneous},
+        rational_edit::store,
+        rational_factor::Refusal,
+    };
+    let degree = source.degree;
+    let [lo, hi] = source.domain();
+    let (mut net, mut knots) = homogeneous(source, lo, 0, work)?;
+    for end in [lo, hi] {
+        let multiplicity = knots.iter().filter(|&&knot| knot == end).count();
+        if multiplicity < degree {
+            refine_homogeneous(
+                &mut net,
+                &mut knots,
+                degree,
+                end,
+                degree - multiplicity,
+                work,
+            )?;
+        }
+    }
+    let first = knots.partition_point(|&k| k < lo);
+    let last = knots.partition_point(|&k| k < hi);
+    // At degree multiplicity the first and last active span each have
+    // a single endpoint pole. Copy their active control range, replacing
+    // the inactive exterior knots by one extra copy of each endpoint.
+    let active = &net[first - 1..last];
+    let channels: Vec<Vec<_>> = (0..active[0].len())
+        .map(|axis| active.iter().map(|row| row[axis].clone()).collect())
+        .collect();
+    let (control_points, weights) = store(&channels, work)?;
+    let mut clamped_knots = vec![lo];
+    clamped_knots.extend_from_slice(&knots[first..last + degree]);
+    clamped_knots.push(hi);
+    let curve = Curve {
+        degree,
+        knots: clamped_knots,
+        control_points,
+        weights,
+        periodic: false,
+    };
+    curve.validate().map_err(|_| Refusal::InvalidOutput)?;
+    Ok(curve)
+}

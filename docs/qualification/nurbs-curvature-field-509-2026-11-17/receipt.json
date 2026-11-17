@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0509",
+  "testedBase": "6b21cc6887b772326ef2dea149c01d6243b0fc7e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 72,
+  "scope": [
+    "Clamp both endpoint spans in exact homogeneous arithmetic and keep the entire active parameter interval.",
+    "Refine both endpoint knots to degree multiplicity in exact homogeneous arithmetic, then extract their active control range into one clamped curve."
+  ],
+  "logSha256": "30aa4c4858316ae83108cc3c39b493ccf3724dcab1d3f4b8255e985f971b5463",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "e1963311e39c4faaf47bc0f8557df2484c200187345df05a2af29ca616f24fb5",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "6c012f34babe47cbc90b3f91a3d0a881b16f2b03b5298509099f0d7ba98b60d4",
+    "crates/nurbs-core/src/editing/exact_knot_insertion.rs": "b9c93a7e8900a239f9db432707896a109ca234c4e1c24b5cb1018ca0d2a88b0b"
+  }
+}

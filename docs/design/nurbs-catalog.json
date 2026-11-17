@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 508,
-  "unallocatedCount": 492,
+  "specifiedCount": 509,
+  "unallocatedCount": 491,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13147,6 +13147,27 @@
       "remainingQualification": [
         "Insert a cyclic Boehm knot in exact homogeneous arithmetic and rotate to the new seam without altering the curve.",
         "Insert the knot in exact homogeneous arithmetic, store one exact cyclic control gauge, and rotate the refined seam without rounding.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0509",
+      "name": "Точное раскрытие периода NURBS-кривой с зажатыми концами",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::open_exact_periodic_curve",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_knot_insertion.rs",
+        "docs/qualification/nurbs-curvature-field-509-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-509-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamp both endpoint spans in exact homogeneous arithmetic and keep the entire active parameter interval.",
+        "Refine both endpoint knots to degree multiplicity in exact homogeneous arithmetic, then extract their active control range into one clamped curve.",
         "WASM and application integration are separate."
       ]
     }

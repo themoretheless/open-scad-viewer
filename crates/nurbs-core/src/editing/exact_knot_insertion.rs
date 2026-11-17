@@ -37,7 +37,7 @@ pub(super) fn homogeneous(
     Ok((net, knots))
 }
 
-fn refine_homogeneous(
+pub(super) fn refine_homogeneous(
     net: &mut Vec<Vec<Q>>,
     knots: &mut Vec<f64>,
     p: usize,
