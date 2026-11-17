@@ -4016,3 +4016,114 @@ fn anchor_trim_patch(
     }
     Ok((bounds, translation))
 }
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimEdge {
+    pub pcurve: crate::curve::Curve,
+    pub curve: crate::curve::Curve,
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimPatchEdges {
+    pub patch: PeriodicTrimPatch,
+    /// Ordered UV/3D edge pairs for the outer loop followed by its holes.
+    pub loops: Vec<Vec<PeriodicTrimEdge>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PeriodicTrimEdgeRefusal {
+    Patch(PeriodicTrimPatchRefusal),
+    Lift(super::exact_projective::PcurvePullbackRefusal),
+    Restrict(ExactRefusal),
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimEdgesReport {
+    pub patches: Option<Vec<PeriodicTrimPatchEdges>>,
+    pub work_used: u64,
+    /// Patch, loop and original pcurve indices, before cell subdivision.
+    pub refused_curve: Option<[usize; 3]>,
+    pub refusal: Option<PeriodicTrimEdgeRefusal>,
+}
+
+/// Construct exact 3D edges and matching UV restrictions of periodic trim
+/// patches. Edges split at chart-cell crossings and retain their source
+/// pcurve parameters. A refusal withholds all patches and edge pairs.
+pub fn build_exact_periodic_surface_trim_edges(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    max_work: u64,
+) -> Result<PeriodicTrimEdgesReport> {
+    use PeriodicTrimEdgeRefusal as Failure;
+
+    let report = build_exact_periodic_surface_trim_patches(source, contours, max_work)?;
+    let mut work_used = report.work_used;
+    let refused = |refusal, work_used, refused_curve| PeriodicTrimEdgesReport {
+        patches: None,
+        work_used,
+        refused_curve,
+        refusal: Some(refusal),
+    };
+    let Some(patches) = report.patches else {
+        let reason = report.refusal.unwrap_or(PeriodicTrimPatchRefusal::Contours(
+            PeriodicContourForestRefusal::Arithmetic(ExactRefusal::InvalidOutput),
+        ));
+        return Ok(refused(Failure::Patch(reason), work_used, None));
+    };
+    let exhausted = Failure::Restrict(ExactRefusal::ResourceLimit);
+    let mut output = Vec::with_capacity(patches.len());
+    for (i, patch) in patches.into_iter().enumerate() {
+        let mut loops = Vec::with_capacity(patch.trim.loops.len());
+        for (j, path) in patch.trim.loops.iter().enumerate() {
+            let mut edges = Vec::new();
+            for (k, pcurve) in path.iter().enumerate() {
+                let index = Some([i, j, k]);
+                if work_used == max_work {
+                    return Ok(refused(exhausted, work_used, index));
+                }
+                let lift = super::exact_projective::lift_pcurve_to_surface(
+                    &patch.surface,
+                    pcurve,
+                    max_work - work_used,
+                )?;
+                work_used += lift.work_used;
+                let Some(pieces) = lift.pieces else {
+                    let reason = lift
+                        .refusal
+                        .map(Failure::Lift)
+                        .unwrap_or(Failure::Restrict(ExactRefusal::InvalidOutput));
+                    return Ok(refused(reason, work_used, index));
+                };
+                for curve in pieces {
+                    if work_used == max_work {
+                        return Ok(refused(exhausted, work_used, index));
+                    }
+                    let restricted = super::exact_knot_insertion::restrict(
+                        pcurve,
+                        curve.domain(),
+                        max_work - work_used,
+                    )?;
+                    work_used += restricted.work_used;
+                    let Some(pcurve) = restricted.curve else {
+                        return Ok(refused(
+                            Failure::Restrict(
+                                restricted.refusal.unwrap_or(ExactRefusal::InvalidOutput),
+                            ),
+                            work_used,
+                            index,
+                        ));
+                    };
+                    edges.push(PeriodicTrimEdge { pcurve, curve });
+                }
+            }
+            loops.push(edges);
+        }
+        output.push(PeriodicTrimPatchEdges { patch, loops });
+    }
+    Ok(PeriodicTrimEdgesReport {
+        patches: Some(output),
+        work_used,
+        refused_curve: None,
+        refusal: None,
+    })
+}

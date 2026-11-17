@@ -4226,3 +4226,88 @@ fn periodic_trim_patches_support_a_nonperiodic_transverse_axis() {
         source.evaluate(0.25, 0.5).unwrap().point
     );
 }
+
+#[test]
+fn periodic_trim_edges_share_exact_uv_and_world_curves_across_chart_cells() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_edges,
+        trim_domain::exact_loop_joins,
+    };
+    let source = doubly_periodic_tensor();
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let hole = [
+        [0.125, 0.125],
+        [0.625, 0.125],
+        [0.625, 0.625],
+        [0.125, 0.625],
+        [0.125, 0.125],
+    ];
+    let report =
+        build_exact_periodic_surface_trim_edges(&source, &[&outer, &hole], 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let result = report.patches.unwrap();
+    assert_eq!(result[0].loops[0].len(), 8);
+    assert_eq!(result[0].loops[1].len(), 4);
+    for path in &result[0].loops {
+        assert_eq!(
+            exact_loop_joins(
+                &path
+                    .iter()
+                    .map(|edge| edge.pcurve.clone())
+                    .collect::<Vec<_>>()
+            )
+            .unwrap(),
+            Some(true)
+        );
+        for (edge, next) in path.iter().zip(path.iter().cycle().skip(1)) {
+            assert_eq!(
+                edge.curve.control_points.last(),
+                next.curve.control_points.first()
+            );
+            let [lo, hi] = edge.curve.domain();
+            assert_eq!(edge.pcurve.domain(), [lo, hi]);
+            for t in [lo, (lo + hi) / 2., hi] {
+                let uv = edge.pcurve.evaluate(t).unwrap().point;
+                let edge_point = edge.curve.evaluate(t).unwrap().point;
+                let support_point = result[0]
+                    .patch
+                    .surface
+                    .evaluate(uv[0], uv[1])
+                    .unwrap()
+                    .point;
+                assert!(
+                    edge_point
+                        .into_iter()
+                        .zip(support_point)
+                        .all(|(a, b)| (a - b).abs() < 1e-13)
+                );
+            }
+        }
+    }
+    let limited =
+        build_exact_periodic_surface_trim_edges(&source, &[&outer, &hole], report.work_used - 1)
+            .unwrap();
+    assert!(limited.patches.is_none());
+    assert_eq!(limited.refused_curve, Some([0, 1, 0]));
+}
+
+#[test]
+fn periodic_trim_edges_withhold_all_results_on_invalid_contour_topology() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicTrimEdgeRefusal, build_exact_periodic_surface_trim_edges,
+    };
+    let source = doubly_periodic_tensor();
+    let bow = [[0., 0.], [1., 1.], [0., 1.], [1., 0.], [0., 0.]];
+    let report = build_exact_periodic_surface_trim_edges(&source, &[&bow], 1_000_000).unwrap();
+    assert!(report.patches.is_none());
+    assert!(matches!(
+        report.refusal,
+        Some(PeriodicTrimEdgeRefusal::Patch(_))
+    ));
+}
