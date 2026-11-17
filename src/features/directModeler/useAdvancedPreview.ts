@@ -192,6 +192,7 @@ export interface AdvancedPreviewOptions {
     | 'edge-fillet'
     | 'profile-prepare'
     | 'nurbs-offset'
+    | 'full-round'
     | 'nurbs-point-trim'
     | 'nurbs-match'
     | 'nurbs-prepare'
@@ -325,6 +326,7 @@ export function useAdvancedPreview(options: AdvancedPreviewOptions) {
     }
     if (
       advancedOp.value === 'nurbs-offset' ||
+      advancedOp.value === 'full-round' ||
       advancedOp.value === 'nurbs-point-trim' ||
       isSolidBodyEdit(advancedOp.value) ||
       isSolidProfileEdit(advancedOp.value) ||

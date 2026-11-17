@@ -1,3 +1,4 @@
+import { canRedoFullRound, canUndoFullRound } from '../../app/directExactFullRound'
 import type { DirectExtrusionOperation } from '../../app/directExtrusion'
 import { storageGet, storageSet } from '../../core/safeStorage'
 import { type PaletteCommand } from '../../app/commandSearch'
@@ -181,6 +182,7 @@ export interface CommandPaletteOptions {
     | 'edge-fillet'
     | 'profile-prepare'
     | 'nurbs-offset'
+    | 'full-round'
     | 'nurbs-point-trim'
     | 'nurbs-match'
     | 'nurbs-prepare'
@@ -854,6 +856,16 @@ export function useCommandPalette(options: CommandPaletteOptions) {
         detail: label('Тело', 'Body'),
         enabled: !!body,
         disabledReason: label('Выберите тело', 'Select a body'),
+      }),
+      cmd('full-round', 'Полное скругление', 'Full Round', () => beginAdvanced('full-round'), {
+        detail: label('Тело', 'Body'),
+        enabled: !!body && !body.instance && (!!body.brep || canUndoFullRound(body) || canRedoFullRound(body)),
+        disabledReason: body?.exactFullRound
+          ? label(
+              'В истории скругления нет шагов назад или вперёд',
+              'The Full Round history has no step to undo or redo',
+            )
+          : label('Выберите тело B-rep', 'Select a B-rep body'),
       }),
       cmd('brep-properties', 'Свойства B-rep', 'B-rep properties', measureSelectedBrep, {
         detail: label('Тело', 'Body'),

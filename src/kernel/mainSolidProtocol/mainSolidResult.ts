@@ -192,6 +192,7 @@ const RESULT_VALIDATORS: ResultValidatorMap = {
   sceneEdit: directDocumentEntry,
   profileEdit: directDocumentEntry,
   bodyEdit: directDocumentEntry,
+  fullRound: directDocumentEntry,
   revolve: directDocumentEntry,
   extrusion: directDocumentEntry,
   main: directDocumentEntry,

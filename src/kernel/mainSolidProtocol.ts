@@ -107,6 +107,7 @@ import type { SolidNurbsRefitOptions, refitSolidNurbs } from './solidCurveReduct
 import type { prepareSolidProfile } from './solidProfilePreparation'
 import type { SolidProfileEditOptions } from './solidProfileEdit'
 import type { SolidBodyEditOptions } from './solidBodyEdit'
+import type { SolidFullRoundOptions } from './solidFullRound'
 import type { SolidRevolveOptions } from './solidRevolve'
 import type { DirectExtrusionOptions } from '../app/directExtrusion'
 import type { inspectSolidIntersections } from './solidDiagnostics'
@@ -225,6 +226,8 @@ export type MainSolidJob =
       kind: 'restoreDocument'
       text: string
       /** Snapshot text of the state the client holds: answer as a delta against it. */ base?: string
+      /** Opening a file or draft: replay stored native histories instead of trusting their caches. */
+      verifyNative?: true
     }
   | { kind: 'primitive'; document: DirectDocument; options: SolidPrimitiveOptions }
   | { kind: 'rushGraphImport'; document: DirectDocument; text: string; group?: string }
@@ -255,6 +258,7 @@ export type MainSolidJob =
   | { kind: 'profileEdit'; document: DirectDocument; options: SolidProfileEditOptions }
   | { kind: 'partialAnnularPreview'; body: DirectBody; edge: number; radius: number }
   | { kind: 'bodyEdit'; document: DirectDocument; options: SolidBodyEditOptions }
+  | { kind: 'fullRound'; document: DirectDocument; options: SolidFullRoundOptions }
   | { kind: 'revolve'; document: DirectDocument; options: SolidRevolveOptions }
   | { kind: 'extrusion'; document: DirectDocument; options: DirectExtrusionOptions }
   | {
@@ -374,6 +378,7 @@ export const MAIN_SOLID_JOB_KINDS: Readonly<Record<MainSolidJob['kind'], true>> 
   profilePrepare: true,
   profileEdit: true,
   bodyEdit: true,
+  fullRound: true,
   partialAnnularPreview: true,
   revolve: true,
   extrusion: true,
@@ -479,6 +484,7 @@ export interface MainSolidResults {
   profilePrepare: ReturnType<typeof prepareSolidProfile>
   profileEdit: DirectDocument
   bodyEdit: DirectDocument
+  fullRound: DirectDocument
   revolve: DirectDocument
   extrusion: DirectDocument
   meshContacts: ReturnType<typeof inspectSolidIntersections>

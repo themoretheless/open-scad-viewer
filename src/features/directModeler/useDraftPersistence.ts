@@ -171,7 +171,7 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
         // The shared draft lock keeps the canonical head stable until the validated
         // replacement is published. Local edits remain the preceding history entry.
         const applied = await target.commitAsync(async () => {
-          const next = await historyWorker.run({ kind: 'restoreDocument', text })
+          const next = await historyWorker.run({ kind: 'restoreDocument', text, verifyNative: true })
           if (!current() || storageGet(key) !== reference)
             throw Error(
               label(
@@ -224,7 +224,7 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
     historyPending.value = true
     try {
       const applied = await target.commitAsync(async () => {
-        const next = await historyWorker.run({ kind: 'restoreDocument', text })
+        const next = await historyWorker.run({ kind: 'restoreDocument', text, verifyNative: true })
         if (!current())
           throw Error(label('Документ изменился во время восстановления.', 'Document changed while restoring.'))
         return next
@@ -367,7 +367,7 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
       if (!current()) return
       if (text) {
         const applied = await target.resetAsync(async () => {
-          const recovered = await draftRecoveryWorker.run({ kind: 'restoreDocument', text })
+          const recovered = await draftRecoveryWorker.run({ kind: 'restoreDocument', text, verifyNative: true })
           if (!current()) throw Error('Draft recovery cancelled.')
           if (!head)
             await withSolidDraftLock(key, async () => {

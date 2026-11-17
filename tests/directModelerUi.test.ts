@@ -106,6 +106,7 @@ vi.mock('../src/kernel/solidPreviewWorker', async () => {
   const { applyDirectExtrusionProfile } = await import('../src/app/directExtrusion')
   const { applySolidRevolve } = await import('../src/kernel/solidRevolve')
   const { applySolidBodyEdit } = await import('../src/kernel/solidBodyEdit')
+  const { applySolidFullRound } = await import('../src/kernel/solidFullRound')
   const { applySolidProfileEdit } = await import('../src/kernel/solidProfileEdit')
   const { prepareSolidProfile } = await import('../src/kernel/solidProfilePreparation')
   const { refitSolidNurbs } = await import('../src/kernel/solidCurveReduction')
@@ -157,100 +158,102 @@ vi.mock('../src/kernel/solidPreviewWorker', async () => {
                                 ? displayWorkerRun(job)
                                 : previewWorkerRun(job, options)) ??
         Promise.resolve().then(() =>
-          job.kind === 'sketchSnaps'
-            ? sketchSnapGeometry(structuredClone([job.sketch]))
-            : job.kind === 'bodySnaps'
-              ? bodySnapGeometry(job.body)
-              : job.kind === 'faceSketch'
-                ? prepareSolidFaceSketch(job.body, job.face)
-                : job.kind === 'bodyEdges'
-                  ? solidBodyEdges(job.body)
-                  : job.kind === 'topology'
-                    ? solidTopology(job.mesh)
-                    : job.kind === 'curveDisplay'
-                      ? sampleSolidNurbsCurve(job.curve)
-                      : job.kind === 'profileDisplay'
-                        ? retainedProfileDisplay(job.profile)
-                        : job.kind === 'surfaceMesh'
-                          ? tessellateSolidNurbsSurface(job.item)
-                          : job.kind === 'surfaceBoundary'
-                            ? measureSurfaceBoundaries(job.a, job.b, job.options)
-                            : job.kind === 'shellDistance'
-                              ? measureShellDistance(job.options)
-                              : job.kind === 'faceDistance'
-                                ? measureFaceDistance(job.options)
-                                : job.kind === 'surfaceDistance'
-                                  ? measureNurbsSurfaceDistance(job.a, job.b, job.toleranceMm, job.maxCells)
-                                  : job.kind === 'curveDistance'
-                                    ? measureNurbsCurveDistance(job.a, job.b, job.toleranceMm, job.maxCells)
-                                    : job.kind === 'measureVertices'
-                                      ? measureSolidVertices(job.a, job.indexA, job.b, job.indexB)
-                                      : job.kind === 'measureEdge'
-                                        ? measureSolidEdgeCurvature(job.body, job.edge, job.parameter)
-                                        : job.kind === 'primitive'
-                                          ? addSolidPrimitive(job.document, job.options)
-                                          : job.kind === 'rushGraphImport'
-                                            ? importSolidRushGraph(job.document, job.text, job.group)
-                                            : job.kind === 'displayMesh'
-                                              ? prepareSolidDisplay(job.mesh, job.brep, job.segments)
-                                              : job.kind === 'restoreDocument'
-                                                ? parseDirectDocument(job.text)
-                                                : job.kind === 'curveOffset'
-                                                  ? offsetSolidCurve(job.document, job.options)
-                                                  : job.kind === 'brepTool'
-                                                    ? applySolidBrepTool(job.document, job.options)
-                                                    : job.kind === 'nurbsEdit'
-                                                      ? applySolidNurbsEdit(job.document, job.options)
-                                                      : job.kind === 'pointEdit'
-                                                        ? applySolidPointEdit(job.document, job.options)
-                                                        : job.kind === 'sketchEdit'
-                                                          ? applySolidSketchEdit(job.document, job.options)
-                                                          : job.kind === 'minkowski3d'
-                                                            ? applySolidMinkowski(job.document, job.options)
-                                                            : job.kind === 'boolean'
-                                                              ? applySolidBoolean(job.document, job.options)
-                                                              : job.kind === 'sceneEdit'
-                                                                ? applySolidSceneEdit(
-                                                                    typeof job.document === 'string'
-                                                                      ? parseDirectDocument(job.document)
-                                                                      : job.document,
-                                                                    job.options,
-                                                                  )
-                                                                : job.kind === 'curveMatch'
-                                                                  ? matchSolidCurve(...job.args)
-                                                                  : job.kind === 'surfaceMatch'
-                                                                    ? matchSolidSurface(...job.args)
-                                                                    : job.kind === 'seamPrepare'
-                                                                      ? prepareSolidSurfaceSeams(...job.args)
-                                                                      : job.kind === 'surfaceBuild'
-                                                                        ? buildSolidSurface(job.document, job.options)
-                                                                        : job.kind === 'nurbsRefit'
-                                                                          ? refitSolidNurbs(job.document, job.options)
-                                                                          : job.kind === 'profilePrepare'
-                                                                            ? prepareSolidProfile(
-                                                                                job.document,
-                                                                                job.ids,
-                                                                                job.tolerance,
-                                                                              )
-                                                                            : job.kind === 'profileEdit'
-                                                                              ? applySolidProfileEdit(
+          job.kind === 'fullRound'
+            ? applySolidFullRound(job.document, job.options)
+            : job.kind === 'sketchSnaps'
+              ? sketchSnapGeometry(structuredClone([job.sketch]))
+              : job.kind === 'bodySnaps'
+                ? bodySnapGeometry(job.body)
+                : job.kind === 'faceSketch'
+                  ? prepareSolidFaceSketch(job.body, job.face)
+                  : job.kind === 'bodyEdges'
+                    ? solidBodyEdges(job.body)
+                    : job.kind === 'topology'
+                      ? solidTopology(job.mesh)
+                      : job.kind === 'curveDisplay'
+                        ? sampleSolidNurbsCurve(job.curve)
+                        : job.kind === 'profileDisplay'
+                          ? retainedProfileDisplay(job.profile)
+                          : job.kind === 'surfaceMesh'
+                            ? tessellateSolidNurbsSurface(job.item)
+                            : job.kind === 'surfaceBoundary'
+                              ? measureSurfaceBoundaries(job.a, job.b, job.options)
+                              : job.kind === 'shellDistance'
+                                ? measureShellDistance(job.options)
+                                : job.kind === 'faceDistance'
+                                  ? measureFaceDistance(job.options)
+                                  : job.kind === 'surfaceDistance'
+                                    ? measureNurbsSurfaceDistance(job.a, job.b, job.toleranceMm, job.maxCells)
+                                    : job.kind === 'curveDistance'
+                                      ? measureNurbsCurveDistance(job.a, job.b, job.toleranceMm, job.maxCells)
+                                      : job.kind === 'measureVertices'
+                                        ? measureSolidVertices(job.a, job.indexA, job.b, job.indexB)
+                                        : job.kind === 'measureEdge'
+                                          ? measureSolidEdgeCurvature(job.body, job.edge, job.parameter)
+                                          : job.kind === 'primitive'
+                                            ? addSolidPrimitive(job.document, job.options)
+                                            : job.kind === 'rushGraphImport'
+                                              ? importSolidRushGraph(job.document, job.text, job.group)
+                                              : job.kind === 'displayMesh'
+                                                ? prepareSolidDisplay(job.mesh, job.brep, job.segments)
+                                                : job.kind === 'restoreDocument'
+                                                  ? parseDirectDocument(job.text)
+                                                  : job.kind === 'curveOffset'
+                                                    ? offsetSolidCurve(job.document, job.options)
+                                                    : job.kind === 'brepTool'
+                                                      ? applySolidBrepTool(job.document, job.options)
+                                                      : job.kind === 'nurbsEdit'
+                                                        ? applySolidNurbsEdit(job.document, job.options)
+                                                        : job.kind === 'pointEdit'
+                                                          ? applySolidPointEdit(job.document, job.options)
+                                                          : job.kind === 'sketchEdit'
+                                                            ? applySolidSketchEdit(job.document, job.options)
+                                                            : job.kind === 'minkowski3d'
+                                                              ? applySolidMinkowski(job.document, job.options)
+                                                              : job.kind === 'boolean'
+                                                                ? applySolidBoolean(job.document, job.options)
+                                                                : job.kind === 'sceneEdit'
+                                                                  ? applySolidSceneEdit(
+                                                                      typeof job.document === 'string'
+                                                                        ? parseDirectDocument(job.document)
+                                                                        : job.document,
+                                                                      job.options,
+                                                                    )
+                                                                  : job.kind === 'curveMatch'
+                                                                    ? matchSolidCurve(...job.args)
+                                                                    : job.kind === 'surfaceMatch'
+                                                                      ? matchSolidSurface(...job.args)
+                                                                      : job.kind === 'seamPrepare'
+                                                                        ? prepareSolidSurfaceSeams(...job.args)
+                                                                        : job.kind === 'surfaceBuild'
+                                                                          ? buildSolidSurface(job.document, job.options)
+                                                                          : job.kind === 'nurbsRefit'
+                                                                            ? refitSolidNurbs(job.document, job.options)
+                                                                            : job.kind === 'profilePrepare'
+                                                                              ? prepareSolidProfile(
                                                                                   job.document,
-                                                                                  job.options,
+                                                                                  job.ids,
+                                                                                  job.tolerance,
                                                                                 )
-                                                                              : job.kind === 'bodyEdit'
-                                                                                ? applySolidBodyEdit(
+                                                                              : job.kind === 'profileEdit'
+                                                                                ? applySolidProfileEdit(
                                                                                     job.document,
                                                                                     job.options,
                                                                                   )
-                                                                                : job.kind === 'revolve'
-                                                                                  ? applySolidRevolve(
+                                                                                : job.kind === 'bodyEdit'
+                                                                                  ? applySolidBodyEdit(
                                                                                       job.document,
                                                                                       job.options,
                                                                                     )
-                                                                                  : applyDirectExtrusionProfile(
-                                                                                      job.document,
-                                                                                      job.options,
-                                                                                    ),
+                                                                                  : job.kind === 'revolve'
+                                                                                    ? applySolidRevolve(
+                                                                                        job.document,
+                                                                                        job.options,
+                                                                                      )
+                                                                                    : applyDirectExtrusionProfile(
+                                                                                        job.document,
+                                                                                        job.options,
+                                                                                      ),
         ),
       cancel: () => {},
       dispose: () => {},
@@ -9879,7 +9882,7 @@ it.each(['en', 'ru'])(
       if (selection) await ui.click(selection)
       const commands = ui.commands(),
         current = commands.map(c => c.id)
-      expect(commands).toHaveLength(102)
+      expect(commands).toHaveLength(103)
       expect(new Set(current).size).toBe(current.length)
       if (ids.length) expect(current).toEqual(ids)
       else ids = current
@@ -12521,6 +12524,59 @@ it.each([
     expect(row.steps.apply, JSON.stringify(row.steps)).toMatchObject({ status: 'pass' })
     expect(row.steps.undoRedo).toEqual({ status: 'pass', note: 'one Undo step' })
     expect(row.steps.workerError.status).toBe('pass')
+  },
+  120000,
+)
+
+it('N4 Full Round: the palette command applies on a B-rep body with one app Undo step and a localized worker error', async () => {
+  const row = await runSolidRow(
+    'full-round',
+    MATRIX_FIXTURES.find(fixture => fixture.name === 'B-rep body')!,
+  )
+  expect(row.kind).toBe('modal')
+  expect(row.steps.apply, JSON.stringify(row.steps)).toMatchObject({ status: 'pass' })
+  expect(row.steps.undoRedo).toEqual({ status: 'pass', note: 'one Undo step' })
+  expect(row.steps.escape.status).toBe('pass')
+  expect(row.steps.workerError).toMatchObject({ status: 'pass', note: 'fullRound' })
+}, 180000)
+
+it.each(['en', 'ru'])(
+  'N4 Full Round: %s panel keeps the native history in the document and app Undo restores the B-rep',
+  async locale => {
+    resetWorkers()
+    const ui = await mount({ locale })
+    await ui.click(locale === 'ru' ? 'Куб' : 'Box')
+    await settle()
+    const before = ui.doc(),
+      id = before.bodies.at(-1).id
+    expect(before.bodies.at(-1).brep).toBeTruthy()
+    const command = ui.commands().find(c => c.id === 'full-round')!
+    expect(command.label).toBe(locale === 'ru' ? 'Полное скругление' : 'Full Round')
+    expect(command.enabled).not.toBe(false)
+    await ui.click(command.label)
+    await settle(250)
+    expect(ui.text(ui.all()[0])).toContain(locale === 'ru' ? 'Сегменты отображения' : 'Display segments')
+    expect((await awaitApply(ui)).enabled).toBe(true)
+    await commandKey(ui, 'Enter')
+    await settle()
+    const body = ui.doc().bodies.find((b: { id: string }) => b.id === id)
+    expect(body.brep).toBeUndefined()
+    expect(body.exactFullRound.history.format).toBe('exact-full-round-history/1')
+    expect(body.exactFullRound.segments).toBe(4)
+    // Saved form: the history survives the document round trip.
+    expect(parseDirectDocument(stringifyMeshJson(ui.doc())).bodies.find(b => b.id === id)!.exactFullRound).toEqual(
+      body.exactFullRound,
+    )
+    // A single native revision has no step: the command explains why it is disabled.
+    const disabled = ui.commands().find(c => c.id === 'full-round')!
+    expect(disabled.enabled).toBe(false)
+    expect(disabled.disabledReason).toBeTruthy()
+    await ui.click('↶')
+    expect(ui.doc().bodies.find((b: { id: string }) => b.id === id).brep).toBeTruthy()
+    expect(ui.doc().bodies.find((b: { id: string }) => b.id === id).exactFullRound).toBeUndefined()
+    await ui.click('↷')
+    expect(ui.doc().bodies.find((b: { id: string }) => b.id === id).exactFullRound).toEqual(body.exactFullRound)
+    unmountAll()
   },
   120000,
 )

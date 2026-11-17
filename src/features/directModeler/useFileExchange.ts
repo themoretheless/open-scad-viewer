@@ -225,7 +225,7 @@ export function useFileExchange(options: UseFileExchangeOptions) {
         const { validateLocked, added } = prepareCommit(imported, 'file')
         const payload = stringifyMeshJson(imported)
         const applied = await target.commitAsync(
-          () => historyWorker.run({ kind: 'restoreDocument', text: payload }),
+          () => historyWorker.run({ kind: 'restoreDocument', text: payload, verifyNative: true }),
           validateLocked,
         )
         if (!current() || !applied) return

@@ -63,6 +63,7 @@ import { refitSolidNurbs } from './solidCurveReduction'
 import { prepareSolidProfile } from './solidProfilePreparation'
 import { applySolidProfileEdit } from './solidProfileEdit'
 import { applySolidBodyEdit } from './solidBodyEdit'
+import { applySolidFullRound, restoreSolidFullRoundBodies } from './solidFullRound'
 import { applySolidRevolve } from './solidRevolve'
 import { applyDirectExtrusionProfile } from '../app/directExtrusion'
 import { inspectSolidIntersections } from './solidDiagnostics'
@@ -119,7 +120,7 @@ const documentResult = <T extends { document: DirectDocument }>(
  * from it (the client's base is that text) reuse its resolved linked instances instead of
  * resolving and copying them again. Worker-private; never mutated after it is stored. */
 let residentRestore: { text: string; document: DirectDocument } | null = null
-const restoreDocumentResult = (job: { text: string; base?: string }): DirectDocument => {
+const restoreDocumentResult = (job: { text: string; base?: string; verifyNative?: true }): DirectDocument => {
   let reuse: Map<string, Pick<DirectDocument['bodies'][number], 'mesh' | 'brep'>> | undefined
   if (typeof job.base === 'string' && residentRestore?.text === job.base && job.text.includes('"instance"')) {
     const ids = snapshotReusableInstances(job.base, job.text)
@@ -130,7 +131,8 @@ const restoreDocumentResult = (job: { text: string; base?: string }): DirectDocu
     }
   }
   residentRestore = null
-  const next = parseDirectDocument(job.text, instanceCache, reuse)
+  const parsed = parseDirectDocument(job.text, instanceCache, reuse),
+    next = job.verifyNative ? restoreSolidFullRoundBodies(parsed) : parsed
   // A commit payload (`DirectHistory.commitPayload`) is not always the canonical snapshot text
   // the client later names as `base`; keep the canonical form so the next commit or Undo/Redo
   // from this state finds it. Only linked instances benefit, so other documents keep the text.
@@ -327,6 +329,8 @@ async function execute(
       return solidPartialAnnularPreview(job.body, job.edge, job.radius)
     case 'bodyEdit':
       return applySolidBodyEdit(job.document, job.options)
+    case 'fullRound':
+      return applySolidFullRound(job.document, job.options)
     case 'revolve':
       return applySolidRevolve(job.document, job.options)
     case 'extrusion':

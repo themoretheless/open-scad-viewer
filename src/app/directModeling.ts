@@ -1,3 +1,4 @@
+import { isDirectExactFullRound } from './directExactFullRound'
 import { countOperation } from '../dev/operationCounters'
 import { packHistoryText, unpackHistoryText, sweepHistoryTextPool, type HistoryText } from './historyText'
 import { qualifySourceBodyRecord, type SourceBodyRecord } from '../kernel/sourceBodyArchive'
@@ -71,6 +72,8 @@ export interface DirectBody {
   material?: DirectMaterial
   instance?: SolidInstanceLink
   livePattern?: import('./liveBodyPattern').LiveBodyPattern
+  /** Native Full Round history; `mesh` is its display cache and `brep` is absent. */
+  exactFullRound?: import('./directExactFullRound').DirectExactFullRound
 }
 /** A group owns the source its bodies were built from, so it stays editable and rebuildable. */
 export interface DirectGroup {
@@ -391,6 +394,8 @@ function* directDocumentValidation(
     if (b.group !== undefined && (typeof b.group !== 'string' || b.group.length === 0 || b.group.length > 100)) {
       throw new Error('Invalid body group.')
     }
+    if (b.exactFullRound !== undefined && (!isDirectExactFullRound(b.exactFullRound) || b.brep || b.instance))
+      throw new Error('Invalid Full Round body history.')
     // A compact instance omits both caches. Partially supplied caches still fail validation.
     if (b.instance && b.mesh === undefined && b.brep === undefined) {
       yield
