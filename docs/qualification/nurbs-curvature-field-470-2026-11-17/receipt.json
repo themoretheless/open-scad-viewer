@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0470",
+  "testedBase": "585380772175c12a525dba1b690debae62fed5c8",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 264,
+  "scope": [
+    "Compute exact common area and centroid of filled coplanar polygons with holes.",
+    "Integrate projected first moments from exact clipped triangle pairs with signed hole contributions, then lift the centroid to the common plane."
+  ],
+  "logSha256": "94028536177170617e90639f39a58487c10b4adcc44ab2f5b1ac8cde8e568749",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "81b6aedb4ca2ce2f6e4bbed577db23caccaa310139609c2e287e0960d09251e5",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "5b85c505b8966f52831a72862cd1d608c914f2bea585323f119b77e4efdbda08",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs": "0de57d155066fa00c9ec097106a1fa6ce7effdc18e6e0185d6e47dfc9d64174d",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs": "8ede062350dde59a85651b267d276bf360e29d8b374169c9e434cf3e7b9805f7"
+  }
+}

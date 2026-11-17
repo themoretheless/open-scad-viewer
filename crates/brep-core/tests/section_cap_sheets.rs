@@ -5390,3 +5390,72 @@ fn exact_coplanar_profile_overlap_area_handles_disconnected_overlap_and_edge_con
             .is_err()
     );
 }
+
+#[test]
+fn exact_coplanar_profile_overlap_mass_subtracts_hole_moments_in_three_dimensions() {
+    use brep_core::analysis::exact_coplanar_planar_polyline_region_overlap_mass;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x: i64, y: i64| [q(x, 1), q(y, 1), q(x + y + 7, 1)];
+    let rect = |x, y, a, b| [p(x, y), p(a, y), p(a, b), p(x, b), p(x, y)];
+    let a = rect(0, 0, 6, 6);
+    let b = rect(2, 0, 7, 5);
+    let h1 = rect(1, 1, 4, 4);
+    let h2 = rect(3, 2, 5, 4).into_iter().rev().collect::<Vec<_>>();
+    let report =
+        exact_coplanar_planar_polyline_region_overlap_mass(&a, &[&h1], &b, &[&h2], 1_000_000)
+            .unwrap();
+    assert_eq!(report.area_vector_mm2, [q(-12, 1), q(-12, 1), q(12, 1)]);
+    assert_eq!(report.centroid_mm, Some([q(53, 12), q(29, 12), q(83, 6)]));
+    assert_eq!(
+        exact_coplanar_planar_polyline_region_overlap_mass(
+            &a,
+            &[&h1],
+            &b,
+            &[&h2],
+            report.exact_work
+        )
+        .unwrap(),
+        report
+    );
+    assert!(
+        exact_coplanar_planar_polyline_region_overlap_mass(
+            &a,
+            &[&h1],
+            &b,
+            &[&h2],
+            report.exact_work - 1
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn exact_coplanar_profile_overlap_mass_handles_disconnected_and_zero_area_intersections() {
+    use brep_core::analysis::exact_coplanar_planar_polyline_region_overlap_mass;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y| [q(x, 1), q(y, 1), q(0, 1)];
+    let u = [
+        p(0, 0),
+        p(5, 0),
+        p(5, 4),
+        p(4, 4),
+        p(4, 1),
+        p(2, 1),
+        p(2, 4),
+        p(0, 4),
+        p(0, 0),
+    ];
+    let bar = [p(-1, 2), p(-1, 3), p(6, 3), p(6, 2), p(-1, 2)];
+    let report =
+        exact_coplanar_planar_polyline_region_overlap_mass(&bar, &[], &u, &[], 1_000_000).unwrap();
+    assert_eq!(report.centroid_mm, Some([q(13, 6), q(5, 2), q(0, 1)]));
+    assert_eq!(report.area_vector_mm2, [q(0, 1), q(0, 1), q(-3, 1)]);
+    let contact = bar.map(|[x, y, z]| [x, y + q(2, 1), z]);
+    let report =
+        exact_coplanar_planar_polyline_region_overlap_mass(&contact, &[], &u, &[], 1_000_000)
+            .unwrap();
+    assert_eq!(report.centroid_mm, None);
+    assert_eq!(report.area_squared_mm4, q(0, 1));
+}

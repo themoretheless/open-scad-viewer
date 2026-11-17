@@ -2852,6 +2852,59 @@ pub fn exact_coplanar_planar_polyline_region_overlap_area(
     second_holes_mm: &[&[[Q; 3]]],
     max_exact_work: u64,
 ) -> Result<ExactCoplanarPolylineRegionOverlapArea> {
+    let (area, _) = coplanar_profile_overlap(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        max_exact_work,
+        false,
+    )?;
+    Ok(area)
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactCoplanarPolylineRegionOverlapMass {
+    /// Absent when the common region has zero area.
+    pub centroid_mm: Option<[Q; 3]>,
+    pub area_vector_mm2: [Q; 3],
+    pub area_squared_mm4: Q,
+    pub exact_work: u64,
+}
+
+/// Measure the exact area and centroid of the common material of two
+/// coplanar regions with holes. Area orientation follows the first profile.
+pub fn exact_coplanar_planar_polyline_region_overlap_mass(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    max_exact_work: u64,
+) -> Result<ExactCoplanarPolylineRegionOverlapMass> {
+    let (area, centroid_mm) = coplanar_profile_overlap(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        max_exact_work,
+        true,
+    )?;
+    Ok(ExactCoplanarPolylineRegionOverlapMass {
+        centroid_mm,
+        area_vector_mm2: area.area_vector_mm2,
+        area_squared_mm4: area.area_squared_mm4,
+        exact_work: area.exact_work,
+    })
+}
+
+fn coplanar_profile_overlap(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    max_exact_work: u64,
+    measure_centroid: bool,
+) -> Result<(ExactCoplanarPolylineRegionOverlapArea, Option<[Q; 3]>)> {
     let a =
         exact_planar_spatial_polyline_region_mass(first_outer_mm, first_holes_mm, max_exact_work)?;
     let mut remaining = max_exact_work - a.exact_work;
@@ -2873,13 +2926,41 @@ pub fn exact_coplanar_planar_polyline_region_overlap_area(
     let second =
         projected_profile_triangles(second_outer_mm, second_holes_mm, axes, &mut remaining)?;
     let mut twice_area = Q::zero();
+    let mut first_moment = [Q::zero(), Q::zero()];
     for (a_hole, a) in &first {
         for (b_hole, b) in &second {
-            let overlap = projected_triangle_overlap_double_area(a, b, &mut remaining)?;
+            let polygon = projected_triangle_overlap(a, b, &mut remaining)?;
+            let mut signed_area = Q::zero();
+            let mut moment = [Q::zero(), Q::zero()];
+            for (p, q) in polygon.iter().zip(polygon.iter().cycle().skip(1)) {
+                spend(&mut remaining, 8)?;
+                let cross = &p[0] * &q[1] - &p[1] * &q[0];
+                if measure_centroid {
+                    spend(&mut remaining, 12)?;
+                    for i in 0..2 {
+                        moment[i] += (&p[i] + &q[i]) * &cross;
+                    }
+                }
+                signed_area += cross;
+            }
+            if signed_area.is_zero() {
+                continue;
+            }
             if a_hole == b_hole {
-                twice_area += overlap;
+                twice_area += signed_area.abs();
             } else {
-                twice_area -= overlap;
+                twice_area -= signed_area.abs();
+            }
+            if measure_centroid {
+                spend(&mut remaining, 4)?;
+                let add = signed_area.is_positive() == (a_hole == b_hole);
+                for (total, value) in first_moment.iter_mut().zip(moment) {
+                    if add {
+                        *total += value;
+                    } else {
+                        *total -= value;
+                    }
+                }
             }
         }
     }
@@ -2887,13 +2968,32 @@ pub fn exact_coplanar_planar_polyline_region_overlap_area(
     if twice_area.is_negative() {
         return Err(refuse("Negative exact profile overlap area"));
     }
+    let [u, v] = axes;
+    let axis = 3 - u - v;
+    let centroid = if measure_centroid && twice_area.is_positive() {
+        spend(&mut remaining, 24)?;
+        let denominator = &twice_area * Q::from_integer(3.into());
+        let mut point = [Q::zero(), Q::zero(), Q::zero()];
+        point[u] = &first_moment[0] / &denominator;
+        point[v] = &first_moment[1] / &denominator;
+        let origin = &first_outer_mm[0];
+        point[axis] = &origin[axis]
+            - (&normal[u] * (&point[u] - &origin[u]) + &normal[v] * (&point[v] - &origin[v]))
+                / &normal[axis];
+        Some(point)
+    } else {
+        None
+    };
     let scale = twice_area / (normal[3 - axes[0] - axes[1]].abs() * Q::from_integer(2.into()));
     let area_vector_mm2 = normal.each_ref().map(|component| component * &scale);
-    Ok(ExactCoplanarPolylineRegionOverlapArea {
-        area_squared_mm4: dot(&area_vector_mm2, &area_vector_mm2),
-        area_vector_mm2,
-        exact_work: max_exact_work - remaining,
-    })
+    Ok((
+        ExactCoplanarPolylineRegionOverlapArea {
+            area_squared_mm4: dot(&area_vector_mm2, &area_vector_mm2),
+            area_vector_mm2,
+            exact_work: max_exact_work - remaining,
+        },
+        centroid,
+    ))
 }
 
 type ProjectedTriangle = [[Q; 2]; 3];
@@ -2925,11 +3025,11 @@ fn projected_profile_triangles(
     Ok(triangles)
 }
 
-fn projected_triangle_overlap_double_area(
+fn projected_triangle_overlap(
     a: &ProjectedTriangle,
     b: &ProjectedTriangle,
     remaining: &mut u64,
-) -> Result<Q> {
+) -> Result<Vec<[Q; 2]>> {
     spend(remaining, 12)?;
     let side = |a: &[Q; 2], b: &[Q; 2], p: &[Q; 2]| {
         (&b[0] - &a[0]) * (&p[1] - &a[1]) - (&b[1] - &a[1]) * (&p[0] - &a[0])
@@ -2941,7 +3041,7 @@ fn projected_triangle_overlap_double_area(
         let start = &b[edge];
         let end = &b[(edge + 1) % 3];
         let Some(mut previous) = polygon.last() else {
-            return Ok(Q::zero());
+            return Ok(Vec::new());
         };
         spend(remaining, 8)?;
         let mut previous_side = side(start, end, previous);
@@ -2967,11 +3067,5 @@ fn projected_triangle_overlap_double_area(
         }
         polygon = clipped;
     }
-    spend(remaining, 8 * polygon.len() as u64)?;
-    let area: Q = polygon
-        .iter()
-        .zip(polygon.iter().cycle().skip(1))
-        .map(|(a, b)| &a[0] * &b[1] - &a[1] * &b[0])
-        .sum();
-    Ok(area.abs())
+    Ok(polygon)
 }
