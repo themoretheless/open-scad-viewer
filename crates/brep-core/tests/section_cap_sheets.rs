@@ -1248,3 +1248,68 @@ fn expanded_exact_attachment_refuses_a_plane_offset_within_model_tolerance() {
         .is_err()
     );
 }
+
+#[test]
+fn discovers_and_caps_only_the_requested_oblique_opening_exactly() {
+    use brep_core::planar_cap::{
+        SectionPlane, discover_and_attach_section_caps_with_expanded_exact_support,
+    };
+    let (mut source, _) = open_prism(false);
+    remove_prism_cap(&mut source, 0.);
+    map_prism_to_nonbinary_cap_support(&mut source);
+    let plane = SectionPlane {
+        normal: [-1., -1., 3.],
+        offset: 6.,
+    };
+    let report = discover_and_attach_section_caps_with_expanded_exact_support(
+        &source, 0, plane, 1_000_000, 10_000,
+    )
+    .unwrap();
+    assert_eq!(report.rings[0].len(), 4);
+    assert_eq!(report.rings.len(), 1);
+    let cap = &report.attachment;
+    assert_eq!(cap.model.validate().unwrap().boundary_edge_count, 4);
+    assert_eq!(cap.model.edges, source.edges);
+    assert_eq!(cap.model.vertices, source.vertices);
+    assert!(
+        brep_core::boundary_agreement::verify_exact(&cap.model, 1_000_000)
+            .unwrap()
+            .all_equal
+    );
+    let work = cap.exact_work + report.discovery_work;
+    assert!(
+        discover_and_attach_section_caps_with_expanded_exact_support(
+            &source, 0, plane, work, 10_000
+        )
+        .is_ok()
+    );
+    assert!(
+        discover_and_attach_section_caps_with_expanded_exact_support(
+            &source,
+            0,
+            plane,
+            work - 1,
+            10_000
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn expanded_exact_discovery_rejects_a_partial_oblique_rim() {
+    use brep_core::planar_cap::{
+        SectionPlane, discover_and_attach_section_caps_with_expanded_exact_support,
+    };
+    let source = open_prism_with_nonbinary_cap_support();
+    let before = source.clone();
+    let plane = SectionPlane {
+        normal: [1., 1., 0.],
+        offset: 0.,
+    };
+    let err = discover_and_attach_section_caps_with_expanded_exact_support(
+        &source, 0, plane, 1_000_000, 10_000,
+    )
+    .unwrap_err();
+    assert_eq!(err.message, "Section boundary has an open chain");
+    assert_eq!(source, before);
+}

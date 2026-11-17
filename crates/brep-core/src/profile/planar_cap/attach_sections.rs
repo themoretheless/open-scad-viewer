@@ -281,7 +281,8 @@ mod discover;
 pub use discover::{
     BoundedSectionPlane, DiscoveredBoundedSectionCaps, DiscoveredSectionCaps, SectionPlane,
     close_shell_with_bounded_section_caps, close_shell_with_section_caps,
-    discover_and_attach_section_caps, discover_and_attach_section_caps_with_support_tolerance,
+    discover_and_attach_section_caps, discover_and_attach_section_caps_with_expanded_exact_support,
+    discover_and_attach_section_caps_with_support_tolerance,
 };
 
 mod solid;

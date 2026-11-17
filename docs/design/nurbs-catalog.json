@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 395,
-  "unallocatedCount": 605,
+  "specifiedCount": 396,
+  "unallocatedCount": 604,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -10162,6 +10162,36 @@
       "remainingQualification": [
         "Attach exact expanded cap supports to explicitly selected rim cycles, leaving other free openings available.",
         "Explicit coedge addresses select the free rims to cap. Exact planar supports preserve original edge identity while unrelated free cycles stay open.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0396",
+      "name": "Выбор свободных контуров по плоскости и сшивка точной расширенной крышки",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::planar_cap::discover_and_attach_section_caps_with_expanded_exact_support",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets/expanded_support.rs",
+        "crates/brep-core/src/contact/boundary_agreement.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs",
+        "docs/qualification/nurbs-curvature-field-396-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-396-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Automatically find exact free rim cycles on a selected plane and sew compact expanded exact caps.",
+        "Plane membership is exact and only complete free cycles are accepted. Discovery and exact capping share the work budget and retain source topology.",
         "WASM and application integration are separate."
       ]
     }

@@ -1,5 +1,5 @@
 use super::{
-    AttachedSectionCaps, BoundedSectionAttachment, SectionAttachmentOptions, attach_section_caps,
+    AttachedSectionCaps, BoundedSectionAttachment, SectionAttachmentOptions, Support, attach,
     attach_section_caps_with_support_tolerance, invalid,
 };
 use crate::Model;
@@ -28,24 +28,57 @@ pub fn discover_and_attach_section_caps(
     max_exact_work: u64,
     max_verification_cells: usize,
 ) -> Result<DiscoveredSectionCaps> {
-    let mut remaining = max_exact_work;
-    let rings = discover_rings(
+    discover_exact(
         source,
         shell,
         SectionPlane { normal, offset },
-        0.,
-        &mut remaining,
-    )?;
+        max_exact_work,
+        max_verification_cells,
+        Support::Tight,
+    )
+}
+
+/// Find all free cycles exactly on a specified plane and cap them using
+/// expandable exact supports. Any free rim in another plane remains open.
+pub fn discover_and_attach_section_caps_with_expanded_exact_support(
+    source: &Model,
+    shell: usize,
+    plane: SectionPlane,
+    max_exact_work: u64,
+    max_verification_cells: usize,
+) -> Result<DiscoveredSectionCaps> {
+    discover_exact(
+        source,
+        shell,
+        plane,
+        max_exact_work,
+        max_verification_cells,
+        Support::ExpandedExact,
+    )
+}
+
+fn discover_exact(
+    source: &Model,
+    shell: usize,
+    plane: SectionPlane,
+    max_exact_work: u64,
+    max_verification_cells: usize,
+    support: Support,
+) -> Result<DiscoveredSectionCaps> {
+    let mut remaining = max_exact_work;
+    let rings = discover_rings(source, shell, plane, 0., &mut remaining)?;
     let addresses: Vec<_> = rings.iter().map(Vec::as_slice).collect();
-    let attachment = attach_section_caps(
+    let attachment = attach(
         source,
         shell,
         &addresses,
-        normal,
-        offset,
+        plane.normal,
+        plane.offset,
         remaining,
         max_verification_cells,
-    )?;
+        support,
+    )?
+    .attachment;
     Ok(DiscoveredSectionCaps {
         attachment,
         rings,

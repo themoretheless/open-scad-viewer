@@ -1,5 +1,6 @@
+use super::super::attach_section_caps;
 use super::{
-    AttachedSectionCaps, BoundedSectionAttachment, SectionAttachmentOptions, attach_section_caps,
+    AttachedSectionCaps, BoundedSectionAttachment, SectionAttachmentOptions,
     attach_section_caps_with_support_tolerance, charge, close_shell, collect_free_rings, invalid,
 };
 use crate::Model;
