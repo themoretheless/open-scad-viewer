@@ -5183,6 +5183,13 @@ pub struct PeriodicTrimLengthLocation {
     pub status: PeriodicTrimLengthLocationStatus,
 }
 
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimLengthLocations {
+    pub stations: Vec<PeriodicTrimLengthLocation>,
+    pub table_cells: usize,
+    pub cells: usize,
+}
+
 impl PeriodicTrimInputEdges {
     /// Invert certified 3D prefix length in increasing original segment order.
     /// Ambiguous comparisons never discard a possible parameter.
@@ -5256,19 +5263,94 @@ impl PeriodicTrimInputEdges {
         parameter_tolerance: f64,
         max_cells: usize,
     ) -> Result<PeriodicTrimLengthLocation> {
+        validate_trim_length_inversion(distance, parameter_tolerance)?;
+        let table =
+            self.measure_input_contour_prefix_lengths(contour, length_tolerance, max_cells)?;
+        self.locate_contour_length_with_table(
+            contour,
+            distance,
+            length_tolerance,
+            parameter_tolerance,
+            &table,
+            table.cells,
+            max_cells,
+        )
+    }
+
+    /// Locate multiple contour stations in input order under one cell budget.
+    /// A station's cell count excludes the shared table and earlier stations.
+    pub fn locate_input_contour_at_lengths(
+        &self,
+        contour: usize,
+        distances: &[f64],
+        length_tolerance: f64,
+        parameter_tolerance: f64,
+        max_cells: usize,
+    ) -> Result<PeriodicTrimLengthLocations> {
+        crate::check(
+            !distances.is_empty() && distances.len() <= 4096,
+            "Periodic trim station batch needs 1..4096 distances",
+        )?;
+        for &distance in distances {
+            validate_trim_length_inversion(distance, parameter_tolerance)?;
+        }
+        let table =
+            self.measure_input_contour_prefix_lengths(contour, length_tolerance, max_cells)?;
+        let mut cells = table.cells;
+        let mut stations: Vec<PeriodicTrimLengthLocation> = Vec::with_capacity(distances.len());
+        let mut earlier = std::collections::BTreeMap::<u64, usize>::new();
+        for &distance in distances {
+            let mut station: PeriodicTrimLengthLocation;
+            if let Some(&index) = earlier.get(&distance.to_bits()) {
+                station = PeriodicTrimLengthLocation {
+                    cells: 0,
+                    ..stations[index].clone()
+                };
+            } else {
+                station = self.locate_contour_length_with_table(
+                    contour,
+                    distance,
+                    length_tolerance,
+                    parameter_tolerance,
+                    &table,
+                    cells,
+                    max_cells,
+                )?;
+                let used = station.cells - cells;
+                cells = station.cells;
+                station.cells = used;
+                earlier.insert(distance.to_bits(), stations.len());
+            }
+            stations.push(station);
+        }
+        Ok(PeriodicTrimLengthLocations {
+            stations,
+            table_cells: table.cells,
+            cells,
+        })
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn locate_contour_length_with_table(
+        &self,
+        contour: usize,
+        distance: f64,
+        length_tolerance: f64,
+        parameter_tolerance: f64,
+        table: &PeriodicTrimContourLengthTable,
+        cells: usize,
+        max_cells: usize,
+    ) -> Result<PeriodicTrimLengthLocation> {
         use crate::distance_bounds::Interval;
         use PeriodicTrimLengthLocationStatus as Status;
         use num_traits::Zero;
 
-        validate_trim_length_inversion(distance, parameter_tolerance)?;
-        let table =
-            self.measure_input_contour_prefix_lengths(contour, length_tolerance, max_cells)?;
         let result = |parameter_bounds, status| PeriodicTrimLengthLocation {
             parameter_bounds,
-            cells: table.cells,
+            cells,
             status,
         };
-        let Some(prefixes) = table.vertex_prefix_bounds else {
+        let Some(prefixes) = &table.vertex_prefix_bounds else {
             let status = if table.minimum_cells == 0 {
                 Status::Unavailable
             } else {
@@ -5295,7 +5377,7 @@ impl PeriodicTrimInputEdges {
             [lo as f64, hi as f64],
             distance,
             parameter_tolerance,
-            table.cells,
+            cells,
             max_cells,
             |candidate, remaining| {
                 let segment = candidate.floor() as usize;

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0591",
+  "testedBase": "f2f0685ae21a8e9c96837cfece2a701e79dba916",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 169,
+  "scope": [
+    "Reuse one certified contour length table and one cell budget across multiple station queries.",
+    "Check ordered station results, duplicate reuse, outside targets and preserved brackets under one shared cell budget."
+  ],
+  "logSha256": "ec30537e05be616a0d613e77c31bdeac06dba2f98af4b0c37658558f00008996",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "9f83023a8a3848ba6a405e19a3a96342716e56a0464df03c50e5340df8bffe65",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "2cd86ccc2c66570f2ff28ecf771e5c1d611bedcddd3cf4807bfb7edf16f6718b"
+  }
+}

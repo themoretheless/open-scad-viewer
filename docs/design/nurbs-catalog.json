@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 590,
-  "unallocatedCount": 410,
+  "specifiedCount": 591,
+  "unallocatedCount": 409,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14819,6 +14819,25 @@
         "Expose certified world-space station bounds without changing the existing parameter-only operation.",
         "Verify seam boxes and absence of boxes for unavailable stations through the WASM ABI without changing the legacy response.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0591",
+      "name": "Пакетный поиск точек по длине замкнутого периодического контура",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::locate_input_contour_at_lengths",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-591-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-591-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Reuse one certified contour length table and one cell budget across multiple station queries.",
+        "Check ordered station results, duplicate reuse, outside targets and preserved brackets under one shared cell budget.",
+        "WASM and application integration are separate."
       ]
     }
   ],
