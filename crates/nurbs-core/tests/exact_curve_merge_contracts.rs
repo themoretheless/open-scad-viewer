@@ -4862,3 +4862,65 @@ fn periodic_trim_contour_length_withholds_partial_perimeter_and_reports_uncertai
     assert!(!tight.within_tolerance);
     assert!(tight.bounds[0] <= tight.bounds[1]);
 }
+
+#[test]
+fn periodic_trim_segment_length_encloses_reversed_split_segment() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [3.5, 0.875],
+        [0.5, 0.875],
+        [0.5, 0.125],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    for (segment, expected, minimum) in [(0, 1.5, 1), (3, 1., 2)] {
+        let report = result
+            .measure_input_segment_length(0, segment, 1e-8, 100)
+            .unwrap();
+        assert_eq!(report.minimum_cells, minimum);
+        let length = report.length.unwrap();
+        assert!(length.bounds[0] <= expected && expected <= length.bounds[1]);
+        assert!(length.within_tolerance);
+    }
+    let limited = result.measure_input_segment_length(0, 3, 1e-8, 1).unwrap();
+    assert_eq!(limited.minimum_cells, 2);
+    assert!(limited.length.is_none());
+}
+
+#[test]
+fn periodic_trim_segment_length_rejects_incomplete_bindings() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let mut result = build_exact_periodic_surface_trim_input_edges(
+        &doubly_periodic_tensor(),
+        &[&outer],
+        1_000_000,
+    )
+    .unwrap();
+    assert!(
+        result
+            .measure_input_segment_length(0, 4, 1e-8, 100)
+            .unwrap()
+            .length
+            .is_none()
+    );
+    result.sources[0][0][1].parameters[0] = num_rational::BigRational::new(3.into(), 4.into());
+    assert!(
+        result
+            .measure_input_segment_length(0, 0, 1e-8, 100)
+            .is_err()
+    );
+}
