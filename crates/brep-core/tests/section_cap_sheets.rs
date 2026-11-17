@@ -6709,3 +6709,86 @@ fn exact_boolean_extrusion_section_preserves_a_coincident_cap_and_refuses_parall
         .is_err()
     );
 }
+
+#[test]
+fn exact_parallel_boolean_extrusion_section_preserves_gaps_through_holes() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Difference, exact_planar_spatial_polyline_area,
+        section_parallel_exact_coplanar_polyline_boolean_extrusion,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y, z| [q(x), q(y), q(z)];
+    let rect = |lo, hi| {
+        [
+            p(lo, lo, 0),
+            p(hi, lo, 0),
+            p(hi, hi, 0),
+            p(lo, hi, 0),
+            p(lo, lo, 0),
+        ]
+    };
+    let a = rect(0, 6);
+    let b = rect(2, 4);
+    let section = |budget| {
+        section_parallel_exact_coplanar_polyline_boolean_extrusion(
+            &a,
+            &[],
+            &b,
+            &[],
+            Difference,
+            &p(1, 0, 2),
+            &p(0, 1, 0),
+            &q(3),
+            budget,
+        )
+    };
+    let report = section(1_000_000).unwrap();
+    assert_eq!(
+        report.cells_mm,
+        [
+            vec![p(1, 3, 2), p(3, 3, 2), p(2, 3, 0), p(0, 3, 0)],
+            vec![p(5, 3, 2), p(7, 3, 2), p(6, 3, 0), p(4, 3, 0)],
+        ]
+    );
+    for mut ring in report.cells_mm.clone() {
+        ring.push(ring[0].clone());
+        assert_eq!(
+            exact_planar_spatial_polyline_area(&ring, 1_000_000)
+                .unwrap()
+                .area_vector_mm2,
+            p(0, 4, 0)
+        );
+    }
+    assert_eq!(section(report.exact_work).unwrap(), report);
+    assert!(section(report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_parallel_boolean_extrusion_section_keeps_coincident_walls_but_not_edge_only_contacts() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Intersection,
+        section_parallel_exact_coplanar_polyline_boolean_extrusion,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y, z| [q(x), q(y), q(z)];
+    let a = [p(0, 0, 0), p(3, 0, 0), p(0, 3, 0), p(0, 0, 0)];
+    let section = |normal, offset| {
+        section_parallel_exact_coplanar_polyline_boolean_extrusion(
+            &a,
+            &[],
+            &a,
+            &[],
+            Intersection,
+            &p(0, 0, 2),
+            &normal,
+            &offset,
+            1_000_000,
+        )
+    };
+    assert_eq!(section(p(0, 1, 0), q(0)).unwrap().cells_mm.len(), 1);
+    assert!(section(p(0, 1, 0), q(3)).unwrap().cells_mm.is_empty());
+    assert!(section(p(0, 1, 0), q(4)).unwrap().cells_mm.is_empty());
+    assert!(section(p(0, 1, 1), q(0)).is_err());
+}

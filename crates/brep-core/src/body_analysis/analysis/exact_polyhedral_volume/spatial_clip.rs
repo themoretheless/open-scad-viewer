@@ -2804,17 +2804,9 @@ pub fn intersect_transverse_exact_planar_polyline_regions(
     spend(&mut remaining, 64)?;
     let na = face_normal(&a)?;
     let nb = face_normal(&b)?;
-    let cross = [(1, 2), (2, 0), (0, 1)].map(|(i, j)| &na[i] * &nb[j] - &na[j] * &nb[i]);
-    let Some(axis) = cross.iter().position(|c| !c.is_zero()) else {
-        return Err(refuse("Profile supports must be nonparallel"));
-    };
-    let [u, v] = [(axis + 1) % 3, (axis + 2) % 3];
-    let da = dot(na, &a.origin);
-    let db = dot(nb, &b.origin);
-    let mut base = [Q::zero(), Q::zero(), Q::zero()];
-    base[u] = (&da * &nb[v] - &db * &na[v]) / &cross[axis];
-    base[v] = (&na[u] * db - &nb[u] * da) / &cross[axis];
-    let direction = cross.each_ref().map(|c| c / &cross[axis]);
+    let (axis, base, direction) =
+        planar_support_intersection_line(na, &dot(na, &a.origin), nb, &dot(nb, &b.origin))
+            .ok_or_else(|| refuse("Profile supports must be nonparallel"))?;
     spend(&mut remaining, 4 * first_outer_mm.len() as u64)?;
     let coordinates = first_outer_mm.iter().map(|point| &point[axis]);
     let lo = coordinates.clone().min().expect("certified outer contour");
@@ -4397,4 +4389,107 @@ fn clip_section_cell_parameter(
         prior = next;
     }
     Ok(result)
+}
+
+fn planar_support_intersection_line(
+    na: &[Q; 3],
+    da: &Q,
+    nb: &[Q; 3],
+    db: &Q,
+) -> Option<(usize, [Q; 3], [Q; 3])> {
+    let cross = [(1, 2), (2, 0), (0, 1)].map(|(i, j)| &na[i] * &nb[j] - &na[j] * &nb[i]);
+    let axis = cross.iter().position(|c| !c.is_zero())?;
+    let [u, v] = [(axis + 1) % 3, (axis + 2) % 3];
+    let mut base = [Q::zero(), Q::zero(), Q::zero()];
+    base[u] = (da * &nb[v] - db * &na[v]) / &cross[axis];
+    base[v] = (&na[u] * db - &nb[u] * da) / &cross[axis];
+    let direction = cross.each_ref().map(|c| c / &cross[axis]);
+    Some((axis, base, direction))
+}
+
+/// Slice a rational extrusion by a plane containing the sweep direction.
+/// Positive-length footprint intervals become exact parallelograms.
+pub fn section_parallel_exact_coplanar_polyline_boolean_extrusion(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    operation: CoplanarPolylineBoolean,
+    sweep_mm: &[Q; 3],
+    normal: &[Q; 3],
+    offset: &Q,
+    max_exact_work: u64,
+) -> Result<ExactBooleanExtrusionSection> {
+    use super::section_loops::clip::clip_planar_segment;
+
+    validate_point(normal)?;
+    validate_point(sweep_mm)?;
+    if normal.iter().all(Zero::is_zero)
+        || !dot(normal, sweep_mm).is_zero()
+        || offset.numer().bits().max(offset.denom().bits()) > 8192
+    {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Expected a bounded section plane parallel to the sweep",
+        ));
+    }
+    let (footprint, mut remaining) = prepare_boolean_extrusion_queries(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        operation,
+        sweep_mm,
+        max_exact_work,
+    )?;
+    let mut cells_mm = Vec::new();
+    if !footprint.edges.is_empty() {
+        spend(&mut remaining, 80)?;
+        let origin = &first_outer_mm[0];
+        let (axis, base, direction) = planar_support_intersection_line(
+            &footprint.normal,
+            &dot(&footprint.normal, origin),
+            normal,
+            offset,
+        )
+        .ok_or_else(|| refuse("Section plane and extrusion base have parallel supports"))?;
+        spend(&mut remaining, 8 * footprint.edges.len() as u64)?;
+        let coordinates = footprint.edges.iter().flatten().map(|point| &point[axis]);
+        let lo = coordinates.clone().min().expect("nonempty footprint");
+        let hi = coordinates.max().expect("nonempty footprint");
+        let [start, end] = [lo, hi].map(|t| std::array::from_fn(|i| &base[i] + t * &direction[i]));
+        let intervals = clip_planar_segment(
+            footprint.edges.iter().map(|[a, b]| (a, b)),
+            footprint.axes,
+            &start,
+            &end,
+            &mut remaining,
+            |point, remaining| {
+                Ok(
+                    point_in_face(&footprint.edges, point, footprint.axes, remaining)?
+                        != FaceLocation::Outside,
+                )
+            },
+        )?;
+        let positive = super::determinant(&direction, sweep_mm, normal).is_positive();
+        for [lo, hi] in intervals {
+            spend(&mut remaining, 24)?;
+            if lo == hi {
+                continue;
+            }
+            let [a, b] =
+                [lo, hi].map(|t| std::array::from_fn(|i| &start[i] + &t * (&end[i] - &start[i])));
+            let up_a = std::array::from_fn(|i| &a[i] + &sweep_mm[i]);
+            let up_b = std::array::from_fn(|i| &b[i] + &sweep_mm[i]);
+            let mut cell = vec![a, b, up_b, up_a];
+            if !positive {
+                cell.reverse();
+            }
+            cells_mm.push(cell);
+        }
+    }
+    Ok(ExactBooleanExtrusionSection {
+        cells_mm,
+        exact_work: max_exact_work - remaining,
+    })
 }

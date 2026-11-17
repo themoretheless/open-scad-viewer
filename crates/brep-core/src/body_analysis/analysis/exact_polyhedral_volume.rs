@@ -998,8 +998,9 @@ pub use spatial_clip::{
     locate_points_in_exact_planar_spatial_polyline,
     loops_of_exact_coplanar_planar_polyline_region_boolean, node_exact_spatial_polyline,
     project_point_to_exact_planar_polyline_region, project_point_to_exact_spatial_polyline,
-    section_exact_coplanar_polyline_boolean_extrusion, self_intersections_exact_spatial_polyline,
-    simplify_bounded_spatial_polyline, simplify_exact_spatial_polyline,
-    triangulate_exact_coplanar_planar_polyline_region_boolean,
+    section_exact_coplanar_polyline_boolean_extrusion,
+    section_parallel_exact_coplanar_polyline_boolean_extrusion,
+    self_intersections_exact_spatial_polyline, simplify_bounded_spatial_polyline,
+    simplify_exact_spatial_polyline, triangulate_exact_coplanar_planar_polyline_region_boolean,
     triangulate_exact_planar_spatial_polyline,
 };
