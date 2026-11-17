@@ -17,7 +17,8 @@ mod higher;
 mod planar_integral;
 pub use planar_integral::{
     ExactPlanarAreaOutcome, ExactPlanarAreaReport, ExactPlanarMass, ExactPlanarMassOutcome,
-    ExactPlanarMassReport, exact_planar_boundary_area, exact_planar_boundary_mass,
+    ExactPlanarMassReport, ExactPlanarInertiaReport, ExactPlanarSecondMoments,
+    exact_planar_boundary_area, exact_planar_boundary_mass, exact_planar_boundary_inertia,
 };
 pub(super) mod proof;
 mod speed;

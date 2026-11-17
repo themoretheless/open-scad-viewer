@@ -176,59 +176,76 @@ pub fn exact_planar_boundary_mass(
         used: 0,
         limit: max_work,
     };
-    for (contour, curves) in loops.iter().enumerate() {
-        if exact_loop_joins(curves)? != Some(true) {
-            return Ok(ExactPlanarMassReport {
-                outcome: ExactPlanarMassOutcome::UnprovedClosure { contour },
-                work_used: 0,
-            });
-        }
-    }
-    let outcome = integrate_mass(loops, &mut work).unwrap_or_else(ExactPlanarMassOutcome::Refused);
+    let outcome = match integrate_contours::<3>(loops, &mut work)? {
+        Ok(total) => mass_from_total(&total, &mut work)
+            .map(ExactPlanarMassOutcome::Mass)
+            .unwrap_or_else(ExactPlanarMassOutcome::Refused),
+        Err(outcome) => outcome,
+    };
     Ok(ExactPlanarMassReport {
         outcome,
         work_used: work.used,
     })
 }
 
-fn integrate_mass(loops: &[Vec<Curve>], work: &mut Work) -> PResult<ExactPlanarMassOutcome> {
-    let mut total = [Q::zero(), Q::zero(), Q::zero()];
+fn integrate_contours<const N: usize>(
+    loops: &[Vec<Curve>],
+    work: &mut Work,
+) -> Result<std::result::Result<[Q; N], ExactPlanarMassOutcome>> {
     for (contour, curves) in loops.iter().enumerate() {
-        if let Some((curve, span)) = visit_spans(curves, work, |[x, y, w], work| {
+        if exact_loop_joins(curves)? != Some(true) {
+            return Ok(Err(ExactPlanarMassOutcome::UnprovedClosure { contour }));
+        }
+    }
+    let mut total = std::array::from_fn(|_| Q::zero());
+    for (contour, curves) in loops.iter().enumerate() {
+        let result = visit_spans(curves, work, |[x, y, w], work| {
             let values = if w.len() == 1 {
-                polynomial_mass(x, y, &w[0], work)?
+                polynomial_mass::<N>(x, y, &w[0], work)?
             } else {
-                let cross = segment_green(x, y, w, work)?;
                 let w1 = at_one(w, work)?;
-                let mut values = [cross, Q::zero(), Q::zero()];
-                for (k, h) in [x, y].into_iter().enumerate() {
-                    let zero = Q::zero();
-                    let a = work.op(h.first().unwrap_or(&zero), &w[0], |a, b| a / b)?;
-                    let end = at_one(h, work)?;
-                    let b = work.op(&end, &w1, |a, b| a / b)?;
-                    let mean = work.op(&a, &b, |a, b| (a + b) / Q::from_integer(2.into()))?;
-                    values[k + 1] = work.op(&values[0], &mean, |a, b| a * b)?;
+                if !w[0].is_positive() || !w1.is_positive() {
+                    return Err(Refusal::UnprovedDenominator);
                 }
-                values
+                let x = unit_chord(x, &w[0], &w1, work)?;
+                let y = unit_chord(y, &w[0], &w1, work)?;
+                polynomial_mass::<N>(&x, &y, &Q::from_integer(1.into()), work)?
             };
             for (sum, value) in total.iter_mut().zip(values) {
                 *sum = work.op(sum, &value, |a, b| a + b)?;
             }
             Ok(())
-        })? {
-            return Ok(ExactPlanarMassOutcome::UnsupportedRationalSpan {
-                contour,
-                curve,
-                span,
-            });
+        });
+        match result {
+            Ok(Some((curve, span))) => {
+                return Ok(Err(ExactPlanarMassOutcome::UnsupportedRationalSpan {
+                    contour,
+                    curve,
+                    span,
+                }));
+            }
+            Err(reason) => return Ok(Err(ExactPlanarMassOutcome::Refused(reason))),
+            Ok(None) => {}
         }
     }
-    let [area, x, y] = total;
-    let signed_area = work.op(&area, &Q::from_integer(2.into()), |a, b| a / b)?;
+    Ok(Ok(total))
+}
+
+fn unit_chord(h: &[Q], w0: &Q, w1: &Q, work: &mut Work) -> PResult<Vec<Q>> {
+    let zero = Q::zero();
+    let start = work.op(h.first().unwrap_or(&zero), w0, |a, b| a / b)?;
+    let end = at_one(h, work)?;
+    let end = work.op(&end, w1, |a, b| a / b)?;
+    let delta = work.op(&end, &start, |a, b| a - b)?;
+    Ok(vec![start, delta])
+}
+
+fn mass_from_total(total: &[Q], work: &mut Work) -> PResult<ExactPlanarMass> {
+    let signed_area = work.op(&total[0], &Q::from_integer(2.into()), |a, b| a / b)?;
     let three = Q::from_integer(3.into());
     let first_moments = [
-        work.op(&x, &three, |a, b| a / b)?,
-        work.op(&y, &three, |a, b| a / b)?,
+        work.op(&total[1], &three, |a, b| a / b)?,
+        work.op(&total[2], &three, |a, b| a / b)?,
     ];
     let centroid = if signed_area.is_zero() {
         None
@@ -238,14 +255,14 @@ fn integrate_mass(loops: &[Vec<Curve>], work: &mut Work) -> PResult<ExactPlanarM
             work.op(&first_moments[1], &signed_area, |a, b| a / b)?,
         ])
     };
-    Ok(ExactPlanarMassOutcome::Mass(ExactPlanarMass {
+    Ok(ExactPlanarMass {
         signed_area,
         first_moments,
         centroid,
-    }))
+    })
 }
 
-fn polynomial_mass(x: &[Q], y: &[Q], w: &Q, work: &mut Work) -> PResult<[Q; 3]> {
+fn polynomial_mass<const N: usize>(x: &[Q], y: &[Q], w: &Q, work: &mut Work) -> PResult<[Q; N]> {
     if !w.is_positive() {
         return Err(Refusal::UnprovedDenominator);
     }
@@ -258,26 +275,107 @@ fn polynomial_mass(x: &[Q], y: &[Q], w: &Q, work: &mut Work) -> PResult<[Q; 3]> 
     let cross = add(&a, &b, true, work)?;
     let w2 = work.op(w, w, |a, b| a * b)?;
     let w3 = work.op(&w2, w, |a, b| a * b)?;
-    let mut result = [Q::zero(), Q::zero(), Q::zero()];
-    for (output, polynomial, denominator) in [
-        (0, cross.clone(), &w2),
-        (1, poly::multiply(&x, &cross, work)?, &w3),
-        (2, poly::multiply(&y, &cross, work)?, &w3),
-    ] {
-        let integral = polynomial
-            .iter()
-            .enumerate()
-            .try_fold(Q::zero(), |sum, (i, q)| {
-                let denominator = Q::from_integer((i + 1).into());
-                let term = work.op(q, &denominator, |a, b| a / b)?;
-                work.op(&sum, &term, |a, b| a + b)
-            })?;
-        result[output] = work.op(&integral, denominator, |a, b| a / b)?;
+    let mut result = std::array::from_fn(|_| Q::zero());
+    result[0] = integrate_polynomial(&cross, &w2, work)?;
+    let xc = poly::multiply(&x, &cross, work)?;
+    let yc = poly::multiply(&y, &cross, work)?;
+    result[1] = integrate_polynomial(&xc, &w3, work)?;
+    result[2] = integrate_polynomial(&yc, &w3, work)?;
+    if N == 6 {
+        let w4 = work.op(&w3, w, |a, b| a * b)?;
+        for (i, (p, q)) in [(&x, &xc), (&y, &xc), (&y, &yc)].into_iter().enumerate() {
+            let term = poly::multiply(p, q, work)?;
+            result[i + 3] = integrate_polynomial(&term, &w4, work)?;
+        }
     }
     Ok(result)
+}
+
+fn integrate_polynomial(poly: &[Q], weight: &Q, work: &mut Work) -> PResult<Q> {
+    let integral = poly.iter().enumerate().try_fold(Q::zero(), |sum, (i, q)| {
+        let denominator = Q::from_integer((i + 1).into());
+        let term = work.op(q, &denominator, |a, b| a / b)?;
+        work.op(&sum, &term, |a, b| a + b)
+    })?;
+    Ok(work.op(&integral, weight, |a, b| a / b)?)
 }
 
 fn at_one(a: &[Q], work: &mut Work) -> PResult<Q> {
     Ok(a.iter()
         .try_fold(Q::zero(), |sum, v| work.op(&sum, v, |a, b| a + b))?)
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPlanarSecondMoments {
+    /// Integrals of [x², xy, y²] about the chart origin.
+    pub about_origin: [Q; 3],
+    /// The corresponding integrals about the centroid, if net area is nonzero.
+    pub about_centroid: Option<[Q; 3]>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPlanarInertiaReport {
+    pub mass: ExactPlanarMassOutcome,
+    pub second_moments: Option<ExactPlanarSecondMoments>,
+    pub work_used: u64,
+}
+
+/// Integrate exact signed second area moments of supported planar boundaries.
+/// Tuple order is x², xy, y². All moments follow the contour winding. The
+/// centroidal values use the parallel-axis identity in exact arithmetic.
+pub fn exact_planar_boundary_inertia(
+    loops: &[Vec<Curve>],
+    max_work: u64,
+) -> Result<ExactPlanarInertiaReport> {
+    check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work) && (1..=256).contains(&loops.len()),
+        "Exact planar inertia needs bounded contours and a valid work budget",
+    )?;
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let result = match integrate_contours::<6>(loops, &mut work)? {
+        Ok(total) => inertia_from_total(&total, &mut work).map_err(ExactPlanarMassOutcome::Refused),
+        Err(reason) => Err(reason),
+    };
+    let (mass, second_moments) = match result {
+        Ok((mass, inertia)) => (ExactPlanarMassOutcome::Mass(mass), Some(inertia)),
+        Err(reason) => (reason, None),
+    };
+    Ok(ExactPlanarInertiaReport {
+        mass,
+        second_moments,
+        work_used: work.used,
+    })
+}
+
+fn inertia_from_total(
+    total: &[Q; 6],
+    work: &mut Work,
+) -> PResult<(ExactPlanarMass, ExactPlanarSecondMoments)> {
+    let mass = mass_from_total(total, work)?;
+    let four = Q::from_integer(4.into());
+    let mut about_origin = std::array::from_fn(|_| Q::zero());
+    for (i, value) in about_origin.iter_mut().enumerate() {
+        *value = work.op(&total[i + 3], &four, |a, b| a / b)?;
+    }
+    let about_centroid = if let Some([x, y]) = &mass.centroid {
+        let mut shifted = about_origin.clone();
+        for (i, (a, b)) in [(x, x), (x, y), (y, y)].into_iter().enumerate() {
+            let product = work.op(a, b, |a, b| a * b)?;
+            let offset = work.op(&mass.signed_area, &product, |a, b| a * b)?;
+            shifted[i] = work.op(&shifted[i], &offset, |a, b| a - b)?;
+        }
+        Some(shifted)
+    } else {
+        None
+    };
+    Ok((
+        mass,
+        ExactPlanarSecondMoments {
+            about_origin,
+            about_centroid,
+        },
+    ))
 }
