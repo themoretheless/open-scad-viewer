@@ -6792,3 +6792,77 @@ fn exact_parallel_boolean_extrusion_section_keeps_coincident_walls_but_not_edge_
     assert!(section(p(0, 1, 0), q(4)).unwrap().cells_mm.is_empty());
     assert!(section(p(0, 1, 1), q(0)).is_err());
 }
+
+#[test]
+fn exact_boolean_extrusion_volume_split_integrates_an_oblique_wedge_and_coincident_cap() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Intersection,
+        split_volume_of_exact_coplanar_polyline_boolean_extrusion,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y, z| [q(x), q(y), q(z)];
+    let a = [p(0, 0, 0), p(2, 0, 0), p(2, 2, 0), p(0, 2, 0), p(0, 0, 0)];
+    let volume = |normal, offset, budget| {
+        split_volume_of_exact_coplanar_polyline_boolean_extrusion(
+            &a,
+            &[],
+            &a,
+            &[],
+            Intersection,
+            &p(0, 0, 2),
+            &normal,
+            &offset,
+            budget,
+        )
+    };
+    let report = volume(p(1, 0, 1), q(1), 1_000_000).unwrap();
+    assert_eq!(
+        (&report.below_mm3, &report.above_mm3, &report.total_mm3),
+        (&q(1), &q(7), &q(8))
+    );
+    assert_eq!(volume(p(1, 0, 1), q(1), report.exact_work).unwrap(), report);
+    assert!(volume(p(1, 0, 1), q(1), report.exact_work - 1).is_err());
+    let reversed = volume(p(-1, 0, -1), q(-1), 1_000_000).unwrap();
+    assert_eq!((reversed.below_mm3, reversed.above_mm3), (q(7), q(1)));
+    let cap = volume(p(0, 0, 1), q(2), 1_000_000).unwrap();
+    assert_eq!((cap.below_mm3, cap.above_mm3), (q(8), q(0)));
+}
+
+#[test]
+fn exact_boolean_extrusion_volume_split_cuts_holes_with_a_plane_parallel_to_sweep() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Difference,
+        split_volume_of_exact_coplanar_polyline_boolean_extrusion,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y, z| [q(x), q(y), q(z)];
+    let rect = |lo, hi| {
+        [
+            p(lo, lo, 0),
+            p(hi, lo, 0),
+            p(hi, hi, 0),
+            p(lo, hi, 0),
+            p(lo, lo, 0),
+        ]
+    };
+    let a = rect(0, 6);
+    let b = rect(2, 4);
+    let report = split_volume_of_exact_coplanar_polyline_boolean_extrusion(
+        &a,
+        &[],
+        &b,
+        &[],
+        Difference,
+        &p(0, 1, 2),
+        &p(1, 0, 0),
+        &q(3),
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(
+        (report.below_mm3, report.above_mm3, report.total_mm3),
+        (q(32), q(32), q(64))
+    );
+}

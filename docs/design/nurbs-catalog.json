@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 484,
-  "unallocatedCount": 516,
+  "specifiedCount": 485,
+  "unallocatedCount": 515,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12625,6 +12625,35 @@
       "remainingQualification": [
         "Construct exact parallel-to-sweep sections, retaining positive-area coincident walls.",
         "Intersect the exact section and footprint supports, clip the common line against the Boolean footprint, then sweep its positive-length intervals into oriented parallelograms.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0485",
+      "name": "Точное разбиение объёма выдавленного булева профиля плоскостью",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::split_volume_of_exact_coplanar_polyline_boolean_extrusion",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "docs/qualification/nurbs-curvature-field-485-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-485-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Integrate exact material volume on both sides of an arbitrary section plane.",
+        "Integrate the clamped affine sweep fraction over exact footprint cells. Parallel cuts use a planar half-space directly, and both exact volumes sum to the swept volume.",
         "WASM and application integration are separate."
       ]
     }

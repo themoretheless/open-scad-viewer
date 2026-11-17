@@ -4493,3 +4493,123 @@ pub fn section_parallel_exact_coplanar_polyline_boolean_extrusion(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactBooleanExtrusionVolumeSplit {
+    /// Material volumes in the two half spaces, ordered by `normal · point`.
+    pub below_mm3: Q,
+    pub above_mm3: Q,
+    pub total_mm3: Q,
+    pub exact_work: u64,
+}
+
+/// Integrate the exact swept volume below and above an arbitrary plane.
+/// The plane itself contributes zero volume.
+pub fn split_volume_of_exact_coplanar_polyline_boolean_extrusion(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    operation: CoplanarPolylineBoolean,
+    sweep_mm: &[Q; 3],
+    normal: &[Q; 3],
+    offset: &Q,
+    max_exact_work: u64,
+) -> Result<ExactBooleanExtrusionVolumeSplit> {
+    super::validate_work(max_exact_work)?;
+    validate_point(sweep_mm)?;
+    validate_point(normal)?;
+    if sweep_mm.iter().all(Zero::is_zero)
+        || normal.iter().all(Zero::is_zero)
+        || offset.numer().bits().max(offset.denom().bits()) > 8192
+    {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Expected a nonzero sweep and a bounded nonzero plane",
+        ));
+    }
+    let (report, _) = planar_profile_boolean_cells(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        operation,
+        max_exact_work,
+    )?;
+    let mut remaining = max_exact_work - report.exact_work;
+    spend(&mut remaining, 8)?;
+    let height = dot(normal, sweep_mm);
+    let nonempty = !report.cells_mm.is_empty();
+    let mut total = Q::zero();
+    let mut below = Q::zero();
+    for cell in report.cells_mm {
+        let mut polygon = Vec::new();
+        for point in cell {
+            spend(&mut remaining, 16)?;
+            let signed = offset - dot(normal, &point);
+            let parameter = if height.is_zero() {
+                signed
+            } else {
+                signed / &height
+            };
+            polygon.push((point, parameter));
+        }
+        let full = integrate_swept_cell(&polygon, sweep_mm, |_| Q::one(), &mut remaining)?;
+        total += &full;
+        if height.is_zero() {
+            let kept = clip_section_cell_parameter(polygon, Q::zero(), true, &mut remaining)?;
+            below += integrate_swept_cell(&kept, sweep_mm, |_| Q::one(), &mut remaining)?;
+        } else {
+            // clamp(t,0,1) = max(t,0) - max(t-1,0). This is
+            // valid also when the section coincides with either cap.
+            spend(&mut remaining, 4 * polygon.len() as u64)?;
+            let positive =
+                clip_section_cell_parameter(polygon.clone(), Q::zero(), true, &mut remaining)?;
+            let saturated = clip_section_cell_parameter(polygon, Q::one(), true, &mut remaining)?;
+            let portion = integrate_swept_cell(&positive, sweep_mm, Q::clone, &mut remaining)?
+                - integrate_swept_cell(
+                    &saturated,
+                    sweep_mm,
+                    |value| value - Q::one(),
+                    &mut remaining,
+                )?;
+            below += if height.is_positive() {
+                portion
+            } else {
+                full - portion
+            };
+        }
+    }
+    if nonempty && total.is_zero() {
+        return Err(refuse("Extrusion vector lies in the profile plane"));
+    }
+    spend(&mut remaining, 12)?;
+    let six = Q::from_integer(6.into());
+    Ok(ExactBooleanExtrusionVolumeSplit {
+        above_mm3: (&total - &below) / &six,
+        below_mm3: below / &six,
+        total_mm3: total / six,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+// Triangle area times sweep height, scaled by six after integrating an
+// affine fraction equal to its mean at the three vertices.
+fn integrate_swept_cell(
+    polygon: &[([Q; 3], Q)],
+    sweep: &[Q; 3],
+    fraction: impl Fn(&Q) -> Q,
+    remaining: &mut u64,
+) -> Result<Q> {
+    let mut six_volume = Q::zero();
+    if let Some((origin, parameter)) = polygon.first() {
+        for pair in polygon[1..].windows(2) {
+            spend(remaining, 32)?;
+            let a = std::array::from_fn(|i| &pair[0].0[i] - &origin[i]);
+            let b = std::array::from_fn(|i| &pair[1].0[i] - &origin[i]);
+            six_volume += super::determinant(&a, &b, sweep).abs()
+                * (fraction(parameter) + fraction(&pair[0].1) + fraction(&pair[1].1));
+        }
+    }
+    Ok(six_volume)
+}
