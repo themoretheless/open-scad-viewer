@@ -3802,3 +3802,70 @@ fn periodic_contour_forest_withholds_the_result_for_touching_boundaries() {
         })
     ));
 }
+
+#[test]
+fn periodic_region_area_adds_islands_and_subtracts_holes_across_seams() {
+    use num_rational::BigRational;
+    use nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_region_area;
+    let source = doubly_periodic_tensor();
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let hole = [
+        [3.75, 3.75],
+        [0.25, 3.75],
+        [0.25, 0.25],
+        [3.75, 0.25],
+        [3.75, 3.75],
+    ];
+    let island = [
+        [3.875, 3.875],
+        [0.125, 3.875],
+        [0.125, 0.125],
+        [3.875, 0.125],
+        [3.875, 3.875],
+    ];
+    let separate = [[1., 1.], [2., 1.], [2., 2.], [1., 2.], [1., 1.]];
+    let contours = [&hole[..], &island[..], &separate[..], &outer[..]];
+    let report = exact_periodic_surface_region_area(&source, &contours, 1_000_000).unwrap();
+    assert_eq!(report.area, Some(BigRational::new(49.into(), 16.into())));
+    assert!(report.refusal.is_none());
+    let reverse: Vec<_> = outer.into_iter().rev().collect();
+    let other = [&reverse[..], &separate[..], &hole[..], &island[..]];
+    assert_eq!(
+        exact_periodic_surface_region_area(&source, &other, 1_000_000)
+            .unwrap()
+            .area,
+        report.area
+    );
+    assert!(
+        exact_periodic_surface_region_area(&source, &contours, report.work_used - 1)
+            .unwrap()
+            .area
+            .is_none()
+    );
+}
+
+#[test]
+fn periodic_region_area_refuses_tangent_boundaries() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicContourForestRefusal, exact_periodic_surface_region_area,
+    };
+    let source = doubly_periodic_tensor();
+    let outer = [[0., 0.], [1.5, 0.], [1.5, 1.5], [0., 1.5], [0., 0.]];
+    let touching = [[0., 0.5], [0.5, 0.5], [0.5, 1.], [0., 1.], [0., 0.5]];
+    let report =
+        exact_periodic_surface_region_area(&source, &[&outer, &touching], 1_000_000).unwrap();
+    assert!(report.area.is_none());
+    assert!(matches!(
+        report.refusal,
+        Some(PeriodicContourForestRefusal::Contact {
+            contours: [0, 1],
+            ..
+        })
+    ));
+}

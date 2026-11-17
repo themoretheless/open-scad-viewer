@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0551",
+  "testedBase": "2a4e36a90dba02c4b5c6d2401b186e70bddb7fd1",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 159,
+  "scope": [
+    "Measure UV area by exact contour nesting parity and rational polygon integration.",
+    "Prove the contour containment forest and sum exact area magnitudes by depth parity under a shared budget."
+  ],
+  "logSha256": "9fd2c1f338a890fa21e1dbeb465d20eb30251580bc31e0bd6789fa96dfdafbf7",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "43a067288f82193c16bd042af28ebbda282258f069f77f986c7f0d03de57224b",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "b4efc7ab70becf57ec51d6e2f36884c21b41cf08502a91cfae6d05dcaf818c33"
+  }
+}

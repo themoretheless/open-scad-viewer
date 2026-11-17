@@ -3243,3 +3243,73 @@ fn build_periodic_contour_forest(
         })
         .collect())
 }
+
+#[derive(Clone, Debug)]
+pub struct PeriodicRegionAreaReport {
+    /// Exact area in squared UV parameter units.
+    pub area: Option<BigRational>,
+    pub work_used: u64,
+    pub refusal: Option<PeriodicContourForestRefusal>,
+}
+
+/// Measure the UV area of a periodic region bounded by simple, strictly
+/// nested or separate contours. Use even-odd fill independently of input
+/// orientation. All topology checks and integrations share one budget.
+pub fn exact_periodic_surface_region_area(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    max_work: u64,
+) -> Result<PeriodicRegionAreaReport> {
+    use PeriodicContourForestRefusal as Failure;
+    use num_traits::{Signed, Zero};
+
+    let forest = exact_periodic_surface_contour_forest(source, contours, max_work)?;
+    let mut work_used = forest.work_used;
+    let refused = |reason, work_used| PeriodicRegionAreaReport {
+        area: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    let Some(nodes) = forest.nodes else {
+        return Ok(refused(
+            forest
+                .refusal
+                .unwrap_or(Failure::Arithmetic(ExactRefusal::InvalidOutput)),
+            work_used,
+        ));
+    };
+    let exhausted = Failure::Arithmetic(ExactRefusal::ResourceLimit);
+    let mut area = BigRational::zero();
+    for (contour, (path, node)) in contours.iter().zip(nodes).enumerate() {
+        if work_used == max_work {
+            return Ok(refused(exhausted, work_used));
+        }
+        let report = exact_periodic_surface_path_signed_area(source, path, max_work - work_used)?;
+        work_used += report.work_used;
+        let Some(signed) = report.signed_area else {
+            let reason = report
+                .refusal
+                .unwrap_or(PeriodicPathAreaRefusal::Arithmetic(
+                    ExactRefusal::InvalidOutput,
+                ));
+            return Ok(refused(Failure::Path { contour, reason }, work_used));
+        };
+        let mut work = Work {
+            used: work_used,
+            limit: max_work,
+        };
+        let magnitude = signed.abs();
+        area = match work.op(&area, &magnitude, |a, b| {
+            if node.depth % 2 == 0 { a + b } else { a - b }
+        }) {
+            Ok(sum) => sum,
+            Err(reason) => return Ok(refused(Failure::Arithmetic(reason.into()), work.used)),
+        };
+        work_used = work.used;
+    }
+    Ok(PeriodicRegionAreaReport {
+        area: Some(area),
+        work_used,
+        refusal: None,
+    })
+}
