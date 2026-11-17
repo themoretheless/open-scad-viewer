@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 584,
-  "unallocatedCount": 416,
+  "specifiedCount": 585,
+  "unallocatedCount": 415,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14701,6 +14701,25 @@
         "Expose certified rational range length and both resource limits through the geometry ABI.",
         "Verify bounds against a rational seam-crossing length, reject invalid rational pairs, and report insufficient integration cells.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0585",
+      "name": "Гарантированный обратный поиск параметра исходного сегмента по 3D-длине",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::locate_input_segment_at_length",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-585-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-585-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Find a certified original parameter bracket for a target prefix length through seam splits.",
+        "Check inverse brackets across the seam, out-of-range distances, and uncertainty under a shared cell limit.",
+        "WASM and application integration are separate."
       ]
     }
   ],

@@ -5046,3 +5046,68 @@ fn periodic_trim_rational_range_reserves_cells_for_both_enclosures() {
     assert_eq!(exact.minimum_cells, 2);
     assert_eq!(exact.length.unwrap().cells, 2);
 }
+
+#[test]
+fn periodic_trim_length_location_brackets_split_and_reversed_input_parameters() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicTrimLengthLocationStatus, build_exact_periodic_surface_trim_input_edges,
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [3.5, 0.875],
+        [0.5, 0.875],
+        [0.5, 0.125],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    for distance in [0.125, 0.5, 0.75] {
+        let report = result
+            .locate_input_segment_at_length(0, 3, distance, 1e-10, 1e-6, 1024)
+            .unwrap();
+        let [lo, hi] = report.parameter_bounds.unwrap();
+        assert!(lo <= distance && distance <= hi);
+        assert!(hi - lo <= 1e-6);
+        assert!(report.cells <= 1024);
+        assert_eq!(report.status, PeriodicTrimLengthLocationStatus::Tolerance);
+    }
+}
+
+#[test]
+fn periodic_trim_length_location_distinguishes_outside_and_cell_limit() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicTrimLengthLocationStatus as Status, build_exact_periodic_surface_trim_input_edges,
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    for (distance, max_cells, status, expected) in [
+        (0., 16, Status::Tolerance, Some([0., 0.])),
+        (0.5, 2, Status::WorkLimit, Some([0., 1.])),
+        (0.5, 1, Status::WorkLimit, None),
+        (2., 16, Status::Outside, None),
+    ] {
+        let report = result
+            .locate_input_segment_at_length(0, 0, distance, 1e-10, 1e-6, max_cells)
+            .unwrap();
+        assert_eq!(report.parameter_bounds, expected);
+        assert_eq!(report.status, status);
+        assert!(report.cells <= max_cells);
+    }
+}

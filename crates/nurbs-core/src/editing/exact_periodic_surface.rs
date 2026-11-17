@@ -5146,3 +5146,113 @@ fn measure_periodic_trim_length_jobs(
         minimum_cells,
     })
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PeriodicTrimLengthLocationStatus {
+    Tolerance,
+    WorkLimit,
+    PrecisionLimit,
+    LengthUncertainty,
+    Outside,
+    Unavailable,
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimLengthLocation {
+    /// Guaranteed to contain a parameter with the requested prefix length.
+    pub parameter_bounds: Option<[f64; 2]>,
+    pub cells: usize,
+    pub status: PeriodicTrimLengthLocationStatus,
+}
+
+impl PeriodicTrimInputEdges {
+    /// Invert certified 3D prefix length in increasing original segment order.
+    /// Ambiguous comparisons never discard a possible parameter.
+    pub fn locate_input_segment_at_length(
+        &self,
+        contour: usize,
+        segment: usize,
+        distance: f64,
+        length_tolerance: f64,
+        parameter_tolerance: f64,
+        max_cells: usize,
+    ) -> Result<PeriodicTrimLengthLocation> {
+        use PeriodicTrimLengthLocationStatus as Status;
+        use num_traits::Zero;
+
+        crate::check(
+            distance.is_finite()
+                && distance >= 0.
+                && parameter_tolerance.is_finite()
+                && parameter_tolerance > 0.,
+            "Periodic trim length inversion needs a nonnegative distance and positive parameter tolerance",
+        )?;
+        let result = |parameter_bounds, cells, status| PeriodicTrimLengthLocation {
+            parameter_bounds,
+            cells,
+            status,
+        };
+        let total =
+            self.measure_input_segment_length(contour, segment, length_tolerance, max_cells)?;
+        let Some(length) = total.length else {
+            let status = if total.minimum_cells == 0 {
+                Status::Unavailable
+            } else {
+                Status::WorkLimit
+            };
+            return Ok(result(None, 0, status));
+        };
+        let mut cells = length.cells;
+        if distance == 0. {
+            return Ok(result(Some([0., 0.]), cells, Status::Tolerance));
+        }
+        if distance > length.bounds[1] {
+            return Ok(result(None, cells, Status::Outside));
+        }
+        if distance > length.bounds[0] {
+            return Ok(result(None, cells, Status::LengthUncertainty));
+        }
+
+        let zero = BigRational::zero();
+        let mut bounds = [0.0_f64, 1.0_f64];
+        loop {
+            let [lo, hi] = bounds;
+            if (hi - lo).next_up() <= parameter_tolerance {
+                return Ok(result(Some(bounds), cells, Status::Tolerance));
+            }
+            let third = (hi - lo) / 3.;
+            let candidates = [lo + third, hi - third];
+            if !(lo < candidates[0] && candidates[0] < candidates[1] && candidates[1] < hi) {
+                return Ok(result(Some(bounds), cells, Status::PrecisionLimit));
+            }
+            for candidate in candidates {
+                if candidate <= bounds[0] || candidate >= bounds[1] {
+                    continue;
+                }
+                if cells == max_cells {
+                    return Ok(result(Some(bounds), cells, Status::WorkLimit));
+                }
+                let parameter = BigRational::from_float(candidate).unwrap();
+                let prefix = self.measure_rational_input_segment_range_length(
+                    contour,
+                    segment,
+                    [&zero, &parameter],
+                    length_tolerance,
+                    max_cells - cells,
+                )?;
+                let Some(prefix) = prefix.length else {
+                    return Ok(result(Some(bounds), cells, Status::WorkLimit));
+                };
+                cells += prefix.cells;
+                if prefix.bounds[1] < distance {
+                    bounds[0] = candidate;
+                } else if prefix.bounds[0] > distance {
+                    bounds[1] = candidate;
+                }
+            }
+            if bounds == [lo, hi] {
+                return Ok(result(Some(bounds), cells, Status::LengthUncertainty));
+            }
+        }
+    }
+}
