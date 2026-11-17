@@ -2086,3 +2086,70 @@ fn transverse_section_preserves_nonbinary_positions_and_refuses_endpoint_contact
     }
     assert!(exact_polyhedral_transverse_section(&solid, [-1., -1., 3.], 6., 1_000_000).is_err());
 }
+
+#[test]
+fn assembles_exact_outer_and_inner_section_cycles_with_face_ownership() {
+    use brep_core::{
+        analysis::{exact_polyhedral_section_loops, exact_polyhedral_transverse_section},
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let direction = [0., 0., 1.];
+    let segments = exact_polyhedral_transverse_section(solid, direction, 1., 1_000_000).unwrap();
+    let report = exact_polyhedral_section_loops(solid, direction, 1., 1_000_000).unwrap();
+    let mut areas = Vec::new();
+    for ring in &report.loops {
+        assert_eq!(ring.points_mm.len(), 4);
+        let mut twice_area = Q::from_integer(0.into());
+        for (i, &face) in ring.faces.iter().enumerate() {
+            let a = &ring.points_mm[i];
+            let b = &ring.points_mm[(i + 1) % 4];
+            twice_area += &a[0] * &b[1] - &a[1] * &b[0];
+            assert!(
+                segments
+                    .faces
+                    .iter()
+                    .find(|entry| entry.face == face)
+                    .unwrap()
+                    .segments_mm
+                    .iter()
+                    .any(|segment| segment == &[a.clone(), b.clone()]
+                        || segment == &[b.clone(), a.clone()])
+            );
+        }
+        areas.push(num_traits::Signed::abs(&twice_area));
+    }
+    areas.sort();
+    assert_eq!(areas, [2, 32].map(|n| Q::from_integer(n.into())));
+    assert!(exact_polyhedral_section_loops(solid, direction, 1., report.exact_work).is_ok());
+    assert!(exact_polyhedral_section_loops(solid, direction, 1., report.exact_work - 1).is_err());
+}
+
+#[test]
+fn builds_two_disjoint_vertical_section_loops_and_allows_empty_sections() {
+    use brep_core::{
+        analysis::exact_polyhedral_section_loops, planar_cap::build_outward_inferred_section_solid,
+    };
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let direction = [1., 0., 0.];
+    let report = exact_polyhedral_section_loops(solid, direction, 1.5, 1_000_000).unwrap();
+    assert_eq!(
+        report
+            .loops
+            .iter()
+            .map(|ring| ring.points_mm.len())
+            .collect::<Vec<_>>(),
+        [4, 4]
+    );
+    assert!(
+        exact_polyhedral_section_loops(solid, direction, 5., 1_000_000)
+            .unwrap()
+            .loops
+            .is_empty()
+    );
+}
