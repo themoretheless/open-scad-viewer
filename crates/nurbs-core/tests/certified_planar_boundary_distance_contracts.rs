@@ -92,3 +92,76 @@ fn keeps_a_global_enclosure_at_the_initial_cell_budget() {
     assert_eq!(report.cells, 8);
     contains(report.distance, 3_f64.sqrt() / 4.);
 }
+
+#[test]
+fn uses_plane_distance_for_a_proved_interior_projection() {
+    use nurbs_core::{
+        analysis::planar_boundary_distance::{
+            PlanarFaceDistanceOptions, distance_to_projected_face,
+        },
+        trim::trim_domain::Location,
+    };
+    let face = projected(false);
+    // The projection is [1/8, 1/8, 1/4], offset by [-1,-1,1]/4.
+    let result = distance_to_projected_face(
+        &face,
+        [-0.125, -0.125, 0.5],
+        PlanarFaceDistanceOptions {
+            tolerance: 1e-9,
+            winding_tolerance: 1e-9,
+            max_winding_cells: 1024,
+            max_boundary_cells: 8,
+        },
+    )
+    .unwrap();
+    assert_eq!(result.projection_classification.location, Location::Inside);
+    assert!(result.converged && result.boundary.is_none());
+    contains(result.distance, 3_f64.sqrt() / 4.);
+    for (range, coord) in result
+        .orthogonal_projection
+        .into_iter()
+        .zip([0.125, 0.125, 0.25])
+    {
+        contains(range, coord);
+    }
+}
+
+#[test]
+fn certifies_hole_exclusion_and_keeps_bounds_when_winding_is_unresolved() {
+    use nurbs_core::{
+        analysis::planar_boundary_distance::{
+            PlanarFaceDistanceOptions, distance_to_projected_face,
+        },
+        trim::trim_domain::Location,
+    };
+    let face = projected(false);
+    let opts = PlanarFaceDistanceOptions {
+        tolerance: 1e-5,
+        winding_tolerance: 1e-9,
+        max_winding_cells: 1024,
+        max_boundary_cells: 16_384,
+    };
+    let point = [0.5, 0.5, 1.];
+    let result = distance_to_projected_face(&face, point, opts).unwrap();
+    let expected = 3_f64.sqrt() / (4. * 2_f64.sqrt());
+    assert_eq!(result.projection_classification.location, Location::Outside);
+    assert!(result.converged);
+    contains(result.distance, expected);
+    assert_eq!(result.boundary.unwrap().witness.contour, 1);
+    let result = distance_to_projected_face(
+        &face,
+        point,
+        PlanarFaceDistanceOptions {
+            max_winding_cells: 1,
+            max_boundary_cells: 8,
+            ..opts
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        result.projection_classification.location,
+        Location::Unresolved
+    );
+    contains(result.distance, expected);
+    assert!(!result.converged);
+}

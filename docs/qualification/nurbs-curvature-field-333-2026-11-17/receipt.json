@@ -1,0 +1,30 @@
+{
+  "id": "NURBS-0333",
+  "testedBase": "9b685e0c6b08f06afe183e7f75f41d27425afcf2",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "certified_planar_boundary_distance_contracts",
+    "--test",
+    "certified_planar_perimeter_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 6,
+  "scope": [
+    "Certify XYZ distance to the nonzero-winding planar region and its authored boundary using orthogonal projection and boundary subdivision.",
+    "Closed rational contours with nonzero winding and boundary traces. Separate winding and boundary budgets preserve valid distance bounds when classification is unresolved."
+  ],
+  "logSha256": "36e2f8196a70cdac345acbc3c86cea38d96107fd6ff14e83b82774e32111163f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/planar_boundary_distance.rs": "267a940cec38f8907a85d78211fb16ed41851de6fe0cb3c7b4b27cfba44234d3",
+    "crates/nurbs-core/src/trim/trim_domain.rs": "f56223cacef64c33c83f0885ddbc343c9ddff188aeefe47551d41400c0f2222f",
+    "crates/nurbs-core/tests/certified_planar_boundary_distance_contracts.rs": "354d54f0aeef980b3b764568f606dab327c0d208c6ec9b906ac479e8981572cd"
+  }
+}

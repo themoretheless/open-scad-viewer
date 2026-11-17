@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 332,
-  "unallocatedCount": 668,
+  "specifiedCount": 333,
+  "unallocatedCount": 667,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8614,6 +8614,26 @@
       "remainingQualification": [
         "Enclose point-to-trim distance over every projected rational boundary including holes, with a certified witness.",
         "Closed rational world-plane contours, including holes. The witness proves an upper bound; ties may return any suitable sampled witness.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0333",
+      "name": "Сертифицированное расстояние от точки до заполненной плоской NURBS-грани с отверстиями",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::analysis::planar_boundary_distance::distance_to_projected_face",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/planar_boundary_distance.rs",
+        "crates/nurbs-core/src/trim/trim_domain.rs",
+        "crates/nurbs-core/tests/certified_planar_boundary_distance_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-333-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-333-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify XYZ distance to the nonzero-winding planar region and its authored boundary using orthogonal projection and boundary subdivision.",
+        "Closed rational contours with nonzero winding and boundary traces. Separate winding and boundary budgets preserve valid distance bounds when classification is unresolved.",
         "WASM and application integration are separate."
       ]
     }
