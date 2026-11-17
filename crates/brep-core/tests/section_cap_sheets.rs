@@ -5246,3 +5246,75 @@ fn exact_planar_polyline_region_second_moments_are_winding_independent_and_valid
         exact_planar_spatial_polyline_region_second_moments(&outer, &[&outer], 1_000_000).is_err()
     );
 }
+
+#[test]
+fn exact_transverse_planar_profiles_intersect_in_segments_separated_by_holes() {
+    use brep_core::analysis::intersect_transverse_exact_planar_polyline_regions;
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y, z| [q(x), q(y), q(z)];
+    let a = [p(0, 0, 0), p(6, 0, 0), p(6, 6, 0), p(0, 6, 0), p(0, 0, 0)];
+    let hole = [p(2, 1, 0), p(4, 1, 0), p(4, 5, 0), p(2, 5, 0), p(2, 1, 0)];
+    let b = [
+        p(1, 3, -1),
+        p(5, 3, -1),
+        p(5, 3, 1),
+        p(1, 3, 1),
+        p(1, 3, -1),
+    ];
+    let report =
+        intersect_transverse_exact_planar_polyline_regions(&a, &[&hole], &b, &[], 1_000_000)
+            .unwrap();
+    assert_eq!(
+        report.segments_mm,
+        [[p(1, 3, 0), p(2, 3, 0)], [p(4, 3, 0), p(5, 3, 0)]]
+    );
+    assert_eq!(
+        intersect_transverse_exact_planar_polyline_regions(&b, &[], &a, &[&hole], 1_000_000)
+            .unwrap()
+            .segments_mm,
+        report.segments_mm
+    );
+    assert_eq!(
+        intersect_transverse_exact_planar_polyline_regions(
+            &a,
+            &[&hole],
+            &b,
+            &[],
+            report.exact_work
+        )
+        .unwrap(),
+        report
+    );
+    assert!(
+        intersect_transverse_exact_planar_polyline_regions(
+            &a,
+            &[&hole],
+            &b,
+            &[],
+            report.exact_work - 1
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn exact_transverse_planar_profiles_keep_isolated_contacts_and_refuse_parallel_supports() {
+    use brep_core::analysis::intersect_transverse_exact_planar_polyline_regions;
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y, z| [q(x), q(y), q(z)];
+    let a = [p(0, 0, 0), p(3, 0, 0), p(0, 3, 0), p(0, 0, 0)];
+    let b = [p(1, 0, 0), p(2, 0, 1), p(0, 0, 1), p(1, 0, 0)];
+    let report =
+        intersect_transverse_exact_planar_polyline_regions(&a, &[], &b, &[], 1_000_000).unwrap();
+    assert_eq!(report.segments_mm, [[p(1, 0, 0), p(1, 0, 0)]]);
+    assert!(
+        intersect_transverse_exact_planar_polyline_regions(&a, &[], &a, &[], 1_000_000).is_err()
+    );
+    let outside = b.map(|[x, y, z]| [x + q(5), y, z]);
+    let report =
+        intersect_transverse_exact_planar_polyline_regions(&a, &[], &outside, &[], 1_000_000)
+            .unwrap();
+    assert!(report.segments_mm.is_empty());
+}

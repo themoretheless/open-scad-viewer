@@ -1148,36 +1148,44 @@ pub fn exact_polyhedral_path_common_material_clip(
             .zip(clip.span_intervals)
         {
             spend(&mut remaining, 1)?;
-            let mut overlap = Vec::new();
-            let mut left = shared.iter().peekable();
-            let mut right = next.iter().peekable();
-            while let (Some([a_lo, a_hi]), Some([b_lo, b_hi])) =
-                (left.peek().copied(), right.peek().copied())
-            {
-                spend(&mut remaining, 8)?;
-                let lo = a_lo.max(b_lo);
-                let hi = a_hi.min(b_hi);
-                if lo <= hi {
-                    overlap.push([lo.clone(), hi.clone()]);
-                }
-                match a_hi.cmp(b_hi) {
-                    std::cmp::Ordering::Less => {
-                        left.next();
-                    }
-                    std::cmp::Ordering::Greater => {
-                        right.next();
-                    }
-                    std::cmp::Ordering::Equal => {
-                        left.next();
-                        right.next();
-                    }
-                }
-            }
-            *shared = overlap;
+            *shared = intersect_closed_intervals(shared, &next, &mut remaining)?;
         }
     }
     intersection.exact_work = max_exact_work - remaining;
     Ok(intersection)
+}
+
+fn intersect_closed_intervals(
+    first: &[[Q; 2]],
+    second: &[[Q; 2]],
+    remaining: &mut u64,
+) -> Result<Vec<[Q; 2]>> {
+    let mut overlap = Vec::new();
+    let mut left = first.iter().peekable();
+    let mut right = second.iter().peekable();
+    while let (Some([a_lo, a_hi]), Some([b_lo, b_hi])) =
+        (left.peek().copied(), right.peek().copied())
+    {
+        spend(remaining, 8)?;
+        let lo = a_lo.max(b_lo);
+        let hi = a_hi.min(b_hi);
+        if lo <= hi {
+            overlap.push([lo.clone(), hi.clone()]);
+        }
+        match a_hi.cmp(b_hi) {
+            std::cmp::Ordering::Less => {
+                left.next();
+            }
+            std::cmp::Ordering::Greater => {
+                right.next();
+            }
+            std::cmp::Ordering::Equal => {
+                left.next();
+                right.next();
+            }
+        }
+    }
+    Ok(overlap)
 }
 
 /// Clip to the union of the closed material of all input solids.
@@ -2320,32 +2328,12 @@ fn clip_path_to_planar_region(
             "Clip path requires at least two vertices",
         ));
     }
-    let (normal, used) = if holes_mm.is_empty() {
-        let area = exact_planar_spatial_polyline_area(outer_mm, max_exact_work)?;
-        (area.area_vector_mm2, area.exact_work)
-    } else {
-        let mass = exact_planar_spatial_polyline_region_mass(outer_mm, holes_mm, max_exact_work)?;
-        (mass.area_vector_mm2, mass.exact_work)
-    };
-    let mut remaining = max_exact_work - used;
+    let mut remaining = max_exact_work;
+    let boundary = prepare_planar_polyline_region(outer_mm, holes_mm, &mut remaining)?;
     for point in path_mm {
         spend(&mut remaining, 4)?;
         validate_point(point)?;
     }
-    let mut segments = Vec::new();
-    for contour in std::iter::once(outer_mm).chain(holes_mm.iter().copied()) {
-        spend(&mut remaining, 8 * (contour.len() as u64 - 1))?;
-        segments.extend(
-            contour
-                .windows(2)
-                .map(|pair| [pair[0].clone(), pair[1].clone()]),
-        );
-    }
-    let boundary = FaceBoundary {
-        origin: outer_mm[0].clone(),
-        normal: Some(normal),
-        segments,
-    };
     let mut span_intervals = Vec::new();
     for pair in path_mm.windows(2) {
         spend(&mut remaining, 3)?;
@@ -2756,6 +2744,93 @@ pub fn exact_planar_spatial_polyline_region_mass(
         centroid_mm,
         area_squared_mm4: dot(&area_vector_mm2, &area_vector_mm2),
         area_vector_mm2,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn prepare_planar_polyline_region(
+    outer_mm: &[[Q; 3]],
+    holes_mm: &[&[[Q; 3]]],
+    remaining: &mut u64,
+) -> Result<FaceBoundary> {
+    if *remaining == 0 {
+        return Err(super::work_exhausted());
+    }
+    let (normal, used) = if holes_mm.is_empty() {
+        let area = exact_planar_spatial_polyline_area(outer_mm, *remaining)?;
+        (area.area_vector_mm2, area.exact_work)
+    } else {
+        let mass = exact_planar_spatial_polyline_region_mass(outer_mm, holes_mm, *remaining)?;
+        (mass.area_vector_mm2, mass.exact_work)
+    };
+    *remaining -= used;
+    let mut segments = Vec::new();
+    for contour in std::iter::once(outer_mm).chain(holes_mm.iter().copied()) {
+        spend(remaining, 8 * (contour.len() as u64 - 1))?;
+        segments.extend(
+            contour
+                .windows(2)
+                .map(|pair| [pair[0].clone(), pair[1].clone()]),
+        );
+    }
+    Ok(FaceBoundary {
+        origin: outer_mm[0].clone(),
+        normal: Some(normal),
+        segments,
+    })
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPlanarPolylineRegionIntersection {
+    /// Disjoint closed segments in order of the first nonzero line axis.
+    /// Repeated endpoints represent isolated contacts.
+    pub segments_mm: Vec<[[Q; 3]; 2]>,
+    pub exact_work: u64,
+}
+
+/// Intersect two closed planar profiles on nonparallel supports. Both
+/// profiles can contain disjoint interior holes.
+pub fn intersect_transverse_exact_planar_polyline_regions(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    max_exact_work: u64,
+) -> Result<ExactPlanarPolylineRegionIntersection> {
+    super::validate_work(max_exact_work)?;
+    let mut remaining = max_exact_work;
+    let a = prepare_planar_polyline_region(first_outer_mm, first_holes_mm, &mut remaining)?;
+    let b = prepare_planar_polyline_region(second_outer_mm, second_holes_mm, &mut remaining)?;
+    spend(&mut remaining, 64)?;
+    let na = face_normal(&a)?;
+    let nb = face_normal(&b)?;
+    let cross = [(1, 2), (2, 0), (0, 1)].map(|(i, j)| &na[i] * &nb[j] - &na[j] * &nb[i]);
+    let Some(axis) = cross.iter().position(|c| !c.is_zero()) else {
+        return Err(refuse("Profile supports must be nonparallel"));
+    };
+    let [u, v] = [(axis + 1) % 3, (axis + 2) % 3];
+    let da = dot(na, &a.origin);
+    let db = dot(nb, &b.origin);
+    let mut base = [Q::zero(), Q::zero(), Q::zero()];
+    base[u] = (&da * &nb[v] - &db * &na[v]) / &cross[axis];
+    base[v] = (&na[u] * db - &nb[u] * da) / &cross[axis];
+    let direction = cross.each_ref().map(|c| c / &cross[axis]);
+    spend(&mut remaining, 4 * first_outer_mm.len() as u64)?;
+    let coordinates = first_outer_mm.iter().map(|point| &point[axis]);
+    let lo = coordinates.clone().min().expect("certified outer contour");
+    let hi = coordinates.max().expect("certified outer contour");
+    let [start, end] = [lo, hi].map(|t| std::array::from_fn(|i| &base[i] + t * &direction[i]));
+    let span = std::array::from_fn(|i| &end[i] - &start[i]);
+    let left = spatial_segment_region_contacts(&a, &start, &end, &span, &mut remaining)?;
+    let right = spatial_segment_region_contacts(&b, &start, &end, &span, &mut remaining)?;
+    let intervals = intersect_closed_intervals(&left, &right, &mut remaining)?;
+    spend(&mut remaining, 16 * intervals.len() as u64)?;
+    let segments_mm = intervals
+        .into_iter()
+        .map(|bounds| bounds.map(|t| std::array::from_fn(|i| &start[i] + &t * &span[i])))
+        .collect();
+    Ok(ExactPlanarPolylineRegionIntersection {
+        segments_mm,
         exact_work: max_exact_work - remaining,
     })
 }
