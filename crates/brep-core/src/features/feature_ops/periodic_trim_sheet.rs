@@ -134,6 +134,21 @@ pub struct PeriodicTrimCurveExtraction {
     pub refusal: Option<ExactRefusal>,
 }
 
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimCurvePair {
+    pub world: PeriodicTrimCurvePiece,
+    pub face_id: TopoId,
+    /// Face-local UV curve sharing the restricted world curve's native clock.
+    pub pcurve: Curve,
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimCurvePairExtraction {
+    pub pieces: Option<Vec<PeriodicTrimCurvePair>>,
+    pub work_used: u64,
+    pub refusal: Option<ExactRefusal>,
+}
+
 impl InputBoundPeriodicTrimSheet {
     /// Find the edges containing a parameter on an original contour segment.
     /// At a split inside the segment, return both incident edges in model order.
@@ -237,6 +252,99 @@ impl InputBoundPeriodicTrimSheet {
             }
         }
         Ok(PeriodicTrimCurveExtraction {
+            pieces: Some(pieces),
+            work_used,
+            refusal: None,
+        })
+    }
+
+    /// Extract matching world and face-local UV pieces under one work limit.
+    pub fn extract_input_range_curve_pairs(
+        &self,
+        contour: usize,
+        segment: usize,
+        range: [&BigRational; 2],
+        max_work: u64,
+    ) -> Result<PeriodicTrimCurvePairExtraction> {
+        let world = self.extract_input_range_curves(contour, segment, range, max_work)?;
+        let mut work_used = world.work_used;
+        let refused = |reason, work_used| PeriodicTrimCurvePairExtraction {
+            pieces: None,
+            work_used,
+            refusal: Some(reason),
+        };
+        let Some(world_pieces) = world.pieces else {
+            return Ok(refused(
+                world.refusal.unwrap_or(ExactRefusal::InvalidOutput),
+                work_used,
+            ));
+        };
+        let mut pieces = Vec::with_capacity(world_pieces.len());
+        if !world_pieces.is_empty() {
+            let invalid = || {
+                Error::new(
+                    "BREP_PERIODIC_TRIM_SHEET",
+                    "Periodic trim edge has no matching face-local parameter curve",
+                )
+            };
+            let model = self.bound_sheet.sheet.model.as_ref().ok_or_else(invalid)?;
+            let binding = self
+                .bound_sheet
+                .contour_bindings
+                .get(contour)
+                .ok_or_else(invalid)?;
+            let wire = model
+                .1
+                .loops
+                .iter()
+                .position(|id| *id == binding.loop_id)
+                .ok_or_else(invalid)?;
+            let wire = model.loops.get(wire).ok_or_else(invalid)?;
+            let mut coedges = std::collections::BTreeMap::new();
+            for coedge in &wire.coedges {
+                let id = model.1.edges.get(coedge.edge).ok_or_else(invalid)?;
+                if coedges.insert(id, coedge).is_some() {
+                    return Err(invalid());
+                }
+            }
+            for world in world_pieces {
+                if work_used == max_work {
+                    return Ok(refused(ExactRefusal::ResourceLimit, work_used));
+                }
+                let coedge = coedges.get(&world.range.edge_id).ok_or_else(invalid)?;
+                coedge.pcurve.validate()?;
+                if coedge.reversed
+                    || coedge.trim().is_some()
+                    || coedge.pcurve.domain()
+                        != model
+                            .edges
+                            .get(coedge.edge)
+                            .ok_or_else(invalid)?
+                            .curve
+                            .domain()
+                {
+                    return Err(invalid());
+                }
+                let uv = exact_knot_insertion::restrict(
+                    &coedge.pcurve,
+                    world.curve.domain(),
+                    max_work - work_used,
+                )?;
+                work_used += uv.work_used;
+                let Some(pcurve) = uv.curve else {
+                    return Ok(refused(
+                        uv.refusal.unwrap_or(ExactRefusal::InvalidOutput),
+                        work_used,
+                    ));
+                };
+                pieces.push(PeriodicTrimCurvePair {
+                    world,
+                    face_id: binding.face_id,
+                    pcurve,
+                });
+            }
+        }
+        Ok(PeriodicTrimCurvePairExtraction {
             pieces: Some(pieces),
             work_used,
             refusal: None,

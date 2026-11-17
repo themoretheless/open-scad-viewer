@@ -520,3 +520,66 @@ fn extract_input_range_curves_refuses_unstorable_cuts_and_exhausted_work() {
     assert!(exhausted.pieces.is_none());
     assert_eq!(exhausted.refusal, Some(Refusal::ResourceLimit));
 }
+
+#[test]
+fn extracted_curve_pairs_preserve_face_lift_and_shared_seam_clock() {
+    use num_rational::BigRational;
+    let q = |n: i64, d: i64| BigRational::new(n.into(), d.into());
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_trim_sheet_with_input_bindings(&support(), &[&outer], 1e-8, 1_000_000)
+            .unwrap();
+    let report = result
+        .extract_input_range_curve_pairs(0, 0, [&q(1, 4), &q(3, 4)], 1_000_000)
+        .unwrap();
+    let pairs = report.pieces.unwrap();
+    assert_eq!(pairs.len(), 2);
+    let model = result.bound_sheet.sheet.model.unwrap();
+    for pair in &pairs {
+        assert_eq!(pair.face_id, model.1.faces[0]);
+        assert_eq!(pair.pcurve.domain(), pair.world.curve.domain());
+        let [lo, hi] = pair.pcurve.domain();
+        for t in [lo, (lo + hi) / 2., hi] {
+            let uv = pair.pcurve.evaluate(t).unwrap().point;
+            let lifted = model.faces[0].surface.evaluate(uv[0], uv[1]).unwrap().point;
+            assert_eq!(pair.world.curve.evaluate(t).unwrap().point, lifted);
+        }
+    }
+    assert_eq!(
+        pairs[0].pcurve.evaluate(0.5).unwrap().point,
+        pairs[1].pcurve.evaluate(0.5).unwrap().point
+    );
+}
+
+#[test]
+fn curve_pair_budget_withholds_world_pieces_when_uv_budget_is_exhausted() {
+    use num_rational::BigRational;
+    use nurbs_core::editing::rational_factor::Refusal;
+    let q = |n: i64, d: i64| BigRational::new(n.into(), d.into());
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_trim_sheet_with_input_bindings(&support(), &[&outer], 1e-8, 1_000_000)
+            .unwrap();
+    let range = [&q(1, 4), &q(3, 4)];
+    let world = result
+        .extract_input_range_curves(0, 0, range, 1_000_000)
+        .unwrap();
+    assert!(world.work_used > 0);
+    let limited = result
+        .extract_input_range_curve_pairs(0, 0, range, world.work_used)
+        .unwrap();
+    assert!(limited.pieces.is_none());
+    assert_eq!(limited.refusal, Some(Refusal::ResourceLimit));
+}
