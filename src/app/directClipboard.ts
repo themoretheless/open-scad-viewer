@@ -111,7 +111,7 @@ export function pasteDirectClipboardPayload(
   if (!finiteVec3(targetPoint)) throw Error('The target point must be three finite numbers.')
   const baseMm = payload.basePoint.map(v => toMillimetres(v, payload.units)) as Vec3
   const targetMm = targetPoint.map(v => toMillimetres(v, documentUnit(target))) as Vec3
-  const delta = [0, 1, 2].map(k => targetMm[k] - baseMm[k]) as Vec3
+  const delta = [0, 1, 2].map(k => targetMm[k]! - baseMm[k]!) as Vec3
   const taken = new Set(
     [
       ...target.sketches,

@@ -29,7 +29,7 @@ export function sketchDimensions(sketch:DirectSketch,edit?:{index:number;value:n
   const dimensions = sketch.dimensions??[]
   if (edit && dimensions.length > 1 && dimensions.every(d=>d.kind==='length') && sketch.points.length>=3 && sketch.points.length<=16) {
     const baseline = measuredCache.get(sketch) ?? (callGeometryRust('cad_dimensions',{points:sketch.points,dimensions}) as DimensionResult)
-    const constraints: SolverConstraint[] = dimensions.map((d,i) => ({id:`dimension-${i}`,kind:'distance',a:`p${(d as {a:number}).a}`,b:`p${(d as {b:number}).b}`,value:i===edit.index?edit.value:baseline.measurements[i].value!}))
+    const constraints: SolverConstraint[] = dimensions.map((d,i) => ({id:`dimension-${i}`,kind:'distance',a:`p${(d as {a:number}).a}`,b:`p${(d as {b:number}).b}`,value:i===edit.index?edit.value:baseline.measurements[i]!.value!}))
     const solved = solveRushGraphSketch(sketch.points.map((position,i)=>({id:`p${i}`,position:[...position] as Point2})),constraints)
     if (solved.status==='inconsistent'||solved.status==='not_converged') throw Error('Sketch dimensions conflict or did not converge.')
     const points = solved.points.map(p=>p.position)

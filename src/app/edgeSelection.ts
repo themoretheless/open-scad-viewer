@@ -13,7 +13,7 @@ function extendEndpoint(
   const list = adjacent.get(v)
   if (!list || list.length !== 2) return
   for (let k = 0; k < 2; k++) {
-    const idx = list[k]
+    const idx = list[k]!
     if (!selected.has(idx)) {
       selected.add(idx)
       pending.push(idx)
@@ -25,18 +25,18 @@ function extendEndpoint(
 export function connectedEdgeChain(edges: readonly { a: number; b: number }[], seeds: readonly number[]): number[] {
   const selected = new Set<number>()
   for (let i = 0; i < seeds.length; i++) {
-    const s = seeds[i]
+    const s = seeds[i]!
     if (Number.isInteger(s) && s >= 0 && s < edges.length) selected.add(s)
   }
   const adjacent = new Map<number, number[]>()
   for (let i = 0; i < edges.length; i++) {
-    const e = edges[i]
+    const e = edges[i]!
     addAdjacent(adjacent, e.a, i)
     addAdjacent(adjacent, e.b, i)
   }
   const pending = [...selected]
   while (pending.length) {
-    const edge = edges[pending.pop()!]
+    const edge = edges[pending.pop()!]!
     extendEndpoint(adjacent, selected, pending, edge.a)
     extendEndpoint(adjacent, selected, pending, edge.b)
   }

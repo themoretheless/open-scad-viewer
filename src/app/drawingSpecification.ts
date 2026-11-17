@@ -90,7 +90,7 @@ export function createSpecificationSheets(bodies:DirectBody[],options:DrawingShe
  const top=16+heading.length*4+6,headerHeight=12,bottom=height-40
  const layout=rows.map(row=>{
   const values=[String(row.position),row.designation,row.description,String(row.quantity),row.material,row.note]
-  const lines=values.map((value,i)=>i===0||i===3?[value]:wrap(value,Math.max(1,Math.floor((columns[i]-4)/(font*1.1)))))
+  const lines=values.map((value,i)=>i===0||i===3?[value]:wrap(value,Math.max(1,Math.floor((columns[i]!-4)/(font*1.1)))))
   return {row,lines,height:4+lineHeight*Math.max(...lines.map(v=>v.length))}
  })
  const pages:typeof layout[]=[];let current:typeof layout=[],used=top+headerHeight
@@ -105,12 +105,12 @@ export function createSpecificationSheets(bodies:DirectBody[],options:DrawingShe
  return pages.map((items,index)=>{
   let y=top+headerHeight,content='',rowLines='',x=12
   for(let col=0;col<columns.length;col++){
-   const headerLines=wrap(titles[col],Math.max(1,Math.floor((columns[col]-4)/2.42)))
-   content+=headerLines.map((s,i)=>text(x+2,top+4+i*lineHeight,s,2.2)).join('');x+=columns[col]
+   const headerLines=wrap(titles[col]!,Math.max(1,Math.floor((columns[col]!-4)/2.42)))
+   content+=headerLines.map((s,i)=>text(x+2,top+4+i*lineHeight,s,2.2)).join('');x+=columns[col]!
   }
   for(const item of items){
    x=12
-   item.lines.forEach((lines,col)=>{content+=lines.map((s,i)=>text(x+2,y+4+i*lineHeight,s)).join('');x+=columns[col]})
+   item.lines.forEach((lines,col)=>{content+=lines.map((s,i)=>text(x+2,y+4+i*lineHeight,s)).join('');x+=columns[col]!})
    y+=item.height;rowLines+=`<path d="M12 ${y}H${width-12}"/>`
   }
   let grid=`<path d="M12 ${top}H${width-12} M12 ${top+headerHeight}H${width-12}"/>`;x=12

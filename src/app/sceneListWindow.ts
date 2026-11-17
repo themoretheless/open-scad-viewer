@@ -6,10 +6,10 @@ export function sceneRowOffsets(heights:readonly (number|{readonly height:number
  const offsets=new Array<number>(heights.length+1)
  offsets[0]=0
  for(let i=0;i<heights.length;i++){
-  const item=heights[i]
+  const item=heights[i]!
   const height=typeof item==='number'?item:item.height
   if(!Number.isFinite(height)||height<=0)throw Error('Invalid scene row height.')
-  offsets[i+1]=offsets[i]+height+gap
+  offsets[i+1]=offsets[i]!+height+gap
  }
  return offsets
 }
@@ -18,7 +18,7 @@ export function sceneListWindow(offsets:readonly number[],top:number,height:numb
  const count=Math.max(0,offsets.length-1),total=offsets[count]??0
  const locate=(pixel:number)=>{
   let lo=0,hi=count
-  while(lo<hi){const mid=(lo+hi+1)>>>1;if(offsets[mid]<=pixel)lo=mid;else hi=mid-1}
+  while(lo<hi){const mid=(lo+hi+1)>>>1;if(offsets[mid]!<=pixel)lo=mid;else hi=mid-1}
   return lo
  }
  const bounded=Math.max(0,Math.min(top,total))

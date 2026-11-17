@@ -30,10 +30,10 @@ export function selectedBrepStraightEdge(body:DirectBody,vertices:[number,number
 export function facePlane(body:DirectBody,face:SolidFace):SketchPlane {
  const plane=callGeometryRust<SketchPlane>('cad_face_plane',{mesh:body.mesh,face})
  if(body.brep){
-  const support=selectedBrepSupport(body,face.triangles),surface=body.brep.faces[support].surface
+  const support=selectedBrepSupport(body,face.triangles),surface=body.brep.faces[support]!.surface
   const [n0,n1,n2]=face.normal,[o0,o1,o2]=plane.origin,tolerance=Math.max(body.brep.toleranceMm*10,1e-6)
   for(const row of surface.controlPoints)for(const p of row){
-   if(Math.abs((p[0]-o0)*n0+(p[1]-o1)*n1+(p[2]-o2)*n2)>tolerance)throw Error('Choose a planar face for a sketch.')
+   if(Math.abs((p[0]!-o0)*n0+(p[1]!-o1)*n1+(p[2]!-o2)*n2)>tolerance)throw Error('Choose a planar face for a sketch.')
   }
  }
  return plane

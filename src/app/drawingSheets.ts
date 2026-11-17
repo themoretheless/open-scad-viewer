@@ -184,7 +184,7 @@ export function createDrawingSheets(bodies:DirectBody[],options:DrawingSheetOpti
  if((options.revision?.length??0)>20)throw Error('Revision is limited to 20 characters.')
  if([options.drawingNumber??'',options.material??''].some(s=>s.length>80))throw Error('Drawing frame labels are too long.')
  if(options.title.length>120||options.author.length>80)throw Error('Drawing labels are too long.')
- const formats={A5:[210,148],A4:[297,210],A3:[420,297],A2:[594,420],Letter:[279.4,215.9]}
+ const formats={A5:[210,148],A4:[297,210],A3:[420,297],A2:[594,420],Letter:[279.4,215.9]} as const
  const format=formats[options.template];const [width,height]=options.portrait?[format[1],format[0]]:format
  if(options.frame&&options.frame!=='simple'&&width<196)throw Error('Engineering title blocks need a sheet at least 196 mm wide. Select landscape A5 or A4.')
  if(options.hidden&&!['show','hide','dash'].includes(options.hidden))throw Error('Invalid hidden line mode.')
@@ -194,13 +194,13 @@ export function createDrawingSheets(bodies:DirectBody[],options:DrawingSheetOpti
  const totalSheets=groups.length+specifications.length
  if(totalSheets>40)throw Error('Drawing export is limited to 40 total sheets, including specifications.')
  const drawingSheets=groups.map((group,index)=>{
-  const title=options.perBody?group[0].name:options.title
+  const title=options.perBody?group[0]!.name:options.title
   const views=[{view:'top',name:'TOP XY'},{view:'front',name:'FRONT XZ'},{view:'right',name:'RIGHT YZ'}] as const
   const cellWidth=(width-24)/3,cellHeight=height-((options.frame&&options.frame!=='simple')?80:(options.linkedDimensions?.length?72:60))
   let approximate=false
   let references:DrawingReference[]=[]
   const drawings=views.map((view,column)=>{
-   const projected=callGeometryRust<{paths:{d:string;hidden:boolean}[];bounds:number[];approximate:boolean;occlusionToleranceMm:number;references:DrawingReference[];dimensions:{a:number[];b:number[];valueMm:number;axis:'horizontal'|'vertical'}[]}>('cad_drawing_project',{bodies:group,view:view.view,hidden:options.hidden??'dash',occlusion:options.occlusion??'mesh',dimensions:(options.linkedDimensions??[]).filter(d=>d.view===view.view&&group.some(b=>b.id===d.bodyId))})
+   const projected=callGeometryRust<{paths:{d:string;hidden:boolean}[];bounds:[number,number,number,number];approximate:boolean;occlusionToleranceMm:number;references:DrawingReference[];dimensions:{a:[number,number];b:[number,number];valueMm:number;axis:'horizontal'|'vertical'}[]}>('cad_drawing_project',{bodies:group,view:view.view,hidden:options.hidden??'dash',occlusion:options.occlusion??'mesh',dimensions:(options.linkedDimensions??[]).filter(d=>d.view===view.view&&group.some(b=>b.id===d.bodyId))})
    approximate ||= projected.approximate
    if(view.view==='top')references=projected.references
    const [minX,minY,maxX,maxY]=projected.bounds
@@ -220,7 +220,7 @@ export function createDrawingSheets(bodies:DirectBody[],options:DrawingSheetOpti
     const dx=x+spanX*options.scale+offset
     return `<g data-dimension="linked" fill="none" stroke="black" stroke-width=".12"><path d="M${ax} ${ay}H${dx+1} M${bx} ${by}H${dx+1} M${dx} ${ay}V${by}"/><path d="M${dx-1} ${ay-1}l2 2 M${dx-1} ${by-1}l2 2"/></g><text x="${dx+1}" y="${(ay+by)/2}">${d.valueMm.toFixed(2)} mm</text>`
    }).join('')
-   const markers=options.vertexLabels?projected.references.flatMap(r=>r.vertices.map((p,i)=>`<text x="${x+(p[0]-minX)*options.scale+1}" y="${y+(p[1]-minY)*options.scale-1}" fill="#2870aa" font-size="2">${i+1}</text>`)).join(''):''
+   const markers=options.vertexLabels?projected.references.flatMap(r=>r.vertices.map((p,i)=>`<text x="${x+(p[0]!-minX)*options.scale+1}" y="${y+(p[1]!-minY)*options.scale-1}" fill="#2870aa" font-size="2">${i+1}</text>`)).join(''):''
    return `<text x="${12+column*cellWidth}" y="18">${view.name}</text><g transform="translate(${x},${y}) scale(${options.scale}) translate(${-minX},${-minY})" fill="none" stroke="black" stroke-width="${.12/options.scale}">${projected.paths.map(p=>`<path d="${escape(p.d)}"${p.hidden?` stroke-dasharray="${.8/options.scale} ${.5/options.scale}"`:''}/>`).join('')}</g>${dimensions}${linked}${markers}`
   }).join('')
   const engineering=options.frame&&options.frame!=='simple'

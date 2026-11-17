@@ -40,8 +40,8 @@ const LATIN_KEYS = "qwertyuiop[]asdfghjkl;'zxcvbnm,.`"
 const CYRILLIC_KEYS = 'йцукенгшщзхъфывапролджэячсмитьбюё'
 const LAYOUT_SWAP = new Map<string, string>()
 for (let i = 0; i < LATIN_KEYS.length; i++) {
-  LAYOUT_SWAP.set(LATIN_KEYS[i], CYRILLIC_KEYS[i])
-  LAYOUT_SWAP.set(CYRILLIC_KEYS[i], LATIN_KEYS[i])
+  LAYOUT_SWAP.set(LATIN_KEYS[i]!, CYRILLIC_KEYS[i]!)
+  LAYOUT_SWAP.set(CYRILLIC_KEYS[i]!, LATIN_KEYS[i]!)
 }
 export function swapKeyboardLayout(text: string): string {
   let out = ''

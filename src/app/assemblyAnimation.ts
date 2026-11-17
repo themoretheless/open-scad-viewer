@@ -33,34 +33,34 @@ function sampleKeyframes(times: readonly number[], values: readonly number[][], 
  if (!times.length || times.length > 64 || times.length !== values.length || !Number.isFinite(time)) {
   throw new Error('Invalid keyframe timeline')
  }
- const width = values[0].length
+ const width = values[0]!.length
  if (
   width === 0 ||
   width > 322 ||
   values.some(v => v.length !== width || v.some(x => !Number.isFinite(x) || Math.abs(x) > 1e6)) ||
-  times.some((x, i) => !Number.isFinite(x) || x < 0 || x > 120 || (i > 0 && times[i - 1] >= x)) ||
+  times.some((x, i) => !Number.isFinite(x) || x < 0 || x > 120 || (i > 0 && times[i - 1]! >= x)) ||
   angles.some(i => i < 0 || i >= width)
  ) {
   throw new Error('Invalid keyframe values')
  }
- if (time <= times[0]) return values[0].slice()
- if (time >= times[times.length - 1]) return values[values.length - 1].slice()
+ if (time <= times[0]!) return values[0]!.slice()
+ if (time >= times[times.length - 1]!) return values[values.length - 1]!.slice()
  let lo = 0, hi = times.length - 1
  while (lo < hi) {
   const mid = (lo + hi) >>> 1
-  if (times[mid] < time) lo = mid + 1
+  if (times[mid]! < time) lo = mid + 1
   else hi = mid
  }
  const upper = lo
- const rawT = (time - times[upper - 1]) / (times[upper] - times[upper - 1])
+ const rawT = (time - times[upper - 1]!) / (times[upper]! - times[upper - 1]!)
  const t = evaluateAssemblyEasing(rawT, easings?.[upper - 1] ?? 'linear')
- const aRow = values[upper - 1]
- const bRow = values[upper]
+ const aRow = values[upper - 1]!
+ const bRow = values[upper]!
  const set = angleSet ?? new Set(angles)
  const out = new Array<number>(width)
  for (let i = 0; i < width; i++) {
-  const a = aRow[i]
-  const b = bRow[i]
+  const a = aRow[i]!
+  const b = bRow[i]!
   const delta = set.has(i) ? remEuclidTau(b - a + Math.PI) - Math.PI : b - a
   out[i] = a + delta * t
  }
@@ -70,7 +70,7 @@ const VALID_EASINGS = new Set<AssemblyEasing>(['linear', 'easeInOutCubic', 'ease
 export function validateAssemblyAnimation(document:DirectDocument,animation:AssemblyAnimation):void {
  if(!animation||animation.version!==1||!Array.isArray(animation.frames)||!animation.frames.length||animation.frames.length>64)throw Error('Expected 1–64 animation keyframes.')
  if(animation.easing!==undefined&&!VALID_EASINGS.has(animation.easing))throw Error('Invalid animation easing.')
- const ids=animation.frames[0].poses.map(p=>p.id)
+ const ids=animation.frames[0]!.poses.map(p=>p.id)
  const validBodyIds=new Set<string>()
  for(const b of document.bodies)if(!b.instance)validBodyIds.add(b.id)
  if(ids.length>16||new Set(ids).size!==ids.length||ids.some(id=>!validBodyIds.has(id)))throw Error('Animation requires up to 16 independent bodies.')
@@ -87,20 +87,20 @@ const DEG_TO_RAD = Math.PI / 180
 const RAD_TO_DEG = 180 / Math.PI
 export function sampleAssemblyAnimation(document:DirectDocument,animation:AssemblyAnimation,time:number,easing?:AssemblyEasing):{document:DirectDocument;camera:{yaw:number;pitch:number}} {
  validateAssemblyAnimation(document,animation)
- const firstPoses=animation.frames[0].poses,count=firstPoses.length
+ const firstPoses=animation.frames[0]!.poses,count=firstPoses.length
  const ids=new Array<string>(count)
- for(let i=0;i<count;i++)ids[i]=firstPoses[i].id
+ for(let i=0;i<count;i++)ids[i]=firstPoses[i]!.id
  const width=count*7+2,frameCount=animation.frames.length
  const times=new Array<number>(frameCount)
  const values=new Array<number[]>(frameCount)
  const easings=new Array<AssemblyEasing|undefined>(frameCount)
  for(let fIdx=0;fIdx<frameCount;fIdx++){
-  const f=animation.frames[fIdx]
+  const f=animation.frames[fIdx]!
   times[fIdx]=f.time
   easings[fIdx]=easing??f.easing??animation.easing??'linear'
   const row=new Array<number>(width)
   for(let i=0;i<count;i++){
-   const p=f.poses[i],base=i*7,rot=p.rotation
+   const p=f.poses[i]!,base=i*7,rot=p.rotation
    row[base]=p.translation[0]
    row[base+1]=p.translation[1]
    row[base+2]=p.translation[2]
@@ -119,20 +119,20 @@ export function sampleAssemblyAnimation(document:DirectDocument,animation:Assemb
  const sampled=sampleKeyframes(times,values,time,angles,new Set(angles),easings)
  let next=parseDirectDocument(serializeDirectDocument(document))
  for(let i=0;i<count;i++){
-  const id=ids[i],base=i*7
+  const id=ids[i]!,base=i*7
   for(const [axis,k] of [['x',3],['y',4],['z',5]] as const){
    if(sampled[base+k]===0&&axis!=='z')continue
-   next=applySolidSceneEdit(next,{operation:'transform',id,ids:[id],createdId:'',x:axis==='z'?sampled[base]:0,y:axis==='z'?sampled[base+1]:0,z:axis==='z'?sampled[base+2]:0,axis,angle:sampled[base+k]*RAD_TO_DEG,scale:axis==='z'?sampled[base+6]:1})
+   next=applySolidSceneEdit(next,{operation:'transform',id,ids:[id],createdId:'',x:axis==='z'?sampled[base]!:0,y:axis==='z'?sampled[base+1]!:0,z:axis==='z'?sampled[base+2]!:0,axis,angle:sampled[base+k]!*RAD_TO_DEG,scale:axis==='z'?sampled[base+6]!:1})
   }
  }
- return {document:next,camera:{yaw:sampled[count*7],pitch:sampled[count*7+1]}}
+ return {document:next,camera:{yaw:sampled[count*7]!,pitch:sampled[count*7+1]!}}
 }
 function bodyAabb(body:DirectBody):{min:[number,number,number];max:[number,number,number]}|null {
  const pos=body.mesh.positions
  if(!pos||pos.length<3)return null
  let minX=Infinity,minY=Infinity,minZ=Infinity,maxX=-Infinity,maxY=-Infinity,maxZ=-Infinity
  for(let i=0;i<pos.length;i+=3){
-  const x=pos[i],y=pos[i+1],z=pos[i+2]
+  const x=pos[i]!,y=pos[i+1]!,z=pos[i+2]!
   if(x<minX)minX=x;if(x>maxX)maxX=x
   if(y<minY)minY=y;if(y>maxY)maxY=y
   if(z<minZ)minZ=z;if(z>maxZ)maxZ=z
@@ -147,10 +147,10 @@ export function findPoseBoundingBoxOverlaps(documentOrBodies:DirectDocument|read
   .sort((a,b)=>a.box.min[0]-b.box.min[0]||a.order-b.order)
  const overlaps:PoseBoundingBoxOverlap[]=[]
  for(let i=0;i<boxes.length;i++){
-  const a=boxes[i]
+  const a=boxes[i]!
   const maxAX=a.box.max[0]-epsilon
   for(let j=i+1;j<boxes.length;j++){
-   const b=boxes[j]
+   const b=boxes[j]!
    if(b.box.min[0]>=maxAX)break
    const minX=Math.max(a.box.min[0],b.box.min[0]),maxX=Math.min(a.box.max[0],b.box.max[0])
    const minY=Math.max(a.box.min[1],b.box.min[1]),maxY=Math.min(a.box.max[1],b.box.max[1])

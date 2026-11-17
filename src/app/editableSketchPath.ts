@@ -31,6 +31,6 @@ export function editablePathAnchors(path: BezierPathJson): Point2[] {
   const end = path.closed ? Math.max(0, path.segments.length - 1) : path.segments.length
   const out = new Array<Point2>(1 + end)
   out[0] = path.start as Point2
-  for (let i = 0; i < end; i++) out[i + 1] = path.segments[i].to as Point2
+  for (let i = 0; i < end; i++) out[i + 1] = path.segments[i]!.to as Point2
   return out
 }

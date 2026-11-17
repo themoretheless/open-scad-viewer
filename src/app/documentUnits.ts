@@ -88,7 +88,7 @@ export function evaluateUnitExpression(
       if (unit) {
         const name = unit[0].toLowerCase()
         if (!Object.hasOwn(units, name)) return { valid: false, reason: 'unit' }
-        factor = units[name]
+        factor = units[name]!
         pos += spaces.length + unit[0].length
       }
       out += `(${number[0].replace(',', '.')}*${factor})`

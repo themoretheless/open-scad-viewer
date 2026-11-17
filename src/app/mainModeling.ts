@@ -19,7 +19,7 @@ export function sceneFace(mesh:MeshData,hit:PickHit|null){const body=sceneBody(m
 export function mainOperation(meshes:MeshData[],selected:number,hit:PickHit|null,op:MainOperation,p:MainParameters){
  if(!meshes[selected])throw Error('Select a body in the main scene.')
  if(![p.amount,p.x,p.y,p.z,p.width,p.height].every(Number.isFinite))throw Error('Enter finite dimensions.')
- const d:DirectDocument={version:1,sketches:[],bodies:meshes.map(sceneBody)},body=d.bodies[selected],topology=solidTopology(body.mesh)
+ const d:DirectDocument={version:1,sketches:[],bodies:meshes.map(sceneBody)},body=d.bodies[selected]!,topology=solidTopology(body.mesh)
  const face=hit?.meshIndex===selected?topology.faces.findIndex(f=>f.triangles.includes(hit.triangleIndex)):-1
  if(['push','shell','profile'].includes(op)&&face<0)throw Error('Click a face in the main viewport.')
  const axis= p.axis==='x'?[1,0,0] as const:p.axis==='y'?[0,1,0] as const:[0,0,1] as const
@@ -33,7 +33,7 @@ export function mainOperation(meshes:MeshData[],selected:number,hit:PickHit|null
  case 'move':case 'rotate':case 'scale':return transformSelection(d,(p.selection??[selected]).map(String),op==='move'?[p.x,p.y,p.z]:[0,0,0],[...axis],op==='rotate'?p.amount:0,op==='scale'?p.amount:1)
  case 'profile':{
   if(p.width<=0||p.height<=0||p.amount===0)throw Error('Profile dimensions must be positive and depth nonzero.')
-  const plane=facePlane(body,topology.faces[face]);plane.origin=[...hit!.point]
+  const plane=facePlane(body,topology.faces[face]!);plane.origin=[...hit!.point]
   if(p.cut)plane.v=plane.v.map(v=>-v) as [number,number,number]
   const points:[number,number][]=p.shape==='circle'?Array.from({length:48},(_,i)=>[p.x+p.width/2*Math.cos(i*Math.PI/24),p.y+p.width/2*Math.sin(i*Math.PI/24)]):[[p.x,p.y],[p.x+p.width,p.y],[p.x+p.width,p.y+p.height],[p.x,p.y+p.height]]
   const profile=extrudeDirectSketch({id:'profile',name:'Profile',closed:true,points,plane},Math.abs(p.amount),'profile-body')
@@ -45,5 +45,5 @@ export function mainOperation(meshes:MeshData[],selected:number,hit:PickHit|null
 export const mainSource=(d:DirectDocument)=>directBodiesScad(d)
 export function previewMeshes(d:DirectDocument):MeshData[]{return d.bodies.map(b=>{
  const indices=b.mesh.indices,source=b.mesh.positions,positions=new Float32Array(indices.length*3)
- for(let k=0;k<indices.length;k++){const s=indices[k]*3,o=k*3;positions[o]=source[s];positions[o+1]=source[s+1];positions[o+2]=source[s+2]}
+ for(let k=0;k<indices.length;k++){const s=indices[k]!*3,o=k*3;positions[o]=source[s]!;positions[o+1]=source[s+1]!;positions[o+2]=source[s+2]!}
  return importedStlToMeshData({triangleCount:indices.length/3,positions},[.35,.7,.95,1])})}

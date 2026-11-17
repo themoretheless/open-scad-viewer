@@ -18,13 +18,13 @@ export function sameSketchPlane(a: SketchPlane = xyPlane(), b: SketchPlane = xyP
 export function polygonSelfIntersects(points: readonly (readonly number[])[]): boolean {
   const n=points.length
   if(n<4||n>4096)return false
-  const orient=(a:readonly number[],b:readonly number[],c:readonly number[])=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0])
+  const orient=(a:readonly number[],b:readonly number[],c:readonly number[])=>(b[0]!-a[0]!)*(c[1]!-a[1]!)-(b[1]!-a[1]!)*(c[0]!-a[0]!)
   const eps=1e-12
   for(let i=0;i<n;i++) {
-    const a=points[i],b=points[(i+1)%n]
+    const a=points[i]!,b=points[(i+1)%n]!
     for(let j=i+2;j<n;j++) {
       if(i===0&&j===n-1)continue
-      const c=points[j],d=points[(j+1)%n]
+      const c=points[j]!,d=points[(j+1)%n]!
       const o1=orient(a,b,c),o2=orient(a,b,d),o3=orient(c,d,a),o4=orient(c,d,b)
       if(((o1>eps&&o2<-eps)||(o1<-eps&&o2>eps))&&((o3>eps&&o4<-eps)||(o3<-eps&&o4>eps)))return true
     }
@@ -35,11 +35,11 @@ export function polygonSelfIntersects(points: readonly (readonly number[])[]): b
 export function extrudeSketchProfile(sketches: readonly DirectSketch[], height: number, offset=0): NurbsBrep {
   if (!sketches.length || sketches.some(s=>!s.closed)) throw new DirectInputError('DIRECT_PROFILE_MISSING','Select at least one closed contour.',undefined,sketches.filter(s=>!s.closed).map(s=>s.id))
   if (!Number.isFinite(height)||Math.abs(height)<.00001||!Number.isFinite(offset)) throw new DirectInputError('DIRECT_EXTRUDE_HEIGHT','Extrusion height must be finite and nonzero.','height')
-  const plane=sketches[0].plane??xyPlane()
+  const plane=sketches[0]!.plane??xyPlane()
   if(sketches.some(s=>!sameSketchPlane(s.plane,plane))) throw new DirectInputError('DIRECT_PROFILE_PLANE','All profile contours must lie on the same workplane.',undefined,sketches.filter(s=>!sameSketchPlane(s.plane,plane)).map(s=>s.id))
   for(const sketch of sketches)if(!sketch.retainedProfile&&!sketch.analytic&&polygonSelfIntersects(sketch.points))
     throw new DirectInputError('DIRECT_SKETCH_SELF_INTERSECTION','Profile contour intersects itself.',undefined,[sketch.id])
-  if(sketches.length===1&&!sketches[0].retainedProfile)return extrudeSketchBrep(sketches[0],height,offset)
+  if(sketches.length===1&&!sketches[0]!.retainedProfile)return extrudeSketchBrep(sketches[0]!,height,offset)
   const loops=sketches.flatMap(sketch=>{
     if(sketch.retainedProfile)return sketchProfile(sketch).loops
     if(sketch.analytic?.kind==='circle') {
@@ -70,7 +70,7 @@ export function extrudeHeightUpToBody(plane: SketchPlane|undefined, offset: numb
   if(!(len>0)||pos.length<3)throw new DirectInputError('DIRECT_TARGET_BODY','Select a target body.',undefined,[body.id])
   const base=p.origin[0]*n[0]/len+p.origin[1]*n[1]/len+p.origin[2]*n[2]/len+offset
   let min=Infinity,max=-Infinity
-  for(let i=0;i+2<pos.length;i+=3){const d=(pos[i]*n[0]+pos[i+1]*n[1]+pos[i+2]*n[2])/len-base;if(d<min)min=d;if(d>max)max=d}
+  for(let i=0;i+2<pos.length;i+=3){const d=(pos[i]!*n[0]+pos[i+1]!*n[1]+pos[i+2]!*n[2])/len-base;if(d<min)min=d;if(d>max)max=d}
   const eps=1e-7
   const height=max<=eps&&min<-eps?(side==='near'?max:min):min>=-eps?(side==='near'?min:max):max
   if(!Number.isFinite(height)||Math.abs(height)<.00001)throw new DirectInputError('DIRECT_EXTRUDE_HEIGHT','Extrusion height must be finite and nonzero.','height')
@@ -86,12 +86,12 @@ export interface ExtrudeUpToPlane { origin: readonly number[]; normal: readonly 
  */
 export function extrudeHeightUpToPlane(plane: SketchPlane|undefined, offset: number, target: ExtrudeUpToPlane): number {
   const p=plane??xyPlane(), n=cross3(p.u,p.v), len=Math.hypot(n[0],n[1],n[2])
-  const m=target.normal, mlen=Math.hypot(m[0],m[1],m[2])
+  const m=target.normal, mlen=Math.hypot(m[0]!,m[1]!,m[2]!)
   if(!(len>0)||!(mlen>0)||!Number.isFinite(mlen)||!Number.isFinite(offset))throw new DirectInputError('DIRECT_UP_TO_PLANE','The up-to plane needs a nonzero normal.')
-  const base=[0,1,2].map(i=>p.origin[i]+n[i]/len*offset)
-  const denom=(n[0]*m[0]+n[1]*m[1]+n[2]*m[2])/len/mlen
+  const base=[0,1,2].map(i=>p.origin[i]!+n[i]!/len*offset)
+  const denom=(n[0]*m[0]!+n[1]*m[1]!+n[2]*m[2]!)/len/mlen
   if(Math.abs(denom)<1e-9)throw new DirectInputError('DIRECT_UP_TO_PLANE','The up-to plane runs parallel to the profile normal and is never reached.')
-  const height=((target.origin[0]-base[0])*m[0]+(target.origin[1]-base[1])*m[1]+(target.origin[2]-base[2])*m[2])/mlen/denom
+  const height=((target.origin[0]!-base[0]!)*m[0]!+(target.origin[1]!-base[1]!)*m[1]!+(target.origin[2]!-base[2]!)*m[2]!)/mlen/denom
   if(!Number.isFinite(height))throw new DirectInputError('DIRECT_UP_TO_PLANE','The up-to plane cannot be reached.')
   if(Math.abs(height)<.00001)throw new DirectInputError('DIRECT_UP_TO_PLANE','The up-to plane coincides with the profile plane: the height would be zero.')
   return height
@@ -115,10 +115,10 @@ export function planarFaceTargets(body: Pick<DirectBody,'id'|'mesh'|'brep'>, lim
   }
   const pos=body.mesh.positions, idx=body.mesh.indices, groups=new Map<string,PlanarFaceTarget>()
   for(let t=0;t+2<idx.length&&groups.size<limit;t+=3){
-    const a=[0,1,2].map(k=>pos[idx[t]*3+k]),b=[0,1,2].map(k=>pos[idx[t+1]*3+k]),c=[0,1,2].map(k=>pos[idx[t+2]*3+k])
-    const nn=cross3([b[0]-a[0],b[1]-a[1],b[2]-a[2]],[c[0]-a[0],c[1]-a[1],c[2]-a[2]]),l=Math.hypot(nn[0],nn[1],nn[2])
+    const a=[0,1,2].map(k=>pos[idx[t]!*3+k]!),b=[0,1,2].map(k=>pos[idx[t+1]!*3+k]!),c=[0,1,2].map(k=>pos[idx[t+2]!*3+k]!)
+    const nn=cross3([b[0]!-a[0]!,b[1]!-a[1]!,b[2]!-a[2]!],[c[0]!-a[0]!,c[1]!-a[1]!,c[2]!-a[2]!]),l=Math.hypot(nn[0],nn[1],nn[2])
     if(!(l>1e-12))continue
-    const u=nn.map(x=>x/l),d=u[0]*a[0]+u[1]*a[1]+u[2]*a[2]
+    const u=nn.map(x=>x/l),d=u[0]!*a[0]!+u[1]!*a[1]!+u[2]!*a[2]!
     const key=[...u.map(x=>Math.round(x*1e5)),Math.round(d*1e4)].join(',')
     if(!groups.has(key))groups.set(key,{bodyId:body.id,face:groups.size,origin:a,normal:u})
   }
@@ -131,14 +131,14 @@ export function planarFaceTargets(body: Pick<DirectBody,'id'|'mesh'|'brep'>, lim
 export function planarFaceTargetAtTriangle(body: Pick<DirectBody,'id'|'mesh'|'brep'>, triangle: number): PlanarFaceTarget|null {
   const pos=body.mesh.positions, idx=body.mesh.indices
   if(!Number.isInteger(triangle)||triangle<0||triangle*3+2>=idx.length)return null
-  const pts=[0,1,2].map(k=>{const v=idx[triangle*3+k];return [pos[v*3],pos[v*3+1],pos[v*3+2]]})
-  const n=cross3([pts[1][0]-pts[0][0],pts[1][1]-pts[0][1],pts[1][2]-pts[0][2]],[pts[2][0]-pts[0][0],pts[2][1]-pts[0][1],pts[2][2]-pts[0][2]]),l=Math.hypot(n[0],n[1],n[2])
+  const pts=[0,1,2].map(k=>{const v=idx[triangle*3+k]!;return [pos[v*3]!,pos[v*3+1]!,pos[v*3+2]!]})
+  const n=cross3([pts[1]![0]!-pts[0]![0]!,pts[1]![1]!-pts[0]![1]!,pts[1]![2]!-pts[0]![2]!],[pts[2]![0]!-pts[0]![0]!,pts[2]![1]!-pts[0]![1]!,pts[2]![2]!-pts[0]![2]!]),l=Math.hypot(n[0],n[1],n[2])
   if(!(l>1e-12))return null
   const size=Math.max(1,...pts.flat().map(Math.abs)), tol=Math.max((body.brep?.toleranceMm??0)*10,1e-5*size)
   for(const f of planarFaceTargets(body,Infinity)){
-    const fl=Math.hypot(f.normal[0],f.normal[1],f.normal[2])
-    if(!(fl>0)||Math.abs(Math.abs(n[0]*f.normal[0]+n[1]*f.normal[1]+n[2]*f.normal[2])/(l*fl)-1)>1e-4)continue
-    if(pts.every(p=>Math.abs((p[0]-f.origin[0])*f.normal[0]+(p[1]-f.origin[1])*f.normal[1]+(p[2]-f.origin[2])*f.normal[2])/fl<=tol))return f
+    const fl=Math.hypot(f.normal[0]!,f.normal[1]!,f.normal[2]!)
+    if(!(fl>0)||Math.abs(Math.abs(n[0]*f.normal[0]!+n[1]*f.normal[1]!+n[2]*f.normal[2]!)/(l*fl)-1)>1e-4)continue
+    if(pts.every(p=>Math.abs((p[0]!-f.origin[0]!)*f.normal[0]!+(p[1]!-f.origin[1]!)*f.normal[1]!+(p[2]!-f.origin[2]!)*f.normal[2]!)/fl<=tol))return f
   }
   return null
 }
@@ -146,15 +146,15 @@ export function planarFaceTargetAtTriangle(body: Pick<DirectBody,'id'|'mesh'|'br
 export function brepFacePlane(controlPoints: readonly (readonly (readonly number[])[])[], tolerance=1e-6): ExtrudeUpToPlane|null {
   const pts=controlPoints.flat()
   if(pts.length<3)return null
-  const a=pts[0]
+  const a=pts[0]!
   let normal:number[]|null=null
   for(let i=1;i<pts.length&&!normal;i++)for(let j=i+1;j<pts.length;j++){
-    const nn=cross3([pts[i][0]-a[0],pts[i][1]-a[1],pts[i][2]-a[2]],[pts[j][0]-a[0],pts[j][1]-a[1],pts[j][2]-a[2]]),l=Math.hypot(nn[0],nn[1],nn[2])
+    const nn=cross3([pts[i]![0]!-a[0]!,pts[i]![1]!-a[1]!,pts[i]![2]!-a[2]!],[pts[j]![0]!-a[0]!,pts[j]![1]!-a[1]!,pts[j]![2]!-a[2]!]),l=Math.hypot(nn[0],nn[1],nn[2])
     if(l>1e-9){normal=nn.map(x=>x/l);break}
   }
   if(!normal)return null
-  for(const q of pts)if(Math.abs((q[0]-a[0])*normal[0]+(q[1]-a[1])*normal[1]+(q[2]-a[2])*normal[2])>tolerance)return null
-  return {origin:[a[0],a[1],a[2]],normal}
+  for(const q of pts)if(Math.abs((q[0]!-a[0]!)*normal[0]!+(q[1]!-a[1]!)*normal[1]!+(q[2]!-a[2]!)*normal[2]!)>tolerance)return null
+  return {origin:[a[0]!,a[1]!,a[2]!],normal}
 }
 export type DirectExtrusionOperation = 'new'|'union'|'difference'|'intersection'
 /**
@@ -199,7 +199,7 @@ export function buildDirectExtrusion(document: DirectDocument, options: DirectEx
     positions=result.positions;indices=result.indices;brep=undefined
     if(!indices.length)return null
   }
-  return {...(options.operation==='new'?{id:options.id,name:`${sketches[0].name} · 3D`}:target!),mesh:{positions,indices},...(brep?{brep}:{})}
+  return {...(options.operation==='new'?{id:options.id,name:`${sketches[0]!.name} · 3D`}:target!),mesh:{positions,indices},...(brep?{brep}:{})}
 }
 /** All targets are computed before the document changes, so a refusal on any target leaves every body intact. */
 export function applyDirectExtrusionProfile(document: DirectDocument, options: DirectExtrusionOptions): DirectDocument {

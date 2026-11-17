@@ -315,7 +315,7 @@ export function loadLegacyTabsWorkspaceDocument(storage: WorkspaceStorage): Work
     ))
     if (tabs.length !== value.length || new Set(tabs.map(tab => tab.id)).size !== tabs.length) return null
     const activeId = storage.getItem(WORKSPACE_LEGACY_ACTIVE_TAB_KEY)
-    const selected = tabs.find(tab => tab.id === activeId) ?? tabs[0]
+    const selected = tabs.find(tab => tab.id === activeId) ?? tabs[0]!
     const rawName = selected.name.trim()
     const fileName = rawName.length > 0 && rawName.length <= MAX_WORKSPACE_FILE_NAME_LENGTH
       ? (/\.(scad|r)$/i.test(rawName)

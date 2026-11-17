@@ -310,7 +310,7 @@ export class BuildCoordinator {
       else this.jobs.delete(jobId)
     }
     for (let index = this.pendingJobIds.length - 1; index >= 0; index--) {
-      const record = this.jobs.get(this.pendingJobIds[index])
+      const record = this.jobs.get(this.pendingJobIds[index]!)
       if (!record || record.request.documentRevision !== revision) this.pendingJobIds.splice(index, 1)
     }
     this.setState({
@@ -388,7 +388,7 @@ export class BuildCoordinator {
     const record = this.jobs.get(jobId)
     if (!record || record.lifecycle !== 'queued') return
     for (let index = this.pendingJobIds.length - 1; index >= 0; index--) {
-      const pendingId = this.pendingJobIds[index]
+      const pendingId = this.pendingJobIds[index]!
       const pending = this.jobs.get(pendingId)
       if (!pending
         || pending.request.documentRevision !== record.request.documentRevision

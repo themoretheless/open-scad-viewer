@@ -21,7 +21,7 @@ export function projectMeshModelerFaces(mesh: PolygonMesh, camera: OrbitCamera) 
   const faces = callGeometryRust<Array<[[number[], number[], number[]], number, number]>>('mesh_editor', {
     action: 'project_faces', mesh, yaw: camera.yaw, pitch: camera.pitch, orientation: sign,
   })
-  return faces.map(([points, face, depth]) => ({points: points.map(p => `${p[0]},${-p[1]}`).join(' '), face, depth}))
+  return faces.map(([points, face, depth]) => ({points: points.map(p => `${p[0]},${-p[1]!}`).join(' '), face, depth}))
 }
 
 export interface ProjectedMeshLine { x1: number; y1: number; x2: number; y2: number; id: number }
@@ -49,24 +49,25 @@ export function projectMeshModelerObject(
   const pos = object.mesh.positions
   let projected: ProjectedMeshVertex[] | undefined
   const vertices = () => projected ??= Array.from({length: pos.length / 3}, (_, id) => {
-    const p = projectDirectPoint([pos[id * 3], pos[id * 3 + 1], pos[id * 3 + 2]], camera)
+    const p = projectDirectPoint([pos[id * 3]!, pos[id * 3 + 1]!, pos[id * 3 + 2]!], camera)
     return {x: p[0], y: -p[1], id}
   })
   const verts = selectMode === 'vertex' ? vertices() : []
   const edges = selectMode === 'edge' ? getEdgeList(object.mesh).map(([a, b], id) => {
     const points = vertices()
-    return {id, x1: points[a].x, y1: points[a].y, x2: points[b].x, y2: points[b].y}
+    const pa = points[a]!, pb = points[b]!
+    return {id, x1: pa.x, y1: pa.y, x2: pb.x, y2: pb.y}
   }) : []
   const defects = emptyManifoldOverlay()
   if (manifoldReport && !manifoldReport.isManifold) {
     const points = vertices()
     const lines = (indices: Uint32Array) => Array.from({length: indices.length / 2}, (_, id): ProjectedMeshLine => {
-      const a = points[indices[id * 2]], b = points[indices[id * 2 + 1]]
+      const a = points[indices[id * 2]!]!, b = points[indices[id * 2 + 1]!]!
       return {id, x1: a.x, y1: a.y, x2: b.x, y2: b.y}
     })
     defects.boundaryEdges = lines(manifoldReport.boundaryEdges)
     defects.nonManifoldEdges = lines(manifoldReport.nonManifoldEdges)
-    defects.nonManifoldVertices = Array.from(manifoldReport.nonManifoldVertices, id => points[id])
+    defects.nonManifoldVertices = Array.from(manifoldReport.nonManifoldVertices, id => points[id]!)
   }
   return { tris, verts, edges, defects }
 }

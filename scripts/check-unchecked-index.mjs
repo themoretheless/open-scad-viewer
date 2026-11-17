@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 
 /** Path prefixes (relative to the repository root) that compile cleanly under the flag. */
 export const CLEAN_PATHS = Object.freeze([
+  'src/app/',
   'src/composables/',
   'src/core/',
   'src/data/',

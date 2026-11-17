@@ -166,10 +166,10 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
     if (item.group !== undefined && (typeof item.group !== 'string' || !item.group.length || item.group.length > 100)) throw new Error('Invalid object group.')
     ids.add(item.id)
   }
-  for (let i = 0; i < d.sketches.length; i++) checkObjectIdentity(d.sketches[i])
-  for (let i = 0; i < d.bodies.length; i++) checkObjectIdentity(d.bodies[i])
-  for (let i = 0; i < d.curves.length; i++) checkObjectIdentity(d.curves[i])
-  for (let i = 0; i < d.surfaces.length; i++) checkObjectIdentity(d.surfaces[i])
+  for (let i = 0; i < d.sketches.length; i++) checkObjectIdentity(d.sketches[i]!)
+  for (let i = 0; i < d.bodies.length; i++) checkObjectIdentity(d.bodies[i]!)
+  for (let i = 0; i < d.curves.length; i++) checkObjectIdentity(d.curves[i]!)
+  for (let i = 0; i < d.surfaces.length; i++) checkObjectIdentity(d.surfaces[i]!)
   const validVec3 = (p: unknown): p is [number, number, number] => Array.isArray(p) && p.length === 3 && finite(p[0]) && finite(p[1]) && finite(p[2])
   const validPoints2d = (pts: unknown): boolean => {
     if (!Array.isArray(pts)) return false
@@ -236,8 +236,8 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
       // extreme), so the vertex box is only a lower bound.
       for (let axis = 0; axis < 3; axis++) {
         const lo = 2 * axis, hi = 2 * axis + 1
-        if (meshAabb[lo] < outer[lo] - slack || meshAabb[hi] > outer[hi] + slack ||
-            meshAabb[lo] > inner[lo] + slack || meshAabb[hi] < inner[hi] - slack) {
+        if (meshAabb[lo]! < outer[lo]! - slack || meshAabb[hi]! > outer[hi]! + slack ||
+            meshAabb[lo]! > inner[lo]! + slack || meshAabb[hi]! < inner[hi]! - slack) {
           throw new Error('Displayed body B-rep and mesh AABBs disagree; refuse stale mesh pairing.')
         }
       }
@@ -264,7 +264,7 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
     }
     d.bodies=resolveSolidInstances(d,instanceCache,reuseInstances).bodies
     for (let i = 0; i < d.bodies.length; i++) {
-      const body = d.bodies[i]
+      const body = d.bodies[i]!
       if (!body.instance) continue
       if (reuseInstances?.has(body.id)) {
         // Already checked and normalized when it was resolved; attached after normalization below.
@@ -331,9 +331,9 @@ export async function parseDirectDocumentAsync(text: string, options: {
 }
 
 const aabbFromPositions = (positions: ArrayLike<number>): [number, number, number, number, number, number] => {
-  let minX = positions[0], maxX = positions[0], minY = positions[1], maxY = positions[1], minZ = positions[2], maxZ = positions[2]
+  let minX = positions[0]!, maxX = positions[0]!, minY = positions[1]!, maxY = positions[1]!, minZ = positions[2]!, maxZ = positions[2]!
   for (let i = 0; i < positions.length; i += 3) {
-    const x = positions[i], y = positions[i + 1], z = positions[i + 2]
+    const x = positions[i]!, y = positions[i + 1]!, z = positions[i + 2]!
     if (x < minX) minX = x; if (x > maxX) maxX = x
     if (y < minY) minY = y; if (y > maxY) maxY = y
     if (z < minZ) minZ = z; if (z > maxZ) maxZ = z
@@ -344,8 +344,8 @@ const aabbFromPositions = (positions: ArrayLike<number>): [number, number, numbe
 type Aabb = [number, number, number, number, number, number]
 const growAabb = (box: Aabb, p: readonly number[]) => {
   for (let axis = 0; axis < 3; axis++) {
-    if (p[axis] < box[2 * axis]) box[2 * axis] = p[axis]
-    if (p[axis] > box[2 * axis + 1]) box[2 * axis + 1] = p[axis]
+    if (p[axis]! < box[2 * axis]!) box[2 * axis] = p[axis]!
+    if (p[axis]! > box[2 * axis + 1]!) box[2 * axis + 1] = p[axis]!
   }
 }
 /** `inner`: the vertex box (the mesh must reach it); `outer`: the control hull of every
@@ -675,7 +675,7 @@ export function extrudeDirectSketch(sketch: DirectSketch, height: number, id: st
     }
     const src = built.positions
     for (let j = 0; j < src.length; j += 3) {
-      const x = src[j], y = src[j + 1], z = src[j + 2]
+      const x = src[j]!, y = src[j + 1]!, z = src[j + 2]!
       const wx = o[0] + x * u[0] + y * v[0] + z * nx
       const wy = o[1] + x * u[1] + y * v[1] + z * ny
       const wz = o[2] + x * u[2] + y * v[2] + z * nz

@@ -59,7 +59,7 @@ export function captureParameterPreset(source: string, name: string, id: string)
   }
   const validated = parseParameterPresets([preset])
   if (!validated) throw new Error('preset_invalid')
-  return validated[0]
+  return validated[0]!
 }
 
 export function applyParameterPreset(source: string, preset: ParameterPreset): string {
@@ -68,7 +68,7 @@ export function applyParameterPreset(source: string, preset: ParameterPreset): s
   if (parameters.length !== preset.values.length) throw new Error('preset_incompatible')
   // Prepare every replacement before touching the caller's source.
   const replacements = parameters.map((parameter, index) => {
-    const entry = preset.values[index]
+    const entry = preset.values[index]!
     if (entry.name !== parameter.name || typeof entry.value !== typeof parameter.value) throw new Error('preset_incompatible')
     return { ...parameter, encoded: encodeCustomizerValue(entry.value) }
   })

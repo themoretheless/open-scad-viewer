@@ -24,7 +24,7 @@ export const WORLD_FRAME: Frame = Object.freeze({
 }) as Frame
 
 export const nextCoordinateSystem = (current: CoordinateSystem): CoordinateSystem =>
-  COORDINATE_SYSTEMS[(COORDINATE_SYSTEMS.indexOf(current) + 1) % COORDINATE_SYSTEMS.length]
+  COORDINATE_SYSTEMS[(COORDINATE_SYSTEMS.indexOf(current) + 1) % COORDINATE_SYSTEMS.length]!
 
 export function coordinateSystemLabel(system: CoordinateSystem, locale: string): string {
   const ru = locale === 'ru'
@@ -53,18 +53,18 @@ export function frameFromFace(points: readonly Vec3[]): Frame {
   const n: Vec3 = [0, 0, 0]
   const c: Vec3 = [0, 0, 0]
   for (let i = 0; i < points.length; i++) {
-    const a = points[i],
-      b = points[(i + 1) % points.length]
+    const a = points[i]!,
+      b = points[(i + 1) % points.length]!
     n[0] += (a[1] - b[1]) * (a[2] + b[2])
     n[1] += (a[2] - b[2]) * (a[0] + b[0])
     n[2] += (a[0] - b[0]) * (a[1] + b[1])
-    for (let k = 0; k < 3; k++) c[k] += a[k] / points.length
+    for (const k of [0, 1, 2] as const) c[k] += a[k] / points.length
   }
   if (Math.hypot(...n) < 1e-12) throw Error('The face is degenerate.')
   let edge: Vec3 = [1, 0, 0]
   for (let i = 0; i < points.length; i++) {
-    const a = points[i],
-      b = points[(i + 1) % points.length],
+    const a = points[i]!,
+      b = points[(i + 1) % points.length]!,
       d: Vec3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]
     if (Math.hypot(...d) > 1e-9) {
       edge = d
@@ -78,7 +78,7 @@ export const frameAxis = (frame: Frame, axis: 'x' | 'y' | 'z'): Vec3 => frame[ax
 
 /** A delta given in frame components, expressed in world components. */
 export function frameDeltaToWorld(frame: Frame, delta: Vec3): Vec3 {
-  return [0, 1, 2].map(k => delta[0] * frame.x[k] + delta[1] * frame.y[k] + delta[2] * frame.z[k]) as Vec3
+  return ([0, 1, 2] as const).map(k => delta[0] * frame.x[k] + delta[1] * frame.y[k] + delta[2] * frame.z[k]) as Vec3
 }
 
 /** World point to frame coordinates (what the numeric panel shows). */
@@ -102,7 +102,7 @@ export function rotateAboutAxis(point: Vec3, pivot: Vec3, axis: Vec3, degrees: n
   const v: Vec3 = [point[0] - pivot[0], point[1] - pivot[1], point[2] - pivot[2]]
   const kv = cross3(k, v),
     kd = dot3(k, v) * (1 - cos)
-  return [0, 1, 2].map(i => pivot[i] + v[i] * cos + kv[i] * sin + k[i] * kd) as Vec3
+  return ([0, 1, 2] as const).map(i => pivot[i] + v[i] * cos + kv[i] * sin + k[i] * kd) as Vec3
 }
 
 /** Move all points by `amount` along one frame axis. */

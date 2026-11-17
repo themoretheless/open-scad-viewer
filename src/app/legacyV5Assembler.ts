@@ -75,7 +75,7 @@ function sameStructuralPath(
   right: SemanticStaticOperation['structuralPath'],
 ): boolean {
   return left.length === right.length && left.every((segment, index) => {
-    const candidate = right[index]
+    const candidate = right[index]!
     return segment.kind === candidate.kind
       && segment.name === candidate.name
       && segment.ordinal === candidate.ordinal
@@ -109,7 +109,7 @@ export function legacyOperationId(
   let lastStatementType: 'call' | 'module' | null = null
   for (let length = 1; length <= operation.structuralPath.length; length++) {
     const path = operation.structuralPath.slice(0, length)
-    const segment = path[length - 1]
+    const segment = path[length - 1]!
     const pathOperation = program.core.operations.find(candidate => (
       sameStructuralPath(candidate.structuralPath, path)
     ))
@@ -166,7 +166,7 @@ export function legacySceneEntityId(
 ): SceneEntityId {
   let path = 'root'
   for (const runtime of runtimeOccurrenceChain(program, occurrence)) {
-    const operation = program.core.operations[runtime.operation]
+    const operation = program.core.operations[runtime.operation]!
     if (directStatementType(operation) !== 'call') continue
     path += `>${legacyOperationId(program, operation.id)}`
     if (operation.name === 'for') {
@@ -183,8 +183,8 @@ function producerOccurrenceByNode(program: SemanticProgramV1): ReadonlyMap<numbe
   const result = new Map<number, SemanticOccurrence>()
   for (const occurrence of program.core.occurrences) {
     if (occurrence.node !== null && occurrence.outputOrdinal !== null && !result.has(occurrence.node)) {
-      const operation = program.core.operations[occurrence.operation]
-      if (semanticNodeProducerOperationNames(program.core.nodes[occurrence.node]).includes(operation.name)) {
+      const operation = program.core.operations[occurrence.operation]!
+      if (semanticNodeProducerOperationNames(program.core.nodes[occurrence.node]!).includes(operation.name)) {
         result.set(occurrence.node, occurrence)
       }
     }
@@ -277,7 +277,7 @@ export async function assembleLegacyV5Result(
       const sourceOffset = vertex * kernelMesh.numProp
       const targetOffset = vertex * 6
       for (let channel = 0; channel < 6; channel++) {
-        vertices[targetOffset + channel] = kernelMesh.vertProperties[sourceOffset + channel]
+        vertices[targetOffset + channel] = kernelMesh.vertProperties[sourceOffset + channel]!
       }
       if ((vertex & 0x3fff) === 0x3fff) await yieldForCancellation(options)
     }
@@ -290,7 +290,7 @@ export async function assembleLegacyV5Result(
       const triangleStart = (kernelMesh.runIndex[run] ?? 0) / 3
       const triangleEnd = (kernelMesh.runIndex[run + 1] ?? kernelMesh.triVerts.length) / 3
       if (triangleEnd <= triangleStart) continue
-      const originalId = kernelMesh.runOriginalID[run]
+      const originalId = kernelMesh.runOriginalID[run]!
       const sourceNode = view.nodeByOriginalId.get(originalId)
       provenance.push({
         triangleStart,

@@ -46,7 +46,7 @@ export const THEME_SELECTIONS: readonly ThemeSelection[] = ['system', 'dark', 'l
 
 export function resolveTheme(selection: ThemeSelection, prefersDark: boolean): ThemeDefinition {
   const resolvedId = selection === 'system' ? (prefersDark ? 'dark' : 'light') : selection
-  return THEME_CATALOG.find(theme => theme.id === resolvedId) ?? THEME_CATALOG[0]
+  return THEME_CATALOG.find(theme => theme.id === resolvedId) ?? THEME_CATALOG[0]!
 }
 
 export function contrastRatio(foreground: string, background: string): number {
@@ -54,7 +54,7 @@ export function contrastRatio(foreground: string, background: string): number {
     if (!/^#[0-9a-f]{6}$/i.test(hex)) throw new TypeError(`Invalid theme color: ${hex}`)
     const channels = [1, 3, 5].map(offset => Number.parseInt(hex.slice(offset, offset + 2), 16) / 255)
       .map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
-    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+    return 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!
   }
   const first = luminance(foreground)
   const second = luminance(background)
@@ -62,7 +62,7 @@ export function contrastRatio(foreground: string, background: string): number {
 }
 
 export function themeCanvasColor(theme: ThemeDefinition): [number, number, number] {
-  const value = theme.tokens['--canvas-bg']
+  const value = theme.tokens['--canvas-bg']!
   if (!/^#[0-9a-f]{6}$/i.test(value)) throw new TypeError(`Invalid canvas color: ${value}`)
   return [1, 3, 5].map(offset => Number.parseInt(value.slice(offset, offset + 2), 16) / 255) as [number, number, number]
 }
@@ -75,12 +75,12 @@ export function assertThemeCatalog(themes: readonly ThemeDefinition[]): void {
     for (const token of Object.keys(darkTokens)) {
       if (!/^#[0-9a-f]{6}$/i.test(theme.tokens[token] ?? '')) throw new TypeError(`Theme ${theme.id} has invalid ${token}`)
     }
-    if (contrastRatio(theme.tokens['--text'], theme.tokens['--bg']) < 4.5
-      || contrastRatio(theme.tokens['--text'], theme.tokens['--surface']) < 4.5
-      || contrastRatio(theme.tokens['--text-dim'], theme.tokens['--surface']) < 4.5
-      || contrastRatio(theme.tokens['--border'], theme.tokens['--surface']) < 3
-      || contrastRatio(theme.tokens['--focus'], theme.tokens['--surface']) < 3
-      || contrastRatio('#ffffff', theme.tokens['--accent-strong']) < 4.5) {
+    if (contrastRatio(theme.tokens['--text']!, theme.tokens['--bg']!) < 4.5
+      || contrastRatio(theme.tokens['--text']!, theme.tokens['--surface']!) < 4.5
+      || contrastRatio(theme.tokens['--text-dim']!, theme.tokens['--surface']!) < 4.5
+      || contrastRatio(theme.tokens['--border']!, theme.tokens['--surface']!) < 3
+      || contrastRatio(theme.tokens['--focus']!, theme.tokens['--surface']!) < 3
+      || contrastRatio('#ffffff', theme.tokens['--accent-strong']!) < 4.5) {
       throw new RangeError(`Theme ${theme.id} does not meet core text contrast`)
     }
     ids.add(theme.id)

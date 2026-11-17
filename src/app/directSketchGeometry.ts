@@ -32,9 +32,9 @@ export function worldPoint(p: number[], plane: SketchPlane = xyPlane()): Vec3 {
   const nx = u[1] * v[2] - u[2] * v[1]
   const ny = u[2] * v[0] - u[0] * v[2]
   const nz = u[0] * v[1] - u[1] * v[0]
-  const x = p[0],
-    y = p[1],
-    z = p.length === 3 ? p[2] : 0
+  const x = p[0]!,
+    y = p[1]!,
+    z = p.length === 3 ? p[2]! : 0
   if (
     !Number.isFinite(o[0]) ||
     !Number.isFinite(o[1]) ||
@@ -93,9 +93,9 @@ export function worldPoints(points: number[][], plane: SketchPlane = xyPlane()):
     if (!Array.isArray(p) || (p.length !== 2 && p.length !== 3)) {
       throw new Error('Sketch placement requires 2D or 3D points.')
     }
-    const x = p[0],
-      y = p[1],
-      z = p.length === 3 ? p[2] : 0
+    const x = p[0]!,
+      y = p[1]!,
+      z = p.length === 3 ? p[2]! : 0
     if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
       throw new Error('Sketch geometry exceeds finite numeric range.')
     }
@@ -204,8 +204,8 @@ export function transformSketch(
     cy = 0
     const n = pts.length
     for (let i = 0; i < n; i++) {
-      cx += pts[i][0] / n
-      cy += pts[i][1] / n
+      cx += pts[i]![0]! / n
+      cy += pts[i]![1]! / n
     }
   }
   if (!Number.isFinite(cx) || !Number.isFinite(cy)) {
@@ -221,7 +221,7 @@ export function transformSketch(
   }
   let moved = new Array<Point2>(pts.length)
   for (let i = 0; i < pts.length; i++) {
-    const mp = apply(pts[i])
+    const mp = apply(pts[i]!)
     if (!Number.isFinite(mp[0]) || !Number.isFinite(mp[1])) {
       throw new Error('Sketch geometry exceeds finite numeric range.')
     }
@@ -336,7 +336,7 @@ export function slotSketch(a: Point2, b: Point2, width: number): Point2[] {
     [a, angle + Math.PI / 2],
   ]
   for (let c = 0; c < 2; c++) {
-    const [center, start] = caps[c]
+    const [center, start] = caps[c]!
     for (let i = 0; i <= 32; i++) {
       const t = start + (Math.PI * i) / 32
       const px = center[0] + width * 0.5 * Math.cos(t)

@@ -18,7 +18,7 @@ function channels(hex: string): number[] {
 function mix(from: string, to: string, amount: number): string {
   const a = channels(from)
   const b = channels(to)
-  return `#${a.map((value, index) => Math.round(value + (b[index] - value) * amount).toString(16).padStart(2, '0')).join('')}`
+  return `#${a.map((value, index) => Math.round(value + (b[index]! - value) * amount).toString(16).padStart(2, '0')).join('')}`
 }
 
 // Moves `color` toward `target` until it reaches `ratio` against `against`; stops at the target.
@@ -31,8 +31,8 @@ function reach(color: string, target: string, against: string, ratio: number): s
 /** Derives a complete, contrast-checked token set from one base tone and one accent. */
 export function customizeTokens(tokens: Readonly<Record<string, string>>, custom: ThemeCustomization): Record<string, string> {
   const result: Record<string, string> = {}
-  let surface = tokens['--surface']
-  let text = tokens['--text']
+  let surface = tokens['--surface']!
+  let text = tokens['--text']!
   if (custom.base) {
     const base = custom.base
     // Each direction derives its own surface; pick the one whose extreme text reads best on both backgrounds.
@@ -46,7 +46,7 @@ export function customizeTokens(tokens: Readonly<Record<string, string>>, custom
       }
       return { dark, toward, derived, worst }
     }
-    const chosen = [plan(true), plan(false)].sort((x, y) => y.worst - x.worst)[0]
+    const chosen = [plan(true), plan(false)].sort((x, y) => y.worst - x.worst)[0]!
     const { dark, toward } = chosen
     surface = chosen.derived
     text = reach(dark ? '#ece9e4' : '#1d1b18', toward, base, 4.5)

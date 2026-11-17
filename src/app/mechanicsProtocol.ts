@@ -43,7 +43,7 @@ export function isTrussTopologyResponse(value:unknown,nodes:number,members:numbe
     &&finite(result.maxDensityChange)&&result.maxDensityChange>=0&&result.maxDensityChange<=1
     &&Array.isArray(result.activeMembers)&&result.activeMembers.length<=members
     &&result.activeMembers.every((index,i)=>Number.isInteger(index)&&index>=0&&index<members
-      &&(i===0||result.activeMembers[i-1]<index)&&result.densities[index]>=0.5)
+      &&(i===0||result.activeMembers[i-1]!<index)&&result.densities[index]!>=0.5)
 }
 
 export function isTrussFieldMeshes(value:unknown,members:number):value is MeshData[] {
@@ -90,7 +90,7 @@ export function isValidatedPrintProfile(value:unknown,expected:PrintStrengthProf
 
 export function isThermalStrengthResult(value:unknown):value is ThermalStrengthResult {
   const result=value as ThermalStrengthResult
-  const bracket=(input:unknown)=>arrayOf(input,2,finite)&&(input as number[])[0]<=(input as number[])[1]
+  const bracket=(input:unknown)=>arrayOf(input,2,finite)&&(input as number[])[0]!<=(input as number[])[1]!
   return !!result&&typeof result==='object'&&result.modelKind==='measured-bilinear-isotropic-axial-v1'
     &&positive(result.youngMpa)&&positive(result.tensionMpa)&&positive(result.compressionMpa)
     &&bracket(result.nozzleBracketC)&&bracket(result.serviceBracketC)

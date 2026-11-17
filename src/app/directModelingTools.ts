@@ -8,13 +8,13 @@ export interface OrbitCamera { yaw: number; pitch: number }
 export const defaultDirectCamera = (): OrbitCamera => ({ yaw: Math.PI / 4, pitch: Math.atan(1 / Math.sqrt(2)) })
 export function projectDirectPoint(p: number[], camera: OrbitCamera): [number, number, number] {
   const cy = Math.cos(camera.yaw), sy = Math.sin(camera.yaw), cp = Math.cos(camera.pitch), sp = Math.sin(camera.pitch)
-  const horizontal = p[0] * sy + p[1] * cy, z = p[2] ?? 0
-  return [p[0] * cy - p[1] * sy, horizontal * sp - z * cp, horizontal * cp + z * sp]
+  const horizontal = p[0]! * sy + p[1]! * cy, z = p[2] ?? 0
+  return [p[0]! * cy - p[1]! * sy, horizontal * sp - z * cp, horizontal * cp + z * sp]
 }
 /** A scene projection shares one camera basis across all vertices and normals. */
 export function createDirectProjector(camera:OrbitCamera):(p:number[])=>[number,number,number]{
  const cy=Math.cos(camera.yaw),sy=Math.sin(camera.yaw),cp=Math.cos(camera.pitch),sp=Math.sin(camera.pitch)
- return p=>{const horizontal=p[0]*sy+p[1]*cy,z=p[2]??0;return [p[0]*cy-p[1]*sy,horizontal*sp-z*cp,horizontal*cp+z*sp]}
+ return p=>{const horizontal=p[0]!*sy+p[1]!*cy,z=p[2]??0;return [p[0]!*cy-p[1]!*sy,horizontal*sp-z*cp,horizontal*cp+z*sp]}
 }
 export function unprojectDirectXY(p: Point2, camera: OrbitCamera): Point2 {
   const sp = Math.sin(camera.pitch)
@@ -45,9 +45,9 @@ export function directExtrusionTool(sketch: DirectSketch, height: number, baseZ:
   const ox = normal[0] * dz, oy = normal[1] * dz, oz = normal[2] * dz
   const pos = body.mesh.positions
   for (let i = 0; i < pos.length; i += 3) {
-    pos[i] += ox
-    pos[i + 1] += oy
-    pos[i + 2] += oz
+    pos[i] = pos[i]! + ox
+    pos[i + 1] = pos[i + 1]! + oy
+    pos[i + 2] = pos[i + 2]! + oz
   }
   return body
 }
@@ -76,11 +76,11 @@ export function circularDirectCopies(sketch: DirectSketch, count: number, center
 const SCRATCH_NORMAL: [number, number, number] = [0, 0, 0]
 export function directFaceShade(mesh: PolygonMesh, triangle: number, camera: OrbitCamera, project?: (p: number[]) => [number, number, number]): number {
   const base = triangle * 3
-  const i0 = mesh.indices[base] * 3, i1 = mesh.indices[base + 1] * 3, i2 = mesh.indices[base + 2] * 3
+  const i0 = mesh.indices[base]! * 3, i1 = mesh.indices[base + 1]! * 3, i2 = mesh.indices[base + 2]! * 3
   const pos = mesh.positions
-  const p0x = pos[i0], p0y = pos[i0 + 1], p0z = pos[i0 + 2]
-  const ax = pos[i1] - p0x, ay = pos[i1 + 1] - p0y, az = pos[i1 + 2] - p0z
-  const bx = pos[i2] - p0x, by = pos[i2 + 1] - p0y, bz = pos[i2 + 2] - p0z
+  const p0x = pos[i0]!, p0y = pos[i0 + 1]!, p0z = pos[i0 + 2]!
+  const ax = pos[i1]! - p0x, ay = pos[i1 + 1]! - p0y, az = pos[i1 + 2]! - p0z
+  const bx = pos[i2]! - p0x, by = pos[i2 + 1]! - p0y, bz = pos[i2 + 2]! - p0z
   const nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx
   const length = Math.hypot(nx, ny, nz) || 1
   SCRATCH_NORMAL[0] = nx / length

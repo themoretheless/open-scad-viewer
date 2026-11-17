@@ -105,10 +105,10 @@ export function snapPivot(
   let best: Vec3 | null = null,
     bestDistance = Infinity
   for (let i = 0; i + 2 < v.length; i += 3) {
-    const d = Math.hypot(v[i] - request[0], v[i + 1] - request[1], v[i + 2] - request[2])
+    const d = Math.hypot(v[i]! - request[0], v[i + 1]! - request[1], v[i + 2]! - request[2])
     if (d < bestDistance) {
       bestDistance = d
-      best = [v[i], v[i + 1], v[i + 2]]
+      best = [v[i]!, v[i + 1]!, v[i + 2]!]
     }
   }
   if (!best) throw Error('The selection has no vertices to snap to.')

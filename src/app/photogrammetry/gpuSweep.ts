@@ -64,7 +64,7 @@ export function parseSweepPayload(blob: Uint8Array): GpuSweepPayload {
     imageWidth.push(u32())
     imageHeight.push(u32())
     imageOffset.push(grayFloats)
-    grayFloats += imageWidth[i] * imageHeight[i]
+    grayFloats += imageWidth[i]! * imageHeight[i]!
   }
   // The gray block starts here; share one backing store with zero copies.
   const gray = floats(grayFloats)

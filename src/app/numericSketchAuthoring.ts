@@ -15,9 +15,9 @@ export function numericSlotSources(a:Point2,b:Point2,width:number,plane:SketchPl
  const ids=['slot-line-0','slot-cap-0','slot-line-1','slot-cap-1']
  const base={closed:false,plane:{origin:[...plane.origin] as [number,number,number],u:[...plane.u] as [number,number,number],v:[...plane.v] as [number,number,number]}}
  return {ids,document:{version:1,bodies:[],sketches:[
-  {...base,id:ids[0],name:'Slot side',points:[rightA,rightB]},
-  {...base,id:ids[1],name:'Slot cap',points:[rightB,leftB],analytic:capB},
-  {...base,id:ids[2],name:'Slot side',points:[leftB,leftA]},
-  {...base,id:ids[3],name:'Slot cap',points:[leftA,rightA],analytic:capA},
+  {...base,id:ids[0]!,name:'Slot side',points:[rightA,rightB]},
+  {...base,id:ids[1]!,name:'Slot cap',points:[rightB,leftB],analytic:capB},
+  {...base,id:ids[2]!,name:'Slot side',points:[leftB,leftA]},
+  {...base,id:ids[3]!,name:'Slot cap',points:[leftA,rightA],analytic:capA},
  ]}}
 }

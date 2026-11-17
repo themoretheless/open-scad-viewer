@@ -35,7 +35,7 @@ export function pickDirectMeshHits(p: Point2, camera: OrbitCamera, candidates: I
     up: Vec3 = [sy * sp, cy * sp, -cp],
     toward: Vec3 = [sy * cp, cy * cp, sp]
   const far = 1e6
-  const origin = [0, 1, 2].map(k => p[0] * right[k] + p[1] * up[k] + far * toward[k]) as Vec3
+  const origin = [0, 1, 2].map(k => p[0] * right[k]! + p[1] * up[k]! + far * toward[k]!) as Vec3
   const ray = { origin, direction: [-toward[0], -toward[1], -toward[2]] as Vec3 }
   const hits: PickHit[] = []
   for (const body of candidates) {
@@ -43,14 +43,14 @@ export function pickDirectMeshHits(p: Point2, camera: OrbitCamera, candidates: I
     const pos = body.mesh.positions,
       idx = body.mesh.indices
     for (let t = 0; t < idx.length / 3; t++) {
-      const a = idx[t * 3] * 3,
-        b = idx[t * 3 + 1] * 3,
-        c = idx[t * 3 + 2] * 3
+      const a = idx[t * 3]! * 3,
+        b = idx[t * 3 + 1]! * 3,
+        c = idx[t * 3 + 2]! * 3
       const d = rayTriangleDistance(
         ray,
-        [pos[a], pos[a + 1], pos[a + 2]],
-        [pos[b], pos[b + 1], pos[b + 2]],
-        [pos[c], pos[c + 1], pos[c + 2]],
+        [pos[a]!, pos[a + 1]!, pos[a + 2]!],
+        [pos[b]!, pos[b + 1]!, pos[b + 2]!],
+        [pos[c]!, pos[c + 1]!, pos[c + 2]!],
       )
       if (d !== null && (!best || d < best.distance)) best = { id: body.id, triangle: t, distance: d }
     }
@@ -79,7 +79,7 @@ export class PickCycle {
       Math.hypot(point[0] - this.last.point[0], point[1] - this.last.point[1]) <= this.tolerance
     const index = near || (options.cycle && this.last?.ids === ids) ? (this.last!.index + 1) % hits.length : 0
     this.last = { point, ids, index }
-    return hits[index]
+    return hits[index]!
   }
 
   /** Pin an explicit choice (from the candidate list) so the next repeated click continues after it. */
