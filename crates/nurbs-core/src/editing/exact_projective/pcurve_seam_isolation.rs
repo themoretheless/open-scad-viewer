@@ -143,14 +143,52 @@ pub(crate) fn isolate_rational_pcurve_line(
 ) -> PResult<Vec<PcurveSeamIsolatedSpan>> {
     isolate_equation(source, Some(max_width), work, |span, parameter, work| {
         let homogeneous = original_span(source, span, parameter, work)?;
-        homogeneous
-            .iter()
-            .zip(coefficients)
-            .try_fold(Poly::new(), |sum, (component, factor)| {
-                let term = scale(component, factor, work)?;
-                add(&sum, &term, false, work)
-            })
+        line_equation(&homogeneous, coefficients, work)
     })
+}
+
+fn line_equation(homogeneous: &[Poly], coefficients: &[Q; 3], work: &mut Work) -> PResult<Poly> {
+    homogeneous
+        .iter()
+        .zip(coefficients)
+        .try_fold(Poly::new(), |sum, (component, factor)| {
+            let term = scale(component, factor, work)?;
+            add(&sum, &term, false, work)
+        })
+}
+
+/// Endpoint coordinates of the continuous pieces that lie on the line.
+pub(crate) fn coincident_span_endpoints(
+    source: &Curve,
+    coefficients: &[Q; 3],
+    axis: usize,
+    work: &mut Work,
+) -> PResult<Vec<[Q; 2]>> {
+    use super::chart_nonnegative::sum;
+    let mut result = Vec::new();
+    for (span, parameter) in active_spans(source) {
+        let homogeneous = original_span(source, span, parameter, work)?;
+        if !line_equation(&homogeneous, coefficients, work)?.is_empty() {
+            continue;
+        }
+        let component = &homogeneous[axis];
+        let weights = &homogeneous[2];
+        let start = component.first().cloned().unwrap_or_else(Q::zero);
+        let end = sum(component, work)?;
+        let w0 = weights
+            .first()
+            .filter(|w| !w.is_zero())
+            .ok_or(Refusal::UnprovedDenominator)?;
+        let w1 = sum(weights, work)?;
+        if w1.is_zero() {
+            return Err(Refusal::UnprovedDenominator);
+        }
+        result.push([
+            work.op(&start, w0, |a, b| a / b)?,
+            work.op(&end, &w1, |a, b| a / b)?,
+        ]);
+    }
+    Ok(result)
 }
 
 fn isolate_equation(

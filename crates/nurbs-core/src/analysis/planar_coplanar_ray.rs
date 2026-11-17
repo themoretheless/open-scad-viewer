@@ -13,7 +13,8 @@ use crate::{
     editing::{
         exact_derivative::Refusal,
         exact_projective::{
-            PcurveSeamIsolation, pcurve_seam_isolation::isolate_rational_pcurve_line,
+            PcurveSeamIsolation,
+            pcurve_seam_isolation::{coincident_span_endpoints, isolate_rational_pcurve_line},
         },
     },
     trim::trim_domain::exact_loop_joins,
@@ -141,6 +142,11 @@ impl RayClock {
         })
     }
 
+    fn exact_parameter(&self, p: &Q, work: &mut Work) -> std::result::Result<Q, Refusal> {
+        let delta = work.op(p, &self.origin, |a, b| a - b)?;
+        Ok(work.op(&delta, &self.step, |a, b| a / b)?)
+    }
+
     fn parameter(
         &self,
         interval: Interval,
@@ -148,8 +154,7 @@ impl RayClock {
     ) -> std::result::Result<[Q; 2], Refusal> {
         let map = |p, work: &mut Work| {
             let p = work.lift(p)?;
-            let delta = work.op(&p, &self.origin, |a, b| a - b)?;
-            work.op(&delta, &self.step, |a, b| a / b)
+            self.exact_parameter(&p, work)
         };
         let mut range = [map(interval.lo, work)?, map(interval.hi, work)?];
         if self.step.is_negative() {
@@ -338,16 +343,7 @@ pub(super) fn partition_support_line(
     work: &mut Work,
     winding_cells: &mut usize,
 ) -> Result<CoplanarRayPartitionOutcome> {
-    check(
-        (1..=256).contains(&face.loops.len()),
-        "Support line needs bounded contours",
-    )?;
-    for contour in &face.loops {
-        check(
-            exact_loop_joins(contour)? == Some(true),
-            "Support line needs exact closed contours",
-        )?;
-    }
+    validate_closed_contours(face)?;
     let domain = crate::trim::trim_domain::TrimDomain::new(&face.loops, options.winding_tolerance)?;
     let axes = face.projection.retained_axes;
     let projected = [
@@ -470,4 +466,43 @@ fn gap_midpoint(
         result[i] = [interval.lo, interval.hi];
     }
     Ok(Some(result))
+}
+
+fn validate_closed_contours(face: &ProjectedTrimmedFace) -> Result<()> {
+    check(
+        (1..=256).contains(&face.loops.len()),
+        "Support line needs bounded contours",
+    )?;
+    for contour in &face.loops {
+        check(
+            exact_loop_joins(contour)? == Some(true),
+            "Support line needs exact closed contours",
+        )?;
+    }
+    Ok(())
+}
+
+pub(super) fn coincident_boundary_ranges(
+    face: &ProjectedTrimmedFace,
+    line: &ExactSupportLine,
+    work: &mut Work,
+) -> Result<std::result::Result<Vec<[Q; 2]>, Refusal>> {
+    validate_closed_contours(face)?;
+    let axes = face.projection.retained_axes;
+    Ok((|| {
+        let clock = RayClock::from_exact(
+            axes.map(|i| line.origin[i].clone()),
+            axes.map(|i| line.direction[i].clone()),
+            work,
+        )?;
+        let mut ranges = Vec::new();
+        for curve in face.loops.iter().flatten() {
+            for [a, b] in coincident_span_endpoints(curve, &clock.equation, clock.axis, work)? {
+                let a = clock.exact_parameter(&a, work)?;
+                let b = clock.exact_parameter(&b, work)?;
+                ranges.push(if a <= b { [a, b] } else { [b, a] });
+            }
+        }
+        Ok(merge_bands(ranges))
+    })())
 }

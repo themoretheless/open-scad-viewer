@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0344",
+  "testedBase": "81aeb8a7a4c5ab462091f0c4e5f20c7991fa2534",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts",
+    "--test",
+    "exact_pcurve_line_contact_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 20,
+  "scope": [
+    "Intersect certified exact boundary intervals sourced from rational trim spans coincident with the support line.",
+    "The exact limits of continuous coincident spans certify closed subintervals of the contour image, including nonbinary endpoints and singleton overlaps. Excursions and isolated contacts from noncoincident spans are outside this proof."
+  ],
+  "logSha256": "4b4564309cfa52f886bc3c77d7004fd3d10ca2ddcee942f2e3ca19ba90cd5be5",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "5ee23e24538fb2949f69527dd9088db2d2d7b088acba41dc298b24104c938741",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs": "7226cdb23c9b6264310c3ae9da57c98e3b655391b45761b47579ec42b8fda028",
+    "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs": "652f259bc265283d0245826d511cbba2aa62dc71e4650ce3b22072ff1642e0d3",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "3a5aea137a1c50ac3d09c0cd45557c2c7511ceaaec9b9c5d4ca7d913694beb11",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "84ba2ee80a3e2431960c3e54af298d02dee26514ee5b8f884d7ea0a6ab3d2cb7"
+  }
+}

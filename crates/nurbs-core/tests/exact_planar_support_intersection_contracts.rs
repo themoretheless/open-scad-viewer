@@ -5,9 +5,10 @@ use nurbs_core::{
             PlanarProjectionOutcome, PlanarSurfaceProjection, project_planar_surface,
         },
         exact_plane_intersection::{
-            ExactPlanarIntersectionSegment, PlanarIntersectionSegments, PlanarSegmentStorage,
-            StoredPlanarIntersection, SupportPlaneIntersection, TrimmedPlanarIntersection,
-            build_planar_intersection_segments, intersect_planar_supports,
+            ExactPlanarIntersectionSegment, PlanarBoundaryIntersection, PlanarIntersectionSegments,
+            PlanarSegmentStorage, StoredPlanarIntersection, SupportPlaneIntersection,
+            TrimmedPlanarIntersection, build_planar_intersection_segments,
+            intersect_planar_face_boundaries, intersect_planar_supports,
             intersect_trimmed_planar_faces, optimize_planar_intersection_segment_storage,
             store_planar_intersection_segment, store_trimmed_planar_intersection,
         },
@@ -567,4 +568,85 @@ fn stores_all_split_intersection_edges_with_strict_chart_gaps() {
         no_approximation.outcome,
         StoredPlanarIntersection::NoAdmissibleStorage
     ));
+}
+
+fn perpendicular_boundary_faces() -> [ProjectedTrimmedFace; 2] {
+    let z = plane(|_, _| 0.);
+    let mut y = z.clone();
+    y.retained_axes = [0, 2];
+    y.omitted_axis = 1;
+    [
+        ProjectedTrimmedFace {
+            projection: z,
+            loops: vec![rectangle([-2., 2.], [0., 1.], false)],
+        },
+        ProjectedTrimmedFace {
+            projection: y,
+            loops: vec![rectangle([0., 1.], [0., 1.], true)],
+        },
+    ]
+}
+
+#[test]
+fn proves_a_nonbinary_endpoint_of_a_coincident_rational_span() {
+    let [mut a, b] = perpendicular_boundary_faces();
+    a.loops = vec![vec![
+        Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 0.5, 1., 1., 1.],
+            control_points: vec![vec![-2., 0.], vec![-1., 0.], vec![1., 0.], vec![2., 1.]],
+            weights: vec![1., 1., 2., 1.],
+            periodic: false,
+        },
+        Curve {
+            degree: 1,
+            knots: vec![0., 0., 0.5, 1., 1.],
+            control_points: vec![vec![2., 1.], vec![-2., 1.], vec![-2., 0.]],
+            weights: vec![1.; 3],
+            periodic: false,
+        },
+    ]];
+    let result = intersect_planar_face_boundaries(&a, &b, WORK).unwrap();
+    let PlanarBoundaryIntersection::Transverse {
+        line,
+        shared_boundary,
+    } = &result.outcome
+    else {
+        panic!("{:?}", result.outcome);
+    };
+    assert_eq!(line.clock_axis, 0);
+    assert_eq!(shared_boundary, &[[q(0, 1), q(1, 3)]]);
+    assert_eq!(
+        result.outcome,
+        intersect_planar_face_boundaries(&b, &a, WORK)
+            .unwrap()
+            .outcome
+    );
+}
+
+#[test]
+fn retains_singleton_shared_boundary_and_refuses_under_budget_exhaustion() {
+    let [mut a, b] = perpendicular_boundary_faces();
+    a.loops = vec![rectangle([-2., 0.], [0., 1.], false)];
+    let full = intersect_planar_face_boundaries(&a, &b, WORK).unwrap();
+    let PlanarBoundaryIntersection::Transverse {
+        shared_boundary, ..
+    } = full.outcome
+    else {
+        panic!("{:?}", full.outcome);
+    };
+    assert_eq!(shared_boundary, [[q(0, 1), q(0, 1)]]);
+    let limited = intersect_planar_face_boundaries(&a, &b, full.work_used - 1).unwrap();
+    assert_eq!(
+        limited.outcome,
+        PlanarBoundaryIntersection::Refused(
+            nurbs_core::editing::exact_derivative::Refusal::ResourceLimit
+        )
+    );
+    assert!(limited.work_used < full.work_used);
+    a.loops = vec![rectangle([-2., -1.], [0., 1.], false)];
+    let disjoint = intersect_planar_face_boundaries(&a, &b, WORK).unwrap();
+    assert!(
+        matches!(disjoint.outcome, PlanarBoundaryIntersection::Transverse { shared_boundary, .. } if shared_boundary.is_empty())
+    );
 }

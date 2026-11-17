@@ -262,3 +262,8 @@ pub use storage::{
     optimize_planar_intersection_segment_storage, store_planar_intersection_segment,
     store_trimmed_planar_intersection,
 };
+
+mod boundary;
+pub use boundary::{
+    PlanarBoundaryIntersection, PlanarBoundaryIntersectionReport, intersect_planar_face_boundaries,
+};
