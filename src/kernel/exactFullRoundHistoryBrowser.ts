@@ -44,7 +44,7 @@ export class ExactFullRoundHistoryBrowser {
     this.workersStarted++
     return new Promise((resolve, reject) => {
       let settled = false
-      let timer: ReturnType<typeof setTimeout> | undefined
+      let timer: ReturnType<typeof setTimeout> | undefined = undefined
       const finish = (error?: Error, result?: MeshData) => {
         if (settled) return
         settled = true
@@ -65,7 +65,7 @@ export class ExactFullRoundHistoryBrowser {
       const abort = () => finish(new Error('Exact history edit cancelled'))
       const failure = () => finish(new Error('Exact history Worker failed'))
       const message = (event: MessageEvent<unknown>) => {
-        const v = event.data as any
+        const v = event.data as { type?: unknown; id?: unknown; ok?: unknown; error?: unknown; mesh?: unknown } | null
         if (!v || v.type !== 'exact-history-result/1' || v.id !== request.id || typeof v.ok !== 'boolean') {
           finish(new Error('Uncorrelated exact history Worker result'))
           return

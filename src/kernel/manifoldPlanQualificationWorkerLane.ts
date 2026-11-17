@@ -199,7 +199,7 @@ export class ManifoldPlanQualificationWorkerLane {
       let settling = false
       let started = false
       let stopReason: 'cancelled' | 'startup' | 'deadline' | null = null
-      let startupTimer: ReturnType<typeof setTimeout> | undefined
+      let startupTimer: ReturnType<typeof setTimeout> | undefined = undefined
       let deadlineTimer: ReturnType<typeof setTimeout> | undefined
       let graceTimer: ReturnType<typeof setTimeout> | undefined
 

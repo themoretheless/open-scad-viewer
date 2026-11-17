@@ -29,7 +29,7 @@ export function buildExactSolidsInWorker(
     const worker = factory()
     const validationAbort = new AbortController()
     let settled = false
-    let timer: ReturnType<typeof setTimeout> | undefined
+    let timer: ReturnType<typeof setTimeout> | undefined = undefined
     const finish = (error?: unknown, bodies?: DirectBody[]) => {
       if (settled) return
       settled = true

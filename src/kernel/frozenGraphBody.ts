@@ -1,3 +1,4 @@
+import type { ProbedJson } from './nativeGeometrySnapshot'
 import { callNurbsRust } from './geometry/nurbs'
 export interface FrozenGraphRestoreOptions {
   maxBytes?: number
@@ -86,14 +87,19 @@ function sameJson(a: unknown, b: unknown, depth = 0): boolean {
   const ka = Object.keys(a),
     kb = Object.keys(b)
   return (
-    ka.length === kb.length && ka.every(k => Object.hasOwn(b, k) && sameJson((a as any)[k], (b as any)[k], depth + 1))
+    ka.length === kb.length &&
+    ka.every(
+      k =>
+        Object.hasOwn(b, k) &&
+        sameJson((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k], depth + 1),
+    )
   )
 }
 export function validFrozenGraphBody(value: unknown, expected: FrozenGraphExpectation): value is FrozenGraphBody {
   try {
     const v = value as FrozenGraphBody,
       r = v.report,
-      g = v.artifact.geometry as any
+      g = v.artifact.geometry as ProbedJson
     if (
       v.representation !== 'native-exact-graph-body' ||
       v.artifact.format !== expected.format ||
@@ -208,7 +214,7 @@ export function validFrozenGraphDisplay(
     if (!validFrozenGraphBody(value, expected) || !Number.isSafeInteger(segments) || segments < 1 || segments > 64)
       return false
     const d = (value as FrozenGraphDisplay).display,
-      g = value.artifact.geometry as any
+      g = value.artifact.geometry as ProbedJson
     if (
       d.method !== 'native-exact-graph-edges/1' ||
       d.segments !== segments ||

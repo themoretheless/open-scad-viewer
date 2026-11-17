@@ -149,7 +149,7 @@ export class MainSolidWorkerClient {
     const id = this.nextId++
     return new Promise((resolve, reject) => {
       let settled = false
-      let timer: ReturnType<typeof setTimeout> | undefined
+      let timer: ReturnType<typeof setTimeout> | undefined = undefined
       const finish = (
         error?: Error,
         result?: MainSolidResults[K],
@@ -175,7 +175,8 @@ export class MainSolidWorkerClient {
         // request (or a worker that lost the document) the next request sends the base again.
         else if (retainAs !== undefined) this.resident = error ? null : { document: new WeakRef(base!), key: retainAs }
         else if (error instanceof MainSolidWorkerError && error.code === 'CAD_RESIDENT_MISSING') this.resident = null
-        error ? reject(error) : resolve(result!)
+        if (error) reject(error)
+        else resolve(result!)
         // Observers cannot change command settlement, cancellation or geometry.
         if (
           onTiming &&

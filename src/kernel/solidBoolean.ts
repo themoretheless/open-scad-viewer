@@ -126,6 +126,7 @@ function booleanPair(
           `Ядро не может выполнить точную операцию для этой пары тел (${a.name} и ${b.name}), тела не изменены. Причина ядра: ${reason}`,
           `The kernel cannot perform the exact operation for this pair of bodies (${a.name} and ${b.name}); the bodies are unchanged. Kernel reason: ${reason}`,
         ),
+        { cause: refusal },
       )
     }
   }

@@ -1,3 +1,4 @@
+import type { ProbedJson } from './nativeGeometrySnapshot'
 /** Presentation guards for native interval receipts; no geometric decisions. */
 export interface AnnularG2Evidence {
   capGeometricG2Certified?: boolean
@@ -5,12 +6,12 @@ export interface AnnularG2Evidence {
   capNormalChordUpper?: number
   capCurvatureTensorUpper?: number
 }
-export function readAnnularG2Evidence(smooth: any): AnnularG2Evidence {
+export function readAnnularG2Evidence(smooth: ProbedJson): AnnularG2Evidence {
   const caps = smooth?.capInternalSeams
   if (!Array.isArray(caps) || caps.length !== 2 || (!caps[0]?.geometricG2 && !caps[1]?.geometricG2)) return {}
-  const count = (x: any) => Number.isSafeInteger(x) && x >= 0 && x <= 100000
-  const finite = (x: any) => typeof x === 'number' && Number.isFinite(x) && x >= 0
-  const validFace = (face: any) => Number.isSafeInteger(face) && face >= 0 && face < 1024
+  const count = (x: number) => Number.isSafeInteger(x) && x >= 0 && x <= 100000
+  const finite = (x: number) => typeof x === 'number' && Number.isFinite(x) && x >= 0
+  const validFace = (face: number) => Number.isSafeInteger(face) && face >= 0 && face < 1024
   let complete = true,
     cells = 0,
     seams = 0,

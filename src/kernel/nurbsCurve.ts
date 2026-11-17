@@ -330,7 +330,6 @@ export function closestPointOnNurbsCurve(
     const step = grad / hess
     const nextU = Math.min(uMax, Math.max(uMin, u - step))
     if (Math.abs(nextU - u) <= 1e-11 * Math.max(1, span)) {
-      u = nextU
       break
     }
     const nextEv = evaluateNurbsCurve(curve, nextU)

@@ -248,7 +248,7 @@ export function createCadKernelOps(wasm: CadToplevel, rawCadSolidConstructor: ty
           try {
             invalid.delete()
           } catch (cleanupError) {
-            throw new AggregateError([failure, cleanupError], 'Invalid solid cleanup failed')
+            throw new AggregateError([failure, cleanupError], 'Invalid solid cleanup failed', { cause: cleanupError })
           }
           throw failure
         }
@@ -260,7 +260,9 @@ export function createCadKernelOps(wasm: CadToplevel, rawCadSolidConstructor: ty
           try {
             geometry.delete()
           } catch (cleanupError) {
-            throw new AggregateError([error, cleanupError], 'Solid construction and cleanup failed')
+            throw new AggregateError([error, cleanupError], 'Solid construction and cleanup failed', {
+              cause: cleanupError,
+            })
           }
         }
         throw error
@@ -298,7 +300,7 @@ export function createCadKernelOps(wasm: CadToplevel, rawCadSolidConstructor: ty
           try {
             invalid.delete()
           } catch (cleanupError) {
-            throw new AggregateError([failure, cleanupError], 'Invalid solid cleanup failed')
+            throw new AggregateError([failure, cleanupError], 'Invalid solid cleanup failed', { cause: cleanupError })
           }
           throw failure
         }
@@ -310,7 +312,9 @@ export function createCadKernelOps(wasm: CadToplevel, rawCadSolidConstructor: ty
           try {
             geometry.delete()
           } catch (cleanupError) {
-            throw new AggregateError([error, cleanupError], 'Solid construction and cleanup failed')
+            throw new AggregateError([error, cleanupError], 'Solid construction and cleanup failed', {
+              cause: cleanupError,
+            })
           }
         }
         throw error

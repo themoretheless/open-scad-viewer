@@ -161,7 +161,7 @@ function ownModuleGeometry(module: CadToplevel): () => void {
       try {
         if (!geometry.isDeleted()) geometry.delete()
       } catch (cleanupError) {
-        throw new AggregateError([error, cleanupError], 'Invalid solid cleanup failed')
+        throw new AggregateError([error, cleanupError], 'Invalid solid cleanup failed', { cause: cleanupError })
       }
       throw error
     }

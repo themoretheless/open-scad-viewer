@@ -89,7 +89,7 @@ export function unpackWasm(input: Uint8Array): Uint8Array<ArrayBuffer> {
     available -= n
     return entry >>> 5
   }
-  let final = 0
+  let final: number
   do {
     final = read(1)
     const type = read(2)

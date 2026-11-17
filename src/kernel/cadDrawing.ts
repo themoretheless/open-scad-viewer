@@ -105,8 +105,8 @@ export function cadDrawing(bodies: DirectBody[], sectionZ?: number) {
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
     `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
   ]
-  let pdf = '%PDF-1.4\n',
-    offsets = [0]
+  let pdf = '%PDF-1.4\n'
+  const offsets = [0]
   objects.forEach((o, i) => {
     offsets.push(pdf.length)
     pdf += `${i + 1} 0 obj\n${o}\nendobj\n`

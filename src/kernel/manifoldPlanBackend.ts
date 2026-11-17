@@ -349,7 +349,7 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
     } catch (error) {
       const cleanupError = safeDelete(this.kernel, current)
       if (cleanupError !== undefined)
-        throw new AggregateError([error, cleanupError], 'Cylinder construction and cleanup failed')
+        throw new AggregateError([error, cleanupError], 'Cylinder construction and cleanup failed', { cause: error })
       throw error
     }
   }
@@ -419,7 +419,7 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
     } catch (error) {
       const cleanupError = safeDelete(this.kernel, solid)
       if (cleanupError !== undefined) {
-        throw new AggregateError([error, cleanupError], 'Original promotion and cleanup failed')
+        throw new AggregateError([error, cleanupError], 'Original promotion and cleanup failed', { cause: error })
       }
       throw error
     }

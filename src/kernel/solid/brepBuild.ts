@@ -76,7 +76,7 @@ function buildExactSolidBody(nodes: readonly BrepNode[], root: string, name: str
   if (definition?.kind !== 'brep') {
     throw new Error(`"${name}" did not resolve to an exact solid.`)
   }
-  const { kind, ...brep } = definition
+  const { kind: _kind, ...brep } = definition
   return {
     id: crypto.randomUUID(),
     name,

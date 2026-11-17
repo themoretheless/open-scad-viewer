@@ -1,6 +1,6 @@
 import type { SweepViewportEvidence } from './sweepViewportEvidence'
 export { readSweepViewportEvidence, type SweepViewportEvidence } from './sweepViewportEvidence'
-import { readNativeGeometryData } from '../../nativeGeometrySnapshot'
+import { readNativeGeometryData, type ProbedJson } from '../../nativeGeometrySnapshot'
 import { readAnnularG2Evidence } from '../../annularG2Evidence'
 import type { NativeGeometryArtifact } from '../../../core/nativeGeometry'
 import { MAX_SWEEP_SEAM_WORK } from '../../nurbsSweepAudit'
@@ -131,7 +131,7 @@ export function readSweepBodyBoundaryViewportEvidence(artifact: NativeGeometryAr
   }
 }
 /** Validate transport scope, coverage and work; all jet decisions are native. */
-function readRetainedDecompositionProof(decomposition: any, order: 1 | 2) {
+function readRetainedDecompositionProof(decomposition: ProbedJson, order: 1 | 2) {
   const decompositionDeclared =
     decomposition?.method === 'exact-retained-decomposition-strip-jets' &&
     decomposition.scope === 'within-source-profile-decomposition-only' &&
@@ -164,7 +164,7 @@ function readRetainedDecompositionProof(decomposition: any, order: 1 | 2) {
         decomposition.exactWork > 0 &&
         decomposition.exactWork <= 1000000 &&
         decomposition.joins.every(
-          (j: any) =>
+          (j: ProbedJson) =>
             Number.isSafeInteger(j.leftPatch) &&
             j.leftPatch >= 0 &&
             j.leftPatch < 4096 &&
@@ -179,9 +179,9 @@ function readRetainedDecompositionProof(decomposition: any, order: 1 | 2) {
             Number.isSafeInteger(j.exactWork) &&
             j.exactWork > 0,
         ) &&
-        new Set(decomposition.joins.map((j: any) => `${j.leftPatch}:${j.rightPatch}`)).size ===
+        new Set(decomposition.joins.map((j: ProbedJson) => `${j.leftPatch}:${j.rightPatch}`)).size ===
           decompositionJoinCount &&
-        decomposition.joins.reduce((sum: number, j: any) => sum + j.exactWork, 0) === decomposition.exactWork
+        decomposition.joins.reduce((sum: number, j: ProbedJson) => sum + j.exactWork, 0) === decomposition.exactWork
   return { certified, count: decompositionJoinCount }
 }
 
@@ -381,7 +381,7 @@ function hasUniqueNonNegativeSafeIntegers(arr: unknown[]): boolean {
 }
 
 function readRetainedProfileViewportEvidence(
-  smooth: any,
+  smooth: ProbedJson,
 ): Pick<
   SweepViewportEvidence,
   | 'profileG2Certified'
@@ -408,7 +408,7 @@ function readRetainedProfileViewportEvidence(
     smooth.unpairedEdges.length === 0 &&
     smooth.edgeIds.length > 0 &&
     hasUniqueNonNegativeSafeIntegers(smooth.edgeIds)
-  const auditCertified = (audit: any, order: 1 | 2, availableWork: number) =>
+  const auditCertified = (audit: ProbedJson, order: 1 | 2, availableWork: number) =>
     completeExtraction &&
     audit?.method === 'constant-projective-strip-jets' &&
     audit.exactG1G2Certified === true &&
@@ -419,7 +419,7 @@ function readRetainedProfileViewportEvidence(
     audit.exactWork >= 0 &&
     audit.exactWork <= availableWork &&
     audit.seams.every(
-      (seam: any) =>
+      (seam: ProbedJson) =>
         seam &&
         seam.certified === true &&
         seam.exactIdentity === true &&
@@ -475,7 +475,7 @@ function readRetainedProfileViewportEvidence(
     station.exactWork === station.g2?.exactWork + (station.g1Audit?.exactWork ?? 0) &&
     station.exactWork <= station.maxWork &&
     smooth.totalExactWork === smooth.exactWork + station.exactWork
-  const stationAuditCertified = (audit: any, order: 1 | 2, available: number) =>
+  const stationAuditCertified = (audit: ProbedJson, order: 1 | 2, available: number) =>
     stationComplete &&
     audit?.method === 'constant-projective-strip-jets' &&
     audit.exactG1G2Certified === true &&
@@ -486,7 +486,7 @@ function readRetainedProfileViewportEvidence(
     Array.isArray(audit.seams) &&
     audit.seams.length === stationEdges.length &&
     audit.seams.every(
-      (seam: any) =>
+      (seam: ProbedJson) =>
         seam?.certified === true &&
         seam.exactIdentity === true &&
         seam.regularityCertified === true &&

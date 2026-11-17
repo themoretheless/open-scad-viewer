@@ -42,7 +42,7 @@ export class MainSolidWorkerPool {
   private readonly busySlots: Uint8Array
   private activeSlotCount = 0
   private readonly perWorkerCompleted: number[]
-  private readonly queue: QueuedSolidTask<any>[] = []
+  private readonly queue: QueuedSolidTask[] = []
   private queueHead = 0
   private activeQueuedCount = 0
   private peakQueueDepth = 0
@@ -121,7 +121,7 @@ export class MainSolidWorkerPool {
       const q = this.queue
       const len = q.length
       if (len === this.queueHead || task.priority <= q[len - 1]!.priority) {
-        q.push(task)
+        q.push(task as unknown as QueuedSolidTask)
       } else {
         let lo = this.queueHead
         let hi = len
@@ -133,7 +133,7 @@ export class MainSolidWorkerPool {
             lo = mid + 1
           }
         }
-        q.splice(lo, 0, task)
+        q.splice(lo, 0, task as unknown as QueuedSolidTask)
       }
       this.activeQueuedCount++
       if (this.activeQueuedCount > this.peakQueueDepth) {
@@ -177,10 +177,10 @@ export class MainSolidWorkerPool {
     return bestWarm ?? firstCold
   }
 
-  private dequeueTask(): QueuedSolidTask<any> | null {
+  private dequeueTask(): QueuedSolidTask | null {
     while (this.queueHead < this.queue.length) {
       const task = this.queue[this.queueHead]!
-      this.queue[this.queueHead] = undefined as unknown as QueuedSolidTask<any>
+      this.queue[this.queueHead] = undefined as unknown as QueuedSolidTask
       this.queueHead++
       if (this.queueHead === this.queue.length) {
         this.queue.length = 0

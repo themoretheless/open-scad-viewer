@@ -170,6 +170,7 @@ async function evaluateInternal(
         throw new AggregateError(
           [primaryFailure, disposeFailure],
           'Manifold plan evaluation failed and result disposal also failed',
+          { cause: disposeFailure },
         )
       }
       // eslint-disable-next-line no-unsafe-finally -- disposal failure is reported, joined with the primary failure when there is one
