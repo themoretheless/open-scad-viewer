@@ -33,7 +33,7 @@ mod pcurve_angle;
 pub use pcurve_angle::{PcurveAngleOutcome, PcurveAngleReport, certify_pcurve_seam_angle};
 mod pcurve_angle_bands;
 pub use pcurve_angle_bands::{PcurveAngleBandsOutcome, PcurveAngleBandsReport, isolate_pcurve_seam_angle};
-mod pcurve_gap;
+pub(super) mod pcurve_gap;
 pub use pcurve_gap::{PcurveGapOutcome, PcurveGapReport, certify_pcurve_seam_gap};
 mod pcurve_gap_bands;
 pub use pcurve_gap_bands::{

@@ -1,7 +1,10 @@
 //! Exact continuous gap threshold for two paired surface trim traces.
 use super::{
-    PcurvePullbackRefusal, chart_nonnegative::nonnegative,
-    pcurve_agreement::compare_surface_fields, pcurve_mobius::scale,
+    PcurvePullbackRefusal,
+    chart_nonnegative::nonnegative,
+    pcurve_agreement::compare_surface_fields,
+    pcurve_lift::{trace_cells, validate_inputs},
+    pcurve_mobius::{original_span, scale},
 };
 use crate::{
     Result, check,
@@ -71,6 +74,45 @@ pub fn certify_pcurve_seam_gap(
         outcome,
         work_used: work.used,
     })
+}
+
+/// Check synchronized degree-one edge and trim traces on their whole clock.
+pub(in crate::editing) fn certify_pcurve_edge_gap(
+    surface: &Surface,
+    pcurve: &Curve,
+    edge: &Curve,
+    tolerance: &Q,
+    work: &mut Work,
+) -> PResult<bool> {
+    let axes = validate_inputs(surface, pcurve, work.limit).map_err(|_| Refusal::InvalidOutput)?;
+    if pcurve.knots != edge.knots || pcurve.degree != 1 || edge.degree != 1 {
+        return Err(Refusal::InvalidOutput);
+    }
+    let squared = work.op(tolerance, tolerance, |a, b| a * b)?;
+    let result = trace_cells(
+        surface,
+        pcurve,
+        &axes,
+        &[],
+        work,
+        |parameter, target, work| {
+            let span = edge.knots.partition_point(|&t| t <= parameter[0]) - 1;
+            if span >= edge.control_points.len() || edge.knots[span + 1] < parameter[1] {
+                return Err(Refusal::UnprovedIdentity.into());
+            }
+            let original = original_span(edge, span, parameter, work)?;
+            Ok(if within(&original, target, &squared, work)? {
+                ControlFlow::Continue(())
+            } else {
+                ControlFlow::Break(())
+            })
+        },
+    );
+    match result {
+        Ok(result) => Ok(matches!(result, ControlFlow::Continue(()))),
+        Err(PcurvePullbackRefusal::Geometry(reason)) => Err(reason),
+        Err(PcurvePullbackRefusal::UnprovedChartDomain) => Err(Refusal::UnprovedIdentity),
+    }
 }
 
 fn within(a: &[Poly], b: &[Poly], tolerance_squared: &Q, work: &mut Work) -> PResult<bool> {

@@ -246,3 +246,9 @@ mod store_curve;
 pub use store_curve::{
     StoredSurfacePlaneCurve, StoredSurfacePlaneCurveReport, store_surface_plane_section_curve,
 };
+
+mod store_pair;
+pub use store_pair::{
+    StoredSurfacePlaneSectionPair, StoredSurfacePlaneSectionPairReport,
+    store_surface_plane_section_pair,
+};

@@ -6,6 +6,7 @@ use nurbs_core::{
         approximate_surface_plane_graph, approximate_surface_plane_graph_xyz,
         audit_surface_plane_graphs, audit_surface_plane_side, refine_surface_plane_side,
         sample_surface_plane_graph, store_surface_plane_section_curve,
+        store_surface_plane_section_pair,
     },
     surface::Surface,
 };
@@ -493,4 +494,77 @@ fn projects_all_controls_to_the_plane_and_keeps_exact_integer_knots() {
     )
     .unwrap();
     assert!(matches!(limited.outcome, Err(Refusal::ResourceLimit)));
+}
+
+#[test]
+fn stores_an_exact_affine_pair_in_the_original_uv_clock() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let mut patch = surface(1, vec![-2., -2., 4., 4.], &[-1., 1.]);
+    patch.weights = vec![vec![1.; 2]; 2];
+    let options = SurfacePlaneWorldPolylineOptions {
+        span: [1, 1],
+        solve_axis: UvAxis::U,
+        max_xyz_error: 1e-20,
+        max_segments: 1,
+        max_work: WORK,
+    };
+    let report = store_surface_plane_section_pair(&patch, [0., 0., 1.], 0., options, 0.).unwrap();
+    let pair = report.outcome.unwrap();
+    assert_eq!(pair.pcurve.knots, pair.spatial.curve.knots);
+    assert_eq!(pair.pcurve.control_points, [vec![1., 0.], vec![1., 1.]]);
+    assert_eq!(
+        pair.spatial.curve.control_points,
+        [vec![0.5, 0., 0.], vec![0.5, 1., 0.]]
+    );
+    assert_eq!(pair.correspondence_tolerance, q(0));
+    let exhausted = store_surface_plane_section_pair(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldPolylineOptions {
+            max_work: report.work_used - 1,
+            ..options
+        },
+        0.,
+    )
+    .unwrap();
+    assert!(matches!(exhausted.outcome, Err(Refusal::ResourceLimit)));
+}
+
+#[test]
+fn verifies_the_lifted_gap_of_a_curved_pair_between_vertices() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let patch = Surface {
+        degree_u: 1,
+        degree_v: 2,
+        knots_u: vec![0., 0., 1., 1.],
+        knots_v: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![
+            vec![vec![0., 0., 0.], vec![0., 0.5, 0.], vec![0., 1., -1.]],
+            vec![vec![1., 0., 1.], vec![1., 0.5, 1.], vec![1., 1., 0.]],
+        ],
+        weights: vec![vec![1.; 3]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let options = SurfacePlaneWorldPolylineOptions {
+        span: [1, 2],
+        solve_axis: UvAxis::U,
+        max_xyz_error: 1. / 64.,
+        max_segments: 32,
+        max_work: WORK,
+    };
+    let tolerance = 1. / 64.;
+    let pair = store_surface_plane_section_pair(&patch, [0., 0., 1.], 0., options, tolerance)
+        .unwrap()
+        .outcome
+        .unwrap();
+    assert_eq!(pair.pcurve.knots, pair.spatial.curve.knots);
+    for edge in pair.pcurve.control_points.windows(2) {
+        let u = (edge[0][0] + edge[1][0]) / 2.;
+        let v = (edge[0][1] + edge[1][1]) / 2.;
+        assert!((u - v * v).abs() <= tolerance);
+    }
+    let exact = store_surface_plane_section_pair(&patch, [0., 0., 1.], 0., options, 0.).unwrap();
+    assert!(matches!(exact.outcome, Err(Refusal::UnprovedIdentity)));
 }

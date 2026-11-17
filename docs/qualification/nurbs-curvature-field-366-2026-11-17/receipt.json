@@ -1,0 +1,38 @@
+{
+  "id": "NURBS-0366",
+  "testedBase": "a203ea072c469f6ea4f8a60c770231fa72f47b4e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_pcurve_gap_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 60,
+  "scope": [
+    "Store a synchronized XYZ edge and UV trim curve with exact continuous agreement certification.",
+    "Shared integer knots synchronize a stored spatial edge and a trace in the original UV coordinates. An exact squared-distance polynomial certifies the gap throughout every interval."
+  ],
+  "logSha256": "8fe80acc56c436764611159db7d8fab0e22b31bfe99fddac729f0f6b2e7b1a0d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "da2692360a4d5526888b332b465754abc188c1e3a90981dbfeaf37634eba49ec",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs": "6d741468f74bf24bd70edf4cf330ceeea2f6ba9395cf5ed7425c44eacbece6a0",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "13c74cc94adafab6a07cfb3b1d442aa6ac3512dd8c4543b60bed425613281275",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "e7ed271777c6cb74d84d2eefe35d8e5681ec872da59a1b6ee1546b211a21c455",
+    "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs": "c1b4188c8cc50afd879e2b01f7930d32153f5e4ab9b4cc3c9a6fa3eb4440a874",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_gap.rs": "b79f610f0ec292bcf43bc2250213f21f08a2e3f0e7c4b029b898b1ca2e2b1f91",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_lift.rs": "6d25e545c6594834d64d59202d7cc9f49d1203757d8f21da8bf863480ed7eb31",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/store_curve.rs": "0025396e3e6dff7fa7cc666f43d3eec2d62680c86a8235da157543b7c723a90d",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/store_pair.rs": "56039ec7be57edfde67849df745ad49de95f0d557d32b8a776dbe034bffd06cd"
+  }
+}

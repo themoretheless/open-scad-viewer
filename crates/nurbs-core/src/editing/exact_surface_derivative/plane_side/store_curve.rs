@@ -1,7 +1,8 @@
 //! Store a certified planar section as a degree-one binary64 NURBS curve.
 use super::{
-    PResult, Q, Refusal, Result, Surface, SurfacePlaneWorldPolylineOptions, Work, check,
-    samples::cell_domain, validate, world_polyline::build,
+    PResult, Q, Refusal, Result, Surface, SurfacePlaneWorldPolyline,
+    SurfacePlaneWorldPolylineOptions, Work, check, samples::cell_domain, validate,
+    world_polyline::build,
 };
 use crate::curve::Curve;
 use num_traits::{Signed, ToPrimitive, Zero};
@@ -64,14 +65,24 @@ fn store(
     let tolerance = work.lift(options.max_xyz_error)?;
     let half = work.op(&tolerance, &Q::from_integer(2.into()), |a, b| a / b)?;
     let world = build(surface, [x, y, z], offset, options, domain, &half, work)?;
+    store_world(&world, [x, y, z], offset, &tolerance, work)
+}
+
+pub(super) fn store_world(
+    world: &SurfacePlaneWorldPolyline,
+    [x, y, z]: [f64; 3],
+    offset: f64,
+    tolerance: &Q,
+    work: &mut Work,
+) -> PResult<StoredSurfacePlaneCurve> {
     let normal = [work.lift(x)?, work.lift(y)?, work.lift(z)?];
     let offset = work.lift(offset)?;
     let norm_squared = dot(&normal, &normal, work)?;
     let mut points = Vec::with_capacity(world.xyz.len());
     let mut rounding = Q::zero();
     let mut plane_residual_upper = Q::zero();
-    for vertex in world.xyz {
-        let product = dot(&normal, &vertex, work)?;
+    for vertex in &world.xyz {
+        let product = dot(&normal, vertex, work)?;
         let residual = work.op(&product, &offset, |a, b| a - b)?;
         let scale = work.op(&residual, &norm_squared, |a, b| a / b)?;
         let mut stored = [Q::zero(), Q::zero(), Q::zero()];
@@ -100,12 +111,12 @@ fn store(
         points.push(point);
     }
     let xyz_error_upper = work.op(&world.xyz_error_upper, &rounding, |a, b| a + b)?;
-    if xyz_error_upper > tolerance {
+    if xyz_error_upper > *tolerance {
         return Err(Refusal::NotRepresentable);
     }
     let curve = Curve::from_polyline(points).map_err(|_| Refusal::InvalidOutput)?;
     Ok(StoredSurfacePlaneCurve {
-        domain,
+        domain: world.domain,
         curve,
         xyz_error_upper,
         plane_residual_upper,
