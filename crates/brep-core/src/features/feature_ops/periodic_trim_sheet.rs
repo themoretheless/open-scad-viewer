@@ -2,6 +2,7 @@
 use crate::{
     Coedge, Edge, Error, Face, FaceUse, Loop, Model, Result, Shell, TopoId, TopologyIds, Vertex,
 };
+use num_rational::BigRational;
 use nurbs_core::{
     editing::exact_periodic_surface::{
         PeriodicTrimEdge, PeriodicTrimEdgeRefusal, PeriodicTrimEdgeSource, PeriodicTrimEdgesReport,
@@ -91,6 +92,65 @@ pub struct InputBoundPeriodicTrimSheet {
     pub bound_sheet: BoundPeriodicTrimSheet,
     /// Bindings in model edge order, expressed in the original sample order.
     pub edge_bindings: Vec<PeriodicTrimInputEdgeBinding>,
+}
+
+/// One exact parameter on a persistent B-rep edge.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PeriodicTrimEdgeParameter {
+    pub edge_id: TopoId,
+    pub parameter: BigRational,
+}
+
+impl InputBoundPeriodicTrimSheet {
+    /// Find the edges containing a parameter on an original contour segment.
+    /// At a split inside the segment, return both incident edges in model order.
+    pub fn locate_input_parameter(
+        &self,
+        contour: usize,
+        segment: usize,
+        parameter: &BigRational,
+    ) -> Result<Vec<PeriodicTrimEdgeParameter>> {
+        let Some(model) = &self.bound_sheet.sheet.model else {
+            return Ok(Vec::new());
+        };
+        if self.edge_bindings.len() != model.edges.len() {
+            return Err(edge_count_error());
+        }
+
+        let mut hits = Vec::new();
+        for (index, binding) in self.edge_bindings.iter().enumerate() {
+            let source = &binding.source;
+            if source.contour != contour || source.segment != segment {
+                continue;
+            }
+            let [from, to] = &source.parameters;
+            if parameter < from.min(to) || parameter > from.max(to) {
+                continue;
+            }
+            let invalid = || {
+                Error::new(
+                    "BREP_PERIODIC_TRIM_SHEET",
+                    "Periodic trim edge binding has an invalid identity or parameter domain",
+                )
+            };
+            if model.1.edges.get(index) != Some(&binding.edge_id) || from == to {
+                return Err(invalid());
+            }
+            let curve = &model.edges[index].curve;
+            curve.validate()?;
+            let [start, end] = curve.domain().map(BigRational::from_float);
+            let (Some(start), Some(end)) = (start, end) else {
+                return Err(invalid());
+            };
+            let fraction = (parameter - from) / (to - from);
+            let edge_parameter = &start + fraction * (end - &start);
+            hits.push(PeriodicTrimEdgeParameter {
+                edge_id: binding.edge_id,
+                parameter: edge_parameter,
+            });
+        }
+        Ok(hits)
+    }
 }
 
 /// Build an exact sheet and trace persistent edges back to the caller's

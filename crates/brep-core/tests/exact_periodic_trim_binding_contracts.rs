@@ -226,3 +226,72 @@ fn refused_build_withholds_input_directed_bindings() {
     assert!(result.bound_sheet.sheet.refusal.is_some());
     assert!(result.edge_bindings.is_empty());
 }
+
+#[test]
+fn input_parameter_locates_both_seam_edges_and_exact_reversed_clock() {
+    use num_rational::BigRational;
+    let rational = |n: i64, d: i64| BigRational::new(n.into(), d.into());
+    let outer = [
+        [3.5, 0.125],
+        [3.5, 0.875],
+        [0.5, 0.875],
+        [0.5, 0.125],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_trim_sheet_with_input_bindings(&support(), &[&outer], 1e-8, 1_000_000)
+            .unwrap();
+    let hits = result
+        .locate_input_parameter(0, 3, &rational(1, 2))
+        .unwrap();
+    assert_eq!(hits.len(), 2);
+    assert_eq!(hits[0].edge_id, result.edge_bindings[0].edge_id);
+    assert_eq!(hits[1].edge_id, result.edge_bindings[1].edge_id);
+    assert_eq!(hits[0].parameter, rational(1, 2));
+    assert_eq!(hits[1].parameter, rational(1, 2));
+    let hits = result
+        .locate_input_parameter(0, 3, &rational(1, 3))
+        .unwrap();
+    assert_eq!(hits.len(), 1);
+    assert_eq!(hits[0].edge_id, result.edge_bindings[1].edge_id);
+    assert_eq!(hits[0].parameter, rational(2, 3));
+    assert!(
+        result
+            .locate_input_parameter(0, 3, &rational(4, 3))
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        result
+            .locate_input_parameter(1, 3, &rational(1, 3))
+            .unwrap()
+            .is_empty()
+    );
+}
+
+#[test]
+fn input_parameter_lookup_skips_refused_sheet_and_detects_identity_mismatch() {
+    use num_rational::BigRational;
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let parameter = BigRational::new(1.into(), 3.into());
+    let refused =
+        build_exact_periodic_trim_sheet_with_input_bindings(&support(), &[&outer], 1e-8, 1)
+            .unwrap();
+    assert!(
+        refused
+            .locate_input_parameter(0, 0, &parameter)
+            .unwrap()
+            .is_empty()
+    );
+    let mut result =
+        build_exact_periodic_trim_sheet_with_input_bindings(&support(), &[&outer], 1e-8, 1_000_000)
+            .unwrap();
+    result.edge_bindings.swap(0, 1);
+    assert!(result.locate_input_parameter(0, 0, &parameter).is_err());
+}
