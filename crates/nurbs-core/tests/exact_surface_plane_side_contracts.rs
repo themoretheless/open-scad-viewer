@@ -1,6 +1,8 @@
 use num_rational::BigRational as Q;
 use nurbs_core::{
-    editing::exact_surface_derivative::{Refusal, SurfacePlaneSide, audit_surface_plane_side},
+    editing::exact_surface_derivative::{
+        Refusal, SurfacePlaneSide, audit_surface_plane_side, refine_surface_plane_side,
+    },
     surface::Surface,
 };
 
@@ -76,4 +78,64 @@ fn proves_coplanarity_for_unclamped_spans_and_shares_the_arithmetic_budget() {
     let limited = audit_surface_plane_side(&flat, [0., 0., 2.], 6., report.work_used - 1).unwrap();
     assert_eq!(limited.cells, Err(Refusal::ResourceLimit));
     assert!(limited.work_used < report.work_used);
+}
+
+#[test]
+fn proves_a_mixed_control_net_is_strictly_separated_after_subdivision() {
+    let folded = surface(2, vec![0., 0., 0., 1., 1., 1.], &[1., -0.125, 1.]);
+    let audit = audit_surface_plane_side(&folded, [0., 0., 1.], 0., WORK)
+        .unwrap()
+        .cells
+        .unwrap();
+    assert_eq!(audit[0].side, SurfacePlaneSide::Unresolved);
+    let refined = refine_surface_plane_side(&folded, [0., 0., 1.], 0., 8, WORK)
+        .unwrap()
+        .regions
+        .unwrap();
+    assert_eq!(refined.len(), 2);
+    assert_eq!(refined[0].cell.domain, [[0., 0.5], [0., 1.]]);
+    assert_eq!(refined[1].cell.domain, [[0.5, 1.], [0., 1.]]);
+    assert!(
+        refined
+            .iter()
+            .all(|region| region.cell.side == SurfacePlaneSide::Positive)
+    );
+    assert_eq!(&refined[0].cell.corners[2..], &refined[1].cell.corners[..2]);
+}
+
+#[test]
+fn localizes_a_folded_crossing_and_keeps_the_whole_original_domain_covered() {
+    let folded = surface(2, vec![0., 0., 0., 1., 1., 1.], &[1., -3., 1.]);
+    let report = refine_surface_plane_side(&folded, [0., 0., 1.], 0., 8, WORK).unwrap();
+    let regions = report.regions.unwrap();
+    let area: f64 = regions
+        .iter()
+        .map(|region| {
+            region
+                .cell
+                .domain
+                .iter()
+                .map(|[a, b]| b - a)
+                .product::<f64>()
+        })
+        .sum();
+    assert_eq!(area, 1.);
+    assert!(
+        regions
+            .iter()
+            .any(|region| region.cell.side == SurfacePlaneSide::Positive)
+    );
+    assert!(
+        regions
+            .iter()
+            .any(|region| region.cell.side == SurfacePlaneSide::Negative)
+    );
+    assert!(
+        regions
+            .iter()
+            .any(|region| region.cell.side == SurfacePlaneSide::Straddles)
+    );
+    let limited =
+        refine_surface_plane_side(&folded, [0., 0., 1.], 0., 8, report.work_used - 1).unwrap();
+    assert_eq!(limited.regions, Err(Refusal::ResourceLimit));
 }

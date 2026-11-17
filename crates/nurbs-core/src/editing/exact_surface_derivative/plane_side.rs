@@ -42,14 +42,7 @@ pub fn audit_surface_plane_side(
     offset: f64,
     max_work: u64,
 ) -> Result<SurfacePlaneAudit> {
-    surface.validate()?;
-    check(
-        normal.iter().all(|x| x.is_finite())
-            && normal.iter().any(|&x| x != 0.)
-            && offset.is_finite()
-            && (1..=cad_predicates::MAX_WORK).contains(&max_work),
-        "Surface plane audit needs a finite nonzero plane and bounded arithmetic work",
-    )?;
+    validate(surface, normal, offset, max_work)?;
     let mut work = Work {
         used: 0,
         limit: max_work,
@@ -61,19 +54,50 @@ pub fn audit_surface_plane_side(
     })
 }
 
+fn validate(surface: &Surface, normal: [f64; 3], offset: f64, max_work: u64) -> Result<()> {
+    surface.validate()?;
+    check(
+        normal.iter().all(|x| x.is_finite())
+            && normal.iter().any(|&x| x != 0.)
+            && offset.is_finite()
+            && (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Surface plane audit needs a finite nonzero plane and bounded arithmetic work",
+    )
+}
+
+struct PlaneNet {
+    size: [usize; 2],
+    numerator: Vec<Q>,
+    denominator: Vec<Q>,
+}
+
 fn audit(
+    surface: &Surface,
+    normal: [f64; 3],
+    offset: f64,
+    work: &mut Work,
+) -> PResult<Vec<SurfacePlaneCell>> {
+    let mut cells = Vec::new();
+    visit_nets(surface, normal, offset, work, |domain, net, work| {
+        cells.push(net.audit(domain, work)?);
+        Ok(())
+    })?;
+    Ok(cells)
+}
+
+fn visit_nets(
     surface: &Surface,
     [x, y, z]: [f64; 3],
     offset: f64,
     work: &mut Work,
-) -> PResult<Vec<SurfacePlaneCell>> {
+    mut visit: impl FnMut([[f64; 2]; 2], PlaneNet, &mut Work) -> PResult<()>,
+) -> PResult<()> {
     let plane = [
         work.lift(x)?,
         work.lift(y)?,
         work.lift(z)?,
         -work.lift(offset)?,
     ];
-    let mut cells = Vec::new();
     for u in surface.degree_u..surface.control_points.len() {
         let u_domain = [surface.knots_u[u], surface.knots_u[u + 1]];
         if u_domain[0] == u_domain[1] {
@@ -84,25 +108,24 @@ fn audit(
             if v_domain[0] == v_domain[1] {
                 continue;
             }
-            cells.push(audit_cell(
-                surface,
-                [u, v],
-                [u_domain, v_domain],
-                &plane,
+            let domain = [u_domain, v_domain];
+            visit(
+                domain,
+                extract_net(surface, [u, v], domain, &plane, work)?,
                 work,
-            )?);
+            )?;
         }
     }
-    Ok(cells)
+    Ok(())
 }
 
-fn audit_cell(
+fn extract_net(
     surface: &Surface,
     [u, v]: [usize; 2],
     domain: [[f64; 2]; 2],
     plane: &[Q; 4],
     work: &mut Work,
-) -> PResult<SurfacePlaneCell> {
+) -> PResult<PlaneNet> {
     let span_width = |[lo, hi]: [f64; 2], work: &mut Work| -> PResult<Q> {
         let lo = work.lift(lo)?;
         let hi = work.lift(hi)?;
@@ -124,26 +147,40 @@ fn audit_cell(
     let pv = surface.degree_v;
     let numerator = storage::bernstein(&residual_poly, pu, pv, work)?;
     let denominator = storage::bernstein(&homogeneous[3], pu, pv, work)?;
-    let mut ratios = Vec::with_capacity(numerator.len());
-    for (n, d) in numerator.iter().zip(&denominator) {
-        if !d.is_positive() {
-            return Err(Refusal::UnprovedDenominator);
-        }
-        ratios.push(work.op(n, d, |a, b| a / b)?);
-    }
-    let residual = [
-        ratios.iter().min().ok_or(Refusal::InvalidOutput)?.clone(),
-        ratios.iter().max().ok_or(Refusal::InvalidOutput)?.clone(),
-    ];
-    let corners = [0, pv, pu * (pv + 1), ratios.len() - 1].map(|i| ratios[i].clone());
-    let side = classify(&residual, &corners);
-    Ok(SurfacePlaneCell {
-        domain,
-        residual,
-        corners,
-        side,
+    Ok(PlaneNet {
+        size: [pu + 1, pv + 1],
+        numerator,
+        denominator,
     })
 }
+
+impl PlaneNet {
+    fn audit(&self, domain: [[f64; 2]; 2], work: &mut Work) -> PResult<SurfacePlaneCell> {
+        let mut ratios = Vec::with_capacity(self.numerator.len());
+        for (n, d) in self.numerator.iter().zip(&self.denominator) {
+            if !d.is_positive() {
+                return Err(Refusal::UnprovedDenominator);
+            }
+            ratios.push(work.op(n, d, |a, b| a / b)?);
+        }
+        let residual = [
+            ratios.iter().min().ok_or(Refusal::InvalidOutput)?.clone(),
+            ratios.iter().max().ok_or(Refusal::InvalidOutput)?.clone(),
+        ];
+        let [nu, nv] = self.size;
+        let corners = [0, nv - 1, (nu - 1) * nv, ratios.len() - 1].map(|i| ratios[i].clone());
+        let side = classify(&residual, &corners);
+        Ok(SurfacePlaneCell {
+            domain,
+            residual,
+            corners,
+            side,
+        })
+    }
+}
+
+mod refinement;
+pub use refinement::{RefinedSurfacePlaneAudit, SurfacePlaneRegion, refine_surface_plane_side};
 
 fn classify([lo, hi]: &[Q; 2], corners: &[Q; 4]) -> SurfacePlaneSide {
     if lo.is_positive() {
