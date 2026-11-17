@@ -20,7 +20,7 @@ struct FaceBoundary {
 /// Clip a nonzero spatial segment against a qualified polyhedral solid.
 /// The full supporting line is traversed from outside to classify segments
 /// whose endpoints are already inside material. Lines through a boundary
-/// edge or vertex, or coincident with a face plane, are outside this
+/// edge or vertex, or running along a retained face, are outside this
 /// transverse mode.
 pub fn exact_polyhedral_segment_clip(
     solid: &QualifiedClosedSolid,
@@ -70,21 +70,25 @@ pub fn exact_polyhedral_segment_clip(
         let denominator = dot(&normal, &direction);
         let delta = std::array::from_fn(|i| &boundary.origin[i] - &start[i]);
         let numerator = dot(&normal, &delta);
+        let omitted = normal.iter().position(|value| !value.is_zero()).unwrap();
+        let axes = [(omitted + 1) % 3, (omitted + 2) % 3];
         if denominator.is_zero() {
-            if numerator.is_zero() {
-                return Err(refuse("Clip line coincides with a face plane"));
+            if numerator.is_zero()
+                && coplanar_line_hits_boundary(
+                    &boundary.segments,
+                    start,
+                    &direction,
+                    axes,
+                    &mut remaining,
+                )?
+            {
+                return Err(refuse("Clip line contacts a retained coplanar face"));
             }
             continue;
         }
         let t = numerator / denominator;
         let point = std::array::from_fn(|i| &start[i] + &t * &direction[i]);
-        let omitted = normal.iter().position(|value| !value.is_zero()).unwrap();
-        if inside_face(
-            &boundary.segments,
-            &point,
-            [(omitted + 1) % 3, (omitted + 2) % 3],
-            &mut remaining,
-        )? {
+        if inside_face(&boundary.segments, &point, axes, &mut remaining)? {
             crossings.push(t);
         }
     }
@@ -113,6 +117,27 @@ pub fn exact_polyhedral_segment_clip(
         intervals,
         exact_work: max_exact_work - remaining,
     })
+}
+
+fn coplanar_line_hits_boundary(
+    segments: &[[[Q; 3]; 2]],
+    start: &[Q; 3],
+    direction: &[Q; 3],
+    [u, v]: [usize; 2],
+    remaining: &mut u64,
+) -> Result<bool> {
+    let side =
+        |p: &[Q; 3]| &direction[u] * (&p[v] - &start[v]) - &direction[v] * (&p[u] - &start[u]);
+    // A full line cannot enter a bounded face without meeting its boundary.
+    for [a, b] in segments {
+        spend(remaining, 12)?;
+        let a = side(a);
+        let b = side(b);
+        if a.is_zero() || b.is_zero() || a.is_negative() != b.is_negative() {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn dot(a: &[Q; 3], b: &[Q; 3]) -> Q {

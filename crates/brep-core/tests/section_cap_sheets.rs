@@ -2684,3 +2684,46 @@ fn spatial_line_clip_preserves_oblique_fractions_and_refuses_edge_contacts() {
     let edge_path = [[q(0, 1), q(0, 1), q(-1, 1)], [q(0, 1), q(0, 1), q(3, 1)]];
     assert!(exact_polyhedral_segment_clip(&solid, &edge_path, 1_000_000).is_err());
 }
+
+#[test]
+fn spatial_clip_ignores_coplanar_support_outside_the_retained_wall() {
+    use brep_core::{
+        analysis::exact_polyhedral_segment_clip, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let p = |x, y, z| [x, y, z].map(|n: i64| Q::from_integer(n.into()));
+    let line = [p(3, 1, -1), p(3, 1, 3)];
+    let report = exact_polyhedral_segment_clip(solid, &line, 1_000_000).unwrap();
+    let q = |n: i64| Q::new(n.into(), 4.into());
+    assert_eq!(report.intervals, [[q(1), q(3)]]);
+    assert!(exact_polyhedral_segment_clip(solid, &line, report.exact_work).is_ok());
+    assert!(exact_polyhedral_segment_clip(solid, &line, report.exact_work - 1).is_err());
+    assert!(
+        exact_polyhedral_segment_clip(solid, &[p(5, 0, -1), p(5, 0, 3)], 1_000_000)
+            .unwrap()
+            .intervals
+            .is_empty()
+    );
+}
+
+#[test]
+fn spatial_clip_still_refuses_contact_with_a_retained_coplanar_wall() {
+    use brep_core::{
+        analysis::exact_polyhedral_segment_clip, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let p = |z: i64| {
+        [
+            Q::new(3.into(), 2.into()),
+            Q::from_integer(1.into()),
+            Q::from_integer(z.into()),
+        ]
+    };
+    assert!(exact_polyhedral_segment_clip(solid, &[p(-1), p(3)], 1_000_000).is_err());
+}
