@@ -15,8 +15,8 @@ use crate::{
         exact_projective::{
             PcurveSeamIsolation,
             pcurve_seam_isolation::{
-                SpanLineBounds, SpanLineCoverage, exact_span_line_ranges,
-                isolate_rational_pcurve_line, span_line_bounds,
+                AlgebraicBoundaryClock, SpanLineBounds, SpanLineCoverage, exact_span_line_ranges,
+                isolate_rational_pcurve_line, quadratic_span_contacts, span_line_bounds,
             },
         },
     },
@@ -546,5 +546,35 @@ pub(super) fn bound_boundary_ranges(
             proven: merge_bands(output.proven),
             possible: merge_bands(output.possible),
         })
+    })())
+}
+
+pub(super) fn algebraic_boundary_clocks(
+    face: &ProjectedTrimmedFace,
+    line: &ExactSupportLine,
+    work: &mut Work,
+) -> Result<std::result::Result<Vec<AlgebraicBoundaryClock>, Refusal>> {
+    validate_closed_contours(face)?;
+    let axes = face.projection.retained_axes;
+    Ok((|| {
+        let clock = RayClock::from_exact(
+            axes.map(|i| line.origin[i].clone()),
+            axes.map(|i| line.direction[i].clone()),
+            work,
+        )?;
+        let mut points = Vec::new();
+        for curve in face.loops.iter().flatten() {
+            points.extend(quadratic_span_contacts(
+                curve,
+                &clock.equation,
+                clock.axis,
+                &clock.origin,
+                &clock.step,
+                work,
+            )?);
+        }
+        points.sort_unstable();
+        points.dedup();
+        Ok(points)
     })())
 }

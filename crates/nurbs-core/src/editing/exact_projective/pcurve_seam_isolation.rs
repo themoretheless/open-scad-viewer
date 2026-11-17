@@ -452,3 +452,7 @@ fn distance([a, b]: [f64; 2], work: &mut Work) -> PResult<Q> {
     let b = work.lift(b)?;
     Ok(work.op(&b, &a, |a, b| a - b)?)
 }
+
+mod quadratic_contacts;
+pub use quadratic_contacts::AlgebraicBoundaryClock;
+pub(crate) use quadratic_contacts::quadratic_span_contacts;

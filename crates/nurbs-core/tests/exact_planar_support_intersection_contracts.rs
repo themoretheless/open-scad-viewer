@@ -5,14 +5,15 @@ use nurbs_core::{
             PlanarProjectionOutcome, PlanarSurfaceProjection, project_planar_surface,
         },
         exact_plane_intersection::{
-            AdaptiveBoundaryOptions, BoundaryResolution, BoundedPlanarBoundaryIntersection,
-            ExactPlanarIntersectionSegment, PlanarBoundaryIntersection, PlanarFaceContactPartition,
-            PlanarIntersectionSegments, PlanarSegmentStorage, StoredPlanarIntersection,
-            SupportPlaneIntersection, TrimmedPlanarIntersection,
-            bound_planar_face_boundary_intersection, build_planar_intersection_segments,
-            classify_planar_face_contacts, intersect_planar_face_boundaries,
-            intersect_planar_face_boundary_contacts, intersect_planar_supports,
-            intersect_trimmed_planar_faces, optimize_planar_intersection_segment_storage,
+            AdaptiveBoundaryOptions, AlgebraicBoundaryClock, AlgebraicPlanarContacts,
+            BoundaryResolution, BoundedPlanarBoundaryIntersection, ExactPlanarIntersectionSegment,
+            PlanarBoundaryIntersection, PlanarFaceContactPartition, PlanarIntersectionSegments,
+            PlanarSegmentStorage, StoredPlanarIntersection, SupportPlaneIntersection,
+            TrimmedPlanarIntersection, bound_planar_face_boundary_intersection,
+            build_planar_intersection_segments, classify_planar_face_contacts,
+            intersect_planar_face_boundaries, intersect_planar_face_boundary_contacts,
+            intersect_planar_supports, intersect_trimmed_planar_faces,
+            match_quadratic_planar_boundary_contacts, optimize_planar_intersection_segment_storage,
             refine_planar_face_boundary_extents, resolve_planar_face_boundary_intersection,
             store_planar_intersection_segment, store_trimmed_planar_intersection,
         },
@@ -1023,4 +1024,89 @@ fn exact_overlap_meets_the_geometric_target_on_first_pass() {
     assert_eq!(report.resolution, BoundaryResolution::WithinTolerance);
     assert_eq!(report.passes, 1);
     assert_eq!(report.max_unresolved_length_squared, Some(q(0, 1)));
+}
+
+fn irrational_contact_loop(shift: f64, weight: f64, reverse: bool) -> Vec<Curve> {
+    let mut points = vec![
+        vec![0., 1. - shift],
+        vec![0.5, -2. - shift],
+        vec![1., 4. - shift],
+    ];
+    if reverse {
+        points.reverse();
+    }
+    let close = vec![points[2].clone(), points[0].clone()];
+    vec![
+        Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: points,
+            weights: vec![1., weight, 1.],
+            periodic: false,
+        },
+        Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 1.],
+            control_points: close,
+            weights: vec![1.; 2],
+            periodic: false,
+        },
+    ]
+}
+
+#[test]
+fn proves_both_irrational_contact_branches_across_a_reversed_clock() {
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.loops = vec![irrational_contact_loop(0.5, 1., false)];
+    b.loops = vec![irrational_contact_loop(0.5, 1., true)];
+    for p in b
+        .loops
+        .iter_mut()
+        .flatten()
+        .flat_map(|c| &mut c.control_points)
+    {
+        p[1] *= 2.;
+    }
+    let result = match_quadratic_planar_boundary_contacts(&a, &b, WORK).unwrap();
+    let AlgebraicPlanarContacts::Transverse { points, .. } = &result.outcome else {
+        panic!("{:?}", result.outcome);
+    };
+    assert_eq!(
+        points,
+        &[false, true].map(|upper_root| AlgebraicBoundaryClock::Quadratic {
+            linear: q(-2, 3),
+            constant: q(1, 18),
+            upper_root
+        })
+    );
+    assert_eq!(
+        match_quadratic_planar_boundary_contacts(&b, &a, WORK)
+            .unwrap()
+            .outcome,
+        result.outcome
+    );
+    let limited = match_quadratic_planar_boundary_contacts(&a, &b, result.work_used - 1).unwrap();
+    assert_eq!(
+        limited.outcome,
+        AlgebraicPlanarContacts::Refused(
+            nurbs_core::editing::exact_derivative::Refusal::ResourceLimit
+        )
+    );
+}
+
+#[test]
+fn compares_weighted_algebraic_images_and_rejects_nearby_unequal_roots() {
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.loops = vec![irrational_contact_loop(0.5, 2., false)];
+    b.loops = vec![irrational_contact_loop(0.5, 2., true)];
+    let result = match_quadratic_planar_boundary_contacts(&a, &b, WORK).unwrap();
+    let AlgebraicPlanarContacts::Transverse { points, .. } = result.outcome else {
+        panic!("{:?}", result.outcome);
+    };
+    assert_eq!(points.len(), 2);
+    b.loops = vec![irrational_contact_loop(0.5 + 1. / 1024., 2., true)];
+    let result = match_quadratic_planar_boundary_contacts(&a, &b, WORK).unwrap();
+    assert!(
+        matches!(result.outcome, AlgebraicPlanarContacts::Transverse { points, .. } if points.is_empty())
+    );
 }

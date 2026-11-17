@@ -207,3 +207,9 @@ pub use adaptive::{
     AdaptiveBoundaryOptions, AdaptiveBoundaryReport, BoundaryResolution,
     resolve_planar_face_boundary_intersection,
 };
+
+mod algebraic;
+pub use algebraic::{
+    AlgebraicBoundaryClock, AlgebraicPlanarContactReport, AlgebraicPlanarContacts,
+    match_quadratic_planar_boundary_contacts,
+};
