@@ -146,6 +146,7 @@ impl DirectImportRoute<'_> {
             interior_point_selectors: self.is_v9_or_later(),
             allow_open_shells: self.allow_open_shells(),
             preserve_authored_charts: self.capability == STEP_INTERCHANGE_V6_CAPABILITY,
+            repair_pcurves: self.capability == STEP_INTERCHANGE_V10_CAPABILITY,
         }
     }
 

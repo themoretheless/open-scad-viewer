@@ -2710,3 +2710,78 @@ fn v10_ap242_direct_line_pullback_moves_closed_seam_seed() {
             < 1e-7
     );
 }
+
+/// Shift the first control point of the first B-spline pcurve so that it no
+/// longer lies under its 3D edge.
+fn corrupt_first_pcurve(text: &str) -> String {
+    let entities = parse(data_payload(text).unwrap()).unwrap();
+    let call_of = |id: usize| match &entities[&id].value {
+        Value::Call(name, args) => (name.clone(), args.clone()),
+        _ => panic!("entity #{id} is not a call"),
+    };
+    let reference = |value: &Value| match value {
+        Value::Ref(id) => *id,
+        _ => panic!("expected a reference"),
+    };
+    let point = entities
+        .values()
+        .find_map(|entity| {
+            let Value::Call(name, args) = &entity.value else {
+                return None;
+            };
+            if name != "DEFINITIONAL_REPRESENTATION" {
+                return None;
+            }
+            let Value::List(items) = &args[1] else {
+                return None;
+            };
+            let (curve_type, curve_args) = call_of(reference(&items[0]));
+            if curve_type != "B_SPLINE_CURVE_WITH_KNOTS" {
+                return None;
+            }
+            let Value::List(points) = &curve_args[2] else {
+                return None;
+            };
+            Some(reference(&points[0]))
+        })
+        .expect("fixture has a B-spline pcurve");
+    let (_, point_args) = call_of(point);
+    let Value::List(coordinates) = &point_args[1] else {
+        panic!("pcurve control point has no coordinates");
+    };
+    let shifted = coordinates
+        .iter()
+        .map(|value| match value {
+            Value::Number(v) => format!("{:?}", v + 0.125),
+            Value::Integer(v) => format!("{:?}", *v as f64 + 0.125),
+            _ => panic!("non-numeric coordinate"),
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+    let marker = format!("#{point}=");
+    let start = text.find(&marker).unwrap();
+    let end = start + text[start..].find(';').unwrap();
+    format!(
+        "{}#{point}=CARTESIAN_POINT('',({shifted})){}",
+        &text[..start],
+        &text[end..]
+    )
+}
+
+#[test]
+fn v10_rebuilds_an_inconsistent_planar_pcurve_from_its_edge_and_v9_still_refuses() {
+    let model = freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+    let (text, _, _) = export_step_v5(&model).unwrap();
+    let (clean, _, _) = import_step_v10(&text).unwrap();
+    // External files carry no kernel identity digest over the damaged geometry.
+    let text = text.replace("OSCAD_TOPO/3|", "EXTERNAL_STEP|");
+    let damaged = corrupt_first_pcurve(&text);
+    assert_ne!(damaged, text);
+    let error = import_step_v9(&damaged).unwrap_err();
+    assert!(error.message.contains("correspondence"), "{}", error.message);
+    let (back, certificate, _) = import_step_v10(&damaged).unwrap();
+    back.validate().unwrap();
+    assert!(certificate.complete);
+    assert_eq!(topology_signature(&back), topology_signature(&clean));
+    assert_eq!(topology_signature(&back), topology_signature(&model));
+}

@@ -75,15 +75,36 @@ impl DirectBuilder<'_> {
         // contract. World correspondence alone cannot choose a lifted UV shore.
         if matching.len() == 1 && kind != "SEAM_CURVE" {
             let pc = matching.into_iter().next().unwrap();
-            verify_correspondence(
+            let checked = verify_correspondence(
                 world,
                 &pc,
                 surface,
                 reversed,
                 self.whole_domain_proofs,
                 require_exact,
-            )?;
-            return Ok(pc);
+            );
+            let repairable = self.repair_pcurves
+                && !degenerate
+                && !require_exact
+                && !surface.periodic_u
+                && !surface.periodic_v;
+            return match checked {
+                Ok(_) => Ok(pc),
+                Err(original) if repairable => {
+                    let repaired = rebuild_pcurve(id, world, &pc, surface, reversed)
+                        .map_err(|_| original)?;
+                    verify_correspondence(
+                        world,
+                        &repaired,
+                        surface,
+                        reversed,
+                        self.whole_domain_proofs,
+                        false,
+                    )?;
+                    Ok(repaired)
+                }
+                Err(original) => Err(original),
+            };
         }
         if kind == "SEAM_CURVE" || surface.periodic_u || surface.periodic_v || degenerate {
             let cursor = self.seam_use.entry((id, surface_id)).or_insert(0);
@@ -114,6 +135,36 @@ impl DirectBuilder<'_> {
             self.pcurve_use.entry((id, surface_id)).or_default(),
         )
     }
+}
+/// Replace an imported ordinary pcurve that disagrees with its 3D edge by the
+/// certified pullback of that edge (`pcurve_repair::resolve_step_trim`). The
+/// caller re-runs the independent correspondence check on the result.
+fn rebuild_pcurve(
+    id: usize,
+    world: &Curve,
+    imported: &Curve,
+    surface: &Surface,
+    reversed: bool,
+) -> Result<Curve> {
+    use brep_core::pcurve_repair::{AuditOptions, resolve_step_trim};
+    let resolution = resolve_step_trim(
+        format!("#{id}"),
+        world,
+        imported,
+        surface,
+        !reversed,
+        AuditOptions {
+            tolerance: 1e-5,
+            ..AuditOptions::default()
+        },
+        nurbs_core::curve_pullback::Limits {
+            tolerance: 1e-5,
+            max_segments: 256,
+            max_iterations: 32,
+            agreement_cells: 100_000,
+        },
+    )?;
+    Ok(resolution.pcurve)
 }
 /// Orientation, whole-domain proof and exact-agreement requirements of one
 /// pcurve selection.
@@ -313,6 +364,7 @@ mod tests {
             curve_bounded_expected: None,
             curve_bounded_used: BTreeSet::new(),
             preserve_authored_charts: false,
+            repair_pcurves: false,
             loops: vec![],
             loop_entity: vec![],
             faces: vec![],

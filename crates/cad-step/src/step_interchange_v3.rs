@@ -74,6 +74,7 @@ struct DirectBuildOptions {
     interior_point_selectors: bool,
     allow_open_shells: bool,
     preserve_authored_charts: bool,
+    repair_pcurves: bool,
 }
 
 pub(crate) fn refuse(message: impl Into<String>) -> Error {
@@ -1877,6 +1878,8 @@ struct DirectBuilder<'a> {
     interior_point_selectors: bool,
     allow_open_shells: bool,
     preserve_authored_charts: bool,
+    /// Rebuild a single inconsistent ordinary pcurve from its 3D edge.
+    repair_pcurves: bool,
     vertices: Vec<Vertex>,
     vertex_map: BTreeMap<usize, usize>,
     edges: Vec<Edge>,
@@ -2350,6 +2353,7 @@ fn build_direct_roots(
         interior_point_selectors,
         allow_open_shells,
         preserve_authored_charts,
+        repair_pcurves,
     } = options;
     let mut builder = DirectBuilder {
         entities,
@@ -2361,6 +2365,7 @@ fn build_direct_roots(
         interior_point_selectors,
         allow_open_shells,
         preserve_authored_charts,
+        repair_pcurves,
         vertices: vec![],
         vertex_map: BTreeMap::new(),
         edges: vec![],
