@@ -1,0 +1,36 @@
+{
+  "id": "NURBS-0348",
+  "testedBase": "e99676fd1884bc2c7f504744118cd48c2359f171",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts",
+    "--test",
+    "exact_pcurve_line_contact_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 28,
+  "scope": [
+    "Bound transverse common trim boundaries by exact closed inner and outer coverage, including irrational isolated roots and folded spans.",
+    "Exact rational interval evaluation encloses stationary and isolated root images. Positive local weights provide a denominator lower bound. Irrational isolated contacts are retained in the upper coverage."
+  ],
+  "logSha256": "7603c5664741f82b02779d2e2f73055e38162d5f2b95df0d415dc7215c0c9dc9",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "55eb4f541336f0eea142c4ff7b270f5ae31b6d9a1ed8d6a6fea7ae2b11bd0672",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs": "507fc4bef5f41a0d210bca605a3619d0bdcb758dcf042f29f03278cb168e71b8",
+    "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs": "8ecc32973151d7420dc5105546669a51ea0b083b733e0e2120a6eef62e90a951",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "55137e1800836f53aa2255c6bcbcbe539e97f81560cfbd5eb263775493dadfe8",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "9145dd9872446af228d8876adbaa1a70e6eebc7ed35edf2631538521e2871e2e",
+    "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs": "400f0ba5b82388a6482751bf82d8e2fdbb6faf4b879f1faa4aa0f253e0905e56",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation/range_bounds.rs": "d56aa645b4abb0b24bbb79276eea168f4741ce88e0f9f11a03b31bce23696162"
+  }
+}

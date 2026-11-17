@@ -15,7 +15,8 @@ use crate::{
         exact_projective::{
             PcurveSeamIsolation,
             pcurve_seam_isolation::{
-                SpanLineCoverage, exact_span_line_ranges, isolate_rational_pcurve_line,
+                SpanLineBounds, SpanLineCoverage, exact_span_line_ranges,
+                isolate_rational_pcurve_line, span_line_bounds,
             },
         },
     },
@@ -147,6 +148,12 @@ impl RayClock {
     fn exact_parameter(&self, p: &Q, work: &mut Work) -> std::result::Result<Q, Refusal> {
         let delta = work.op(p, &self.origin, |a, b| a - b)?;
         Ok(work.op(&delta, &self.step, |a, b| a / b)?)
+    }
+
+    fn exact_range(&self, [a, b]: [Q; 2], work: &mut Work) -> std::result::Result<[Q; 2], Refusal> {
+        let a = self.exact_parameter(&a, work)?;
+        let b = self.exact_parameter(&b, work)?;
+        Ok(if a <= b { [a, b] } else { [b, a] })
     }
 
     fn parameter(
@@ -500,14 +507,44 @@ pub(super) fn exact_boundary_ranges(
         )?;
         let mut ranges = Vec::new();
         for curve in face.loops.iter().flatten() {
-            for [a, b] in
-                exact_span_line_ranges(curve, &clock.equation, clock.axis, coverage, work)?
+            for range in exact_span_line_ranges(curve, &clock.equation, clock.axis, coverage, work)?
             {
-                let a = clock.exact_parameter(&a, work)?;
-                let b = clock.exact_parameter(&b, work)?;
-                ranges.push(if a <= b { [a, b] } else { [b, a] });
+                ranges.push(clock.exact_range(range, work)?);
             }
         }
         Ok(merge_bands(ranges))
+    })())
+}
+
+pub(super) fn bound_boundary_ranges(
+    face: &ProjectedTrimmedFace,
+    line: &ExactSupportLine,
+    width: f64,
+    work: &mut Work,
+) -> Result<std::result::Result<SpanLineBounds, Refusal>> {
+    validate_closed_contours(face)?;
+    let axes = face.projection.retained_axes;
+    Ok((|| {
+        let clock = RayClock::from_exact(
+            axes.map(|i| line.origin[i].clone()),
+            axes.map(|i| line.direction[i].clone()),
+            work,
+        )?;
+        let mut output = SpanLineBounds::default();
+        for curve in face.loops.iter().flatten() {
+            let bounds = span_line_bounds(curve, &clock.equation, clock.axis, width, work)?;
+            for (source, target) in [
+                (bounds.proven, &mut output.proven),
+                (bounds.possible, &mut output.possible),
+            ] {
+                for range in source {
+                    target.push(clock.exact_range(range, work)?);
+                }
+            }
+        }
+        Ok(SpanLineBounds {
+            proven: merge_bands(output.proven),
+            possible: merge_bands(output.possible),
+        })
     })())
 }

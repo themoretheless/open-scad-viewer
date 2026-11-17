@@ -236,29 +236,52 @@ fn stationary_witnesses(
     max_width: f64,
     work: &mut Work,
 ) -> PResult<Vec<Q>> {
+    stationary_brackets(component, weight, max_width, work)?
+        .iter()
+        .map(|bracket| bracket_midpoint(bracket, work))
+        .collect()
+}
+
+fn stationary_brackets(
+    component: &Poly,
+    weight: &Poly,
+    max_width: f64,
+    work: &mut Work,
+) -> PResult<Vec<[Q; 2]>> {
     use super::chart_nonnegative::derivative;
     let dw = derivative(weight, work)?;
     let dc = derivative(component, work)?;
     let forward = multiply(&dc, weight, work)?;
     let backward = multiply(component, &dw, work)?;
     let power = add(&forward, &backward, true, work)?;
-    let exact = rational_interior_roots(&power, work)?;
+    interior_brackets(&power, max_width, work)
+}
+
+fn interior_brackets(power: &Poly, max_width: f64, work: &mut Work) -> PResult<Vec<[Q; 2]>> {
+    let exact = rational_interior_roots(power, work)?;
     if power.len() <= 2 || !exact.is_empty() {
-        return Ok(exact);
+        return Ok(exact.into_iter().map(|root| [root.clone(), root]).collect());
     }
     let width = work.lift(max_width)?;
-    let two = Q::from_integer(2.into());
-    isolate_power(&power, [0., 1.], Some(&width), work)?
+    isolate_power(power, [0., 1.], Some(&width), work)?
         .into_iter()
         .map(|root| {
             let [lo, hi] = root.parameter;
-            let lo = work.lift(lo)?;
-            let hi = work.lift(hi)?;
-            let sum = work.op(&lo, &hi, |a, b| a + b)?;
-            Ok(work.op(&sum, &two, |a, b| a / b)?)
+            Ok([work.lift(lo)?, work.lift(hi)?])
         })
         .collect()
 }
+
+fn bracket_midpoint([lo, hi]: &[Q; 2], work: &mut Work) -> PResult<Q> {
+    if lo == hi {
+        return Ok(lo.clone());
+    }
+    let two = Q::from_integer(2.into());
+    Ok(work.op(lo, hi, |a, b| (a + b) / &two)?)
+}
+
+mod range_bounds;
+pub(crate) use range_bounds::{SpanLineBounds, span_line_bounds};
 
 fn rational_interior_roots(power: &Poly, work: &mut Work) -> PResult<Vec<Q>> {
     let roots = match power.as_slice() {

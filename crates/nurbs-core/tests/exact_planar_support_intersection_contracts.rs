@@ -5,9 +5,10 @@ use nurbs_core::{
             PlanarProjectionOutcome, PlanarSurfaceProjection, project_planar_surface,
         },
         exact_plane_intersection::{
-            ExactPlanarIntersectionSegment, PlanarBoundaryIntersection, PlanarFaceContactPartition,
-            PlanarIntersectionSegments, PlanarSegmentStorage, StoredPlanarIntersection,
-            SupportPlaneIntersection, TrimmedPlanarIntersection,
+            BoundedPlanarBoundaryIntersection, ExactPlanarIntersectionSegment,
+            PlanarBoundaryIntersection, PlanarFaceContactPartition, PlanarIntersectionSegments,
+            PlanarSegmentStorage, StoredPlanarIntersection, SupportPlaneIntersection,
+            TrimmedPlanarIntersection, bound_planar_face_boundary_intersection,
             build_planar_intersection_segments, classify_planar_face_contacts,
             intersect_planar_face_boundaries, intersect_planar_face_boundary_contacts,
             intersect_planar_supports, intersect_trimmed_planar_faces,
@@ -862,6 +863,80 @@ fn certifies_inner_extent_using_a_rational_witness_near_irrational_stationary_po
     assert_eq!(
         limited.outcome,
         PlanarBoundaryIntersection::Refused(
+            nurbs_core::editing::exact_derivative::Refusal::ResourceLimit
+        )
+    );
+}
+
+#[test]
+fn tightens_the_upper_boundary_of_an_irrational_rational_span_fold() {
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.loops = vec![folded_boundary(1.)];
+    b.loops = vec![rectangle([1.25, 2.], [0., 1.], false)];
+    let bounds = |width| {
+        let report = bound_planar_face_boundary_intersection(&a, &b, width, WORK).unwrap();
+        let BoundedPlanarBoundaryIntersection::Transverse {
+            proven, possible, ..
+        } = report.outcome
+        else {
+            panic!("{:?}", report.outcome);
+        };
+        assert_eq!(proven.len(), 1);
+        assert_eq!(possible.len(), 1);
+        assert_eq!(proven[0][0], q(5, 4));
+        assert_eq!(possible[0][0], q(5, 4));
+        (proven[0][1].clone(), possible[0][1].clone())
+    };
+    let (coarse_lo, coarse_hi) = bounds(1e-2);
+    let (fine_lo, fine_hi) = bounds(1e-8);
+    assert!(coarse_hi > fine_hi && fine_hi > fine_lo);
+    assert!(fine_hi - fine_lo < q(1, 1_000_000));
+    assert!(coarse_lo > q(3, 2));
+    // This coordinate is exactly attained at normalized parameter 5/8.
+    let t = q(5, 8);
+    let sample = (q(8, 1) * &t - q(7, 1) * &t * &t) / (q(1, 1) + q(2, 1) * &t - q(2, 1) * &t * &t);
+    assert!(sample <= bounds(1e-8).1);
+}
+
+#[test]
+fn encloses_irrational_isolated_boundary_contacts_without_marking_them_exact() {
+    let [a, mut b] = perpendicular_boundary_faces();
+    b.loops = vec![vec![
+        Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![0., 0.5], vec![0.5, -2.5], vec![1., 3.5]],
+            weights: vec![1.; 3],
+            periodic: false,
+        },
+        Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 1.],
+            control_points: vec![vec![1., 3.5], vec![0., 0.5]],
+            weights: vec![1.; 2],
+            periodic: false,
+        },
+    ]];
+    let report = bound_planar_face_boundary_intersection(&a, &b, 1e-8, WORK).unwrap();
+    let BoundedPlanarBoundaryIntersection::Transverse {
+        proven, possible, ..
+    } = report.outcome
+    else {
+        panic!("{:?}", report.outcome);
+    };
+    assert!(proven.is_empty());
+    assert_eq!(possible.len(), 2);
+    for (band, sign) in possible.iter().zip([q(-1, 1), q(1, 1)]) {
+        assert!(&band[1] - &band[0] < q(1, 1_000_000));
+        let polynomial = |t: &Q| (q(3, 1) * t - q(1, 1)).pow(2) - q(1, 2);
+        assert!(polynomial(&band[0]) * &sign <= q(0, 1));
+        assert!(polynomial(&band[1]) * &sign >= q(0, 1));
+    }
+    let limited =
+        bound_planar_face_boundary_intersection(&a, &b, 1e-8, report.work_used - 1).unwrap();
+    assert_eq!(
+        limited.outcome,
+        BoundedPlanarBoundaryIntersection::Refused(
             nurbs_core::editing::exact_derivative::Refusal::ResourceLimit
         )
     );

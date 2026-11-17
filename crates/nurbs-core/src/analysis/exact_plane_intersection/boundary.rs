@@ -4,7 +4,9 @@ use super::{
     intersect_bands, intersect_planar_supports,
 };
 use crate::{
-    Result, analysis::planar_coplanar_ray::exact_boundary_ranges, check,
+    Result,
+    analysis::planar_coplanar_ray::{bound_boundary_ranges, exact_boundary_ranges},
+    check,
     editing::exact_projective::pcurve_seam_isolation::SpanLineCoverage,
 };
 use num_rational::BigRational as Q;
@@ -123,4 +125,79 @@ fn shared(
         Err(reason) => return Ok(Err(reason)),
     };
     Ok(Ok(intersect_bands(&a, &b, true)))
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum BoundedPlanarBoundaryIntersection {
+    Transverse {
+        line: ExactSupportLine,
+        /// Closed lower coverage of the shared boundary.
+        proven: Vec<[Q; 2]>,
+        /// Closed upper coverage, including every isolated contact and folded span.
+        possible: Vec<[Q; 2]>,
+    },
+    Parallel,
+    Coincident,
+    Refused(Refusal),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BoundedPlanarBoundaryReport {
+    pub outcome: BoundedPlanarBoundaryIntersection,
+    pub work_used: u64,
+}
+
+/// Bound every contact between the contours of transverse planar faces.
+/// The width controls the root isolation brackets in each local normalized
+/// span. Rational polynomial interval evaluation converts them to support
+/// clock coverage. All bounds are closed.
+pub fn bound_planar_face_boundary_intersection(
+    left: &ProjectedTrimmedFace,
+    right: &ProjectedTrimmedFace,
+    width: f64,
+    max_work: u64,
+) -> Result<BoundedPlanarBoundaryReport> {
+    check(
+        width.is_finite() && width > 0. && width <= 1.,
+        "Boundary intersection bounds need a normalized root width in (0, 1]",
+    )?;
+    let support = intersect_planar_supports(&left.projection, &right.projection, max_work)?;
+    let mut work = Work {
+        used: support.work_used,
+        limit: max_work,
+    };
+    let outcome = match support.outcome {
+        SupportPlaneIntersection::Line(line) => bound_shared(left, right, line, width, &mut work)?,
+        SupportPlaneIntersection::Parallel => BoundedPlanarBoundaryIntersection::Parallel,
+        SupportPlaneIntersection::Coincident => BoundedPlanarBoundaryIntersection::Coincident,
+        SupportPlaneIntersection::ResourceLimit => {
+            BoundedPlanarBoundaryIntersection::Refused(Refusal::ResourceLimit)
+        }
+    };
+    Ok(BoundedPlanarBoundaryReport {
+        outcome,
+        work_used: work.used,
+    })
+}
+
+fn bound_shared(
+    left: &ProjectedTrimmedFace,
+    right: &ProjectedTrimmedFace,
+    line: ExactSupportLine,
+    width: f64,
+    work: &mut Work,
+) -> Result<BoundedPlanarBoundaryIntersection> {
+    let a = match bound_boundary_ranges(left, &line, width, work)? {
+        Ok(ranges) => ranges,
+        Err(reason) => return Ok(BoundedPlanarBoundaryIntersection::Refused(reason)),
+    };
+    let b = match bound_boundary_ranges(right, &line, width, work)? {
+        Ok(ranges) => ranges,
+        Err(reason) => return Ok(BoundedPlanarBoundaryIntersection::Refused(reason)),
+    };
+    Ok(BoundedPlanarBoundaryIntersection::Transverse {
+        line,
+        proven: intersect_bands(&a.proven, &b.proven, true),
+        possible: intersect_bands(&a.possible, &b.possible, true),
+    })
 }
