@@ -3738,3 +3738,114 @@ fn lift_hole_into_component(
         vertices,
     })
 }
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimComponent {
+    /// Original contour indices in the same order as `loops`.
+    pub contours: Vec<usize>,
+    /// Counterclockwise outer loop followed by clockwise holes.
+    pub loops: Vec<Vec<crate::curve::Curve>>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimComponentsReport {
+    pub components: Option<Vec<PeriodicTrimComponent>>,
+    pub work_used: u64,
+    pub refusal: Option<PeriodicContourForestRefusal>,
+}
+
+/// Turn exact periodic component lifts into degree-one trim loops that
+/// can be consumed by the planar UV classifier. Refuse unstorable UVs.
+/// Each component retains its own lifted UV chart.
+pub fn build_exact_periodic_surface_trim_components(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    max_work: u64,
+) -> Result<PeriodicTrimComponentsReport> {
+    let lifted = lift_exact_periodic_surface_region_components(source, contours, max_work)?;
+    let Some(components) = lifted.components else {
+        return Ok(PeriodicTrimComponentsReport {
+            components: None,
+            work_used: lifted.work_used,
+            refusal: lifted.refusal,
+        });
+    };
+    let mut work = Work {
+        used: lifted.work_used,
+        limit: max_work,
+    };
+    let result = components
+        .iter()
+        .map(|component| {
+            let contours = std::iter::once(&component.outer).chain(&component.holes);
+            let spans: usize = contours.clone().map(|path| path.vertices.len() - 1).sum();
+            let curves: usize = contours
+                .clone()
+                .map(|path| (path.vertices.len() - 1).div_ceil(255))
+                .sum();
+            if spans > 4096 || curves > 256 {
+                return Err(ExactRefusal::ResourceLimit);
+            }
+            let mut result = PeriodicTrimComponent {
+                contours: Vec::new(),
+                loops: Vec::new(),
+            };
+            for (i, contour) in contours.enumerate() {
+                result.contours.push(contour.contour);
+                result.loops.push(store_periodic_trim_loop(
+                    &contour.vertices,
+                    i == 0,
+                    &mut work,
+                )?);
+            }
+            Ok(result)
+        })
+        .collect::<std::result::Result<Vec<_>, _>>();
+    Ok(match result {
+        Ok(components) => PeriodicTrimComponentsReport {
+            components: Some(components),
+            work_used: work.used,
+            refusal: None,
+        },
+        Err(reason) => PeriodicTrimComponentsReport {
+            components: None,
+            work_used: work.used,
+            refusal: Some(PeriodicContourForestRefusal::Arithmetic(reason)),
+        },
+    })
+}
+
+fn store_periodic_trim_loop(
+    vertices: &[[BigRational; 2]],
+    ccw: bool,
+    work: &mut Work,
+) -> std::result::Result<Vec<crate::curve::Curve>, ExactRefusal> {
+    use crate::curve::Curve;
+    use num_traits::{Signed, Zero};
+
+    let mut area = BigRational::zero();
+    for edge in vertices.windows(2) {
+        let a = work.op(&edge[0][0], &edge[1][1], |a, b| a * b)?;
+        let b = work.op(&edge[0][1], &edge[1][0], |a, b| a * b)?;
+        let cross = work.op(&a, &b, |a, b| a - b)?;
+        area = work.op(&area, &cross, |a, b| a + b)?;
+    }
+    if area.is_zero() {
+        return Err(ExactRefusal::InvalidOutput);
+    }
+    let mut points = vertices
+        .iter()
+        .map(|[u, v]| Ok(vec![work.float(u)?, work.float(v)?]))
+        .collect::<std::result::Result<Vec<_>, ExactRefusal>>()?;
+    if area.is_positive() != ccw {
+        points.reverse();
+    }
+    (0..points.len() - 1)
+        .step_by(255)
+        .map(|start| {
+            let end = (start + 256).min(points.len());
+            Curve::from_polyline(points[start..end].to_vec())
+                .map_err(|_| ExactRefusal::InvalidOutput)
+        })
+        .collect()
+}

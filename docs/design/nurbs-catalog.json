@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 554,
-  "unallocatedCount": 446,
+  "specifiedCount": 555,
+  "unallocatedCount": 445,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14110,6 +14110,27 @@
       "remainingQualification": [
         "Export rational lifted components with holes translated into the same UV chart.",
         "Reuse the certified contour forest and translate every hole vertex exactly into its outer component chart.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0555",
+      "name": "Линейные NURBS-контуры обрезки из точной периодической UV-развёртки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_components",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-555-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-555-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Store aligned component lifts as exact oriented degree-one trim loops for the UV classifier.",
+        "Normalize winding with rational area, store exactly representable degree-one trim loops and verify downstream UV classification.",
         "WASM and application integration are separate."
       ]
     }

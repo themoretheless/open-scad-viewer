@@ -4079,3 +4079,74 @@ fn periodic_region_lift_refuses_touching_boundaries() {
         Some(PeriodicContourForestRefusal::Contact { .. })
     ));
 }
+
+#[test]
+fn periodic_trim_components_feed_the_uv_classifier_with_aligned_holes() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_components,
+        trim_domain::{Location, TrimDomain, exact_loop_joins},
+    };
+    let source = doubly_periodic_tensor();
+    let outer = [
+        [3.25, 3.25],
+        [3.25, 0.75],
+        [0.75, 0.75],
+        [0.75, 3.25],
+        [3.25, 3.25],
+    ];
+    let hole = [
+        [0.125, 0.125],
+        [0.625, 0.125],
+        [0.625, 0.625],
+        [0.125, 0.625],
+        [0.125, 0.125],
+    ];
+    let report =
+        build_exact_periodic_surface_trim_components(&source, &[&hole, &outer], 1_000_000).unwrap();
+    let components = report.components.unwrap();
+    assert_eq!(components.len(), 1);
+    assert_eq!(components[0].contours, vec![1, 0]);
+    let loops = &components[0].loops;
+    for contour in loops {
+        assert_eq!(exact_loop_joins(contour).unwrap(), Some(true));
+    }
+    let trim = TrimDomain::new(loops, 1e-8).unwrap();
+    assert_eq!(
+        trim.classify_point([4., 4.], 1024).unwrap().location,
+        Location::Inside
+    );
+    assert_eq!(
+        trim.classify_point([4.25, 4.25], 1024).unwrap().location,
+        Location::Outside
+    );
+    assert!(
+        build_exact_periodic_surface_trim_components(
+            &source,
+            &[&hole, &outer],
+            report.work_used - 1
+        )
+        .unwrap()
+        .components
+        .is_none()
+    );
+}
+
+#[test]
+fn periodic_trim_components_refuse_touching_contours() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicContourForestRefusal, build_exact_periodic_surface_trim_components,
+    };
+    let a = [[0., 0.], [1., 0.], [1., 1.], [0., 1.], [0., 0.]];
+    let b = [[1., 0.], [2., 0.], [2., 1.], [1., 1.], [1., 0.]];
+    let report = build_exact_periodic_surface_trim_components(
+        &doubly_periodic_tensor(),
+        &[&a, &b],
+        1_000_000,
+    )
+    .unwrap();
+    assert!(report.components.is_none());
+    assert!(matches!(
+        report.refusal,
+        Some(PeriodicContourForestRefusal::Contact { .. })
+    ));
+}

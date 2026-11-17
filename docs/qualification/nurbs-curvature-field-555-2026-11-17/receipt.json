@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0555",
+  "testedBase": "505a89506c445d5e7a47641ed2ae06f180cede87",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 167,
+  "scope": [
+    "Store aligned component lifts as exact oriented degree-one trim loops for the UV classifier.",
+    "Normalize winding with rational area, store exactly representable degree-one trim loops and verify downstream UV classification."
+  ],
+  "logSha256": "71b7781cb8354335396f68c44f5cfc7f488cdc4c253ed9f979f53fd1d891b52f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "a6194566ac7f5c48d0a9a7ec8f9c8731610f478b18daa2b28949ce5def228b8c",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "144e132c00d2ff8e2051ba9ccfdc9d9569a013878dbfd4478aceac1705f6ccb2"
+  }
+}
