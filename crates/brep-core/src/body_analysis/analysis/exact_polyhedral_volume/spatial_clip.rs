@@ -764,3 +764,58 @@ pub fn bounded_polyhedral_path_material_length(
         exact_work: max_exact_work - remaining,
     })
 }
+
+/// A connected interval of exterior parameters within a single path span.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PolyhedralExteriorInterval {
+    pub parameters: [Q; 2],
+    /// Whether the start and end parameters, respectively, are exterior.
+    pub endpoints_included: [bool; 2],
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralPathExteriorClip {
+    /// Exterior intervals for each path span, ordered by local parameter.
+    pub span_intervals: Vec<Vec<PolyhedralExteriorInterval>>,
+    pub exact_work: u64,
+}
+
+/// Clip a spatial polyline to the exterior of a qualified polyhedral solid.
+/// Boundary points are excluded, so a tangency splits an exterior interval.
+pub fn exact_polyhedral_path_exterior_clip(
+    solid: &QualifiedClosedSolid,
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralPathExteriorClip> {
+    let material = exact_polyhedral_path_material_clip(solid, points_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - material.exact_work;
+    let mut span_intervals = Vec::with_capacity(material.span_intervals.len());
+    for intervals in material.span_intervals {
+        spend(&mut remaining, 4)?;
+        let mut exterior = Vec::new();
+        let mut start = Q::zero();
+        let mut include_start = true;
+        for [lo, hi] in intervals {
+            spend(&mut remaining, 4)?;
+            if start < lo {
+                exterior.push(PolyhedralExteriorInterval {
+                    parameters: [start, lo],
+                    endpoints_included: [include_start, false],
+                });
+            }
+            start = hi;
+            include_start = false;
+        }
+        if start < Q::one() {
+            exterior.push(PolyhedralExteriorInterval {
+                parameters: [start, Q::one()],
+                endpoints_included: [include_start, true],
+            });
+        }
+        span_intervals.push(exterior);
+    }
+    Ok(ExactPolyhedralPathExteriorClip {
+        span_intervals,
+        exact_work: max_exact_work - remaining,
+    })
+}

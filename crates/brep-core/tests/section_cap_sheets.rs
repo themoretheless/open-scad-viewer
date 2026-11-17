@@ -3461,3 +3461,80 @@ fn bounded_path_material_length_encloses_irrational_distance() {
         [q(0), q(0)]
     );
 }
+
+#[test]
+fn exact_path_exterior_clip_preserves_open_ends_at_hole_and_face_contacts() {
+    use brep_core::{
+        analysis::{PolyhedralExteriorInterval, exact_polyhedral_path_exterior_clip},
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |x, z| [q(x, 1), q(3, 2), q(z, 1)];
+    let expected = vec![
+        PolyhedralExteriorInterval {
+            parameters: [q(0, 1), q(1, 6)],
+            endpoints_included: [true, false],
+        },
+        PolyhedralExteriorInterval {
+            parameters: [q(1, 3), q(1, 2)],
+            endpoints_included: [false, false],
+        },
+        PolyhedralExteriorInterval {
+            parameters: [q(5, 6), q(1, 1)],
+            endpoints_included: [false, true],
+        },
+    ];
+    for z in [1, 2] {
+        let path = [point(-1, z), point(5, z)];
+        let report = exact_polyhedral_path_exterior_clip(solid, &path, 1_000_000).unwrap();
+        assert_eq!(report.span_intervals, [expected.clone()]);
+        assert_eq!(
+            exact_polyhedral_path_exterior_clip(solid, &path, report.exact_work).unwrap(),
+            report
+        );
+        assert!(exact_polyhedral_path_exterior_clip(solid, &path, report.exact_work - 1).is_err());
+    }
+}
+
+#[test]
+fn exact_path_exterior_clip_splits_at_isolated_contact_and_handles_stationary_spans() {
+    use brep_core::{
+        analysis::{PolyhedralExteriorInterval, exact_polyhedral_path_exterior_clip},
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |x, y| [q(x, 1), q(y, 1), q(1, 1)];
+    let interval = |lo, hi, endpoints_included| PolyhedralExteriorInterval {
+        parameters: [lo, hi],
+        endpoints_included,
+    };
+    let stationary = vec![interval(q(0, 1), q(1, 1), [true, true])];
+    let path = [
+        point(-1, 1),
+        point(-1, 1),
+        point(1, -1),
+        point(0, 0),
+        point(0, 0),
+    ];
+    let report = exact_polyhedral_path_exterior_clip(solid, &path, 1_000_000).unwrap();
+    assert_eq!(
+        report.span_intervals,
+        [
+            stationary,
+            vec![
+                interval(q(0, 1), q(1, 2), [true, false]),
+                interval(q(1, 2), q(1, 1), [false, true]),
+            ],
+            vec![interval(q(0, 1), q(1, 1), [true, false])],
+            vec![],
+        ]
+    );
+}
