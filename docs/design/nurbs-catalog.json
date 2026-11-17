@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 566,
-  "unallocatedCount": 434,
+  "specifiedCount": 567,
+  "unallocatedCount": 433,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14351,6 +14351,25 @@
       "remainingQualification": [
         "Recover directed rational source parameters before orientation normalization of outer and hole contours.",
         "Verify exact directed intervals under reversed winding and splitting across a periodic seam, and withhold mappings on refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0567",
+      "name": "Привязка исходного направления сегментов периодической обрезки к рёбрам B-rep",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "brep_core::feature_ops::periodic_trim_sheet::build_exact_periodic_trim_sheet_with_input_bindings",
+      "evidence": [
+        "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs",
+        "crates/brep-core/tests/exact_periodic_trim_binding_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-567-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-567-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Associate directed exact original contour parameters with persistent B-rep edge IDs.",
+        "Verify identity and source interval alignment on outer and hole coedges plus atomic refusal.",
         "WASM and application integration are separate."
       ]
     }

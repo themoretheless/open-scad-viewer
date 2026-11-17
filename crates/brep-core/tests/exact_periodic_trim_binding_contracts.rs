@@ -1,6 +1,7 @@
 use brep_core::feature_ops::periodic_trim_sheet::{
     build_exact_periodic_trim_sheet_with_bindings,
     build_exact_periodic_trim_sheet_with_edge_bindings,
+    build_exact_periodic_trim_sheet_with_input_bindings,
 };
 use nurbs_core::{
     curve::Curve,
@@ -166,4 +167,62 @@ fn refused_build_withholds_persistent_edge_sources() {
     assert!(report.bound_sheet.sheet.model.is_none());
     assert!(report.bound_sheet.sheet.refusal.is_some());
     assert!(report.edge_bindings.is_empty());
+}
+
+#[test]
+fn input_directed_edge_bindings_follow_persistent_wire_order() {
+    let outer = [
+        [3.5, 0.125],
+        [3.5, 0.875],
+        [0.5, 0.875],
+        [0.5, 0.125],
+        [3.5, 0.125],
+    ];
+    let hole = [
+        [0.125, 0.25],
+        [0.375, 0.25],
+        [0.375, 0.75],
+        [0.125, 0.75],
+        [0.125, 0.25],
+    ];
+    let result = build_exact_periodic_trim_sheet_with_input_bindings(
+        &support(),
+        &[&hole, &outer],
+        1e-8,
+        1_000_000,
+    )
+    .unwrap();
+    let model = result.bound_sheet.sheet.model.unwrap();
+    assert_eq!(result.edge_bindings.len(), model.edges.len());
+    for (binding, id) in result.edge_bindings.iter().zip(&model.1.edges) {
+        assert_eq!(&binding.edge_id, id);
+        assert!(binding.source.parameters[0] > binding.source.parameters[1]);
+    }
+    let split = &result.edge_bindings[..2];
+    assert!(
+        split
+            .iter()
+            .all(|entry| entry.source.contour == 1 && entry.source.segment == 3)
+    );
+    assert_eq!(split[0].source.parameters[1], split[1].source.parameters[0]);
+    let hole_edge = model.loops[model.faces[0].holes[0]].coedges[0].edge;
+    assert_eq!(result.edge_bindings[hole_edge].source.contour, 0);
+    assert_eq!(result.edge_bindings[hole_edge].source.segment, 3);
+}
+
+#[test]
+fn refused_build_withholds_input_directed_bindings() {
+    let outer = [
+        [3.5, 0.125],
+        [3.5, 0.875],
+        [0.5, 0.875],
+        [0.5, 0.125],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_trim_sheet_with_input_bindings(&support(), &[&outer], 1e-8, 1)
+            .unwrap();
+    assert!(result.bound_sheet.sheet.model.is_none());
+    assert!(result.bound_sheet.sheet.refusal.is_some());
+    assert!(result.edge_bindings.is_empty());
 }

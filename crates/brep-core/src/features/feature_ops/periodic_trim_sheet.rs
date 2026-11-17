@@ -4,8 +4,9 @@ use crate::{
 };
 use nurbs_core::{
     editing::exact_periodic_surface::{
-        PeriodicTrimEdge, PeriodicTrimEdgeRefusal, PeriodicTrimEdgeSource,
-        build_exact_periodic_surface_trim_edges,
+        PeriodicTrimEdge, PeriodicTrimEdgeRefusal, PeriodicTrimEdgeSource, PeriodicTrimEdgesReport,
+        PeriodicTrimInputEdgeSource, build_exact_periodic_surface_trim_edges,
+        build_exact_periodic_surface_trim_input_edges,
     },
     surface::Surface,
 };
@@ -79,6 +80,66 @@ pub fn build_exact_periodic_trim_sheet_with_edge_bindings(
     build_sheet(source, contours, tolerance_mm, max_work, true)
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PeriodicTrimInputEdgeBinding {
+    pub edge_id: TopoId,
+    pub source: PeriodicTrimInputEdgeSource,
+}
+
+#[derive(Clone, Debug)]
+pub struct InputBoundPeriodicTrimSheet {
+    pub bound_sheet: BoundPeriodicTrimSheet,
+    /// Bindings in model edge order, expressed in the original sample order.
+    pub edge_bindings: Vec<PeriodicTrimInputEdgeBinding>,
+}
+
+/// Build an exact sheet and trace persistent edges back to the caller's
+/// original contour segments, including the direction of each edge.
+pub fn build_exact_periodic_trim_sheet_with_input_bindings(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    tolerance_mm: f64,
+    max_work: u64,
+) -> Result<InputBoundPeriodicTrimSheet> {
+    check_tolerance(tolerance_mm)?;
+    let input = build_exact_periodic_surface_trim_input_edges(source, contours, max_work)?;
+    let bound_sheet =
+        assemble_sheet(input.geometry, contours.len(), tolerance_mm, false)?.bound_sheet;
+    let sources = input.sources.into_iter().flatten().flatten();
+    let mut edge_bindings = Vec::new();
+    if let Some(model) = &bound_sheet.sheet.model {
+        let mut sources = sources;
+        for &edge_id in &model.1.edges {
+            let source = sources.next().ok_or_else(edge_count_error)?;
+            edge_bindings.push(PeriodicTrimInputEdgeBinding { edge_id, source });
+        }
+        if sources.next().is_some() {
+            return Err(edge_count_error());
+        }
+    }
+    Ok(InputBoundPeriodicTrimSheet {
+        bound_sheet,
+        edge_bindings,
+    })
+}
+
+fn edge_count_error() -> Error {
+    Error::new(
+        "BREP_PERIODIC_TRIM_SHEET",
+        "Periodic trim source and edge counts differ",
+    )
+}
+
+fn check_tolerance(tolerance_mm: f64) -> Result<()> {
+    if !tolerance_mm.is_finite() || tolerance_mm <= 0. {
+        return Err(Error::new(
+            "BREP_PERIODIC_TRIM_SHEET",
+            "Periodic trim sheet needs positive finite tolerance",
+        ));
+    }
+    Ok(())
+}
+
 fn build_sheet(
     source: &Surface,
     contours: &[&[[f64; 2]]],
@@ -86,11 +147,18 @@ fn build_sheet(
     max_work: u64,
     bind_edges: bool,
 ) -> Result<EdgeBoundPeriodicTrimSheet> {
-    let error = |message| Error::new("BREP_PERIODIC_TRIM_SHEET", message);
-    if !tolerance_mm.is_finite() || tolerance_mm <= 0. {
-        return Err(error("Periodic trim sheet needs positive finite tolerance"));
-    }
+    check_tolerance(tolerance_mm)?;
     let report = build_exact_periodic_surface_trim_edges(source, contours, max_work)?;
+    assemble_sheet(report, contours.len(), tolerance_mm, bind_edges)
+}
+
+fn assemble_sheet(
+    report: PeriodicTrimEdgesReport,
+    contour_count: usize,
+    tolerance_mm: f64,
+    bind_edges: bool,
+) -> Result<EdgeBoundPeriodicTrimSheet> {
+    let error = |message| Error::new("BREP_PERIODIC_TRIM_SHEET", message);
     let Some(patches) = report.patches else {
         return Ok(EdgeBoundPeriodicTrimSheet {
             bound_sheet: BoundPeriodicTrimSheet {
@@ -113,7 +181,7 @@ fn build_sheet(
         bodies: Vec::new(),
         tolerance_mm,
     };
-    let mut wire_owners = vec![None; contours.len()];
+    let mut wire_owners = vec![None; contour_count];
     let mut edge_sources = Vec::new();
     for patch in patches {
         if bind_edges {
@@ -203,7 +271,7 @@ fn build_sheet(
         })
         .collect::<Result<Vec<_>>>()?;
     if bind_edges && edge_sources.len() != model.1.edges.len() {
-        return Err(error("Periodic trim source and edge counts differ"));
+        return Err(edge_count_error());
     }
     let edge_bindings = edge_sources
         .into_iter()
