@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 532,
-  "unallocatedCount": 468,
+  "specifiedCount": 533,
+  "unallocatedCount": 467,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13648,6 +13648,27 @@
       "remainingQualification": [
         "Extend one surface axis to an exact integer number of turns with unchanged parameter units.",
         "Repeat the complete weighted tensor cycle and translate each newly exposed knot exactly under the control and work limits.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0533",
+      "name": "Точное извлечение полосы NURBS-поверхности через несколько периодов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::restrict_exact_periodic_surface_over_turns",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-533-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-533-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Extract a clamped surface strip over full and partial turns while preserving absolute UV.",
+        "Extend exact cyclic tensor support only as far as needed and clamp the selected absolute interval under one work budget.",
         "WASM and application integration are separate."
       ]
     }

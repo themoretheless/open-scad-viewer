@@ -2844,3 +2844,68 @@ fn exact_period_repetition_refuses_unstorable_translations_and_oversized_outputs
         Some(GaugeMergeRefusal::Exact(ExactRefusal::NotRepresentable))
     );
 }
+
+#[test]
+fn multiturn_surface_strip_preserves_absolute_parameters_and_transverse_period() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::restrict_exact_periodic_surface_over_turns, surface::Axis,
+    };
+    let source = doubly_periodic_tensor();
+    for axis in [Axis::U, Axis::V] {
+        let report =
+            restrict_exact_periodic_surface_over_turns(&source, axis, [3.5, 13.25], 1_000_000)
+                .unwrap();
+        assert_eq!(report.refusal, None);
+        let strip = report.surface.unwrap();
+        match axis {
+            Axis::U => assert!(!strip.periodic_u && strip.periodic_v),
+            Axis::V => assert!(strip.periodic_u && !strip.periodic_v),
+        };
+        for q in 14..=53 {
+            let t = q as f64 / 4.;
+            let (u, v, old_u, old_v) = match axis {
+                Axis::U => (t, 2.25, t % 4., 2.25),
+                Axis::V => (2.25, t, 2.25, t % 4.),
+            };
+            assert_eq!(
+                strip.evaluate(u, v).unwrap().point,
+                source.evaluate(old_u, old_v).unwrap().point
+            );
+        }
+        assert!(
+            restrict_exact_periodic_surface_over_turns(
+                &source,
+                axis,
+                [3.5, 13.25],
+                report.work_used - 1
+            )
+            .unwrap()
+            .surface
+            .is_none()
+        );
+    }
+}
+
+#[test]
+fn multiturn_surface_strip_refuses_an_oversized_cover() {
+    use nurbs_core::{
+        editing::{
+            exact_curve_merge::GaugeMergeRefusal,
+            exact_periodic_surface::restrict_exact_periodic_surface_over_turns,
+            rational_factor::Refusal,
+        },
+        surface::Axis,
+    };
+    let report = restrict_exact_periodic_surface_over_turns(
+        &doubly_periodic_tensor(),
+        Axis::U,
+        [0., 1024.],
+        1_000_000,
+    )
+    .unwrap();
+    assert!(report.surface.is_none());
+    assert_eq!(
+        report.refusal,
+        Some(GaugeMergeRefusal::Exact(Refusal::ResourceLimit))
+    );
+}

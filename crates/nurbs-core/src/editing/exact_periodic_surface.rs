@@ -181,6 +181,28 @@ pub fn restrict_exact_periodic_surface_axis(
     interval: [f64; 2],
     max_work: u64,
 ) -> Result<Report> {
+    restrict_periodic_surface_interval(source, axis, interval, max_work, false)
+}
+
+/// Extract a clamped strip spanning full and partial turns of the selected
+/// periodic surface axis. The anchor must lie in the original half-open
+/// domain. Keep the lifted absolute parameters and the transverse basis.
+pub fn restrict_exact_periodic_surface_over_turns(
+    source: &Surface,
+    axis: Axis,
+    interval: [f64; 2],
+    max_work: u64,
+) -> Result<Report> {
+    restrict_periodic_surface_interval(source, axis, interval, max_work, true)
+}
+
+fn restrict_periodic_surface_interval(
+    source: &Surface,
+    axis: Axis,
+    interval: [f64; 2],
+    max_work: u64,
+    allow_multiple_turns: bool,
+) -> Result<Report> {
     let [lo, hi] = interval;
     crate::check(
         lo.is_finite() && hi.is_finite() && lo < hi,
@@ -190,18 +212,32 @@ pub fn restrict_exact_periodic_surface_axis(
     let Some(surface) = rotated.surface else {
         return Ok(rotated);
     };
-    if hi > row(&surface, axis, 0).domain()[1] {
-        return Ok(Report {
-            surface: None,
-            work_used: rotated.work_used,
-            refusal: Some(GaugeMergeRefusal::Join(Refusal::NonAdjacentDomain)),
-        });
-    }
+    let reference = row(&surface, axis, 0);
     let mut work = Work {
         used: rotated.work_used,
         limit: max_work,
     };
-    Ok(clamp_surface_axis(&surface, axis, interval, &mut work))
+    if hi <= reference.domain()[1] {
+        return Ok(clamp_surface_axis(&surface, axis, interval, &mut work));
+    }
+    if !allow_multiple_turns {
+        return Ok(Report {
+            surface: None,
+            work_used: work.used,
+            refusal: Some(GaugeMergeRefusal::Join(Refusal::NonAdjacentDomain)),
+        });
+    }
+    let extended = match extend_tensor_support(&surface, axis, reference, hi, &mut work) {
+        Ok(extended) => extended,
+        Err(reason) => {
+            return Ok(Report {
+                surface: None,
+                work_used: work.used,
+                refusal: Some(GaugeMergeRefusal::Exact(reason)),
+            });
+        }
+    };
+    Ok(clamp_surface_axis(&extended, axis, interval, &mut work))
 }
 
 fn clamp_surface_axis(source: &Surface, axis: Axis, interval: [f64; 2], work: &mut Work) -> Report {
@@ -1479,10 +1515,33 @@ pub fn repeat_exact_periodic_surface_period(
     if let Err(reason) = extend() {
         return Ok(refused(work.used, GaugeMergeRefusal::Exact(reason)));
     }
+    let surface = surface_with_repeated_axis(source, axis, knots, count, cycle, true);
+    if surface.validate().is_err() {
+        return Ok(refused(
+            work.used,
+            GaugeMergeRefusal::Join(Refusal::InvalidOutput),
+        ));
+    }
+    Ok(Report {
+        surface: Some(surface),
+        work_used: work.used,
+        refusal: None,
+    })
+}
+
+fn surface_with_repeated_axis(
+    source: &Surface,
+    axis: Axis,
+    knots: Vec<f64>,
+    count: usize,
+    cycle: usize,
+    periodic: bool,
+) -> Surface {
     let mut surface = source.clone();
     match axis {
         Axis::U => {
             surface.knots_u = knots;
+            surface.periodic_u = periodic;
             surface.control_points = (0..count)
                 .map(|i| source.control_points[i % cycle].clone())
                 .collect();
@@ -1492,6 +1551,7 @@ pub fn repeat_exact_periodic_surface_period(
         }
         Axis::V => {
             surface.knots_v = knots;
+            surface.periodic_v = periodic;
             for (points, original) in surface
                 .control_points
                 .iter_mut()
@@ -1504,15 +1564,42 @@ pub fn repeat_exact_periodic_surface_period(
             }
         }
     }
-    if surface.validate().is_err() {
-        return Ok(refused(
-            work.used,
-            GaugeMergeRefusal::Join(Refusal::InvalidOutput),
-        ));
+    surface
+}
+
+fn extend_tensor_support(
+    source: &Surface,
+    axis: Axis,
+    reference: crate::curve::Curve,
+    end: f64,
+    work: &mut Work,
+) -> std::result::Result<Surface, ExactRefusal> {
+    let degree = reference.degree;
+    let mut count = reference.control_points.len();
+    let cycle = count - degree;
+    let [lo, hi] = reference.domain();
+    let lo = work.lift(lo)?;
+    let hi = work.lift(hi)?;
+    let period = work.op(&hi, &lo, |a, b| a - b)?;
+    let mut knots = reference.knots;
+    // Keep one complete de Boor support window beyond the last active knot.
+    while end > knots[count] {
+        if count == 256 {
+            return Err(ExactRefusal::ResourceLimit);
+        }
+        let prior = work.lift(knots[knots.len() - cycle])?;
+        let shifted = work.op(&prior, &period, |a, b| a + b)?;
+        knots.push(work.float(&shifted)?);
+        count += 1;
     }
-    Ok(Report {
-        surface: Some(surface),
-        work_used: work.used,
-        refusal: None,
-    })
+    let other = match axis {
+        Axis::U => Axis::V,
+        Axis::V => Axis::U,
+    };
+    work.charge((count * axis_control_count(source, other)) as u64)?;
+    // This finite window need not end at an integral turn; its selected
+    // axis is clamped by the caller before any surface is exposed.
+    Ok(surface_with_repeated_axis(
+        source, axis, knots, count, cycle, false,
+    ))
 }
