@@ -3997,3 +3997,82 @@ pub fn exact_coplanar_polyline_boolean_extrusion_inertia(
         max_exact_work - remaining,
     ))
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactCoplanarPolylineBooleanExtrusionLocations {
+    /// Locations in the same order as the queries.
+    pub locations: Vec<PolyhedralPathLocation>,
+    pub exact_work: u64,
+}
+
+/// Classify points against an exact Boolean profile swept along a rational
+/// vector. Recover the base point by inverting the sweep and use only
+/// exterior and hole edges, so the internal cell seams are transparent.
+pub fn locate_points_in_exact_coplanar_polyline_boolean_extrusion(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    operation: CoplanarPolylineBoolean,
+    sweep_mm: &[Q; 3],
+    queries_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactCoplanarPolylineBooleanExtrusionLocations> {
+    validate_point(sweep_mm)?;
+    if sweep_mm.iter().all(Zero::is_zero) {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Extrusion requires a nonzero vector",
+        ));
+    }
+    let (report, axes) = planar_profile_boolean_boundary(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        operation,
+        max_exact_work,
+    )?;
+    let mut remaining = max_exact_work - report.exact_work;
+    let origin = &first_outer_mm[0];
+    let mut normal = [Q::zero(), Q::zero(), Q::zero()];
+    for [a, b] in &report.edges_mm {
+        spend(&mut remaining, 20)?;
+        let a: [Q; 3] = std::array::from_fn(|i| &a[i] - &origin[i]);
+        let b: [Q; 3] = std::array::from_fn(|i| &b[i] - &origin[i]);
+        for (k, (i, j)) in [(1, 2), (2, 0), (0, 1)].into_iter().enumerate() {
+            normal[k] += &a[i] * &b[j] - &a[j] * &b[i];
+        }
+    }
+    spend(&mut remaining, 8)?;
+    let height = dot(&normal, sweep_mm);
+    if height.is_zero() && !report.edges_mm.is_empty() {
+        return Err(refuse("Extrusion vector lies in the profile plane"));
+    }
+    let mut locations = Vec::new();
+    for query in queries_mm {
+        spend(&mut remaining, 28)?;
+        validate_point(query)?;
+        let mut location = PolyhedralPathLocation::Exterior;
+        if !report.edges_mm.is_empty() {
+            let offset = std::array::from_fn(|i| &query[i] - &origin[i]);
+            let t = dot(&normal, &offset) / &height;
+            if !t.is_negative() && t <= Q::one() {
+                let base = std::array::from_fn(|i| &query[i] - &t * &sweep_mm[i]);
+                location = match point_in_face(&report.edges_mm, &base, axes, &mut remaining)? {
+                    FaceLocation::Outside => PolyhedralPathLocation::Exterior,
+                    FaceLocation::Boundary => PolyhedralPathLocation::Boundary,
+                    FaceLocation::Inside if t.is_zero() || t.is_one() => {
+                        PolyhedralPathLocation::Boundary
+                    }
+                    FaceLocation::Inside => PolyhedralPathLocation::Interior,
+                };
+            }
+        }
+        locations.push(location);
+    }
+    Ok(ExactCoplanarPolylineBooleanExtrusionLocations {
+        locations,
+        exact_work: max_exact_work - remaining,
+    })
+}

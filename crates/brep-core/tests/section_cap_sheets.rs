@@ -6314,3 +6314,129 @@ fn exact_coplanar_boolean_extrusion_inertia_subtracts_a_through_hole() {
         ]
     );
 }
+
+#[test]
+fn exact_boolean_extrusion_locations_distinguish_caps_holes_and_internal_seams() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Difference, PolyhedralPathLocation::*,
+        locate_points_in_exact_coplanar_polyline_boolean_extrusion,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y| [q(x, 1), q(y, 1), q(0, 1)];
+    let rect = |lo, hi| [p(lo, lo), p(hi, lo), p(hi, hi), p(lo, hi), p(lo, lo)];
+    let a = rect(0, 6);
+    let b = rect(2, 4);
+    let sweep = [q(1, 3), q(0, 1), q(-2, 1)];
+    let at = |x, y, t: Q| {
+        let base = p(x, y);
+        std::array::from_fn(|i| &base[i] + &t * &sweep[i])
+    };
+    let queries = [
+        at(2, 1, q(1, 2)),
+        at(2, 3, q(1, 2)),
+        at(3, 3, q(1, 2)),
+        at(1, 1, q(0, 1)),
+        at(1, 1, q(1, 1)),
+        at(1, 1, q(3, 2)),
+        at(3, 3, q(1, 1)),
+        at(0, 1, q(1, 2)),
+    ];
+    let report = locate_points_in_exact_coplanar_polyline_boolean_extrusion(
+        &a,
+        &[],
+        &b,
+        &[],
+        Difference,
+        &sweep,
+        &queries,
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(
+        report.locations,
+        [
+            Interior, Boundary, Exterior, Boundary, Boundary, Exterior, Exterior, Boundary
+        ]
+    );
+    assert_eq!(
+        locate_points_in_exact_coplanar_polyline_boolean_extrusion(
+            &a,
+            &[],
+            &b,
+            &[],
+            Difference,
+            &sweep,
+            &queries,
+            report.exact_work
+        )
+        .unwrap(),
+        report
+    );
+    assert!(
+        locate_points_in_exact_coplanar_polyline_boolean_extrusion(
+            &a,
+            &[],
+            &b,
+            &[],
+            Difference,
+            &sweep,
+            &queries,
+            report.exact_work - 1
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn exact_boolean_extrusion_locations_handle_point_contacts_and_empty_profiles() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::*, PolyhedralPathLocation::*,
+        locate_points_in_exact_coplanar_polyline_boolean_extrusion,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y| [q(x), q(y), q(0)];
+    let rect = |lo, hi| [p(lo, lo), p(lo, hi), p(hi, hi), p(hi, lo), p(lo, lo)];
+    let a = rect(0, 2);
+    let b = rect(2, 4);
+    let queries = [[q(2), q(2), q(1)], [q(1), q(1), q(1)], [q(3), q(3), q(1)]];
+    let sweep = [q(0), q(0), q(2)];
+    let union = locate_points_in_exact_coplanar_polyline_boolean_extrusion(
+        &a,
+        &[],
+        &b,
+        &[],
+        Union,
+        &sweep,
+        &queries,
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(union.locations, [Boundary, Interior, Interior]);
+    let empty = locate_points_in_exact_coplanar_polyline_boolean_extrusion(
+        &a,
+        &[],
+        &b,
+        &[],
+        Intersection,
+        &sweep,
+        &queries,
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(empty.locations, [Exterior; 3]);
+    assert!(
+        locate_points_in_exact_coplanar_polyline_boolean_extrusion(
+            &a,
+            &[],
+            &b,
+            &[],
+            Union,
+            &p(1, 0),
+            &queries,
+            1_000_000
+        )
+        .is_err()
+    );
+}

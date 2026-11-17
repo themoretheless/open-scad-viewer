@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 479,
-  "unallocatedCount": 521,
+  "specifiedCount": 480,
+  "unallocatedCount": 520,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12478,6 +12478,35 @@
       "remainingQualification": [
         "Integrate exact volumetric mass properties of rational planar Boolean extrusions.",
         "Integrate signed tetrahedra from the outward rational extrusion mesh. Check the exact swept volume and compute centroidal inertia at unit density.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0480",
+      "name": "Точная классификация точек в косом выдавливании плоского булева профиля",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::locate_points_in_exact_coplanar_polyline_boolean_extrusion",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "docs/qualification/nurbs-curvature-field-480-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-480-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify exact point batches against rational planar Boolean extrusions.",
+        "Invert the exact rational sweep. Classify recovered base points against the regularized footprint boundary and distinguish cap, wall and interior locations.",
         "WASM and application integration are separate."
       ]
     }
