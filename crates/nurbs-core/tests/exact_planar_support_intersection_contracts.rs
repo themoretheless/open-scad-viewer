@@ -6,12 +6,13 @@ use nurbs_core::{
         },
         exact_plane_intersection::{
             AdaptiveBoundaryOptions, AlgebraicBoundaryClock, AlgebraicPlanarContacts,
-            BoundaryResolution, BoundedPlanarBoundaryIntersection, ExactPlanarIntersectionSegment,
-            PlanarBoundaryIntersection, PlanarFaceContactPartition, PlanarIntersectionSegments,
-            PlanarSectionOutcome, PlanarSegmentStorage, StoredPlanarIntersection,
-            SupportPlaneIntersection, TrimmedPlanarIntersection,
-            bound_planar_face_boundary_intersection, build_planar_intersection_segments,
-            classify_planar_face_contacts, enclose_algebraic_planar_boundary_point,
+            BoundaryResolution, BoundedPlanarBoundaryIntersection, ClassifiedPlanarSection,
+            ExactPlanarIntersectionSegment, PlanarBoundaryIntersection, PlanarFaceContactPartition,
+            PlanarIntersectionSegments, PlanarSectionOutcome, PlanarSectionWindingOptions,
+            PlanarSegmentStorage, StoredPlanarIntersection, SupportPlaneIntersection,
+            TrimmedPlanarIntersection, bound_planar_face_boundary_intersection,
+            build_planar_intersection_segments, classify_planar_face_contacts,
+            classify_quadratic_planar_section, enclose_algebraic_planar_boundary_point,
             intersect_planar_face_boundaries, intersect_planar_face_boundary_contacts,
             intersect_planar_supports, intersect_trimmed_planar_faces,
             isolate_ordered_algebraic_boundary_clocks, match_quadratic_planar_boundary_contacts,
@@ -1357,4 +1358,83 @@ fn refuses_a_coincident_span_instead_of_claiming_a_finite_cut_list() {
             nurbs_core::editing::exact_derivative::Refusal::UnprovedIdentity
         )
     );
+}
+
+fn section_winding_options(max_winding_cells: usize) -> PlanarSectionWindingOptions {
+    PlanarSectionWindingOptions {
+        winding_tolerance: 1e-8,
+        max_winding_cells,
+        max_work: WORK,
+    }
+}
+
+#[test]
+fn classifies_every_gap_between_exact_hole_and_face_boundaries() {
+    use nurbs_core::trim::trim_domain::Location::{Inside, Outside};
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.loops = vec![
+        rectangle([-2., 2.], [-1., 1.], false),
+        rectangle([-0.5, 0.5], [-0.5, 0.5], true),
+    ];
+    b.loops = vec![rectangle([-1., 1.], [-1., 1.], false)];
+    let options = section_winding_options(10_000);
+    let report = classify_quadratic_planar_section(&a, &b, options).unwrap();
+    let ClassifiedPlanarSection::Transverse { section, gaps } = report.outcome else {
+        panic!("{:?}", report.outcome);
+    };
+    assert_eq!(section.events.len(), 6);
+    assert_eq!(
+        gaps,
+        [
+            [Inside, Outside],
+            [Inside, Inside],
+            [Outside, Inside],
+            [Inside, Inside],
+            [Inside, Outside]
+        ]
+    );
+    let reverse = classify_quadratic_planar_section(&b, &a, options).unwrap();
+    let ClassifiedPlanarSection::Transverse {
+        section: reverse_section,
+        gaps: reverse_gaps,
+    } = reverse.outcome
+    else {
+        panic!("{:?}", reverse.outcome);
+    };
+    assert_eq!(section.line, reverse_section.line);
+    assert_eq!(
+        reverse_gaps,
+        gaps.into_iter().map(|[a, b]| [b, a]).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn classifies_the_full_gap_between_irrational_events_with_bounded_winding() {
+    use nurbs_core::trim::trim_domain::Location::{Inside, Unresolved};
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.loops = vec![irrational_contact_loop(0.5, 2., false)];
+    b.loops = vec![irrational_contact_loop(0.5, 2., true)];
+    let complete =
+        classify_quadratic_planar_section(&a, &b, section_winding_options(10_000)).unwrap();
+    let ClassifiedPlanarSection::Transverse { section, gaps } = complete.outcome else {
+        panic!("{:?}", complete.outcome);
+    };
+    assert_eq!(gaps, [[Inside, Inside]]);
+    assert!(
+        section
+            .events
+            .iter()
+            .all(|event| matches!(event.clock, AlgebraicBoundaryClock::Quadratic { .. }))
+    );
+    let limited = classify_quadratic_planar_section(&a, &b, section_winding_options(1)).unwrap();
+    let ClassifiedPlanarSection::Transverse {
+        section: limited_section,
+        gaps,
+    } = limited.outcome
+    else {
+        panic!("{:?}", limited.outcome);
+    };
+    assert_eq!(limited_section, section);
+    assert_eq!(gaps, [[Unresolved, Unresolved]]);
+    assert!(limited.winding_cells <= 1);
 }

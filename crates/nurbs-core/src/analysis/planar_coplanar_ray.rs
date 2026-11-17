@@ -456,16 +456,24 @@ fn partition_gaps(
 }
 
 fn gap_midpoint(
-    [origin, direction]: &[[Q; 2]; 2],
+    projected: &[[Q; 2]; 2],
     lo: &Q,
     hi: &Q,
     work: &mut Work,
 ) -> std::result::Result<Option<[[f64; 2]; 2]>, Refusal> {
     let parameter = work.op(lo, hi, |a, b| (a + b) / Q::from_integer(2.into()))?;
+    section_sample_rectangle(projected, &parameter, work)
+}
+
+pub(super) fn section_sample_rectangle(
+    [origin, direction]: &[[Q; 2]; 2],
+    parameter: &Q,
+    work: &mut Work,
+) -> std::result::Result<Option<[[f64; 2]; 2]>, Refusal> {
     let cap = Q::from_integer(1_000_000_000.into());
     let mut result = [[0.; 2]; 2];
     for i in 0..2 {
-        let offset = work.op(&direction[i], &parameter, |a, b| a * b)?;
+        let offset = work.op(&direction[i], parameter, |a, b| a * b)?;
         let point = work.op(&origin[i], &offset, |a, b| a + b)?;
         if point.abs() > cap {
             return Ok(None);

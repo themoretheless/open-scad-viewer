@@ -1,0 +1,37 @@
+{
+  "id": "NURBS-0355",
+  "testedBase": "113f400622864a8579ef0299687629e7eeaa640e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts",
+    "--test",
+    "exact_pcurve_line_contact_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 42,
+  "scope": [
+    "Certify the complete open section intervals as inside or outside each face using rational samples between all boundary events.",
+    "Exact contact enumeration excludes boundary crossings throughout each open gap. A winding proof at one rational sample labels the full gap, preserving unresolved labels when coverage is inconclusive."
+  ],
+  "logSha256": "051482c2b4fe22ee65cb83fcfc483d388c7c1ab3624e14097ad8e4a196b0b305",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "388a14fc36f131cdfa489ec5dde0df43a5881f3f4a264bd8ecbb7275dd6631d9",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs": "74ef49a01c828d271cbcd42955582e6be6535c25d07d9b2aa46afb647f921c61",
+    "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs": "4789ce63ca5b26bd468046175e59d1c12abca27e30284736657df9275a5a9553",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "55572461a9096d70b99a6b7bc15a77aed695467431b765074739761027faf390",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "96b41326cacf17990e6cd796e5df4303d8debf7ce589c56d9d87833c6bc2d9dd",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/section.rs": "13605f27a17d97bfe39b3a566c3b4ae66758a608b3bb9c31f61aa25aeaa7cea5",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation/quadratic_contacts.rs": "91105550c89e687c5c014553b9b251d49e3e45588149ba0ad431cdc879a6779a",
+    "crates/nurbs-core/src/trim/trim_domain.rs": "f56223cacef64c33c83f0885ddbc343c9ddff188aeefe47551d41400c0f2222f"
+  }
+}
