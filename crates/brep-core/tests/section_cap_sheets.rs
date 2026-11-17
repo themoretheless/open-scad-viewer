@@ -2187,3 +2187,44 @@ fn exact_oblique_section_area_has_the_correct_metric_scale() {
         assert_eq!(report.area_squared_mm4, Q::from_integer(44.into()));
     }
 }
+
+#[test]
+fn exact_section_centroid_accounts_for_an_off_center_hole() {
+    use brep_core::{
+        analysis::exact_polyhedral_section_centroid,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let normal = [0., 0., 1.];
+    let report = exact_polyhedral_section_centroid(solid, normal, 1., 1_000_000).unwrap();
+    let q = |a: i64, b: i64| Q::new(a.into(), b.into());
+    assert_eq!(report.centroid_mm, Some([q(61, 30), q(61, 30), q(1, 1)]));
+    assert_eq!(report.section.area_squared_mm4, q(225, 1));
+    assert!(
+        exact_polyhedral_section_centroid(solid, normal, 1., report.section.exact_work).is_ok()
+    );
+    assert!(
+        exact_polyhedral_section_centroid(solid, normal, 1., report.section.exact_work - 1)
+            .is_err()
+    );
+    assert!(
+        exact_polyhedral_section_centroid(solid, normal, 3., 1_000_000)
+            .unwrap()
+            .centroid_mm
+            .is_none()
+    );
+}
+
+#[test]
+fn exact_section_centroid_lifts_a_nonbinary_point_to_the_oblique_plane() {
+    use brep_core::analysis::exact_polyhedral_section_centroid;
+    use num_rational::BigRational as Q;
+    let solid = shifted_oblique_solid(0.);
+    let report = exact_polyhedral_section_centroid(&solid, [-1., -1., 3.], 2., 1_000_000).unwrap();
+    let q = |a: i64, b: i64| Q::new(a.into(), b.into());
+    assert_eq!(report.centroid_mm, Some([q(3, 2), q(0, 1), q(7, 6)]));
+    assert_eq!(report.section.area_squared_mm4, q(44, 1));
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 414,
-  "unallocatedCount": 586,
+  "specifiedCount": 415,
+  "unallocatedCount": 585,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -10659,6 +10659,31 @@
       "remainingQualification": [
         "Measure exact transverse section area with ring nesting, void subtraction and oblique metric scaling.",
         "Exact ray parity yields ring depth, and oriented shoelace magnitudes add material and subtract voids. The exact normal ratio restores the physical area as a rational square.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0415",
+      "name": "Точный центр площади поперечного сечения B-rep-тела",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::exact_polyhedral_section_centroid",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/mod.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops.rs",
+        "docs/qualification/nurbs-curvature-field-415-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-415-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Integrate exact area centroids of transverse material sections with holes in world coordinates.",
+        "Signed planar first moments use ring nesting parity and are lifted exactly to the section plane. Empty sections retain no centroid.",
         "WASM and application integration are separate."
       ]
     }

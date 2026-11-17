@@ -134,6 +134,35 @@ pub fn exact_polyhedral_section_area(
     offset: f64,
     max_exact_work: u64,
 ) -> Result<ExactPolyhedralSectionArea> {
+    measure_section(solid, normal, offset, max_exact_work, false).map(|report| report.section)
+}
+
+#[derive(Clone, Debug)]
+pub struct ExactPolyhedralSectionCentroid {
+    pub section: ExactPolyhedralSectionArea,
+    /// Center of the retained material area in world coordinates.
+    /// An empty section has no centroid.
+    pub centroid_mm: Option<[Q; 3]>,
+}
+
+/// Compute the exact area centroid of a strict transverse section. The
+/// common metric scale of the planar projection cancels in the first moments.
+pub fn exact_polyhedral_section_centroid(
+    solid: &QualifiedClosedSolid,
+    normal: [f64; 3],
+    offset: f64,
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralSectionCentroid> {
+    measure_section(solid, normal, offset, max_exact_work, true)
+}
+
+fn measure_section(
+    solid: &QualifiedClosedSolid,
+    normal: [f64; 3],
+    offset: f64,
+    max_exact_work: u64,
+    compute_centroid: bool,
+) -> Result<ExactPolyhedralSectionCentroid> {
     use num_traits::{Signed, Zero};
 
     let section = exact_polyhedral_section_loops(solid, normal, offset, max_exact_work)?;
@@ -155,13 +184,21 @@ pub fn exact_polyhedral_section_area(
 
     let mut depths = Vec::with_capacity(polygons.len());
     let mut twice_area = Q::zero();
+    let mut moments = [Q::zero(), Q::zero()];
     for (index, ring) in polygons.iter().enumerate() {
-        spend(&mut remaining, 5 * ring.len() as u64)?;
-        let unsigned_area = edges(ring)
-            .map(|(a, b)| &a[0] * &b[1] - &b[0] * &a[1])
-            .sum::<Q>()
-            .abs();
-        if unsigned_area.is_zero() {
+        let mut signed_area = Q::zero();
+        let mut first = [Q::zero(), Q::zero()];
+        for (a, b) in edges(ring) {
+            spend(&mut remaining, if compute_centroid { 11 } else { 5 })?;
+            let cross = &a[0] * &b[1] - &b[0] * &a[1];
+            if compute_centroid {
+                for axis in 0..2 {
+                    first[axis] += &cross * (&a[axis] + &b[axis]);
+                }
+            }
+            signed_area += cross;
+        }
+        if signed_area.is_zero() {
             return Err(refuse("Section ring has zero projected area"));
         }
         let mut depth = 0;
@@ -170,10 +207,21 @@ pub fn exact_polyhedral_section_area(
                 depth += 1;
             }
         }
-        if depth % 2 == 0 {
-            twice_area += unsigned_area;
+        let material = depth % 2 == 0;
+        if material {
+            twice_area += signed_area.abs();
         } else {
-            twice_area -= unsigned_area;
+            twice_area -= signed_area.abs();
+        }
+        if compute_centroid {
+            spend(&mut remaining, 4)?;
+            for (total, moment) in moments.iter_mut().zip(first) {
+                if material != signed_area.is_negative() {
+                    *total += moment;
+                } else {
+                    *total -= moment;
+                }
+            }
         }
         depths.push(depth);
     }
@@ -183,11 +231,30 @@ pub fn exact_polyhedral_section_area(
     let norm_squared: Q = normal.iter().map(|n| n * n).sum();
     let area_squared_mm4 =
         twice_area.pow(2) * norm_squared / (Q::from_integer(4.into()) * normal[omitted].pow(2));
-    Ok(ExactPolyhedralSectionArea {
-        area_squared_mm4,
-        depths,
-        loops: section.loops,
-        exact_work: max_exact_work - remaining,
+    let centroid_mm = if compute_centroid && !polygons.is_empty() {
+        if !twice_area.is_positive() {
+            return Err(refuse("Section material area must be positive"));
+        }
+        spend(&mut remaining, 16)?;
+        let denominator = twice_area * Q::from_integer(3.into());
+        let mut point = std::array::from_fn(|_| Q::zero());
+        for (axis, moment) in axes.into_iter().zip(moments) {
+            point[axis] = moment / &denominator;
+        }
+        let retained = &normal[axes[0]] * &point[axes[0]] + &normal[axes[1]] * &point[axes[1]];
+        point[omitted] = (Q::from_float(offset).unwrap() - retained) / &normal[omitted];
+        Some(point)
+    } else {
+        None
+    };
+    Ok(ExactPolyhedralSectionCentroid {
+        section: ExactPolyhedralSectionArea {
+            area_squared_mm4,
+            depths,
+            loops: section.loops,
+            exact_work: max_exact_work - remaining,
+        },
+        centroid_mm,
     })
 }
 
