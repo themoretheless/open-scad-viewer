@@ -675,6 +675,29 @@ pub fn merge_with_exact_c1_clock(
     right: &Curve,
     max_work: u64,
 ) -> Result<GaugeMergeReport> {
+    merge_with_exact_affine_clock(left, right, max_work, false)
+}
+
+/// Merge clamped curves whose regular seam can reach C2 by a positive
+/// affine change of the right parameter. The left clock stays fixed.
+/// Geometric G2 with a nonzero tangential acceleration correction requires
+/// a nonlinear change and is refused by this operation.
+pub fn merge_with_exact_c2_clock(
+    left: &Curve,
+    right: &Curve,
+    max_work: u64,
+) -> Result<GaugeMergeReport> {
+    merge_with_exact_affine_clock(left, right, max_work, true)
+}
+
+fn merge_with_exact_affine_clock(
+    left: &Curve,
+    right: &Curve,
+    max_work: u64,
+    require_second_derivative: bool,
+) -> Result<GaugeMergeReport> {
+    use num_traits::Zero;
+
     use super::{
         exact_projective::affine_curve::scale_curve_clock, rational_edit::Work,
         rational_factor::Refusal as ExactRefusal,
@@ -688,6 +711,12 @@ pub fn merge_with_exact_c1_clock(
     };
     if let Some(reason) = seam.refusal {
         return Ok(refused(reason, seam.work_used));
+    }
+    if require_second_derivative && !seam.acceleration_scale.as_ref().is_some_and(Zero::is_zero) {
+        return Ok(refused(
+            GaugeMergeRefusal::Join(Refusal::SeamMismatch),
+            seam.work_used,
+        ));
     }
     let Some(scale) = seam.speed_scale else {
         return Ok(refused(

@@ -744,3 +744,70 @@ fn c1_clock_merge_refuses_inexact_knots_and_reversed_tangents() {
         assert_eq!(report.refusal, Some(expected));
     }
 }
+
+fn quadratic_clock_seam() -> (Curve, Curve) {
+    let left = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![0.5, 0.], vec![1., 1.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let right = Curve {
+        knots: vec![10., 10., 10., 12., 12., 12.],
+        control_points: vec![vec![1., 1.], vec![1.5, 2.], vec![2., 4.]],
+        weights: vec![3.; 3],
+        ..left.clone()
+    };
+    (left, right)
+}
+
+#[test]
+fn c2_clock_merge_preserves_the_quadratic_across_distinct_domains() {
+    use nurbs_core::editing::exact_curve_merge::{
+        compare_exact_curve_seam_jets, merge_with_exact_c2_clock,
+    };
+    let (left, right) = quadratic_clock_seam();
+    let report = merge_with_exact_c2_clock(&left, &right, 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let curve = report.curve.unwrap();
+    assert_eq!(curve.domain(), [0., 2.]);
+    let [a, b] = curve.split(1.).unwrap();
+    assert_eq!(
+        compare_exact_curve_seam_jets(&a, &b, 1_000_000)
+            .unwrap()
+            .continuity_order,
+        Some(2)
+    );
+    for t in [0., 0.5, 1., 1.5, 2.] {
+        assert_eq!(curve.evaluate(t).unwrap().point, vec![t, t * t]);
+    }
+}
+
+#[test]
+fn c2_clock_merge_refuses_g2_with_a_nonzero_tangential_correction() {
+    use nurbs_core::editing::exact_curve_merge::{
+        GaugeMergeRefusal, compare_exact_curve_geometric_seam, merge_with_exact_c1_clock,
+        merge_with_exact_c2_clock,
+    };
+    let (left, mut right) = quadratic_clock_seam();
+    right.control_points[2] = vec![2.5, 5.];
+    let seam = compare_exact_curve_geometric_seam(&left, &right, 1_000_000).unwrap();
+    assert_eq!(seam.continuity_order, Some(2));
+    assert_eq!(
+        seam.acceleration_scale,
+        Some(num_rational::BigRational::new(1.into(), 4.into()))
+    );
+    let refused = merge_with_exact_c2_clock(&left, &right, 1_000_000).unwrap();
+    assert!(refused.curve.is_none());
+    assert_eq!(
+        refused.refusal,
+        Some(GaugeMergeRefusal::Join(Refusal::SeamMismatch))
+    );
+    assert!(
+        merge_with_exact_c1_clock(&left, &right, 1_000_000)
+            .unwrap()
+            .curve
+            .is_some()
+    );
+}

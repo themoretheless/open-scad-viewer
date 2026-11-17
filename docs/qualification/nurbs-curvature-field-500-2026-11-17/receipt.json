@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0500",
+  "testedBase": "4b9b35df6b4947a9fecb872b07c347a3314464a7",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 54,
+  "scope": [
+    "Prove equal first and second derivatives after changing the right parameter by an exact affine map.",
+    "A regular G2 seam with zero tangential correction becomes C2 under the exact positive affine clock. Refuse when a nonlinear correction is necessary."
+  ],
+  "logSha256": "2b9accf8f52c4726206700debd26b3cf4b10684e9b6581f8eb68690486ca879e",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "f980c315ad628d1462e413bdb84225e46e3761ad97900c183194d353c188d5f4",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "749a95df393bc2c45ed7a64d335a19d2e23eed4e2920ad8986a8b45fc19b9360"
+  }
+}

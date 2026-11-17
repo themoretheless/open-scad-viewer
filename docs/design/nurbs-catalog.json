@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 499,
-  "unallocatedCount": 501,
+  "specifiedCount": 500,
+  "unallocatedCount": 500,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12965,6 +12965,26 @@
       "remainingQualification": [
         "Match the first derivatives exactly with a positive affine clock change on the right curve before merging.",
         "Use an exact positive tangent ratio to change the right clock, store each mapped knot exactly and merge with the remaining work budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0500",
+      "name": "Точная склейка NURBS-кривых с аффинным согласованием параметров до C2",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::merge_with_exact_c2_clock",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-500-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-500-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Prove equal first and second derivatives after changing the right parameter by an exact affine map.",
+        "A regular G2 seam with zero tangential correction becomes C2 under the exact positive affine clock. Refuse when a nonlinear correction is necessary.",
         "WASM and application integration are separate."
       ]
     }
