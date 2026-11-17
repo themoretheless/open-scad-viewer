@@ -356,4 +356,7 @@ fn close_shell<P>(
 }
 
 mod infer;
-pub use infer::{InferredSectionPlane, InferredSectionPlanes, infer_section_planes};
+pub use infer::{
+    InferredSectionPlane, InferredSectionPlanes, close_shell_with_inferred_section_caps,
+    infer_section_planes,
+};

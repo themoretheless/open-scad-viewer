@@ -1,7 +1,10 @@
-use super::{charge, collect_free_rings, invalid};
+use super::{
+    AttachedSectionCaps, attach_section_caps, charge, close_shell, collect_free_rings, invalid,
+};
 use crate::Model;
+use num_bigint::BigInt;
 use num_rational::BigRational as Q;
-use num_traits::Zero;
+use num_traits::{ToPrimitive, Zero};
 use nurbs_core::Result;
 use std::collections::BTreeMap;
 
@@ -87,4 +90,68 @@ fn lift(point: &[f64]) -> [Q; 3] {
 
 fn dot(a: &[Q; 3], b: &[Q; 3]) -> Q {
     a.iter().zip(b).map(|(a, b)| a * b).sum()
+}
+
+/// Detect and cap all planar free rims under shared work limits. Refuses
+/// any plane equation or support that cannot be stored exactly in binary64.
+pub fn close_shell_with_inferred_section_caps(
+    source: &Model,
+    shell: usize,
+    max_exact_work: u64,
+    max_verification_cells: usize,
+) -> Result<AttachedSectionCaps> {
+    let inferred = infer_section_planes(source, shell, max_exact_work)?;
+    let mut result = close_shell(
+        source,
+        shell,
+        &inferred.planes,
+        max_exact_work - inferred.exact_work,
+        max_verification_cells,
+        |current, plane, mut work, cells| {
+            let budget = work;
+            let [x, y, z, offset] = store_equation(plane, &mut work)?;
+            let rings: Vec<_> = plane.rings.iter().map(Vec::as_slice).collect();
+            let attachment =
+                attach_section_caps(current, shell, &rings, [x, y, z], offset, work, cells)?;
+            Ok((attachment, budget - work))
+        },
+    )?;
+    result.exact_work += inferred.exact_work;
+    Ok(result)
+}
+
+fn store_equation(plane: &InferredSectionPlane, work: &mut u64) -> Result<[f64; 4]> {
+    let coefficients = [
+        &plane.normal[0],
+        &plane.normal[1],
+        &plane.normal[2],
+        &plane.offset,
+    ];
+    let mut denominator = BigInt::from(1);
+    for value in coefficients {
+        let mut a = denominator.clone();
+        let mut b = value.denom().clone();
+        while !b.is_zero() {
+            charge(work, 1)?;
+            let rem = a % &b;
+            a = b;
+            b = rem;
+        }
+        charge(work, 2)?;
+        denominator = (denominator / a) * value.denom();
+    }
+    charge(work, 8)?;
+    let integers = coefficients.map(|q| q.numer() * (&denominator / q.denom()));
+    let normal_bits = integers[..3].iter().map(BigInt::bits).max().unwrap();
+    let scale = BigInt::from(1) << normal_bits.saturating_sub(1) as usize;
+    let mut stored = [0.; 4];
+    for (out, integer) in stored.iter_mut().zip(integers) {
+        charge(work, 2)?;
+        let q = Q::new(integer, scale.clone());
+        *out = q
+            .to_f64()
+            .filter(|value| Q::from_float(*value).as_ref() == Some(&q))
+            .ok_or_else(|| invalid("Inferred section plane cannot be stored exactly"))?;
+    }
+    Ok(stored)
 }

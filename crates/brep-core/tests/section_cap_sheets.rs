@@ -777,3 +777,60 @@ fn refuses_to_infer_a_plane_from_a_warped_free_rim() {
     let error = infer_section_planes(&source, 0, 1_000_000).unwrap_err();
     assert_eq!(error.message, "Free section cycle has nonplanar controls");
 }
+
+#[test]
+fn automatically_caps_two_oblique_rims_with_exact_equations() {
+    use brep_core::planar_cap::close_shell_with_inferred_section_caps;
+    let (mut source, _) = open_prism(false);
+    remove_prism_cap(&mut source, 0.);
+    let shear = |point: &mut [f64]| point[2] += 0.75 * point[0];
+    for vertex in &mut source.vertices {
+        shear(&mut vertex.point);
+    }
+    for edge in &mut source.edges {
+        for point in &mut edge.curve.control_points {
+            shear(point);
+        }
+    }
+    for face in &mut source.faces {
+        for point in face.surface.control_points.iter_mut().flatten() {
+            shear(point);
+        }
+    }
+    source.rebuild_topology_ids();
+    let report = close_shell_with_inferred_section_caps(&source, 0, 1_000_000, 10_000).unwrap();
+    assert!(report.model.shells[0].closed);
+    assert_eq!(report.cap_faces.len(), 2);
+    assert_eq!(report.model.edges, source.edges);
+    assert_eq!(report.model.vertices, source.vertices);
+    assert_eq!(report.model.validate().unwrap().boundary_edge_count, 0);
+    assert!(
+        close_shell_with_inferred_section_caps(
+            &source,
+            0,
+            report.exact_work,
+            report.verification_cells
+        )
+        .is_ok()
+    );
+    assert!(
+        close_shell_with_inferred_section_caps(
+            &source,
+            0,
+            report.exact_work - 1,
+            report.verification_cells
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn automatically_caps_nested_rims_as_one_face_with_a_hole() {
+    use brep_core::planar_cap::close_shell_with_inferred_section_caps;
+    let (source, _) = open_hollow_prism();
+    let report = close_shell_with_inferred_section_caps(&source, 0, 1_000_000, 10_000).unwrap();
+    assert_eq!(report.cap_faces.len(), 1);
+    assert_eq!(report.model.faces[report.cap_faces[0]].holes.len(), 1);
+    assert!(report.model.shells[0].closed);
+    assert!(!source.shells[0].closed);
+}

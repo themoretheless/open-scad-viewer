@@ -448,4 +448,7 @@ pub use attach_sections::{
     build_section_solid,
 };
 
-pub use attach_sections::{InferredSectionPlane, InferredSectionPlanes, infer_section_planes};
+pub use attach_sections::{
+    InferredSectionPlane, InferredSectionPlanes, close_shell_with_inferred_section_caps,
+    infer_section_planes,
+};
