@@ -11,6 +11,7 @@ import type { MeshData } from '../core/mesh'
 import { DEFAULT_DISPLAY_BUDGET, sameDisplayBudget, type DisplayBudget } from './displayScheduler'
 import { carryMeshPublication, deltaMeshFromMeshData, diffSceneEntities } from './sceneDelta'
 import { countOperation } from '../dev/operationCounters'
+import { InstancedSceneBuffers, instancePickId, resolveInstancePick, type InstancingMetrics } from './instancedScene'
 import { CameraHistory, cameraStatesEqual, type CameraHistorySnapshot, type CameraState } from './cameraHistory'
 import { clampGestureDistance, computeOrbitUpdate, computePanUpdate, computeWheelDistance } from './cameraGestures'
 import type { KeyboardCameraStep } from './keyboardCamera'
@@ -66,6 +67,12 @@ export interface RecordingSceneState {
 
 const CALL_LOG_LIMIT = 512
 
+/** Buffer-less device: the recorder stages instances only to count uploads. */
+const NULL_DEVICE = {
+  createBuffer: () => ({ destroy() {} }) as unknown as GPUBuffer,
+  queue: { writeBuffer() {} } as unknown as GPUQueue,
+}
+
 export class RecordingRenderer implements PublicRenderer {
   onFrameSubmitted: ((token: number, submittedAt: number) => void) | null = null
   onSelectionChange: SelectionChangeHandler | null = null
@@ -110,6 +117,7 @@ export class RecordingRenderer implements PublicRenderer {
   private framesDrawn = 0
   private sceneUploads = 0
   private uploadMetrics: SceneUploadMetrics = { geometryUploadBytes: 0, geometryBuffersCreated: 0, reusedEntities: 0 }
+  private readonly instanced = new InstancedSceneBuffers(NULL_DEVICE)
 
   private record(method: string) {
     this.callCounts.set(method, (this.callCounts.get(method) ?? 0) + 1)
@@ -198,6 +206,7 @@ export class RecordingRenderer implements PublicRenderer {
     if (this.raf) cancelAnimationFrame(this.raf)
     this.raf = 0
     this.canvas = null
+    this.instanced.destroy()
     this.setStatus({ status: 'destroyed' })
   }
 
@@ -243,6 +252,17 @@ export class RecordingRenderer implements PublicRenderer {
   }
   get sceneUploadMetrics(): SceneUploadMetrics {
     return { ...this.uploadMetrics }
+  }
+  /** Instanced staging: one geometry upload per new asset, one draw per batch, edges on demand. */
+  get instancingMetrics(): InstancingMetrics {
+    return { ...this.instanced.metrics }
+  }
+  /** Mesh index for the pick id an instanced draw writes, or null. */
+  resolveInstancePick(pickId: number): number | null {
+    return resolveInstancePick(this.instanced.plan, pickId)
+  }
+  instancePickId(meshIndex: number): number | null {
+    return instancePickId(this.instanced.plan, meshIndex)
   }
   get currentDisplayMode(): DisplayMode {
     return this.displayMode
@@ -324,8 +344,15 @@ export class RecordingRenderer implements PublicRenderer {
       geometryBuffersCreated: uploaded.length * 2,
       reusedEntities: meshes.length - uploaded.length,
     }
+    this.instanced.stage(meshes)
+    if (this.displayMode === 'edges') this.ensureInspectionEdges()
     this.pendingFrameToken = options.frameToken ?? null
     this.requestRender()
+  }
+
+  /** Inspection edges are built only when a mode needs them, once per asset. */
+  private ensureInspectionEdges() {
+    this.instanced.plan.batches.forEach((_, index) => this.instanced.ensureEdges(index))
   }
 
   setMeshVisibility(index: number, visible: boolean) {
@@ -491,6 +518,7 @@ export class RecordingRenderer implements PublicRenderer {
   setDisplayMode(mode: DisplayMode) {
     this.record('setDisplayMode')
     this.displayMode = mode
+    if (mode === 'edges') this.ensureInspectionEdges()
     this.requestRender()
   }
   setBackgroundColor(_color: readonly [number, number, number]) {
