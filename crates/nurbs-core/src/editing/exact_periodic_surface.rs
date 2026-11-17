@@ -3347,10 +3347,60 @@ pub fn exact_periodic_surface_region_component_centroids(
     contours: &[&[[f64; 2]]],
     max_work: u64,
 ) -> Result<PeriodicRegionCentroidReport> {
+    let report = measure_periodic_region_components(source, contours, max_work, false)?;
+    Ok(PeriodicRegionCentroidReport {
+        components: report.components.map(|components| {
+            components
+                .into_iter()
+                .map(|component| component.geometry)
+                .collect()
+        }),
+        work_used: report.work_used,
+        refusal: report.refusal,
+    })
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PeriodicRegionComponentInertia {
+    pub geometry: PeriodicRegionComponentCentroid,
+    /// Integrals of centered U², U·V and V² in the outer contour's lift.
+    pub central_moments: [BigRational; 3],
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicRegionInertiaReport {
+    pub components: Option<Vec<PeriodicRegionComponentInertia>>,
+    pub work_used: u64,
+    pub refusal: Option<PeriodicContourForestRefusal>,
+}
+
+/// Compute exact UV second moments about each filled component's centroid.
+/// Translate the holes to the same lift before subtracting their moments.
+pub fn exact_periodic_surface_region_component_inertia(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    max_work: u64,
+) -> Result<PeriodicRegionInertiaReport> {
+    measure_periodic_region_components(source, contours, max_work, true)
+}
+
+struct ContourMoments {
+    area: BigRational,
+    center: [BigRational; 2],
+    central: Option<[BigRational; 3]>,
+}
+
+fn measure_periodic_region_components(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    max_work: u64,
+    inertia: bool,
+) -> Result<PeriodicRegionInertiaReport> {
     use PeriodicContourForestRefusal as Failure;
+    use num_traits::Signed;
 
     let forest = exact_periodic_surface_contour_forest(source, contours, max_work)?;
-    let refused = |reason, work_used| PeriodicRegionCentroidReport {
+    let refused = |reason, work_used| PeriodicRegionInertiaReport {
         components: None,
         work_used,
         refusal: Some(reason),
@@ -3369,7 +3419,12 @@ pub fn exact_periodic_surface_region_component_centroids(
         if work.used == max_work {
             return Ok(refused(exhausted, work.used));
         }
-        let report = exact_periodic_surface_path_centroid(source, path, max_work - work.used)?;
+        let (report, central) = periodic_path_moments(
+            source,
+            path,
+            max_work - work.used,
+            if inertia { 2 } else { 1 },
+        )?;
         work.used += report.work_used;
         if let Some(reason) = report.refusal {
             return Ok(refused(Failure::Path { contour, reason }, work.used));
@@ -3377,7 +3432,20 @@ pub fn exact_periodic_surface_region_component_centroids(
         let (Some(area), Some(center)) = (report.signed_area, report.centroid) else {
             return Ok(refused(invalid, work.used));
         };
-        moments.push((num_traits::Signed::abs(&area), center));
+        if inertia && central.is_none() {
+            return Ok(refused(invalid, work.used));
+        }
+        moments.push(ContourMoments {
+            center,
+            central: central.map(|values| {
+                if area.is_negative() {
+                    values.map(|value| -value)
+                } else {
+                    values
+                }
+            }),
+            area: area.abs(),
+        });
     }
     let domains = [Axis::U, Axis::V].map(|axis| {
         let reference = row(source, axis, 0);
@@ -3426,7 +3494,7 @@ pub fn exact_periodic_surface_region_component_centroids(
             Err(reason) => return Ok(refused(Failure::Arithmetic(reason), work.used)),
         }
     }
-    Ok(PeriodicRegionCentroidReport {
+    Ok(PeriodicRegionInertiaReport {
         components: Some(components),
         work_used: work.used,
         refusal: None,
@@ -3438,12 +3506,21 @@ fn measure_periodic_component(
     outer: usize,
     nodes: &[PeriodicContourNode],
     contours: &[&[[f64; 2]]],
-    moments: &[(BigRational, [BigRational; 2])],
+    moments: &[ContourMoments],
     work: &mut Work,
-) -> std::result::Result<PeriodicRegionComponentCentroid, ExactRefusal> {
+) -> std::result::Result<PeriodicRegionComponentInertia, ExactRefusal> {
     use num_traits::Signed;
 
-    let (mut area, center) = moments[outer].clone();
+    let ContourMoments {
+        area,
+        center,
+        central,
+    } = &moments[outer];
+    let mut area = area.clone();
+    let mut second = central.clone();
+    if let Some(raw) = &mut second {
+        shift_uv_second_moments(raw, &area, center, work)?;
+    }
     let mut weighted = [
         work.op(&area, &center[0], |a, b| a * b)?,
         work.op(&area, &center[1], |a, b| a * b)?,
@@ -3458,7 +3535,12 @@ fn measure_periodic_component(
         if location != PeriodicPathLocation::Inside {
             return Err(ExactRefusal::InvalidOutput);
         }
-        let (hole_area, center) = &moments[hole];
+        let ContourMoments {
+            area: hole_area,
+            center,
+            central,
+        } = &moments[hole];
+        let mut aligned = center.clone();
         area = work.op(&area, hole_area, |a, b| a - b)?;
         for i in 0..2 {
             let mut coordinate = center[i].clone();
@@ -3470,8 +3552,16 @@ fn measure_periodic_component(
                 )?;
                 coordinate = work.op(&coordinate, &offset, |a, b| a + b)?;
             }
-            let term = work.op(hole_area, &coordinate, |a, b| a * b)?;
+            aligned[i] = coordinate;
+            let term = work.op(hole_area, &aligned[i], |a, b| a * b)?;
             weighted[i] = work.op(&weighted[i], &term, |a, b| a - b)?;
+        }
+        if let Some(raw) = &mut second {
+            let mut hole_raw = central.clone().ok_or(ExactRefusal::InvalidOutput)?;
+            shift_uv_second_moments(&mut hole_raw, hole_area, &aligned, work)?;
+            for (total, value) in raw.iter_mut().zip(hole_raw) {
+                *total = work.op(total, &value, |a, b| a - b)?;
+            }
         }
     }
     if !area.is_positive() {
@@ -3481,9 +3571,32 @@ fn measure_periodic_component(
         work.op(&weighted[0], &area, |a, b| a / b)?,
         work.op(&weighted[1], &area, |a, b| a / b)?,
     ];
-    Ok(PeriodicRegionComponentCentroid {
-        outer_contour: outer,
-        area,
-        centroid,
+    let central_moments = if let Some(mut raw) = second {
+        shift_uv_second_moments(&mut raw, &(-area.clone()), &centroid, work)?;
+        raw
+    } else {
+        std::array::from_fn(|_| BigRational::default())
+    };
+    Ok(PeriodicRegionComponentInertia {
+        geometry: PeriodicRegionComponentCentroid {
+            outer_contour: outer,
+            area,
+            centroid,
+        },
+        central_moments,
     })
+}
+
+fn shift_uv_second_moments(
+    moments: &mut [BigRational; 3],
+    area: &BigRational,
+    centroid: &[BigRational; 2],
+    work: &mut Work,
+) -> std::result::Result<(), ExactRefusal> {
+    for (moment, (i, j)) in moments.iter_mut().zip([(0, 0), (0, 1), (1, 1)]) {
+        let product = work.op(&centroid[i], &centroid[j], |a, b| a * b)?;
+        let shift = work.op(area, &product, |a, b| a * b)?;
+        *moment = work.op(moment, &shift, |a, b| a + b)?;
+    }
+    Ok(())
 }

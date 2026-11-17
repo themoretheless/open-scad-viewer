@@ -3936,3 +3936,76 @@ fn periodic_region_centroid_rejects_touching_components() {
         Some(PeriodicContourForestRefusal::Contact { .. })
     ));
 }
+
+#[test]
+fn periodic_region_inertia_uses_the_shifted_hole_and_component_centroid() {
+    use num_rational::BigRational as Q;
+    use nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_region_component_inertia;
+    let source = doubly_periodic_tensor();
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let hole = [
+        [0.125, 0.125],
+        [0.625, 0.125],
+        [0.625, 0.625],
+        [0.125, 0.625],
+        [0.125, 0.125],
+    ];
+    let report =
+        exact_periodic_surface_region_component_inertia(&source, &[&outer, &hole], 1_000_000)
+            .unwrap();
+    assert!(report.refusal.is_none());
+    let components = report.components.unwrap();
+    assert_eq!(components.len(), 1);
+    assert_eq!(components[0].geometry.area, Q::from_integer(2.into()));
+    let expected = [
+        Q::new(2317.into(), 6144.into()),
+        Q::new((-81).into(), 2048.into()),
+        Q::new(2317.into(), 6144.into()),
+    ];
+    assert_eq!(components[0].central_moments, expected);
+    let reverse: Vec<_> = hole.into_iter().rev().collect();
+    assert_eq!(
+        exact_periodic_surface_region_component_inertia(&source, &[&outer, &reverse], 1_000_000)
+            .unwrap()
+            .components
+            .unwrap()[0]
+            .central_moments,
+        expected
+    );
+    assert!(
+        exact_periodic_surface_region_component_inertia(
+            &source,
+            &[&outer, &hole],
+            report.work_used - 1
+        )
+        .unwrap()
+        .components
+        .is_none()
+    );
+}
+
+#[test]
+fn periodic_region_inertia_rejects_contact_between_contours() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicContourForestRefusal, exact_periodic_surface_region_component_inertia,
+    };
+    let a = [[0., 0.], [1., 0.], [1., 1.], [0., 1.], [0., 0.]];
+    let b = [[1., 0.], [2., 0.], [2., 1.], [1., 1.], [1., 0.]];
+    let report = exact_periodic_surface_region_component_inertia(
+        &doubly_periodic_tensor(),
+        &[&a, &b],
+        1_000_000,
+    )
+    .unwrap();
+    assert!(report.components.is_none());
+    assert!(matches!(
+        report.refusal,
+        Some(PeriodicContourForestRefusal::Contact { .. })
+    ));
+}
