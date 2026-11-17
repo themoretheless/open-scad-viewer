@@ -7,6 +7,12 @@ import Panel from '../src/components/MaterialPathCheck.svt'
 const cases = JSON.parse(
   readFileSync('docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-03/whole-wall/contract.json', 'utf8'),
 ).cases
+/** Props captured by the fake renderer; event handlers are invoked directly. */
+type NodeProps = {
+  [key: string]: unknown
+  onClick?: (...args: unknown[]) => unknown
+  'onUpdate:modelValue'?: (...args: unknown[]) => unknown
+}
 class Node {
   style: Record<string, string> = {}
   get options() {
@@ -14,9 +20,9 @@ class Node {
   }
   parent: Node | null = null
   children: Node[] = []
-  props: Record<string, any> = {}
+  props: NodeProps = {}
   text = ''
-  value: any
+  value: unknown
   checked = false
   constructor(public tag: string) {}
   addEventListener() {}
@@ -50,7 +56,8 @@ const renderer = createRenderer<Node, Node>({
     if (n.parent) n.parent.children = n.parent.children.filter(c => c !== n)
     n.parent = p
     const i = a ? p.children.indexOf(a) : -1
-    i < 0 ? p.children.push(n) : p.children.splice(i, 0, n)
+    if (i < 0) p.children.push(n)
+    else p.children.splice(i, 0, n)
   },
   remove: n => {
     if (n.parent) n.parent.children = n.parent.children.filter(c => c !== n)
@@ -67,37 +74,31 @@ const flush = async () => {
 }
 function mount() {
   const props = shallowReactive({ active: true, ru: true, model: cases[0].request.model })
-  const states: Array<[boolean, any]> = []
+  const states: Array<[boolean, unknown]> = []
   const root = new Node('root'),
     app = renderer.createApp({
-      render: () => h(Panel, { ...props, onState: (active: boolean, point: any) => states.push([active, point]) }),
+      render: () => h(Panel, { ...props, onState: (active: boolean, point: unknown) => states.push([active, point]) }),
     })
   app.mount(root)
   const all = (n: Node = root): Node[] => [n, ...n.children.flatMap(all)],
     text = (n: Node = root): string => n.text + n.children.map(text).join('')
   const click = async (s: string) => {
-    all()
-      .find(n => n.tag === 'button' && text(n).includes(s))!
-      .props.onClick()
+    all().find(n => n.tag === 'button' && text(n).includes(s))!.props.onClick!()
     await flush()
   }
   return { props, root, app, all, text, click, states }
 }
 it('cancels a pending calculation, ignores its late result and permits retry', async () => {
   mock.run.mockReset()
-  const replies: Array<(v: any) => void> = []
+  const replies: Array<(v: unknown) => void> = []
   mock.run.mockImplementation(() => new Promise(r => replies.push(r)))
   const ui = mount(),
     before = JSON.stringify(ui.props.model)
   try {
     await ui.click('Проверка материала вдоль линии')
-    ui.all()
-      .find(n => n.tag === 'select')!
-      .props['onUpdate:modelValue']('whole')
+    ui.all().find(n => n.tag === 'select')!.props['onUpdate:modelValue']!('whole')
     await flush()
-    ui.all()
-      .find(n => n.tag === 'input' && n.props.type === 'checkbox')!
-      .props['onUpdate:modelValue'](false)
+    ui.all().find(n => n.tag === 'input' && n.props.type === 'checkbox')!.props['onUpdate:modelValue']!(false)
     await flush()
     await ui.click('Проверить')
     expect(mock.run).toHaveBeenCalledTimes(1)
@@ -146,7 +147,7 @@ it('shows a failed calculation and retries without changing the source body', as
 })
 it('drops a late result after the active body changes', async () => {
   mock.run.mockReset()
-  let reply!: (v: any) => void
+  let reply!: (v: unknown) => void
   mock.run.mockImplementation(
     () =>
       new Promise(r => {

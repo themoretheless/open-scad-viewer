@@ -48,7 +48,7 @@ describe('native boundary graph transport', () => {
     falseClosure.closedOrientedIncidence = true
     expect(validBoundaryMesh(limits, 1, 1, falseClosure)).toBe(false)
     const inflated = fresh()
-    ;(inflated as any).materialQualified = true
+    ;(inflated as unknown as Record<string, unknown>).materialQualified = true
     expect(validBoundaryMesh(limits, 1, 1, inflated)).toBe(false)
   })
   it('refuses an edge beyond the requested deviation', () => {
@@ -73,7 +73,9 @@ describe('native boundary graph transport', () => {
 describe('refined boundary triangle transport', () => {
   it('refuses malformed optional refinement requests before dispatch', () => {
     for (const refinement of [null, false, 0, {}, { cells: 1 }])
-      expect(validBoundaryMeshLimits({ ...limits, refinement } as any)).toBe(false)
+      expect(
+        validBoundaryMeshLimits({ ...limits, refinement } as unknown as Parameters<typeof validBoundaryMeshLimits>[0]),
+      ).toBe(false)
   })
   const refinement = {
     maxDeviationMm: 0.05,
@@ -132,7 +134,7 @@ describe('refined boundary triangle transport', () => {
     mesh.refinement!.accepted[0].deviationUpperMm = 0.051
     expect(validBoundaryMesh(requested, 1, 1, mesh)).toBe(false)
     mesh.refinement!.accepted[0].deviationUpperMm = 0.04
-    ;(mesh.refinement as any).solidQualified = true
+    ;(mesh.refinement as unknown as Record<string, unknown>).solidQualified = true
     expect(validBoundaryMesh(requested, 1, 1, mesh)).toBe(false)
   })
 })

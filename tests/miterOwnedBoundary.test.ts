@@ -14,6 +14,11 @@ import {
   type MiterOwnedSourceRequest,
 } from '../src/kernel/nurbsMiterOwnedBoundary'
 import { DEFAULT_SWEEP_VOLUME_BUDGETS } from '../src/kernel/nurbsSweepEmbedding'
+/** Fields of the native miter placement result inspected below. */
+interface MiterOwnedPlacement {
+  placement: { model: unknown }
+  solidGeometryCertified: boolean
+}
 const scalar = (value: number) => ({
   degree: 1,
   knots: [0, 0, 1, 1],
@@ -94,10 +99,12 @@ it('replays original source for native station bounds and refuses injected proof
     wallCells: 100000,
     volumeBudgets: DEFAULT_SWEEP_VOLUME_BUDGETS,
   }
-  const placed = callGeometryRust<any>('brep_miter_owned_place', affine)
+  const placed = callGeometryRust<MiterOwnedPlacement>('brep_miter_owned_place', affine)
   expect(placed.placement.model).not.toBeNull()
   expect(placed.solidGeometryCertified).toBe(true)
-  expect(callGeometryRust<any>('brep_miter_owned_place', { ...affine, wallCells: 0 }).placement.model).toBeNull()
+  expect(
+    callGeometryRust<MiterOwnedPlacement>('brep_miter_owned_place', { ...affine, wallCells: 0 }).placement.model,
+  ).toBeNull()
   for (const key of ['model', 'sections', 'sourceCertificate', 'boundaryCertificate']) {
     expect(() => callGeometryRust('brep_miter_owned_place', { ...affine, [key]: rebuilt.model })).toThrow(
       /original source only/,

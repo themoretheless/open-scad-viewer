@@ -1,18 +1,39 @@
 import { createRenderer, nextTick, ref, h } from 'svet'
 import { it, expect, vi } from 'vitest'
-const state = vi.hoisted(() => ({ tasks: [] as any[], worker: null as any }))
+interface PendingTask {
+  resolve: (value: unknown) => void
+  reject: (reason: unknown) => void
+  job: unknown
+}
+const state = vi.hoisted(() => ({
+  tasks: [] as PendingTask[],
+  worker: null as null | Record<'cancel' | 'dispose' | 'run', ReturnType<typeof vi.fn>>,
+}))
 vi.mock('../src/kernel/solidPreviewWorker', () => ({
   createSolidPreviewWorker: () => {
     state.tasks = []
     state.worker = {
       cancel: vi.fn(),
       dispose: vi.fn(),
-      run: vi.fn((job: any) => new Promise((resolve, reject) => state.tasks.push({ resolve, reject, job }))),
+      run: vi.fn((job: unknown) => new Promise((resolve, reject) => state.tasks.push({ resolve, reject, job }))),
     }
     return state.worker
   },
 }))
 import Panel from '../src/components/OffsetDeviationCheck.svt'
+/** Fake renderer node; handlers in props are invoked directly. */
+interface FakeNode {
+  [extra: string]: unknown
+  type: string
+  text?: string
+  children: FakeNode[]
+  props: {
+    [key: string]: unknown
+    onClick?: (...args: unknown[]) => unknown
+    'onUpdate:modelValue'?: (...args: unknown[]) => unknown
+  }
+  parent: FakeNode | null
+}
 const surface = () => ({
   degreeU: 1,
   degreeV: 1,
@@ -38,11 +59,11 @@ it('invalidates stale results on edits, handles cancel and retry, and preserves 
   vi.stubGlobal('ShadowRoot', class {})
   vi.stubGlobal('HTMLInputElement', class {})
   vi.stubGlobal('document', { activeElement: null })
-  const node = (type: string) => ({
+  const node = (type: string): FakeNode => ({
     type,
-    children: [] as any[],
-    props: {} as any,
-    parent: null as any,
+    children: [],
+    props: {},
+    parent: null,
     getRootNode() {
       return {}
     },
@@ -54,7 +75,7 @@ it('invalidates stale results on edits, handles cancel and retry, and preserves 
     style: {},
     options: [],
   })
-  const renderer = createRenderer<any, any>({
+  const renderer = createRenderer<FakeNode, FakeNode>({
     createElement: node,
     createText: text => ({ ...node('#text'), text }),
     createComment: text => ({ ...node('#comment'), text }),
@@ -92,8 +113,8 @@ it('invalidates stale results on edits, handles cancel and retry, and preserves 
     render: () => h(Panel, { surfaces: surfaces.value, active: active.value, ru: ru.value }),
   })
   app.mount(root)
-  const all = (n: any): any[] => [n, ...n.children.flatMap(all)]
-  const button = (text: string) => all(root).find(n => n.type === 'button' && n.text === text)
+  const all = (n: FakeNode): FakeNode[] => [n, ...n.children.flatMap(all)]
+  const button = (text: string) => all(root).find(n => n.type === 'button' && n.text === text)!
   const flush = async () => {
     await nextTick()
     await nextTick()
@@ -103,22 +124,22 @@ it('invalidates stale results on edits, handles cancel and retry, and preserves 
       .map(n => n.text ?? '')
       .join(' ')
   try {
-    button('Inspect offset A → B').props.onClick()
+    button('Inspect offset A → B').props.onClick!()
     await flush()
-    void button('Inspect · Enter').props.onClick()
+    void button('Inspect · Enter').props.onClick!()
     await flush()
     expect(state.tasks[0].job).toMatchObject({ kind: 'offsetDeviation', options: { distance: 1, tolerance: 0.001 } })
-    button('Cancel · Esc').props.onClick()
+    button('Cancel · Esc').props.onClick!()
     await flush()
     state.tasks[0].resolve({ decision: 'within_tolerance', errorUpper: 0, idealLocalFoldFree: true })
     await flush()
     expect(text()).not.toContain('Tolerance reached')
-    void button('Inspect · Enter').props.onClick()
+    void button('Inspect · Enter').props.onClick!()
     await flush()
     state.tasks[1].reject(new Error('native failure'))
     await flush()
     expect(button('Retry · Enter')).toBeTruthy()
-    void button('Retry · Enter').props.onClick()
+    void button('Retry · Enter').props.onClick!()
     await flush()
     state.tasks[2].resolve({ decision: 'within_tolerance', errorUpper: 0.00001, idealLocalFoldFree: true })
     await flush()
@@ -127,7 +148,7 @@ it('invalidates stale results on edits, handles cancel and retry, and preserves 
     surfaces.value[1].controlPoints[1][1][2] = 0.25
     await flush()
     expect(text()).not.toContain('Tolerance reached')
-    void button('Inspect · Enter').props.onClick()
+    void button('Inspect · Enter').props.onClick!()
     await flush()
     active.value = false
     await flush()
@@ -136,8 +157,8 @@ it('invalidates stale results on edits, handles cancel and retry, and preserves 
     expect(text()).not.toContain('Tolerance reached')
     active.value = true
     await flush()
-    const tolerance = all(root).find(n => n.props['aria-label'] === 'Tolerance, mm')
-    tolerance.props['onUpdate:modelValue'](0)
+    const tolerance = all(root).find(n => n.props['aria-label'] === 'Tolerance, mm')!
+    tolerance.props['onUpdate:modelValue']!(0)
     await flush()
     expect(button('Inspect · Enter').props.disabled).toBe(true)
     ru.value = true
@@ -147,5 +168,5 @@ it('invalidates stale results on edits, handles cancel and retry, and preserves 
     app.unmount()
     vi.unstubAllGlobals()
   }
-  expect(state.worker.dispose).toHaveBeenCalledOnce()
+  expect(state.worker!.dispose).toHaveBeenCalledOnce()
 })

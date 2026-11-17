@@ -153,7 +153,7 @@ it.each([false, true])('replays the private original cap policy (%s) and audits 
 })
 it('keeps legacy calls unchanged and refuses missing native annular receipts', () => {
   calls.rust.mockReturnValueOnce({ model: model() })
-  const { annularCaps, ...legacy } = options
+  const { annularCaps: _annularCaps, ...legacy } = options
   createProgressiveBrepProfileBody([[curve]], curve, law, law, legacy)
   expect(calls.rust.mock.calls[0]![0]).toBe('brep_nurbs_progressive_profile_body')
   expect(calls.rust.mock.calls[0]![1]).not.toHaveProperty('annular_cap_max_work')

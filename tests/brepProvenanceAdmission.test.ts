@@ -11,12 +11,20 @@ import { executeBrepNativeProgram } from '../src/kernel/brepNativeExecutor'
 import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 const SOURCE = 'difference(){cube(3);translate([2,0,0]) cube(1);}'
 const lower = (body: string) => lowerOpenSCADToSemanticProgram('// @language openscad-viewer/brep-1\n' + body)
+/** Loose mutable view of the lowered program envelope that tampers rewrite. */
+interface ForgeableProgram {
+  provenance: Record<string, unknown>[]
+  source: { utf16CodeUnitLength: number }
+  tessellationIntents: unknown[]
+  diagnostics: unknown[]
+  core: { occurrences: { node: unknown }[]; diagnosticTemplates: Record<string, unknown>[] }
+}
 /** Rebuilds a trusted lowering with exactly one envelope component tampered. */
-const forge = (mutate: (program: Record<string, any>) => void): SemanticLoweringSuccess => {
+const forge = (mutate: (program: ForgeableProgram) => void): SemanticLoweringSuccess => {
   const base = lower(SOURCE)
-  const program = structuredClone(base.program) as Record<string, any>
+  const program = structuredClone(base.program) as unknown as ForgeableProgram
   mutate(program)
-  return { ...base, program: program as SemanticLoweringSuccess['program'] }
+  return { ...base, program: program as unknown as SemanticLoweringSuccess['program'] }
 }
 const intent = (occurrence: number) => ({
   occurrence,
@@ -37,7 +45,7 @@ it('executes a real lowered program with all envelope components transported', a
     await result.dispose()
   }
 })
-const tampers: [string, (program: Record<string, any>) => void][] = [
+const tampers: [string, (program: ForgeableProgram) => void][] = [
   [
     'dropped provenance entry',
     p => {
@@ -71,14 +79,14 @@ const tampers: [string, (program: Record<string, any>) => void][] = [
   [
     'intent with maxSegments below minSegments',
     p => {
-      const producing = p.core.occurrences.findIndex((occurrence: any) => occurrence.node !== null)
+      const producing = p.core.occurrences.findIndex(occurrence => occurrence.node !== null)
       p.tessellationIntents = [{ ...intent(producing), minSegments: 10, maxSegments: 3 }]
     },
   ],
   [
     'non-positive intent chord tolerance',
     p => {
-      const producing = p.core.occurrences.findIndex((occurrence: any) => occurrence.node !== null)
+      const producing = p.core.occurrences.findIndex(occurrence => occurrence.node !== null)
       p.tessellationIntents = [{ ...intent(producing), chordTolerance: 0 }]
     },
   ],

@@ -33,12 +33,18 @@ vi.mock('../src/kernel/mainSolidWorker', () => ({
   computeTrussTopology: worker.topology,
 }))
 
+/** Props captured by the fake renderer; event handlers are invoked directly. */
+type NodeProps = {
+  [key: string]: unknown
+  onClick?: (...args: unknown[]) => unknown
+  'onUpdate:modelValue'?: (...args: unknown[]) => unknown
+}
 class Node {
   parent: Node | null = null
   children: Node[] = []
-  props: Record<string, any> = {}
+  props: NodeProps = {}
   text = ''
-  value: any = ''
+  value: unknown = ''
   selected = false
   constructor(public tag: string) {}
   get tagName() {
@@ -78,7 +84,8 @@ const renderer = createRenderer<Node, Node>({
     if (node.parent) node.parent.children = node.parent.children.filter(child => child !== node)
     node.parent = parent
     const index = anchor ? parent.children.indexOf(anchor) : -1
-    index < 0 ? parent.children.push(node) : parent.children.splice(index, 0, node)
+    if (index < 0) parent.children.push(node)
+    else parent.children.splice(index, 0, node)
   },
   remove: node => {
     if (node.parent) node.parent.children = node.parent.children.filter(child => child !== node)
@@ -91,7 +98,8 @@ const renderer = createRenderer<Node, Node>({
     if (node.parent) node.parent.children = node.parent.children.filter(child => child !== node)
     node.parent = parent
     const index = anchor ? parent.children.indexOf(anchor) : -1
-    index < 0 ? parent.children.push(node) : parent.children.splice(index, 0, node)
+    if (index < 0) parent.children.push(node)
+    else parent.children.splice(index, 0, node)
     return [node, node]
   },
 })
@@ -135,14 +143,14 @@ async function mount(component: Component, initial: Record<string, unknown>) {
     return control!
   }
   const edit = async (node: Node, value: unknown) => {
-    node.props['onUpdate:modelValue'](value)
+    node.props['onUpdate:modelValue']!(value)
     await nextTick()
   }
   const editField = (label: string, value: unknown) => edit(field(label), value)
   const press = (name: string) => {
     const node = button(name)
     expect(node.props.disabled).toBeFalsy()
-    return node.props.onClick({}) as Promise<void> | undefined
+    return node.props.onClick!({}) as Promise<void> | undefined
   }
   const click = async (name: string) => {
     await press(name)

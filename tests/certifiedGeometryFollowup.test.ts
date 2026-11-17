@@ -40,7 +40,7 @@ it('binds a rational NURBS source to continuous bounds, filled enclosures and th
   expect(verifyMinkowskiProof(JSON.parse(JSON.stringify(proof))).mesh).toEqual(r.mesh)
   for (const mutation of [
     (p: NurbsMinkowskiProof) => {
-      p.a.kind === 'brep' && (p.a.model.faces[1].surface.weights[1][1] = 1)
+      if (p.a.kind === 'brep') p.a.model.faces[1].surface.weights[1][1] = 1
     },
     (p: NurbsMinkowskiProof) => {
       p.certificate.sourceHomotopyBounds[0] = ['0', '1']

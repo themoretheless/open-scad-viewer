@@ -3,9 +3,13 @@ import { expect, it } from 'vitest'
 import { measureShellDistance, type ShellDistanceOptions } from '../src/kernel/solidMeasurements'
 import { mainSolidExpectation, mainSolidResult } from '../src/kernel/mainSolidProtocol'
 import { createMainSolidWorkerHandler } from '../src/kernel/mainSolidWorkerRuntime'
+/** Shape of the distance fixture documents read below. */
+interface DistanceFixture {
+  document: { bodies: { brep: ShellDistanceOptions['a'] }[] }
+}
 const read = (name: string) =>
   JSON.parse(readFileSync(new URL(`./fixtures/${name}-distance.json`, import.meta.url), 'utf8'))
-const options = (f: any): ShellDistanceOptions => ({
+const options = (f: DistanceFixture): ShellDistanceOptions => ({
   a: structuredClone(f.document.bodies[0].brep),
   b: structuredClone(f.document.bodies[1].brep),
   toleranceMm: 0.001,
@@ -73,7 +77,7 @@ it('rejects invalid face identities, budgets, volume claims and false completion
     expect(mainSolidResult(e, { ...r, ...patch })).toBe(false)
 })
 it('recovers from rejected shell budgets in the worker', async () => {
-  const messages: any[] = [],
+  const messages: unknown[] = [],
     handler = createMainSolidWorkerHandler(m => messages.push(m)),
     o = options(read('shell'))
   await handler({ version: 1, id: 1, job: { kind: 'shellDistance', options: { ...o, maxCells: 0 } } })
@@ -85,7 +89,7 @@ it('recovers from rejected shell budgets in the worker', async () => {
 it('reserves work for every pair of rotated nested shells', () => {
   const base = JSON.parse(
     readFileSync(new URL('./fixtures/boundary-agreement.json', import.meta.url), 'utf8'),
-  ).cases.find((c: any) => c.name === 'normal').document.bodies[0].brep
+  ).cases.find((c: { name: string }) => c.name === 'normal').document.bodies[0].brep
   const transform = (scale: number, offset: number) => {
     const m = structuredClone(base),
       c = Math.cos(0.37),

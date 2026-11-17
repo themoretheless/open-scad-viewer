@@ -6,7 +6,7 @@ import type { MeshData } from '../src/core/mesh'
 class Node {
   parent: Node | null = null
   children: Node[] = []
-  props: Record<string, any> = {}
+  props: { [key: string]: unknown; onClick?: (...args: unknown[]) => unknown } = {}
   text = ''
   constructor(public tag: string) {}
 }
@@ -55,9 +55,7 @@ async function mount(props: Record<string, unknown>) {
   await Promise.resolve()
   await nextTick()
   const all = (n: Node = root): Node[] => [n, ...n.children.flatMap(all)]
-  all()
-    .find(n => n.props['aria-label'] === 'VR mode')!
-    .props.onClick()
+  all().find(n => n.props['aria-label'] === 'VR mode')!.props.onClick!()
   await nextTick()
   const text = (n: Node): string => n.text + n.children.map(text).join('')
   return all().find(n => n.tag === 'button' && text(n) === 'Enter VR')!

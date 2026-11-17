@@ -9,7 +9,16 @@ import { createHash } from 'node:crypto'
  * incapable of detecting coordinated drift in the implementation under test.
  */
 
-export type ReferenceSemanticProgramV1 = Record<string, any>
+/**
+ * Field of a decoded but not yet validated JSON object. The reference walks
+ * arbitrary, possibly malformed input with its own structural checks, so it
+ * deliberately does not narrow field types statically.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- reference validator walks untrusted JSON
+type JsonField = any
+type JsonRecord = Record<string, JsonField>
+
+export type ReferenceSemanticProgramV1 = JsonRecord
 
 export type ReferenceSemanticFailureFamily =
   | 'schema'
@@ -206,16 +215,16 @@ function fail(family: ReferenceSemanticFailureFamily, path: string, detail: stri
   throw new ReferenceSemanticProgramError(family, path, detail)
 }
 
-function isRecord(value: unknown): value is Record<string, any> {
+function isRecord(value: unknown): value is JsonRecord {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
-function record(value: unknown, path: string): Record<string, any> {
+function record(value: unknown, path: string): JsonRecord {
   if (!isRecord(value)) fail('schema', path, 'expected object')
   return value
 }
 
-function exact(value: unknown, keys: readonly string[], path: string): Record<string, any> {
+function exact(value: unknown, keys: readonly string[], path: string): JsonRecord {
   const output = record(value, path)
   const actual = Object.keys(output).sort()
   const wanted = [...keys].sort()
@@ -225,7 +234,7 @@ function exact(value: unknown, keys: readonly string[], path: string): Record<st
   return output
 }
 
-function array(value: unknown, path: string, maximum: number): any[] {
+function array(value: unknown, path: string, maximum: number): JsonField[] {
   if (!Array.isArray(value)) fail('schema', path, 'expected array')
   if (value.length > maximum) fail('limit', path, `array exceeds ${maximum} items`)
   return value
@@ -575,7 +584,7 @@ function validateIdentityValue(value: unknown, path: string, depth = 0): void {
   }
 }
 
-function samePath(left: readonly any[], right: readonly any[]): boolean {
+function samePath(left: readonly JsonField[], right: readonly JsonField[]): boolean {
   return (
     left.length === right.length &&
     left.every(
@@ -587,7 +596,7 @@ function samePath(left: readonly any[], right: readonly any[]): boolean {
   )
 }
 
-function validateOperations(value: unknown): Record<string, any>[] {
+function validateOperations(value: unknown): JsonRecord[] {
   const operations = array(value, '$.core.operations', LIMIT.operations).map((item, index) =>
     record(item, `$.core.operations[${index}]`),
   )
@@ -682,7 +691,7 @@ function validateOperations(value: unknown): Record<string, any>[] {
   return operations
 }
 
-function validateValueType(value: unknown, path: string): Record<string, any> {
+function validateValueType(value: unknown, path: string): JsonRecord {
   const valueType = exact(value, KEY.valueType, path)
   if (!includes(TAG.geometryKind, valueType.geometryKind)) {
     fail('type', `${path}.geometryKind`, 'unknown geometry kind')
@@ -724,7 +733,7 @@ function validateValueType(value: unknown, path: string): Record<string, any> {
   return valueType
 }
 
-function sameValueType(left: Record<string, any>, right: Record<string, any>): boolean {
+function sameValueType(left: JsonRecord, right: JsonRecord): boolean {
   if (
     left.geometryKind !== right.geometryKind ||
     left.space !== right.space ||
@@ -739,7 +748,7 @@ function sameValueType(left: Record<string, any>, right: Record<string, any>): b
   )
 }
 
-function sameRepresentationEvidence(left: Record<string, any>, right: Record<string, any>): boolean {
+function sameRepresentationEvidence(left: JsonRecord, right: JsonRecord): boolean {
   return (
     left.representation === right.representation &&
     left.evidence.tag === right.evidence.tag &&
@@ -749,7 +758,7 @@ function sameRepresentationEvidence(left: Record<string, any>, right: Record<str
   )
 }
 
-function expectedValueType(contract: string, geometryKind: string, space: string): Record<string, any> {
+function expectedValueType(contract: string, geometryKind: string, space: string): JsonRecord {
   return {
     geometryKind,
     space,
@@ -778,10 +787,7 @@ type ContinuationIndex = {
   nearestModule: Int32Array
 }
 
-function sameContinuationBindings(
-  left: readonly Record<string, any>[],
-  right: readonly Record<string, any>[],
-): boolean {
+function sameContinuationBindings(left: readonly JsonRecord[], right: readonly JsonRecord[]): boolean {
   return (
     left.length === right.length &&
     left.every(
@@ -790,7 +796,7 @@ function sameContinuationBindings(
   )
 }
 
-function structuralPrefix(prefix: readonly Record<string, any>[], path: readonly Record<string, any>[]): boolean {
+function structuralPrefix(prefix: readonly JsonRecord[], path: readonly JsonRecord[]): boolean {
   return (
     prefix.length < path.length &&
     prefix.every(
@@ -805,8 +811,8 @@ function structuralPrefix(prefix: readonly Record<string, any>[], path: readonly
 /** Recomputes the one admitted caller-body/definition/children continuation. */
 function childrenContinuationAnchors(
   expansionIndex: number,
-  occurrences: readonly Record<string, any>[],
-  operations: readonly Record<string, any>[],
+  occurrences: readonly JsonRecord[],
+  operations: readonly JsonRecord[],
   index: ContinuationIndex,
 ): ContinuationAnchors | null {
   const expansion = occurrences[expansionIndex]
@@ -840,7 +846,7 @@ function childrenContinuationAnchors(
 
   const bodyStaticChildren = index.staticChildren.get(callerBody.operation) ?? []
   if (bodyStaticChildren.length !== 1 || bodyStaticChildren[0] !== expansion.operation) return null
-  const indexSlot = (slots: readonly Record<string, any>[]): Record<string, any> | null =>
+  const indexSlot = (slots: readonly JsonRecord[]): JsonRecord | null =>
     slots.length === 1 && slots[0].name === '$index' ? slots[0] : null
   const childrenIndex = indexSlot(children.dynamicSlots)
   const expansionIndexSlot = indexSlot(expansion.dynamicSlots)
@@ -897,8 +903,8 @@ function childrenContinuationAnchors(
 
 function isModuleDefinitionActivation(
   definitionIndex: number,
-  occurrences: readonly Record<string, any>[],
-  operations: readonly Record<string, any>[],
+  occurrences: readonly JsonRecord[],
+  operations: readonly JsonRecord[],
   index: ContinuationIndex,
 ): boolean {
   const definition = occurrences[definitionIndex]
@@ -943,7 +949,7 @@ function isModuleDefinitionActivation(
   )
 }
 
-function validateNodes(value: unknown, contract: string): Record<string, any>[] {
+function validateNodes(value: unknown, contract: string): JsonRecord[] {
   const nodes = array(value, '$.core.nodes', LIMIT.nodes).map((item, index) => record(item, `$.core.nodes[${index}]`))
   nodes.forEach((node, index) => {
     const path = `$.core.nodes[${index}]`
@@ -959,11 +965,11 @@ function validateNodes(value: unknown, contract: string): Record<string, any>[] 
       fail('type', `${path}.kind`, 'B-rep contract requires analytic topology')
     }
     const valueType = validateValueType(node.valueType, `${path}.valueType`)
-    const requireValueType = (expected: Record<string, any>): void => {
+    const requireValueType = (expected: JsonRecord): void => {
       if (!sameValueType(valueType, expected))
         fail('type', `${path}.valueType`, 'value type does not match node transition')
     }
-    const inputNode = (field: string): Record<string, any> => {
+    const inputNode = (field: string): JsonRecord => {
       const reference = earlierNode(node[field], `${path}.${field}`, index)
       return nodes[reference]
     }
@@ -1142,11 +1148,7 @@ function validateNodes(value: unknown, contract: string): Record<string, any>[] 
   return nodes
 }
 
-function validateOccurrences(
-  value: unknown,
-  operations: Record<string, any>[],
-  nodes: Record<string, any>[],
-): Record<string, any>[] {
+function validateOccurrences(value: unknown, operations: JsonRecord[], nodes: JsonRecord[]): JsonRecord[] {
   const occurrences = array(value, '$.core.occurrences', LIMIT.occurrences).map((item, index) =>
     record(item, `$.core.occurrences[${index}]`),
   )
@@ -1363,7 +1365,7 @@ function validateOccurrences(
   return occurrences
 }
 
-function nodeInputs(node: Record<string, any>): number[] {
+function nodeInputs(node: JsonRecord): number[] {
   if (
     [
       'transform',
@@ -1380,13 +1382,13 @@ function nodeInputs(node: Record<string, any>): number[] {
   return []
 }
 
-function occurrenceRoot(index: number, occurrences: Record<string, any>[]): number {
+function occurrenceRoot(index: number, occurrences: JsonRecord[]): number {
   let cursor = index
   while (occurrences[cursor].parent !== null) cursor = occurrences[cursor].parent
   return cursor
 }
 
-function occurrenceIsDescendantOf(candidate: number, ancestor: number, occurrences: Record<string, any>[]): boolean {
+function occurrenceIsDescendantOf(candidate: number, ancestor: number, occurrences: JsonRecord[]): boolean {
   let cursor: number | null = candidate
   while (cursor !== null) {
     if (cursor === ancestor) return true
@@ -1395,11 +1397,7 @@ function occurrenceIsDescendantOf(candidate: number, ancestor: number, occurrenc
   return false
 }
 
-function identityPreservingNodeLineage(
-  outputNode: number,
-  identityNode: number,
-  nodes: Record<string, any>[],
-): boolean {
+function identityPreservingNodeLineage(outputNode: number, identityNode: number, nodes: JsonRecord[]): boolean {
   let cursor = outputNode
   while (cursor !== identityNode) {
     const node = nodes[cursor]
@@ -1409,7 +1407,7 @@ function identityPreservingNodeLineage(
   return true
 }
 
-function validateResult(value: unknown, nodes: Record<string, any>[], occurrences: Record<string, any>[]): number[] {
+function validateResult(value: unknown, nodes: JsonRecord[], occurrences: JsonRecord[]): number[] {
   const firstRowByOccurrenceId = new Map<string, number>()
   const canonicalOccurrenceRows = occurrences.map((occurrence, index) => {
     const first = firstRowByOccurrenceId.get(occurrence.occurrenceId)
@@ -1491,7 +1489,7 @@ type ReferenceExecution = {
   terminal: ReferenceExecutionTerminal
 }
 
-function validateDiagnosticTemplates(value: unknown, operations: Record<string, any>[]): Record<string, any>[] {
+function validateDiagnosticTemplates(value: unknown, operations: JsonRecord[]): JsonRecord[] {
   return array(value, '$.core.diagnosticTemplates', LIMIT.diagnostics).map((item, index) => {
     const path = `$.core.diagnosticTemplates[${index}]`
     const template = exact(item, KEY.diagnosticTemplate, path)
@@ -1521,7 +1519,7 @@ function validateDiagnosticTemplates(value: unknown, operations: Record<string, 
   })
 }
 
-function nodesReachableFrom(nodes: Record<string, any>[], roots: readonly number[]): Uint8Array {
+function nodesReachableFrom(nodes: JsonRecord[], roots: readonly number[]): Uint8Array {
   const reached = new Uint8Array(nodes.length)
   const pending = [...roots]
   while (pending.length > 0) {
@@ -1533,7 +1531,7 @@ function nodesReachableFrom(nodes: Record<string, any>[], roots: readonly number
   return reached
 }
 
-function operationMaterializesNode(operation: Record<string, any>, node: Record<string, any>): boolean {
+function operationMaterializesNode(operation: JsonRecord, node: JsonRecord): boolean {
   if (node.kind === 'box') return operation.name === 'cube'
   if (node.kind.startsWith('sphere-')) return operation.name === 'sphere'
   if (node.kind.startsWith('cylinder-')) return operation.name === 'cylinder'
@@ -1555,11 +1553,11 @@ function operationMaterializesNode(operation: Record<string, any>, node: Record<
 /** Independent, bounded validation of the hash-covered execution witness. */
 function validateExecution(
   value: unknown,
-  nodes: Record<string, any>[],
-  operations: Record<string, any>[],
-  occurrences: Record<string, any>[],
+  nodes: JsonRecord[],
+  operations: JsonRecord[],
+  occurrences: JsonRecord[],
   outputRoots: number[],
-  templates: Record<string, any>[],
+  templates: JsonRecord[],
   contract: string,
 ): ReferenceExecution {
   const execution = exact(value, KEY.execution, '$.core.execution')
@@ -1759,7 +1757,7 @@ type ProductionGroup = {
   transparent: boolean
 }
 
-function productionRule(operation: Record<string, any>, allowInterruptedUnsupported = false): string {
+function productionRule(operation: JsonRecord, allowInterruptedUnsupported = false): string {
   const pair = `${String(operation.category)}:${String(operation.name)}`
   const last = operation.structuralPath[operation.structuralPath.length - 1]
   const prior = operation.structuralPath[operation.structuralPath.length - 2]
@@ -1828,7 +1826,7 @@ function productionRule(operation: Record<string, any>, allowInterruptedUnsuppor
   fail('identity', `$.core.operations[${String(operation.id)}]`, `operation pair ${pair} has no V1 production rule`)
 }
 
-function referenceResultItems(result: Record<string, any>): Record<string, any>[] {
+function referenceResultItems(result: JsonRecord): JsonRecord[] {
   if (result.tag === 'empty') return []
   if (result.tag === 'single') return [result.item]
   return result.items
@@ -1836,10 +1834,10 @@ function referenceResultItems(result: Record<string, any>): Record<string, any>[
 
 /** Independently recomputes the closed occurrence frontier and node owners. */
 function validateOccurrenceProduction(
-  operations: Record<string, any>[],
-  occurrences: Record<string, any>[],
-  nodes: Record<string, any>[],
-  result: Record<string, any>,
+  operations: JsonRecord[],
+  occurrences: JsonRecord[],
+  nodes: JsonRecord[],
+  result: JsonRecord,
   effects: ReferenceExecutionEffect[] = [],
   terminal: ReferenceExecutionTerminal = null,
 ): void {
@@ -1940,7 +1938,7 @@ function validateOccurrenceProduction(
     if (rows.length !== wanted)
       fail('identity', `$.core.occurrences[${group}]`, `production requires ${wanted} output rows`)
   }
-  const expectKind = (row: number, kinds: readonly string[]): Record<string, any> => {
+  const expectKind = (row: number, kinds: readonly string[]): JsonRecord => {
     const reference = occurrences[row].node
     if (reference === null || !kinds.includes(nodes[reference].kind)) {
       fail('identity', `$.core.occurrences[${row}].node`, 'operation materializes the wrong node kind')
@@ -1960,7 +1958,7 @@ function validateOccurrenceProduction(
     group: number,
     path: string,
     schedule: ScheduleEvent[],
-  ): Record<string, any> => {
+  ): JsonRecord => {
     const reducer = nodes[reference]
     if (
       reducer?.kind !== 'boolean' ||
@@ -2556,7 +2554,7 @@ function validateOccurrenceProduction(
   }
 }
 
-export function referenceSemanticCapabilityClosureV1(core: Record<string, any>): string[] {
+export function referenceSemanticCapabilityClosureV1(core: JsonRecord): string[] {
   const result = record(core.result, '$.core.result')
   const capabilities = new Set<string>(core.declaredCapabilities as string[])
   capabilities.add('semantic.program-v1')
@@ -2565,7 +2563,7 @@ export function referenceSemanticCapabilityClosureV1(core: Record<string, any>):
   capabilities.add(`semantic.result.${String(result.tag)}`)
   if ((core.occurrences as unknown[]).length > 0) capabilities.add('semantic.occurrences')
   if ((core.diagnosticTemplates as unknown[]).length > 0) capabilities.add('diagnostics.deterministic')
-  for (const node of core.nodes as Record<string, any>[]) {
+  for (const node of core.nodes as JsonRecord[]) {
     const capability = (CAPABILITY_BY_KIND as Readonly<Record<string, string>>)[node.kind]
     if (capability === undefined) fail('field', '$.core.nodes', 'unknown node capability tag')
     capabilities.add(capability)
@@ -2605,7 +2603,7 @@ export function referenceSemanticCapabilityClosureV1(core: Record<string, any>):
   return [...capabilities].sort(utf8Compare)
 }
 
-function validateCore(value: unknown): Record<string, any> {
+function validateCore(value: unknown): JsonRecord {
   const core = exact(value, KEY.core, '$.core')
   if (core.schema !== 'semantic-program-core') fail('schema', '$.core.schema', 'wrong core schema')
   const version = exact(core.schemaVersion, KEY.version, '$.core.schemaVersion')
@@ -2757,11 +2755,11 @@ function validateReferenceEnvelopeSnapshot(snapshot: unknown, exactSource?: stri
         fail('source', path, 'span endpoint splits a surrogate pair')
       }
     }
-    envelope.provenance.forEach((entry: Record<string, any>, index: number) => {
+    envelope.provenance.forEach((entry: JsonRecord, index: number) => {
       scalarBoundary(entry.span.start, `$.provenance[${index}].span.start`)
       scalarBoundary(entry.span.end, `$.provenance[${index}].span.end`)
     })
-    envelope.diagnostics.forEach((entry: Record<string, any>, index: number) => {
+    envelope.diagnostics.forEach((entry: JsonRecord, index: number) => {
       if (entry.span === null) return
       scalarBoundary(entry.span.start, `$.diagnostics[${index}].span.start`)
       scalarBoundary(entry.span.end, `$.diagnostics[${index}].span.end`)
@@ -2774,7 +2772,7 @@ function normalizeReferenceSemanticProgramV1(input: unknown, exactSource?: strin
   return validateReferenceEnvelopeSnapshot(snapshotJsonTree(input), exactSource)
 }
 
-function normalizeReferenceSemanticProgramCoreV1(input: unknown, exactSource?: string): Record<string, any> {
+function normalizeReferenceSemanticProgramCoreV1(input: unknown, exactSource?: string): JsonRecord {
   const snapshot = snapshotJsonTree(input)
   const candidate = record(snapshot, '$')
   if (candidate.schema === 'semantic-program-core') return validateCore(candidate)
@@ -3217,7 +3215,7 @@ export function makeReferenceSemanticProgramV1(): ReferenceSemanticProgramV1 {
 export function makeReferenceLinearChainProgramV1(length: number): ReferenceSemanticProgramV1 {
   integer(length, '$fixture.length', 1, LIMIT.nodes)
   const source = 'chain();'
-  const nodes: Record<string, any>[] = [
+  const nodes: JsonRecord[] = [
     {
       id: 0,
       kind: 'box',
@@ -3246,7 +3244,7 @@ export function makeReferenceLinearChainProgramV1(length: number): ReferenceSema
       matrix: [...identityMatrix],
     })
   }
-  const operations: Record<string, any>[] = []
+  const operations: JsonRecord[] = []
   const appendOperation = (
     parent: number | null,
     kind: string,
@@ -3274,7 +3272,7 @@ export function makeReferenceLinearChainProgramV1(length: number): ReferenceSema
     })
     return id
   }
-  const occurrences: Record<string, any>[] = []
+  const occurrences: JsonRecord[] = []
   if (length === 1) {
     const cube = appendOperation(null, 'call', 'cube', 'geometry')
     const occurrenceId = referenceSemanticOccurrenceIdV1(null, null, operations[cube].operationId, [])

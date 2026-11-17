@@ -176,7 +176,7 @@ it('revalidates authored affine laws after circle correction through Rush', asyn
   )
   const node = graph.document.nodes.find(n => n.op === 'brep_progressive_miter_sweep')!
   const built = buildOwnNurbs(graph.document, { action: 'build', display: { segments: 4, subdivisionLevels: 0 } })
-  expect((built.report.construction![node.id] as any).affineLawsApplied).toBe(true)
+  expect((built.report.construction![node.id] as { affineLawsApplied?: unknown }).affineLawsApplied).toBe(true)
   expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({
     profileG1Certified: true,
     profileG2Certified: true,
