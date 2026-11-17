@@ -2152,7 +2152,7 @@ pub fn exact_periodic_surface_path_signed_area(
     native: &[[f64; 2]],
     max_work: u64,
 ) -> Result<PeriodicPathAreaReport> {
-    let moments = periodic_path_moments(source, native, max_work, false)?;
+    let moments = periodic_path_moments(source, native, max_work, 0)?.0;
     Ok(PeriodicPathAreaReport {
         signed_area: moments.signed_area,
         work_used: moments.work_used,
@@ -2179,15 +2179,37 @@ pub fn exact_periodic_surface_path_centroid(
     native: &[[f64; 2]],
     max_work: u64,
 ) -> Result<PeriodicPathCentroidReport> {
-    periodic_path_moments(source, native, max_work, true)
+    Ok(periodic_path_moments(source, native, max_work, 1)?.0)
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicPathInertiaReport {
+    pub geometry: PeriodicPathCentroidReport,
+    /// Signed integrals of centered U², U·V and V², in that order.
+    /// Undefined when the centroid is undefined.
+    pub central_moments: Option<[BigRational; 3]>,
+}
+
+/// Compute exact signed second moments of a lifted UV polygon about its
+/// centroid. Reversing the contour reverses the sign of every integral.
+pub fn exact_periodic_surface_path_inertia(
+    source: &Surface,
+    native: &[[f64; 2]],
+    max_work: u64,
+) -> Result<PeriodicPathInertiaReport> {
+    let (geometry, central_moments) = periodic_path_moments(source, native, max_work, 2)?;
+    Ok(PeriodicPathInertiaReport {
+        geometry,
+        central_moments,
+    })
 }
 
 fn periodic_path_moments(
     source: &Surface,
     native: &[[f64; 2]],
     max_work: u64,
-    compute_centroid: bool,
-) -> Result<PeriodicPathCentroidReport> {
+    order: usize,
+) -> Result<(PeriodicPathCentroidReport, Option<[BigRational; 3]>)> {
     use PeriodicPathAreaRefusal as Failure;
     use num_traits::Zero;
     crate::check(
@@ -2195,12 +2217,17 @@ fn periodic_path_moments(
         "Periodic path area needs a closed polygon with at least three edges",
     )?;
     let lift = lift_exact_periodic_surface_path(source, native, max_work)?;
-    let refused = |reason, work_used, refused_coordinate| PeriodicPathCentroidReport {
-        signed_area: None,
-        centroid: None,
-        work_used,
-        refused_coordinate,
-        refusal: Some(reason),
+    let refused = |reason, work_used, refused_coordinate| {
+        (
+            PeriodicPathCentroidReport {
+                signed_area: None,
+                centroid: None,
+                work_used,
+                refused_coordinate,
+                refusal: Some(reason),
+            },
+            None,
+        )
     };
     let Some(points) = lift.parameters else {
         let reason = lift
@@ -2221,6 +2248,8 @@ fn periodic_path_moments(
     };
     let mut integrate = || -> std::result::Result<_, ExactRefusal> {
         let mut moment: [BigRational; 2] = std::array::from_fn(|_| BigRational::zero());
+        let axes = [(0, 0), (0, 1), (1, 1)];
+        let mut second = axes.map(|_| BigRational::zero());
         let mut twice_area = BigRational::from_integer(0.into());
         let [x, y] = points[0];
         let mut previous = [work.lift(x)?, work.lift(y)?];
@@ -2230,11 +2259,24 @@ fn periodic_path_moments(
             let backward = work.op(&previous[1], &current[0], |a, b| a * b)?;
             let cross = work.op(&forward, &backward, |a, b| a - b)?;
             twice_area = work.op(&twice_area, &cross, |a, b| a + b)?;
-            if compute_centroid {
+            if order >= 1 {
                 for axis in 0..2 {
                     let sum = work.op(&previous[axis], &current[axis], |a, b| a + b)?;
                     let term = work.op(&sum, &cross, |a, b| a * b)?;
                     moment[axis] = work.op(&moment[axis], &term, |a, b| a + b)?;
+                }
+            }
+            if order >= 2 {
+                for (sum, (i, j)) in second.iter_mut().zip(axes) {
+                    let a = work.op(&previous[i], &current[i], |a, b| a + b)?;
+                    let b = work.op(&previous[j], &current[j], |a, b| a + b)?;
+                    let mixed = work.op(&a, &b, |a, b| a * b)?;
+                    let start = work.op(&previous[i], &previous[j], |a, b| a * b)?;
+                    let end = work.op(&current[i], &current[j], |a, b| a * b)?;
+                    let same = work.op(&start, &end, |a, b| a + b)?;
+                    let factor = work.op(&mixed, &same, |a, b| a + b)?;
+                    let term = work.op(&cross, &factor, |a, b| a * b)?;
+                    *sum = work.op(sum, &term, |a, b| a + b)?;
                 }
             }
             previous = current;
@@ -2242,7 +2284,7 @@ fn periodic_path_moments(
         let area = work.op(&twice_area, &BigRational::from_integer(2.into()), |a, b| {
             a / b
         })?;
-        let centroid = if compute_centroid && !twice_area.is_zero() {
+        let centroid = if order >= 1 && !twice_area.is_zero() {
             let divisor = work.op(&twice_area, &BigRational::from_integer(3.into()), |a, b| {
                 a * b
             })?;
@@ -2253,16 +2295,31 @@ fn periodic_path_moments(
         } else {
             None
         };
-        Ok((area, centroid))
+        let central = if let (true, Some(center)) = (order >= 2, &centroid) {
+            let divisor = BigRational::from_integer(24.into());
+            for (sum, (i, j)) in second.iter_mut().zip(axes) {
+                let raw = work.op(sum, &divisor, |a, b| a / b)?;
+                let product = work.op(&center[i], &center[j], |a, b| a * b)?;
+                let translation = work.op(&area, &product, |a, b| a * b)?;
+                *sum = work.op(&raw, &translation, |a, b| a - b)?;
+            }
+            Some(second)
+        } else {
+            None
+        };
+        Ok((area, centroid, central))
     };
     Ok(match integrate() {
-        Ok((area, centroid)) => PeriodicPathCentroidReport {
-            signed_area: Some(area),
-            centroid,
-            work_used: work.used,
-            refused_coordinate: None,
-            refusal: None,
-        },
+        Ok((area, centroid, central)) => (
+            PeriodicPathCentroidReport {
+                signed_area: Some(area),
+                centroid,
+                work_used: work.used,
+                refused_coordinate: None,
+                refusal: None,
+            },
+            central,
+        ),
         Err(reason) => refused(Failure::Arithmetic(reason), work.used, None),
     })
 }

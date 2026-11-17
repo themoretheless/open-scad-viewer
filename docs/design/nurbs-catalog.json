@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 542,
-  "unallocatedCount": 458,
+  "specifiedCount": 543,
+  "unallocatedCount": 457,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13858,6 +13858,27 @@
       "remainingQualification": [
         "Compute exact rational area and centroid moments of a closed lifted UV polygon.",
         "Compute rational first polygon moments alongside signed area and report the exact centroid when the area is nonzero.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0543",
+      "name": "Точные вторые центральные моменты замкнутого UV-контура через периодические швы",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_path_inertia",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-543-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-543-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Compute the signed rational central second moments of a closed lifted UV polygon.",
+        "Integrate rational quadratic moments over oriented polygon triangles and translate them to the exact centroid.",
         "WASM and application integration are separate."
       ]
     }

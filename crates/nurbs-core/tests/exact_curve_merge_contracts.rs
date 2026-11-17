@@ -3356,3 +3356,38 @@ fn periodic_path_centroid_is_undefined_for_zero_algebraic_area() {
     assert_eq!(report.signed_area, Some(Q::from_integer(0.into())));
     assert!(report.centroid.is_none());
 }
+
+#[test]
+fn periodic_path_inertia_proves_signed_triangle_moments_across_both_seams() {
+    use num_rational::BigRational as Q;
+    use nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_path_inertia;
+    let source = doubly_periodic_tensor();
+    let path = [[3.5, 3.5], [0.5, 3.5], [3.5, 0.5], [3.5, 3.5]];
+    let report = exact_periodic_surface_path_inertia(&source, &path, 1_000_000).unwrap();
+    let expected = [
+        Q::new(1.into(), 36.into()),
+        Q::new((-1).into(), 72.into()),
+        Q::new(1.into(), 36.into()),
+    ];
+    assert_eq!(report.central_moments, Some(expected.clone()));
+    let reverse: Vec<_> = path.into_iter().rev().collect();
+    let reverse = exact_periodic_surface_path_inertia(&source, &reverse, 1_000_000).unwrap();
+    assert_eq!(reverse.central_moments, Some(expected.map(|q| -q)));
+    assert!(
+        exact_periodic_surface_path_inertia(&source, &path, report.geometry.work_used - 1)
+            .unwrap()
+            .central_moments
+            .is_none()
+    );
+}
+
+#[test]
+fn periodic_path_inertia_is_undefined_for_zero_algebraic_area() {
+    use nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_path_inertia;
+    let path = [[3.5, 0.], [0.5, 0.], [1., 0.], [0.5, 0.], [3.5, 0.]];
+    let report =
+        exact_periodic_surface_path_inertia(&doubly_periodic_tensor(), &path, 1_000_000).unwrap();
+    assert_eq!(report.geometry.refusal, None);
+    assert!(report.geometry.centroid.is_none());
+    assert!(report.central_moments.is_none());
+}
