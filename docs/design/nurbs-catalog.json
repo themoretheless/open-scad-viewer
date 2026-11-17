@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 407,
-  "unallocatedCount": 593,
+  "specifiedCount": 408,
+  "unallocatedCount": 592,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -10489,6 +10489,30 @@
       "remainingQualification": [
         "Find exact directional support values and attaining boundary points for retained planar polyhedral regions.",
         "Exact rational dot products on certified linear boundaries give sharp minima and maxima with witnesses. Unused regions of expanded support charts do not affect the range.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0408",
+      "name": "Точный габарит плоскогранного тела в заданной аффинной системе координат",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::exact_polyhedral_frame_bounds",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/mod.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "docs/qualification/nurbs-curvature-field-408-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-408-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Find the tight coordinate box in a supplied invertible affine frame with exact extremal witnesses.",
+        "Exact dual basis covectors project retained linear boundaries along all three frame coordinates in a single traversal. Singular and nonfinite frames refuse.",
         "WASM and application integration are separate."
       ]
     }

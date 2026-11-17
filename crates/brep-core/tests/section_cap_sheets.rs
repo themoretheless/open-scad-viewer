@@ -1805,3 +1805,50 @@ fn exact_projection_scales_and_reverses_an_oblique_direction() {
     }
     assert!(exact_polyhedral_projection(solid, [0.; 3], 1_000_000).is_err());
 }
+
+#[test]
+fn exact_affine_frame_bounds_recover_dimensions_of_the_sheared_prism() {
+    use brep_core::{
+        analysis::exact_polyhedral_frame_bounds, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let source = open_prism_with_nonbinary_cap_support();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let origin = [0.75, 0., 1.25];
+    let basis = [[0.5, -0.5, 0.], [0.25, 0.5, 0.25], [0., 0., 1.]];
+    let report = exact_polyhedral_frame_bounds(solid, origin, basis, 1_000_000).unwrap();
+    assert_eq!(
+        report.bounds,
+        [[-1, 3], [-1, 3], [-1, 1]].map(|pair| pair.map(|n| Q::from_integer(n.into())))
+    );
+    for (axis, witnesses) in report.witnesses_mm.iter().enumerate() {
+        for (point, bound) in witnesses.iter().zip(&report.bounds[axis]) {
+            let exact = |n| Q::from_float(n).unwrap();
+            let x = &point[0] - exact(origin[0]);
+            let y = &point[1] - exact(origin[1]);
+            let z = &point[2] - exact(origin[2]);
+            let v = (&x + &y) / exact(0.75);
+            let u = (&x - exact(0.25) * &v) / exact(0.5);
+            let w = &z - exact(0.25) * &v;
+            assert_eq!(&[u, v, w][axis], bound);
+        }
+    }
+    assert!(exact_polyhedral_frame_bounds(solid, origin, basis, report.exact_work).is_ok());
+    assert!(exact_polyhedral_frame_bounds(solid, origin, basis, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_frame_projection_rejects_singular_or_nonfinite_frames() {
+    use brep_core::{
+        analysis::exact_polyhedral_frame_bounds, planar_cap::build_outward_inferred_section_solid,
+    };
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    assert!(exact_polyhedral_frame_bounds(solid, [0.; 3], [[1., 0., 0.]; 3], 1_000_000).is_err());
+    assert!(
+        exact_polyhedral_frame_bounds(solid, [f64::INFINITY, 0., 0.], [[1., 0., 0.]; 3], 1_000_000)
+            .is_err()
+    );
+}

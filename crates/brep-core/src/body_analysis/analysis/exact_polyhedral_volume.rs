@@ -356,35 +356,109 @@ pub fn exact_polyhedral_projection(
             "Projection needs a finite nonzero direction",
         ));
     }
-    let direction = lift(&direction);
-    let mut minimum: Option<(Q, [Q; 3])> = None;
-    let mut maximum: Option<(Q, [Q; 3])> = None;
+    let ([axis], exact_work) = project_polyhedral_boundary(
+        solid,
+        [lift(&direction)],
+        std::array::from_fn(|_| Q::zero()),
+        max_exact_work,
+    )?;
+    Ok(ExactPolyhedralProjection {
+        dot_bounds: axis.bounds,
+        witnesses_mm: axis.witnesses_mm,
+        exact_work,
+    })
+}
+
+#[derive(Clone, Debug)]
+pub struct ExactPolyhedralFrameBounds {
+    /// Min/max coordinates along each basis axis in the supplied frame.
+    pub bounds: [[Q; 2]; 3],
+    /// World-space points attaining each axis's two extrema.
+    pub witnesses_mm: [[[Q; 3]; 2]; 3],
+    pub exact_work: u64,
+}
+
+/// Get the smallest coordinate box in a caller-supplied affine frame.
+/// The three world-space basis vectors may be skewed or scaled.
+pub fn exact_polyhedral_frame_bounds(
+    solid: &QualifiedClosedSolid,
+    origin_mm: [f64; 3],
+    basis: [[f64; 3]; 3],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralFrameBounds> {
+    validate_work(max_exact_work)?;
+    if !origin_mm
+        .iter()
+        .chain(basis.iter().flatten())
+        .all(|value| value.is_finite())
+    {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Projection frame must be finite",
+        ));
+    }
+    let mut frame_work = max_exact_work;
+    spend(&mut frame_work, 64)?;
+    let [a, b, c] = basis.map(|axis| lift(&axis));
+    let determinant = determinant(&a, &b, &c);
+    if determinant.is_zero() {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Projection frame must be invertible",
+        ));
+    }
+    let covectors = [(&b, &c), (&c, &a), (&a, &b)].map(|(u, v)| {
+        [(1, 2), (2, 0), (0, 1)].map(|(j, k)| (&u[j] * &v[k] - &u[k] * &v[j]) / &determinant)
+    });
+    let (axes, work) = project_polyhedral_boundary(solid, covectors, lift(&origin_mm), frame_work)?;
+    Ok(ExactPolyhedralFrameBounds {
+        bounds: axes.each_ref().map(|axis| axis.bounds.clone()),
+        witnesses_mm: axes.map(|axis| axis.witnesses_mm),
+        exact_work: max_exact_work - frame_work + work,
+    })
+}
+
+struct ProjectionAxisBounds {
+    bounds: [Q; 2],
+    witnesses_mm: [[Q; 3]; 2],
+}
+
+fn project_polyhedral_boundary<const N: usize>(
+    solid: &QualifiedClosedSolid,
+    directions: [[Q; 3]; N],
+    origin: [Q; 3],
+    max_exact_work: u64,
+) -> Result<([ProjectionAxisBounds; N], u64)> {
+    let mut ranges: [Option<ProjectionAxisBounds>; N] = std::array::from_fn(|_| None);
     let mut remaining = max_exact_work;
     visit_polyhedral_boundary(solid, &mut remaining, |_, _, a, b, _, remaining| {
-        spend(remaining, 14)?;
         for point in [a, b] {
-            let value: Q = direction
-                .iter()
-                .zip(point)
-                .map(|(axis, coordinate)| axis * coordinate)
-                .sum();
-            if minimum.as_ref().is_none_or(|(bound, _)| value < *bound) {
-                minimum = Some((value.clone(), point.clone()));
-            }
-            if maximum.as_ref().is_none_or(|(bound, _)| value > *bound) {
-                maximum = Some((value, point.clone()));
+            spend(remaining, 3 + 7 * N as u64)?;
+            let local: [Q; 3] = std::array::from_fn(|i| &point[i] - &origin[i]);
+            for (direction, range) in directions.iter().zip(&mut ranges) {
+                let value: Q = direction.iter().zip(&local).map(|(d, p)| d * p).sum();
+                if let Some(range) = range {
+                    if value < range.bounds[0] {
+                        range.bounds[0] = value;
+                        range.witnesses_mm[0] = point.clone();
+                    } else if value > range.bounds[1] {
+                        range.bounds[1] = value;
+                        range.witnesses_mm[1] = point.clone();
+                    }
+                } else {
+                    *range = Some(ProjectionAxisBounds {
+                        bounds: [value.clone(), value],
+                        witnesses_mm: [point.clone(), point.clone()],
+                    });
+                }
             }
         }
         Ok(())
     })?;
-    let (Some((lo, lo_point)), Some((hi, hi_point))) = (minimum, maximum) else {
+    if ranges.iter().any(Option::is_none) {
         return Err(refuse("Exact projection requires material boundary edges"));
-    };
-    Ok(ExactPolyhedralProjection {
-        dot_bounds: [lo, hi],
-        witnesses_mm: [lo_point, hi_point],
-        exact_work: max_exact_work - remaining,
-    })
+    }
+    Ok((ranges.map(Option::unwrap), max_exact_work - remaining))
 }
 
 fn visit_polyhedral_boundary(
