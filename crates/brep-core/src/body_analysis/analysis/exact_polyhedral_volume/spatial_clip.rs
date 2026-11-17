@@ -1540,3 +1540,68 @@ pub fn exact_polyhedral_path_coverage_components(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactSpatialPolylineSimplification {
+    pub points_mm: Vec<[Q; 3]>,
+    /// Original vertex index for each retained point. Consecutive duplicate
+    /// positions are represented by their first occurrence.
+    pub source_vertices: Vec<usize>,
+    pub exact_work: u64,
+}
+
+/// Remove consecutive duplicate vertices and vertices strictly between
+/// their neighbors on a straight segment. Preserve the oriented trace,
+/// including reversals and the anchor of a closed path.
+pub fn simplify_exact_spatial_polyline(
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactSpatialPolylineSimplification> {
+    super::validate_work(max_exact_work)?;
+    if points_mm.is_empty() {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Polyline requires at least one point",
+        ));
+    }
+    let mut remaining = max_exact_work;
+    let mut source_vertices: Vec<usize> = Vec::new();
+    for (index, point) in points_mm.iter().enumerate() {
+        spend(&mut remaining, 4)?;
+        validate_point(point)?;
+        if source_vertices
+            .last()
+            .is_some_and(|&last| points_mm[last] == *point)
+        {
+            continue;
+        }
+        while let [.., before, last] = source_vertices.as_slice() {
+            spend(&mut remaining, 20)?;
+            let a = &points_mm[*before];
+            let b = &points_mm[*last];
+            let Some(axis) = (0..3).find(|&i| a[i] != point[i]) else {
+                break;
+            };
+            let span = &point[axis] - &a[axis];
+            let offset = &b[axis] - &a[axis];
+            let t = offset / span;
+            if t <= Q::zero()
+                || t >= Q::one()
+                || (0..3).any(|i| &b[i] - &a[i] != &t * (&point[i] - &a[i]))
+            {
+                break;
+            }
+            source_vertices.pop();
+        }
+        source_vertices.push(index);
+    }
+    let points_mm = source_vertices
+        .iter()
+        .map(|&index| points_mm[index].clone())
+        .collect();
+    Ok(ExactSpatialPolylineSimplification {
+        points_mm,
+        source_vertices,
+        exact_work: max_exact_work - remaining,
+    })
+}

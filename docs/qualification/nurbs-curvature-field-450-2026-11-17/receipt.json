@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0450",
+  "testedBase": "f7284400cee865625e26d4fd4098288f4cd57d0c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 224,
+  "scope": [
+    "Remove redundant spatial polyline vertices while preserving the oriented trace.",
+    "A rational collinearity and strict between test removes only redundant vertices. Reversals, small bends, closed anchors and original vertex indices are preserved."
+  ],
+  "logSha256": "e593bf56b135ccb9798e2b08b64a94eba6acf59118faf6049e62d439554e812c",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "2c2609718bba89ae30dc3e196db1e523945f2567626d03ada7e8daf857c11b45",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "6923a261bb4aa83cbade3cbac8b255c19c8940627d63d91406bad992b412f98e",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs": "0b5b293d60b3f71778bcdb3dbe454614f2346ab1268e42255310a3052294440d",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs": "8ede062350dde59a85651b267d276bf360e29d8b374169c9e434cf3e7b9805f7"
+  }
+}

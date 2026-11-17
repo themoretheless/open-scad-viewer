@@ -4264,3 +4264,50 @@ fn exact_path_coverage_components_join_at_span_vertex_without_losing_it() {
         }]
     );
 }
+
+#[test]
+fn exact_spatial_polyline_simplification_preserves_closed_anchor_and_retracing() {
+    use brep_core::analysis::simplify_exact_spatial_polyline;
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y| [q(x), q(y), q(x)];
+    let path = [
+        p(0, 0),
+        p(0, 0),
+        p(1, 0),
+        p(2, 0),
+        p(1, 0),
+        p(1, 1),
+        p(0, 0),
+    ];
+    let report = simplify_exact_spatial_polyline(&path, 1_000_000).unwrap();
+    assert_eq!(report.source_vertices, [0, 3, 4, 5, 6]);
+    assert_eq!(
+        report.points_mm,
+        [p(0, 0), p(2, 0), p(1, 0), p(1, 1), p(0, 0)]
+    );
+    assert_eq!(
+        simplify_exact_spatial_polyline(&path, report.exact_work).unwrap(),
+        report
+    );
+    assert!(simplify_exact_spatial_polyline(&path, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_spatial_polyline_simplification_keeps_small_rational_bends() {
+    use brep_core::analysis::simplify_exact_spatial_polyline;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let a = [q(0, 1), q(0, 1), q(0, 1)];
+    let b = [q(1, 3), q(1, 7), q(1, 1_000_000_000)];
+    let c = [q(2, 3), q(2, 7), q(2, 1_000_000_000)];
+    let d = [q(1, 1), q(3, 7), q(0, 1)];
+    let report =
+        simplify_exact_spatial_polyline(&[a.clone(), b, c.clone(), d.clone()], 1_000_000).unwrap();
+    assert_eq!(report.source_vertices, [0, 2, 3]);
+    assert_eq!(report.points_mm, [a.clone(), c, d]);
+    let stationary = simplify_exact_spatial_polyline(&[a.clone(), a.clone()], 1_000_000).unwrap();
+    assert_eq!(stationary.points_mm, [a]);
+    assert_eq!(stationary.source_vertices, [0]);
+    assert!(simplify_exact_spatial_polyline(&[], 1_000_000).is_err());
+}
