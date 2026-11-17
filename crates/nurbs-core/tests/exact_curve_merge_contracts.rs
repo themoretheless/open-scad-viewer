@@ -425,3 +425,91 @@ fn exact_gauge_merge_chain_rejects_a_late_mismatch_atomically() {
     );
     assert!(merge_chain_with_weight_scaling(&[], 1_000_000).is_err());
 }
+
+#[test]
+fn exact_degree_merge_preserves_mixed_degree_rational_laws_in_both_orders() {
+    use nurbs_core::editing::exact_curve_merge::merge_with_exact_degree_elevation;
+    let a = Curve {
+        degree: 1,
+        knots: vec![-2., -2., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![3., 0.]],
+        weights: vec![1., 2.],
+        periodic: false,
+    };
+    let b = Curve {
+        degree: 2,
+        knots: vec![1., 1., 1., 5., 5., 5.],
+        control_points: vec![vec![3., 0.], vec![4., 2.], vec![5., 0.]],
+        weights: vec![3., 5., 3.],
+        periodic: false,
+    };
+    for (left, right) in [(&a, &b), (&b.reverse().unwrap(), &a.reverse().unwrap())] {
+        // Curve reversal retains the source interval, so put the reversed
+        // pieces back on adjacent absolute intervals for the swapped case.
+        let left = left.clone();
+        let mut right = right.clone();
+        if left.domain()[1] != right.domain()[0] {
+            let offset = left.domain()[1] - right.domain()[0];
+            for knot in &mut right.knots {
+                *knot += offset;
+            }
+        }
+        let report = merge_with_exact_degree_elevation(&left, &right, 1_000_000).unwrap();
+        let joined = report.curve.unwrap();
+        assert_eq!(joined.degree, 2);
+        assert_eq!(joined.domain(), [left.domain()[0], right.domain()[1]]);
+        for source in [&left, &right] {
+            let [lo, hi] = source.domain();
+            for parameter in [lo, (lo + hi) / 2., hi] {
+                let expected = source.evaluate(parameter).unwrap().point;
+                let actual = joined.evaluate(parameter).unwrap().point;
+                assert!(
+                    expected
+                        .iter()
+                        .zip(actual)
+                        .all(|(a, b)| (a - b).abs() < 1e-12)
+                );
+            }
+        }
+        assert!(
+            merge_with_exact_degree_elevation(&left, &right, report.work_used)
+                .unwrap()
+                .curve
+                .is_some()
+        );
+        assert!(
+            merge_with_exact_degree_elevation(&left, &right, report.work_used - 1)
+                .unwrap()
+                .curve
+                .is_none()
+        );
+    }
+}
+
+#[test]
+fn exact_degree_merge_refuses_an_unstoreable_elevated_pole() {
+    use nurbs_core::editing::exact_curve_merge::{
+        GaugeMergeRefusal, merge_with_exact_degree_elevation,
+    };
+    use nurbs_core::editing::rational_factor::Refusal as ExactRefusal;
+    let a = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![2., 0.]],
+        weights: vec![1., 2.],
+        periodic: false,
+    };
+    let b = Curve {
+        degree: 2,
+        knots: vec![1., 1., 1., 2., 2., 2.],
+        control_points: vec![vec![2., 0.], vec![3., 2.], vec![4., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let report = merge_with_exact_degree_elevation(&a, &b, 1_000_000).unwrap();
+    assert!(report.curve.is_none());
+    assert_eq!(
+        report.refusal,
+        Some(GaugeMergeRefusal::Exact(ExactRefusal::NotRepresentable))
+    );
+}

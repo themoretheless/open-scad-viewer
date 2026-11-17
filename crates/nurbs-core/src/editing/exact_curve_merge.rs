@@ -59,12 +59,8 @@ fn incompatibility(left: &Curve, right: &Curve, require_equal_weights: bool) -> 
     }
     let na = left.control_points.len();
     let nb = right.control_points.len();
-    for curve in [left, right] {
-        let n = curve.control_points.len();
-        let [a, b] = curve.domain();
-        if !curve.knots[..=p].iter().all(|&u| u == a) || !curve.knots[n..].iter().all(|&u| u == b) {
-            return Some(Refusal::NonClamped);
-        }
+    if !clamped(left) || !clamped(right) {
+        return Some(Refusal::NonClamped);
     }
     if left.domain()[1] != right.domain()[0] {
         return Some(Refusal::NonAdjacentDomain);
@@ -79,6 +75,14 @@ fn incompatibility(left: &Curve, right: &Curve, require_equal_weights: bool) -> 
     }
     None
 }
+fn clamped(curve: &Curve) -> bool {
+    let [start, end] = curve.domain();
+    curve.knots[..=curve.degree].iter().all(|&u| u == start)
+        && curve.knots[curve.control_points.len()..]
+            .iter()
+            .all(|&u| u == end)
+}
+
 // Only called with compatible validated storage. Mutates one private net;
 // the chain never allocates another full candidate at each intermediate join.
 fn append(curve: &mut Curve, right: &Curve) {
@@ -270,4 +274,79 @@ pub fn merge_chain_with_weight_scaling(
         work_used: work.used,
         refusal: None,
     })
+}
+
+/// Join two clamped NURBS curves, elevating the lower degree exactly and
+/// reconciling the weights in a common gauge. Both operations share one
+/// work budget. Each source parameter interval is retained.
+pub fn merge_with_exact_degree_elevation(
+    left: &Curve,
+    right: &Curve,
+    max_work: u64,
+) -> Result<GaugeMergeReport> {
+    if left.degree == right.degree {
+        return merge_with_weight_scaling(left, right, max_work);
+    }
+    left.validate()?;
+    right.validate()?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact degree merge work must be in 1..=1000000",
+    )?;
+    let refused = |reason, work_used| GaugeMergeReport {
+        curve: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    for (incompatible, reason) in [
+        (left.periodic || right.periodic, Refusal::Periodic),
+        (
+            left.control_points[0].len() != right.control_points[0].len(),
+            Refusal::DimensionMismatch,
+        ),
+        (!clamped(left) || !clamped(right), Refusal::NonClamped),
+        (
+            left.domain()[1] != right.domain()[0],
+            Refusal::NonAdjacentDomain,
+        ),
+        (
+            left.control_points.last() != right.control_points.first(),
+            Refusal::SeamMismatch,
+        ),
+    ] {
+        if incompatible {
+            return Ok(refused(GaugeMergeRefusal::Join(reason), 0));
+        }
+    }
+    let elevate_left = left.degree < right.degree;
+    let (lower, degree) = if elevate_left {
+        (left, right.degree)
+    } else {
+        (right, left.degree)
+    };
+    let elevation = super::exact_knot_insertion::elevate_exact(lower, degree, max_work)?;
+    let Some(elevated) = elevation.curve else {
+        return Ok(refused(
+            GaugeMergeRefusal::Exact(
+                elevation
+                    .refusal
+                    .unwrap_or(super::rational_factor::Refusal::InvalidOutput),
+            ),
+            elevation.work_used,
+        ));
+    };
+    if elevation.work_used == max_work {
+        return Ok(refused(
+            GaugeMergeRefusal::Exact(super::rational_factor::Refusal::ResourceLimit),
+            max_work,
+        ));
+    }
+    let (left, right) = if elevate_left {
+        (&elevated, right)
+    } else {
+        (left, &elevated)
+    };
+    let mut report = merge_with_weight_scaling(left, right, max_work - elevation.work_used)?;
+    report.work_used += elevation.work_used;
+    Ok(report)
 }
