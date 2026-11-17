@@ -4820,3 +4820,59 @@ fn exact_planar_polyline_path_clip_keeps_transverse_and_stationary_contacts() {
         ]
     );
 }
+
+#[test]
+fn exact_planar_polyline_region_projection_uses_the_filled_tilted_profile() {
+    use brep_core::analysis::{
+        PlanarPolylinePointLocation::Interior, project_point_to_exact_planar_polyline_region,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x: i64, y: i64| [q(x, 1), q(y, 1), q(x + y, 1)];
+    let profile = [p(0, 0), p(3, 0), p(3, 3), p(0, 3), p(0, 0)];
+    let query = [q(0, 1), q(0, 1), q(3, 1)];
+    let report =
+        project_point_to_exact_planar_polyline_region(&profile, &query, 1_000_000).unwrap();
+    assert_eq!(report.closest_mm, p(1, 1));
+    assert_eq!(report.distance_squared_mm2, q(3, 1));
+    assert_eq!(report.location, Interior);
+    assert_eq!(
+        project_point_to_exact_planar_polyline_region(&profile, &query, report.exact_work).unwrap(),
+        report
+    );
+    assert!(
+        project_point_to_exact_planar_polyline_region(&profile, &query, report.exact_work - 1)
+            .is_err()
+    );
+}
+
+#[test]
+fn exact_planar_polyline_region_projection_falls_back_to_concave_boundary() {
+    use brep_core::analysis::{
+        PlanarPolylinePointLocation::Boundary, project_point_to_exact_planar_polyline_region,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y| [q(x), q(y), q(0)];
+    let profile = [
+        p(0, 0),
+        p(4, 0),
+        p(4, 2),
+        p(2, 2),
+        p(2, 4),
+        p(0, 4),
+        p(0, 0),
+    ];
+    let query = [q(3), q(3), q(2)];
+    let report =
+        project_point_to_exact_planar_polyline_region(&profile, &query, 1_000_000).unwrap();
+    assert_eq!(report.closest_mm, p(3, 2));
+    assert_eq!(report.distance_squared_mm2, q(5));
+    assert_eq!(report.location, Boundary);
+    let on_edge = [q(2), q(3), q(2)];
+    let report =
+        project_point_to_exact_planar_polyline_region(&profile, &on_edge, 1_000_000).unwrap();
+    assert_eq!(report.closest_mm, p(2, 3));
+    assert_eq!(report.distance_squared_mm2, q(4));
+    assert_eq!(report.location, Boundary);
+}

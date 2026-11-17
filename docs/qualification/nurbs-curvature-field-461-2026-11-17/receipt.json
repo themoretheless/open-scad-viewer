@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0461",
+  "testedBase": "66e9705efe5efecaa8ba5b0dec98574782d65a74",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 246,
+  "scope": [
+    "Find exact closest points on filled planar contours, including concave regions.",
+    "Orthogonally project onto the exact support and classify the projected point. For exterior projections, compare exact squared distances along all boundary segments."
+  ],
+  "logSha256": "22b8da9a27983591abbf8a44f6073931c40d03617c2cdb9d32da3ad4110021a5",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "819117b8585abe9e2f40547311921343e03141b5ff5d500956f88662ffc35c69",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "0d9ac7d160c7248c6de9acc4bcbf16760d964417975de7bf9608f544dc9d3c85",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs": "01551da79da8610fabec8baa14b5b1394d164384cb19f071c19d80524cc8cebf",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs": "8ede062350dde59a85651b267d276bf360e29d8b374169c9e434cf3e7b9805f7"
+  }
+}

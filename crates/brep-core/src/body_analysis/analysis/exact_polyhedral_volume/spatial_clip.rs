@@ -2332,3 +2332,66 @@ pub fn clip_spatial_path_to_exact_planar_polyline(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPlanarPolylineRegionProjection {
+    pub closest_mm: [Q; 3],
+    pub distance_squared_mm2: Q,
+    /// Location of the returned closest point on the region.
+    pub location: PlanarPolylinePointLocation,
+    pub exact_work: u64,
+}
+
+/// Find a closest point on a filled simple planar contour. If the
+/// orthogonal projection lies outside, use the nearest boundary feature.
+/// Boundary ties favor the first occurrence in contour order.
+pub fn project_point_to_exact_planar_polyline_region(
+    contour_mm: &[[Q; 3]],
+    query_mm: &[Q; 3],
+    max_exact_work: u64,
+) -> Result<ExactPlanarPolylineRegionProjection> {
+    let area = exact_planar_spatial_polyline_area(contour_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - area.exact_work;
+    spend(&mut remaining, 32 + 8 * (contour_mm.len() as u64 - 1))?;
+    validate_point(query_mm)?;
+    let normal = &area.area_vector_mm2;
+    let offset = std::array::from_fn(|i| &query_mm[i] - &contour_mm[0][i]);
+    let height = dot(&offset, normal);
+    let scale = &height / &area.area_squared_mm4;
+    let projected = std::array::from_fn(|i| &query_mm[i] - &scale * &normal[i]);
+    let boundary: Vec<_> = contour_mm
+        .windows(2)
+        .map(|pair| [pair[0].clone(), pair[1].clone()])
+        .collect();
+    let location = point_in_face(&boundary, &projected, plane_axes(normal), &mut remaining)?;
+    let (closest_mm, distance_squared_mm2, location) = match location {
+        FaceLocation::Inside => (
+            projected,
+            height * scale,
+            PlanarPolylinePointLocation::Interior,
+        ),
+        FaceLocation::Boundary => (
+            projected,
+            height * scale,
+            PlanarPolylinePointLocation::Boundary,
+        ),
+        FaceLocation::Outside => {
+            let mut best = None;
+            for [a, b] in &boundary {
+                spend(&mut remaining, 32)?;
+                let (point, distance) = nearest_segment_point(query_mm, a, b);
+                if best.as_ref().is_none_or(|(_, squared)| &distance < squared) {
+                    best = Some((point, distance));
+                }
+            }
+            let (point, distance) = best.expect("certified contour has boundary segments");
+            (point, distance, PlanarPolylinePointLocation::Boundary)
+        }
+    };
+    Ok(ExactPlanarPolylineRegionProjection {
+        closest_mm,
+        distance_squared_mm2,
+        location,
+        exact_work: max_exact_work - remaining,
+    })
+}
