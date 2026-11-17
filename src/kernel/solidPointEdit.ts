@@ -4,7 +4,7 @@ import type {DirectDocument} from '../app/directModeling'
 import {updateSolidNurbsControlPoint} from './solidNurbs'
 import {bridgeNurbsCurves} from '../app/directDimensions'
 import {solveConstrainedPoints} from '../app/sketchConstraints'
-import {resolveDependentCurveSketches} from '../app/sketchCurveConstraints'
+import {resolveDependentCurveSketches,solveDraggedCurveSketch} from '../app/sketchCurveConstraints'
 export type SolidPointEditOptions=
  | {kind:'cv';id:string;u:number;v:number;point:[number,number,number];weight?:number}
  | {kind:'sketch-vertex';id:string;index:number;point:[number,number]}
@@ -27,6 +27,8 @@ export function applySolidPointEdit(source:DirectDocument,p:SolidPointEditOption
    else if(p.handle==='radius')a.radius=Math.max(.01,Math.hypot(p.point[0]-a.center[0],p.point[1]-a.center[1]))
    else {const angle=Math.atan2(p.point[1]-a.center[1],p.point[0]-a.center[0])*180/Math.PI;if(p.handle==='start'){const end=a.start+a.sweep;a.start=angle;a.sweep=((end-angle)%360+360)%360||360}else a.sweep=((angle-a.start)%360+360)%360||360}
    sketch.points=sampleCurve(a);delete sketch.dimensions
+   // The dragged circle's own curve constraints are re-solved from the dragged shape, or the drag is refused.
+   d.sketches[d.sketches.indexOf(sketch)]=solveDraggedCurveSketch(sketch,d.sketches)
   }
   // Circle and arc sketches constrained to the dragged sketch follow it, or the drag is refused.
   d.sketches=resolveDependentCurveSketches(d.sketches,[p.id])

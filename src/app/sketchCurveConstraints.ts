@@ -277,3 +277,30 @@ export function droppedCurveConstraintsNotice(dropped: readonly SketchCurveConst
     ? `Обрезка сняла ограничения окружностей и дуг: ${names}.`
     : `Trim removed circle and arc constraints: ${names}.`
 }
+
+export const CURVE_DRAG_REFUSED_MESSAGE =
+  'This circle or arc cannot be dragged there: its curve constraints cannot be satisfied. The drag was refused.'
+
+/**
+ * Re-solves the curve constraints of a circle or arc sketch after one of its own handles was dragged, starting
+ * from the dragged shape. Returns the sketch unchanged when it has no curve constraints; throws
+ * `CURVE_DRAG_REFUSED_MESSAGE` instead of returning a violating sketch.
+ */
+export function solveDraggedCurveSketch<T extends CurveSketch>(sketch: T, sketches: readonly CurveSketch[]): T {
+  if (!sketch.analytic || !sketch.curveConstraints?.length) return sketch
+  try {
+    return solveSketchCurveConstraints(
+      sketch,
+      sketches.map(o => (o.id === sketch.id ? sketch : o)),
+    )
+  } catch {
+    throw Error(CURVE_DRAG_REFUSED_MESSAGE)
+  }
+}
+
+/** Localized notice for a refused circle or arc handle drag. */
+export function curveDragRefusedNotice(locale: string): string {
+  return locale === 'ru'
+    ? 'Окружность или дугу нельзя перетащить сюда: её ограничения не выполнимы. Перетаскивание отменено.'
+    : CURVE_DRAG_REFUSED_MESSAGE
+}

@@ -30,8 +30,8 @@ const renderer=createRenderer<Node,Node>({
 const mounts:Array<()=>void>=[]
 afterEach(()=>{mounts.splice(0).forEach(f=>f());vi.unstubAllGlobals()})
 
-async function mount(component:any,props:any){
- vi.stubGlobal('localStorage',{getItem:()=>null,setItem:()=>{}})
+async function mount(component:any,props:any,stored:string|null=null){
+ vi.stubGlobal('localStorage',{getItem:()=>stored,setItem:()=>{}})
  vi.stubGlobal('Document',class {});vi.stubGlobal('ShadowRoot',class {});vi.stubGlobal('document',{activeElement:null});vi.stubGlobal('window',{document:{activeElement:null}})
  const root=new Node('root'),app=renderer.createApp(component,props);app.mount(root);mounts.push(()=>app.unmount());await nextTick()
  const all=(n:Node=root):Node[]=>[n,...n.children.flatMap(all)],text=(n:Node):string=>n.text+n.children.map(text).join('')
@@ -96,6 +96,32 @@ it('draws and extrudes a sketch directly on the main workplane',async()=>{
  expect(emitted).toHaveLength(1);expect(inspectPolygonMesh(emitted[0].mesh).signedVolumeMm3).toBeCloseTo(1000)
 })
 
+const constrainedSketches=(curveConstraints:unknown[]):string=>{
+ const circle=(id:string,center:[number,number],radius:number)=>{const analytic={kind:'circle' as const,center,radius,start:0,sweep:360};return {id,name:id,points:sampleCurve(analytic),closed:true,analytic}}
+ const line={id:'L',name:'L',points:[[-10,0],[10,0],[10,5]],closed:false}
+ return JSON.stringify({version:1,sketches:[circle('R',[0,0],5),line,{...circle('A',[0,0],2),curveConstraints}],bodies:[]})
+}
+it('re-solves a constrained circle when its own handles are dragged in the main sketch tool',async()=>{
+ const ui=await mount(MainSketchTools,{plane:null,project:(p:number[])=>[p[0],p[1]],ray:(x:number,y:number)=>({origin:[x,y,100],direction:[0,0,-1]}),revision:0,locale:'en'},constrainedSketches([{kind:'concentric',ref:'R'}]))
+ const svg=ui.all().find(n=>n.tag==='svg')!,curve=()=>ui.all().filter(n=>n.tag==='polyline'&&n.props['stroke-width']==='3')[2]!
+ curve().props.onPointerdown(ui.event(curve(),0,2));await nextTick()
+ const handles=()=>ui.all().filter(n=>n.tag==='circle'&&String(n.props.r)==='6')
+ const center=handles()[0]!;center.props.onPointerdown(ui.event(center,0,0));svg.props.onPointermove(ui.event(svg,7,7));svg.props.onPointerup();await nextTick()
+ expect(handles()[0]!.props.cx).toBeCloseTo(0,6);expect(handles()[0]!.props.cy).toBeCloseTo(0,6)
+ const radius=handles()[1]!;radius.props.onPointerdown(ui.event(radius,2,0));svg.props.onPointermove(ui.event(svg,0,20));svg.props.onPointerup();await nextTick()
+ expect(Math.hypot(handles()[1]!.props.cx,handles()[1]!.props.cy)).toBeCloseTo(20,6);expect(handles()[0]!.props.cx).toBeCloseTo(0,6)
+ expect(ui.all().some(n=>n.props.role==='alert'||n.props.role==='status')).toBe(false)
+})
+it('refuses a main sketch handle drag with a notice when the circle constraints cannot be satisfied',async()=>{
+ const ui=await mount(MainSketchTools,{plane:null,project:(p:number[])=>[p[0],p[1]],ray:(x:number,y:number)=>({origin:[x,y,100],direction:[0,0,-1]}),revision:0,locale:'en'},constrainedSketches([{kind:'concentric',ref:'R'},{kind:'equal_radius',ref:'R'},{kind:'tangent_line',ref:'L',a:0,b:1}]))
+ const svg=ui.all().find(n=>n.tag==='svg')!,curve=()=>ui.all().filter(n=>n.tag==='polyline'&&n.props['stroke-width']==='3')[2]!
+ curve().props.onPointerdown(ui.event(curve(),0,2));await nextTick()
+ const before=curve().props.points,radius=ui.all().filter(n=>n.tag==='circle'&&String(n.props.r)==='6')[1]!
+ radius.props.onPointerdown(ui.event(radius,2,0));svg.props.onPointermove(ui.event(svg,0,9));await nextTick()
+ expect(curve().props.points).toEqual(before)
+ expect(ui.all().find(n=>n.props.role==='status')&&ui.text(ui.all().find(n=>n.props.role==='status')!)).toContain('drag was refused')
+ svg.props.onPointerup();await nextTick();expect(curve().props.points).toEqual(before)
+})
 it('authors Bézier nodes, edits handles, cancels a drag and extrudes from the viewport',async()=>{
  const bodies:any[]=[],ui=await mount(MainSketchTools,{plane:null,project:(p:number[])=>[p[0],p[1]],ray:(x:number,y:number)=>({origin:[x,y,100],direction:[0,0,-1]}),revision:0,locale:'en',onBody:(b:any)=>bodies.push(b)})
  await ui.click('bezier');const svg=ui.all().find(n=>n.tag==='svg')!
