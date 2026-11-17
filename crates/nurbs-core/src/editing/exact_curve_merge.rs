@@ -1531,3 +1531,75 @@ fn extend_periodic_support(
     }
     Ok(())
 }
+
+#[derive(Clone, Debug)]
+pub struct PeriodicPartitionReport {
+    pub pieces: Option<Vec<Curve>>,
+    pub work_used: u64,
+    /// Zero-based interval index. Absent if seaming itself failed.
+    pub refused_piece: Option<usize>,
+    pub refusal: Option<GaugeMergeRefusal>,
+}
+
+/// Open one period at the chosen seam and extract each successive clamped
+/// interval with its own exact weight gauge. Cuts use the lifted parameter
+/// clock and must strictly increase inside the new period. A failed piece
+/// withholds the entire partition.
+pub fn partition_exact_periodic_curve(
+    source: &Curve,
+    seam: f64,
+    cuts: &[f64],
+    max_work: u64,
+) -> Result<PeriodicPartitionReport> {
+    use super::rational_edit::Work;
+
+    crate::check(
+        cuts.len() < 256,
+        "Periodic partition supports at most 256 pieces",
+    )?;
+    let rotated = insert_and_rotate_periodic_curve_seam(source, seam, max_work)?;
+    let Some(curve) = rotated.curve else {
+        return Ok(PeriodicPartitionReport {
+            pieces: None,
+            work_used: rotated.work_used,
+            refused_piece: None,
+            refusal: rotated.refusal,
+        });
+    };
+    let [start, end] = curve.domain();
+    let mut prior = start;
+    for &cut in cuts {
+        crate::check(
+            prior < cut && cut < end,
+            "Periodic partition cuts must increase inside the lifted period",
+        )?;
+        prior = cut;
+    }
+
+    let mut work = Work {
+        used: rotated.work_used,
+        limit: max_work,
+    };
+    let mut pieces = Vec::with_capacity(cuts.len() + 1);
+    let mut left = start;
+    for (index, right) in cuts.iter().copied().chain([end]).enumerate() {
+        match clamp_curve_interval(&curve, [left, right], &mut work) {
+            Ok(piece) => pieces.push(piece),
+            Err(reason) => {
+                return Ok(PeriodicPartitionReport {
+                    pieces: None,
+                    work_used: work.used,
+                    refused_piece: Some(index),
+                    refusal: Some(GaugeMergeRefusal::Exact(reason)),
+                });
+            }
+        }
+        left = right;
+    }
+    Ok(PeriodicPartitionReport {
+        pieces: Some(pieces),
+        work_used: work.used,
+        refused_piece: None,
+        refusal: None,
+    })
+}

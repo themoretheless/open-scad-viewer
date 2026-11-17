@@ -1502,3 +1502,46 @@ fn multiple_periods_refuse_to_exceed_the_curve_control_limit() {
     );
     assert!(report.curve.is_none());
 }
+
+#[test]
+fn periodic_partition_covers_the_complete_shifted_period() {
+    use nurbs_core::editing::exact_curve_merge::partition_exact_periodic_curve;
+    let source = periodic_unit_square();
+    let cuts = [4.5, 6.];
+    let report = partition_exact_periodic_curve(&source, 3.5, &cuts, 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let pieces = report.pieces.unwrap();
+    assert_eq!(
+        pieces.iter().map(Curve::domain).collect::<Vec<_>>(),
+        [[3.5, 4.5], [4.5, 6.], [6., 7.5]]
+    );
+    for piece in &pieces {
+        assert!(!piece.periodic);
+        let [lo, hi] = piece.domain();
+        for t in [lo, (lo + hi) / 2., hi] {
+            assert_eq!(
+                piece.evaluate(t).unwrap().point,
+                source.evaluate(t % 4.).unwrap().point
+            );
+        }
+    }
+    assert!(
+        partition_exact_periodic_curve(&source, 3.5, &cuts, report.work_used)
+            .unwrap()
+            .pieces
+            .is_some()
+    );
+    let limited =
+        partition_exact_periodic_curve(&source, 3.5, &cuts, report.work_used - 1).unwrap();
+    assert_eq!(limited.refused_piece, Some(2));
+    assert!(limited.pieces.is_none());
+}
+
+#[test]
+fn periodic_partition_rejects_unordered_outside_and_duplicate_cuts() {
+    use nurbs_core::editing::exact_curve_merge::partition_exact_periodic_curve;
+    let source = periodic_unit_square();
+    for cuts in [&[5., 4.][..], &[4., 4.], &[3.5], &[7.5], &[f64::NAN]] {
+        assert!(partition_exact_periodic_curve(&source, 3.5, cuts, 1_000_000).is_err());
+    }
+}

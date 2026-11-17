@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 511,
-  "unallocatedCount": 489,
+  "specifiedCount": 512,
+  "unallocatedCount": 488,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13208,6 +13208,26 @@
       "remainingQualification": [
         "Lift complete and partial periodic turns into one exactly clamped parameter interval under bounded storage and work.",
         "Extend the exact cyclic basis only until the endpoint is covered and clamp the requested interval without normalizing the parameters.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0512",
+      "name": "Точное разбиение периода NURBS-кривой на участки с зажатыми концами",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::partition_exact_periodic_curve",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-512-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-512-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Partition one shifted period into ordered clamped subcurves under one budget without returning partial output.",
+        "Rotate or insert the requested seam once, validate ordered cuts against the lifted domain, and independently clamp each exact restriction.",
         "WASM and application integration are separate."
       ]
     }
