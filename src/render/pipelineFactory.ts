@@ -12,7 +12,9 @@ import {
   MORPH_VERTEX_STRIDE,
   getShader,
   immediateObjectShader,
+  instanceStepEdgeShader,
   instanceStepObjectShader,
+  instanceStepShadowShader,
   instancedObjectShader,
   supportsImmediateAddressSpace,
 } from './shaders'
@@ -76,6 +78,8 @@ export class PipelineFactory {
   instanceStepLayout!: GPUPipelineLayout
   /** Instance-step vertex buffers: mesh vertices (slot 0) + per-instance records (slot 1, instance step). */
   instanceStepVertexLayouts!: GPUVertexBufferLayout[]
+  /** Instance-step edges: edge positions (slot 0) + per-instance records (slot 1, instance step). */
+  instanceStepEdgeVertexLayouts!: GPUVertexBufferLayout[]
   vertexLayouts!: Record<ShaderVertexLayout, GPUVertexBufferLayout[]>
   immediateObjectStyle = false
   private fmt: GPUTextureFormat = 'bgra8unorm'
@@ -174,10 +178,15 @@ export class PipelineFactory {
       ],
     }
     this.instanceStepVertexLayouts = [meshVBL, INSTANCE_STEP_VERTEX_LAYOUT]
+    const edgeVBL: GPUVertexBufferLayout = {
+      arrayStride: MESH_VERTEX_STRIDE,
+      attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
+    }
+    this.instanceStepEdgeVertexLayouts = [edgeVBL, INSTANCE_STEP_VERTEX_LAYOUT]
     this.vertexLayouts = {
       mesh: [meshVBL, morphVBL],
       edge: [
-        { arrayStride: MESH_VERTEX_STRIDE, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] },
+        edgeVBL,
         { arrayStride: MORPH_VERTEX_STRIDE, attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x3' }] },
       ],
       line: [lineVBL],
@@ -202,7 +211,11 @@ export class PipelineFactory {
         variant === 'immediate'
           ? immediateObjectShader(spec.source)
           : variant === 'instanceStep'
-            ? instanceStepObjectShader(spec.source)
+            ? spec.depthOnly
+              ? instanceStepShadowShader(spec.source)
+              : spec.vertexLayout === 'edge'
+                ? instanceStepEdgeShader(spec.source)
+                : instanceStepObjectShader(spec.source)
             : variant === 'instanced'
               ? instancedObjectShader(spec.source, spec.vertexLayout === 'edge' ? 'EdgeV' : 'V')
               : spec.source
@@ -222,13 +235,13 @@ export class PipelineFactory {
   getRenderPipeline(dev: GPUDevice, id: string, flavor: PipelineFlavor = {}): GPURenderPipeline {
     const spec = getShader(id)
     const variant = flavor.variant ?? 'uniform'
-    if (variant !== 'uniform' && !spec.supportsVariants) {
+    if (variant !== 'uniform' && !spec.supportsVariants && !(variant === 'instanceStep' && spec.depthOnly)) {
       throw new Error(`Shader '${id}' does not support the '${variant}' variant`)
     }
     if (variant === 'immediate' && !this.immediateObjectLayout) {
       throw new Error(`Device does not support the 'immediate' variant (no immediate address space)`)
     }
-    if (variant === 'instanceStep' && (spec.vertexLayout !== 'mesh' || spec.depthOnly)) {
+    if (variant === 'instanceStep' && spec.vertexLayout !== 'mesh' && spec.vertexLayout !== 'edge') {
       throw new Error(`Shader '${id}' does not support the 'instanceStep' variant`)
     }
     const blend = flavor.blend ?? spec.blend
@@ -242,7 +255,9 @@ export class PipelineFactory {
     const layout =
       spec.kind === 'object'
         ? depthOnly
-          ? this.shadowObjectLayout
+          ? variant === 'instanceStep'
+            ? this.sceneOnlyLayout
+            : this.shadowObjectLayout
           : spec.usesMatcapBinding && variant === 'uniform'
             ? this.matcapObjectLayout
             : spec.usesEnvBinding && variant === 'uniform'
@@ -250,7 +265,9 @@ export class PipelineFactory {
               : variant === 'instanced'
                 ? this.instanceLayout
                 : variant === 'instanceStep'
-                  ? this.instanceStepLayout
+                  ? spec.usesShadowBinding
+                    ? this.instanceStepLayout
+                    : this.sceneOnlyLayout
                   : variant === 'immediate'
                     ? this.immediateObjectLayout!
                     : this.objectLayout
@@ -263,7 +280,12 @@ export class PipelineFactory {
             // Depth-only shadow-map pass: no color targets, no fragment stage;
             // renders mesh depth from the key light into a depth32float texture.
             layout,
-            vertex: { module, entryPoint: 'vs', buffers: this.vertexLayouts[spec.vertexLayout] },
+            vertex: {
+              module,
+              entryPoint: 'vs',
+              buffers:
+                variant === 'instanceStep' ? this.instanceStepVertexLayouts : this.vertexLayouts[spec.vertexLayout],
+            },
             primitive: { topology, cullMode: spec.cullMode },
             depthStencil: {
               format: 'depth32float',
@@ -278,7 +300,11 @@ export class PipelineFactory {
               module,
               entryPoint: 'vs',
               buffers:
-                variant === 'instanceStep' ? this.instanceStepVertexLayouts : this.vertexLayouts[spec.vertexLayout],
+                variant !== 'instanceStep'
+                  ? this.vertexLayouts[spec.vertexLayout]
+                  : spec.vertexLayout === 'edge'
+                    ? this.instanceStepEdgeVertexLayouts
+                    : this.instanceStepVertexLayouts,
             },
             fragment: {
               module,

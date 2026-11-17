@@ -99,3 +99,44 @@ fn instanceObj(model: mat4x4f, color: vec4f, style: vec4f) -> Obj {
   let nmat = mat4x4f(vec4f(cross(b, c) * s, 0.0), vec4f(cross(c, a) * s, 0.0), vec4f(cross(a, b) * s, 0.0), vec4f(0.0, 0.0, 0.0, 1.0));
   return Obj(model, nmat, color, style, vec4f(1.0, 0.0, 0.0, 0.0), vec3f(1.0), 0.0, vec3f(0.0), 0.7, 0.0);
 }`
+
+function applyContract(source: string, label: string, replacements: Array<[string, string]>) {
+  for (const [from, to] of replacements) {
+    if (source.split(from).length !== 2) throw new Error(`Instance-step ${label} shader contract changed: ${from}`)
+    source = source.replace(from, to)
+  }
+  if (source.includes('fromPos')) throw new Error(`Instance-step ${label} shader contract changed: morph input still referenced`)
+  return source
+}
+
+const INSTANCE_OBJ = 'let ob = instanceObj(mat4x4f(inst.m0, inst.m1, inst.m2, inst.m3), inst.color, inst.style);'
+
+/**
+ * Instance-step variant of the edge shader. The edge vertex layout keeps the
+ * position at slot 0 (location 0); the instance record sits at slot 1
+ * (locations 3..8, as in the surface variant). Color and style reach the
+ * fragment stage as flat varyings; the edge shader reads only `ob.style`.
+ */
+export function instanceStepEdgeShader(source: string) {
+  return applyContract(source, 'edge', [
+    ['@group(1) @binding(0) var<uniform> ob: Obj;', INSTANCE_STEP_PRELUDE],
+    ['struct EdgeV {', 'struct EdgeV { @location(1) @interpolate(flat) icolor: vec4f, @location(2) @interpolate(flat) istyle: vec4f,'],
+    ['@location(1) fromPos: vec3f) -> EdgeV {', `inst: InstanceIn) -> EdgeV {\n  ${INSTANCE_OBJ}`],
+    ['mix(fromPos, pos, ob.morph.x)', 'pos'],
+    ['return EdgeV(', 'return EdgeV(ob.color, ob.style, '],
+    ['@fragment fn fs(v: EdgeV) -> @location(0) vec4f {', '@fragment fn fs(v: EdgeV) -> @location(0) vec4f {\n  let ob = instanceObj(mat4x4f(), v.icolor, v.istyle);'],
+  ])
+}
+
+/**
+ * Instance-step variant of the depth-only shadow shader: the model matrix
+ * comes from the instance record at slot 1 and the pipeline layout is the
+ * scene group alone.
+ */
+export function instanceStepShadowShader(source: string) {
+  return applyContract(source, 'shadow', [
+    ['@group(1) @binding(0) var<uniform> ob: Obj;', INSTANCE_STEP_PRELUDE],
+    ['@location(2) fromPos: vec3f) -> @builtin(position) vec4f {', `inst: InstanceIn) -> @builtin(position) vec4f {\n  ${INSTANCE_OBJ}`],
+    ['mix(fromPos, pos, ob.morph.x)', 'pos'],
+  ])
+}

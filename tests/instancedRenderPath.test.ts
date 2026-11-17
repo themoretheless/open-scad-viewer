@@ -129,16 +129,15 @@ describe('pipeline factory: instance-step variant', () => {
     expect(uniform.vertex.buffers[1].stepMode).toBeUndefined()
   })
 
-  it('warmup builds the instance-step pipeline and rejects it for edge shaders', () => {
+  it('warmup builds the instance-step pipeline and rejects it for material shaders', () => {
     stubGpuGlobals()
     const { dev, modules } = fakeFactoryDevice()
     const factory = new PipelineFactory()
     factory.build(dev, 'bgra8unorm')
     factory.warmup(dev)
     expect(modules).toContain(instanceStepObjectShader(MESH_WGSL))
-    expect(() => factory.getRenderPipeline(dev, 'edge', { variant: 'instanceStep' })).toThrow(
-      "does not support the 'instanceStep'",
-    )
+    // Edges gained an instance-step variant (tests/instanceStepPasses.test.ts).
+    expect(() => factory.getRenderPipeline(dev, 'edge', { variant: 'instanceStep' })).not.toThrow()
     expect(() => factory.getRenderPipeline(dev, 'meshPbr', { variant: 'instanceStep' })).toThrow()
   })
 })

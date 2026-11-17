@@ -47,7 +47,9 @@ export {
 } from './generated/sources'
 export {
   immediateObjectShader,
+  instanceStepEdgeShader,
   instanceStepObjectShader,
+  instanceStepShadowShader,
   instancedObjectShader,
   supportsImmediateAddressSpace,
 } from './variants'

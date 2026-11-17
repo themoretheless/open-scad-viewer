@@ -11,6 +11,7 @@ import type { ViewFrustum } from '../viewFrustum'
 
 import type { MeshInstances } from '../../kernel/meshInstances'
 import type { InstancedOpaquePass } from '../instancedOpaquePass'
+import type { InstanceStepRuns } from '../instanceStepRuns'
 
 import { OBJECT_UNIFORM_LAYOUT } from '../shaders'
 
@@ -211,6 +212,13 @@ export interface EncodeFramePassContext {
   readonly transparentDraws: GMesh[]
   readonly opaqueInstances: MeshInstances
   readonly instancedOpaque: InstancedOpaquePass
+  /** Instance-step runs for the shadow, section cap, transparent and edge passes (read only when `instancing`). */
+  readonly instanceSteps?: {
+    readonly shadow: InstanceStepRuns
+    readonly sectionCap: InstanceStepRuns
+    readonly transparent: InstanceStepRuns
+    readonly edges: InstanceStepRuns
+  }
   readonly transparentInstances: MeshInstances
   readonly edgeInstances: MeshInstances
   readonly opaqueBundle: MeshDrawBundle

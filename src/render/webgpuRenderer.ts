@@ -55,6 +55,7 @@ import { MeshDrawBundle } from './meshDrawBundle'
 import { ViewFrustum } from './viewFrustum'
 import { MeshInstances } from '../kernel/meshInstances'
 import { InstancedOpaquePass, instancingRequested } from './instancedOpaquePass'
+import { InstanceStepRuns } from './instanceStepRuns'
 import { computeOrbitCameraFrame } from './orbitCameraProjection'
 import type { DisplayBudget } from './displayScheduler'
 import { MeshDisplayController } from './meshDisplayController'
@@ -274,6 +275,19 @@ export class WebGPURenderer {
   private readonly transparentDraws: GMesh[] = []
   private readonly opaqueInstances = new MeshInstances()
   private readonly instancedOpaque = new InstancedOpaquePass()
+  /** Instance-step runs of the other passes; used only while instancing is on. */
+  private readonly instanceSteps = {
+    shadow: new InstanceStepRuns(),
+    sectionCap: new InstanceStepRuns(),
+    transparent: new InstanceStepRuns(),
+    edges: new InstanceStepRuns(),
+  }
+  /**
+   * With instancing on, selection and source-highlight overlays rebuild at the
+   * next frame instead of on every state change (deferred until needed).
+   */
+  private selectionOverlayDirty = false
+  private sourceOverlayDirty = false
   private readonly transparentInstances = new MeshInstances()
   private readonly edgeInstances = new MeshInstances()
   private readonly opaqueBundle = new MeshDrawBundle()
@@ -555,6 +569,10 @@ export class WebGPURenderer {
     if (this.instancingEnabled !== enabled) {
       this.instancingEnabled = enabled
       this.instancedOpaque.reset()
+      for (const runs of Object.values(this.instanceSteps)) runs.clear()
+      // Leaving the deferred mode rebuilds whatever was pending right away.
+      if (!enabled) this.flushDeferredOverlays()
+      this.invalidateShadowMap()
       this.requestRender()
     }
   }
@@ -1469,6 +1487,7 @@ export class WebGPURenderer {
   private clearDrawCaches() {
     this.opaqueInstances.clear()
     this.instancedOpaque.clear()
+    for (const runs of Object.values(this.instanceSteps)) runs.clear()
     this.transparentInstances.clear()
     this.edgeInstances.clear()
     this.transparentDraws.length = 0
@@ -1487,6 +1506,7 @@ export class WebGPURenderer {
       sceneUB = this.sceneUB
     if (!canvas || !dev || !ctx || !this.depth || !sceneUB || !this.drawable || !canvas.width || !canvas.height) return
 
+    this.flushDeferredOverlays()
     const { eye, viewProjection } = this.cameraState()
     encodeAndSubmitFrame({
       canvas,
@@ -1551,6 +1571,7 @@ export class WebGPURenderer {
       transparentDraws: this.transparentDraws,
       opaqueInstances: this.opaqueInstances,
       instancedOpaque: this.instancedOpaque,
+      instanceSteps: this.instanceSteps,
       transparentInstances: this.transparentInstances,
       edgeInstances: this.edgeInstances,
       opaqueBundle: this.opaqueBundle,
@@ -1918,10 +1939,12 @@ export class WebGPURenderer {
   }
 
   private clearSelectionOverlayBuffers() {
+    this.selectionOverlayDirty = false
     this.overlays.clearSelection()
   }
 
   private clearSourceHighlightOverlayBuffers() {
+    this.sourceOverlayDirty = false
     this.overlays.clearSourceHighlight()
   }
 
@@ -1930,6 +1953,34 @@ export class WebGPURenderer {
   }
 
   private rebuildSelectionOverlays() {
+    if (this.instancingEnabled) {
+      this.selectionOverlayDirty = true
+      return
+    }
+    this.rebuildSelectionOverlaysNow()
+  }
+
+  private rebuildSourceHighlightOverlay() {
+    if (this.instancingEnabled) {
+      this.sourceOverlayDirty = true
+      return
+    }
+    this.rebuildSourceHighlightOverlayNow()
+  }
+
+  /** Runs overlay rebuilds deferred by the instancing mode. */
+  private flushDeferredOverlays() {
+    if (this.selectionOverlayDirty) {
+      this.selectionOverlayDirty = false
+      this.rebuildSelectionOverlaysNow()
+    }
+    if (this.sourceOverlayDirty) {
+      this.sourceOverlayDirty = false
+      this.rebuildSourceHighlightOverlayNow()
+    }
+  }
+
+  private rebuildSelectionOverlaysNow() {
     this.overlays.rebuildSelection({
       dev: this.dev,
       selectionMode: this.selectionMode,
@@ -1941,7 +1992,7 @@ export class WebGPURenderer {
     })
   }
 
-  private rebuildSourceHighlightOverlay() {
+  private rebuildSourceHighlightOverlayNow() {
     this.overlays.rebuildSourceHighlight({
       dev: this.dev,
       sourceHighlightId: this.sourceHighlightId,

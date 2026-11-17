@@ -16,6 +16,7 @@ import { fillSceneUniforms } from '../uniformFill'
 import { NO_GHOST_MESHES, type GMesh, type OverlaySlot } from '../types'
 
 import { sortEdgeDraws, sortOpaqueDraws } from '../drawSorting'
+import { instanceStepEligible } from '../instanceStepRuns'
 import { EncodeFramePassContext, groupByShadingModel, setObjectStyleImmediate } from './groupByShadingModel'
 
 /** Line-list overlay (position + RGBA) drawn with the selection overlay pipeline. */
@@ -96,6 +97,9 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
   // Classify draws before encoding: the shadow depth pass runs ahead of the
   // main pass and draws the same opaque set.
   const transitioning = frame.geometryGhosts.length > 0 || hasMorph
+  // Opt-in instancing: instance-step runs replace the storage-buffer
+  // `MeshInstances` path in every pass; off keeps the old path untouched.
+  const steps = frame.instancing === true ? (frame.instanceSteps ?? null) : null
   const useWboit = frame.transparencyMode === 'wboit'
   frame.viewFrustum.update(viewProjection)
   frame.opaqueDraws.length = frame.edgeDraws.length = frame.transparentDraws.length = 0
@@ -145,11 +149,30 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
           depthStoreOp: 'store',
         },
       })
+      // Instancing: non-morphing casters draw as instance-step runs grouped
+      // by asset (depth is order-independent); morphing casters stay below.
+      const shadowRuns = steps ? ([] as GMesh[]) : null
+      if (steps) {
+        for (let index = 0; index < meshes.length; index++) {
+          const mesh = meshes[index]!
+          if (!frame.isMeshVisible(index) || mesh.displayBox || isTransparentAlpha(mesh.alpha)) continue
+          if (!mesh.morph && mesh.ic > 0) shadowRuns!.push(mesh)
+        }
+        steps.shadow.draw(
+          shadowPass,
+          dev,
+          getRenderPipeline('meshShadow', { variant: 'instanceStep' }),
+          sceneBG,
+          shadowRuns!,
+          { order: 'asset' },
+        )
+      }
       shadowPass.setPipeline(getRenderPipeline('meshShadow'))
       shadowPass.setBindGroup(0, sceneBG)
       for (let index = 0; index < meshes.length; index++) {
         const mesh = meshes[index]!
         if (!frame.isMeshVisible(index) || mesh.displayBox || isTransparentAlpha(mesh.alpha)) continue
+        if (shadowRuns && !mesh.morph && mesh.ic > 0) continue
         shadowPass.setBindGroup(1, mesh.bg)
         shadowPass.setVertexBuffer(0, mesh.vb)
         shadowPass.setVertexBuffer(1, mesh.morphSlot!)
@@ -243,6 +266,7 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
     } else if (
       !customOpaque &&
       (transitioning ||
+        steps ||
         !frame.opaqueInstances.draw(
           pass,
           dev,
@@ -281,16 +305,26 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
     }
 
     if (frame.sectionEnabled && frame.displayMode !== 'xray' && frame.opaqueDraws.length) {
-      frame.sectionCapBundle.draw(
-        pass,
-        dev,
-        fmt,
-        getRenderPipeline('meshSectionCap'),
-        sceneBG,
-        frame.opaqueDraws,
-        false,
-        extraBindGroupForShader('meshSectionCap'),
-      )
+      if (steps && !transitioning && frame.opaqueDraws.every(mesh => instanceStepEligible(mesh))) {
+        steps.sectionCap.draw(
+          pass,
+          dev,
+          getRenderPipeline('meshSectionCap', { variant: 'instanceStep' }),
+          sceneBG,
+          frame.opaqueDraws,
+          { order: 'asset' },
+        )
+      } else
+        frame.sectionCapBundle.draw(
+          pass,
+          dev,
+          fmt,
+          getRenderPipeline('meshSectionCap'),
+          sceneBG,
+          frame.opaqueDraws,
+          false,
+          extraBindGroupForShader('meshSectionCap'),
+        )
     }
 
     if (!useWboit) {
@@ -306,9 +340,28 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
       for (const { index } of transparentOrder)
         frame.transparentDraws.push(index < meshes.length ? meshes[index]! : ghostMeshes[index - meshes.length]!)
       const customTransparent = frame.transparentDraws.some(mesh => mesh.shadingModel !== 'phong')
-      if (
+      const transparentSteps =
+        steps &&
+        !customTransparent &&
+        !transitioning &&
+        frame.transparentDraws.length > 0 &&
+        frame.transparentDraws.every(mesh => instanceStepEligible(mesh))
+      if (transparentSteps) {
+        steps.transparent.draw(
+          pass,
+          dev,
+          getRenderPipeline('mesh', { variant: 'instanceStep', blend: 'alpha', depth: TRANSPARENT_DEPTH }),
+          sceneBG,
+          frame.transparentDraws,
+          {
+            order: 'consecutive',
+            group1: textures.shadowBG ?? undefined,
+          },
+        )
+      } else if (
         !customTransparent &&
         (transitioning ||
+          steps ||
           !frame.transparentInstances.draw(
             pass,
             dev,
@@ -399,8 +452,14 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
   }
 
   const edgeGroup = extraBindGroupForShader('edge')
-  if (
+  if (steps && !transitioning) {
+    steps.edges.draw(pass, dev, getRenderPipeline('edge', { variant: 'instanceStep' }), sceneBG, frame.edgeDraws, {
+      edges: true,
+      order: 'asset',
+    })
+  } else if (
     transitioning ||
+    steps ||
     !frame.edgeInstances.draw(
       pass,
       dev,
