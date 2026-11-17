@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0417",
+  "testedBase": "38bcdf2985f7ad708d66086a5cd3e315812caf82",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 158,
+  "scope": [
+    "Classify exact world-space points against transverse section material with source face witnesses.",
+    "Exact plane residuals distinguish off-plane points. Half-open ray parity resolves material across nested rings, and exact edge hits retain source face attribution."
+  ],
+  "logSha256": "58df5c2943e80cbbd8782bc7524879b511f29b7787fafba9a2c93ee8f2159bdf",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "730ba59be70606790c4ff3e23e78b35c764a911ab764cce411247c4d6d86dae4",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/mod.rs": "df53bb317079ae08b4d08f95000c3165c001c353303fd908881bb10a88d5fc11",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "0ca14af814e7dd4165608bbe9f530605fffd9445f6059eabff2af90f1fe72b5d",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/section_loops.rs": "708e22625ca7ea5a1a4a4394219ec8d02647605561ef36ee3a33e0afce314920"
+  }
+}

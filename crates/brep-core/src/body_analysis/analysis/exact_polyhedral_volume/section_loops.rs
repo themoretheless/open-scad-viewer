@@ -167,10 +167,8 @@ fn measure_section(
 
     let section = exact_polyhedral_section_loops(solid, normal, offset, max_exact_work)?;
     let mut remaining = max_exact_work - section.exact_work;
-    let omitted = (0..3)
-        .max_by(|&i, &j| normal[i].abs().total_cmp(&normal[j].abs()))
-        .unwrap();
-    let axes = [(omitted + 1) % 3, (omitted + 2) % 3];
+    let axes = projected_axes(normal);
+    let omitted = (axes[0] + 2) % 3;
     let mut polygons = Vec::with_capacity(section.loops.len());
     for ring in &section.loops {
         spend(&mut remaining, ring.points_mm.len() as u64)?;
@@ -309,5 +307,106 @@ pub fn bounded_polyhedral_section_perimeter(
         bounds_mm,
         loops: section.loops,
         exact_work: max_exact_work - remaining,
+    })
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PolyhedralSectionPointLocation {
+    OffPlane,
+    Outside,
+    Material,
+    Boundary {
+        ring: usize,
+        segment: usize,
+        face: usize,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralSectionPoint {
+    pub location: PolyhedralSectionPointLocation,
+    pub exact_work: u64,
+}
+
+/// Classify an exact world-space point against a strict transverse material
+/// section. Interior and exterior use even-odd membership across all loops.
+/// Boundary hits retain an incident section segment and its source face.
+pub fn exact_polyhedral_section_point(
+    solid: &QualifiedClosedSolid,
+    normal: [f64; 3],
+    offset: f64,
+    point_mm: &[Q; 3],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralSectionPoint> {
+    if point_mm
+        .iter()
+        .any(|coordinate| coordinate.numer().bits().max(coordinate.denom().bits()) > 8192)
+    {
+        return Err(refuse(
+            "Section query coordinates exceed the exact bit limit",
+        ));
+    }
+    let section = exact_polyhedral_section_loops(solid, normal, offset, max_exact_work)?;
+    let mut remaining = max_exact_work - section.exact_work;
+    spend(&mut remaining, 16)?;
+    let exact_normal = super::lift(&normal);
+    let projected: Q = exact_normal.iter().zip(point_mm).map(|(n, p)| n * p).sum();
+    let location = if projected == Q::from_float(offset).unwrap() {
+        classify_section_loops(
+            &section.loops,
+            projected_axes(normal),
+            point_mm,
+            &mut remaining,
+        )?
+    } else {
+        PolyhedralSectionPointLocation::OffPlane
+    };
+    Ok(ExactPolyhedralSectionPoint {
+        location,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn projected_axes(normal: [f64; 3]) -> [usize; 2] {
+    let omitted = (0..3)
+        .max_by(|&i, &j| normal[i].abs().total_cmp(&normal[j].abs()))
+        .unwrap();
+    [(omitted + 1) % 3, (omitted + 2) % 3]
+}
+
+fn classify_section_loops(
+    loops: &[PolyhedralSectionLoop],
+    [u, v]: [usize; 2],
+    point: &[Q; 3],
+    remaining: &mut u64,
+) -> Result<PolyhedralSectionPointLocation> {
+    use num_traits::{Signed, Zero};
+
+    let [x, y] = [&point[u], &point[v]];
+    let mut inside = false;
+    for (ring, contour) in loops.iter().enumerate() {
+        let points = &contour.points_mm;
+        for (segment, (a, b)) in points.iter().zip(points.iter().cycle().skip(1)).enumerate() {
+            spend(remaining, 12)?;
+            let side = (&b[u] - &a[u]) * (y - &a[v]) - (&b[v] - &a[v]) * (x - &a[u]);
+            if side.is_zero()
+                && (std::cmp::min(&a[u], &b[u]) <= x && x <= std::cmp::max(&a[u], &b[u]))
+                && (std::cmp::min(&a[v], &b[v]) <= y && y <= std::cmp::max(&a[v], &b[v]))
+            {
+                return Ok(PolyhedralSectionPointLocation::Boundary {
+                    ring,
+                    segment,
+                    face: contour.faces[segment],
+                });
+            }
+            if (&a[v] > y) != (&b[v] > y) && side.is_positive() == (b[v] > a[v]) {
+                inside = !inside;
+            }
+        }
+    }
+    Ok(if inside {
+        PolyhedralSectionPointLocation::Material
+    } else {
+        PolyhedralSectionPointLocation::Outside
     })
 }

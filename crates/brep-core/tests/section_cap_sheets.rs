@@ -2275,3 +2275,73 @@ fn bounds_exact_oblique_section_length_at_the_requested_precision() {
     );
     assert!(bounded_polyhedral_section_perimeter(&solid, normal, 2., f64::NAN, 1_000_000).is_err());
 }
+
+#[test]
+fn classifies_material_hole_boundary_and_off_plane_points_in_exact_sections() {
+    use brep_core::{
+        analysis::{
+            PolyhedralSectionPointLocation::*, exact_polyhedral_section_loops,
+            exact_polyhedral_section_point,
+        },
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let normal = [0., 0., 1.];
+    let q = |n: i64| Q::new(n.into(), 2.into());
+    for (p, expected) in [
+        ([1, 1, 2], Material),
+        ([3, 3, 2], Outside),
+        ([9, 3, 2], Outside),
+        ([1, 1, 3], OffPlane),
+    ] {
+        let result =
+            exact_polyhedral_section_point(solid, normal, 1., &p.map(q), 1_000_000).unwrap();
+        assert_eq!(result.location, expected);
+        assert!(
+            exact_polyhedral_section_point(solid, normal, 1., &p.map(q), result.exact_work).is_ok()
+        );
+        assert!(
+            exact_polyhedral_section_point(solid, normal, 1., &p.map(q), result.exact_work - 1)
+                .is_err()
+        );
+    }
+    let point = [2, 3, 2].map(q);
+    let boundary = exact_polyhedral_section_point(solid, normal, 1., &point, 1_000_000).unwrap();
+    let Boundary {
+        ring,
+        segment,
+        face,
+    } = boundary.location
+    else {
+        panic!("expected hole boundary")
+    };
+    let contours = exact_polyhedral_section_loops(solid, normal, 1., 1_000_000).unwrap();
+    assert_eq!(face, contours.loops[ring].faces[segment]);
+    let [a, b] = [
+        segment,
+        (segment + 1) % contours.loops[ring].points_mm.len(),
+    ]
+    .map(|i| &contours.loops[ring].points_mm[i]);
+    assert_eq!(a[0], point[0]);
+    assert_eq!(b[0], point[0]);
+}
+
+#[test]
+fn locates_a_nonbinary_point_in_an_oblique_section() {
+    use brep_core::analysis::{
+        PolyhedralSectionPointLocation::Material, exact_polyhedral_section_point,
+    };
+    use num_rational::BigRational as Q;
+    let solid = shifted_oblique_solid(0.);
+    let point = [
+        Q::new(3.into(), 2.into()),
+        Q::from_integer(0.into()),
+        Q::new(7.into(), 6.into()),
+    ];
+    let result =
+        exact_polyhedral_section_point(&solid, [-1., -1., 3.], 2., &point, 1_000_000).unwrap();
+    assert_eq!(result.location, Material);
+}
