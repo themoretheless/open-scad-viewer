@@ -453,6 +453,15 @@ pub fn compare_exact_curve_seam_jets(
     right: &Curve,
     max_work: u64,
 ) -> Result<ExactCurveSeamJetReport> {
+    compare_curve_jets(left, right, max_work, true)
+}
+
+fn compare_curve_jets(
+    left: &Curve,
+    right: &Curve,
+    max_work: u64,
+    adjacent_domains: bool,
+) -> Result<ExactCurveSeamJetReport> {
     use super::rational_edit::Work;
     use num_traits::Zero;
 
@@ -471,7 +480,7 @@ pub fn compare_exact_curve_seam_jets(
     if let Some(reason) = seam_geometry_incompatibility(left, right) {
         return Ok(refused(GaugeMergeRefusal::Join(reason), 0));
     }
-    if left.domain()[1] != right.domain()[0] {
+    if adjacent_domains && left.domain()[1] != right.domain()[0] {
         return Ok(refused(
             GaugeMergeRefusal::Join(Refusal::NonAdjacentDomain),
             0,
@@ -1008,4 +1017,49 @@ pub fn merge_and_compact_exact_projective_c2_chain(
         }
     }
     Ok(CompactC2ClockChainReport { chain, seams })
+}
+
+#[derive(Clone, Debug)]
+pub struct ClosedC2ClockChainReport {
+    pub chain: C2ClockChainReport,
+    /// End-minus-start residuals in the joined curve's absolute parameter.
+    /// Absent if an internal join failed.
+    pub closure: Option<ExactCurveSeamJetReport>,
+}
+
+/// Assemble a curve chain and require an exact C2 wrap at the final seam.
+/// The closure test matches position and both derivatives at the two ends
+/// in the final parameter clock. The result is a closed clamped curve.
+pub fn merge_closed_exact_projective_c2_chain(
+    sources: &[&Curve],
+    max_work: u64,
+) -> Result<ClosedC2ClockChainReport> {
+    let mut chain = merge_chain_with_exact_projective_c2_clock(sources, max_work)?;
+    let Some(curve) = chain.curve.as_ref() else {
+        return Ok(ClosedC2ClockChainReport {
+            chain,
+            closure: None,
+        });
+    };
+    let remaining = max_work - chain.work_used;
+    let closure = if remaining == 0 {
+        ExactCurveSeamJetReport {
+            residuals: None,
+            continuity_order: None,
+            work_used: 0,
+            refusal: Some(GaugeMergeRefusal::Exact(
+                super::rational_factor::Refusal::ResourceLimit,
+            )),
+        }
+    } else {
+        compare_curve_jets(curve, curve, remaining, false)?
+    };
+    chain.work_used += closure.work_used;
+    if closure.continuity_order != Some(2) {
+        chain.curve = None;
+    }
+    Ok(ClosedC2ClockChainReport {
+        chain,
+        closure: Some(closure),
+    })
 }

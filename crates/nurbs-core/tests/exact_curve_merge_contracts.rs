@@ -1054,3 +1054,72 @@ fn compact_c2_chain_retains_verified_geometry_on_a_short_removal_budget() {
     assert!(failed.chain.curve.is_none());
     assert!(failed.seams.is_empty());
 }
+
+fn closed_cubic_segments() -> Vec<Curve> {
+    let poles = [[-1., -1.], [1., -1.], [1., 1.], [-1., 1.]];
+    (0..4)
+        .map(|index| {
+            let [a, b, c, d] = std::array::from_fn(|offset| poles[(index + offset) % 4]);
+            let control = |f: fn(f64, f64, f64, f64) -> f64| {
+                (0..2)
+                    .map(|axis| f(a[axis], b[axis], c[axis], d[axis]))
+                    .collect()
+            };
+            let start = 10. * index as f64;
+            Curve {
+                degree: 3,
+                knots: [vec![start; 4], vec![start + 1.; 4]].concat(),
+                control_points: vec![
+                    control(|a, b, c, _| a + 4. * b + c),
+                    control(|_, b, c, _| 4. * b + 2. * c),
+                    control(|_, b, c, _| 2. * b + 4. * c),
+                    control(|_, b, c, d| b + 4. * c + d),
+                ],
+                weights: vec![1.; 4],
+                periodic: false,
+            }
+        })
+        .collect()
+}
+
+#[test]
+fn closed_c2_chain_proves_exact_wrap_in_the_accumulated_clock() {
+    use nurbs_core::editing::exact_curve_merge::merge_closed_exact_projective_c2_chain;
+    let segments = closed_cubic_segments();
+    let sources: Vec<_> = segments.iter().collect();
+    let report = merge_closed_exact_projective_c2_chain(&sources, 1_000_000).unwrap();
+    assert_eq!(report.chain.joins_verified, 3);
+    assert_eq!(report.chain.curve.unwrap().domain(), [0., 4.]);
+    assert_eq!(report.closure.unwrap().continuity_order, Some(2));
+    assert!(
+        merge_closed_exact_projective_c2_chain(&sources, report.chain.work_used)
+            .unwrap()
+            .chain
+            .curve
+            .is_some()
+    );
+    assert!(
+        merge_closed_exact_projective_c2_chain(&sources, report.chain.work_used - 1)
+            .unwrap()
+            .chain
+            .curve
+            .is_none()
+    );
+}
+
+#[test]
+fn closed_c2_chain_withholds_a_curve_when_only_internal_joins_pass() {
+    use nurbs_core::editing::exact_curve_merge::merge_closed_exact_projective_c2_chain;
+    let mut segments = closed_cubic_segments();
+    segments[0].control_points[0][0] += 1.;
+    let sources: Vec<_> = segments.iter().collect();
+    let report = merge_closed_exact_projective_c2_chain(&sources, 1_000_000).unwrap();
+    assert_eq!(report.chain.joins_verified, 3);
+    assert!(report.chain.curve.is_none());
+    let closure = report.closure.unwrap();
+    assert_eq!(closure.continuity_order, None);
+    assert_eq!(
+        closure.residuals.unwrap()[0][0],
+        num_rational::BigRational::from_integer((-1).into())
+    );
+}

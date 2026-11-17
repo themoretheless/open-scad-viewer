@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0505",
+  "testedBase": "74165998faace11eeefa710f36003dd1392e7a91",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 64,
+  "scope": [
+    "Prove a closed clamped chain by matching exact position and both endpoint derivatives at the final seam.",
+    "Compare end-minus-start jets after the internal joins in the final absolute parameter and withhold geometry if the wrap does not prove C2."
+  ],
+  "logSha256": "6adc043257fb2b84d49d61a4ac98038d4563eb74d15ece1d78c2a09b040c15f6",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "74f102ff38a78474a578729a0c983b2df3feba3d97f5d6a1ab4bbb5f216b8eb8",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "d5d47721972f02200d728e68ca498359136e3fba29b56396f250b257a487107e"
+  }
+}
