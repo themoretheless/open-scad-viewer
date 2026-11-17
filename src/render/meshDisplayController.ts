@@ -120,12 +120,15 @@ export class MeshDisplayController {
     this.dropDeviceState()
     this.onDemand?.dispose()
     this.onDemand = null
+    this.clusters.setBuilder(null)
   }
 
   private levelSource(): OnDemandLevelSource | null {
     if (!this.onDemand) {
       // Retried each frame until the app registers a provider.
       const provider = this.createProvider()
+      // Cluster levels go to the same worker; without one they build on the main thread.
+      this.clusters.setBuilder(provider?.cluster ? (base, resolution) => provider.cluster!(base, resolution) : null)
       this.onDemand = provider
         ? new OnDemandLevelSource(provider, geometryKey, () => {
             this.lastKey = ''

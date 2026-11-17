@@ -7,6 +7,7 @@
  * and a newer target for the same geometry cancels the stale request.
  */
 import type { MeshLodLevel } from '../core/mesh'
+import type { ClusterInput, ClusterPayload } from '../kernel/clusterDecimation'
 import type { DisplayLevelPayload, DisplayLevelSummaryEntry } from '../kernel/displayLevelService'
 import type { DisplayLevelRequest, DisplayLevelResponse } from '../kernel/displayLevelWorkerRuntime'
 import { placeholderLevel, isDeferredLevel } from './deferredLevels'
@@ -16,6 +17,8 @@ import type { GMesh } from './types'
 export interface DisplayLevelProvider {
   summary(geometry: string, geometryJson: string, signal: AbortSignal): Promise<DisplayLevelSummaryEntry[] | null>
   level(geometry: string, geometryJson: string, index: number, signal: AbortSignal): Promise<DisplayLevelPayload>
+  /** Vertex-cluster a plain mesh off the main thread (byte-identical to `clusterArrays`). */
+  cluster?(base: ClusterInput, resolution: number): Promise<ClusterPayload | null>
   forget?(geometry: string): void
   dispose?(): void
 }
@@ -191,6 +194,22 @@ export class WorkerDisplayLevelProvider implements DisplayLevelProvider {
     })
   }
 
+  cluster(base: ClusterInput, resolution: number) {
+    // Structured clone copies the inputs; the main thread keeps its base arrays.
+    const request = {
+      type: 'cluster' as const,
+      resolution,
+      vertices: base.vertices,
+      indices: base.indices,
+      edgeIndices: base.edgeIndices,
+      faceIds: base.faceIds,
+    }
+    return this.send<ClusterPayload | null>(request, new AbortController().signal, response => {
+      if (!('cluster' in response)) throw new Error('Display level worker returned no cluster level')
+      return response.cluster
+    })
+  }
+
   forget(geometry: string) {
     this.worker?.postMessage({ type: 'forget', geometry } satisfies DisplayLevelRequest)
   }
@@ -205,7 +224,8 @@ export class WorkerDisplayLevelProvider implements DisplayLevelProvider {
   private send<T>(
     request:
       | { type: 'summary'; geometry: string; geometryJson: string }
-      | { type: 'level'; geometry: string; geometryJson: string; index: number },
+      | { type: 'level'; geometry: string; geometryJson: string; index: number }
+      | ({ type: 'cluster'; resolution: number } & ClusterInput),
     signal: AbortSignal,
     read: (response: Extract<DisplayLevelResponse, { ok: true }>) => T,
   ): Promise<T> {

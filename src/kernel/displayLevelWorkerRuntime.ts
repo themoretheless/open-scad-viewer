@@ -3,6 +3,7 @@
  * one per macrotask so a `cancel` that arrives while earlier work runs still
  * drops a queued request before its native evaluation starts.
  */
+import { clusterArrays, type ClusterInput, type ClusterPayload } from './clusterDecimation'
 import { DisplayLevelService, type DisplayLevelPayload, type DisplayLevelSummaryEntry } from './displayLevelService'
 
 export type DisplayLevelRequest =
@@ -14,18 +15,20 @@ export type DisplayLevelRequest =
       readonly geometryJson: string
       readonly index: number
     }
+  | ({ readonly type: 'cluster'; readonly id: number; readonly resolution: number } & ClusterInput)
   | { readonly type: 'cancel'; readonly id: number }
   | { readonly type: 'forget'; readonly geometry: string }
 
 export type DisplayLevelResponse =
   | { readonly id: number; readonly ok: true; readonly summary: DisplayLevelSummaryEntry[] | null }
   | { readonly id: number; readonly ok: true; readonly level: DisplayLevelPayload }
+  | { readonly id: number; readonly ok: true; readonly cluster: ClusterPayload | null }
   | { readonly id: number; readonly ok: false; readonly error: string }
 
 type Post = (message: DisplayLevelResponse, transfer: Transferable[]) => void
 type Defer = (task: () => void) => void
 
-const levelTransferables = (level: DisplayLevelPayload): Transferable[] => {
+const levelTransferables = (level: DisplayLevelPayload | ClusterPayload): Transferable[] => {
   const buffers = new Set<ArrayBuffer>()
   for (const view of [
     level.vertices,
@@ -67,7 +70,11 @@ export function createDisplayLevelWorkerHandler(
     const request = queue.shift()
     if (!request) return
     try {
-      if (request.type === 'summary') {
+      if (request.type === 'cluster') {
+        // Fresh arrays owned by this message: transfer without copying.
+        const cluster = clusterArrays(request, request.resolution)
+        post({ id: request.id, ok: true, cluster }, cluster ? levelTransferables(cluster) : [])
+      } else if (request.type === 'summary') {
         post({ id: request.id, ok: true, summary: service.summary(request.geometry, request.geometryJson) }, [])
       } else {
         const level = cloneLevel(service.level(request.geometry, request.geometryJson, request.index))
