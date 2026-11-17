@@ -1004,3 +1004,53 @@ fn projective_c2_chain_discards_partial_output_on_a_late_mismatch() {
     assert_eq!(singleton.curve, Some(b));
     assert_eq!(singleton.work_used, 0);
 }
+
+#[test]
+fn compact_c2_chain_removes_both_redundant_seams_of_a_single_quadratic() {
+    use nurbs_core::editing::exact_curve_merge::merge_and_compact_exact_projective_c2_chain;
+    let (a, b) = quadratic_clock_seam();
+    let c = Curve {
+        knots: vec![30., 30., 30., 34., 34., 34.],
+        control_points: vec![vec![2., 4.], vec![2.5, 6.], vec![3., 9.]],
+        ..b.clone()
+    };
+    let report = merge_and_compact_exact_projective_c2_chain(&[&a, &b, &c], 1_000_000).unwrap();
+    assert_eq!(report.chain.joins_verified, 2);
+    assert_eq!(report.seams.len(), 2);
+    for (seam, parameter) in report.seams.iter().zip([1., 2.]) {
+        assert_eq!(seam.parameter, parameter);
+        assert_eq!(seam.removed, 2);
+        assert_eq!(seam.remaining_multiplicity, 0);
+        assert_eq!(seam.refusal, None);
+    }
+    let curve = report.chain.curve.unwrap();
+    assert_eq!(curve.knots, vec![0., 0., 0., 3., 3., 3.]);
+    for t in [0., 0.5, 1., 1.5, 2., 2.5, 3.] {
+        let point = curve.evaluate(t).unwrap().point;
+        assert!((point[0] - t).abs() < 1e-13);
+        assert!((point[1] - t * t).abs() < 1e-13);
+    }
+}
+
+#[test]
+fn compact_c2_chain_retains_verified_geometry_on_a_short_removal_budget() {
+    use nurbs_core::editing::{
+        exact_curve_merge::{
+            merge_and_compact_exact_projective_c2_chain, merge_chain_with_exact_projective_c2_clock,
+        },
+        exact_knot_removal::Refusal as RemovalRefusal,
+    };
+    let (a, b) = quadratic_clock_seam();
+    let base = merge_chain_with_exact_projective_c2_clock(&[&a, &b], 1_000_000).unwrap();
+    let limited = merge_and_compact_exact_projective_c2_chain(&[&a, &b], base.work_used).unwrap();
+    assert_eq!(limited.chain.curve, base.curve);
+    assert_eq!(limited.chain.work_used, base.work_used);
+    assert_eq!(limited.seams[0].removed, 0);
+    assert_eq!(
+        limited.seams[0].refusal,
+        Some(RemovalRefusal::ResourceLimit)
+    );
+    let failed = merge_and_compact_exact_projective_c2_chain(&[&a, &b, &a], 1_000_000).unwrap();
+    assert!(failed.chain.curve.is_none());
+    assert!(failed.seams.is_empty());
+}

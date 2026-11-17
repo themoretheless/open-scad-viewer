@@ -371,8 +371,6 @@ pub fn merge_and_simplify_exact_seam(
     right: &Curve,
     max_work: u64,
 ) -> Result<CompactSeamMergeReport> {
-    use super::exact_knot_removal::{Refusal as RemovalRefusal, remove};
-
     let joined = merge_with_exact_degree_elevation(left, right, max_work)?;
     let mut work_used = joined.work_used;
     let Some(mut curve) = joined.curve else {
@@ -384,30 +382,58 @@ pub fn merge_and_simplify_exact_seam(
             removal_refusal: None,
         });
     };
-    let seam = left.domain()[1];
-    let mut multiplicity = curve.knots.iter().filter(|&&knot| knot == seam).count();
-    let mut removal_refusal = None;
-    while multiplicity > 0 {
-        if work_used == max_work {
-            removal_refusal = Some(RemovalRefusal::ResourceLimit);
-            break;
-        }
-        let report = remove(&curve, seam, max_work - work_used)?;
-        work_used += report.work_used;
-        if !report.removed {
-            removal_refusal = report.refusal;
-            break;
-        }
-        curve = report.curve;
-        multiplicity -= 1;
-    }
+    let seam = compact_seam(&mut curve, left.domain()[1], &mut work_used, max_work)?;
     Ok(CompactSeamMergeReport {
         curve: Some(curve),
-        seam_multiplicity: Some(multiplicity),
+        seam_multiplicity: Some(seam.remaining_multiplicity),
         work_used,
         join_refusal: None,
-        removal_refusal,
+        removal_refusal: seam.refusal,
     })
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct SeamCompaction {
+    pub parameter: f64,
+    pub removed: usize,
+    pub remaining_multiplicity: usize,
+    pub refusal: Option<super::exact_knot_removal::Refusal>,
+}
+
+fn compact_seam(
+    curve: &mut Curve,
+    parameter: f64,
+    work_used: &mut u64,
+    max_work: u64,
+) -> Result<SeamCompaction> {
+    use super::exact_knot_removal::{Refusal as RemovalRefusal, remove};
+
+    let mut seam = SeamCompaction {
+        parameter,
+        removed: 0,
+        remaining_multiplicity: curve
+            .knots
+            .iter()
+            .filter(|&&knot| knot == parameter)
+            .count(),
+        refusal: None,
+    };
+    while seam.remaining_multiplicity > 0 {
+        if *work_used == max_work {
+            seam.refusal = Some(RemovalRefusal::ResourceLimit);
+            break;
+        }
+        let report = remove(curve, parameter, max_work - *work_used)?;
+        *work_used += report.work_used;
+        if !report.removed {
+            seam.refusal = report.refusal;
+            break;
+        }
+        *curve = report.curve;
+        seam.remaining_multiplicity -= 1;
+        seam.removed += 1;
+    }
+    Ok(seam)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -888,6 +914,14 @@ pub fn merge_chain_with_exact_projective_c2_clock(
     sources: &[&Curve],
     max_work: u64,
 ) -> Result<C2ClockChainReport> {
+    merge_projective_c2_chain(sources, max_work, &mut Vec::new())
+}
+
+fn merge_projective_c2_chain(
+    sources: &[&Curve],
+    max_work: u64,
+    seams: &mut Vec<f64>,
+) -> Result<C2ClockChainReport> {
     crate::check(
         (1..=256).contains(&sources.len()),
         "C2 curve chain needs 1..=256 sources",
@@ -934,6 +968,7 @@ pub fn merge_chain_with_exact_projective_c2_clock(
                 )),
             });
         };
+        seams.push(curve.domain()[1]);
         curve = merged;
     }
     Ok(C2ClockChainReport {
@@ -942,4 +977,35 @@ pub fn merge_chain_with_exact_projective_c2_clock(
         work_used,
         refusal: None,
     })
+}
+
+#[derive(Clone, Debug)]
+pub struct CompactC2ClockChainReport {
+    pub chain: C2ClockChainReport,
+    /// One entry per successful structural seam, in input order.
+    pub seams: Vec<SeamCompaction>,
+}
+
+/// Build a regular C2 chain and compact only its join knots. Each accepted
+/// removal preserves the complete curve in its final parameter domain.
+/// Failed removals retain the last verified representation and record the
+/// reason per seam; a failed join yields no curve or compaction results.
+pub fn merge_and_compact_exact_projective_c2_chain(
+    sources: &[&Curve],
+    max_work: u64,
+) -> Result<CompactC2ClockChainReport> {
+    let mut parameters = Vec::new();
+    let mut chain = merge_projective_c2_chain(sources, max_work, &mut parameters)?;
+    let mut seams = Vec::new();
+    if let Some(curve) = chain.curve.as_mut() {
+        for parameter in parameters {
+            seams.push(compact_seam(
+                curve,
+                parameter,
+                &mut chain.work_used,
+                max_work,
+            )?);
+        }
+    }
+    Ok(CompactC2ClockChainReport { chain, seams })
 }

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 503,
-  "unallocatedCount": 497,
+  "specifiedCount": 504,
+  "unallocatedCount": 496,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13046,6 +13046,27 @@
       "remainingQualification": [
         "Compose regular C2 seam clocks across an ordered chain and publish a single curve only after every join is proved.",
         "Align each incoming seam to the accumulated exact curve under one work budget. Report the failing right source and withhold partial geometry.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0504",
+      "name": "Удаление избыточных узлов на стыках цепочки NURBS-кривых C2",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::merge_and_compact_exact_projective_c2_chain",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_knot_removal.rs",
+        "docs/qualification/nurbs-curvature-field-504-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-504-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Join a regular C2 chain and attempt exact removal at each transported seam under one budget.",
+        "Record transported join parameters and verify full curve identity for every accepted knot removal. Report surviving multiplicities and preserve the last verified curve on a removal refusal.",
         "WASM and application integration are separate."
       ]
     }
