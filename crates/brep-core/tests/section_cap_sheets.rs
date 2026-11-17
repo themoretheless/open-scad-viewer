@@ -727,3 +727,53 @@ fn rejects_a_bounded_section_solid_when_final_material_proof_fails() {
     assert_eq!(error.code, "BREP_CLOSED_SOLID_UNPROVED");
     assert_eq!(source, before);
 }
+
+#[test]
+fn infers_exact_section_planes_and_groups_coplanar_hole_rings() {
+    use brep_core::planar_cap::infer_section_planes;
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let report = infer_section_planes(&source, 0, 1_000_000).unwrap();
+    let [plane] = report.planes.as_slice() else {
+        panic!("expected one plane")
+    };
+    assert_eq!(plane.normal, [0, 0, 1].map(|x| Q::from_integer(x.into())));
+    assert_eq!(plane.offset, Q::from_integer(2.into()));
+    assert_eq!(plane.rings.iter().map(Vec::len).collect::<Vec<_>>(), [4, 4]);
+    assert!(infer_section_planes(&source, 0, report.exact_work - 1).is_err());
+
+    let (mut source, _) = open_prism(false);
+    remove_prism_cap(&mut source, 0.);
+    let report = infer_section_planes(&source, 0, 1_000_000).unwrap();
+    assert_eq!(report.planes.len(), 2);
+    assert_eq!(report.planes[0].offset, Q::from_integer(0.into()));
+    assert_eq!(report.planes[1].offset, Q::from_integer(2.into()));
+}
+
+#[test]
+fn refuses_to_infer_a_plane_from_a_warped_free_rim() {
+    use brep_core::planar_cap::infer_section_planes;
+    let (mut source, _) = open_prism(false);
+    let warp = |point: &mut [f64]| {
+        if point == [4., 4., 2.] {
+            point[2] = 3.;
+        }
+    };
+    for vertex in &mut source.vertices {
+        warp(&mut vertex.point);
+    }
+    for edge in &mut source.edges {
+        for point in &mut edge.curve.control_points {
+            warp(point);
+        }
+    }
+    for face in &mut source.faces {
+        for point in face.surface.control_points.iter_mut().flatten() {
+            warp(point);
+        }
+    }
+    source.rebuild_topology_ids();
+    assert!(source.validate().is_ok());
+    let error = infer_section_planes(&source, 0, 1_000_000).unwrap_err();
+    assert_eq!(error.message, "Free section cycle has nonplanar controls");
+}

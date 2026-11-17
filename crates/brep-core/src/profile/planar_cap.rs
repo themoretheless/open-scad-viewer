@@ -447,3 +447,5 @@ pub use attach_sections::{
     BoundedSectionSolid, SectionSolid, SectionSolidOptions, build_bounded_section_solid,
     build_section_solid,
 };
+
+pub use attach_sections::{InferredSectionPlane, InferredSectionPlanes, infer_section_planes};

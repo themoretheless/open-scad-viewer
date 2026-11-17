@@ -113,6 +113,34 @@ fn discover_rings(
             "A finite section plane with nonzero normal is required",
         ));
     }
+    let exact_normal = normal.map(|value| BigRational::from_float(value).unwrap());
+    let exact_offset = BigRational::from_float(offset).unwrap();
+    let distance = BigRational::from_float(selection_tolerance_mm).unwrap();
+    let normal_squared: BigRational = exact_normal.iter().map(|n| n * n).sum();
+    let residual_squared = &distance * &distance * normal_squared;
+    collect_free_rings(source, shell, remaining, |curve, remaining| {
+        for point in &curve.control_points {
+            charge(remaining, 8)?;
+            let dot: BigRational = exact_normal
+                .iter()
+                .zip(point)
+                .map(|(n, x)| n * BigRational::from_float(*x).unwrap())
+                .sum();
+            let residual = dot - &exact_offset;
+            if &residual * &residual > residual_squared {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    })
+}
+
+fn collect_free_rings(
+    source: &Model,
+    shell: usize,
+    remaining: &mut u64,
+    mut select: impl FnMut(&nurbs_core::curve::Curve, &mut u64) -> Result<bool>,
+) -> Result<Vec<Vec<[usize; 2]>>> {
     if !(1..=1_000_000).contains(remaining) {
         return Err(invalid("Section work budget must be 1..1000000"));
     }
@@ -122,11 +150,6 @@ fn discover_rings(
         .get(shell)
         .filter(|shell| !shell.closed)
         .ok_or_else(|| invalid("Section discovery requires an open shell"))?;
-    let exact_normal = normal.map(|value| BigRational::from_float(value).unwrap());
-    let exact_offset = BigRational::from_float(offset).unwrap();
-    let distance = BigRational::from_float(selection_tolerance_mm).unwrap();
-    let normal_squared: BigRational = exact_normal.iter().map(|n| n * n).sum();
-    let residual_squared = &distance * &distance * normal_squared;
     let mut incidence = vec![0_u8; source.edges.len()];
     for coedge in source.loops.iter().flat_map(|wire| &wire.coedges) {
         charge(remaining, 1)?;
@@ -144,21 +167,7 @@ fn discover_rings(
                     continue;
                 }
                 let edge = &source.edges[coedge.edge];
-                let mut coplanar = true;
-                for point in &edge.curve.control_points {
-                    charge(remaining, 8)?;
-                    let dot: BigRational = exact_normal
-                        .iter()
-                        .zip(point)
-                        .map(|(n, x)| n * BigRational::from_float(*x).unwrap())
-                        .sum();
-                    let residual = dot - &exact_offset;
-                    if &residual * &residual > residual_squared {
-                        coplanar = false;
-                        break;
-                    }
-                }
-                if !coplanar {
+                if !select(&edge.curve, remaining)? {
                     continue;
                 }
                 let reversed = coedge.reversed ^ face_use.reversed;
@@ -345,3 +354,6 @@ fn close_shell<P>(
         verification_cells,
     })
 }
+
+mod infer;
+pub use infer::{InferredSectionPlane, InferredSectionPlanes, infer_section_planes};

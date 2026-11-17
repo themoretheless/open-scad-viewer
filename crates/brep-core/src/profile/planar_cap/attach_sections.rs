@@ -272,3 +272,5 @@ pub use solid::{
     BoundedSectionSolid, SectionSolid, SectionSolidOptions, build_bounded_section_solid,
     build_section_solid,
 };
+
+pub use discover::{InferredSectionPlane, InferredSectionPlanes, infer_section_planes};
