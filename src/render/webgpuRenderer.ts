@@ -13,6 +13,7 @@ import {
 } from './cameraHistory'
 import { NativePickingCache } from './nativePickingCache'
 import { warmGeometryKernel } from '../kernel/geometry/kernel'
+import { acquireWebGPUDevice, watchDeviceFailures } from './gpuDeviceManager'
 import { clientRayInKernel, projectPointInKernel } from '../kernel/geometry/viewport'
 import type { MeshData } from '../core/mesh'
 import {
@@ -410,75 +411,33 @@ export class WebGPURenderer {
     this.updateStatus({ status: 'initializing' })
 
     try {
-      if (typeof navigator === 'undefined' || !navigator.gpu) {
-        this.teardown()
-        this.updateStatus({
-          status: 'unavailable',
-          reason: 'webgpu',
-          message: 'WebGPU is unavailable in this environment.',
-        })
-        return false
-      }
-
-      const gpu = navigator.gpu
-      const adapter = await gpu.requestAdapter()
-      if (!adapter || !this.isCurrentInit(generation, canvas)) {
-        if (this.isCurrentInit(generation, canvas)) {
-          this.teardown()
-          this.updateStatus({
-            status: 'unavailable',
-            reason: 'adapter',
-            message: 'No compatible WebGPU adapter was found.',
-          })
-        }
-        return false
-      }
-
-      await warmGeometryKernel()
-      if (!this.isCurrentInit(generation, canvas)) return false
-      const device = await adapter.requestDevice()
-      if (!this.isCurrentInit(generation, canvas)) {
-        device.destroy()
-        return false
-      }
-
-      // Own the device before any further operation that can throw, so the
-      // outer failure path can always release it.
-      this.dev = device
-      const context = canvas.getContext('webgpu')
-      if (!context) {
-        this.teardown()
-        this.updateStatus({
-          status: 'unavailable',
-          reason: 'context',
-          message: 'The canvas could not create a WebGPU context.',
-        })
-        return false
-      }
-
-      this.ctx = context
-      this.fmt = gpu.getPreferredCanvasFormat()
-      context.configure({ device, format: this.fmt, alphaMode: 'premultiplied' })
-
-      void device.lost.then(info => {
-        if (this.dev !== device || this.dead) return
-        this.lost = true
-        this.initialized = false
-        this.drawable = false
-        this.cancelPendingHover()
-        if (this.raf) cancelAnimationFrame(this.raf)
-        this.raf = 0
-        this.updateStatus({
-          status: 'device-lost',
-          reason: info.reason,
-          message: info.message,
-        })
+      const acquired = await acquireWebGPUDevice(canvas, {
+        isCurrent: () => this.isCurrentInit(generation, canvas),
+        beforeDevice: warmGeometryKernel,
       })
-      // Errors outside the per-frame validation scope (pipeline creation,
-      // texture uploads) would otherwise only reach the console.
-      device.addEventListener?.('uncapturederror', event => {
-        if (this.dev !== device || this.dead) return
-        this.reportError('frame', new Error((event as GPUUncapturedErrorEvent).error.message))
+      if (acquired.kind === 'stale') return false
+      if (acquired.kind === 'unavailable') {
+        this.teardown()
+        this.updateStatus({ status: 'unavailable', reason: acquired.reason, message: acquired.message })
+        return false
+      }
+
+      const { device } = acquired
+      this.dev = device
+      this.ctx = acquired.context
+      this.fmt = acquired.format
+      watchDeviceFailures(device, {
+        isCurrent: () => this.dev === device && !this.dead,
+        onLost: info => {
+          this.lost = true
+          this.initialized = false
+          this.drawable = false
+          this.cancelPendingHover()
+          if (this.raf) cancelAnimationFrame(this.raf)
+          this.raf = 0
+          this.updateStatus({ status: 'device-lost', reason: info.reason, message: info.message })
+        },
+        onError: error => this.reportError('frame', error),
       })
 
       this.buildPipelines()
