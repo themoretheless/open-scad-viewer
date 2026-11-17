@@ -7,6 +7,8 @@ import {
   highlightActiveLineGutter,
   keymap,
   lineNumbers,
+  ViewPlugin,
+  type ViewUpdate,
   type DecorationSet,
 } from '@codemirror/view'
 import { defaultKeymap, historyKeymap } from '@codemirror/commands'
@@ -18,7 +20,6 @@ import {
   syntaxHighlighting,
   type StringStream,
 } from '@codemirror/language'
-import { highlightSelectionMatches } from '@codemirror/search'
 import { tags } from '@lezer/highlight'
 import { editorBlocks, type EditorBlock } from '../language/editorBlocks'
 import type { EditorCompositionPhase } from './EditorAdapter'
@@ -181,6 +182,48 @@ const highlightDecorations = EditorView.decorations.compute([highlightsField], (
   return Decoration.set(marks, true)
 })
 
+const selectionMatchMark = Decoration.mark({ class: 'cm-selectionMatch' })
+const WORD_CHAR = /[\w$]/
+
+/**
+ * Highlights other whole-word occurrences of a selected word (2+ chars) in the
+ * visible ranges. Replaces `@codemirror/search`'s `highlightSelectionMatches`
+ * so that package stays out of the editor chunk; find itself is app-owned.
+ */
+const selectionMatches = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet
+    constructor(view: EditorView) {
+      this.decorations = this.build(view)
+    }
+    update(update: ViewUpdate) {
+      if (update.docChanged || update.selectionSet || update.viewportChanged) this.decorations = this.build(update.view)
+    }
+    build(view: EditorView): DecorationSet {
+      const { state } = view
+      const sel = state.selection
+      if (sel.ranges.length > 1) return Decoration.none
+      const { from, to } = sel.main
+      const query = state.sliceDoc(from, to)
+      if (query.length < 2 || query.length > 200 || !/^[\w$]+$/.test(query)) return Decoration.none
+      const isWord = (pos: number) => pos >= 0 && pos < state.doc.length && WORD_CHAR.test(state.sliceDoc(pos, pos + 1))
+      if (isWord(from - 1) || isWord(to)) return Decoration.none
+      const marks = []
+      for (const range of view.visibleRanges) {
+        const text = state.sliceDoc(range.from, range.to)
+        for (let index = text.indexOf(query); index >= 0; index = text.indexOf(query, index + 1)) {
+          const start = range.from + index
+          const end = start + query.length
+          if (start === from || isWord(start - 1) || isWord(end)) continue
+          marks.push(selectionMatchMark.range(start, end))
+        }
+      }
+      return Decoration.set(marks, true)
+    }
+  },
+  { decorations: plugin => plugin.decorations },
+)
+
 /** Layout rules only; colours come from the app's CSS variables so both themes apply. */
 const scadTheme = EditorView.theme({
   '&': { height: '100%', backgroundColor: 'var(--bg)', color: 'var(--text)', fontSize: '12.5px' },
@@ -261,7 +304,7 @@ export function mountCodeMirror(options: MountCodeMirrorOptions): MountedCodeMir
       drawSelection(),
       scadRushLanguage,
       syntaxHighlighting(scadHighlightStyle),
-      highlightSelectionMatches({ minSelectionLength: 2, wholeWords: true }),
+      selectionMatches,
       highlightDecorations,
       // No Tab binding: the app's keydown handler owns Tab / Shift+Tab indentation.
       keymap.of([...historyKeymap, ...defaultKeymap]),

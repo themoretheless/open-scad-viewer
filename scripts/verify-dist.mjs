@@ -162,7 +162,7 @@ const jsChunkBudgets = [
   // Modeling tools with validated transferable G-code moves, measured: 100,285 bytes.
   [/^assets\/MainModelingTools-[^/]+\.js$/, 102_000],
   // Named lazy chunks (vite.config.ts runtimeChunkFileName); each measured with ~0.5 KB headroom.
-  [/^assets\/codemirrorView-[^/]+\.js$/, 309_400], // CodeMirror 6 editor view: measured 308,892 bytes.
+  [/^assets\/codemirrorView-[^/]+\.js$/, 303_900], // CodeMirror 6 editor view without @codemirror/search: measured 303,339 bytes.
   [/^assets\/geometryBuildEngine-[^/]+\.js$/, 332_900], // Geometry build engine and semantic lowering: measured 332,379 bytes (was 330,732).
   [/^assets\/wasmStreaming-[^/]+\.js$/, 196_300], // Merge of origin/main (worker commit deltas against the published state): measured 195,710 bytes (was 195,195 with kernel jobs, worker protocol v13; 187,929 before).
   [/^assets\/workerHandlerRuntime-[^/]+\.js$/, 113_400], // Shared worker handler runtime and coded error validation, grown by origin/main worker code (main budgeted it as a hashed chunk at 111,500): measured 112,878 bytes (was 108,416).
