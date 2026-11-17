@@ -1,7 +1,16 @@
 import { readFileSync } from 'node:fs'
-import { expressionShellExpectation, validExpressionShell } from '../src/kernel/expressionShell'
+import {
+  expressionShellExpectation,
+  validExpressionShell,
+  type ExpressionShellOptions,
+} from '../src/kernel/expressionShell'
 import { describe, it, expect } from 'vitest'
 import { validNeighborTangencyRequest, validNeighborTangencyReport } from '../src/kernel/expressionNeighborTangency'
+type NeighborCheck = { maxSineSquared: number; [key: string]: unknown }
+type NeighborFixture = {
+  request: ExpressionShellOptions & { neighborTangencyCheck: NeighborCheck }
+  shell: { neighborTangencyCheck: Record<string, unknown> }
+}
 describe('actual shell neighbor tangency transport', () => {
   const request = { controls: 1000, cells: 10000, spans: 100000, maxSineSquared: 1e-6 }
   const pending = {
@@ -52,7 +61,7 @@ describe('actual shell neighbor tangency transport', () => {
 })
 
 it('validates native actual-neighbor reports and rejects stale angular requests', () => {
-  const fixtures = JSON.parse(
+  const fixtures: { admitted: NeighborFixture } = JSON.parse(
     readFileSync(
       new URL(
         '../docs/qualification/mapped-retained-carrier-2026-10-08/expression-neighbor-tangency-dispatch-2026-10-10.json',
@@ -61,7 +70,7 @@ it('validates native actual-neighbor reports and rejects stale angular requests'
       'utf8',
     ),
   )
-  for (const value of Object.values(fixtures) as any[])
+  for (const value of Object.values(fixtures) as NeighborFixture[])
     expect(validExpressionShell(expressionShellExpectation(value.request), value)).toBe(true)
   const original = fixtures.admitted,
     expected = expressionShellExpectation(original.request)

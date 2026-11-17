@@ -45,9 +45,13 @@ describe('exact Full Round scene on qualified real WASM', () => {
     expect(mesh.indices.length).toBeGreaterThan(0)
     expect(scene.outputs[0].snapshotRevision).toBe(snapshot.revision)
     const exact = restoreExactFullRoundSnapshot(snapshot)
-    expect(scene.outputs[0].topologyFaceIds).toEqual((exact.model as any).topologyIds.faces)
+    expect(scene.outputs[0].topologyFaceIds).toEqual(
+      (exact.model as unknown as { topologyIds: { faces: unknown[] } }).topologyIds.faces,
+    )
     expect(new Set(mesh.faceIds).size).toBe(scene.outputs[0].topologyFaceIds.length)
-    expect(typeof (exact.model as any).vertices[0].point[0][0]).toBe('string')
+    expect(typeof (exact.model as unknown as { vertices: { point: string[][] }[] }).vertices[0]!.point[0]![0]).toBe(
+      'string',
+    )
     expect(isGeometryEvaluationResultPayload(structuredClone(scene.result))).toBe(true)
   }, 30000)
   it('keeps exact geometry and entity stable across display detail changes', async () => {

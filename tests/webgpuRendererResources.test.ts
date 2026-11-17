@@ -476,7 +476,7 @@ describe('parameter geometry animation', () => {
 
   it('drives vertex morphs from a source buffer and blend uniform without rewriting vertices', () => {
     vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
-    const { renderer, internal } = harness()
+    const { renderer } = harness()
     const state = renderer as unknown as {
       meshes: Array<{
         morph?: { from: Float32Array; started: number }

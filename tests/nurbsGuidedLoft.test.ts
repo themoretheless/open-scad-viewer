@@ -1,11 +1,14 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
 import { bezierNurbsCurve, guidedLoftNurbsCurves, controlTangentLoftNurbsCurves } from '../src/kernel/nurbsConstructors'
-import { evaluateNurbsSurface } from '../src/kernel/nurbsSurface'
+import { evaluateNurbsSurface, type NurbsSurface } from '../src/kernel/nurbsSurface'
 import { compileRushFrontend } from '../src/language/rushFrontend'
 import { buildOwnNurbs } from '../src/language/rushGraphNurbsKernel'
 import { compileRushGraphNurbs } from '../src/language/rushGraphNurbsCompiler'
 import { importMeshFile } from '../src/exchange/meshImport'
+import type { NurbsBrep } from '../src/kernel/geometry/brep'
+type SectionCertificate = { accepted: boolean; errorUpper: number }
+type LoftReport = { originalSectionCertificates: SectionCertificate[]; tangents?: unknown }
 
 it('lowers guide references and checks tangent units through Rush', () => {
   const source = readFileSync('examples/rush/guided-loft-surface.r', 'utf8')
@@ -221,7 +224,7 @@ it('retains original section compositions through mapped Rush entrypoints', () =
     const compiled = compileRushFrontend(text),
       loft = compiled.document.nodes.find(n => n.op === 'guided_loft_surface' || n.op === 'auto_guided_loft_surface')!
     const built = buildOwnNurbs(compiled.document, { action: 'build' })
-    const report = built.report.construction?.[loft.id] as any
+    const report = built.report.construction?.[loft.id] as LoftReport
     expect(report.originalSectionCertificates).toHaveLength(2)
     for (const certificate of report.originalSectionCertificates) {
       expect(certificate).toMatchObject({
@@ -231,7 +234,7 @@ it('retains original section compositions through mapped Rush entrypoints', () =
       })
       expect(certificate.errorUpper).toBeLessThanOrEqual(1e-6)
     }
-    const surface = built.report.definitions[loft.id] as any
+    const surface = built.report.definitions[loft.id] as NurbsSurface
     for (const u of [0, 0.13, 0.37, 0.5, 0.87, 1])
       for (const [v, weights] of [
         [0, [1, 2]],
@@ -267,10 +270,10 @@ it('builds authored nonplanar caps and refuses incomplete embedding through Rush
   const compiled = compileRushFrontend(source),
     built = buildOwnNurbs(compiled.document, { action: 'build' })
   expect(built.report.root_kind).toBe('brep')
-  const model = built.report.definitions[compiled.document.root] as any
+  const model = built.report.definitions[compiled.document.root] as NurbsBrep
   expect(model.faces).toHaveLength(6)
   expect(model.bodies).toHaveLength(1)
-  expect(evaluateNurbsSurface(model.faces[4].surface, 0.5, 0.5).point[2]).toBeCloseTo(0.125, 12)
+  expect(evaluateNurbsSurface(model.faces[4]!.surface, 0.5, 0.5).point[2]).toBeCloseTo(0.125, 12)
   expect(() =>
     buildOwnNurbs(
       compileRushFrontend(source.replace('loft_embedding_limits()', 'loft_embedding_limits(facePairs: 1)')).document,
@@ -302,8 +305,8 @@ it('combines nested section maps, unequal weights, curved guides and authored ta
     const compiled = compileRushFrontend(text),
       node = compiled.document.nodes.find(n => n.op === 'guided_loft_surface' || n.op === 'auto_guided_loft_surface')!
     const built = buildOwnNurbs(compiled.document, { action: 'build' }),
-      report = built.report.construction?.[node.id] as any
-    expect(report.originalSectionCertificates.every((c: any) => c.accepted && c.errorUpper <= 1e-6)).toBe(true)
+      report = built.report.construction?.[node.id] as LoftReport
+    expect(report.originalSectionCertificates.every(c => c.accepted && c.errorUpper <= 1e-6)).toBe(true)
     expect(report.tangents).toMatchObject([
       { accepted: true, targetUnits: 'authored-dP/dt' },
       { accepted: true, targetUnits: 'authored-dP/dt' },
@@ -313,7 +316,7 @@ it('combines nested section maps, unequal weights, curved guides and authored ta
         [0, 32],
         [1, -32],
       ]) {
-        const dv = evaluateNurbsSurface(built.report.definitions[node.id] as any, u, v).dv!
+        const dv = evaluateNurbsSurface(built.report.definitions[node.id] as NurbsSurface, u, v).dv!
         expect(dv[0]).toBeCloseTo(0, 8)
         expect(dv[1]).toBeCloseTo(y, 8)
         expect(dv[2]).toBeCloseTo(80, 8)

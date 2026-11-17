@@ -138,6 +138,7 @@ it('rebuilds dense generated geometry from compact OpenSCAD source', async () =>
       String(e).split('\n')[0] +
         ' CODE ' +
         source.slice((e as { start: number }).start - 70, (e as { start: number }).start + 70),
+      { cause: e },
     )
   }
   expect(built.meshes).toHaveLength(1)

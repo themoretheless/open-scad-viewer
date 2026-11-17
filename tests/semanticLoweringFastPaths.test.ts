@@ -82,7 +82,7 @@ describe('semantic lowering fast paths', () => {
     const originalHas = WeakSet.prototype.has
     const originalGet = WeakMap.prototype.get
     let forgedError: unknown = null
-    let encodedLength = 0
+    let encodedLength: number
     // Only the calls under test run while the prototypes are patched: vitest itself uses them.
     try {
       WeakSet.prototype.has = () => true

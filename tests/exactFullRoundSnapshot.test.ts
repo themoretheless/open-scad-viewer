@@ -32,10 +32,13 @@ import {
 } from '../src/core/nativeGeometry'
 import { prepareExactFullRoundDisplay } from '../src/kernel/geometry/brepExactDisplay'
 
-function construct(height: number): { artifact: any; program: any } {
+type ExactModel = { vertices: { point: string[][] }[] }
+type ExactArtifact = Record<string, unknown> & { geometry: ExactModel }
+type Program = ReturnType<typeof lowerOpenSCADToSemanticProgram>['program']
+function construct(height: number): { artifact: ExactArtifact; program: Program } {
   const source = '// @language openscad-viewer/brep-1\nfull_round_exact([5,4,3]) cube([4,8,' + height + ']);'
   const program = lowerOpenSCADToSemanticProgram(source).program
-  const output: any = callGeometryRust('brep_graph', {
+  const output = callGeometryRust<{ outcomes: { geometry: { artifact: ExactArtifact } }[] }>('brep_graph', {
     ...program.core,
     op: 'brep_graph',
     sourceText: source,
@@ -47,10 +50,10 @@ function construct(height: number): { artifact: any; program: any } {
     maxNodes: 4,
     maxBytes: 4194304,
   })
-  return { artifact: output.outcomes[0].geometry.artifact, program }
+  return { artifact: output.outcomes[0]!.geometry.artifact, program }
 }
 describe('exact Full Round snapshot with qualified real WASM', () => {
-  let artifact: any, program: any
+  let artifact: ExactArtifact, program: Program
   beforeAll(() => {
     ;({ artifact, program } = construct(6))
   }, 30000)
@@ -62,9 +65,9 @@ describe('exact Full Round snapshot with qualified real WASM', () => {
     const restored = restoreExactFullRoundSnapshot(transported)
     expect(restored.artifact).toEqual(artifact)
     expect(restored.model).toEqual(artifact.geometry)
-    expect(typeof (restored.model as any).vertices[0].point[0][0]).toBe('string')
+    expect(typeof (restored.model as unknown as ExactModel).vertices[0]!.point[0]![0]).toBe('string')
     expect(Object.isFrozen(restored.artifact.geometry)).toBe(true)
-    expect(Object.isFrozen((restored.model as any).vertices[0].point[0])).toBe(true)
+    expect(Object.isFrozen((restored.model as unknown as ExactModel).vertices[0]!.point[0])).toBe(true)
   }, 30000)
   it('keeps geometry revision independent of display sampling and document revision', () => {
     const first = createExactFullRoundSnapshot('body', artifact, program)
@@ -78,7 +81,7 @@ describe('exact Full Round snapshot with qualified real WASM', () => {
   }, 30000)
   it('rejects geometric forgery even with valid freshly recomputed storage hashes', () => {
     const forged = structuredClone(artifact)
-    forged.geometry.vertices[0].point[0] = ['999', '1']
+    forged.geometry.vertices[0]!.point[0] = ['999', '1']
     const snapshot = createNativeGeometryArtifact(
       'body',
       'rational-brep',

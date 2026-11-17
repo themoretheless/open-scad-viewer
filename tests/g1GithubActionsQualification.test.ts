@@ -8,7 +8,31 @@ import { afterEach, describe, expect, it } from 'vitest'
 const root = resolve(import.meta.dirname, '..')
 const harness = resolve(root, 'scripts/g1-github-actions.mjs')
 const planPath = resolve(root, 'docs/qualification/semantic-manifold-g1-plan-v125.json')
-const plan = JSON.parse(readFileSync(planPath, 'utf8'))
+type Sha256Binding = { value: string; byteLength: number }
+type PlanEnvironment = {
+  id: string
+  os: string
+  class?: string
+  architecture?: string
+  browser?: { engine: string }
+  runtime: { version: string; sha256: Sha256Binding }
+}
+type PlanBinding = { id: string; sha256: Sha256Binding }
+type PlanBundle = PlanBinding & { paths: string[] }
+type PlanRow = {
+  id: string
+  executionEnvironmentIds: string[]
+  work: { cleanRunsRequired: number; unitsPerCleanRun: number; seeds: unknown[] }
+}
+type Plan = {
+  planId: string
+  executionProtocol: { candidateRunId: string }
+  lifecycle: { qualificationClaim: string }
+  bindings: { artifacts: PlanBinding[]; bundles: PlanBundle[] }
+  matrix: PlanRow[]
+  environments: PlanEnvironment[]
+}
+const plan: Plan = JSON.parse(readFileSync(planPath, 'utf8'))
 const runtimeFreeze = JSON.parse(
   readFileSync(resolve(root, 'docs/qualification/environment-freeze/g1-runtime-browser-bindings-v1.json'), 'utf8'),
 )
@@ -19,10 +43,10 @@ const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encodi
 const temporaryRoots: string[] = []
 
 const digest = (bytes: Buffer | string) => createHash('sha256').update(bytes).digest('hex')
-const runnerKey = (environment: any) => (environment.os === 'macos-15' ? 'macos-15-arm64' : environment.os)
+const runnerKey = (environment: PlanEnvironment) => (environment.os === 'macos-15' ? 'macos-15-arm64' : environment.os)
 const evidenceProducers = ['.github/workflows/g1-qualification-clean.yml', 'scripts/g1-github-actions.mjs']
 
-function validateHarnessBinding(bundle: any): void {
+function validateHarnessBinding(bundle: PlanBundle): void {
   for (const path of evidenceProducers) {
     if (!bundle.paths.includes(path)) throw new Error(`unbound evidence producer: ${path}`)
   }
@@ -32,7 +56,7 @@ function validateHarnessBinding(bundle: any): void {
   }
 }
 
-function writeEvidence(directory: string, fragment: any, preflight: any): void {
+function writeEvidence(directory: string, fragment: unknown, preflight: unknown): void {
   mkdirSync(directory, { recursive: true })
   writeFileSync(resolve(directory, 'fragment.json'), `${JSON.stringify(fragment, null, 2)}\n`)
   writeFileSync(resolve(directory, 'preflight.json'), `${JSON.stringify(preflight, null, 2)}\n`)
@@ -51,22 +75,16 @@ function fixture(): { artifacts: string; first: string } {
   const artifacts = resolve(directory, 'artifacts')
   const bindings = {
     artifacts: Object.fromEntries(
-      plan.bindings.artifacts.map((item: any) => [
-        item.id,
-        { value: item.sha256.value, byteLength: item.sha256.byteLength },
-      ]),
+      plan.bindings.artifacts.map(item => [item.id, { value: item.sha256.value, byteLength: item.sha256.byteLength }]),
     ),
     bundles: Object.fromEntries(
-      plan.bindings.bundles.map((item: any) => [
-        item.id,
-        { value: item.sha256.value, byteLength: item.sha256.byteLength },
-      ]),
+      plan.bindings.bundles.map(item => [item.id, { value: item.sha256.value, byteLength: item.sha256.byteLength }]),
     ),
   }
   let first = ''
   for (const row of plan.matrix) {
     for (const environmentId of row.executionEnvironmentIds) {
-      const environment = plan.environments.find((item: any) => item.id === environmentId)
+      const environment = plan.environments.find(item => item.id === environmentId)!
       const node =
         runtimeFreeze.nodeArtifacts[environment.class === 'vite-browser' ? 'vite-host-node22' : environmentId]
       const runner = githubFreeze.runnerImages[runnerKey(environment)]
@@ -75,14 +93,14 @@ function fixture(): { artifacts: string; first: string } {
         : null
       const browser = browserRevision
         ? {
-            engine: environment.browser.engine,
+            engine: environment.browser!.engine,
             revision: browserRevision,
             provisionRoot: '/frozen/playwright',
             value: githubFreeze.playwright.browserTrees[browserRevision].treeSha256,
             byteLength: githubFreeze.playwright.browserTrees[browserRevision].manifestByteLength,
             entryCount: githubFreeze.playwright.browserTrees[browserRevision].entryCount,
             trees: Object.fromEntries(
-              githubFreeze.playwright.requiredTrees[environment.browser.engine].map((revision: string) => {
+              githubFreeze.playwright.requiredTrees[environment.browser!.engine].map((revision: string) => {
                 const tree = githubFreeze.playwright.browserTrees[revision]
                 return [
                   revision,
@@ -192,7 +210,7 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
       priorResultsMayBeImported: false,
     })
     expect(plan.lifecycle.qualificationClaim).toBe('none')
-    const harnessBundle = plan.bindings.bundles.find((item: any) => item.id === 'g1-qualification-harness-bundle')
+    const harnessBundle = plan.bindings.bundles.find(item => item.id === 'g1-qualification-harness-bundle')!
     expect(harnessBundle.paths).toEqual(
       expect.arrayContaining([
         '.github/workflows/g1-qualification-clean.yml',
@@ -209,7 +227,7 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
 
   it.each(evidenceProducers)('rejects an unbound %s producer', producer => {
     const harnessBundle = structuredClone(
-      plan.bindings.bundles.find((item: any) => item.id === 'g1-qualification-harness-bundle'),
+      plan.bindings.bundles.find(item => item.id === 'g1-qualification-harness-bundle')!,
     )
     harnessBundle.paths = harnessBundle.paths.filter((path: string) => path !== producer)
     expect(() => validateHarnessBinding(harnessBundle)).toThrow(/unbound evidence producer/u)
@@ -231,7 +249,7 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
     const { artifacts, first } = fixture()
     const fragment = JSON.parse(readFileSync(resolve(first, 'fragment.json'), 'utf8'))
     const preflight = JSON.parse(readFileSync(resolve(first, 'preflight.json'), 'utf8'))
-    const environment = plan.environments.find((item: any) => item.id === fragment.environmentId)
+    const environment = plan.environments.find(item => item.id === fragment.environmentId)!
     const variant = githubFreeze.runnerImages[runnerKey(environment)].observedVariants[0]
     for (const value of [fragment, preflight]) {
       value.host.runnerImage = variant.imageOS
@@ -245,7 +263,7 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
 
   it.each(['observed', 'unobserved'])('checks %s Windows rollout image without loosening host admission', kind => {
     const { artifacts } = fixture()
-    const row = plan.matrix.find((item: any) => item.executionEnvironmentIds.includes('windows-node20'))
+    const row = plan.matrix.find(item => item.executionEnvironmentIds.includes('windows-node20'))!
     const target = resolve(artifacts, `${row.id}--windows-node20--run-1`)
     const fragment = JSON.parse(readFileSync(resolve(target, 'fragment.json'), 'utf8'))
     const preflight = JSON.parse(readFileSync(resolve(target, 'preflight.json'), 'utf8'))
@@ -313,14 +331,14 @@ describe('G1 V34 GitHub Actions evidence integrity', () => {
 describe('cross-platform frozen runtime execution', () => {
   it('accepts the actual Node Windows identity and refuses another OS or architecture', async () => {
     const { matchesNodeHost } = await import('../scripts/g1RuntimeIdentity.mjs')
-    const windows = plan.environments.find((item: any) => item.id === 'windows-node20')
+    const windows = plan.environments.find(item => item.id === 'windows-node20')
     expect(matchesNodeHost(windows, 'win32', 'x64')).toBe(true)
     expect(matchesNodeHost(windows, 'linux', 'x64')).toBe(false)
     expect(matchesNodeHost(windows, 'win32', 'arm64')).toBe(false)
     expect(matchesNodeHost(windows, 'windows', 'x64')).toBe(false)
-    const mac = plan.environments.find((item: any) => item.id === 'macos-node20')
+    const mac = plan.environments.find(item => item.id === 'macos-node20')
     expect(matchesNodeHost(mac, 'darwin', 'arm64')).toBe(true)
-    const ubuntu = plan.environments.find((item: any) => item.id === 'ubuntu-node20')
+    const ubuntu = plan.environments.find(item => item.id === 'ubuntu-node20')
     expect(matchesNodeHost(ubuntu, 'linux', 'x64')).toBe(true)
   })
 
@@ -345,13 +363,13 @@ describe('cross-platform frozen runtime execution', () => {
     const result = spawnSync(process.execPath, [harness, 'matrix', '--probe-only'], { cwd: root, encoding: 'utf8' })
     expect(result.status, result.stderr).toBe(0)
     const matrix = JSON.parse(result.stdout)
-    expect(matrix.nodes.include.map((item: any) => item.environment).sort()).toEqual([
+    expect(matrix.nodes.include.map((item: { environment: string }) => item.environment).sort()).toEqual([
       'macos-node20',
       'ubuntu-node20',
       'ubuntu-node22',
       'windows-node20',
     ])
-    expect(matrix.browsers.include.map((item: any) => item.environment).sort()).toEqual([
+    expect(matrix.browsers.include.map((item: { environment: string }) => item.environment).sort()).toEqual([
       'vite-chromium',
       'vite-webkit',
     ])
@@ -359,13 +377,13 @@ describe('cross-platform frozen runtime execution', () => {
 })
 
 it('preserves exact LF checkout bytes for every bound source and native sources', () => {
-  const paths = [...new Set(plan.bindings.bundles.flatMap((item: any) => item.paths))] as string[]
+  const paths = [...new Set(plan.bindings.bundles.flatMap(item => item.paths))]
   paths.push('crates/nurbs-core/src/sweeps/profile_certificate.rs', 'crates/Cargo.toml', 'crates/Cargo.lock')
   const attributes = execFileSync('git', ['check-attr', '-z', 'eol', '--', ...paths], {
     cwd: root,
     encoding: 'utf8',
   }).split('\0')
   for (let i = 0; i < attributes.length - 1; i += 3) expect(attributes[i + 2], attributes[i]).toBe('lf')
-  const harnessBundle = plan.bindings.bundles.find((item: any) => item.paths.includes('scripts/g1-github-actions.mjs'))
+  const harnessBundle = plan.bindings.bundles.find(item => item.paths.includes('scripts/g1-github-actions.mjs'))!
   expect(harnessBundle.paths).toContain('.gitattributes')
 })

@@ -72,7 +72,10 @@ describe('original quadric carrier evidence', () => {
     expect(valid(r)).toBe(false)
   })
   it('rejects unmatched multiplicities and source spans', () => {
-    for (const change of [(r: any) => (r.roots[0].multiplicities = [2]), (r: any) => (r.roots[0].sourceSpans = [2])]) {
+    for (const change of [
+      (r: ReturnType<typeof quadricReport>) => (r.roots[0].multiplicities = [2]),
+      (r: ReturnType<typeof quadricReport>) => (r.roots[0].sourceSpans = [2]),
+    ]) {
       const r = quadricReport()
       change(r)
       expect(valid(r)).toBe(false)

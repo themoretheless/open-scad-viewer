@@ -1,14 +1,33 @@
 import { readFileSync } from 'node:fs'
 import { createRenderer, nextTick, ref, h } from 'svet'
-import { it, expect, vi } from 'vitest'
-const state = vi.hoisted(() => ({ tasks: [] as any[], worker: null as any }))
+import { it, expect, vi, type Mock } from 'vitest'
+type Task = { resolve: (value: unknown) => void; reject: (reason: unknown) => void; job: unknown }
+type FakeWorker = { cancel: Mock; dispose: Mock; run: Mock }
+type Handler = (...args: unknown[]) => unknown
+type FakeNode = {
+  type: string
+  text?: string
+  children: FakeNode[]
+  props: { onClick: Handler; onKeydown: Handler; 'onUpdate:modelValue': Handler; [key: string]: unknown }
+  parent: FakeNode | null
+  focus(): void
+  getRootNode(): object
+  addEventListener(): void
+  removeEventListener(): void
+  setAttribute(): void
+  removeAttribute(): void
+  tagName: string
+  style: object
+  options: unknown[]
+}
+const state = vi.hoisted(() => ({ tasks: [] as Task[], worker: null as FakeWorker | null }))
 vi.mock('../src/kernel/solidPreviewWorker', () => ({
   createSolidPreviewWorker: () => {
     state.tasks = []
     state.worker = {
       cancel: vi.fn(),
       dispose: vi.fn(),
-      run: vi.fn((job: any) => new Promise((resolve, reject) => state.tasks.push({ resolve, reject, job }))),
+      run: vi.fn((job: unknown) => new Promise((resolve, reject) => state.tasks.push({ resolve, reject, job }))),
     }
     return state.worker
   },
@@ -24,14 +43,17 @@ it('preserves keyboard focus through invalid input, cancel, Retry and closing; c
   vi.stubGlobal('Document', class {})
   vi.stubGlobal('ShadowRoot', class {})
   vi.stubGlobal('HTMLInputElement', class {})
-  let focused: any
-  const node = (type: string) => ({
+  let focused: FakeNode | undefined
+  const markFocused = (n: FakeNode) => {
+    focused = n
+  }
+  const node = (type: string): FakeNode => ({
     type,
-    children: [] as any[],
-    props: {} as any,
-    parent: null as any,
+    children: [],
+    props: {} as FakeNode['props'],
+    parent: null,
     focus() {
-      focused = this
+      markFocused(this)
     },
     getRootNode() {
       return {}
@@ -44,7 +66,7 @@ it('preserves keyboard focus through invalid input, cancel, Retry and closing; c
     style: {},
     options: [],
   })
-  const renderer = createRenderer<any, any>({
+  const renderer = createRenderer<FakeNode, FakeNode>({
     createElement: node,
     createText: text => ({ ...node('#text'), text }),
     createComment: text => ({ ...node('#comment'), text }),
@@ -81,8 +103,8 @@ it('preserves keyboard focus through invalid input, cancel, Retry and closing; c
     render: () => h(Panel, { surfaces: surfaces.value, active: active.value, ru: ru.value }),
   })
   app.mount(root)
-  const all = (n: any): any[] => [n, ...n.children.flatMap(all)]
-  const button = (text: string) => all(root).find(n => n.type === 'button' && n.text === text)
+  const all = (n: FakeNode): FakeNode[] => [n, ...n.children.flatMap(all)]
+  const button = (text: string) => all(root).find(n => n.type === 'button' && n.text === text)!
   const flush = async () => {
     await nextTick()
     await nextTick()
@@ -91,7 +113,7 @@ it('preserves keyboard focus through invalid input, cancel, Retry and closing; c
   try {
     button('Inspect profile transition').props.onClick()
     await flush()
-    const angle = all(root).find(n => n.type === 'input' && String(n.props.min) === '0')
+    const angle = all(root).find(n => n.type === 'input' && String(n.props.min) === '0')!
     angle.props['onUpdate:modelValue'](1)
     await flush()
     await button('Inspect · Enter').props.onClick()
@@ -105,22 +127,22 @@ it('preserves keyboard focus through invalid input, cancel, Retry and closing; c
     void button('Inspect · Enter').props.onClick()
     await flush()
     expect(state.tasks).toHaveLength(1)
-    expect(focused.text).toBe('Cancel · Esc')
-    const section = all(root).find(n => n.type === 'section'),
+    expect(focused!.text).toBe('Cancel · Esc')
+    const section = all(root).find(n => n.type === 'section')!,
       event = escape()
     section.props.onKeydown(event)
     await flush()
     expect(event.preventDefault).toHaveBeenCalledOnce()
-    expect(focused.text).toBe('Inspect · Enter')
-    state.tasks[0].resolve(fixture.report)
+    expect(focused!.text).toBe('Inspect · Enter')
+    state.tasks[0]!.resolve(fixture.report)
     await flush()
     expect(all(root).some(n => n.props.role === 'status')).toBe(false)
     void button('Inspect · Enter').props.onClick()
     await flush()
-    state.tasks[1].reject(Object.assign(new Error('native failure'), { code: 'CAD_OPERATION' }))
+    state.tasks[1]!.reject(Object.assign(new Error('native failure'), { code: 'CAD_OPERATION' }))
     await flush()
     expect(button('Retry · Enter')).toBeTruthy()
-    expect(focused.text).toBe('Retry · Enter')
+    expect(focused!.text).toBe('Retry · Enter')
     for (const [code, hint, russianHint] of [
       ['CAD_REQUEST', 'Correct the section parameters', 'Исправьте параметры сечений'],
       ['CAD_TIMEOUT', 'Reduce the work budget', 'Уменьшите бюджет'],
@@ -132,19 +154,19 @@ it('preserves keyboard focus through invalid input, cancel, Retry and closing; c
     ]) {
       void button('Retry · Enter').props.onClick()
       await flush()
-      state.tasks.at(-1).reject(Object.assign(new Error('opaque native failure'), { code }))
+      state.tasks.at(-1)!.reject(Object.assign(new Error('opaque native failure'), { code }))
       await flush()
-      const alert = all(root).find(n => n.props.role === 'alert')
+      const alert = all(root).find(n => n.props.role === 'alert')!
       expect(
         all(alert)
           .map(n => n.text ?? '')
           .join(' '),
       ).toContain(hint)
-      expect(focused.text).toBe('Retry · Enter')
+      expect(focused!.text).toBe('Retry · Enter')
       const dispatched = state.tasks.length
       ru.value = true
       await flush()
-      const localized = all(root).find(n => n.props.role === 'alert')
+      const localized = all(root).find(n => n.props.role === 'alert')!
       const localizedText = all(localized)
         .map(n => n.text ?? '')
         .join(' ')
@@ -158,10 +180,10 @@ it('preserves keyboard focus through invalid input, cancel, Retry and closing; c
     }
     void button('Retry · Enter').props.onClick()
     await flush()
-    state.tasks.at(-1).resolve(fixture.stoppedCoverage.report)
+    state.tasks.at(-1)!.resolve(fixture.stoppedCoverage.report)
     await flush()
     expect(all(root).some(n => n.props.role === 'status')).toBe(true)
-    const region = all(root).find(n => n.props['aria-label'] === 'Unresolved transition pair')
+    const region = all(root).find(n => n.props['aria-label'] === 'Unresolved transition pair')!
     expect(region.props.max).toBe(fixture.stoppedCoverage.report.coverage.unresolvedPairs.length)
     region.props['onUpdate:modelValue'](0)
     await flush()
@@ -175,7 +197,7 @@ it('preserves keyboard focus through invalid input, cancel, Retry and closing; c
     expect(all(root).some(n => n.props.role === 'status')).toBe(false)
     void button('Inspect · Enter').props.onClick()
     await flush()
-    const obsolete = state.tasks.at(-1)
+    const obsolete = state.tasks.at(-1)!
     surfaces.value[0].weights[0][0] += 0.01
     await flush()
     expect(button('Inspect · Enter')).toBeTruthy()
@@ -203,11 +225,11 @@ it('preserves keyboard focus through invalid input, cancel, Retry and closing; c
     expect(button('Inspect · Enter').props.disabled).toBe(false)
     section.props.onKeydown(escape())
     await flush()
-    expect(focused.text).toBe('Inspect profile transition')
-    expect(focused.props['aria-expanded']).toBe(false)
+    expect(focused!.text).toBe('Inspect profile transition')
+    expect(focused!.props['aria-expanded']).toBe(false)
   } finally {
     app.unmount()
     vi.unstubAllGlobals()
   }
-  expect(state.worker.dispose).toHaveBeenCalledOnce()
+  expect(state.worker?.dispose).toHaveBeenCalledOnce()
 })

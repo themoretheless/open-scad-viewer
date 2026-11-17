@@ -28,7 +28,7 @@ it.each([
   if (caps.capRepresentation === 'radial-annular') {
     expect(caps.capFaceGroups.map((group: number[]) => group.length)).toEqual([4, 4])
     expect(caps.capFaces.map((face: number) => model.faces[face].holes.length)).toEqual(Array(8).fill(0))
-  } else expect(model.faces.slice(-2).map((f: any) => f.holes.length)).toEqual([1, 1])
+  } else expect(model.faces.slice(-2).map((f: { holes: unknown[] }) => f.holes.length)).toEqual([1, 1])
   const stored = JSON.stringify(model)
   expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry, model)).toMatchObject({
     solidGeometryCertified: true,

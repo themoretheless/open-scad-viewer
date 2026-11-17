@@ -8,6 +8,7 @@ import { describePublicErrorCode as describePublicErrorCodeFromPublicError } fro
 import { getGpuExecutionTopologyReport, getGpuMemoryArchitectureProfile } from '../src/render/types'
 import { createAndUploadBufferByArchitecture, detectGpuMemoryArchitecture } from '../src/render/gpuZeroCopyPipeline'
 import { sameTypedArray, sortEdgeDraws, sortOpaqueDraws } from '../src/render/drawSorting'
+import type { GMesh } from '../src/render/types'
 import { isSectionClipped, selectionCandidateKey } from '../src/render/pickingController'
 import { groupByShadingModel } from '../src/render/framePassEncoder'
 import { deepEqual, identityValue, truthy, valueToString } from '../src/parser/astDiscovery'
@@ -290,15 +291,15 @@ describe('Tier IV Wave 5 Improvements', () => {
         { vb: vb2, ib: ib1, edgeIB: ib1, bg: bg2, shadingModel: 'pbr', ic: 12, edgeIC: 8 },
         { vb: vb1, ib: ib1, edgeIB: ib1, bg: bg1, shadingModel: 'phong', ic: 12, edgeIC: 8 },
         { vb: vb2, ib: ib1, edgeIB: ib1, bg: bg1, shadingModel: 'phong', ic: 12, edgeIC: 8 },
-      ] as any[]
+      ] as unknown as GMesh[]
       sortOpaqueDraws(draws)
       // 'pbr' < 'phong' lexicographically, and within 'phong' the two vb2/vb1 meshes are grouped deterministically
-      expect(draws[0].shadingModel).toBe('pbr')
-      expect(draws[1].shadingModel).toBe('phong')
-      expect(draws[2].shadingModel).toBe('phong')
+      expect(draws[0]!.shadingModel).toBe('pbr')
+      expect(draws[1]!.shadingModel).toBe('phong')
+      expect(draws[2]!.shadingModel).toBe('phong')
       sortEdgeDraws(draws)
       // After sortEdgeDraws, both vb2 meshes are adjacent
-      expect(draws[0].vb === draws[1].vb || draws[1].vb === draws[2].vb).toBe(true)
+      expect(draws[0]!.vb === draws[1]!.vb || draws[1]!.vb === draws[2]!.vb).toBe(true)
 
       const groups = groupByShadingModel(draws)
       expect(groups).toHaveLength(2)

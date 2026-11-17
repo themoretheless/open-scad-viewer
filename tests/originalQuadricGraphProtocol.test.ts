@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { isOriginalQuadricGraphReport as valid } from '../src/kernel/originalQuadricGraphProtocol'
 import { isOriginalQuadricCarrierReport } from '../src/kernel/originalQuadricCarrierProtocol'
 import { graphReport, graphBoundaryReport, graphUnprovedReport } from './fixtures/quadricGraph'
+type Graph = ReturnType<typeof graphReport>
+type Boundary = ReturnType<typeof graphBoundaryReport>
 describe('finite quadric graph evidence', () => {
   it('accepts finite contact only with original target and carrier provenance', () =>
     expect(valid(graphReport())).toBe(true))
@@ -64,9 +66,9 @@ describe('finite quadric graph evidence', () => {
   })
   it('rejects wrong source order, source span, or unrelated natural parameter', () => {
     for (const change of [
-      (r: any) => (r.contacts[0].multiplicities = [1]),
-      (r: any) => (r.contacts[0].sourceSpans = [2]),
-      (r: any) => (r.contacts[0].parameterBox[0] = [7, 8]),
+      (r: Graph) => (r.contacts[0].multiplicities = [1]),
+      (r: Graph) => (r.contacts[0].sourceSpans = [2]),
+      (r: Graph) => (r.contacts[0].parameterBox[0] = [7, 8]),
     ]) {
       const r = graphReport()
       change(r)
@@ -87,8 +89,8 @@ describe('finite quadric graph evidence', () => {
   })
   it('rejects a boundary proof for another root or another span', () => {
     for (const change of [
-      (r: any) => (r.boundaryProofs[0].normalizedRoot = [0.5, 0.5]),
-      (r: any) => (r.boundaryProofs[0].span = 2),
+      (r: Boundary) => (r.boundaryProofs[0].normalizedRoot = [0.5, 0.5]),
+      (r: Boundary) => (r.boundaryProofs[0].span = 2),
     ]) {
       const r = graphBoundaryReport()
       change(r)
@@ -102,10 +104,10 @@ describe('finite quadric graph evidence', () => {
   })
   it('rejects inconsistent total and per-query work', () => {
     for (const change of [
-      (r: any) => r.exactWork++,
-      (r: any) => r.boundaryExactWork++,
-      (r: any) => r.boundaryProofs[0].workUsed++,
-      (r: any) => r.carrier.maxExactWork++,
+      (r: Boundary) => r.exactWork++,
+      (r: Boundary) => r.boundaryExactWork++,
+      (r: Boundary) => r.boundaryProofs[0].workUsed++,
+      (r: Boundary) => r.carrier.maxExactWork++,
     ]) {
       const r = graphBoundaryReport()
       change(r)

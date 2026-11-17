@@ -2,6 +2,9 @@ import { it, expect } from 'vitest'
 import { circleNurbsCurve } from '../src/kernel/nurbsConstructors'
 import { createRationalBrepSectionLoft, createMiterBrepProfileBody } from '../src/kernel/geometry/brep'
 import { inspectMiterStationSmoothness } from '../src/kernel/miterStationSmoothness'
+import type { NurbsBrep } from '../src/kernel/geometry/brep'
+import type { MiterProfileSmoothness } from '../src/kernel/sweep/certificates/miterProfileSmoothness'
+type ProfileReport = { profileSmoothness: MiterProfileSmoothness }
 const straight = () =>
   createRationalBrepSectionLoft([0, 5, 10].map(z => [[circleNurbsCurve([0, 0, z], [0, 0, 1], 0.5)]]))
 it('certifies all straight station joins independently of caps and refuses budget exhaustion', () => {
@@ -89,7 +92,7 @@ it('carries applicable station G2 through Rush while retaining cap C0 and Solid'
     continuousBound: true,
   })
   const node = graph.document.nodes.find(n => n.op === 'brep_progressive_miter_sweep')!
-  const smooth = (built.report.construction![node.id] as any).profileSmoothness
+  const smooth = (built.report.construction![node.id] as ProfileReport).profileSmoothness
   expect(smooth.totalExactWork).toBe(smooth.exactWork + smooth.station.exactWork)
   expect(smooth.totalExactWork).toBeLessThanOrEqual(smooth.maxWork)
 })
@@ -143,9 +146,9 @@ it('certifies reconstructed moving frames and hollow Solid while retaining expli
     continuousBound: true,
   })
   const node = compileRushFrontend(source).document.nodes.find(n => n.op === 'brep_smooth_miter_stations')!
-  const report = built.report.construction![node.id] as any
+  const report = built.report.construction![node.id] as ProfileReport
   expect(report.profileSmoothness.totalExactWork).toBeLessThanOrEqual(report.profileSmoothness.maxWork)
-  const { kind, ...model } = built.report.definitions[node.id] as any
+  const { kind, ...model } = built.report.definitions[node.id] as NurbsBrep & { kind: string }
   expect(kind).toBe('brep')
   const { inspectMiterProfileSmoothness } = await import('../src/kernel/miterProfileSmoothness')
   const budget = report.profileSmoothness.totalExactWork - 1

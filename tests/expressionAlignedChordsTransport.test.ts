@@ -88,12 +88,12 @@ describe('aligned chord coverage transport', () => {
   })
   it('rejects stale thresholds, malformed regions and inconsistent work', () => {
     for (const mutate of [
-      (v: any) => (v.report.minimum_mm = 2),
-      (v: any) => (v.report.pending[0].faces = [0, 1]),
-      (v: any) => (v.report.pending[0].domains[0][0] = [1, 0]),
-      (v: any) => (v.report.intrinsic_spans = 1),
-      (v: any) => (v.report.budget_pending = 0),
-      (v: any) => (v.report.intrinsic_unresolved = 1),
+      (v: typeof pending) => (v.report.minimum_mm = 2),
+      (v: typeof pending) => (v.report.pending[0]!.faces = [0, 1]),
+      (v: typeof pending) => (v.report.pending[0]!.domains[0]![0] = [1, 0]),
+      (v: typeof pending) => (v.report.intrinsic_spans = 1),
+      (v: typeof pending) => (v.report.budget_pending = 0),
+      (v: typeof pending) => (v.report.intrinsic_unresolved = 1),
     ]) {
       const v = structuredClone(pending)
       mutate(v)

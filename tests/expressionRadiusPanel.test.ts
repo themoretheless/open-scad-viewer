@@ -2,7 +2,18 @@ import { readFileSync } from 'node:fs'
 import { createSSRApp, shallowRef, ref } from 'svet'
 import { renderToString } from 'svet'
 import { it, expect, vi } from 'vitest'
-const state = vi.hoisted(() => ({ result: undefined as any, error: '', errorCode: '' }))
+type AlignedReport = { pending: unknown[]; span_stages?: unknown; [key: string]: unknown }
+type PanelResult = {
+  request: Record<string, unknown>
+  shell: {
+    faces: { kind: string }[]
+    inspection?: unknown
+    alignedChordCheck?: { report: AlignedReport; [key: string]: unknown }
+    [key: string]: unknown
+  }
+  [key: string]: unknown
+}
+const state = vi.hoisted(() => ({ result: undefined as PanelResult | undefined, error: '', errorCode: '' }))
 vi.mock('../src/app/useExpressionInspection', () => ({
   useExpressionInspection: () => ({
     result: shallowRef(state.result),
@@ -27,7 +38,7 @@ const fixture = JSON.parse(
 for (const ru of [true, false])
   it(`shows unverified contact domains without calling them self-intersections: ${ru}`, async () => {
     state.result = structuredClone(fixture.admitted)
-    const transition = state.result.shell.faces.findIndex((f: any) => f.kind === 'transition')
+    const transition = state.result!.shell.faces.findIndex(f => f.kind === 'transition')
     const product = [
       [
         [0.25, 0.5],
@@ -38,14 +49,14 @@ for (const ru of [true, false])
         [0.3, 0.4],
       ],
     ]
-    state.result.shell.inspection = {
+    state.result!.shell.inspection = {
       contacts: {
         pendingPairs: 1,
         pairs: [{ faces: [0, transition], proof: 'pending', pendingProducts: Array(10000).fill(product) }],
       },
     }
     const html = await renderToString(
-      createSSRApp(ExpressionShellCheck, { options: state.result.request, active: true, ru }),
+      createSSRApp(ExpressionShellCheck, { options: state.result!.request, active: true, ru }),
     )
     expect(html).toContain(
       ru ? 'Самопересечение для них не подтверждено.' : 'They are not confirmed self-intersections.',
@@ -58,7 +69,7 @@ for (const ru of [true, false])
     expect(html.match(/aria-label="(?:Непроверенная область контакта|Unverified contact region)"/g)).toHaveLength(1)
     expect(html.length).toBeLessThan(15000)
     const inactive = await renderToString(
-      createSSRApp(ExpressionShellCheck, { options: state.result.request, active: false, ru }),
+      createSSRApp(ExpressionShellCheck, { options: state.result!.request, active: false, ru }),
     )
     expect(inactive).toMatch(/<button[^>]*disabled[^>]*>[^<]*(?:Показать исходные грани|Show source faces)/)
   })
@@ -70,7 +81,7 @@ for (const [name, label] of [
   it(`renders the native ${name} radius state without whole-body qualification`, async () => {
     state.result = fixture[name]
     const html = await renderToString(
-      createSSRApp(ExpressionShellCheck, { options: state.result.request, active: true, ru: true }),
+      createSSRApp(ExpressionShellCheck, { options: state.result!.request, active: true, ru: true }),
     )
     expect(html).toContain(label)
     expect(html).toContain('Касательность и толщина требуют отдельных проверок.')
@@ -93,7 +104,7 @@ for (const name of ['admitted', 'unproven'])
   it(`renders bounded support tangency ${name} without neighbor body admission`, async () => {
     state.result = supportFixture[name]
     const html = await renderToString(
-      createSSRApp(ExpressionShellCheck, { options: state.result.request, active: true, ru: true }),
+      createSSRApp(ExpressionShellCheck, { options: state.result!.request, active: true, ru: true }),
     )
     expect(html).toContain(`data-support-tangency-state="${name === 'admitted' ? 'qualified' : 'unproven'}"`)
     expect(html).toContain('Соседние грани тела и толщина требуют отдельных проверок.')
@@ -113,7 +124,7 @@ for (const name of ['admitted', 'unproven'])
   it(`renders native actual-neighbor tangency ${name} with remaining whole-body checks`, async () => {
     state.result = neighborFixture[name]
     const html = await renderToString(
-      createSSRApp(ExpressionShellCheck, { options: state.result.request, active: true, ru: true }),
+      createSSRApp(ExpressionShellCheck, { options: state.result!.request, active: true, ru: true }),
     )
     expect(html).toContain(`data-neighbor-tangency-state="${name === 'admitted' ? 'qualified' : 'unproven'}"`)
     expect(html).toContain('Толщина, самопересечения и остальные швы требуют отдельных проверок.')
@@ -126,7 +137,7 @@ for (const ru of [true, false])
   for (const qualified of [true, false])
     it(`renders aligned distance coverage with explicit whole-thickness limit: ${ru}/${qualified}`, async () => {
       state.result = structuredClone(neighborFixture.admitted)
-      state.result.request.alignedChordCheck = {
+      state.result!.request.alignedChordCheck = {
         minimumMm: 1,
         maxSineSquared: 1e-4,
         toleranceUv: 0.05,
@@ -135,7 +146,7 @@ for (const ru of [true, false])
         spans: 100000,
         domainCells: 100000,
       }
-      state.result.shell.alignedChordCheck = {
+      state.result!.shell.alignedChordCheck = {
         qualified,
         report: {
           pending: qualified ? [] : [{ faces: [0, 1] }],
@@ -147,7 +158,7 @@ for (const ru of [true, false])
         },
       }
       const html = await renderToString(
-        createSSRApp(ExpressionShellCheck, { options: state.result.request, active: true, ru }),
+        createSSRApp(ExpressionShellCheck, { options: state.result!.request, active: true, ru }),
       )
       expect(html).toContain(`data-aligned-chord-state="${qualified ? 'qualified' : 'unproven'}"`)
       expect(html).toContain(
@@ -159,7 +170,7 @@ for (const ru of [true, false])
 
 it('renders one pending-region selector without enumerating a large frontier', async () => {
   state.result = structuredClone(neighborFixture.admitted)
-  state.result.request.alignedChordCheck = {
+  state.result!.request.alignedChordCheck = {
     minimumMm: 1,
     maxSineSquared: 1e-4,
     toleranceUv: 0.05,
@@ -182,7 +193,7 @@ it('renders one pending-region selector without enumerating a large frontier', a
     ],
     pending_reason: 'budget',
   }
-  state.result.shell.alignedChordCheck = {
+  state.result!.shell.alignedChordCheck = {
     qualified: false,
     report: {
       pending: Array(435).fill(region),
@@ -194,9 +205,9 @@ it('renders one pending-region selector without enumerating a large frontier', a
     },
   }
   const render = () =>
-    renderToString(createSSRApp(ExpressionShellCheck, { options: state.result.request, active: true, ru: false }))
+    renderToString(createSSRApp(ExpressionShellCheck, { options: state.result!.request, active: true, ru: false }))
   const initial = await render()
-  state.result.shell.alignedChordCheck.report.pending = Array(30557).fill(region)
+  state.result!.shell.alignedChordCheck.report.pending = Array(30557).fill(region)
   const large = await render()
   expect(large).toContain('max="30557"')
   expect(large.match(/aria-label="Pending region"/g)).toHaveLength(1)
@@ -223,7 +234,7 @@ for (const ru of [true, false])
   ])
     it(`localizes the pending distance region reason: ${ru}/${reason}`, async () => {
       state.result = structuredClone(neighborFixture.admitted)
-      state.result.shell.alignedChordCheck = {
+      state.result!.shell.alignedChordCheck = {
         qualified: false,
         report: {
           pending: [{ faces: [0, 1], pending_reason: reason }],
@@ -235,13 +246,13 @@ for (const ru of [true, false])
         },
       }
       const html = await renderToString(
-        createSSRApp(ExpressionShellCheck, { options: state.result.request, active: true, ru }),
+        createSSRApp(ExpressionShellCheck, { options: state.result!.request, active: true, ru }),
       )
       expect(html).toContain(ru ? translated : en)
     })
 
 it('shows saved distance precision and normal tolerance without replacing them with defaults', async () => {
-  state.result.request.alignedChordCheck = {
+  state.result!.request.alignedChordCheck = {
     minimumMm: 1.4,
     maxSineSquared: 0.002,
     toleranceUv: 0.012,
@@ -251,7 +262,7 @@ it('shows saved distance precision and normal tolerance without replacing them w
     domainCells: 0,
   }
   const html = await renderToString(
-    createSSRApp(ExpressionShellCheck, { options: state.result.request, active: true, ru: false }),
+    createSSRApp(ExpressionShellCheck, { options: state.result!.request, active: true, ru: false }),
   )
   expect(html).toMatch(/<input(?=[^>]*aria-label="UV subdivision tolerance")(?=[^>]*value="0.012")[^>]*>/)
   expect(html).toMatch(
@@ -262,9 +273,9 @@ it('shows saved distance precision and normal tolerance without replacing them w
 for (const ru of [true, false])
   it(`explains unavailable transition-face highlighting and preserves UV intervals: ${ru}`, async () => {
     state.result = structuredClone(neighborFixture.admitted)
-    const transition = state.result.shell.faces.findIndex((f: any) => f.kind === 'transition')
+    const transition = state.result!.shell.faces.findIndex(f => f.kind === 'transition')
     expect(transition).toBeGreaterThanOrEqual(0)
-    state.result.shell.alignedChordCheck = {
+    state.result!.shell.alignedChordCheck = {
       qualified: false,
       report: {
         pending: [
@@ -291,7 +302,7 @@ for (const ru of [true, false])
       },
     }
     const html = await renderToString(
-      createSSRApp(ExpressionShellCheck, { options: state.result.request, active: true, ru }),
+      createSSRApp(ExpressionShellCheck, { options: state.result!.request, active: true, ru }),
     )
     expect(html).toContain('data-chord-transition-limitation')
     expect(html).toContain(
@@ -307,7 +318,7 @@ for (const ru of [true, false])
 for (const ru of [true, false])
   it(`renders optional native span accounting as work rather than timing: ${ru}`, async () => {
     state.result = structuredClone(neighborFixture.admitted)
-    state.result.shell.alignedChordCheck = {
+    state.result!.shell.alignedChordCheck = {
       qualified: false,
       report: {
         pending: [],
@@ -328,7 +339,7 @@ for (const ru of [true, false])
       },
     }
     const html = await renderToString(
-      createSSRApp(ExpressionShellCheck, { options: state.result.request, active: true, ru }),
+      createSSRApp(ExpressionShellCheck, { options: state.result!.request, active: true, ru }),
     )
     expect(html).toContain('data-chord-span-stages')
     expect(html).toContain(
@@ -338,9 +349,9 @@ for (const ru of [true, false])
     )
     expect(html).toContain((ru ? 'Координаты' : 'Positions') + ': 1')
     expect(html).toContain((ru ? 'Нормали' : 'Normals') + ': 2')
-    delete state.result.shell.alignedChordCheck.report.span_stages
+    delete state.result!.shell.alignedChordCheck.report.span_stages
     const legacy = await renderToString(
-      createSSRApp(ExpressionShellCheck, { options: state.result.request, active: true, ru }),
+      createSSRApp(ExpressionShellCheck, { options: state.result!.request, active: true, ru }),
     )
     expect(legacy).not.toContain('data-chord-span-stages')
   })
