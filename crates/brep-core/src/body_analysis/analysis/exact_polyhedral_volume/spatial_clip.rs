@@ -194,11 +194,50 @@ pub fn exact_polyhedral_signed_distance(
     validate_point(point_mm)?;
     let mut remaining = max_exact_work;
     let faces = prepare_faces(solid, &mut remaining)?;
-    let nearest = nearest_boundary(&faces, point_mm, &mut remaining)?;
+    let mut report = signed_distance_prepared(&faces, point_mm, &mut remaining)?;
+    report.exact_work = max_exact_work - remaining;
+    Ok(report)
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralSignedDistanceBatch {
+    /// One result per input point in order, with per-point work excluding
+    /// shared face preparation.
+    pub samples: Vec<ExactPolyhedralSignedDistance>,
+    pub exact_work: u64,
+}
+
+/// Evaluate signed distance at multiple rational world-space points under
+/// one budget. The complete ordered batch is returned only if every query
+/// succeeds.
+pub fn exact_polyhedral_signed_distance_batch(
+    solid: &QualifiedClosedSolid,
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralSignedDistanceBatch> {
+    let mut remaining = max_exact_work;
+    let faces = prepare_faces(solid, &mut remaining)?;
+    let mut samples = Vec::new();
+    for point in points_mm {
+        validate_point(point)?;
+        samples.push(signed_distance_prepared(&faces, point, &mut remaining)?);
+    }
+    Ok(ExactPolyhedralSignedDistanceBatch {
+        samples,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn signed_distance_prepared(
+    faces: &BTreeMap<usize, FaceBoundary>,
+    point_mm: &[Q; 3],
+    remaining: &mut u64,
+) -> Result<ExactPolyhedralSignedDistance> {
+    let start_work = *remaining;
+    let nearest = nearest_boundary(faces, point_mm, remaining)?;
     let mut squared = nearest.distance_squared_mm2;
     if !squared.is_zero()
-        && classify_open_point(&faces, point_mm, &mut remaining)?
-            == PolyhedralPointLocation::Material
+        && classify_open_point(faces, point_mm, remaining)? == PolyhedralPointLocation::Material
     {
         squared = -squared;
     }
@@ -206,7 +245,7 @@ pub fn exact_polyhedral_signed_distance(
         signed_distance_squared_mm2: squared,
         nearest_mm: nearest.point_mm,
         face: nearest.face,
-        exact_work: max_exact_work - remaining,
+        exact_work: start_work - *remaining,
     })
 }
 

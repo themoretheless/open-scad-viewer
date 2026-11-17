@@ -1,0 +1,38 @@
+{
+  "id": "NURBS-0428",
+  "testedBase": "8c112cddec84bcf98c89a6c81a92755500c1f764",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 180,
+  "scope": [
+    "Evaluate ordered exact signed-distance samples with one shared polyhedral face preparation.",
+    "One certified retained-face preparation is reused across exact point queries. The shared work budget covers all samples and errors refuse the whole batch."
+  ],
+  "logSha256": "9b9cbd17e6bdf5d24518459fe5c61c925c296e25bf0448de4e90f51763c02de6",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "e0e1226fc2fc268f74f3769d47d876aaba64dcddac9ac4976c15c0f3b1752244",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "1d014c980cbdf6050cff2625e427fdfac45023a7312afd9d25554402f760255d",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs": "63b88987d5b7f931fe71cab96aa44ff367326d225e137b949166cc7c003b1f1f"
+  }
+}

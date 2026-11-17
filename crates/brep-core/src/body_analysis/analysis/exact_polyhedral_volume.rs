@@ -906,7 +906,8 @@ pub use section_loops::*;
 mod spatial_clip;
 pub use spatial_clip::{
     ExactPolyhedralBoundaryDistance, ExactPolyhedralPointLocation, ExactPolyhedralSegmentClip,
-    ExactPolyhedralSignedDistance, PolyhedralPointLocation, exact_polyhedral_boundary_distance,
-    exact_polyhedral_point_location, exact_polyhedral_segment_clip,
-    exact_polyhedral_signed_distance,
+    ExactPolyhedralSignedDistance, ExactPolyhedralSignedDistanceBatch, PolyhedralPointLocation,
+    exact_polyhedral_boundary_distance, exact_polyhedral_point_location,
+    exact_polyhedral_segment_clip, exact_polyhedral_signed_distance,
+    exact_polyhedral_signed_distance_batch,
 };

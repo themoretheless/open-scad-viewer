@@ -2856,3 +2856,48 @@ fn signed_distance_uses_exact_oblique_face_projection() {
         assert!(report.exact_work < nearest.exact_work + location.exact_work);
     }
 }
+
+#[test]
+fn batches_exact_signed_distances_with_order_and_shared_preparation() {
+    use brep_core::{
+        analysis::{exact_polyhedral_signed_distance, exact_polyhedral_signed_distance_batch},
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |a: i64, b: i64| Q::new(a.into(), b.into());
+    let points = [5, 3, 4, 5].map(|x| [q(x, 4), q(3, 2), q(1, 1)]);
+    let report = exact_polyhedral_signed_distance_batch(solid, &points, 1_000_000).unwrap();
+    let mut separate_work = 0;
+    for ((point, sample), sign) in points.iter().zip(&report.samples).zip([1, -1, 0, 1]) {
+        let individual = exact_polyhedral_signed_distance(solid, point, 1_000_000).unwrap();
+        assert_eq!(sample.signed_distance_squared_mm2, q(sign, 16));
+        assert_eq!(sample.nearest_mm, individual.nearest_mm);
+        assert_eq!(sample.face, individual.face);
+        assert!(sample.exact_work < individual.exact_work);
+        separate_work += individual.exact_work;
+    }
+    assert!(report.exact_work < separate_work);
+    assert!(exact_polyhedral_signed_distance_batch(solid, &points, report.exact_work).is_ok());
+    assert!(exact_polyhedral_signed_distance_batch(solid, &points, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn signed_distance_batch_refuses_out_of_budget_coordinates_and_accepts_empty_input() {
+    use brep_core::analysis::exact_polyhedral_signed_distance_batch;
+    use num_rational::BigRational as Q;
+    let solid = shifted_oblique_solid(0.);
+    let zero = Q::from_integer(0.into());
+    let origin = std::array::from_fn(|_| zero.clone());
+    let large = Q::from_integer(num_bigint::BigInt::from(1) << 8192);
+    let points = [origin, [large, zero.clone(), zero]];
+    assert!(exact_polyhedral_signed_distance_batch(&solid, &points, 1_000_000).is_err());
+    assert!(
+        exact_polyhedral_signed_distance_batch(&solid, &[], 1_000_000)
+            .unwrap()
+            .samples
+            .is_empty()
+    );
+}
