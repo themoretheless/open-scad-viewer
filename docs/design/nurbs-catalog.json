@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 442,
-  "unallocatedCount": 558,
+  "specifiedCount": 443,
+  "unallocatedCount": 557,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -11401,6 +11401,35 @@
       "remainingQualification": [
         "Enclose traveled length separately in each location with a requested absolute tolerance.",
         "Sum exact parameter fractions per location and span, then bound each sum of square roots independently. Boundary points and stationary spans have zero traveled length.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0443",
+      "name": "Точное восстановление пространственных ломаных после отсечения по материалу",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::exact_polyhedral_material_path_components",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "docs/qualification/nurbs-curvature-field-443-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-443-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Reconstruct clipped components as exact spatial vertices and retain point contacts.",
+        "Evaluate rational clip endpoints in model coordinates. Join only consecutive parameter ranges, keep bends, and retain disconnected visits to the same geometric point.",
         "WASM and application integration are separate."
       ]
     }

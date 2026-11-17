@@ -3834,3 +3834,68 @@ fn bounded_path_length_breakdown_certifies_irrational_lengths() {
     }
     assert!(bounded_polyhedral_path_length_breakdown(solid, &path, 0.0, 1_000_000).is_err());
 }
+
+#[test]
+fn exact_material_path_components_join_spans_and_preserve_hole_and_turn() {
+    use brep_core::{
+        analysis::{PolyhedralMaterialPathComponent, exact_polyhedral_material_path_components},
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |x, z| [q(x, 1), q(3, 2), q(z, 1)];
+    let path = [
+        point(-1, 1),
+        point(3, 1),
+        point(3, 1),
+        point(3, 2),
+        point(5, 2),
+    ];
+    let report = exact_polyhedral_material_path_components(solid, &path, 1_000_000).unwrap();
+    assert_eq!(
+        report.components,
+        [
+            PolyhedralMaterialPathComponent {
+                parameters: [q(1, 4), q(1, 2)],
+                points_mm: vec![point(0, 1), point(1, 1)],
+            },
+            PolyhedralMaterialPathComponent {
+                parameters: [q(3, 4), q(7, 2)],
+                points_mm: vec![point(2, 1), point(3, 1), point(3, 2), point(4, 2)],
+            },
+        ]
+    );
+    assert_eq!(
+        exact_polyhedral_material_path_components(solid, &path, report.exact_work).unwrap(),
+        report
+    );
+    assert!(
+        exact_polyhedral_material_path_components(solid, &path, report.exact_work - 1).is_err()
+    );
+}
+
+#[test]
+fn exact_material_path_components_keep_separate_visits_to_the_same_tangent_point() {
+    use brep_core::{
+        analysis::{PolyhedralMaterialPathComponent, exact_polyhedral_material_path_components},
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |x, y| [q(x, 1), q(y, 1), q(1, 1)];
+    let path = [point(-1, 1), point(1, -1), point(-1, 1)];
+    let report = exact_polyhedral_material_path_components(solid, &path, 1_000_000).unwrap();
+    assert_eq!(
+        report.components,
+        [q(1, 2), q(3, 2)].map(|t| PolyhedralMaterialPathComponent {
+            parameters: [t.clone(), t],
+            points_mm: vec![point(0, 0)],
+        }),
+    );
+}

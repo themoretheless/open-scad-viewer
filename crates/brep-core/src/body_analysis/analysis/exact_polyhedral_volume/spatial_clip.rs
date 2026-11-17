@@ -1046,3 +1046,63 @@ pub fn bounded_polyhedral_path_length_breakdown(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PolyhedralMaterialPathComponent {
+    /// Closed interval in span-index-plus-local-parameter coordinates.
+    pub parameters: [Q; 2],
+    /// Exact vertices in millimeters. A point-only component has one vertex.
+    pub points_mm: Vec<[Q; 3]>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralMaterialPathComponents {
+    pub components: Vec<PolyhedralMaterialPathComponent>,
+    pub exact_work: u64,
+}
+
+/// Reconstruct closed material portions as exact spatial polylines in path
+/// order. Components are connected in the input parameter domain.
+pub fn exact_polyhedral_material_path_components(
+    solid: &QualifiedClosedSolid,
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralMaterialPathComponents> {
+    let clip = exact_polyhedral_path_material_clip(solid, points_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - clip.exact_work;
+    let mut components: Vec<PolyhedralMaterialPathComponent> = Vec::new();
+    for (span, (pair, intervals)) in points_mm.windows(2).zip(clip.span_intervals).enumerate() {
+        spend(&mut remaining, 4)?;
+        let origin = Q::from_integer(span.into());
+        let direction: [Q; 3] = std::array::from_fn(|i| &pair[1][i] - &pair[0][i]);
+        let evaluate = |t: &Q| std::array::from_fn(|i| &pair[0][i] + t * &direction[i]);
+        for [lo, hi] in intervals {
+            spend(&mut remaining, 16)?;
+            let parameters = [&origin + &lo, &origin + &hi];
+            let end = evaluate(&hi);
+            if let Some(component) = components.last_mut()
+                && component.parameters[1] == parameters[0]
+            {
+                component.parameters[1] = parameters[1].clone();
+                if component.points_mm.last() != Some(&end) {
+                    component.points_mm.push(end);
+                }
+            } else {
+                let start = evaluate(&lo);
+                let points_mm = if start == end {
+                    vec![start]
+                } else {
+                    vec![start, end]
+                };
+                components.push(PolyhedralMaterialPathComponent {
+                    parameters,
+                    points_mm,
+                });
+            }
+        }
+    }
+    Ok(ExactPolyhedralMaterialPathComponents {
+        components,
+        exact_work: max_exact_work - remaining,
+    })
+}
