@@ -51,27 +51,30 @@ pub fn approximate_surface_plane_strip_xyz(
         used: stitched.work_used,
         limit: options.strip.max_work,
     };
-    let outcome = stitched
-        .outcome
-        .and_then(|strip| approximate(surface, normal, offset, options, strip, &mut work));
+    let outcome = stitched.outcome.and_then(|strip| {
+        let tolerance = work.lift(options.max_xyz_error)?;
+        approximate(
+            surface, normal, offset, options, strip, &tolerance, &mut work,
+        )
+    });
     Ok(SurfacePlaneWorldStripReport {
         outcome,
         work_used: work.used,
     })
 }
 
-fn approximate(
+pub(super) fn approximate(
     surface: &Surface,
     normal: [f64; 3],
     offset: f64,
     options: SurfacePlaneWorldStripOptions,
     strip: SurfacePlaneGraphStrip,
+    tolerance: &Q,
     work: &mut Work,
 ) -> PResult<SurfacePlaneWorldStrip> {
-    let tolerance = work.lift(options.max_xyz_error)?;
     // The previous cell's endpoint error and the next cell's endpoint error
     // both bound the possible displacement when the shared endpoint is chosen.
-    let cell_tolerance = work.op(&tolerance, &Q::from_integer(3.into()), |a, b| a / b)?;
+    let cell_tolerance = work.op(tolerance, &Q::from_integer(3.into()), |a, b| a / b)?;
     let mut uv = Vec::new();
     let mut xyz = Vec::new();
     let mut cell_vertices = Vec::new();
@@ -100,7 +103,7 @@ fn approximate(
             error = work.op(&error, &displacement, |a, b| a + b)?;
             skip = 1;
         }
-        if error > tolerance {
+        if error > *tolerance {
             return Err(Refusal::UnprovedIdentity);
         }
         let [u, v] = cell.domain;
@@ -129,7 +132,7 @@ fn approximate(
     })
 }
 
-fn distance_l1(a: &[Q; 3], b: &[Q; 3], work: &mut Work) -> PResult<Q> {
+pub(super) fn distance_l1(a: &[Q; 3], b: &[Q; 3], work: &mut Work) -> PResult<Q> {
     let mut total = Q::zero();
     for (a, b) in a.iter().zip(b) {
         let term = work.op(a, b, |a, b| (a - b).abs())?;

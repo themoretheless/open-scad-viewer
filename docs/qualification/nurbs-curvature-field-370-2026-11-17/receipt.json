@@ -1,0 +1,37 @@
+{
+  "id": "NURBS-0370",
+  "testedBase": "588b5fb370c76714094a196437cd3a5ea7bfea96",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_pcurve_gap_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 68,
+  "scope": [
+    "Close a full periodic section strip after proving exact equality of the homogeneous seam traces.",
+    "Exact homogeneous seam trace equality proves closure across a complete transverse period. The end positions share one XYZ vertex and retain distinct periodic UV coordinates. The wrap displacement is budgeted in the final chord error."
+  ],
+  "logSha256": "dca73490b0c8650731faacd2ae26e532b69f5235a45abef97811f6853af5e492",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "6ee1583ae1a2dbebd8495f8a04b3ea7c5c82fe939f53e2a9482000a26f6781ca",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs": "4c728f358714477e1c4c7baa7c4bec377027a05586d5a8a8610c8c7ef43d843d",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "13c74cc94adafab6a07cfb3b1d442aa6ac3512dd8c4543b60bed425613281275",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs": "e7ed271777c6cb74d84d2eefe35d8e5681ec872da59a1b6ee1546b211a21c455",
+    "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs": "7a3141f4f2751ca9f6b2a1850a7325d6a34cb9e5467f77251ac5f23ee63ec8b6",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/stitch.rs": "7fa2e6e821b9b374b82205256f6192a36b71921a8f9827b6798a6a9f86ecd5f5",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/world_strip.rs": "e0364b4e833119c7764298c3d08f93207052b3f5ada7787a5d98e8a565e5bd9b",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/periodic_strip.rs": "85fb96a8ee1291e6d6833aff51637b54c6dd49836dedf9534757b5de6598886f"
+  }
+}

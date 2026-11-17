@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 369,
-  "unallocatedCount": 631,
+  "specifiedCount": 370,
+  "unallocatedCount": 630,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9481,6 +9481,31 @@
       "remainingQualification": [
         "Build a continuous multi-cell XYZ section polyline with exactly shared seam vertices and certified per-cell error.",
         "Consecutive certified graphs share a single rational UV and XYZ vertex. The exact endpoint displacement is added to the continuous chord error of the next cell.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0370",
+      "name": "Замкнутое пространственное сечение через периодический шов NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::close_periodic_surface_plane_strip_xyz",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs",
+        "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/stitch.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/world_strip.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/periodic_strip.rs",
+        "docs/qualification/nurbs-curvature-field-370-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-370-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Close a full periodic section strip after proving exact equality of the homogeneous seam traces.",
+        "Exact homogeneous seam trace equality proves closure across a complete transverse period. The end positions share one XYZ vertex and retain distinct periodic UV coordinates. The wrap displacement is budgeted in the final chord error.",
         "WASM and application integration are separate."
       ]
     }

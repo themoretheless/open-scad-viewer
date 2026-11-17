@@ -269,3 +269,6 @@ pub use world_strip::{
     SurfacePlaneWorldStrip, SurfacePlaneWorldStripOptions, SurfacePlaneWorldStripReport,
     approximate_surface_plane_strip_xyz,
 };
+
+mod periodic_strip;
+pub use periodic_strip::close_periodic_surface_plane_strip_xyz;

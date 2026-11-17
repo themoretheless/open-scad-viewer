@@ -6,9 +6,9 @@ use nurbs_core::{
         SurfacePlaneWorldPolylineOptions, SurfacePlaneWorldStripOptions,
         approximate_surface_plane_graph, approximate_surface_plane_graph_xyz,
         approximate_surface_plane_strip_xyz, audit_surface_plane_graphs, audit_surface_plane_side,
-        refine_surface_plane_side, sample_surface_plane_graph, split_surface_cell_by_plane,
-        stitch_surface_plane_graph_strip, store_surface_plane_section_curve,
-        store_surface_plane_section_pair,
+        close_periodic_surface_plane_strip_xyz, refine_surface_plane_side,
+        sample_surface_plane_graph, split_surface_cell_by_plane, stitch_surface_plane_graph_strip,
+        store_surface_plane_section_curve, store_surface_plane_section_pair,
     },
     surface::Surface,
 };
@@ -835,4 +835,95 @@ fn produces_no_partial_polyline_if_a_later_cell_lacks_a_branch() {
     )
     .unwrap();
     assert_eq!(result.outcome, Err(Refusal::UnprovedIdentity));
+}
+
+fn periodic_section_patch() -> Surface {
+    let ring = [[1., 0.], [0., 1.], [-1., 0.], [0., -1.], [1., 0.], [0., 1.]];
+    Surface {
+        degree_u: 1,
+        degree_v: 2,
+        knots_u: vec![0., 0., 1., 1.],
+        knots_v: (-2..=6).map(f64::from).collect(),
+        control_points: [-1., 2.]
+            .into_iter()
+            .map(|z| ring.iter().map(|&[x, y]| vec![x, y, z]).collect())
+            .collect(),
+        weights: vec![vec![1.; 6]; 2],
+        periodic_u: false,
+        periodic_v: true,
+    }
+}
+
+fn periodic_section_options() -> SurfacePlaneWorldStripOptions {
+    SurfacePlaneWorldStripOptions {
+        strip: SurfacePlaneGraphStripOptions {
+            solve_axis: nurbs_core::editing::exact_projective::UvAxis::U,
+            solved_span: 1,
+            transverse_spans: [2, 5],
+            max_normalized_width: 1e-10,
+            max_work: WORK,
+        },
+        max_xyz_error: 0.05,
+        max_segments_per_cell: 64,
+    }
+}
+
+#[test]
+fn closes_a_full_period_with_one_spatial_seam_vertex_and_two_original_uv_ends() {
+    let patch = periodic_section_patch();
+    let options = periodic_section_options();
+    let report = close_periodic_surface_plane_strip_xyz(&patch, [0., 0., 1.], 0., options).unwrap();
+    let closed = report.outcome.unwrap();
+    assert_eq!(closed.strip.cells.len(), 4);
+    assert_eq!(closed.xyz.first(), closed.xyz.last());
+    assert_eq!(closed.uv.first().unwrap()[1], q(0));
+    assert_eq!(closed.uv.last().unwrap()[1], q(4));
+    assert_eq!(closed.uv.first().unwrap()[0], closed.uv.last().unwrap()[0]);
+    assert_eq!(
+        &closed.xyz[0][..2],
+        &[Q::new(1.into(), 2.into()), Q::new(1.into(), 2.into())]
+    );
+    assert!(
+        closed
+            .cell_error_upper
+            .iter()
+            .all(|q| q <= &Q::from_float(options.max_xyz_error).unwrap())
+    );
+    let exhausted = close_periodic_surface_plane_strip_xyz(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldStripOptions {
+            strip: SurfacePlaneGraphStripOptions {
+                max_work: report.work_used - 1,
+                ..options.strip
+            },
+            ..options
+        },
+    )
+    .unwrap();
+    assert_eq!(exhausted.outcome, Err(Refusal::ResourceLimit));
+}
+
+#[test]
+fn rejects_a_partial_period_or_an_open_chart_as_a_closed_section() {
+    let mut patch = periodic_section_patch();
+    let options = periodic_section_options();
+    assert!(
+        close_periodic_surface_plane_strip_xyz(
+            &patch,
+            [0., 0., 1.],
+            0.,
+            SurfacePlaneWorldStripOptions {
+                strip: SurfacePlaneGraphStripOptions {
+                    transverse_spans: [2, 4],
+                    ..options.strip
+                },
+                ..options
+            }
+        )
+        .is_err()
+    );
+    patch.periodic_v = false;
+    assert!(close_periodic_surface_plane_strip_xyz(&patch, [0., 0., 1.], 0., options).is_err());
 }
