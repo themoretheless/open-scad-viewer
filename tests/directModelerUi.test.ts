@@ -1549,6 +1549,17 @@ it('creates, places, updates and detaches a linked instance with undo',async()=>
  await ui.click('↶');expect(ui.doc().bodies.find(b=>b.id===instance.id)!.instance!.sourceId).toBe('b')
 })
 
+it('creates a linked instance array by step from the palette with undo and redo',async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const ui=await mount();await ui.click('Cube');const before=ui.doc()
+ await ui.click('Linked instance array');expect(ui.doc()).toEqual(before)
+ quantityField(ui,'Count').props['onUpdate:modelValue']('3');quantityField(ui,'Step').props['onUpdate:modelValue']('15');await flushClearance();await commandKey(ui,'Enter')
+ const copies=ui.doc().bodies.filter(b=>b.instance)
+ expect(copies.map(b=>[b.instance!.sourceId,b.instance!.matrix[0][3]])).toEqual([['b',15],['b',30]])
+ await ui.click('↶');expect(ui.doc().bodies.filter(b=>b.instance)).toHaveLength(0)
+ await ui.click('↷');expect(ui.doc().bodies.filter(b=>b.instance)).toHaveLength(2)
+})
+
 it('refuses direct instance geometry edits and source edits affecting a locked instance',async()=>{
  await geometryKernel.warmGeometryKernel()
  const ui=await mount();await ui.click('Cube');await ui.click('Create linked instance');await commandKey(ui,'Enter')

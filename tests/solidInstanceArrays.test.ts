@@ -4,6 +4,7 @@ import { stringifyMeshJson } from '../src/exchange/meshJson'
 import { createBrepBox, tessellateNurbsBrep } from '../src/kernel/geometry/brep'
 import { createSolidInstanceArray, solidInstanceArrayPlacements } from '../src/kernel/solidInstanceArrays'
 import { detachSolidInstances } from '../src/kernel/solidInstances'
+import { applySolidSceneEdit, type SolidSceneInstanceArray } from '../src/kernel/solidSceneEdit'
 
 const box = (size: number) => {
   const brep = createBrepBox([0, 0, 0], [size, 2, 3])
@@ -109,4 +110,60 @@ it('updates 100 linked array instances from the source across undo, redo and rel
   const reloaded = parseDirectDocument(stringifyMeshJson(redone))
   expect(reloaded.bodies[100].instance?.sourceId).toBe('source')
   expect(axisRange(reloaded.bodies[100].mesh.positions, 0)).toEqual([1000, 1004])
+})
+
+it('creates step, extent and path arrays through the scene edit, with undo and redo', () => {
+  const base = emptyDirectDocument()
+  base.bodies.push(box(2))
+  base.sketches.push({
+    id: 'path',
+    name: 'Path',
+    closed: false,
+    points: [
+      [0, 0],
+      [10, 0],
+      [10, 10],
+    ],
+  })
+  const edit = (array: SolidSceneInstanceArray, axis: 'x' | 'y' | 'z' = 'x') =>
+    applySolidSceneEdit(base, {
+      operation: 'instance-array',
+      id: 'source',
+      ids: ['source'],
+      createdId: 'arr',
+      x: 0,
+      y: 0,
+      z: 0,
+      axis,
+      angle: 0,
+      scale: 1,
+      array,
+    })
+  const placed = (d: ReturnType<typeof edit>) =>
+    d.bodies
+      .filter(b => b.instance)
+      .map(b => [b.id, ...b.instance!.matrix.slice(0, 3).map(r => Math.round(r[3] * 1e9) / 1e9)])
+  expect(placed(edit({ kind: 'step', count: 3, distance: 5 }))).toEqual([
+    ['arr:1', 5, 0, 0],
+    ['arr:2', 10, 0, 0],
+  ])
+  expect(placed(edit({ kind: 'extent', count: 3, distance: 30 }, 'y'))).toEqual([
+    ['arr:1', 0, 15, 0],
+    ['arr:2', 0, 30, 0],
+  ])
+  const path = edit({ kind: 'path', count: 3, distance: 0, pathId: 'path', align: true })
+  expect(path.bodies.find(b => b.id === 'arr:1')!.instance!.matrix.map(r => r[3])).toEqual([10, 0, 0, 1])
+  // The last copy is turned a quarter turn: its 2-wide x span becomes a y span.
+  const [minX, maxX] = axisRange(path.bodies.find(b => b.id === 'arr:2')!.mesh.positions, 0)
+  expect(maxX - minX).toBeCloseTo(2, 9)
+  const [minY, maxY] = axisRange(path.bodies.find(b => b.id === 'arr:2')!.mesh.positions, 1)
+  expect(maxY - minY).toBeCloseTo(2, 9)
+  expect(minY).toBeCloseTo(10, 9)
+  expect(() => edit({ kind: 'path', count: 3, distance: 0 })).toThrow()
+  expect(() => edit({ kind: 'step', count: 1, distance: 5 })).toThrow()
+  const history = new DirectHistory(base)
+  history.commit(edit({ kind: 'step', count: 4, distance: 5 }))
+  expect(history.document.bodies).toHaveLength(4)
+  expect(history.undo().bodies).toHaveLength(1)
+  expect(history.redo().bodies.filter(b => b.instance?.sourceId === 'source')).toHaveLength(3)
 })

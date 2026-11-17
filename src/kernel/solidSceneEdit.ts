@@ -4,11 +4,15 @@ import {transformSketch} from '../app/directSketchGeometry'
 import {parseDirectDocument,type DirectDocument} from '../app/directModeling'
 import {transformSelection} from '../app/directSolidTools'
 import {createSolidInstance,transformSolidInstance,resolveSolidInstances,detachSolidInstances} from './solidInstances'
+import {createSolidInstanceArray,solidInstanceArrayPlacements,type SolidInstanceArraySpec} from './solidInstanceArrays'
+import {worldPoints} from '../app/directSketchGeometry'
 import {createRuledSketchLoft} from './geometry/brep'
 import {stringifyMeshJson} from '../exchange/meshJson'
-export type SolidSceneEditOperation='duplicate'|'sketch-transform'|'transform'|'instance-create'|'instance-transform'|'instance-place'|'instance-detach'|'group-create'|'group-move'|'loft'
-export interface SolidSceneEditOptions {operation:SolidSceneEditOperation;id:string;ids:string[];createdId:string;x:number;y:number;z:number;axis:'x'|'y'|'z'|[number,number,number];angle:number;scale:number;group?:string;copyIds?:string[]}
-export function isSolidSceneEdit(operation:unknown):operation is SolidSceneEditOperation{return ['duplicate','sketch-transform','transform','instance-create','instance-transform','instance-place','instance-detach','group-create','group-move','loft'].includes(String(operation))}
+export type SolidSceneEditOperation='duplicate'|'sketch-transform'|'transform'|'instance-create'|'instance-transform'|'instance-place'|'instance-detach'|'instance-array'|'group-create'|'group-move'|'loft'
+export interface SolidSceneEditOptions {operation:SolidSceneEditOperation;id:string;ids:string[];createdId:string;x:number;y:number;z:number;axis:'x'|'y'|'z'|[number,number,number];angle:number;scale:number;group?:string;copyIds?:string[];array?:SolidSceneInstanceArray}
+/** Linked-instance array of `id`: `step`/`extent` run along `axis` with `distance` as the spacing or the total span; `path` follows the sketch `pathId`. Copies get ids `${createdId}:n`. */
+export interface SolidSceneInstanceArray {kind:'step'|'extent'|'path';count:number;distance:number;pathId?:string;align?:boolean}
+export function isSolidSceneEdit(operation:unknown):operation is SolidSceneEditOperation{return ['duplicate','sketch-transform','transform','instance-create','instance-transform','instance-place','instance-detach','instance-array','group-create','group-move','loft'].includes(String(operation))}
 export function applySolidSceneEdit(document:DirectDocument,p:SolidSceneEditOptions,instanceCache?:SolidInstanceBatchCache):DirectDocument {
  if(p.operation==='duplicate'){
   const originals=[...document.bodies,...document.sketches],selected=originals.filter(object=>p.ids.includes(object.id))
@@ -25,6 +29,7 @@ export function applySolidSceneEdit(document:DirectDocument,p:SolidSceneEditOpti
  if(Array.isArray(p.axis)&&(p.axis.length!==3||!p.axis.every(Number.isFinite)||Math.hypot(...p.axis)<1e-9))throw Error('Invalid transform axis.')
  if(p.operation==='transform')return resolveSolidInstances(transformSelection(document,p.ids,[p.x,p.y,p.z],[...axis],p.angle,p.scale),instanceCache)
  if(p.operation==='instance-transform')return transformSolidInstance(document,p.id,[p.x,p.y,p.z],[...axis],p.angle,p.scale,instanceCache)
+ if(p.operation==='instance-array')return createSolidInstanceArray(document,p.id,`${p.createdId}:`,solidInstanceArrayPlacements(instanceArraySpec(document,p,[...axis])),instanceCache)
  if(p.operation==='instance-create')return createSolidInstance(document,p.id,p.createdId,[[1,0,0,p.x],[0,1,0,p.y],[0,0,1,p.z],[0,0,0,1]],instanceCache)
  const d=structuredClone(document)
  switch(p.operation){
@@ -54,4 +59,13 @@ export function applySolidSceneEdit(document:DirectDocument,p:SolidSceneEditOpti
   case 'loft':if(p.ids.length<2||p.ids.length>64)throw new DirectInputError('DIRECT_LOFT_SECTIONS','Select 2–64 closed polygon sketches in loft order.',undefined,p.ids);d.bodies.push({id:p.createdId,name:'Ruled loft',...createRuledSketchLoft(d.sketches,p.ids)});return parseDirectDocument(stringifyMeshJson(d))
   default:throw Error('Unsupported scene edit.')
  }
+}
+function instanceArraySpec(document:DirectDocument,p:SolidSceneEditOptions,direction:[number,number,number]):SolidInstanceArraySpec{
+ const a=p.array
+ if(!a)throw new DirectInputError('DIRECT_PATTERN_ARRAY','Array parameters are missing.','patternCount',[])
+ if(a.kind!=='path')return a.kind==='step'?{kind:'step',direction,step:a.distance,count:a.count}:{kind:'extent',direction,extent:a.distance,count:a.count}
+ const sketch=document.sketches.find(s=>s.id===a.pathId)
+ if(!sketch||sketch.points.length<2)throw new DirectInputError('DIRECT_PATTERN_ARRAY','Select a sketch line as the array path.','patternCount',[])
+ const points=worldPoints(sketch.points,sketch.plane)
+ return {kind:'path',points:sketch.closed?[...points,points[0]]:points,count:a.count,align:!!a.align}
 }
