@@ -1063,3 +1063,92 @@ pub fn merge_closed_exact_projective_c2_chain(
         closure: Some(closure),
     })
 }
+
+/// Store a clamped curve with an exactly verified C2 wrap as a cyclic spline
+/// on the same domain. The coincident endpoint poles must share one weight.
+/// The seam retains degree multiplicity in the cyclic knot vector, so the
+/// evaluator's knot-based continuity metadata remains conservative there.
+pub fn store_exact_periodic_c2_curve(source: &Curve, max_work: u64) -> Result<GaugeMergeReport> {
+    use super::rational_edit::Work;
+
+    let seam = compare_curve_jets(source, source, max_work, false)?;
+    let refused = |reason, work_used| GaugeMergeReport {
+        curve: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    if let Some(reason) = seam.refusal {
+        return Ok(refused(reason, seam.work_used));
+    }
+    if seam.continuity_order != Some(2) || source.weights.first() != source.weights.last() {
+        return Ok(refused(
+            GaugeMergeRefusal::Join(Refusal::SeamMismatch),
+            seam.work_used,
+        ));
+    }
+    let mut work = Work {
+        used: seam.work_used,
+        limit: max_work,
+    };
+    let out = match repeat_clamped_cycle(source, &mut work) {
+        Ok(curve) => curve,
+        Err(reason) => return Ok(refused(GaugeMergeRefusal::Exact(reason), work.used)),
+    };
+    Ok(GaugeMergeReport {
+        curve: Some(out),
+        work_used: work.used,
+        refusal: None,
+    })
+}
+
+fn repeat_clamped_cycle(
+    source: &Curve,
+    work: &mut super::rational_edit::Work,
+) -> std::result::Result<Curve, super::rational_factor::Refusal> {
+    use super::rational_factor::Refusal as ExactRefusal;
+    use num_rational::BigRational as Q;
+
+    let degree = source.degree;
+    let cycle = source.control_points.len() - 1;
+    if cycle <= degree || cycle + degree > 256 {
+        return Err(ExactRefusal::InvalidOutput);
+    }
+    let [lo, hi] = source.domain();
+    let start = work.lift(lo)?;
+    let end = work.lift(hi)?;
+    let width = work.op(&end, &start, |a, b| a - b)?;
+    let pattern = &source.knots[1..=cycle];
+    let mut knots = Vec::with_capacity(cycle + 2 * degree + 1);
+    for index in 0..=cycle + 2 * degree {
+        let relative = index as isize - 1;
+        let turn = relative.div_euclid(cycle as isize);
+        let knot = pattern[relative.rem_euclid(cycle as isize) as usize];
+        if turn == 0 {
+            knots.push(knot);
+        } else {
+            let value = work.lift(knot)?;
+            let shift = Q::from_integer(turn.into());
+            let mapped = work.op(&value, &width, |a, b| a + &shift * b)?;
+            knots.push(work.float(&mapped)?);
+        }
+    }
+    // Each nonempty active span i uses the controls i-p..=i and
+    // de Boor knots i-p+1..=i+p. They are all in the unchanged control
+    // prefix and the knot window strictly between the two exterior ends
+    // of the clamped vector. Thus the stored cyclic law is identical
+    // on each span, including the one-sided endpoint limits.
+    let active_window = 1..source.knots.len() - 1;
+    work.charge(active_window.len() as u64)?;
+    if knots[active_window.clone()] != source.knots[active_window] {
+        return Err(ExactRefusal::DifferentDefinition);
+    }
+    let mut curve = source.clone();
+    curve.periodic = true;
+    curve.knots = knots;
+    curve
+        .control_points
+        .extend_from_slice(&source.control_points[1..degree]);
+    curve.weights.extend_from_slice(&source.weights[1..degree]);
+    curve.validate().map_err(|_| ExactRefusal::InvalidOutput)?;
+    Ok(curve)
+}

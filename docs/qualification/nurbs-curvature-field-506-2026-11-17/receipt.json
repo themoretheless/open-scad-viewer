@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0506",
+  "testedBase": "4fd4637497825f6e4504f587086dacd9748465fb",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 66,
+  "scope": [
+    "Store a C2-closed clamped spline as an exactly equivalent cyclic spline, preserving the complete active parameter law.",
+    "Verify exact C2 closure and equal endpoint weights, repeat the poles and period knots, and prove whole-domain identity of the actual stored output."
+  ],
+  "logSha256": "5b9de06fe9b57e83cf725f97d90828e29909c3be6203bf78de94bb2f876fa90f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "404c675b95bd4c32c63b2799367c3c9934bd926f6c5d88cca88d56ec0b948131",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "db60603bebfcaab11f7b648d9ee154a3f282eabd7201bf8d536d05a86d26d9af"
+  }
+}

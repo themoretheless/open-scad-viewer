@@ -1123,3 +1123,64 @@ fn closed_c2_chain_withholds_a_curve_when_only_internal_joins_pass() {
         num_rational::BigRational::from_integer((-1).into())
     );
 }
+
+#[test]
+fn periodic_c2_storage_preserves_the_complete_active_parameter_law() {
+    use nurbs_core::{
+        analysis::curve_partition_agreement::verify_periodic_source_closure,
+        editing::exact_curve_merge::{
+            merge_closed_exact_projective_c2_chain, store_exact_periodic_c2_curve,
+        },
+    };
+    let segments = closed_cubic_segments();
+    let sources: Vec<_> = segments.iter().collect();
+    let source = merge_closed_exact_projective_c2_chain(&sources, 1_000_000)
+        .unwrap()
+        .chain
+        .curve
+        .unwrap();
+    let report = store_exact_periodic_c2_curve(&source, 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let curve = report.curve.unwrap();
+    assert!(verify_periodic_source_closure(&curve).unwrap());
+    assert_eq!(curve.domain(), source.domain());
+    for i in 0..=32 {
+        let t = i as f64 / 8.;
+        assert_eq!(
+            curve.evaluate(t).unwrap().point,
+            source.evaluate(t).unwrap().point
+        );
+    }
+    assert!(
+        store_exact_periodic_c2_curve(&source, report.work_used)
+            .unwrap()
+            .curve
+            .is_some()
+    );
+    assert!(
+        store_exact_periodic_c2_curve(&source, report.work_used - 1)
+            .unwrap()
+            .curve
+            .is_none()
+    );
+}
+
+#[test]
+fn periodic_c2_storage_rejects_a_position_only_wrap() {
+    use nurbs_core::editing::exact_curve_merge::{
+        GaugeMergeRefusal, store_exact_periodic_c2_curve,
+    };
+    let curve = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 2., 2., 2.],
+        control_points: vec![vec![0., 0.], vec![1., 1.], vec![1., -1.], vec![0., 0.]],
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let report = store_exact_periodic_c2_curve(&curve, 1_000_000).unwrap();
+    assert!(report.curve.is_none());
+    assert_eq!(
+        report.refusal,
+        Some(GaugeMergeRefusal::Join(Refusal::SeamMismatch))
+    );
+}
