@@ -1,0 +1,38 @@
+{
+  "id": "NURBS-0377",
+  "testedBase": "a1860ed6cc14bfc5deb36b2296ede89b03d4fbb0",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 79,
+  "scope": [
+    "Store nonbinary cap supports as exactly planar binary64 surfaces within a certified tolerance.",
+    "Joint binary64 corner rounding preserves exact affine closure. The maximum corner error bounds the entire support surface, and each stored coedge is certified against the rounded support."
+  ],
+  "logSha256": "4b098fd6614288582fdea55f374ac36f63e8d2f03f973b8505bfff94b7eb1a63",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "9ca5c0d1a2e6574dc69b809bd244f733b056a02902860f06deb3b6258dd91bae",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "06d66ad4e5376806ebb7fea5d587ba38298528904a7c624a5797f5a6f1c49ebc",
+    "crates/brep-core/tests/section_cap_sheets.rs": "27007a99a8031395407c8cfc261841431e1fb7a9ec493b5f4a55634030f8c364",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/support.rs": "77cb264370c548778e518b0470e05ae8d244fe21796b6a64cd5252316d729a70",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap.rs": "a0e4762c72e3c10cd70fc6af51c0cd7eddcbec08a1b441ebd1ff6e3145f8d495"
+  }
+}

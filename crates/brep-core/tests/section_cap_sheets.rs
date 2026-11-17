@@ -1,4 +1,6 @@
-use brep_core::planar_cap::{SectionSheetOptions, build_section_sheets};
+use brep_core::planar_cap::{
+    SectionSheetOptions, build_section_sheets, build_section_sheets_with_support_tolerance,
+};
 use nurbs_core::curve::Curve;
 
 fn options() -> SectionSheetOptions {
@@ -66,4 +68,48 @@ fn refuses_a_support_that_cannot_be_lifted_without_rounding() {
     let outline = ring([0., 0.], [1., 1.], |_| 1. / 3.);
     let report = build_section_sheets(&[&outline], [0., 0., 3.], 1., options());
     assert!(report.is_err());
+}
+
+#[test]
+fn rounds_an_oblique_nonbinary_support_without_warping_it() {
+    use num_rational::BigRational as Q;
+    let mut wire = ring([0., 0.], [1., 1.], |_| 0.);
+    for point in wire.iter_mut().flat_map(|curve| &mut curve.control_points) {
+        point[2] = (point[0] + point[1] + 1.) / 3.;
+    }
+    let normal = [-1., -1., 3.];
+    let report =
+        build_section_sheets_with_support_tolerance(&[&wire], normal, 1., options(), 1e-14)
+            .unwrap();
+    let [error] = report.support_error_upper.as_slice() else {
+        panic!("{:?}", report.support_error_upper);
+    };
+    assert!(error > &Q::from_integer(0.into()));
+    assert!(error <= &Q::from_float(1e-14).unwrap());
+    let cap = &report.sheet.model.faces[0].surface;
+    let z = |u: usize, v: usize| Q::from_float(cap.control_points[u][v][2]).unwrap();
+    assert_eq!(z(0, 0) + z(1, 1), z(0, 1) + z(1, 0));
+    for point in cap.control_points.iter().flatten() {
+        let exact = (Q::from_float(point[0]).unwrap()
+            + Q::from_float(point[1]).unwrap()
+            + Q::from_integer(1.into()))
+            / Q::from_integer(3.into());
+        let gap = Q::from_float(point[2]).unwrap() - exact;
+        assert!(gap.pow(2) <= error.pow(2));
+    }
+    report.sheet.model.validate().unwrap();
+    assert!(
+        build_section_sheets_with_support_tolerance(&[&wire], normal, 1., options(), 0.).is_err()
+    );
+}
+
+#[test]
+fn supports_zero_tolerance_for_an_exactly_storable_plane() {
+    use num_rational::BigRational as Q;
+    let wire = ring([0., 0.], [1., 1.], |_| 0.5);
+    let report =
+        build_section_sheets_with_support_tolerance(&[&wire], [0., 0., 2.], 1., options(), 0.)
+            .unwrap();
+    assert_eq!(report.support_error_upper, [Q::from_integer(0.into())]);
+    assert_eq!(report.sheet.model.faces.len(), 1);
 }

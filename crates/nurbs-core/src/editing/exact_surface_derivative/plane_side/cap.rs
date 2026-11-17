@@ -280,3 +280,8 @@ pub use holes::{
     PlanarSectionCapWithHoles, PlanarSectionCapWithHolesReport, arrange_surface_plane_section_caps,
     cap_surface_plane_section_with_holes,
 };
+
+mod support;
+pub use support::{
+    BoundedPlanarCapSupport, BoundedPlanarCapSupportReport, lift_planar_cap_support_bounded,
+};

@@ -324,6 +324,7 @@ fn apply(source: &Surface, field: Field, max_work: u64) -> Result<Report> {
 
 mod plane_side;
 pub use plane_side::{
+    BoundedPlanarCapSupport, BoundedPlanarCapSupportReport, lift_planar_cap_support_bounded,
     PlanarSectionCapArrangement, PlanarSectionCapArrangementReport, PlanarSectionCapRegion,
     arrange_surface_plane_section_caps,
     PlanarSectionCap, PlanarSectionCapReport, PlanarSectionCapWithHoles, PlanarSectionCapWithHolesReport, cap_surface_plane_section, cap_surface_plane_section_with_holes,

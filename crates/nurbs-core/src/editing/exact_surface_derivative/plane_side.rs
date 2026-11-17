@@ -287,8 +287,9 @@ pub use split_periodic::{
 
 mod cap;
 pub use cap::{
-    PlanarSectionCap, PlanarSectionCapArrangement, PlanarSectionCapArrangementReport,
-    PlanarSectionCapRegion, PlanarSectionCapReport, PlanarSectionCapWithHoles,
-    PlanarSectionCapWithHolesReport, arrange_surface_plane_section_caps, cap_surface_plane_section,
-    cap_surface_plane_section_with_holes,
+    BoundedPlanarCapSupport, BoundedPlanarCapSupportReport, PlanarSectionCap,
+    PlanarSectionCapArrangement, PlanarSectionCapArrangementReport, PlanarSectionCapRegion,
+    PlanarSectionCapReport, PlanarSectionCapWithHoles, PlanarSectionCapWithHolesReport,
+    arrange_surface_plane_section_caps, cap_surface_plane_section,
+    cap_surface_plane_section_with_holes, lift_planar_cap_support_bounded,
 };
