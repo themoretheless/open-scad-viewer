@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 388,
-  "unallocatedCount": 612,
+  "specifiedCount": 389,
+  "unallocatedCount": 611,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9957,6 +9957,37 @@
       "remainingQualification": [
         "Infer exact rim planes and close the shell with jointly rounded planar supports and certified displacement bounds.",
         "Inferred planes remain exact. Caps with unrepresentable affine control points use planar binary64 supports within a certified displacement bound, preserving and reverifying original boundary curves.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0389",
+      "name": "Автоматическое B-rep-тело с выведенными плоскостями крышек и гарантированным объёмом",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::planar_cap::build_inferred_section_solid",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/solid.rs",
+        "crates/brep-core/src/model/closed_solid.rs",
+        "crates/brep-core/src/body_analysis/analysis/certified_freeform_volume.rs",
+        "crates/brep-core/tests/support/closed_solid_policy.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/support.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs",
+        "docs/qualification/nurbs-curvature-field-389-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-389-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Infer the cap planes from a standalone shell, bound support rounding, and prove the stored solid and its positive volume.",
+        "The original free cycles determine exact section planes. Only a continuously qualified outward closed solid with a positive volume enclosure is returned; exact rational per-cap support errors accompany the result.",
         "WASM and application integration are separate."
       ]
     }

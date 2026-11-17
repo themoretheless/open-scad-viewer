@@ -1,6 +1,7 @@
 use super::{
-    AttachedSectionCaps, BoundedSectionPlane, SectionPlane, close_shell_with_bounded_section_caps,
-    close_shell_with_section_caps, invalid,
+    AttachedSectionCaps, BoundedSectionAttachment, BoundedSectionPlane, SectionAttachmentOptions,
+    SectionPlane, close_shell_with_bounded_inferred_section_caps,
+    close_shell_with_bounded_section_caps, close_shell_with_section_caps, invalid,
 };
 use crate::{
     Body, Model,
@@ -67,6 +68,35 @@ pub fn build_bounded_section_solid(
         options.max_exact_work,
         options.max_verification_cells,
     )?;
+    qualify_bounded_attachment(source, bounded, options)
+}
+
+/// Infer all cap planes from the free rims of a standalone shell and qualify
+/// the resulting solid. The same support tolerance applies to each inferred
+/// cap. The returned volume bounds the stored geometry.
+pub fn build_inferred_section_solid(
+    source: &Model,
+    support_tolerance_mm: f64,
+    options: SectionSolidOptions,
+) -> Result<BoundedSectionSolid> {
+    require_standalone_shell(source)?;
+    let bounded = close_shell_with_bounded_inferred_section_caps(
+        source,
+        0,
+        SectionAttachmentOptions {
+            max_exact_work: options.max_exact_work,
+            max_verification_cells: options.max_verification_cells,
+            support_tolerance_mm,
+        },
+    )?;
+    qualify_bounded_attachment(source, bounded, options)
+}
+
+fn qualify_bounded_attachment(
+    source: &Model,
+    bounded: BoundedSectionAttachment,
+    options: SectionSolidOptions,
+) -> Result<BoundedSectionSolid> {
     let section = qualify_attachment(source, bounded.attachment, options)?;
     Ok(BoundedSectionSolid {
         section,

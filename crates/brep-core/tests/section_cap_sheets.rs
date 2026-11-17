@@ -931,3 +931,53 @@ fn refuses_zero_rounding_allowance_for_the_inferred_oblique_support() {
     );
     assert_eq!(source, before);
 }
+
+#[test]
+fn builds_a_certified_hollow_solid_from_inferred_cap_planes() {
+    use brep_core::planar_cap::build_inferred_section_solid;
+    use num_traits::Zero;
+    let (source, _) = open_hollow_prism();
+    let report = build_inferred_section_solid(&source, 0., section_solid_options())
+        .unwrap_or_else(|error| panic!("{error:?}"));
+    let [error] = report.support_error_upper.as_slice() else {
+        panic!("expected one cap")
+    };
+    assert!(error.is_zero());
+    assert!(report.section.solid.geometry().proven);
+    let model = report.section.solid.model();
+    assert_eq!(model.edges, source.edges);
+    assert_eq!(model.vertices, source.vertices);
+    assert_eq!(model.bodies.len(), 1);
+    assert_eq!(model.faces[report.section.cap_faces[0]].holes.len(), 1);
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+    let volume = report.section.volume.volume_mm3;
+    assert!(volume.lower > 0. && volume.lower <= 30. && volume.upper >= 30.);
+    assert!(volume.upper - volume.lower < 1e-4);
+}
+
+#[test]
+fn refuses_a_rounded_inferred_cap_when_embedding_is_unproved() {
+    use brep_core::planar_cap::build_inferred_section_solid;
+    let source = open_prism_with_nonbinary_cap_support();
+    let before = source.clone();
+    let error = build_inferred_section_solid(&source, 1e-14, section_solid_options())
+        .err()
+        .unwrap();
+    assert_eq!(error.code, "BREP_CLOSED_SOLID_UNPROVED");
+    assert_eq!(source, before);
+}
+
+#[test]
+fn refuses_an_inward_inferred_solid_after_capping() {
+    use brep_core::planar_cap::build_inferred_section_solid;
+    let (mut source, _) = open_hollow_prism();
+    for face in &mut source.shells[0].faces {
+        face.reversed = !face.reversed;
+    }
+    let before = source.clone();
+    let error = build_inferred_section_solid(&source, 0., section_solid_options())
+        .err()
+        .unwrap();
+    assert_eq!(error.code, "BREP_CLOSED_SOLID_UNPROVED");
+    assert_eq!(source, before);
+}
