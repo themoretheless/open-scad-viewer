@@ -665,6 +665,68 @@ pub fn exact_polyhedral_path_material_clip(
     points_mm: &[[Q; 3]],
     max_exact_work: u64,
 ) -> Result<ExactPolyhedralPathMaterialClip> {
+    let (span_intervals, exact_work) = clip_path_material(
+        solid,
+        points_mm,
+        max_exact_work,
+        |intervals, interval, _| {
+            append_closed_interval(intervals, interval);
+        },
+    )?;
+    Ok(ExactPolyhedralPathMaterialClip {
+        span_intervals,
+        exact_work,
+    })
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PolyhedralInteriorInterval {
+    pub parameters: [Q; 2],
+    /// Whether the start and end parameters, respectively, are strictly inside.
+    pub endpoints_included: [bool; 2],
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralPathInteriorClip {
+    /// Strict interior intervals in local parameter order, one list per span.
+    pub span_intervals: Vec<Vec<PolyhedralInteriorInterval>>,
+    pub exact_work: u64,
+}
+
+/// Clip a spatial polyline to the strict interior of a qualified polyhedral
+/// solid. Boundary runs and isolated contacts are excluded from the result.
+pub fn exact_polyhedral_path_interior_clip(
+    solid: &QualifiedClosedSolid,
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralPathInteriorClip> {
+    let (span_intervals, exact_work) = clip_path_material(
+        solid,
+        points_mm,
+        max_exact_work,
+        |intervals, parameters, inclusion| {
+            if let Some(endpoints_included) = inclusion {
+                intervals.push(PolyhedralInteriorInterval {
+                    parameters,
+                    endpoints_included,
+                });
+            }
+        },
+    )?;
+    Ok(ExactPolyhedralPathInteriorClip {
+        span_intervals,
+        exact_work,
+    })
+}
+
+/// Enumerate material intervals in scan order. Strict interior intervals
+/// carry endpoint inclusion flags, and boundary contacts carry none.
+fn clip_path_material<T>(
+    solid: &QualifiedClosedSolid,
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+    mut visit: impl FnMut(&mut Vec<T>, [Q; 2], Option<[bool; 2]>),
+) -> Result<(Vec<Vec<T>>, u64)> {
     let mut remaining = max_exact_work;
     let faces = prepare_path_faces(solid, points_mm, &mut remaining)?;
     let mut span_intervals = Vec::new();
@@ -683,9 +745,11 @@ pub fn exact_polyhedral_path_material_clip(
 
         let mut intervals = Vec::new();
         let mut cursor = Q::zero();
+        let mut start_included = true;
         let direction: [Q; 3] = std::array::from_fn(|i| &end[i] - &start[i]);
         let two = Q::from_integer(2.into());
         for contact in contacts.into_iter().map(Some).chain([None]) {
+            let end_included = contact.is_none();
             let lo = contact
                 .as_ref()
                 .map_or_else(Q::one, |interval| interval[0].clone());
@@ -696,20 +760,22 @@ pub fn exact_polyhedral_path_material_clip(
                 if classify_open_point(&faces, &point, &mut remaining)?
                     == PolyhedralPointLocation::Material
                 {
-                    append_closed_interval(&mut intervals, [cursor.clone(), lo.clone()]);
+                    visit(
+                        &mut intervals,
+                        [cursor.clone(), lo],
+                        Some([start_included, end_included]),
+                    );
                 }
             }
             if let Some([lo, hi]) = contact {
                 cursor = cursor.max(hi.clone());
-                append_closed_interval(&mut intervals, [lo, hi]);
+                start_included = false;
+                visit(&mut intervals, [lo, hi], None);
             }
         }
         span_intervals.push(intervals);
     }
-    Ok(ExactPolyhedralPathMaterialClip {
-        span_intervals,
-        exact_work: max_exact_work - remaining,
-    })
+    Ok((span_intervals, max_exact_work - remaining))
 }
 
 fn append_closed_interval(intervals: &mut Vec<[Q; 2]>, interval: [Q; 2]) {

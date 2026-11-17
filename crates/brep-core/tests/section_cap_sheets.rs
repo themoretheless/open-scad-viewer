@@ -3538,3 +3538,73 @@ fn exact_path_exterior_clip_splits_at_isolated_contact_and_handles_stationary_sp
         ]
     );
 }
+
+#[test]
+fn exact_path_interior_clip_excludes_coplanar_runs_and_keeps_through_hole_gap() {
+    use brep_core::{
+        analysis::{PolyhedralInteriorInterval, exact_polyhedral_path_interior_clip},
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |x, z| [q(x, 1), q(3, 2), q(z, 1)];
+    let path = [point(-1, 1), point(5, 1), point(5, 2), point(-1, 2)];
+    let report = exact_polyhedral_path_interior_clip(solid, &path, 1_000_000).unwrap();
+    assert_eq!(
+        report.span_intervals,
+        [
+            vec![
+                PolyhedralInteriorInterval {
+                    parameters: [q(1, 6), q(1, 3)],
+                    endpoints_included: [false, false],
+                },
+                PolyhedralInteriorInterval {
+                    parameters: [q(1, 2), q(5, 6)],
+                    endpoints_included: [false, false],
+                },
+            ],
+            vec![],
+            vec![],
+        ]
+    );
+    assert_eq!(
+        exact_polyhedral_path_interior_clip(solid, &path, report.exact_work).unwrap(),
+        report
+    );
+    assert!(exact_polyhedral_path_interior_clip(solid, &path, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_path_interior_clip_splits_at_inner_wall_tangency_and_keeps_interior_ends() {
+    use brep_core::{
+        analysis::{PolyhedralInteriorInterval, exact_polyhedral_path_interior_clip},
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let a = [q(1, 2), q(3, 2), q(1, 1)];
+    let b = [q(3, 2), q(1, 2), q(1, 1)];
+    let interval = |lo, hi, endpoints_included| PolyhedralInteriorInterval {
+        parameters: [lo, hi],
+        endpoints_included,
+    };
+    let path = [a.clone(), b.clone(), b, [q(3, 2), q(1, 2), q(2, 1)]];
+    let report = exact_polyhedral_path_interior_clip(solid, &path, 1_000_000).unwrap();
+    assert_eq!(
+        report.span_intervals,
+        [
+            vec![
+                interval(q(0, 1), q(1, 2), [true, false]),
+                interval(q(1, 2), q(1, 1), [false, true]),
+            ],
+            vec![interval(q(0, 1), q(1, 1), [true, true])],
+            vec![interval(q(0, 1), q(1, 1), [true, false])],
+        ]
+    );
+}
