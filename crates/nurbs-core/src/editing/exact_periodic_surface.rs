@@ -5826,6 +5826,25 @@ impl PeriodicTrimInputEdges {
         contour: usize,
         max_work: u64,
     ) -> Result<PeriodicTrimProjectedArea> {
+        self.input_contour_projected_area(contour, max_work, false)
+    }
+
+    /// Integrate signed projection areas of straight and polynomial Bézier
+    /// edges. Higher-degree pieces must have a constant weight.
+    pub fn exact_input_contour_polynomial_projected_area(
+        &self,
+        contour: usize,
+        max_work: u64,
+    ) -> Result<PeriodicTrimProjectedArea> {
+        self.input_contour_projected_area(contour, max_work, true)
+    }
+
+    fn input_contour_projected_area(
+        &self,
+        contour: usize,
+        max_work: u64,
+        allow_polynomial: bool,
+    ) -> Result<PeriodicTrimProjectedArea> {
         crate::check(
             (1..=cad_predicates::MAX_WORK).contains(&max_work),
             "Exact periodic trim area work must be in 1..=1000000",
@@ -5838,7 +5857,7 @@ impl PeriodicTrimInputEdges {
         let result = if pieces.is_empty() {
             Ok(None)
         } else {
-            trim_linear_projected_area(&pieces, &mut work).map(Some)
+            trim_projected_area(&pieces, allow_polynomial, &mut work).map(Some)
         };
         let (projected_area, refusal) = match result {
             Ok(area) => (area, None),
@@ -5858,8 +5877,9 @@ impl From<ExactRefusal> for PeriodicTrimProjectedAreaRefusal {
     }
 }
 
-fn trim_linear_projected_area(
+fn trim_projected_area(
     pieces: &[TrimInputPiece<'_>],
+    allow_polynomial: bool,
     work: &mut Work,
 ) -> std::result::Result<[BigRational; 3], PeriodicTrimProjectedAreaRefusal> {
     let mut area: [BigRational; 3] = std::array::from_fn(|_| BigRational::default());
@@ -5869,57 +5889,52 @@ fn trim_linear_projected_area(
     for (curve, source) in pieces {
         work.charge(1).map_err(ExactRefusal::from)?;
         curve.validate().map_err(|_| ExactRefusal::InvalidOutput)?;
-        if curve.degree != 1 || curve.control_points.len() != 2 {
+        let count = curve.control_points.len();
+        let [lo, hi] = curve.domain();
+        let bezier = !curve.periodic
+            && count == curve.degree + 1
+            && curve.knots[..count].iter().all(|&value| value == lo)
+            && curve.knots[count..].iter().all(|&value| value == hi);
+        if !bezier
+            || (curve.degree != 1
+                && (!allow_polynomial || curve.weights.iter().any(|&w| w != curve.weights[0])))
+        {
             return Err(PeriodicTrimProjectedAreaRefusal::NonlinearEdge);
         }
-        let [lo, hi] = curve.domain();
-        if curve.periodic
-            || curve.knots != [lo, lo, hi, hi]
-            || curve.control_points[0].len() != 3
+        if curve.control_points[0].len() != 3
             || source.parameters[0] == source.parameters[1]
             || reversed != (source.parameters[0] > source.parameters[1])
         {
             return Err(ExactRefusal::InvalidOutput.into());
         }
-        let mut endpoints = [
-            [
-                BigRational::default(),
-                BigRational::default(),
-                BigRational::default(),
-            ],
-            [
-                BigRational::default(),
-                BigRational::default(),
-                BigRational::default(),
-            ],
-        ];
-        for (out, pole) in endpoints.iter_mut().zip(&curve.control_points) {
-            for (value, &coordinate) in out.iter_mut().zip(pole) {
-                *value = work.lift(coordinate).map_err(ExactRefusal::from)?;
-            }
+        let mut poles = Vec::with_capacity(count);
+        for pole in &curve.control_points {
+            poles.push([
+                work.lift(pole[0]).map_err(ExactRefusal::from)?,
+                work.lift(pole[1]).map_err(ExactRefusal::from)?,
+                work.lift(pole[2]).map_err(ExactRefusal::from)?,
+            ]);
         }
-        let [start, end] = endpoints;
-        if previous.as_ref().is_some_and(|point| point != &start) {
+        let start = &poles[0];
+        let end = &poles[count - 1];
+        if previous.as_ref().is_some_and(|point| point != start) {
             return Err(ExactRefusal::InvalidOutput.into());
         }
         if first.is_none() {
             first = Some(start.clone());
         }
-        for (axis, sum) in area.iter_mut().enumerate() {
-            let i = (axis + 1) % 3;
-            let j = (axis + 2) % 3;
-            let a = work
-                .op(&start[i], &end[j], |a, b| a * b)
-                .map_err(ExactRefusal::from)?;
-            let b = work
-                .op(&start[j], &end[i], |a, b| a * b)
-                .map_err(ExactRefusal::from)?;
-            let cross = work.op(&a, &b, |a, b| a - b).map_err(ExactRefusal::from)?;
-            *sum = work
-                .op(sum, &cross, |a, b| a + b)
-                .map_err(ExactRefusal::from)?;
+        if curve.degree == 1 {
+            accumulate_trim_cross(
+                &mut area,
+                start,
+                end,
+                &BigRational::from_integer(1.into()),
+                work,
+            )?;
+        } else {
+            integrate_polynomial_trim_cross(&mut area, &poles, work)?;
         }
-        previous = Some(end);
+        previous = Some(end.clone());
     }
     if first != previous {
         return Err(ExactRefusal::InvalidOutput.into());
@@ -5931,4 +5946,53 @@ fn trim_linear_projected_area(
             .map_err(ExactRefusal::from)?;
     }
     Ok(area)
+}
+
+fn accumulate_trim_cross(
+    area: &mut [BigRational; 3],
+    a: &[BigRational; 3],
+    b: &[BigRational; 3],
+    scale: &BigRational,
+    work: &mut Work,
+) -> std::result::Result<(), ExactRefusal> {
+    for (axis, sum) in area.iter_mut().enumerate() {
+        let i = (axis + 1) % 3;
+        let j = (axis + 2) % 3;
+        let x = work.op(&a[i], &b[j], |a, b| a * b)?;
+        let y = work.op(&a[j], &b[i], |a, b| a * b)?;
+        let cross = work.op(&x, &y, |a, b| a - b)?;
+        let scaled = work.op(&cross, scale, |a, b| a * b)?;
+        *sum = work.op(sum, &scaled, |a, b| a + b)?;
+    }
+    Ok(())
+}
+
+fn integrate_polynomial_trim_cross(
+    area: &mut [BigRational; 3],
+    poles: &[[BigRational; 3]],
+    work: &mut Work,
+) -> std::result::Result<(), ExactRefusal> {
+    use num_bigint::BigInt;
+    let binomial_row = |degree| {
+        let mut row = vec![BigInt::from(1)];
+        for k in 1..=degree {
+            row.push(&row[k - 1] * (degree + 1 - k) / k);
+        }
+        row
+    };
+    let n = poles.len() - 1;
+    let basis = binomial_row(n);
+    let derivative_basis = binomial_row(n - 1);
+    let product_basis = binomial_row(2 * n - 1);
+    for (j, pair) in poles.windows(2).enumerate() {
+        let [a, b, c] = [0, 1, 2].map(|axis| work.op(&pair[1][axis], &pair[0][axis], |x, y| x - y));
+        let delta = [a?, b?, c?];
+        for (i, pole) in poles.iter().enumerate() {
+            // Integral of B_i^n B_j^{n-1}, multiplied by the derivative degree n.
+            let scale =
+                BigRational::new(&basis[i] * &derivative_basis[j], &product_basis[i + j] * 2);
+            accumulate_trim_cross(area, pole, &delta, &scale, work)?;
+        }
+    }
+    Ok(())
 }

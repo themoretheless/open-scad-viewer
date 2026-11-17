@@ -5580,3 +5580,52 @@ fn periodic_trim_projected_area_refuses_exhaustion_and_disconnected_edges() {
         Some(Failure::Arithmetic(Refusal::InvalidOutput))
     );
 }
+
+#[test]
+fn periodic_trim_polynomial_projected_area_integrates_curved_bezier_exactly() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicTrimProjectedAreaRefusal as Failure, build_exact_periodic_surface_trim_input_edges,
+    };
+    let q = |n: i64, d: i64| num_rational::BigRational::new(n.into(), d.into());
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let mut result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    {
+        let first = &mut result.geometry.patches.as_mut().unwrap()[0].loops[0][0].curve;
+        first.degree = 2;
+        first.knots = vec![0., 0., 0., 0.5, 0.5, 0.5];
+        first.control_points.insert(1, vec![0.375, 0.25, 0.25]);
+        first.weights = vec![2.; 3];
+    }
+    assert_eq!(
+        result
+            .exact_input_contour_projected_area(0, 1_000_000)
+            .unwrap()
+            .refusal,
+        Some(Failure::NonlinearEdge)
+    );
+    let area = result
+        .exact_input_contour_polynomial_projected_area(0, 1_000_000)
+        .unwrap();
+    assert_eq!(area.projected_area, Some([q(-3, 4), q(-3, 4), q(-1, 16)]));
+
+    result.geometry.patches.as_mut().unwrap()[0].loops[0][0]
+        .curve
+        .weights[1] = 1.;
+    let rational = result
+        .exact_input_contour_polynomial_projected_area(0, 1_000_000)
+        .unwrap();
+    assert!(rational.projected_area.is_none());
+    assert_eq!(rational.refusal, Some(Failure::NonlinearEdge));
+}
