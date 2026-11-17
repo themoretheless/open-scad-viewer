@@ -1445,15 +1445,15 @@ pub(super) fn clamp_curve_net(
             )?;
         }
     }
-    let first = knots.partition_point(|&k| k < lo);
-    let last = knots.partition_point(|&k| k < hi);
-    // At degree multiplicity the first and last active span each have
-    // a single endpoint pole. Copy their active control range, replacing
-    // the inactive exterior knots by one extra copy of each endpoint.
-    let active = net.drain(first - 1..last).collect();
-    let mut clamped_knots = vec![lo];
-    clamped_knots.extend_from_slice(&knots[first..last + degree]);
-    clamped_knots.push(hi);
+    let after_start = knots.partition_point(|&k| k <= lo);
+    let before_end = knots.partition_point(|&k| k < hi);
+    // The first active span starts at the last copy of lo. The last
+    // active span ends at the first copy of hi. This also handles source
+    // endpoints that are already clamped at degree plus one.
+    let active = net.drain(after_start - degree - 1..before_end).collect();
+    let mut clamped_knots = vec![lo; degree + 1];
+    clamped_knots.extend_from_slice(&knots[after_start..before_end]);
+    clamped_knots.extend(std::iter::repeat_n(hi, degree + 1));
     Ok((active, clamped_knots))
 }
 

@@ -3849,3 +3849,170 @@ fn store_periodic_trim_loop(
         })
         .collect()
 }
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimPatch {
+    pub surface: Surface,
+    pub trim: PeriodicTrimComponent,
+    /// Offset applied to the component's original UV lift to obtain this chart.
+    pub uv_translation: [BigRational; 2],
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PeriodicTrimPatchRefusal {
+    Contours(PeriodicContourForestRefusal),
+    Support {
+        component: usize,
+        reason: GaugeMergeRefusal,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimPatchReport {
+    pub patches: Option<Vec<PeriodicTrimPatch>>,
+    pub work_used: u64,
+    pub refusal: Option<PeriodicTrimPatchRefusal>,
+}
+
+/// Build a clamped support patch and its oriented trim loops for each
+/// periodic UV component. The outer contour's bounding rectangle sets the
+/// exact chart. Shift it by whole turns as needed to anchor the extraction
+/// in the source domain. Both support and trims use the resulting UV clock.
+pub fn build_exact_periodic_surface_trim_patches(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    max_work: u64,
+) -> Result<PeriodicTrimPatchReport> {
+    use PeriodicTrimPatchRefusal as Failure;
+
+    let trims = build_exact_periodic_surface_trim_components(source, contours, max_work)?;
+    let refused = |reason, work_used| PeriodicTrimPatchReport {
+        patches: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    let Some(trims_list) = trims.components else {
+        let reason = trims
+            .refusal
+            .unwrap_or(PeriodicContourForestRefusal::Arithmetic(
+                ExactRefusal::InvalidOutput,
+            ));
+        return Ok(refused(Failure::Contours(reason), trims.work_used));
+    };
+    let mut work = Work {
+        used: trims.work_used,
+        limit: max_work,
+    };
+    let mut patches = Vec::with_capacity(trims_list.len());
+    for mut trim in trims_list {
+        let component = trim.contours[0];
+        let (bounds, uv_translation) = match anchor_trim_patch(source, &mut trim, &mut work) {
+            Ok(chart) => chart,
+            Err(reason) => {
+                return Ok(refused(
+                    Failure::Support {
+                        component,
+                        reason: GaugeMergeRefusal::Exact(reason),
+                    },
+                    work.used,
+                ));
+            }
+        };
+        let mut support = source.clone();
+        for (axis, interval) in [Axis::U, Axis::V].into_iter().zip(bounds) {
+            if work.used == max_work {
+                return Ok(refused(
+                    Failure::Support {
+                        component,
+                        reason: GaugeMergeRefusal::Exact(ExactRefusal::ResourceLimit),
+                    },
+                    work.used,
+                ));
+            }
+            let report = if row(&support, axis, 0).periodic {
+                let mut report = restrict_exact_periodic_surface_over_turns(
+                    &support,
+                    axis,
+                    interval,
+                    max_work - work.used,
+                )?;
+                report.work_used += work.used;
+                report
+            } else {
+                clamp_surface_axis(&support, axis, interval, &mut work)
+            };
+            work.used = report.work_used;
+            let Some(patch) = report.surface else {
+                let reason = report
+                    .refusal
+                    .unwrap_or(GaugeMergeRefusal::Exact(ExactRefusal::InvalidOutput));
+                return Ok(refused(Failure::Support { component, reason }, work.used));
+            };
+            support = patch;
+        }
+        patches.push(PeriodicTrimPatch {
+            surface: support,
+            trim,
+            uv_translation,
+        });
+    }
+    Ok(PeriodicTrimPatchReport {
+        patches: Some(patches),
+        work_used: work.used,
+        refusal: None,
+    })
+}
+
+fn anchor_trim_patch(
+    source: &Surface,
+    trim: &mut PeriodicTrimComponent,
+    work: &mut Work,
+) -> std::result::Result<([[f64; 2]; 2], [BigRational; 2]), ExactRefusal> {
+    use num_traits::Zero;
+
+    let mut bounds = [[0.; 2]; 2];
+    let mut translation = std::array::from_fn(|_| BigRational::zero());
+    for (i, axis) in [Axis::U, Axis::V].into_iter().enumerate() {
+        let coordinates = || {
+            trim.loops[0]
+                .iter()
+                .flat_map(|curve| &curve.control_points)
+                .map(|point| point[i])
+        };
+        let min = coordinates().fold(f64::INFINITY, f64::min);
+        let max = coordinates().fold(f64::NEG_INFINITY, f64::max);
+        let reference = row(source, axis, 0);
+        let [lo, hi] = reference.domain();
+        if reference.periodic && !(lo <= min && min < hi) {
+            let start = work.lift(lo)?;
+            let end = work.lift(hi)?;
+            let period = work.op(&end, &start, |a, b| a - b)?;
+            let bound = work.lift(min)?;
+            let delta = work.op(&bound, &start, |a, b| a - b)?;
+            let turns = work.op(&delta, &period, |a, b| (a / b).floor())?;
+            translation[i] = work.op(&turns, &period, |a, b| -a * b)?;
+        }
+        if translation[i].is_zero() {
+            bounds[i] = [min, max];
+            continue;
+        }
+        let shift = |x, work: &mut Work| -> std::result::Result<_, ExactRefusal> {
+            let x = work.lift(x)?;
+            let shifted = work.op(&x, &translation[i], |a, b| a + b)?;
+            Ok(work.float(&shifted)?)
+        };
+        bounds[i] = [shift(min, work)?, shift(max, work)?];
+        for point in trim
+            .loops
+            .iter_mut()
+            .flatten()
+            .flat_map(|curve| &mut curve.control_points)
+        {
+            point[i] = shift(point[i], work)?;
+        }
+    }
+    for curve in trim.loops.iter().flatten() {
+        curve.validate().map_err(|_| ExactRefusal::InvalidOutput)?;
+    }
+    Ok((bounds, translation))
+}

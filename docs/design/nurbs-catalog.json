@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 555,
-  "unallocatedCount": 445,
+  "specifiedCount": 556,
+  "unallocatedCount": 444,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14131,6 +14131,27 @@
       "remainingQualification": [
         "Store aligned component lifts as exact oriented degree-one trim loops for the UV classifier.",
         "Normalize winding with rational area, store exactly representable degree-one trim loops and verify downstream UV classification.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0556",
+      "name": "Точные опорные NURBS-патчи с контурами обрезки через периодические швы",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-556-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-556-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Build exact clamped support surfaces and aligned UV trim loops in a shared lifted chart.",
+        "Translate each contour lift by exact integer periods, extract its bounding support tensor, and keep the oriented loops on that clock.",
         "WASM and application integration are separate."
       ]
     }

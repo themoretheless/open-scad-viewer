@@ -4150,3 +4150,79 @@ fn periodic_trim_components_refuse_touching_contours() {
         Some(PeriodicContourForestRefusal::Contact { .. })
     ));
 }
+
+#[test]
+fn periodic_trim_patches_provide_exact_support_and_holes_across_both_seams() {
+    use num_rational::BigRational as Q;
+    use nurbs_core::{
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
+        trim_domain::{Location, TrimDomain},
+    };
+    let source = doubly_periodic_tensor();
+    // Start on the near side so the lift initially has negative minima.
+    let outer = [
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+    ];
+    let hole = [
+        [0.125, 0.125],
+        [0.625, 0.125],
+        [0.625, 0.625],
+        [0.125, 0.625],
+        [0.125, 0.125],
+    ];
+    let report =
+        build_exact_periodic_surface_trim_patches(&source, &[&outer, &hole], 1_000_000).unwrap();
+    assert!(report.refusal.is_none());
+    let patches = report.patches.unwrap();
+    let patch = &patches[0];
+    assert_eq!(
+        patch.uv_translation,
+        [Q::from_integer(4.into()), Q::from_integer(4.into())]
+    );
+    assert!(!patch.surface.periodic_u && !patch.surface.periodic_v);
+    assert_eq!(patch.surface.knots_u[1], 3.25);
+    assert_eq!(
+        patch.surface.knots_v[patch.surface.control_points[0].len()],
+        4.75
+    );
+    let domain = TrimDomain::new(&patch.trim.loops, 1e-8).unwrap();
+    for (uv, location) in [
+        ([4., 4.], Location::Inside),
+        ([4.25, 4.25], Location::Outside),
+    ] {
+        assert_eq!(domain.classify_point(uv, 1024).unwrap().location, location);
+        assert_eq!(
+            patch.surface.evaluate(uv[0], uv[1]).unwrap().point,
+            source.evaluate(uv[0] % 4., uv[1] % 4.).unwrap().point
+        );
+    }
+    let short =
+        build_exact_periodic_surface_trim_patches(&source, &[&outer, &hole], report.work_used - 1)
+            .unwrap();
+    assert!(short.patches.is_none());
+}
+
+#[test]
+fn periodic_trim_patches_support_a_nonperiodic_transverse_axis() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
+        surface::extrude,
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [[3.5, 0.], [0.5, 0.], [0.5, 0.75], [3.5, 0.75], [3.5, 0.]];
+    let report = build_exact_periodic_surface_trim_patches(&source, &[&outer], 1_000_000).unwrap();
+    let patch = &report.patches.unwrap()[0];
+    assert_eq!(patch.surface.knots_v, vec![0., 0., 0.75, 0.75]);
+    assert_eq!(
+        patch.surface.evaluate(4.25, 0.5).unwrap().point,
+        source.evaluate(0.25, 0.5).unwrap().point
+    );
+}
