@@ -3899,3 +3899,58 @@ fn exact_material_path_components_keep_separate_visits_to_the_same_tangent_point
         }),
     );
 }
+
+#[test]
+fn exact_path_common_material_clip_retains_only_the_shared_part_of_three_solids() {
+    use brep_core::analysis::exact_polyhedral_path_common_material_clip;
+    use num_rational::BigRational as Q;
+    let a = shifted_oblique_solid(0.);
+    let b = shifted_oblique_solid(1.);
+    let c = shifted_oblique_solid(2.);
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |x| [q(x, 1), q(0, 1), q(1, 1)];
+    let path = [point(-1), point(5), point(-1)];
+    let inputs = [&a, &b, &c];
+    let report = exact_polyhedral_path_common_material_clip(&inputs, &path, 1_000_000).unwrap();
+    assert_eq!(
+        report.span_intervals,
+        [vec![[q(1, 2), q(2, 3)]], vec![[q(1, 3), q(1, 2)]]],
+    );
+    assert_eq!(
+        exact_polyhedral_path_common_material_clip(&[&c, &b, &a], &path, 1_000_000)
+            .unwrap()
+            .span_intervals,
+        report.span_intervals
+    );
+    assert_eq!(
+        exact_polyhedral_path_common_material_clip(&inputs, &path, report.exact_work).unwrap(),
+        report
+    );
+    assert!(
+        exact_polyhedral_path_common_material_clip(&inputs, &path, report.exact_work - 1).is_err()
+    );
+}
+
+#[test]
+fn exact_path_common_material_clip_distinguishes_touching_and_disjoint_solids() {
+    use brep_core::analysis::exact_polyhedral_path_common_material_clip;
+    use num_rational::BigRational as Q;
+    let a = shifted_oblique_solid(0.);
+    let touching = shifted_oblique_solid(3.);
+    let disjoint = shifted_oblique_solid(4.);
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let path = [[q(0, 1), q(0, 1), q(1, 1)], [q(6, 1), q(0, 1), q(1, 1)]];
+    assert_eq!(
+        exact_polyhedral_path_common_material_clip(&[&a, &touching], &path, 1_000_000)
+            .unwrap()
+            .span_intervals,
+        [vec![[q(1, 2), q(1, 2)]]],
+    );
+    assert!(
+        exact_polyhedral_path_common_material_clip(&[&a, &disjoint], &path, 1_000_000)
+            .unwrap()
+            .span_intervals[0]
+            .is_empty()
+    );
+    assert!(exact_polyhedral_path_common_material_clip(&[], &path, 1_000_000).is_err());
+}

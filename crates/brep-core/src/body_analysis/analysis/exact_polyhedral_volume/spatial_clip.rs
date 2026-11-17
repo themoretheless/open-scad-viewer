@@ -1106,3 +1106,62 @@ pub fn exact_polyhedral_material_path_components(
         exact_work: max_exact_work - remaining,
     })
 }
+
+/// Clip a spatial polyline to the closed material shared by all input solids.
+/// Touching solids can yield point-only or boundary-only intervals.
+pub fn exact_polyhedral_path_common_material_clip(
+    solids: &[&QualifiedClosedSolid],
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralPathMaterialClip> {
+    let Some((first, rest)) = solids.split_first() else {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Material intersection requires at least one solid",
+        ));
+    };
+    let mut intersection = exact_polyhedral_path_material_clip(first, points_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - intersection.exact_work;
+    for solid in rest {
+        if remaining == 0 {
+            return Err(super::work_exhausted());
+        }
+        let clip = exact_polyhedral_path_material_clip(solid, points_mm, remaining)?;
+        remaining -= clip.exact_work;
+        for (shared, next) in intersection
+            .span_intervals
+            .iter_mut()
+            .zip(clip.span_intervals)
+        {
+            spend(&mut remaining, 1)?;
+            let mut overlap = Vec::new();
+            let mut left = shared.iter().peekable();
+            let mut right = next.iter().peekable();
+            while let (Some([a_lo, a_hi]), Some([b_lo, b_hi])) =
+                (left.peek().copied(), right.peek().copied())
+            {
+                spend(&mut remaining, 8)?;
+                let lo = a_lo.max(b_lo);
+                let hi = a_hi.min(b_hi);
+                if lo <= hi {
+                    overlap.push([lo.clone(), hi.clone()]);
+                }
+                match a_hi.cmp(b_hi) {
+                    std::cmp::Ordering::Less => {
+                        left.next();
+                    }
+                    std::cmp::Ordering::Greater => {
+                        right.next();
+                    }
+                    std::cmp::Ordering::Equal => {
+                        left.next();
+                        right.next();
+                    }
+                }
+            }
+            *shared = overlap;
+        }
+    }
+    intersection.exact_work = max_exact_work - remaining;
+    Ok(intersection)
+}
