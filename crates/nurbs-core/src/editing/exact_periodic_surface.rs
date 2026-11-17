@@ -485,12 +485,20 @@ pub fn assemble_exact_periodic_surface_axis(
     axis: Axis,
     max_work: u64,
 ) -> Result<PeriodicAssemblyReport> {
-    use PeriodicAssemblyRefusal as Failure;
-
     crate::check(
         (2..=256).contains(&strips.len()),
         "Periodic assembly needs 2..=256 strips",
     )?;
+    assemble_surface_axis(strips, axis, max_work)
+}
+
+fn assemble_surface_axis(
+    strips: &[Surface],
+    axis: Axis,
+    max_work: u64,
+) -> Result<PeriodicAssemblyReport> {
+    use PeriodicAssemblyRefusal as Failure;
+
     crate::check(
         (1..=cad_predicates::MAX_WORK).contains(&max_work),
         "Periodic assembly work must be in 1..=1000000",
@@ -543,6 +551,19 @@ fn close_surface_cycle(
 ) -> std::result::Result<Surface, PeriodicAssemblyRefusal> {
     use PeriodicAssemblyRefusal as Failure;
 
+    let reference = row(&surface, axis, 0);
+    let p = reference.degree;
+    let count = reference.control_points.len();
+    if reference.periodic
+        || !reference.knots[..=p]
+            .iter()
+            .all(|&knot| knot == reference.knots[p])
+        || !reference.knots[count..]
+            .iter()
+            .all(|&knot| knot == reference.knots[count])
+    {
+        return Err(Failure::Exact(ExactRefusal::InvalidOutput));
+    }
     let [nu, nv] = [
         surface.control_points.len(),
         surface.control_points[0].len(),
@@ -566,8 +587,8 @@ fn close_surface_cycle(
             });
         }
     }
-    let cycle = super::exact_curve_merge::repeat_clamped_cycle(&row(&surface, axis, 0), work)
-        .map_err(Failure::Exact)?;
+    let cycle =
+        super::exact_curve_merge::repeat_clamped_cycle(&reference, work).map_err(Failure::Exact)?;
     match axis {
         Axis::U => {
             surface.knots_u = cycle.knots;
@@ -592,4 +613,64 @@ fn close_surface_cycle(
         .validate()
         .map_err(|_| Failure::Exact(ExactRefusal::InvalidOutput))?;
     Ok(surface)
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicGridAssemblyReport {
+    pub surface: Option<Surface>,
+    pub work_used: u64,
+    /// U row whose V joins failed, absent for a failure in the final U pass.
+    pub refused_row: Option<usize>,
+    pub refusal: Option<PeriodicAssemblyRefusal>,
+}
+
+/// Assemble a rectangular grid indexed by U then V into a single doubly
+/// periodic surface. Both directions use exact structural joins and C0
+/// wraps, preserving all patch parameter laws. No partial surface is emitted.
+pub fn assemble_exact_doubly_periodic_surface(
+    patches: &[Vec<Surface>],
+    max_work: u64,
+) -> Result<PeriodicGridAssemblyReport> {
+    let columns = patches.first().map_or(0, Vec::len);
+    crate::check(
+        (1..=256).contains(&patches.len())
+            && (1..=256).contains(&columns)
+            && patches.len() * columns <= 256
+            && patches.iter().all(|row| row.len() == columns),
+        "Periodic assembly needs a rectangular grid of 1..=256 patches",
+    )?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Periodic assembly work must be in 1..=1000000",
+    )?;
+    let reject = |refused_row, work_used, refusal| PeriodicGridAssemblyReport {
+        surface: None,
+        work_used,
+        refused_row,
+        refusal,
+    };
+    let exhausted = Some(PeriodicAssemblyRefusal::Exact(ExactRefusal::ResourceLimit));
+    let mut work_used = 0;
+    let mut strips = Vec::with_capacity(patches.len());
+    for (index, row) in patches.iter().enumerate() {
+        if work_used == max_work {
+            return Ok(reject(Some(index), work_used, exhausted));
+        }
+        let result = assemble_surface_axis(row, Axis::V, max_work - work_used)?;
+        work_used += result.work_used;
+        let Some(strip) = result.surface else {
+            return Ok(reject(Some(index), work_used, result.refusal));
+        };
+        strips.push(strip);
+    }
+    if work_used == max_work {
+        return Ok(reject(None, work_used, exhausted));
+    }
+    let result = assemble_surface_axis(&strips, Axis::U, max_work - work_used)?;
+    Ok(PeriodicGridAssemblyReport {
+        surface: result.surface,
+        work_used: work_used + result.work_used,
+        refused_row: None,
+        refusal: result.refusal,
+    })
 }

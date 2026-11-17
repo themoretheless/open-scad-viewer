@@ -2083,3 +2083,65 @@ fn exact_periodic_surface_assembly_rejects_a_wrap_weight_mismatch() {
         })
     );
 }
+
+#[test]
+fn exact_periodic_grid_assembly_round_trips_both_axes() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        assemble_exact_doubly_periodic_surface, partition_exact_doubly_periodic_surface,
+    };
+    let source = doubly_periodic_tensor();
+    for (u_cuts, v_cuts) in [(&[4.5][..], &[5., 6.][..]), (&[][..], &[][..])] {
+        let patches = partition_exact_doubly_periodic_surface(
+            &source,
+            [3.5, 3.75],
+            u_cuts,
+            v_cuts,
+            1_000_000,
+        )
+        .unwrap()
+        .patches
+        .unwrap();
+        let report = assemble_exact_doubly_periodic_surface(&patches, 1_000_000).unwrap();
+        assert_eq!(report.refusal, None);
+        let result = report.surface.unwrap();
+        assert!(result.periodic_u && result.periodic_v);
+        for u in [3.5, 4.5, 6., 7.5] {
+            for v in [3.75, 4.5, 6., 7.75] {
+                assert_eq!(
+                    result.evaluate(u, v).unwrap().point,
+                    source.evaluate(u % 4., v % 4.).unwrap().point
+                );
+            }
+        }
+        assert!(
+            assemble_exact_doubly_periodic_surface(&patches, report.work_used - 1)
+                .unwrap()
+                .surface
+                .is_none()
+        );
+    }
+}
+
+#[test]
+fn exact_periodic_grid_assembly_withholds_geometry_after_a_late_row_failure() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicAssemblyRefusal, assemble_exact_doubly_periodic_surface,
+        partition_exact_doubly_periodic_surface,
+    };
+    let source = doubly_periodic_tensor();
+    let mut patches =
+        partition_exact_doubly_periodic_surface(&source, [0., 0.], &[2.], &[2.], 1_000_000)
+            .unwrap()
+            .patches
+            .unwrap();
+    patches[1][0].weights[1][0] = 2.;
+    let report = assemble_exact_doubly_periodic_surface(&patches, 1_000_000).unwrap();
+    assert_eq!(report.refused_row, Some(1));
+    assert_eq!(
+        report.refusal,
+        Some(PeriodicAssemblyRefusal::Wrap {
+            transverse_index: 1
+        })
+    );
+    assert!(report.surface.is_none());
+}
