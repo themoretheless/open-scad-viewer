@@ -29,13 +29,7 @@ pub fn measure_projected_face_area(
             && (1..=256).contains(&face.loops.len()),
         "Projected area needs contours, a positive tolerance and a bounded cell budget",
     )?;
-    let [u, v] = face.projection.slopes.each_ref().map(rational_interval);
-    let (u, v) = (u?, v?);
-    let norm_squared = Interval::point(1.).add(u.mul(u)?)?.add(v.mul(v)?)?;
-    let scale = Interval::new(
-        norm_squared.lo.max(1.).sqrt().next_down(),
-        norm_squared.hi.sqrt().next_up(),
-    )?;
+    let (scale, _) = plane_metric(&face.projection.slopes)?;
 
     // Validate before indexing knot vectors and reserve enough cells to
     // cover all unprocessed contours even if the first needs refinement.
@@ -83,7 +77,18 @@ pub fn measure_projected_face_area(
     })
 }
 
-fn rational_interval(q: &Q) -> Result<Interval> {
+pub(super) fn plane_metric(slopes: &[Q; 2]) -> Result<(Interval, [Interval; 2])> {
+    let [u, v] = slopes.each_ref().map(rational_interval);
+    let (u, v) = (u?, v?);
+    let norm_squared = Interval::point(1.).add(u.mul(u)?)?.add(v.mul(v)?)?;
+    let scale = Interval::new(
+        norm_squared.lo.max(1.).sqrt().next_down(),
+        norm_squared.hi.sqrt().next_up(),
+    )?;
+    Ok((scale, [u, v]))
+}
+
+pub(super) fn rational_interval(q: &Q) -> Result<Interval> {
     let mid = q
         .to_f64()
         .filter(|x| x.is_finite())

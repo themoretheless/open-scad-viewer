@@ -75,3 +75,5 @@ pub mod planar_trim_projection;
 pub mod planar_face_area;
 
 pub mod exact_planar_face_mass;
+
+pub mod bounded_planar_face_mass;
