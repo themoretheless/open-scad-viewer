@@ -3086,3 +3086,160 @@ pub fn relate_exact_periodic_surface_paths(
         Err(reason) => refused(PeriodicPathAreaRefusal::Arithmetic(reason), work.used),
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PeriodicContourNode {
+    /// Index of the immediate containing contour, in input order.
+    pub parent: Option<usize>,
+    pub depth: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PeriodicContourForestRefusal {
+    Path {
+        contour: usize,
+        reason: PeriodicPathAreaRefusal,
+    },
+    NonSimple {
+        contour: usize,
+        contact: PeriodicPathContact,
+    },
+    Contact {
+        contours: [usize; 2],
+        contact: PeriodicPathContact,
+    },
+    Arithmetic(ExactRefusal),
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicContourForestReport {
+    pub nodes: Option<Vec<PeriodicContourNode>>,
+    pub work_used: u64,
+    pub refusal: Option<PeriodicContourForestRefusal>,
+}
+
+/// Build the containment forest of simple, mutually disjoint closed UV
+/// contours on a periodic chart. Even depths bound filled regions; odd
+/// depths bound holes under even-odd fill. The result uses input indices.
+pub fn exact_periodic_surface_contour_forest(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    max_work: u64,
+) -> Result<PeriodicContourForestReport> {
+    use PeriodicContourForestRefusal as Failure;
+
+    crate::check(
+        (1..=256).contains(&contours.len()),
+        "Periodic contour forest needs 1..=256 contours",
+    )?;
+    crate::check(
+        contours
+            .iter()
+            .all(|path| (4..=4096).contains(&path.len()) && path.first() == path.last()),
+        "Periodic contour forest needs closed polygons of 4..=4096 samples",
+    )?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact contour forest work must be in 1..=1000000",
+    )?;
+    source.validate()?;
+    let domains = [Axis::U, Axis::V].map(|axis| {
+        let reference = row(source, axis, 0);
+        reference.periodic.then(|| reference.domain())
+    });
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let refused = |reason, work_used| PeriodicContourForestReport {
+        nodes: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    let mut polygons = Vec::with_capacity(contours.len());
+    for (contour, path) in contours.iter().enumerate() {
+        if work.used == max_work {
+            return Ok(refused(
+                Failure::Arithmetic(ExactRefusal::ResourceLimit),
+                work.used,
+            ));
+        }
+        let lift = lift_exact_periodic_surface_path(source, path, max_work - work.used)?;
+        work.used += lift.work_used;
+        let Some(points) = lift.parameters else {
+            let reason = PeriodicPathAreaRefusal::Lift(
+                lift.refusal
+                    .unwrap_or(PeriodicLiftRefusal::Arithmetic(ExactRefusal::InvalidOutput)),
+            );
+            return Ok(refused(Failure::Path { contour, reason }, work.used));
+        };
+        if points.first() != points.last() {
+            return Ok(refused(
+                Failure::Path {
+                    contour,
+                    reason: PeriodicPathAreaRefusal::NonzeroWinding,
+                },
+                work.used,
+            ));
+        }
+        let polygon = match prepare_lifted_polygon(&points, domains, &mut work) {
+            Ok(polygon) => polygon,
+            Err(reason) => return Ok(refused(Failure::Arithmetic(reason), work.used)),
+        };
+        match find_cyclic_polygon_contact(&polygon, &mut work) {
+            Ok(Some(contact)) => {
+                return Ok(refused(Failure::NonSimple { contour, contact }, work.used));
+            }
+            Ok(None) => polygons.push(polygon),
+            Err(reason) => return Ok(refused(Failure::Arithmetic(reason), work.used)),
+        }
+    }
+    match build_periodic_contour_forest(&polygons, contours, &mut work) {
+        Ok(nodes) => Ok(PeriodicContourForestReport {
+            nodes: Some(nodes),
+            work_used: work.used,
+            refusal: None,
+        }),
+        Err(reason) => Ok(refused(reason, work.used)),
+    }
+}
+
+fn build_periodic_contour_forest(
+    polygons: &[LiftedPolygon],
+    native: &[&[[f64; 2]]],
+    work: &mut Work,
+) -> std::result::Result<Vec<PeriodicContourNode>, PeriodicContourForestRefusal> {
+    use PeriodicContourForestRefusal as Failure;
+    let mut containers = vec![Vec::new(); polygons.len()];
+    for (i, a) in polygons.iter().enumerate() {
+        for (j, b) in polygons.iter().enumerate().skip(i + 1) {
+            if let Some(contact) =
+                find_periodic_path_pair_contact(a, b, work).map_err(Failure::Arithmetic)?
+            {
+                return Err(Failure::Contact {
+                    contours: [i, j],
+                    contact,
+                });
+            }
+            if classify_lifted_polygon(a, native[j][0], work).map_err(Failure::Arithmetic)?
+                == PeriodicPathLocation::Inside
+            {
+                containers[j].push(i);
+            } else if classify_lifted_polygon(b, native[i][0], work).map_err(Failure::Arithmetic)?
+                == PeriodicPathLocation::Inside
+            {
+                containers[i].push(j);
+            }
+        }
+    }
+    Ok(containers
+        .iter()
+        .map(|ancestors| PeriodicContourNode {
+            depth: ancestors.len(),
+            parent: ancestors
+                .iter()
+                .copied()
+                .max_by_key(|&index| containers[index].len()),
+        })
+        .collect())
+}

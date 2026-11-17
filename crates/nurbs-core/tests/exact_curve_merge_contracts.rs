@@ -3724,3 +3724,81 @@ fn periodic_path_relation_distinguishes_contact_and_self_intersection() {
         Some(R::NonSimple { contour: 1, .. })
     ));
 }
+
+#[test]
+fn periodic_contour_forest_tracks_holes_and_islands_in_input_order() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicContourNode, exact_periodic_surface_contour_forest,
+    };
+    let source = doubly_periodic_tensor();
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let hole = [
+        [3.75, 3.75],
+        [0.25, 3.75],
+        [0.25, 0.25],
+        [3.75, 0.25],
+        [3.75, 3.75],
+    ];
+    let island = [
+        [3.875, 3.875],
+        [0.125, 3.875],
+        [0.125, 0.125],
+        [3.875, 0.125],
+        [3.875, 3.875],
+    ];
+    let separate = [[1., 1.], [2., 1.], [2., 2.], [1., 2.], [1., 1.]];
+    let contours = [&island[..], &outer[..], &separate[..], &hole[..]];
+    let report = exact_periodic_surface_contour_forest(&source, &contours, 1_000_000).unwrap();
+    assert_eq!(
+        report.nodes,
+        Some(vec![
+            PeriodicContourNode {
+                parent: Some(3),
+                depth: 2
+            },
+            PeriodicContourNode {
+                parent: None,
+                depth: 0
+            },
+            PeriodicContourNode {
+                parent: None,
+                depth: 0
+            },
+            PeriodicContourNode {
+                parent: Some(1),
+                depth: 1
+            }
+        ])
+    );
+    assert!(
+        exact_periodic_surface_contour_forest(&source, &contours, report.work_used - 1)
+            .unwrap()
+            .nodes
+            .is_none()
+    );
+}
+
+#[test]
+fn periodic_contour_forest_withholds_the_result_for_touching_boundaries() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicContourForestRefusal, exact_periodic_surface_contour_forest,
+    };
+    let source = doubly_periodic_tensor();
+    let a = [[0., 0.], [1., 0.], [1., 1.], [0., 1.], [0., 0.]];
+    let b = [[1., 0.], [2., 0.], [2., 1.], [1., 1.], [1., 0.]];
+    let report = exact_periodic_surface_contour_forest(&source, &[&a, &b], 1_000_000).unwrap();
+    assert!(report.nodes.is_none());
+    assert!(matches!(
+        report.refusal,
+        Some(PeriodicContourForestRefusal::Contact {
+            contours: [0, 1],
+            ..
+        })
+    ));
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 549,
-  "unallocatedCount": 451,
+  "specifiedCount": 550,
+  "unallocatedCount": 450,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14005,6 +14005,27 @@
       "remainingQualification": [
         "Distinguish nesting, separation and boundary contact after exact periodic simplicity checks.",
         "Prove the two projected polygons simple, test every boundary translate, and classify witness vertices to determine strict nesting.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0550",
+      "name": "Дерево вложенности простых UV-контуров на периодической поверхности",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::exact_periodic_surface_contour_forest",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-550-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-550-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Build an exact containment forest for simple, mutually disjoint periodic UV polygons.",
+        "Certify each cyclic contour and each pair of boundaries before resolving immediate parents and nesting depths.",
         "WASM and application integration are separate."
       ]
     }
