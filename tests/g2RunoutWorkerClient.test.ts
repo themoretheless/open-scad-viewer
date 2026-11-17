@@ -47,6 +47,7 @@ const job: Extract<MainSolidJob, { kind: 'g2RunoutSurface' }> = {
   },
   options: { sourceBoundary: 'vMax', sourceTrace: { at: 0.9, along: [0, 1] }, gains: [0.1, 0.1], transverseUv: [0, 1] },
 }
+type Result = ReturnType<typeof result>
 function result() {
   return {
     patches: [surface],
@@ -126,10 +127,10 @@ it('cancels runout work, retries in a new realm and discards a captured late res
 })
 it('refuses a malformed surface and forged seam scope from the worker', async () => {
   for (const mutate of [
-    (v: any) => (v.patches[0].weights[0][0] = NaN),
-    (v: any) => (v.report.supportSeams[1].source = 0),
-    (v: any) => (v.report.fields[0].absoluteCurvatureUpper = 11),
-    (v: any) => (v.report.method = 'native-original-support-G2-runout/1'),
+    (v: Result) => (v.patches[0]!.weights[0]![0] = NaN),
+    (v: Result) => (v.report.supportSeams[1]!.source = 0),
+    (v: Result) => (v.report.fields[0]!.absoluteCurvatureUpper = 11),
+    (v: Result) => (v.report.method = 'native-original-support-G2-runout/1'),
   ]) {
     const port = new Port(),
       client = new MainSolidWorkerClient(() => port)

@@ -54,7 +54,7 @@ it('rejects surface worker results with wrong domains, scope, budgets or complet
     expect(mainSolidResult(expectation, { ...r, ...patch })).toBe(false)
 })
 it('dispatches complete surface distance and recovers from invalid input in the worker', async () => {
-  const messages: any[] = [],
+  const messages: unknown[] = [],
     handler = createMainSolidWorkerHandler(message => messages.push(message))
   const job = { kind: 'surfaceDistance' as const, a: plane(0), b: plane(3), toleranceMm: 0.001, maxCells: 100 }
   await handler({ version: 1, id: 1, job })

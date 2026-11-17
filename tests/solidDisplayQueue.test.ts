@@ -1,7 +1,9 @@
 import { expect, it, vi } from 'vitest'
 import { SolidDisplayQueue } from '../src/kernel/solidDisplayQueue'
-import { SolidDisplayCache, solidDisplayKey } from '../src/kernel/solidDisplayCache'
+import { SolidDisplayCache, solidDisplayKey, type DisplayMesh } from '../src/kernel/solidDisplayCache'
 import type { DirectBody } from '../src/app/directModeling'
+import type { MainSolidJob } from '../src/kernel/mainSolidProtocol'
+type DisplayJob = Extract<MainSolidJob, { kind: 'displayMesh' }>
 const body = (id: string) =>
   ({
     id,
@@ -14,10 +16,12 @@ it('runs one request at a time, reuses exact cached results and continues after 
   const a = body('a'),
     b = body('b'),
     cache = new SolidDisplayCache(),
-    requests: Array<{ job: any; resolve: (v: any) => void; reject: (e: Error) => void }> = []
+    requests: Array<{ job: DisplayJob; resolve: (v: DisplayMesh) => void; reject: (e: Error) => void }> = []
   const port = {
       cancel: vi.fn(),
-      run: vi.fn(job => new Promise<any>((resolve, reject) => requests.push({ job, resolve, reject }))),
+      run: vi.fn(
+        (job: DisplayJob) => new Promise<DisplayMesh>((resolve, reject) => requests.push({ job, resolve, reject })),
+      ),
     },
     queue = new SolidDisplayQueue(port, cache)
   const pending = queue.prepare([a, b])
@@ -36,9 +40,9 @@ it('drops old responses after cancellation, a newer scene, or in-place geometry 
   const a = body('a'),
     b = body('b'),
     cache = new SolidDisplayCache(),
-    resolve: Array<(v: any) => void> = []
+    resolve: Array<(v: DisplayMesh) => void> = []
   const queue = new SolidDisplayQueue(
-    { cancel: vi.fn(), run: () => new Promise<any>(done => resolve.push(done)) },
+    { cancel: vi.fn(), run: () => new Promise<DisplayMesh>(done => resolve.push(done)) },
     cache,
   )
   const old = queue.prepare([a])

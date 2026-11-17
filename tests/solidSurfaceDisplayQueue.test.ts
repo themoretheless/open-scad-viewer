@@ -1,6 +1,9 @@
 import { expect, it, vi } from 'vitest'
 import { SolidSurfaceDisplayQueue } from '../src/kernel/solidSurfaceDisplayQueue'
 import { createSolidNurbsSurface, tessellateSolidNurbsSurface } from '../src/kernel/solidNurbs'
+import type { MainSolidJob } from '../src/kernel/mainSolidProtocol'
+import type { PolygonMesh } from '../src/kernel/geometry/polygon'
+type SurfaceJob = Extract<MainSolidJob, { kind: 'surfaceMesh' }>
 it('deduplicates geometry, retains bounded results and reports unavailable surfaces', async () => {
   const a = createSolidNurbsSurface('a'),
     b = structuredClone(a)
@@ -25,7 +28,7 @@ it('drops cancelled and mutated responses and continues other surfaces after a f
     b = structuredClone(a)
   b.id = 'b'
   b.segmentsU = 4
-  const requests: Array<{ job: any; resolve: (v: any) => void; reject: (e: Error) => void }> = []
+  const requests: Array<{ job: SurfaceJob; resolve: (v: PolygonMesh) => void; reject: (e: Error) => void }> = []
   const queue = new SolidSurfaceDisplayQueue({
     run: job => new Promise((resolve, reject) => requests.push({ job, resolve, reject })),
     cancel: vi.fn(),

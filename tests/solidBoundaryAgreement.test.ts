@@ -1,8 +1,14 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
 import { inspectBoundaryAgreement } from '../src/kernel/solidBoundaryAgreement'
-import { mainSolidExpectation, mainSolidResult } from '../src/kernel/mainSolidProtocol'
+import { mainSolidExpectation, mainSolidResult, type MainSolidRequest } from '../src/kernel/mainSolidProtocol'
 import { createMainSolidWorkerHandler } from '../src/kernel/mainSolidWorkerRuntime'
+import type { MainSolidPort } from '../src/kernel/mainSolidWorkerClient'
+type FakePort = Omit<MainSolidPort, 'onmessage'> & {
+  onmessage: ((event: { data: unknown }) => void) | null
+  request?: MainSolidRequest
+  terminated: boolean
+}
 const fixtures = JSON.parse(readFileSync(new URL('./fixtures/boundary-agreement.json', import.meta.url), 'utf8')).cases
 it('finds the unsampled boundary defect in WASM and retains model identities', () => {
   for (const f of fixtures) {
@@ -65,7 +71,7 @@ it('rejects swapped identities, false success, forged witnesses and invalid line
   }
 })
 it('recovers in the worker after a bad budget', async () => {
-  const messages: any[] = [],
+  const messages: unknown[] = [],
     handler = createMainSolidWorkerHandler(m => messages.push(m)),
     model = fixtures[1].model
   await handler({ version: 1, id: 1, job: { kind: 'boundaryAgreement', model, maxCells: 0 } })
@@ -79,14 +85,14 @@ it('recovers in the worker after a bad budget', async () => {
 })
 it('cancels boundary work and refuses its captured late response after restart', async () => {
   const { MainSolidWorkerClient } = await import('../src/kernel/mainSolidWorkerClient')
-  const ports: any[] = []
+  const ports: FakePort[] = []
   const client = new MainSolidWorkerClient(() => {
-    const p: any = {
+    const p: FakePort = {
       onmessage: null,
       onerror: null,
       onmessageerror: null,
       terminated: false,
-      postMessage(m: any) {
+      postMessage(m) {
         this.request = m
       },
       terminate() {
@@ -102,19 +108,21 @@ it('cancels boundary work and refuses its captured late response after restart',
   try {
     const first = client.run(job),
       cancelled = expect(first).rejects.toMatchObject({ name: 'AbortError' }),
-      stale = ports[0].onmessage,
-      request = ports[0].request
+      stale = ports[0]!.onmessage,
+      request = ports[0]!.request
     const second = client.run(job)
     await cancelled
-    expect(ports[0].terminated).toBe(true)
+    expect(ports[0]!.terminated).toBe(true)
     let settled = false
     void second.then(() => {
       settled = true
     })
-    stale({ data: { version: 1, id: request.id, kind: 'boundaryAgreement', ok: true, result } })
+    stale!({ data: { version: 1, id: request!.id, kind: 'boundaryAgreement', ok: true, result } })
     await Promise.resolve()
     expect(settled).toBe(false)
-    ports[1].onmessage({ data: { version: 1, id: ports[1].request.id, kind: 'boundaryAgreement', ok: true, result } })
+    ports[1]!.onmessage!({
+      data: { version: 1, id: ports[1]!.request!.id, kind: 'boundaryAgreement', ok: true, result },
+    })
     await expect(second).resolves.toMatchObject({ allWithinTolerance: true })
   } finally {
     client.dispose()

@@ -638,7 +638,7 @@ const topologyResult = () => ({
   axialForcesN: [[1000]],
 })
 const topologyJob = () => {
-  const { forcesN, ...structure } = model()
+  const { forcesN: _forcesN, ...structure } = model()
   return {
     kind: 'trussTopology' as const,
     model: structure,

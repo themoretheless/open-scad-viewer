@@ -2,7 +2,16 @@ import { evaluateNurbsSurface } from '../src/kernel/nurbsSurface'
 import { obliqueSphereRequests } from './fixtures/oblique-sphere-distance'
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
-import { solidDistanceExpectation, validSolidDistance } from '../src/kernel/solidDistance'
+import { solidDistanceExpectation, validSolidDistance, type SolidDistanceResult } from '../src/kernel/solidDistance'
+import type { NurbsBrep } from '../src/kernel/geometry/brep'
+import type { MainSolidRequest } from '../src/kernel/mainSolidProtocol'
+import type { MainSolidPort } from '../src/kernel/mainSolidWorkerClient'
+type FakePort = Omit<MainSolidPort, 'onmessage'> & {
+  onmessage: ((event: { data: unknown }) => void) | null
+  request?: MainSolidRequest
+  terminated: boolean
+}
+type Validity = SolidDistanceResult['validity'][number]
 const cases = JSON.parse(
   readFileSync(
     new URL(
@@ -39,11 +48,11 @@ it('rejects inconsistent proof, budgets, shell ownership and contact coordinates
   ])
     expect(validSolidDistance(e, { ...result, ...patch })).toBe(false)
   for (const mutate of [
-    (r: any) => (r.validity[0].exactAgreement = false),
-    (r: any) => (r.validity[0].orientations[0].expectedOutward = false),
-    (r: any) => (r.validity[0].orientations[0].outward = null),
-    (r: any) => (r.validity[0].nestingRolesConsistent = null),
-    (r: any) => r.limits.validity.exactWork++,
+    (r: SolidDistanceResult) => (r.validity[0].exactAgreement = false),
+    (r: SolidDistanceResult) => (r.validity[0].orientations[0]!.expectedOutward = false),
+    (r: SolidDistanceResult) => (r.validity[0].orientations[0]!.outward = null),
+    (r: SolidDistanceResult) => (r.validity[0].nestingRolesConsistent = null),
+    (r: SolidDistanceResult) => r.limits.validity.exactWork++,
   ]) {
     const r = structuredClone(result)
     mutate(r)
@@ -52,12 +61,12 @@ it('rejects inconsistent proof, budgets, shell ownership and contact coordinates
   const contact = cases[2],
     ce = solidDistanceExpectation(contact.request)
   for (const mutate of [
-    (r: any) => (r.contact.faces[0] = 999),
-    (r: any) => (r.contact.firstUv[0] = [-1, -1]),
-    (r: any) => (r.contact.contractionUpper = 0.5),
-    (r: any) => (r.contact.pointIntervalMm[0] = [2, 1]),
-    (r: any) => (r.contactPairsVisited = 0),
-    (r: any) => (r.contact = null),
+    (r: SolidDistanceResult) => (r.contact!.faces[0] = 999),
+    (r: SolidDistanceResult) => (r.contact!.firstUv[0] = [-1, -1]),
+    (r: SolidDistanceResult) => (r.contact!.contractionUpper = 0.5),
+    (r: SolidDistanceResult) => (r.contact!.pointIntervalMm[0] = [2, 1]),
+    (r: SolidDistanceResult) => (r.contactPairsVisited = 0),
+    (r: SolidDistanceResult) => (r.contact = null),
   ]) {
     const r = structuredClone(contact.result)
     mutate(r)
@@ -74,14 +83,14 @@ it('rejects inconsistent proof, budgets, shell ownership and contact coordinates
   ])
     expect(validSolidDistance(se, { ...separated.result, ...patch })).toBe(false)
   for (const mutate of [
-    (r: any) => (r.separationWitness = null),
-    (r: any) => (r.separationWitness.faces[0] = 999),
-    (r: any) => (r.separationWitness.parameters[0][0] = -1),
-    (r: any) => (r.separationWitness.points[0][0] = Infinity),
-    (r: any) => (r.separationWitness.pointEnclosures[0][0] = [9, 8]),
-    (r: any) => {
-      r.separationWitness.points[0][0] = 20
-      r.separationWitness.pointEnclosures[0][0] = [20, 20]
+    (r: SolidDistanceResult) => (r.separationWitness = null),
+    (r: SolidDistanceResult) => (r.separationWitness!.faces[0] = 999),
+    (r: SolidDistanceResult) => (r.separationWitness!.parameters[0][0] = -1),
+    (r: SolidDistanceResult) => (r.separationWitness!.points[0][0] = Infinity),
+    (r: SolidDistanceResult) => (r.separationWitness!.pointEnclosures[0][0] = [9, 8]),
+    (r: SolidDistanceResult) => {
+      r.separationWitness!.points[0][0] = 20
+      r.separationWitness!.pointEnclosures[0][0] = [20, 20]
     },
   ]) {
     const r = structuredClone(separated.result)
@@ -95,14 +104,14 @@ it('rejects inconsistent proof, budgets, shell ownership and contact coordinates
 })
 it('terminates an obsolete solid-distance request and rejects incomplete proof in replies', async () => {
   const { MainSolidWorkerClient } = await import('../src/kernel/mainSolidWorkerClient')
-  const ports: any[] = []
+  const ports: FakePort[] = []
   const client = new MainSolidWorkerClient(() => {
-    const p: any = {
+    const p: FakePort = {
       onmessage: null,
       onerror: null,
       onmessageerror: null,
       terminated: false,
-      postMessage(m: any) {
+      postMessage(m) {
         this.request = m
       },
       terminate() {
@@ -116,27 +125,33 @@ it('terminates an obsolete solid-distance request and rejects incomplete proof i
   try {
     const first = client.run(job),
       cancelled = expect(first).rejects.toMatchObject({ name: 'AbortError' }),
-      stale = ports[0].onmessage,
-      old = ports[0].request
+      stale = ports[0]!.onmessage,
+      old = ports[0]!.request
     const second = client.run(job)
     await cancelled
-    expect(ports[0].terminated).toBe(true)
+    expect(ports[0]!.terminated).toBe(true)
     let settled = false
     void second.then(() => {
       settled = true
     })
-    stale({ data: { version: 1, id: old.id, kind: job.kind, ok: true, result: cases[0].result } })
+    stale!({ data: { version: 1, id: old!.id, kind: job.kind, ok: true, result: cases[0].result } })
     await Promise.resolve()
     expect(settled).toBe(false)
-    ports[1].onmessage({
-      data: { version: 1, id: ports[1].request.id, kind: job.kind, ok: true, result: cases[0].result },
+    ports[1]!.onmessage!({
+      data: { version: 1, id: ports[1]!.request!.id, kind: job.kind, ok: true, result: cases[0].result },
     })
     await expect(second).resolves.toMatchObject({ distanceIntervalMm: [0, 0] })
     const forged = client.run(job),
       rejected = expect(forged).rejects.toMatchObject({ code: 'CAD_PROTOCOL' }),
-      port = ports.at(-1)
-    port.onmessage({
-      data: { version: 1, id: port.request.id, kind: job.kind, ok: true, result: { ...cases[0].result, validity: [] } },
+      port = ports.at(-1)!
+    port.onmessage!({
+      data: {
+        version: 1,
+        id: port.request!.id,
+        kind: job.kind,
+        ok: true,
+        result: { ...cases[0].result, validity: [] },
+      },
     })
     await rejected
   } finally {
@@ -161,9 +176,9 @@ it('validates actual WASM volume-distance responses without changing either inpu
         const uv = witness.parameters[side],
           point = evaluateNurbsSurface(surface, uv[0], uv[1]).point
         for (let axis = 0; axis < 3; axis++) {
-          expect(witness.points[side][axis]).toBeCloseTo(point[axis], 10)
-          expect(witness.pointEnclosures[side][axis][0]).toBeLessThanOrEqual(witness.points[side][axis])
-          expect(witness.pointEnclosures[side][axis][1]).toBeGreaterThanOrEqual(witness.points[side][axis])
+          expect(witness.points[side]![axis]).toBeCloseTo(point[axis], 10)
+          expect(witness.pointEnclosures[side][axis][0]).toBeLessThanOrEqual(witness.points[side]![axis])
+          expect(witness.pointEnclosures[side][axis][1]).toBeGreaterThanOrEqual(witness.points[side]![axis])
         }
       }
     }
@@ -183,7 +198,9 @@ it('keeps the cavity witness on the inner authored shell', () => {
   expect(validSolidDistance(solidDistanceExpectation(request), result)).toBe(true)
   const face = result.separationWitness.faces[0]
   expect(
-    request.a.bodies[0].innerShells.some((s: number) => request.a.shells[s].faces.some((f: any) => f.face === face)),
+    request.a.bodies[0].innerShells.some((s: number) =>
+      request.a.shells[s].faces.some((f: { face: number }) => f.face === face),
+    ),
   ).toBe(true)
   expect(result.distanceIntervalMm[0]).toBeLessThanOrEqual(1)
   expect(result.distanceIntervalMm[1]).toBeGreaterThanOrEqual(1)
@@ -192,11 +209,11 @@ it('keeps the cavity witness on the inner authored shell', () => {
 it('validates native curved-cylinder volume and original-face witness reports', () => {
   const { request, result, displayMeshes } = cases[5]
   expect(validSolidDistance(solidDistanceExpectation(request), result)).toBe(true)
-  expect(result.validity.every((v: any) => v.proven)).toBe(true)
+  expect(result.validity.every((v: Validity) => v.proven)).toBe(true)
   expect(result.reason).toBe('separated-volumes')
   expect(result.distanceIntervalMm[0]).toBeLessThanOrEqual(3)
   expect(result.distanceIntervalMm[1]).toBeGreaterThanOrEqual(3)
-  expect(displayMeshes.every((mesh: any) => mesh.positions.length > 100)).toBe(true)
+  expect(displayMeshes.every((mesh: { positions: ArrayLike<number> }) => mesh.positions.length > 100)).toBe(true)
 })
 
 it('validates native exact-sphere volume and separation without accepting incomplete validity', () => {
@@ -205,14 +222,16 @@ it('validates native exact-sphere volume and separation without accepting incomp
   expect(validSolidDistance(e, result)).toBe(true)
   expect(expectedDistanceMm).toBe(2)
   expect(
-    result.validity.every((v: any) => v.proven && v.boundaryProven && v.exactAgreement && v.selfIntersectionAbsent),
+    result.validity.every(
+      (v: Validity) => v.proven && v.boundaryProven && v.exactAgreement && v.selfIntersectionAbsent,
+    ),
   ).toBe(true)
   expect(result.reason).toBe('separated-volumes')
   expect(result.materialOverlap).toBe(false)
   expect(result.distanceIntervalMm[0]).toBeLessThanOrEqual(2)
   expect(result.distanceIntervalMm[1]).toBeGreaterThanOrEqual(2)
   expect(result.separationWitness.points).toHaveLength(2)
-  expect(displayMeshes.every((mesh: any) => mesh.positions.length > 100)).toBe(true)
+  expect(displayMeshes.every((mesh: { positions: ArrayLike<number> }) => mesh.positions.length > 100)).toBe(true)
   for (const side of [0, 1]) {
     const incomplete = structuredClone(result)
     incomplete.validity[side].selfIntersectionAbsent = false
@@ -224,9 +243,9 @@ it('qualifies actual WASM exact sphere distances across the tested radius scales
   const { callGeometryRust } = await import('../src/kernel/geometry/kernel')
   const { measureSolidDistance } = await import('../src/kernel/solidDistance')
   for (const radius of [0.000011444091796875, 0.375, 1.5, 6, 12, 786432]) {
-    const a = callGeometryRust<any>('brep_nurbs_sphere', { radius }),
+    const a = callGeometryRust<NurbsBrep>('brep_nurbs_sphere', { radius }),
       contained = radius === 786432
-    const b = contained ? callGeometryRust<any>('brep_nurbs_sphere', { radius: 3 }) : structuredClone(a),
+    const b = contained ? callGeometryRust<NurbsBrep>('brep_nurbs_sphere', { radius: 3 }) : structuredClone(a),
       offset = 2 * radius + 2
     if (!contained) {
       for (const v of b.vertices) v.point[0] += offset
