@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0537",
+  "testedBase": "9191d143fbe2da839c96b662839d0920e1819511",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 131,
+  "scope": [
+    "Reduce lifted parameters exactly modulo certified periods before standard point evaluation.",
+    "Use bounded rational modulo on each exact periodic axis, then evaluate the point at the representable native parameters."
+  ],
+  "logSha256": "c8771ab9859f9554e28ae62b7c65638fe3f0f4a12be0ac9f15d86087627a25f2",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "cdfc9767c7488bfc179d96ba935c475def454f7129d12f965f5e395d60dbd768",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "a22604becce44302cac3a12436f8b82756df30aed07dc7012019ccb4d6b05c56"
+  }
+}

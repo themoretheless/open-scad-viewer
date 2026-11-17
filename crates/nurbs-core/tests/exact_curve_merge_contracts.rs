@@ -3109,3 +3109,48 @@ fn multiturn_periodic_grid_rejects_out_of_range_second_axis_cuts() {
         .is_err()
     );
 }
+
+#[test]
+fn exact_periodic_surface_evaluation_wraps_negative_and_distant_parameters() {
+    use nurbs_core::editing::exact_periodic_surface::evaluate_exact_wrapped_surface_point;
+    let source = doubly_periodic_tensor();
+    for (uv, native) in [
+        ([-4.25, 14.25], [3.75, 2.25]),
+        ([4., -8.], [0., 0.]),
+        ([2f64.powi(60), -2f64.powi(80)], [0., 0.]),
+    ] {
+        let report = evaluate_exact_wrapped_surface_point(&source, uv, 1_000_000).unwrap();
+        assert_eq!(report.native_uv, Some(native));
+        assert_eq!(
+            report.point,
+            Some(source.evaluate(native[0], native[1]).unwrap().point)
+        );
+        assert!(
+            evaluate_exact_wrapped_surface_point(&source, uv, report.work_used - 1)
+                .unwrap()
+                .point
+                .is_none()
+        );
+    }
+}
+
+#[test]
+fn exact_periodic_surface_evaluation_refuses_rounding_at_the_upper_seam() {
+    use nurbs_core::editing::{
+        exact_periodic_surface::{
+            evaluate_exact_wrapped_surface_point, open_exact_periodic_surface_axis,
+        },
+        rational_factor::Refusal,
+    };
+    use nurbs_core::surface::Axis;
+    let source = doubly_periodic_tensor();
+    let report =
+        evaluate_exact_wrapped_surface_point(&source, [-2f64.powi(-54), 0.], 1_000_000).unwrap();
+    assert_eq!(report.refusal, Some(Refusal::NotRepresentable));
+    assert!(report.point.is_none());
+    let open = open_exact_periodic_surface_axis(&source, Axis::V, 1_000_000)
+        .unwrap()
+        .surface
+        .unwrap();
+    assert!(evaluate_exact_wrapped_surface_point(&open, [1., -0.125], 1_000_000).is_err());
+}

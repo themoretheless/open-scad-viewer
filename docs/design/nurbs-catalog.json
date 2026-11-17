@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 536,
-  "unallocatedCount": 464,
+  "specifiedCount": 537,
+  "unallocatedCount": 463,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13732,6 +13732,27 @@
       "remainingQualification": [
         "Partition a lifted multi-turn rectangle into exact patches at absolute U and V cuts.",
         "Build exact clamped patches on both lifted axes and return the grid only after all intervals succeed under one work budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0537",
+      "name": "Вычисление точки периодической NURBS-поверхности с точным приведением U и V",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::evaluate_exact_wrapped_surface_point",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-537-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-537-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Reduce lifted parameters exactly modulo certified periods before standard point evaluation.",
+        "Use bounded rational modulo on each exact periodic axis, then evaluate the point at the representable native parameters.",
         "WASM and application integration are separate."
       ]
     }

@@ -1714,3 +1714,92 @@ fn extend_tensor_support(
         source, axis, knots, count, cycle, false,
     ))
 }
+
+#[derive(Clone, Debug)]
+pub struct PeriodicPointReport {
+    /// The actual parameters passed to the surface evaluator.
+    pub native_uv: Option<[f64; 2]>,
+    pub point: Option<[f64; 3]>,
+    pub work_used: u64,
+    pub refusal: Option<ExactRefusal>,
+}
+
+/// Evaluate a point using exact modulo reduction on each periodic axis.
+/// The upper seam maps to the lower endpoint. Nonperiodic coordinates
+/// must lie inside their domain. Refuse an unstorable reduced coordinate
+/// instead of rounding it across a knot or seam.
+pub fn evaluate_exact_wrapped_surface_point(
+    source: &Surface,
+    uv: [f64; 2],
+    max_work: u64,
+) -> Result<PeriodicPointReport> {
+    source.validate()?;
+    crate::check(
+        uv.iter().all(|t| t.is_finite()),
+        "Surface parameters must be finite",
+    )?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact parameter wrapping work must be in 1..=1000000",
+    )?;
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let mut native_uv = uv;
+    for (i, axis) in [Axis::U, Axis::V].into_iter().enumerate() {
+        let reference = row(source, axis, 0);
+        let [lo, hi] = reference.domain();
+        if !reference.periodic {
+            crate::check(
+                lo <= uv[i] && uv[i] <= hi,
+                "Parameter is outside the nonperiodic axis",
+            )?;
+            continue;
+        }
+        let wrapped = if crate::analysis::curve_partition_agreement::verify_periodic_source_closure(
+            &reference,
+        )? {
+            wrap_parameter_exact(uv[i], [lo, hi], &mut work)
+        } else {
+            Err(ExactRefusal::InvalidOutput)
+        };
+        match wrapped {
+            Ok(value) => native_uv[i] = value,
+            Err(reason) => {
+                return Ok(PeriodicPointReport {
+                    native_uv: None,
+                    point: None,
+                    work_used: work.used,
+                    refusal: Some(reason),
+                });
+            }
+        }
+    }
+    let point = source.evaluate_validated(native_uv[0], native_uv[1])?.point;
+    Ok(PeriodicPointReport {
+        native_uv: Some(native_uv),
+        point: Some(point),
+        work_used: work.used,
+        refusal: None,
+    })
+}
+
+fn wrap_parameter_exact(
+    parameter: f64,
+    [lo, hi]: [f64; 2],
+    work: &mut Work,
+) -> std::result::Result<f64, ExactRefusal> {
+    if lo <= parameter && parameter < hi {
+        return Ok(parameter);
+    }
+    let value = work.lift(parameter)?;
+    let start = work.lift(lo)?;
+    let end = work.lift(hi)?;
+    let period = work.op(&end, &start, |end, start| end - start)?;
+    let offset = work.op(&value, &start, |value, start| value - start)?;
+    let turns = work.op(&offset, &period, |offset, period| (offset / period).floor())?;
+    let shift = work.op(&turns, &period, |turns, period| turns * period)?;
+    let reduced = work.op(&value, &shift, |value, shift| value - shift)?;
+    Ok(work.float(&reduced)?)
+}
