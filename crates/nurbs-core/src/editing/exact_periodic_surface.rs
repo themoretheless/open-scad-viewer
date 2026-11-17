@@ -316,3 +316,73 @@ pub fn restrict_exact_doubly_periodic_surface(
     second.work_used += first.work_used;
     Ok(second)
 }
+
+#[derive(Clone, Debug)]
+pub struct StripPartitionReport {
+    pub strips: Option<Vec<Surface>>,
+    pub work_used: u64,
+    /// Zero-based strip index, absent if rotating the seam failed.
+    pub refused_strip: Option<usize>,
+    pub refusal: Option<GaugeMergeRefusal>,
+}
+
+/// Partition one complete period into clamped strips along the selected axis.
+/// Cuts are strictly increasing on the lifted clock. The transverse basis
+/// stays fixed. Each strip has one common weight gauge and all strips share
+/// one work budget. A refusal discards the entire partition.
+pub fn partition_exact_periodic_surface_axis(
+    source: &Surface,
+    axis: Axis,
+    seam: f64,
+    cuts: &[f64],
+    max_work: u64,
+) -> Result<StripPartitionReport> {
+    crate::check(
+        cuts.len() < 256,
+        "Periodic partition supports at most 256 strips",
+    )?;
+    let rotated = insert_and_rotate_periodic_surface_seam(source, axis, seam, max_work)?;
+    let Some(surface) = rotated.surface else {
+        return Ok(StripPartitionReport {
+            strips: None,
+            work_used: rotated.work_used,
+            refused_strip: None,
+            refusal: rotated.refusal,
+        });
+    };
+    let [start, end] = row(&surface, axis, 0).domain();
+    let mut left = start;
+    for &cut in cuts {
+        crate::check(
+            left < cut && cut < end,
+            "Periodic strip cuts must increase inside the lifted period",
+        )?;
+        left = cut;
+    }
+
+    let mut work = Work {
+        used: rotated.work_used,
+        limit: max_work,
+    };
+    let mut strips = Vec::with_capacity(cuts.len() + 1);
+    let mut left = start;
+    for (index, right) in cuts.iter().copied().chain([end]).enumerate() {
+        let report = clamp_surface_axis(&surface, axis, [left, right], &mut work);
+        let Some(strip) = report.surface else {
+            return Ok(StripPartitionReport {
+                strips: None,
+                work_used: work.used,
+                refused_strip: Some(index),
+                refusal: report.refusal,
+            });
+        };
+        strips.push(strip);
+        left = right;
+    }
+    Ok(StripPartitionReport {
+        strips: Some(strips),
+        work_used: work.used,
+        refused_strip: None,
+        refusal: None,
+    })
+}

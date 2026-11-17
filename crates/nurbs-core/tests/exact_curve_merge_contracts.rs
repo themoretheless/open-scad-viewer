@@ -1912,3 +1912,52 @@ fn periodic_rectangle_returns_no_partial_strip_on_second_axis_refusal() {
         Some(GaugeMergeRefusal::Join(Refusal::NonAdjacentDomain))
     );
 }
+
+#[test]
+fn periodic_surface_partition_covers_one_turn_and_preserves_the_transverse_period() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::partition_exact_periodic_surface_axis, surface::Axis,
+    };
+    let source = doubly_periodic_tensor();
+    let report =
+        partition_exact_periodic_surface_axis(&source, Axis::V, 3.5, &[4.5, 6.], 1_000_000)
+            .unwrap();
+    assert_eq!(report.refusal, None);
+    let strips = report.strips.unwrap();
+    assert_eq!(strips.len(), 3);
+    for (strip, [lo, hi]) in strips.iter().zip([[3.5, 4.5], [4.5, 6.], [6., 7.5]]) {
+        assert!(strip.periodic_u && !strip.periodic_v);
+        assert_eq!(strip.knots_u, source.knots_u);
+        assert_eq!(strip.knots_v[1], lo);
+        assert_eq!(strip.knots_v[strip.knots_v.len() - 2], hi);
+        for v in [lo, (lo + hi) / 2., hi] {
+            assert_eq!(
+                strip.evaluate(2.25, v).unwrap().point,
+                source.evaluate(2.25, v % 4.).unwrap().point
+            );
+        }
+    }
+    let short = partition_exact_periodic_surface_axis(
+        &source,
+        Axis::V,
+        3.5,
+        &[4.5, 6.],
+        report.work_used - 1,
+    )
+    .unwrap();
+    assert!(short.strips.is_none());
+    assert_eq!(short.refused_strip, Some(2));
+}
+
+#[test]
+fn periodic_surface_partition_rejects_invalid_cuts() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::partition_exact_periodic_surface_axis, surface::Axis,
+    };
+    let source = doubly_periodic_tensor();
+    for cuts in [&[6., 4.5][..], &[4.5, 4.5], &[3.5], &[7.5], &[f64::NAN]] {
+        assert!(
+            partition_exact_periodic_surface_axis(&source, Axis::U, 3.5, cuts, 1_000_000).is_err()
+        );
+    }
+}
