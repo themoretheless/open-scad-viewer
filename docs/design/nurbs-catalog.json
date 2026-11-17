@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 527,
-  "unallocatedCount": 473,
+  "specifiedCount": 528,
+  "unallocatedCount": 472,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13543,6 +13543,27 @@
       "remainingQualification": [
         "Remove an interior knot under an exact tensor proof and restore cyclic storage with fewer controls.",
         "Open the cyclic axis, prove the tensor removal, reclose on the same parameter domain and require a net control reduction.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0528",
+      "name": "Точное пакетное упрощение периодической оси NURBS-поверхности",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::simplify_exact_periodic_surface_axis",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-528-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-528-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Prove and remove redundant interior knots in one cyclic-axis pass with exact reclosure.",
+        "Open once, prove each removal in a bounded tensor pass, and publish a net reduction only after exact reclosure.",
         "WASM and application integration are separate."
       ]
     }

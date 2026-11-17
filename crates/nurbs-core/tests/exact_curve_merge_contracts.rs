@@ -2581,3 +2581,44 @@ fn periodic_surface_knot_removal_preserves_actual_creases() {
         Some(PeriodicKnotRemovalRefusal::Remove(_))
     ));
 }
+
+#[test]
+fn periodic_surface_simplification_removes_multiple_redundant_knots_atomically() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::{
+            assemble_exact_periodic_surface_axis, partition_exact_periodic_surface_axis,
+            simplify_exact_periodic_surface_axis,
+        },
+        surface::Axis,
+    };
+    let source = doubly_periodic_tensor();
+    let strips =
+        partition_exact_periodic_surface_axis(&source, Axis::V, 0., &[0.5, 2.5], 1_000_000)
+            .unwrap()
+            .strips
+            .unwrap();
+    let refined = assemble_exact_periodic_surface_axis(&strips, Axis::V, 1_000_000)
+        .unwrap()
+        .surface
+        .unwrap();
+    let report = simplify_exact_periodic_surface_axis(&refined, Axis::V, 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    assert_eq!(report.removed, 2);
+    assert_eq!(report.surface, Some(source));
+    let short =
+        simplify_exact_periodic_surface_axis(&refined, Axis::V, report.work_used - 1).unwrap();
+    assert!(short.surface.is_none());
+    assert_eq!(short.removed, 0);
+}
+
+#[test]
+fn periodic_surface_simplification_returns_the_literal_source_if_no_knot_can_be_removed() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::simplify_exact_periodic_surface_axis, surface::Axis,
+    };
+    let source = doubly_periodic_tensor();
+    let result = simplify_exact_periodic_surface_axis(&source, Axis::U, 1_000_000).unwrap();
+    assert_eq!(result.refusal, None);
+    assert_eq!(result.removed, 0);
+    assert_eq!(result.surface, Some(source));
+}

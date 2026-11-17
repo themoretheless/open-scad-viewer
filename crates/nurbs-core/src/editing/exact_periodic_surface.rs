@@ -1104,15 +1104,93 @@ pub fn remove_exact_periodic_surface_knot(
         Ok(surface) => surface,
         Err(reason) => return Ok(refuse(work.used, Failure::Close(reason))),
     };
-    let control_count = |s: &Surface| match axis {
-        Axis::U => s.control_points.len(),
-        Axis::V => s.control_points[0].len(),
-    };
-    if control_count(&closed) >= control_count(source) {
+    if axis_control_count(&closed, axis) >= axis_control_count(source, axis) {
         return Ok(refuse(work.used, Failure::NoControlReduction));
     }
     Ok(PeriodicKnotRemovalReport {
         surface: Some(closed),
+        work_used: work.used,
+        refusal: None,
+    })
+}
+
+fn axis_control_count(surface: &Surface, axis: Axis) -> usize {
+    match axis {
+        Axis::U => surface.control_points.len(),
+        Axis::V => surface.control_points[0].len(),
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicAxisSimplificationReport {
+    pub surface: Option<Surface>,
+    /// Net number of control rows or columns eliminated after reclosure.
+    pub removed: usize,
+    pub work_used: u64,
+    pub refusal: Option<PeriodicKnotRemovalRefusal>,
+}
+
+/// Attempt each original interior knot occurrence on one periodic axis.
+/// Open the seam once and verify every tensor removal before restoring the
+/// original period. Budget or reclosure failure yields no partial result.
+/// If a completed pass yields no net reduction, return the original surface.
+pub fn simplify_exact_periodic_surface_axis(
+    source: &Surface,
+    axis: Axis,
+    max_work: u64,
+) -> Result<PeriodicAxisSimplificationReport> {
+    use super::exact_surface_knot_removal as removal;
+    use PeriodicKnotRemovalRefusal as Failure;
+
+    let opened = open_exact_periodic_surface_axis(source, axis, max_work)?;
+    let refuse = |work_used, refusal| PeriodicAxisSimplificationReport {
+        surface: None,
+        removed: 0,
+        work_used,
+        refusal: Some(refusal),
+    };
+    let Some(surface) = opened.surface else {
+        return Ok(refuse(
+            opened.work_used,
+            Failure::Open(
+                opened
+                    .refusal
+                    .unwrap_or(GaugeMergeRefusal::Exact(ExactRefusal::InvalidOutput)),
+            ),
+        ));
+    };
+    if opened.work_used == max_work {
+        return Ok(refuse(
+            opened.work_used,
+            Failure::Remove(removal::Refusal::ResourceLimit),
+        ));
+    }
+    let simplified = removal::simplify(&surface, axis, max_work - opened.work_used)?;
+    let mut work = Work {
+        used: opened.work_used + simplified.work_used,
+        limit: max_work,
+    };
+    if !simplified.completed_pass {
+        return Ok(refuse(
+            work.used,
+            Failure::Remove(removal::Refusal::ResourceLimit),
+        ));
+    }
+    // Reclosing a clamped basis adds exactly degree minus one controls.
+    let proposed_count =
+        axis_control_count(&simplified.surface, axis) + axis_degree(source, axis) - 1;
+    let removed = axis_control_count(source, axis).saturating_sub(proposed_count);
+    let result = if removed == 0 {
+        source.clone()
+    } else {
+        match close_surface_cycle(simplified.surface, axis, &mut work) {
+            Ok(surface) => surface,
+            Err(reason) => return Ok(refuse(work.used, Failure::Close(reason))),
+        }
+    };
+    Ok(PeriodicAxisSimplificationReport {
+        surface: Some(result),
+        removed,
         work_used: work.used,
         refusal: None,
     })
