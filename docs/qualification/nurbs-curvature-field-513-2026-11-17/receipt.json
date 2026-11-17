@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0513",
+  "testedBase": "d289f3dd8dff3ffb7dd504619fd43847f98feaac",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 83,
+  "scope": [
+    "Rotate an existing periodic surface knot and the complete rational control net without rounding.",
+    "Prove the shared cyclic knot translation once and apply the same literal index permutation to the complete tensor net."
+  ],
+  "logSha256": "0802899b55773ae6cdf7ba72d300326f746fec782756b5f3d7431dfb7701ade7",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "9c277a5807df51c829633b7b6ab1e86d588f9b8f954b27c8857ae9bb69e554eb",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "557b28e2b567264eaaa9198b8096fb202c13edbe3e71ed8ccce4e9ab2f55aa34",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "b9f38652379a3847c5e8b13e93b0469859a4cd5eb5baeab17ebe06420bdf76f3"
+  }
+}

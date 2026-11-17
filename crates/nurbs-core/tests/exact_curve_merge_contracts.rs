@@ -1545,3 +1545,62 @@ fn periodic_partition_rejects_unordered_outside_and_duplicate_cuts() {
         assert!(partition_exact_periodic_curve(&source, 3.5, cuts, 1_000_000).is_err());
     }
 }
+
+#[test]
+fn exact_periodic_surface_rotation_preserves_the_weighted_tensor_in_both_axes() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::rotate_periodic_surface_at_exact_knot,
+        surface::{Axis, extrude},
+    };
+    let mut profile = periodic_unit_square();
+    profile.weights = vec![1., 2., 1., 4., 1.];
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = extrude(&profile, [0., 0., 2.]).unwrap();
+    let u = rotate_periodic_surface_at_exact_knot(&source, Axis::U, 3., 1_000_000)
+        .unwrap()
+        .surface
+        .unwrap();
+    assert_eq!(u.knots_u, vec![2., 3., 4., 5., 6., 7., 8.]);
+    assert_eq!(u.knots_v, source.knots_v);
+    assert_eq!(u.weights[0], source.weights[3]);
+
+    let transposed = nurbs_geometry::surface_transpose::transpose(&source).unwrap();
+    let v = rotate_periodic_surface_at_exact_knot(&transposed, Axis::V, 3., 1_000_000)
+        .unwrap()
+        .surface
+        .unwrap();
+    assert_eq!(v, nurbs_geometry::surface_transpose::transpose(&u).unwrap());
+    for t in [3., 3.5, 4., 5.5, 7.] {
+        for transverse in [0., 0.5, 1.] {
+            let expected = source.evaluate(t % 4., transverse).unwrap().point;
+            assert_eq!(u.evaluate(t, transverse).unwrap().point, expected);
+        }
+    }
+}
+
+#[test]
+fn exact_periodic_surface_rotation_refuses_an_inexact_translated_knot() {
+    use nurbs_core::{
+        editing::{
+            exact_curve_merge::GaugeMergeRefusal,
+            exact_periodic_surface::rotate_periodic_surface_at_exact_knot,
+            rational_factor::Refusal as ExactRefusal,
+        },
+        surface::{Axis, extrude},
+    };
+    let seam = 0.5_f64.next_up();
+    let mut profile = periodic_unit_square();
+    profile.knots = vec![-0.25, 0., 0.25, seam, 0.75, 1., 1.25];
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = extrude(&profile, [0., 0., 2.]).unwrap();
+    let report = rotate_periodic_surface_at_exact_knot(&source, Axis::U, seam, 1_000_000).unwrap();
+    assert!(report.surface.is_none());
+    assert_eq!(
+        report.refusal,
+        Some(GaugeMergeRefusal::Exact(ExactRefusal::NotRepresentable))
+    );
+}
