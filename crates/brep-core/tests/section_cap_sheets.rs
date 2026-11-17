@@ -5709,3 +5709,108 @@ fn exact_coplanar_boolean_cells_merge_simultaneous_boundary_events() {
     .unwrap();
     assert!(same.cells_mm.is_empty());
 }
+
+#[test]
+fn exact_coplanar_boolean_boundary_cancels_partial_shared_seams() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Union, boundary_of_exact_coplanar_planar_polyline_region_boolean,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x: i64, y: i64| [q(x), q(y), q(0)];
+    let rect = |a, b, c, d| [p(a, b), p(c, b), p(c, d), p(a, d), p(a, b)];
+    let a = rect(0, 0, 2, 4);
+    let b = rect(2, 1, 4, 3);
+    let report = boundary_of_exact_coplanar_planar_polyline_region_boolean(
+        &a,
+        &[],
+        &b,
+        &[],
+        Union,
+        1_000_000,
+    )
+    .unwrap();
+    let corners = [
+        p(0, 0),
+        p(2, 0),
+        p(2, 1),
+        p(4, 1),
+        p(4, 3),
+        p(2, 3),
+        p(2, 4),
+        p(0, 4),
+    ];
+    let expected: std::collections::BTreeSet<_> = corners
+        .iter()
+        .zip(corners.iter().cycle().skip(1))
+        .map(|(a, b)| [a.clone(), b.clone()])
+        .collect();
+    assert_eq!(
+        report
+            .edges_mm
+            .iter()
+            .cloned()
+            .collect::<std::collections::BTreeSet<_>>(),
+        expected
+    );
+    assert_eq!(
+        boundary_of_exact_coplanar_planar_polyline_region_boolean(
+            &a,
+            &[],
+            &b,
+            &[],
+            Union,
+            report.exact_work
+        )
+        .unwrap(),
+        report
+    );
+    assert!(
+        boundary_of_exact_coplanar_planar_polyline_region_boolean(
+            &a,
+            &[],
+            &b,
+            &[],
+            Union,
+            report.exact_work - 1
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn exact_coplanar_boolean_boundary_keeps_opposite_hole_orientation() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Difference,
+        boundary_of_exact_coplanar_planar_polyline_region_boolean,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x: i64, y: i64| [q(x), q(y), q(x + y)];
+    let rect = |lo, hi| [p(lo, lo), p(hi, lo), p(hi, hi), p(lo, hi), p(lo, lo)];
+    let outer = rect(0, 6);
+    let cut = rect(2, 4);
+    let report = boundary_of_exact_coplanar_planar_polyline_region_boolean(
+        &outer,
+        &[],
+        &cut,
+        &[],
+        Difference,
+        1_000_000,
+    )
+    .unwrap();
+    let hole_edges = [
+        [p(2, 2), p(2, 4)],
+        [p(2, 4), p(4, 4)],
+        [p(4, 4), p(4, 2)],
+        [p(4, 2), p(2, 2)],
+    ];
+    assert!(hole_edges.iter().all(|edge| report.edges_mm.contains(edge)));
+    let twice_area: Q = report
+        .edges_mm
+        .iter()
+        .map(|[a, b]| &a[0] * &b[1] - &a[1] * &b[0])
+        .sum();
+    assert_eq!(twice_area, q(64));
+    assert_eq!(report.edges_mm.len(), 12);
+}

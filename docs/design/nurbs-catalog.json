@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 473,
-  "unallocatedCount": 527,
+  "specifiedCount": 474,
+  "unallocatedCount": 526,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12303,6 +12303,35 @@
       "remainingQualification": [
         "Construct convex cells for regularized union, difference, intersection and symmetric difference.",
         "Sweep both exact profile parities per slab and group coincident events before evaluating the Boolean operation. Lift selected bands into disjoint convex cells.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0474",
+      "name": "Точная граница результата булевых операций над компланарными профилями",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::boundary_of_exact_coplanar_planar_polyline_region_boolean",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "docs/qualification/nurbs-curvature-field-474-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-474-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Recover directed exact boundaries of planar Boolean results by canceling cell seams.",
+        "Sweep directed cell-edge events along each common seam and cancel opposite incidences on exact subintervals. Preserve exterior and hole orientation.",
         "WASM and application integration are separate."
       ]
     }

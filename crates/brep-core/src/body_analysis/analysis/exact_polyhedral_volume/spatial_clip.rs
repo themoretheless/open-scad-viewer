@@ -3221,6 +3221,25 @@ pub fn decompose_exact_coplanar_planar_polyline_region_boolean(
     operation: CoplanarPolylineBoolean,
     max_exact_work: u64,
 ) -> Result<ExactCoplanarPolylineRegionBooleanCells> {
+    let (report, _) = planar_profile_boolean_cells(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        operation,
+        max_exact_work,
+    )?;
+    Ok(report)
+}
+
+fn planar_profile_boolean_cells(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    operation: CoplanarPolylineBoolean,
+    max_exact_work: u64,
+) -> Result<(ExactCoplanarPolylineRegionBooleanCells, [usize; 2])> {
     super::validate_work(max_exact_work)?;
     let mut remaining = max_exact_work;
     let first = prepare_planar_polyline_region(first_outer_mm, first_holes_mm, &mut remaining)?;
@@ -3293,10 +3312,13 @@ pub fn decompose_exact_coplanar_planar_polyline_region_boolean(
             cells_mm.push(cell);
         }
     }
-    Ok(ExactCoplanarPolylineRegionBooleanCells {
-        cells_mm,
-        exact_work: max_exact_work - remaining,
-    })
+    Ok((
+        ExactCoplanarPolylineRegionBooleanCells {
+            cells_mm,
+            exact_work: max_exact_work - remaining,
+        },
+        [u, v],
+    ))
 }
 
 type PlanarProfileEdge = [[Q; 3]; 2];
@@ -3351,4 +3373,80 @@ fn profile_boolean_slice_bands<'a>(
 
 fn profile_edge_ordinate([a, b]: &[[Q; 3]; 2], [u, v]: [usize; 2], at: &Q) -> Q {
     &a[v] + (at - &a[u]) * (&b[v] - &a[v]) / (&b[u] - &a[u])
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactCoplanarPolylineBooleanBoundary {
+    /// Directed exact boundary edges with interior seams removed.
+    /// Junctions use identical coordinates; rings can meet at a vertex.
+    pub edges_mm: Vec<[[Q; 3]; 2]>,
+    pub exact_work: u64,
+}
+
+/// Extract the oriented boundary of a regularized planar Boolean result.
+/// Partially shared cell edges cancel over their common subintervals.
+pub fn boundary_of_exact_coplanar_planar_polyline_region_boolean(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    operation: CoplanarPolylineBoolean,
+    max_exact_work: u64,
+) -> Result<ExactCoplanarPolylineBooleanBoundary> {
+    let (report, [u, v]) = planar_profile_boolean_cells(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        operation,
+        max_exact_work,
+    )?;
+    let mut remaining = max_exact_work - report.exact_work;
+    let mut seams = BTreeMap::<[Q; 2], ([Q; 3], i32)>::new();
+    let mut edges_mm = Vec::new();
+    for cell in report.cells_mm {
+        for (a, b) in cell.iter().zip(cell.iter().cycle().skip(1)) {
+            let depth = u64::from((seams.len() + 2).ilog2()) + 1;
+            spend(&mut remaining, 16 * depth)?;
+            let start = seams
+                .entry([a[u].clone(), a[v].clone()])
+                .or_insert_with(|| (a.clone(), 0));
+            if a[u] != b[u] {
+                edges_mm.push([a.clone(), b.clone()]);
+                continue;
+            }
+            // Accumulate signed edge multiplicity over the seam ordinate.
+            // A descending edge starts at the upper endpoint.
+            start.1 += 1;
+            seams
+                .entry([b[u].clone(), b[v].clone()])
+                .or_insert_with(|| (b.clone(), 0))
+                .1 -= 1;
+        }
+    }
+    let mut previous: Option<[Q; 3]> = None;
+    let mut winding = 0;
+    for (_, (point, delta)) in seams {
+        spend(&mut remaining, 8)?;
+        if let Some(prior) = previous {
+            if prior[u] != point[u] && winding != 0 {
+                return Err(refuse("Unbalanced planar cell seam"));
+            }
+            match winding {
+                0 => {}
+                1 => edges_mm.push([prior, point.clone()]),
+                -1 => edges_mm.push([point.clone(), prior]),
+                _ => return Err(refuse("Overlapping planar cell seam edges")),
+            }
+        }
+        winding += delta;
+        previous = Some(point);
+    }
+    if winding != 0 {
+        return Err(refuse("Unbalanced planar cell seam"));
+    }
+    Ok(ExactCoplanarPolylineBooleanBoundary {
+        edges_mm,
+        exact_work: max_exact_work - remaining,
+    })
 }
