@@ -1,5 +1,6 @@
 import { expect, it, vi } from 'vitest'
 import type { SemanticLoweringSuccess } from '../src/language/semantic/semanticProgramLowerer'
+import type { ReferenceSemanticProgramV1 as LooseJson } from './support/referenceSemanticProgramV1'
 vi.mock('../src/language/semantic/semanticProgramLowerer', async importOriginal => {
   const original = await importOriginal<typeof import('../src/language/semantic/semanticProgramLowerer')>()
   // Defense in depth: a tampered program must be refused by native admission
@@ -12,9 +13,9 @@ import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanti
 const SOURCE = 'difference(){cube(3);translate([2,0,0]) cube(1);}'
 const lower = (body: string) => lowerOpenSCADToSemanticProgram('// @language openscad-viewer/brep-1\n' + body)
 /** Rebuilds a trusted lowering with exactly one identity component tampered. */
-const forge = (mutate: (program: Record<string, any>) => void): SemanticLoweringSuccess => {
+const forge = (mutate: (program: LooseJson) => void): SemanticLoweringSuccess => {
   const base = lower(SOURCE)
-  const program = structuredClone(base.program) as Record<string, any>
+  const program = structuredClone(base.program) as LooseJson
   mutate(program)
   return { ...base, program: program as SemanticLoweringSuccess['program'] }
 }
@@ -30,7 +31,7 @@ it('executes a real lowered program with operations transported', async () => {
     await result.dispose()
   }
 })
-const tampers: [string, (program: Record<string, any>) => void][] = [
+const tampers: [string, (program: LooseJson) => void][] = [
   [
     'operationId',
     p => {
@@ -65,7 +66,7 @@ const tampers: [string, (program: Record<string, any>) => void][] = [
       const ops = p.core.operations
       const tail = ops.slice(1)
       tail.reverse()
-      p.core.operations = [ops[0], ...tail].map((op: any, id: number) => ({ ...op, id }))
+      p.core.operations = [ops[0], ...tail].map((op: LooseJson, id: number) => ({ ...op, id }))
     },
   ],
   [
@@ -77,7 +78,7 @@ const tampers: [string, (program: Record<string, any>) => void][] = [
   [
     'sceneEntityId',
     p => {
-      const row = p.core.occurrences.find((o: any) => o.sceneEntityId !== null)
+      const row = p.core.occurrences.find((o: LooseJson) => o.sceneEntityId !== null)
       row.sceneEntityId = row.sceneEntityId.replace('entity:v2:', 'entity:v9:')
     },
   ],

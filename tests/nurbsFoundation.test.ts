@@ -36,6 +36,17 @@ const arc: NurbsCurve = {
   weights: [1, Math.SQRT1_2, 1],
 }
 
+/** Fields read from certificate variants that the shared union type does not expose. */
+interface CertificateFields {
+  classification: string
+  fittedToExactPromotion: boolean
+  exact: boolean
+  hausdorffErrorUpper: number
+  dataSiteErrorUpper: number
+  seam: { c0: { certified: boolean } }
+}
+const certificateFields = (certificate: unknown) => certificate as CertificateFields
+
 describe('NURBS foundation product boundary', () => {
   test('exposes deterministic positive outward certificates through WASM', () => {
     const certificate = certifyNurbsCurveFoundation(arc)
@@ -174,7 +185,7 @@ describe('NURBS foundation product boundary', () => {
     }
     const edited = editPeriodicNurbsCurveCertified(periodic, 'insert', { u: 3.5, maxError: 10 })
     expect(edited.curve.periodic).toBe(true)
-    expect((edited.certificate as any).seam.c0.certified).toBe(true)
+    expect(certificateFields(edited.certificate).seam.c0.certified).toBe(true)
     expect(splitPeriodicNurbsCurveCertified(periodic, 4).curves).toHaveLength(2)
   })
 
@@ -201,8 +212,8 @@ describe('NURBS foundation product boundary', () => {
       ],
       3,
     )
-    expect((fit.certificate as any).classification).toBe('approximate_fit')
-    expect((fit.certificate as any).fittedToExactPromotion).toBe(false)
+    expect(certificateFields(fit.certificate).classification).toBe('approximate_fit')
+    expect(certificateFields(fit.certificate).fittedToExactPromotion).toBe(false)
     const surfaceFit = fitNurbsSurfaceCertified([
       [
         [0, 0, 0],
@@ -213,7 +224,7 @@ describe('NURBS foundation product boundary', () => {
         [1, 1, 1],
       ],
     ])
-    expect((surfaceFit.certificate as any).classification).toBe('approximate_fit')
+    expect(certificateFields(surfaceFit.certificate).classification).toBe('approximate_fit')
   })
 
   test('keeps transformed scales and mutated certificates outside authority', () => {
@@ -223,7 +234,7 @@ describe('NURBS foundation product boundary', () => {
     }
     const projected = projectPointToNurbsCurveCertified(transformed, [100800, -199800, 7])
     expect(projected.globalDistanceUpper).toBeGreaterThanOrEqual(0)
-    ;(projected.coverage as any).endpointsIncluded = false
+    ;(projected.coverage as { endpointsIncluded: boolean }).endpointsIncluded = false
     expect(projectPointToNurbsCurveCertified(transformed, [100800, -199800, 7]).coverage?.endpointsIncluded).toBe(true)
   })
 
@@ -266,7 +277,7 @@ describe('NURBS foundation product boundary', () => {
     }
     const composed = materializeReparameterizedNurbsCurve(arc, mapping)
     expect(composed.certificate.version).toBe('nurbs-foundation/5')
-    expect((composed.certificate as any).exact).toBe(true)
+    expect(certificateFields(composed.certificate).exact).toBe(true)
     const left = evaluateNurbsCurve(composed.curve, 0.5).point
     const right = evaluateNurbsCurve(arc, 0.5).point
     expect(left.every((value, index) => Math.abs(value - right[index]) < 1e-12)).toBe(true)
@@ -280,9 +291,9 @@ describe('NURBS foundation product boundary', () => {
       ],
       4,
     )
-    expect((cloud.certificate as any).classification).toBe('approximate_cloud_fit')
-    expect((cloud.certificate as any).hausdorffErrorUpper).toBeGreaterThanOrEqual(
-      (cloud.certificate as any).dataSiteErrorUpper,
+    expect(certificateFields(cloud.certificate).classification).toBe('approximate_cloud_fit')
+    expect(certificateFields(cloud.certificate).hausdorffErrorUpper).toBeGreaterThanOrEqual(
+      certificateFields(cloud.certificate).dataSiteErrorUpper,
     )
     const surfaceCloud = fitNurbsSurfaceCloudCertified(
       [
@@ -295,7 +306,7 @@ describe('NURBS foundation product boundary', () => {
       3,
       3,
     )
-    expect((surfaceCloud.certificate as any).fittedToExactPromotion).toBe(false)
+    expect(certificateFields(surfaceCloud.certificate).fittedToExactPromotion).toBe(false)
     const planar = projectPointToNurbsSurfaceCertified(
       {
         degreeU: 1,
@@ -391,7 +402,7 @@ describe('NURBS foundation product boundary', () => {
       weights: [1, 1],
     }
     const overlap = intersectNurbsCurveSurfaceCertified(onPlane, plane)
-    expect(overlap.components.some(c => c.kind === 'overlap' && (c as any).coedgeTrim)).toBe(true)
+    expect(overlap.components.some(c => c.kind === 'overlap' && (c as { coedgeTrim?: unknown }).coedgeTrim)).toBe(true)
   })
 
   test('certifies general surface/surface intersection without graph-patch iso', () => {

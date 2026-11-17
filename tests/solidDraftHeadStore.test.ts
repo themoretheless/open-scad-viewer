@@ -13,7 +13,7 @@ it('aborts a draft superseded while its put request is pending', async () => {
   const prototype = Object.getPrototypeOf(db.transaction('heads', 'readonly').objectStore('heads'))
   const original = prototype.put
   let current = true
-  const spy = vi.spyOn(prototype, 'put').mockImplementation(function (this: IDBObjectStore, ...args: any[]) {
+  const spy = vi.spyOn(prototype, 'put').mockImplementation(function (this: IDBObjectStore, ...args: unknown[]) {
     const result = original.apply(this, args)
     queueMicrotask(() => {
       current = false
@@ -59,7 +59,7 @@ it('retains a committed head after transaction abort and requests strict durabil
   const prototype = Object.getPrototypeOf(db),
     original = prototype.transaction,
     durabilities: unknown[] = []
-  const spy = vi.spyOn(prototype, 'transaction').mockImplementation(function (this: IDBDatabase, ...args: any[]) {
+  const spy = vi.spyOn(prototype, 'transaction').mockImplementation(function (this: IDBDatabase, ...args: unknown[]) {
     const tx = original.apply(this, args)
     durabilities.push(args[2]?.durability)
     if (args[1] === 'readwrite') {
@@ -157,7 +157,7 @@ it('rejects a head returned for another document key', async () => {
   })
   const prototype = Object.getPrototypeOf(db.transaction('heads', 'readonly').objectStore('heads'))
   const original = prototype.get
-  const spy = vi.spyOn(prototype, 'get').mockImplementation(function (this: IDBObjectStore, ...args: any[]) {
+  const spy = vi.spyOn(prototype, 'get').mockImplementation(function (this: IDBObjectStore, ...args: unknown[]) {
     const result = original.apply(this, args)
     result.addEventListener('success', () => {
       Object.defineProperty(result, 'result', { value: { ...initial, key: 'another-model' } })

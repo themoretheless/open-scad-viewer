@@ -1,5 +1,6 @@
 import { expect, it, vi } from 'vitest'
 import type { SemanticLoweringSuccess } from '../src/language/semantic/semanticProgramLowerer'
+import type { ReferenceSemanticProgramV1 as LooseJson } from './support/referenceSemanticProgramV1'
 vi.mock('../src/language/semantic/semanticProgramLowerer', async importOriginal => {
   const original = await importOriginal<typeof import('../src/language/semantic/semanticProgramLowerer')>()
   // Defense in depth: a tampered program must be refused by native admission
@@ -17,9 +18,9 @@ const PROGRAMS: Record<string, string> = {
 }
 const lower = (body: string) => lowerOpenSCADToSemanticProgram('// @language openscad-viewer/brep-1\n' + body)
 /** Rebuilds a trusted lowering with exactly one production component tampered. */
-const forge = (source: string, mutate: (program: Record<string, any>) => void): SemanticLoweringSuccess => {
+const forge = (source: string, mutate: (program: LooseJson) => void): SemanticLoweringSuccess => {
   const base = lower(source)
-  const program = structuredClone(base.program) as Record<string, any>
+  const program = structuredClone(base.program) as LooseJson
   mutate(program)
   return { ...base, program: program as SemanticLoweringSuccess['program'] }
 }
@@ -48,7 +49,7 @@ for (const [name, source] of Object.entries(PROGRAMS)) {
     }
   })
 }
-const tampers: [string, string, (program: Record<string, any>) => void][] = [
+const tampers: [string, string, (program: LooseJson) => void][] = [
   [
     'removed occurrence row',
     PROGRAMS.difference,
@@ -67,7 +68,7 @@ const tampers: [string, string, (program: Record<string, any>) => void][] = [
     'broken transform-map chain',
     PROGRAMS.difference,
     p => {
-      const transform = p.core.nodes.find((node: any) => node.kind === 'transform')
+      const transform = p.core.nodes.find((node: LooseJson) => node.kind === 'transform')
       transform.input = 0
     },
   ],
@@ -75,7 +76,7 @@ const tampers: [string, string, (program: Record<string, any>) => void][] = [
     'bad boolean operand structure',
     PROGRAMS.unionTransform,
     p => {
-      const union = p.core.nodes.find((node: any) => node.kind === 'boolean' && node.operation === 'union')
+      const union = p.core.nodes.find((node: LooseJson) => node.kind === 'boolean' && node.operation === 'union')
       union.inputs = [...union.inputs].reverse()
     },
   ],
@@ -83,7 +84,7 @@ const tampers: [string, string, (program: Record<string, any>) => void][] = [
     'broken hull reduction',
     PROGRAMS.hull,
     p => {
-      const hull = p.core.nodes.find((node: any) => node.kind === 'hull')
+      const hull = p.core.nodes.find((node: LooseJson) => node.kind === 'hull')
       hull.inputs = [...hull.inputs].reverse()
     },
   ],
@@ -98,7 +99,9 @@ const tampers: [string, string, (program: Record<string, any>) => void][] = [
     'broken $expansion continuation anchor',
     PROGRAMS.children,
     p => {
-      const expansion = p.core.occurrences.find((row: any) => p.core.operations[row.operation].name === '$expansion')
+      const expansion = p.core.occurrences.find(
+        (row: LooseJson) => p.core.operations[row.operation].name === '$expansion',
+      )
       expansion.staticParent = 0
     },
   ],
@@ -106,7 +109,9 @@ const tampers: [string, string, (program: Record<string, any>) => void][] = [
     'removed $expansion continuation row',
     PROGRAMS.children,
     p => {
-      const index = p.core.occurrences.findIndex((row: any) => p.core.operations[row.operation].name === '$expansion')
+      const index = p.core.occurrences.findIndex(
+        (row: LooseJson) => p.core.operations[row.operation].name === '$expansion',
+      )
       p.core.occurrences.splice(index, 1)
     },
   ],

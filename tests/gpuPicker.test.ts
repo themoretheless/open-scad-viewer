@@ -59,37 +59,31 @@ describe('GpuPicker Hardware Picking Pass', () => {
     vi.stubGlobal('GPUMapMode', { READ: 1 })
 
     let mappedData = new Uint32Array([readbackRawId, 0, 0, 0])
-    let unmapped = false
+    const copiedCommands: { src: unknown; dst: unknown; size: unknown }[] = []
+    const passes: { desc: unknown; draws: number }[] = []
 
-    const copiedCommands: any[] = []
-    const passes: any[] = []
-
-    const dev: any = {
-      createTexture: (desc: any) => ({
+    const dev = {
+      createTexture: (desc: unknown) => ({
         desc,
         createView: () => ({ textureDesc: desc }),
         destroy: vi.fn(),
       }),
-      createBuffer: (desc: any) => ({
+      createBuffer: (desc: unknown) => ({
         desc,
         getMappedRange: () => mappedData.buffer,
-        mapAsync: vi.fn(async () => {
-          unmapped = false
-        }),
-        unmap: vi.fn(() => {
-          unmapped = true
-        }),
+        mapAsync: vi.fn(async () => {}),
+        unmap: vi.fn(),
         destroy: vi.fn(),
       }),
-      createBindGroupLayout: (desc: any) => ({ desc }),
-      createPipelineLayout: (desc: any) => ({ desc }),
-      createShaderModule: (desc: any) => ({ desc }),
-      createRenderPipeline: (desc: any) => ({ desc }),
-      createBindGroup: (desc: any) => ({ desc }),
+      createBindGroupLayout: (desc: unknown) => ({ desc }),
+      createPipelineLayout: (desc: unknown) => ({ desc }),
+      createShaderModule: (desc: unknown) => ({ desc }),
+      createRenderPipeline: (desc: unknown) => ({ desc }),
+      createBindGroup: (desc: unknown) => ({ desc }),
       createCommandEncoder: () => {
-        const enc: any = {
-          beginRenderPass: (desc: any) => {
-            const pass: any = {
+        const enc = {
+          beginRenderPass: (desc: unknown) => {
+            const pass = {
               desc,
               draws: 0,
               setPipeline: vi.fn(),
@@ -104,7 +98,7 @@ describe('GpuPicker Hardware Picking Pass', () => {
             passes.push(pass)
             return pass
           },
-          copyTextureToBuffer: (src: any, dst: any, size: any) => {
+          copyTextureToBuffer: (src: unknown, dst: unknown, size: unknown) => {
             copiedCommands.push({ src, dst, size })
           },
           finish: () => ({ finish: true }),
@@ -115,7 +109,7 @@ describe('GpuPicker Hardware Picking Pass', () => {
         writeBuffer: vi.fn(),
         submit: vi.fn(),
       },
-    }
+    } as unknown as GPUDevice
 
     return {
       dev,
@@ -129,8 +123,8 @@ describe('GpuPicker Hardware Picking Pass', () => {
 
   function fakeMesh(visible = true): GpuPickerMesh {
     return {
-      vb: {} as any,
-      ib: {} as any,
+      vb: {} as GPUBuffer,
+      ib: {} as GPUBuffer,
       ic: 36,
       transform: identityMat4(),
       visible,

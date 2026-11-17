@@ -142,7 +142,17 @@ it('retains explicit bevel source roles and crossing diagnostics without a trimm
       [10, 10],
     ],
   }
-  const response = result() as any
+  type BevelCell = {
+    domain: number[]
+    errorUpperMm: number
+    source?: { kind: string; domain?: number[]; sourceKnot?: number }
+  }
+  type BevelReport = Omit<ReturnType<typeof result>['report'], 'cells'> & {
+    cells: BevelCell[]
+    wholeWire?: boolean
+    regionTrimmed?: boolean
+  }
+  const response: { curves: unknown[]; report: BevelReport } = result()
   response.curves = [
     {
       degree: 1,
@@ -182,9 +192,9 @@ it('retains explicit bevel source roles and crossing diagnostics without a trimm
   expect(r.report.regionTrimmed).toBe(false)
   expect(r.report.cells[1]!.source).toEqual({ kind: 'bevel', sourceKnot: 0.5 })
   expect(d).toEqual(before)
-  response.report.cells[2].source.domain = [0.6, 1]
+  response.report.cells[2]!.source!.domain = [0.6, 1]
   expect(() => offsetSolidCurve(d, { ...options, join: 'bevel' })).toThrow('source roles')
-  response.report.cells[2].source.domain = [0.5, 1]
-  delete response.report.cells[1].source
+  response.report.cells[2]!.source!.domain = [0.5, 1]
+  delete response.report.cells[1]!.source
   expect(() => offsetSolidCurve(d, { ...options, join: 'bevel' })).toThrow('source roles')
 })

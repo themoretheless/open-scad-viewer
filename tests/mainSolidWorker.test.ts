@@ -9,9 +9,9 @@ beforeEach(async () => {
 })
 class FakeWorker {
   static instances: FakeWorker[] = []
-  onmessage: any
-  onerror: any
-  onmessageerror: any
+  onmessage!: (event: { data: unknown }) => void
+  onerror: unknown
+  onmessageerror: unknown
   terminate = vi.fn()
   postMessage = vi.fn()
   constructor() {

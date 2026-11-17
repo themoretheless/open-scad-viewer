@@ -38,6 +38,7 @@ const options = {
   transverseUv: [0, 1] as [number, number],
   gains: [0.1, 0.1] as [number, number],
 }
+type Receipt = ReturnType<typeof receipt>
 function receipt() {
   return {
     patches: [surface],
@@ -118,14 +119,14 @@ it('passes original-support inputs and preserves unresolved diagnostics', () => 
 })
 it('rejects forged body claims, over-budget work and missing or duplicated seam coverage', () => {
   const changes = [
-    (r: any) => (r.report.solidGeometryCertified = true),
-    (r: any) => (r.report.radiusLawCertified = true),
-    (r: any) => (r.report.cells = 100001),
-    (r: any) => (r.report.exactWork = -1),
-    (r: any) => r.report.supportSeams.pop(),
-    (r: any) => (r.report.supportSeams[1].source = 0),
-    (r: any) => (r.report.supportSeams[0].positionValidated = false),
-    (r: any) => (r.report.supportSeams[0].positionUpper = -1),
+    (r: Receipt) => (r.report.solidGeometryCertified = true),
+    (r: Receipt) => (r.report.radiusLawCertified = true),
+    (r: Receipt) => (r.report.cells = 100001),
+    (r: Receipt) => (r.report.exactWork = -1),
+    (r: Receipt) => r.report.supportSeams.pop(),
+    (r: Receipt) => (r.report.supportSeams[1].source = 0),
+    (r: Receipt) => (r.report.supportSeams[0].positionValidated = false),
+    (r: Receipt) => (r.report.supportSeams[0].positionUpper = -1),
   ]
   for (const change of changes) {
     const r = receipt()
@@ -152,15 +153,15 @@ it('checks cancellation before dispatch and before exposing the result', () => {
 
 it('rejects stale seam-only receipts and incomplete or excessive whole-panel fields', () => {
   const changes = [
-    (r: any) => (r.report.method = 'native-original-support-G2-runout/1'),
-    (r: any) => (r.report.fields = []),
-    (r: any) => (r.report.fields[0].absoluteCurvatureUpper = 10.0001),
-    (r: any) => (r.report.fields[0].absoluteCurvatureUpper = null),
-    (r: any) => (r.report.fields[0].injectivityCertified = false),
-    (r: any) => (r.report.fields[0].patch = 1),
-    (r: any) => (r.report.curvatureLimitPerMm = 20),
-    (r: any) => (r.report.domainCells = 1000001),
-    (r: any) => (r.report.fieldComplete = false),
+    (r: Receipt) => (r.report.method = 'native-original-support-G2-runout/1'),
+    (r: Receipt) => (r.report.fields = []),
+    (r: Receipt) => (r.report.fields[0].absoluteCurvatureUpper = 10.0001),
+    (r: Receipt) => (r.report.fields[0].absoluteCurvatureUpper = null as unknown as number),
+    (r: Receipt) => (r.report.fields[0].injectivityCertified = false),
+    (r: Receipt) => (r.report.fields[0].patch = 1),
+    (r: Receipt) => (r.report.curvatureLimitPerMm = 20),
+    (r: Receipt) => (r.report.domainCells = 1000001),
+    (r: Receipt) => (r.report.fieldComplete = false),
   ]
   for (const change of changes) {
     const r = receipt()

@@ -33,6 +33,9 @@ import {
   type ReferenceSemanticProgramV1,
 } from './support/referenceSemanticProgramV1'
 
+// Rows of forged programs share the reference oracle's loose JSON shape.
+type FixtureRow = ReferenceSemanticProgramV1
+
 function clone<T>(value: T): T {
   return structuredClone(value)
 }
@@ -72,7 +75,7 @@ function recomputeOccurrence(program: ReferenceSemanticProgramV1, index: number)
 function resetSuccessfulExecution(program: ReferenceSemanticProgramV1): void {
   program.core.execution = {
     version: 'semantic-execution-v2',
-    evaluationOrder: program.core.nodes.map((node: Record<string, any>) => node.id),
+    evaluationOrder: program.core.nodes.map((node: FixtureRow) => node.id),
     discardedEffects: [],
     terminal: null,
   }
@@ -106,16 +109,12 @@ function coherentlyRenumberNodes(program: ReferenceSemanticProgramV1, oldIdsInNe
     for (const item of program.core.result.items) item.node = remap(item.node)
   }
   for (const effect of program.core.execution.discardedEffects) effect.root = remap(effect.root)
-  program.core.execution.discardedEffects.sort(
-    (left: Record<string, any>, right: Record<string, any>) => left.root - right.root,
-  )
+  program.core.execution.discardedEffects.sort((left: FixtureRow, right: FixtureRow) => left.root - right.root)
   if (program.core.execution.terminal !== null) {
     for (const entry of program.core.execution.terminal.prefixFrontier) entry.root = remap(entry.root)
-    program.core.execution.terminal.prefixFrontier.sort(
-      (left: Record<string, any>, right: Record<string, any>) => left.root - right.root,
-    )
+    program.core.execution.terminal.prefixFrontier.sort((left: FixtureRow, right: FixtureRow) => left.root - right.root)
   }
-  program.core.execution.evaluationOrder = program.core.nodes.map((node: Record<string, any>) => node.id)
+  program.core.execution.evaluationOrder = program.core.nodes.map((node: FixtureRow) => node.id)
 }
 
 function makeMultiOutputFixture(): ReferenceSemanticProgramV1 {
@@ -905,7 +904,7 @@ function makeDiscardedDifferenceEffectFixture(
   program.core.result = { tag: 'empty', type: 'never' }
   program.core.declaredCapabilities = contract === 'legacy/current' ? [] : ['geometry.brep']
   program.core.diagnosticTemplates = []
-  program.provenance = program.core.operations.map((operation: Record<string, any>) => ({
+  program.provenance = program.core.operations.map((operation: FixtureRow) => ({
     operation: operation.id,
     span: { start: source.lastIndexOf(operation.name === '$body' ? 'difference' : operation.name), end: source.length },
     label: `${operation.name}()`,
@@ -986,11 +985,11 @@ function makeManyDiscardedDifferenceEffectsFixture(count = 1_001): {
   const statement = 'difference(){ let(x=0); cube(1); }\n'
   const source = statement.repeat(count)
   const program = makeReferenceSemanticProgramV1()
-  const operations: Record<string, any>[] = []
-  const occurrences: Record<string, any>[] = []
-  const nodes: Record<string, any>[] = []
-  const effects: Record<string, any>[] = []
-  const provenance: Record<string, any>[] = []
+  const operations: FixtureRow[] = []
+  const occurrences: FixtureRow[] = []
+  const nodes: FixtureRow[] = []
+  const effects: FixtureRow[] = []
+  const provenance: FixtureRow[] = []
   const ambiguityGroup = referenceSemanticAmbiguityGroupIdV1([], 'boolean', 'difference')
   const valueType = {
     geometryKind: 'solid-set',
@@ -1477,7 +1476,7 @@ function makePostChildTerminalFixture(kind: PostChildTerminalKind): {
       ? { id, kind: 'box', valueType: clone(solidType), size: [1, 1, 1], center: false }
       : { id, kind: 'rectangle', valueType: clone(regionType), size: [1, 1], center: false },
   )
-  const nodes: Record<string, any>[] = [...childNodes]
+  const nodes: FixtureRow[] = [...childNodes]
   if (specification.partialRoot) {
     nodes.push({
       id: 2,
@@ -1491,7 +1490,7 @@ function makePostChildTerminalFixture(kind: PostChildTerminalKind): {
     })
   }
   const rootNode = specification.partialRoot ? 2 : null
-  const occurrences: Record<string, any>[] = [
+  const occurrences: FixtureRow[] = [
     {
       id: 0,
       occurrenceId: occurrenceIds[0],
@@ -1599,7 +1598,7 @@ function makePostChildTerminalFixture(kind: PostChildTerminalKind): {
       ],
     },
   ]
-  program.provenance = program.core.operations.map((operation: Record<string, any>) => {
+  program.provenance = program.core.operations.map((operation: FixtureRow) => {
     const token = operation.name === '$body' ? specification.rootName : operation.name
     const start = specification.source.indexOf(token)
     return { operation: operation.id, span: { start, end: start + token.length }, label: `${operation.name}()` }
@@ -2136,7 +2135,7 @@ function makeLegacyLinearExtrudeFixture(scale: unknown): ReferenceSemanticProgra
     },
   }
   program.core.diagnosticTemplates = []
-  program.provenance = program.provenance.slice(0, 3).map((entry: Record<string, any>, index: number) => ({
+  program.provenance = program.provenance.slice(0, 3).map((entry: FixtureRow, index: number) => ({
     ...entry,
     operation: index,
     label: `${program.core.operations[index].name}()`,
@@ -3108,9 +3107,7 @@ describe('independent SemanticProgram V1 oracle', () => {
     const forged = clone(fixture.program)
     coherentlyRenumberNodes(forged, [1, 0])
     expect(forged.core.execution.evaluationOrder).toEqual([0, 1])
-    expect(forged.core.execution.terminal.prefixFrontier.map((entry: Record<string, any>) => entry.root)).toEqual([
-      0, 1,
-    ])
+    expect(forged.core.execution.terminal.prefixFrontier.map((entry: FixtureRow) => entry.root)).toEqual([0, 1])
     expect(() => referenceValidateSemanticProgramV1(forged, fixture.source)).toThrow(ReferenceSemanticProgramError)
     expect(() => normalizeSemanticProgram(forged, fixture.source)).toThrow(SemanticProgramValidationError)
   })
@@ -3154,15 +3151,15 @@ describe('independent SemanticProgram V1 oracle', () => {
     const forgedNonEmptyBase = clone(valid.program)
     forgedNonEmptyBase.source = referenceSemanticSourceDescriptorV1(nonEmptyBaseSource)
     forgedNonEmptyBase.core.operations.splice(2, 1)
-    forgedNonEmptyBase.core.operations.forEach((operation: Record<string, any>, id: number) => {
+    forgedNonEmptyBase.core.operations.forEach((operation: FixtureRow, id: number) => {
       operation.id = id
     })
     forgedNonEmptyBase.core.occurrences.splice(2, 1)
-    forgedNonEmptyBase.core.occurrences.forEach((occurrence: Record<string, any>, id: number) => {
+    forgedNonEmptyBase.core.occurrences.forEach((occurrence: FixtureRow, id: number) => {
       occurrence.id = id
       if (occurrence.operation > 2) occurrence.operation--
     })
-    forgedNonEmptyBase.provenance = forgedNonEmptyBase.core.operations.map((operation: Record<string, any>) => ({
+    forgedNonEmptyBase.provenance = forgedNonEmptyBase.core.operations.map((operation: FixtureRow) => ({
       operation: operation.id,
       span: { start: 0, end: nonEmptyBaseSource.length },
       label: `${operation.name}()`,

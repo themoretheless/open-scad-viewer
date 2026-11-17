@@ -3,6 +3,7 @@ import { expect, it } from 'vitest'
 import { compileRushFrontend } from '../src/language/rushFrontend'
 import { buildOwnNurbs, buildOwnNurbsAsync } from '../src/language/rushGraphNurbsKernel'
 import { readSweepViewportEvidence } from '../src/kernel/sweepViewportEvidence'
+import type { NativeSmoothedMiterBody } from '../src/kernel/sweep/construction/brep'
 const source = () => readFileSync('examples/rush/progressive-miter-reconstructed-stations.r', 'utf8')
 const request = { action: 'build' as const, display: { segments: 4, subdivisionLevels: 0 } }
 it('carries bounded curved station reconstruction through actual Rush, async construction and viewport evidence', async () => {
@@ -20,7 +21,7 @@ it('carries bounded curved station reconstruction through actual Rush, async con
     stationContinuity: 'G2',
     capContinuity: 'C0',
   })
-  const report = built.report.construction![node.id] as any
+  const report = built.report.construction![node.id] as NativeSmoothedMiterBody
   expect(report.method).toBe('bounded-miter-station-reconstruction')
   expect(report.candidate.wallDisplacementUpper).toBeGreaterThan(0.39)
   expect(report.sharpStationIndices).toEqual([])
@@ -60,7 +61,7 @@ it('keeps a sharp miter C0 through actual Rush and final viewport evidence', () 
     stationG1Certified: false,
     stationG2Certified: false,
   })
-  expect((built.report.construction![node.id] as any).sharpStationIndices).toEqual([1])
+  expect((built.report.construction![node.id] as NativeSmoothedMiterBody).sharpStationIndices).toEqual([1])
 })
 it('admits closed circle correction without inventing cap obligations in sync and async paths', async () => {
   const graph = compileRushFrontend(
@@ -68,7 +69,7 @@ it('admits closed circle correction without inventing cap obligations in sync an
   ).document
   const node = graph.nodes.find(n => n.op === 'brep_progressive_miter_sweep')!
   const built = buildOwnNurbs(graph, request)
-  const report = built.report.construction![node.id] as any
+  const report = built.report.construction![node.id] as NativeSmoothedMiterBody
   expect(report.boundaryCertificate).toMatchObject({
     closed: true,
     continuousBound: true,
@@ -105,7 +106,7 @@ it('reconstructs a closed corrected frame/guide/affine hollow Solid with profile
   ).document
   const node = graph.nodes.find(n => n.op === 'brep_smooth_miter_stations')!
   const built = buildOwnNurbs(graph, request)
-  const report = built.report.construction![node.id] as any
+  const report = built.report.construction![node.id] as NativeSmoothedMiterBody
   expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({
     profileG2Certified: true,
     solidGeometryCertified: true,
@@ -166,7 +167,7 @@ it('retains G2 of canonical circular profile joins through a closed authored fra
     before = structuredClone(graph)
   const node = graph.nodes.find(n => n.op === 'brep_progressive_miter_sweep')!
   const built = buildOwnNurbs(graph, request)
-  const report = built.report.construction![node.id] as any
+  const report = built.report.construction![node.id] as NativeSmoothedMiterBody
   expect(report.profileSmoothness).toMatchObject({
     extractionComplete: true,
     unclassifiedFaces: [],

@@ -464,7 +464,7 @@ it.each(['minimumMm', 'maxSineSquared', 'toleranceUv', 'controls', 'cells', 'spa
             ],
             pending_reason: 'budget',
           })
-      const report: any = {
+      const report: Record<string, unknown> = {
         method: 'expression-support-aligned-chord-coverage',
         scope: 'original-retained-transition-support-products',
         minimum_mm: current.alignedChordCheck.minimumMm,

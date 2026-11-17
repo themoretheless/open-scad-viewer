@@ -1,5 +1,6 @@
 import { expect, it, vi } from 'vitest'
 import type { SemanticLoweringSuccess } from '../src/language/semantic/semanticProgramLowerer'
+import type { ReferenceSemanticProgramV1 as LooseJson } from './support/referenceSemanticProgramV1'
 vi.mock('../src/language/semantic/semanticProgramLowerer', async importOriginal => {
   const original = await importOriginal<typeof import('../src/language/semantic/semanticProgramLowerer')>()
   // Defense in depth: a tampered program must be refused by native admission
@@ -12,9 +13,9 @@ import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanti
 const SOURCE = 'difference(){cube(3);translate([2,0,0]) cube(1);}'
 const lower = (body: string) => lowerOpenSCADToSemanticProgram('// @language openscad-viewer/brep-1\n' + body)
 /** Rebuilds a trusted lowering with exactly one envelope component tampered. */
-const forge = (mutate: (program: Record<string, any>) => void): SemanticLoweringSuccess => {
+const forge = (mutate: (program: LooseJson) => void): SemanticLoweringSuccess => {
   const base = lower(SOURCE)
-  const program = structuredClone(base.program) as Record<string, any>
+  const program = structuredClone(base.program) as LooseJson
   mutate(program)
   return { ...base, program: program as SemanticLoweringSuccess['program'] }
 }
@@ -27,7 +28,7 @@ it('admits the lowered envelope components on the native graph path', async () =
     await result.dispose()
   }
 })
-const tampers: [string, (program: Record<string, any>) => void][] = [
+const tampers: [string, (program: LooseJson) => void][] = [
   [
     'source digest letter case',
     p => {

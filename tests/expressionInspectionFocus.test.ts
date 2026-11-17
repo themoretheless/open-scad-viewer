@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs'
-import { createRenderer, nextTick, ref, shallowRef, h } from 'svet'
+import { createRenderer, nextTick, ref, shallowRef, h, type Ref, type ShallowRef } from 'svet'
 import { it, expect, vi } from 'vitest'
 const state = vi.hoisted(() => ({
-  result: null as any,
-  pending: null as any,
-  error: null as any,
+  result: null as unknown as ShallowRef<unknown>,
+  pending: null as unknown as Ref<boolean>,
+  error: null as unknown as Ref<string>,
   run: vi.fn(),
   cancel: vi.fn(),
 }))
@@ -36,14 +36,24 @@ it('focuses the replacement cancel button and routes Escape to cancellation', as
   vi.stubGlobal('window', windowTarget)
   vi.stubGlobal('Document', class {})
   vi.stubGlobal('ShadowRoot', class {})
-  let focused: any
+  interface FakeNode {
+    type: string
+    text?: string
+    children: FakeNode[]
+    props: Record<string, unknown>
+    parent: FakeNode | null
+  }
+  let focused: FakeNode | undefined
+  const setFocused = (n: FakeNode) => {
+    focused = n
+  }
   const node = (type: string) => ({
     type,
-    children: [] as any[],
-    props: {} as any,
-    parent: null as any,
-    focus() {
-      focused = this
+    children: [] as FakeNode[],
+    props: {} as Record<string, unknown>,
+    parent: null as FakeNode | null,
+    focus(this: FakeNode) {
+      setFocused(this)
     },
     getRootNode() {
       return {}
@@ -56,7 +66,7 @@ it('focuses the replacement cancel button and routes Escape to cancellation', as
     style: {},
     options: [],
   })
-  const renderer = createRenderer<any, any>({
+  const renderer = createRenderer<FakeNode, FakeNode>({
     createElement: node,
     createText: text => ({ ...node('#text'), text }),
     createComment: text => ({ ...node('#comment'), text }),
@@ -87,19 +97,21 @@ it('focuses the replacement cancel button and routes Escape to cancellation', as
   })
   const faces = vi.fn()
   const active = ref(true),
-    options = ref({} as any)
+    options = ref<Record<string, unknown>>({})
   const root = node('root'),
     app = renderer.createApp({
       render: () => h(Panel, { options: options.value, active: active.value, ru: false, onFaces: faces }),
     })
   app.mount(root)
-  const all = (n: any): any[] => [n, ...n.children.flatMap(all)]
+  const fire = (n: FakeNode | undefined, key: string, ...args: unknown[]) =>
+    (n!.props[key] as (...args: unknown[]) => unknown)(...args)
+  const all = (n: FakeNode): FakeNode[] => [n, ...n.children.flatMap(all)]
   const inspect = all(root).find(n => n.type === 'button' && n.props.onClick)
-  inspect.props.onClick()
+  fire(inspect, 'onClick')
   await nextTick()
   await nextTick()
   expect(state.pending.value).toBe(true)
-  inspect.props.onClick()
+  fire(inspect, 'onClick')
   await nextTick()
   expect(state.run).toHaveBeenCalledTimes(1)
   expect(focused?.type).toBe('button')
@@ -136,12 +148,12 @@ it('focuses the replacement cancel button and routes Escape to cancellation', as
   }
   await nextTick()
   let inspectAgain = all(root).find(n => n.type === 'button' && n.text === 'Inspect')
-  await inspectAgain.props.onClick()
+  await fire(inspectAgain, 'onClick')
   await nextTick()
   expect(state.pending.value).toBe(false)
-  expect(focused.props['aria-label']).toBe('Distance check budget')
+  expect(focused!.props['aria-label']).toBe('Distance check budget')
   const budget = all(root).find(n => n.props['aria-label'] === 'Distance check budget')
-  budget.props['onUpdate:modelValue']('standard')
+  fire(budget, 'onUpdate:modelValue', 'standard')
   await nextTick()
   for (const [field, bad, good] of [
     ['Normal-direction squared sine tolerance', 1, 0.0001],
@@ -149,18 +161,18 @@ it('focuses the replacement cancel button and routes Escape to cancellation', as
     ['UV subdivision tolerance', 0, 0.05],
   ] as const) {
     const input = all(root).find(n => n.props['aria-label'] === field)
-    input.props['onUpdate:modelValue'](bad)
+    fire(input, 'onUpdate:modelValue', bad)
     await nextTick()
     inspectAgain = all(root).find(n => n.type === 'button' && n.text === 'Inspect')
-    await inspectAgain.props.onClick()
+    await fire(inspectAgain, 'onClick')
     await nextTick()
     expect(state.pending.value).toBe(false)
-    expect(focused.props['aria-label']).toBe(field)
-    expect(input.props['aria-invalid']).toBe(true)
-    input.props['onUpdate:modelValue'](good)
+    expect(focused!.props['aria-label']).toBe(field)
+    expect(input!.props['aria-invalid']).toBe(true)
+    fire(input, 'onUpdate:modelValue', good)
     await nextTick()
   }
-  await inspectAgain.props.onClick()
+  await fire(inspectAgain, 'onClick')
   await nextTick()
   await nextTick()
   expect(state.pending.value).toBe(true)
@@ -191,11 +203,11 @@ it('focuses the replacement cancel button and routes Escape to cancellation', as
   const region = all(root).find(n => n.props['aria-label'] === 'Pending region')
   expect(region).toBeTruthy()
   faces.mockClear()
-  region.props['onUpdate:modelValue'](2)
+  fire(region, 'onUpdate:modelValue', 2)
   await nextTick()
   expect(faces).toHaveBeenLastCalledWith([])
   // Recommending extended work is valid only below the binding hard limit.
-  budget.props['onUpdate:modelValue']('saved')
+  fire(budget, 'onUpdate:modelValue', 'saved')
   options.value = {
     alignedChordCheck: {
       minimumMm: 1,
@@ -251,13 +263,13 @@ it('focuses the replacement cancel button and routes Escape to cancellation', as
   await nextTick()
   const contactRegion = all(root).find(n => n.props['aria-label'] === 'Unverified contact region')
   const contactPair = all(root).find(n => n.props['aria-label'] === 'Unverified pair')
-  contactRegion.props['onUpdate:modelValue'](2)
+  fire(contactRegion, 'onUpdate:modelValue', 2)
   await nextTick()
-  expect(contactRegion.props['onUpdate:modelValue']).toBeTruthy()
-  contactPair.props['onUpdate:modelValue'](1)
+  expect(contactRegion!.props['onUpdate:modelValue']).toBeTruthy()
+  fire(contactPair, 'onUpdate:modelValue', 1)
   await nextTick()
   expect(contactRegion.value).toBe(1)
-  contactRegion.props['onUpdate:modelValue'](NaN)
+  fire(contactRegion, 'onUpdate:modelValue', NaN)
   await nextTick()
   expect(all(root).some(n => n.props['data-contact-uv-domains'] !== undefined)).toBe(false)
   state.pending.value = false
@@ -269,10 +281,10 @@ it('focuses the replacement cancel button and routes Escape to cancellation', as
   active.value = false
   await nextTick()
   let retry = all(root).find(n => n.type === 'button' && n.text === 'Retry')
-  expect(retry.props.disabled).toBe(true)
+  expect(retry!.props.disabled).toBe(true)
   const runCalls = state.run.mock.calls.length
   const cancelCalls = state.cancel.mock.calls.length
-  await retry.props.onClick()
+  await fire(retry, 'onClick')
   await nextTick()
   expect(state.run).toHaveBeenCalledTimes(runCalls)
   expect(state.cancel).toHaveBeenCalledTimes(cancelCalls)
@@ -285,8 +297,8 @@ it('focuses the replacement cancel button and routes Escape to cancellation', as
   options.value = undefined
   await nextTick()
   retry = all(root).find(n => n.type === 'button' && n.text === 'Retry')
-  expect(retry.props.disabled).toBe(true)
-  await retry.props.onClick()
+  expect(retry!.props.disabled).toBe(true)
+  await fire(retry, 'onClick')
   await nextTick()
   expect(state.run).toHaveBeenCalledTimes(runCalls)
   app.unmount()

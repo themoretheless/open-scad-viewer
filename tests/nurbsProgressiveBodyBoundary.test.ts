@@ -1,4 +1,4 @@
-import { readNativeGeometryData } from '../src/kernel/nativeGeometrySnapshot'
+import { readNativeGeometryData, type ProbedJson } from '../src/kernel/nativeGeometrySnapshot'
 import { expect, it } from 'vitest'
 import { bezierNurbsCurve, type ProgressiveGuidedSurfaceSweepOptions } from '../src/kernel/nurbsConstructors'
 import { createProgressiveBrepProfileBody } from '../src/kernel/geometry/brep'
@@ -87,7 +87,7 @@ it.each([
   })
   const retained = readNativeGeometryData(built.nativeGeometry).geometry
   if (file.includes('straight')) {
-    const poles = retained.faces.slice(0, -2).flatMap((face: any) => face.surface.controlPoints.flat())
+    const poles = retained.faces.slice(0, -2).flatMap((face: ProbedJson) => face.surface.controlPoints.flat())
     expect(
       [0, 1, 2].map(k => [
         Math.min(...poles.map((p: number[]) => p[k]!)),

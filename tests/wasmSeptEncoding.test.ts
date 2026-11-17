@@ -84,7 +84,9 @@ it('agrees with BigInt acceptance and bytes on deterministic arbitrary frames', 
     let expected: Uint8Array | undefined
     try {
       expected = reference(text)
-    } catch {}
+    } catch {
+      // The reference decoder rejects this input; decodeBase91 must throw too.
+    }
     if (expected === undefined) expect(() => decodeBase91(text)).toThrow()
     else expect(decodeBase91(text)).toEqual(expected)
   }
