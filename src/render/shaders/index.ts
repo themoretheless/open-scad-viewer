@@ -45,7 +45,12 @@ export {
   SELECTION_OVERLAY_WGSL,
   MESH_SHADOW_WGSL,
 } from './generated/sources'
-export { immediateObjectShader, instancedObjectShader, supportsImmediateAddressSpace } from './variants'
+export {
+  immediateObjectShader,
+  instanceStepObjectShader,
+  instancedObjectShader,
+  supportsImmediateAddressSpace,
+} from './variants'
 
 /* ── Registry ─────────────────────────────────────── */
 
@@ -53,7 +58,7 @@ export { immediateObjectShader, instancedObjectShader, supportsImmediateAddressS
 export type ShaderKind = 'object' | 'overlay' | 'line' | 'grid'
 
 /** Which Obj source a pipeline variant reads. */
-export type ShaderVariant = 'uniform' | 'immediate' | 'instanced'
+export type ShaderVariant = 'uniform' | 'immediate' | 'instanced' | 'instanceStep'
 
 /** Named interleaved vertex-buffer layouts shared by pipeline creation. */
 export type ShaderVertexLayout = 'mesh' | 'edge' | 'line' | 'grid'

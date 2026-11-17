@@ -51,8 +51,8 @@ describe('instanced scene staging', () => {
     const scene = new InstancedSceneBuffers(device)
     scene.stage(hundred())
     expect(scene.metrics).toMatchObject({ geometryUploads: 1, drawCalls: 1, instances: 100, edgeUploads: 0 })
-    // Vertex + index + one instance-transform buffer of 100 mat4.
-    expect(buffers.map(buffer => buffer.size)).toEqual([72, 12, 6400])
+    // Vertex + index + one instance-record buffer of 100 records (mat4 + color + style).
+    expect(buffers.map(buffer => buffer.size)).toEqual([72, 12, 9600])
     const pass = fakePass()
     scene.encode(pass as unknown as GPURenderPassEncoder)
     expect(pass.drawIndexed).toHaveBeenCalledTimes(1)

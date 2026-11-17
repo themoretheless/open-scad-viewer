@@ -89,6 +89,68 @@ struct V {
 }
 `
 
+/**
+ * Instanced picking: the model matrix comes from the instance-step record
+ * buffer (vertex slot 1, locations 3..6) and the written id is
+ * `batch.pickBase + instance_index`, so one draw resolves to the individual
+ * instance. Shares the scene group and object-group layout with the
+ * per-entity shader.
+ */
+export const GPU_INSTANCE_PICKING_WGSL = /* wgsl */`
+struct PickScene {
+  vp: mat4x4f,
+  section: vec4f,
+  options: vec4f,
+};
+
+struct PickBatch {
+  pickBase: u32,
+  pad0: u32,
+  pad1: u32,
+  pad2: u32,
+};
+
+@group(0) @binding(0) var<uniform> sc: PickScene;
+@group(1) @binding(0) var<uniform> batch: PickBatch;
+
+struct V {
+  @builtin(position) p: vec4f,
+  @location(0) w: vec3f,
+  @location(1) @interpolate(flat) id: u32,
+};
+
+@vertex fn vs(@builtin(instance_index) instance: u32, @location(0) pos: vec3f,
+  @location(3) m0: vec4f, @location(4) m1: vec4f, @location(5) m2: vec4f, @location(6) m3: vec4f) -> V {
+  let wp = (mat4x4f(m0, m1, m2, m3) * vec4f(pos, 1.0)).xyz;
+  return V(sc.vp * vec4f(wp, 1.0), wp, batch.pickBase + instance);
+}
+
+@fragment fn fs(v: V) -> @location(0) u32 {
+  if (sc.options.x > 0.5 && dot(v.w, sc.section.xyz) < sc.section.w) {
+    discard;
+  }
+  return v.id;
+}
+`
+
+/** Instance-step record stride shared with `InstancedSceneBuffers` (model + color + style). */
+export const PICK_INSTANCE_RECORD_BYTES = 96
+
+/** Vertex buffers of the instanced pick pipeline: positions + per-instance model columns. */
+export const PICK_INSTANCE_VERTEX_BUFFERS: GPUVertexBufferLayout[] = [
+  { arrayStride: 24, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] },
+  {
+    arrayStride: PICK_INSTANCE_RECORD_BYTES,
+    stepMode: 'instance',
+    attributes: [
+      { shaderLocation: 3, offset: 0, format: 'float32x4' },
+      { shaderLocation: 4, offset: 16, format: 'float32x4' },
+      { shaderLocation: 5, offset: 32, format: 'float32x4' },
+      { shaderLocation: 6, offset: 48, format: 'float32x4' },
+    ],
+  },
+]
+
 /* ── Picking Types & Options ──────────────────────────── */
 
 export interface GpuPickerMesh {
@@ -97,6 +159,41 @@ export interface GpuPickerMesh {
   ic: number
   transform: Float32Array
   visible: boolean
+}
+
+/** One instanced batch for the pick pass (see `InstancedSceneBuffers.drawBatches`). */
+export interface GpuPickerInstanceBatch {
+  vb: GPUBuffer
+  ib: GPUBuffer
+  ic: number
+  instances: GPUBuffer
+  instanceCount: number
+  pickBase: number
+}
+
+/**
+ * Instanced members of the scene. `covers(meshIndex)` excludes those meshes
+ * from the per-entity draws; `resolve(pickId)` maps `pickBase + instance` back
+ * to a mesh index (null when stale).
+ */
+export interface GpuPickerInstances {
+  batches: readonly GpuPickerInstanceBatch[]
+  covers(meshIndex: number): boolean
+  resolve(pickId: number): number | null
+}
+
+/**
+ * Written instanced id: per-entity ids occupy 1..meshCount, so instanced ids
+ * are offset past them. Decode with `decodePickId`.
+ */
+export const instancedPickId = (meshCount: number, pickBase: number, instanceIndex: number) =>
+  meshCount + pickBase + instanceIndex
+
+/** Mesh index for a raw pick id written by either pick shader, or null for background. */
+export function decodePickId(rawId: number, meshCount: number, instances?: GpuPickerInstances): number | null {
+  if (rawId <= 0) return null
+  if (rawId <= meshCount) return rawId - 1
+  return instances ? instances.resolve(rawId - meshCount) : null
 }
 
 export interface GpuPickerSceneParams {
@@ -133,6 +230,10 @@ export class GpuPicker {
   private sceneBG: GPUBindGroup | null = null
   private objUBs: GPUBuffer[] = []
   private objBGs: GPUBindGroup[] = []
+  private instancePipeline: GPURenderPipeline | null = null
+  private batchUBs: GPUBuffer[] = []
+  private batchBGs: GPUBindGroup[] = []
+  private readonly scratchBatch = new Uint32Array(4)
 
   private ensureResources(dev: GPUDevice) {
     if (this.dev === dev && this.pipeline && this.colorTexture) return
@@ -204,6 +305,15 @@ export class GpuPicker {
       },
     })
 
+    const instanceModule = dev.createShaderModule({ code: GPU_INSTANCE_PICKING_WGSL })
+    this.instancePipeline = dev.createRenderPipeline({
+      layout: pipelineLayout,
+      vertex: { module: instanceModule, entryPoint: 'vs', buffers: PICK_INSTANCE_VERTEX_BUFFERS },
+      fragment: { module: instanceModule, entryPoint: 'fs', targets: [{ format: 'r32uint' }] },
+      primitive: { topology: 'triangle-list', cullMode: 'back' },
+      depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
+    })
+
     this.sceneUB = dev.createBuffer({
       size: 256,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -243,9 +353,24 @@ export class GpuPicker {
     return this.objBGs[index]!
   }
 
+  private ensureBatchBindGroup(dev: GPUDevice, index: number, id: number): GPUBindGroup {
+    if (!this.batchUBs[index]) {
+      this.batchUBs[index] = dev.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
+      this.batchBGs[index] = dev.createBindGroup({
+        layout: this.objBGL!,
+        entries: [{ binding: 0, resource: { buffer: this.batchUBs[index] } }],
+      })
+    }
+    this.scratchBatch[0] = id
+    dev.queue.writeBuffer(this.batchUBs[index], 0, this.scratchBatch)
+    return this.batchBGs[index]!
+  }
+
   /**
    * Performs an asynchronous hardware picking pass at (pixelX, pixelY).
    * Returns the zero-indexed meshIndex hit by the ray, or null if background.
+   * With `instances`, covered meshes are drawn as instanced batches that
+   * write `pickBase + instance_index` (offset past the per-entity ids).
    */
   async pick(
     dev: GPUDevice,
@@ -253,6 +378,7 @@ export class GpuPicker {
     sceneParams: GpuPickerSceneParams,
     pixelX: number,
     pixelY: number,
+    instances?: GpuPickerInstances,
   ): Promise<number | null> {
     if (meshes.length === 0) return null
     this.ensureResources(dev)
@@ -303,13 +429,27 @@ export class GpuPicker {
 
     for (let index = 0; index < meshes.length; index++) {
       const mesh = meshes[index]!
-      if (!mesh.visible || mesh.ic === 0) continue
+      if (!mesh.visible || mesh.ic === 0 || instances?.covers(index)) continue
       drawnMeshes++
       const objBG = this.ensureObjectBindGroup(dev, index, mesh)
       pass.setBindGroup(1, objBG)
       pass.setVertexBuffer(0, mesh.vb)
       pass.setIndexBuffer(mesh.ib, 'uint32')
       pass.drawIndexed(mesh.ic)
+    }
+
+    if (instances?.batches.length && this.instancePipeline) {
+      pass.setPipeline(this.instancePipeline)
+      pass.setBindGroup(0, this.sceneBG!)
+      instances.batches.forEach((batch, index) => {
+        if (!batch.ic || !batch.instanceCount) return
+        drawnMeshes += batch.instanceCount
+        pass.setBindGroup(1, this.ensureBatchBindGroup(dev, index, instancedPickId(meshes.length, batch.pickBase, 0)))
+        pass.setVertexBuffer(0, batch.vb)
+        pass.setVertexBuffer(1, batch.instances)
+        pass.setIndexBuffer(batch.ib, 'uint32')
+        pass.drawIndexed(batch.ic, batch.instanceCount)
+      })
     }
 
     pass.end()
@@ -331,7 +471,7 @@ export class GpuPicker {
       const array = new Uint32Array(this.readbackBuffer.getMappedRange())
       const rawId = array[0]!
       this.readbackBuffer.unmap()
-      return rawId > 0 ? rawId - 1 : null
+      return decodePickId(rawId, meshes.length, instances)
     } catch {
       this.deviceLost = true
       return null
@@ -352,8 +492,12 @@ export class GpuPicker {
     this.readbackBuffer?.destroy()
     this.sceneUB?.destroy()
     for (const ub of this.objUBs) ub?.destroy()
+    for (const ub of this.batchUBs) ub?.destroy()
     this.objUBs = []
     this.objBGs = []
+    this.batchUBs = []
+    this.batchBGs = []
+    this.instancePipeline = null
     this.colorTexture = null
     this.colorView = null
     this.depthTexture = null

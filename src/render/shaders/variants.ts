@@ -42,3 +42,43 @@ export function instancedObjectShader(source: string, output: 'V' | 'EdgeV') {
   }
   return source
 }
+
+/**
+ * Instance-step variant of a mesh-surface shader for `InstancedSceneBuffers`.
+ * The model matrix comes from a second vertex buffer stepped per instance
+ * (locations 3..6, column-major), color and style (alpha, selected, edge,
+ * hovered) from locations 7/8; color and style reach the fragment stage as
+ * flat varyings. The normal matrix is the sign-corrected cofactor of the
+ * model's upper 3x3, which equals the inverse transpose up to a positive scale
+ * (the shaders normalize it). Instances never morph, so the morph input is
+ * dropped, and the material tail takes the uniform path's defaults. The shadow
+ * map moves from group(2) to group(1): the pipeline layout is scene + shadow,
+ * with no per-entity object group. Morph and LOD entities keep the uniform
+ * variant.
+ */
+export function instanceStepObjectShader(source: string) {
+  const replacements: Array<[string, string]> = [
+    ['@group(1) @binding(0) var<uniform> ob: Obj;', INSTANCE_STEP_PRELUDE],
+    ['struct V {', 'struct V { @location(2) @interpolate(flat) icolor: vec4f, @location(3) @interpolate(flat) istyle: vec4f,'],
+    ['@location(2) fromPos: vec3f) -> V {', 'inst: InstanceIn) -> V {\n  let ob = instanceObj(mat4x4f(inst.m0, inst.m1, inst.m2, inst.m3), inst.color, inst.style);'],
+    ['mix(fromPos, pos, ob.morph.x)', 'pos'],
+    ['return V(', 'return V(ob.color, ob.style, '],
+    ['@fragment fn fs(v: V) -> @location(0) vec4f {', '@fragment fn fs(v: V) -> @location(0) vec4f {\n  let ob = instanceObj(mat4x4f(), v.icolor, v.istyle);'],
+  ]
+  for (const [from, to] of replacements) {
+    if (source.split(from).length !== 2) throw new Error(`Instance-step shader contract changed: ${from}`)
+    source = source.replace(from, to)
+  }
+  if (source.includes('fromPos')) throw new Error('Instance-step shader contract changed: morph input still referenced')
+  return source.replaceAll('@group(2) @binding(', '@group(1) @binding(')
+}
+
+const INSTANCE_STEP_PRELUDE = `struct InstanceIn { @location(3) m0: vec4f, @location(4) m1: vec4f, @location(5) m2: vec4f, @location(6) m3: vec4f, @location(7) color: vec4f, @location(8) style: vec4f }
+fn instanceObj(model: mat4x4f, color: vec4f, style: vec4f) -> Obj {
+  let a = model[0].xyz;
+  let b = model[1].xyz;
+  let c = model[2].xyz;
+  let s = select(1.0, -1.0, dot(a, cross(b, c)) < 0.0);
+  let nmat = mat4x4f(vec4f(cross(b, c) * s, 0.0), vec4f(cross(c, a) * s, 0.0), vec4f(cross(a, b) * s, 0.0), vec4f(0.0, 0.0, 0.0, 1.0));
+  return Obj(model, nmat, color, style, vec4f(1.0, 0.0, 0.0, 0.0), vec3f(1.0), 0.0, vec3f(0.0), 0.7, 0.0);
+}`

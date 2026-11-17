@@ -30,6 +30,7 @@ import { fillSceneUniforms } from '../uniformFill'
 
 import {
   NO_GHOST_MESHES,
+  type GMesh,
   type OverlaySlot,
 } from '../types'
 
@@ -233,7 +234,18 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
 
   if (!isCsgActive) {
     const customOpaque = frame.opaqueDraws.some(mesh => mesh.shadingModel !== 'phong')
-    if (!customOpaque && (transitioning || !frame.opaqueInstances.draw(pass, dev, pipelines.instanceBGL, getRenderPipeline('mesh', { variant: 'instanced' }), sceneBG, frame.opaqueDraws, false, textures.shadowBG ?? undefined))) {
+    let meshIndex: Map<GMesh, number> | null = null
+    const indexOf = (mesh: GMesh) => (meshIndex ??= new Map(meshes.map((entry, index) => [entry, index]))).get(mesh) ?? -1
+    // Shared assets draw as instance-step batches; morph/LOD/material entities
+    // stay per-entity (`perEntity`) and go through the bundle below.
+    const instanced = !customOpaque && !transitioning && frame.instancedOpaque.prepare(dev, frame.opaqueDraws, indexOf)
+    if (!instanced) frame.instancedOpaque.reset()
+    if (instanced) {
+      const shadowBG = textures.shadowBG ?? undefined
+      frame.instancedOpaque.encode(pass, getRenderPipeline('mesh', { variant: 'instanceStep' }), sceneBG, shadowBG)
+      const rest = frame.instancedOpaque.perEntity as GMesh[]
+      if (rest.length) frame.opaqueBundle.draw(pass, dev, fmt, getRenderPipeline('mesh'), sceneBG, rest, false, shadowBG)
+    } else if (!customOpaque && (transitioning || !frame.opaqueInstances.draw(pass, dev, pipelines.instanceBGL, getRenderPipeline('mesh', { variant: 'instanced' }), sceneBG, frame.opaqueDraws, false, textures.shadowBG ?? undefined))) {
       frame.opaqueBundle.draw(pass, dev, fmt, getRenderPipeline('mesh'), sceneBG, frame.opaqueDraws, false, textures.shadowBG ?? undefined)
     } else if (customOpaque) {
       for (const group of groupByShadingModel(frame.opaqueDraws)) {

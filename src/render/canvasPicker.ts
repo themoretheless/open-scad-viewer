@@ -3,7 +3,7 @@
  * client-to-canvas mapping and lazy picker lifetime can be tested with a
  * fake device.
  */
-import { GpuPicker, type GpuPickerMesh, type GpuPickerSceneParams } from './gpuPicker'
+import { GpuPicker, type GpuPickerInstances, type GpuPickerMesh, type GpuPickerSceneParams } from './gpuPicker'
 
 export interface CanvasRect {
   left: number
@@ -35,6 +35,7 @@ export class CanvasPicker {
     clientY: number,
     meshes: readonly GpuPickerMesh[],
     scene: () => CanvasPickScene,
+    instances?: GpuPickerInstances,
   ): Promise<number | null> {
     const point = canvasPickPoint(rect, clientX, clientY)
     if (!point) return null
@@ -45,6 +46,7 @@ export class CanvasPicker {
       { ...scene(), viewportWidth: rect.width, viewportHeight: rect.height },
       point.x,
       point.y,
+      ...(instances ? [instances] : []),
     )
   }
 

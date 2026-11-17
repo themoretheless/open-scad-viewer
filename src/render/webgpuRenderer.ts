@@ -75,6 +75,7 @@ import { TransparentSortBuffer } from './transparentOrdering'
 import { MeshDrawBundle } from './meshDrawBundle'
 import { ViewFrustum } from './viewFrustum'
 import { MeshInstances } from '../kernel/meshInstances'
+import { InstancedOpaquePass } from './instancedOpaquePass'
 import { computeOrbitCameraFrame } from './orbitCameraProjection'
 import type { DisplayBudget } from './displayScheduler'
 import { MeshDisplayController } from './meshDisplayController'
@@ -302,6 +303,7 @@ export class WebGPURenderer {
   private readonly transparentSort = new TransparentSortBuffer()
   private readonly transparentDraws: GMesh[] = []
   private readonly opaqueInstances = new MeshInstances()
+  private readonly instancedOpaque = new InstancedOpaquePass()
   private readonly transparentInstances = new MeshInstances()
   private readonly edgeInstances = new MeshInstances()
   private readonly opaqueBundle = new MeshDrawBundle()
@@ -535,7 +537,7 @@ export class WebGPURenderer {
       sectionNormal: this.sectionNormal,
       sectionOffset: this.sectionOffset,
       sectionEnabled: this.sectionEnabled,
-    }))
+    }), this.instancedOpaque.pickInstances())
   }
 
   getTransparencyMode(): 'sorted' | 'wboit' {
@@ -1372,6 +1374,7 @@ export class WebGPURenderer {
 
   private clearDrawCaches() {
     this.opaqueInstances.clear()
+    this.instancedOpaque.clear()
     this.transparentInstances.clear()
     this.edgeInstances.clear()
     this.transparentDraws.length = 0
@@ -1443,6 +1446,7 @@ export class WebGPURenderer {
       transparentSort: this.transparentSort,
       transparentDraws: this.transparentDraws,
       opaqueInstances: this.opaqueInstances,
+      instancedOpaque: this.instancedOpaque,
       transparentInstances: this.transparentInstances,
       edgeInstances: this.edgeInstances,
       opaqueBundle: this.opaqueBundle,

@@ -12,10 +12,12 @@ import {
   MORPH_VERTEX_STRIDE,
   getShader,
   immediateObjectShader,
+  instanceStepObjectShader,
   instancedObjectShader,
   supportsImmediateAddressSpace,
 } from './shaders'
 import type { ShaderDepthSpec, ShaderVariant, ShaderVertexLayout } from './shaders'
+import { INSTANCE_STEP_VERTEX_LAYOUT } from './instancedScene'
 
 /** Optional per-flavor overrides for the cached pipeline factory. */
 export interface PipelineFlavor {
@@ -70,6 +72,10 @@ export class PipelineFactory {
   envObjectLayout!: GPUPipelineLayout
   immediateObjectLayout: GPUPipelineLayout | null = null
   instanceLayout!: GPUPipelineLayout
+  /** Instance-step surfaces: scene + shadow (group 1); transforms come from vertex slot 1. */
+  instanceStepLayout!: GPUPipelineLayout
+  /** Instance-step vertex buffers: mesh vertices (slot 0) + per-instance records (slot 1, instance step). */
+  instanceStepVertexLayouts!: GPUVertexBufferLayout[]
   vertexLayouts!: Record<ShaderVertexLayout, GPUVertexBufferLayout[]>
   immediateObjectStyle = false
   private fmt: GPUTextureFormat = 'bgra8unorm'
@@ -125,6 +131,7 @@ export class PipelineFactory {
       ? dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.objBGL, this.shadowBGL], immediateSize: 16 })
       : null
     this.instanceLayout = dev.createPipelineLayout({ bindGroupLayouts: [this.sceneBGL, this.instanceBGL, this.shadowBGL] })
+    this.instanceStepLayout = this.sceneLayout
 
     const meshVBL: GPUVertexBufferLayout = {
       arrayStride: MESH_VERTEX_STRIDE,
@@ -146,6 +153,7 @@ export class PipelineFactory {
         { shaderLocation: 1, offset: 12, format: 'float32x4' },
       ],
     }
+    this.instanceStepVertexLayouts = [meshVBL, INSTANCE_STEP_VERTEX_LAYOUT]
     this.vertexLayouts = {
       mesh: [meshVBL, morphVBL],
       edge: [
@@ -169,6 +177,7 @@ export class PipelineFactory {
     if (!module) {
       const spec = getShader(id)
       const source = variant === 'immediate' ? immediateObjectShader(spec.source)
+        : variant === 'instanceStep' ? instanceStepObjectShader(spec.source)
         : variant === 'instanced'
           ? instancedObjectShader(spec.source, spec.vertexLayout === 'edge' ? 'EdgeV' : 'V')
           : spec.source
@@ -194,6 +203,9 @@ export class PipelineFactory {
     if (variant === 'immediate' && !this.immediateObjectLayout) {
       throw new Error(`Device does not support the 'immediate' variant (no immediate address space)`)
     }
+    if (variant === 'instanceStep' && (spec.vertexLayout !== 'mesh' || spec.depthOnly)) {
+      throw new Error(`Shader '${id}' does not support the 'instanceStep' variant`)
+    }
     const blend = flavor.blend ?? spec.blend
     const depth = flavor.depth ?? spec.depth
     const topology = flavor.topology ?? spec.topology
@@ -207,6 +219,7 @@ export class PipelineFactory {
         : spec.usesMatcapBinding && variant === 'uniform' ? this.matcapObjectLayout
         : spec.usesEnvBinding && variant === 'uniform' ? this.envObjectLayout
         : variant === 'instanced' ? this.instanceLayout
+        : variant === 'instanceStep' ? this.instanceStepLayout
         : variant === 'immediate' ? this.immediateObjectLayout!
         : this.objectLayout
       : spec.usesShadowBinding ? this.sceneLayout : this.sceneOnlyLayout
@@ -219,7 +232,7 @@ export class PipelineFactory {
       depthStencil: { format: 'depth32float', depthWriteEnabled: true, depthCompare: depth.compare, ...SHADOW_CASTER_DEPTH_BIAS },
     } : {
       layout,
-      vertex: { module, entryPoint: 'vs', buffers: this.vertexLayouts[spec.vertexLayout] },
+      vertex: { module, entryPoint: 'vs', buffers: variant === 'instanceStep' ? this.instanceStepVertexLayouts : this.vertexLayouts[spec.vertexLayout] },
       fragment: { module, entryPoint: 'fs', targets: [{
         format: this.fmt,
         ...(blend === 'alpha' ? { blend: ALPHA_BLEND } : {}),
@@ -264,6 +277,7 @@ export class PipelineFactory {
       ['meshShadow'],
       ['edge'],
       ['mesh', { variant: 'instanced' }],
+      ['mesh', { variant: 'instanceStep' }],
       ['mesh', { variant: 'instanced', blend: 'alpha', depth: TRANSPARENT_DEPTH }],
       ['edge', { variant: 'instanced' }],
       ['edge', { depth: DEEP_DEPTH }],

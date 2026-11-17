@@ -17,6 +17,7 @@ import type { MeshDrawBundle } from '../meshDrawBundle'
 import type { ViewFrustum } from '../viewFrustum'
 
 import type { MeshInstances } from '../../kernel/meshInstances'
+import type { InstancedOpaquePass } from '../instancedOpaquePass'
 
 
 import {
@@ -225,6 +226,7 @@ export interface EncodeFramePassContext {
   readonly transparentSort: TransparentSortBuffer
   readonly transparentDraws: GMesh[]
   readonly opaqueInstances: MeshInstances
+  readonly instancedOpaque: InstancedOpaquePass
   readonly transparentInstances: MeshInstances
   readonly edgeInstances: MeshInstances
   readonly opaqueBundle: MeshDrawBundle

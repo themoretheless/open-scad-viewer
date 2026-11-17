@@ -12,8 +12,49 @@
  */
 import type { MeshData } from '../core/mesh'
 
-export type InstanceSource = Pick<MeshData, 'vertices' | 'indices' | 'edgeIndices' | 'transform'> & {
-  readonly geometryAssetId?: string | undefined
+/** Resident geometry buffers owned by someone else (the renderer); adopted, never uploaded or destroyed. */
+export interface AdoptedGeometry {
+  readonly vb: GPUBuffer
+  readonly ib: GPUBuffer
+  readonly ic: number
+}
+
+/** Per-instance style: RGBA color and (alpha, selected, edge, hovered). */
+export interface InstanceStyle {
+  readonly color?: readonly number[] | undefined
+  readonly styleAlpha?: number | undefined
+  readonly styleSelected?: number | undefined
+  readonly styleEdge?: number | undefined
+  readonly styleHovered?: number | undefined
+}
+
+export type InstanceSource = Pick<MeshData, 'vertices' | 'indices' | 'edgeIndices' | 'transform'> &
+  InstanceStyle & {
+    readonly geometryAssetId?: string | undefined
+    /** Adopted resident buffers; the batch key is then the vertex-buffer identity. */
+    readonly gpu?: AdoptedGeometry | undefined
+  }
+
+/**
+ * Instance-step record: column-major model (16 floats), color (4), style (4).
+ * Bound at vertex slot 1 with `stepMode: 'instance'`.
+ */
+export const INSTANCE_RECORD_FLOATS = 24
+export const INSTANCE_RECORD_BYTES = INSTANCE_RECORD_FLOATS * 4
+const STYLE_OFFSET = 16
+
+/** Vertex slot 1 layout of the instance-step shader variants (locations 3..8). */
+export const INSTANCE_STEP_VERTEX_LAYOUT: GPUVertexBufferLayout = {
+  arrayStride: INSTANCE_RECORD_BYTES,
+  stepMode: 'instance',
+  attributes: [
+    { shaderLocation: 3, offset: 0, format: 'float32x4' },
+    { shaderLocation: 4, offset: 16, format: 'float32x4' },
+    { shaderLocation: 5, offset: 32, format: 'float32x4' },
+    { shaderLocation: 6, offset: 48, format: 'float32x4' },
+    { shaderLocation: 7, offset: 64, format: 'float32x4' },
+    { shaderLocation: 8, offset: 80, format: 'float32x4' },
+  ],
 }
 
 export interface InstanceBatch {
@@ -33,14 +74,18 @@ export interface InstancePlan {
 
 const identityKeys = new WeakMap<object, string>()
 let nextIdentity = 0
-function identityKey(mesh: InstanceSource) {
-  let key = identityKeys.get(mesh.vertices)
-  if (!key) identityKeys.set(mesh.vertices, (key = `identity:${nextIdentity++}`))
+function identityKey(object: object, prefix: string) {
+  let key = identityKeys.get(object)
+  if (!key) identityKeys.set(object, (key = `${prefix}:${nextIdentity++}`))
   return key
 }
 
-/** Asset key: the content-addressed asset id, else the vertex array identity. */
-export const instanceAssetKey = (mesh: InstanceSource) => mesh.geometryAssetId ?? identityKey(mesh)
+/**
+ * Asset key: the adopted vertex-buffer identity, else the content-addressed
+ * asset id, else the vertex array identity.
+ */
+export const instanceAssetKey = (mesh: InstanceSource) =>
+  mesh.gpu ? identityKey(mesh.gpu.vb, 'gpu') : (mesh.geometryAssetId ?? identityKey(mesh.vertices, 'identity'))
 
 /** Groups meshes by asset in first-occurrence order. Pick id 0 stays "no hit". */
 export function planInstanceBatches(meshes: readonly InstanceSource[]): InstancePlan {
@@ -88,18 +133,37 @@ export function instancePickId(plan: InstancePlan, meshIndex: number): number | 
   return slot ? plan.batches[slot[0]]!.pickBase + slot[1] : null
 }
 
-/** Column transforms of a batch packed for an instance-step vertex buffer (16 floats each). */
-export function packInstanceTransforms(batch: InstanceBatch, meshes: readonly InstanceSource[], out?: Float32Array) {
-  const data = out && out.length >= batch.members.length * 16 ? out : new Float32Array(batch.members.length * 16)
-  batch.members.forEach((mesh, slot) => {
-    const transform = meshes[mesh]!.transform
-    if (transform) data.set(transform.subarray(0, 16), slot * 16)
-    else data.set(IDENTITY, slot * 16)
+function writeStyle(data: Float32Array, offset: number, mesh: InstanceStyle) {
+  const color = mesh.color
+  data[offset] = color?.[0] ?? 1
+  data[offset + 1] = color?.[1] ?? 1
+  data[offset + 2] = color?.[2] ?? 1
+  data[offset + 3] = color?.[3] ?? 1
+  data[offset + 4] = mesh.styleAlpha ?? 1
+  data[offset + 5] = mesh.styleSelected ?? 0
+  data[offset + 6] = mesh.styleEdge ?? 0
+  data[offset + 7] = mesh.styleHovered ?? 0
+}
+
+/**
+ * Instance records of a batch for the instance-step vertex buffer
+ * (`INSTANCE_RECORD_FLOATS` each). `transform` is the row-major `Mat4`; the
+ * record stores it column-major as WGSL `mat4x4f` expects.
+ */
+export function packInstanceRecords(batch: InstanceBatch, meshes: readonly InstanceSource[], out?: Float32Array) {
+  const floats = batch.members.length * INSTANCE_RECORD_FLOATS
+  const data = out && out.length >= floats ? out : new Float32Array(floats)
+  batch.members.forEach((index, slot) => {
+    const mesh = meshes[index]!,
+      transform = mesh.transform,
+      offset = slot * INSTANCE_RECORD_FLOATS
+    for (let row = 0; row < 4; row++)
+      for (let column = 0; column < 4; column++)
+        data[offset + column * 4 + row] = transform ? transform[row * 4 + column]! : row === column ? 1 : 0
+    writeStyle(data, offset + STYLE_OFFSET, mesh)
   })
   return data
 }
-
-const IDENTITY = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])
 
 export interface InstancingMetrics {
   /** Distinct assets whose vertex/index buffers were uploaded by the last stage. */
@@ -116,6 +180,8 @@ interface AssetBuffers {
   vb: GPUBuffer
   ib: GPUBuffer
   ic: number
+  /** Adopted from the caller: never destroyed here. */
+  adopted: boolean
   edgeIB: GPUBuffer | null
   edgeIC: number
   edges: Uint32Array
@@ -126,6 +192,18 @@ interface BatchBuffers {
   capacity: number
   count: number
   asset: AssetBuffers
+  /** CPU mirror of the instance records, diffed by `updateStyles`. */
+  records: Float32Array
+}
+
+/** What one instanced draw binds; used by the GPU picker. */
+export interface InstanceDrawBatch {
+  readonly vb: GPUBuffer
+  readonly ib: GPUBuffer
+  readonly ic: number
+  readonly instances: GPUBuffer
+  readonly instanceCount: number
+  readonly pickBase: number
 }
 
 type InstancingDevice = Pick<GPUDevice, 'createBuffer' | 'queue'>
@@ -144,7 +222,6 @@ const usage = (name: 'VERTEX' | 'INDEX' | 'COPY_DST', fallback: number) =>
 export class InstancedSceneBuffers {
   private assets = new Map<string, AssetBuffers>()
   private batches: BatchBuffers[] = []
-  private scratch = new Float32Array(0)
   plan: InstancePlan = { batches: [], slotOf: [] }
   readonly metrics: InstancingMetrics = {
     geometryUploads: 0,
@@ -164,8 +241,11 @@ export class InstancedSceneBuffers {
     const previousBatches = this.batches
     this.batches = plan.batches.map((batch, index) => {
       let asset = this.assets.get(batch.key) ?? live.get(batch.key)
-      if (!asset) {
-        const mesh = meshes[batch.members[0]!]!
+      const first = meshes[batch.members[0]!]!
+      if (!asset && first.gpu) {
+        asset = { ...first.gpu, adopted: true, edgeIB: null, edgeIC: 0, edges: first.edgeIndices ?? new Uint32Array(0) }
+      } else if (!asset) {
+        const mesh = first
         const vb = this.device.createBuffer({
           size: mesh.vertices.byteLength,
           usage: usage('VERTEX', VERTEX) | usage('COPY_DST', COPY_DST),
@@ -180,6 +260,7 @@ export class InstancedSceneBuffers {
           vb,
           ib,
           ic: mesh.indices.length,
+          adopted: false,
           edgeIB: null,
           edgeIC: 0,
           edges: mesh.edgeIndices ?? new Uint32Array(0),
@@ -189,7 +270,7 @@ export class InstancedSceneBuffers {
       }
       live.set(batch.key, asset)
       const reused = previousBatches[index]
-      const needed = batch.members.length * 64
+      const needed = batch.members.length * INSTANCE_RECORD_BYTES
       let instances = reused?.instances ?? null,
         capacity = reused?.capacity ?? 0
       if (!instances || capacity < needed) {
@@ -200,10 +281,13 @@ export class InstancedSceneBuffers {
         })
         capacity = needed
       }
-      if (this.scratch.length < batch.members.length * 16) this.scratch = new Float32Array(batch.members.length * 16)
-      packInstanceTransforms(batch, meshes, this.scratch)
-      this.device.queue.writeBuffer(instances, 0, this.scratch, 0, batch.members.length * 16)
-      return { instances, capacity, count: batch.members.length, asset }
+      const records = packInstanceRecords(
+        batch,
+        meshes,
+        reused && reused.records.length >= batch.members.length * INSTANCE_RECORD_FLOATS ? reused.records : undefined,
+      )
+      this.device.queue.writeBuffer(instances, 0, records, 0, batch.members.length * INSTANCE_RECORD_FLOATS)
+      return { instances, capacity, count: batch.members.length, asset, records }
     })
     for (let i = this.batches.length; i < previousBatches.length; i++) previousBatches[i]!.instances.destroy()
     for (const [key, asset] of this.assets) if (!live.has(key)) destroyAsset(asset)
@@ -216,6 +300,42 @@ export class InstancedSceneBuffers {
       instances: meshes.length,
     })
     return plan
+  }
+
+  /**
+   * Rewrites only the color/style slice of instances whose style changed
+   * (selection, hover, alpha) without restaging. `meshes` must be parallel to
+   * the list of the last `stage` call. Returns the number of 32-byte slices written.
+   */
+  updateStyles(meshes: readonly InstanceStyle[]): number {
+    let writes = 0
+    const style = new Float32Array(8)
+    this.plan.batches.forEach((batch, batchIndex) => {
+      const buffers = this.batches[batchIndex]!
+      batch.members.forEach((index, slot) => {
+        writeStyle(style, 0, meshes[index]!)
+        const offset = slot * INSTANCE_RECORD_FLOATS + STYLE_OFFSET
+        let same = true
+        for (let i = 0; i < 8 && same; i++) same = buffers.records[offset + i] === style[i]
+        if (same) return
+        buffers.records.set(style, offset)
+        this.device.queue.writeBuffer(buffers.instances, offset * 4, buffers.records, offset, 8)
+        writes++
+      })
+    })
+    return writes
+  }
+
+  /** Draw batches with their pick bases, in plan order. */
+  drawBatches(): InstanceDrawBatch[] {
+    return this.batches.map((batch, index) => ({
+      vb: batch.asset.vb,
+      ib: batch.asset.ib,
+      ic: batch.asset.ic,
+      instances: batch.instances,
+      instanceCount: batch.count,
+      pickBase: this.plan.batches[index]!.pickBase,
+    }))
   }
 
   /** Upload the edge index buffer of one batch's asset on first use. */
@@ -234,7 +354,7 @@ export class InstancedSceneBuffers {
     return asset.edgeIB
   }
 
-  /** One instanced draw per batch: slot 0 = asset vertices, slot 1 = instance transforms. */
+  /** One instanced draw per batch: slot 0 = asset vertices, slot 1 = instance records. */
   encode(pass: Pick<GPURenderPassEncoder, 'setVertexBuffer' | 'setIndexBuffer' | 'drawIndexed'>, edges = false) {
     this.batches.forEach((batch, index) => {
       const ib = edges ? this.ensureEdges(index) : batch.asset.ib
@@ -256,7 +376,9 @@ export class InstancedSceneBuffers {
 }
 
 function destroyAsset(asset: AssetBuffers) {
-  asset.vb.destroy()
-  asset.ib.destroy()
+  if (!asset.adopted) {
+    asset.vb.destroy()
+    asset.ib.destroy()
+  }
   asset.edgeIB?.destroy()
 }
