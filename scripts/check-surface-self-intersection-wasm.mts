@@ -16,6 +16,8 @@ import {isSurfaceIsoAuditReport} from '../src/kernel/surfaceIsoSelfIntersectionP
 import {isSurfaceAuditReport} from '../src/kernel/surfaceSelfIntersectionProtocol.ts'
 import {nonlinearSurfaceCases,spatialSurfaceCases,isoTargetFixture,offCenterSpatialSurface} from '../tools/browser-qualification/surface-self-fixtures.ts'
 import { encodeBinary, decodeBinary } from '../src/core/valueBinaryCodec.ts'
+/** Decoded ABI payload; its shape is asserted at runtime by this script. */
+type Wire = ReturnType<typeof JSON.parse>
 const [wasmPath, directory, sourceCommit] = process.argv.slice(2)
 assert(wasmPath && directory && /^[a-f0-9]{40}$/.test(sourceCommit ?? ''))
 mkdirSync(directory, { recursive: true })
@@ -25,7 +27,7 @@ assert.deepEqual(WebAssembly.Module.imports(module), [])
 const instance = await WebAssembly.instantiate(module, {})
 const w = instance.exports as unknown as { memory: WebAssembly.Memory; abi_alloc(n:number):number; abi_free(p:number,n:number):void; abi_request(op:number,p:number,n:number):bigint }
 const cases: object[] = []
-function request(v:unknown):any {
+function request(v:unknown):Wire {
   const data = encodeBinary(v), original = data.slice(), ptr = w.abi_alloc(data.length)
   assert(ptr)
   new Uint8Array(w.memory.buffer, ptr, data.length).set(data)
@@ -39,7 +41,7 @@ function request(v:unknown):any {
   } finally { w.abi_free(ptr, data.length) }
 }
 const op = 'nurbs_surface_self_intersection_audit'
-function run(name:string, surface:object, status:string, extra:object = {}):any {
+function run(name:string, surface:object, status:string, extra:object = {}):Wire {
   const v = { op, surface, maxSpans:100, ...extra }, before = JSON.stringify(v), start = performance.now()
   const reply = request(v)
   assert.equal(JSON.stringify(v), before)
@@ -62,7 +64,7 @@ function reject(name:string, v:object):void {
   assert.equal(typeof reply.error.code,'string')
   cases.push({name,error:reply.error.code,elapsedMs:performance.now()-start})
 }
-function graph():any { return { degreeU:2,degreeV:1,knotsU:[0,0,0,1,1,1],knotsV:[0,0,1,1],controlPoints:[0,.5,1].map(x=>[[x,0,x*x],[x,1,x*x]]),weights:[[1,1],[1,1],[1,1]],periodicU:false,periodicV:false } }
+function graph():Wire { return { degreeU:2,degreeV:1,knotsU:[0,0,0,1,1,1],knotsV:[0,0,1,1],controlPoints:[0,.5,1].map(x=>[[x,0,x*x],[x,1,x*x]]),weights:[[1,1],[1,1],[1,1]],periodicU:false,periodicV:false } }
 // Surface codec uses the canonical camelCase wire fields.
 run('global-absence',graph(),'absent')
 const fold=graph();fold.controlPoints[2]=structuredClone(fold.controlPoints[0])
@@ -129,7 +131,7 @@ for(const parameter of [.25,.75]){
 for(const axis of [0,1] as const){
  const q=isoTargetFixture(axis),before=JSON.stringify(q),reply=request({op:'nurbs_surface_iso_target_window',...q})
  assert.equal(JSON.stringify(q),before);assert.equal(reply.ok,true);const r=reply.value;assert(isSurfaceIsoTargetReport(r));assert.equal(r.roots.length,2);assert.equal(r.windowCoverageComplete,true)
- for(const t of [.25,.75]){const root=r.roots.find((x:any)=>x.parameterBox[0][0]<=t&&t<=x.parameterBox[0][1]);assert(root);const z=4/3+t*t*t/4;assert(root.parameterBox[2][0]<=10+2*z&&10+2*z<=root.parameterBox[2][1])}
+ for(const t of [.25,.75]){const root=r.roots.find((x:Wire)=>x.parameterBox[0][0]<=t&&t<=x.parameterBox[0][1]);assert(root);const z=4/3+t*t*t/4;assert(root.parameterBox[2][0]<=10+2*z&&10+2*z<=root.parameterBox[2][1])}
  cases.push({name:`iso-target-two-roots-axis-${axis}`,status:r.status,roots:r.roots.length,complete:r.windowCoverageComplete})
 }
 const q=isoTargetFixture(0)
@@ -144,13 +146,13 @@ reject('iso-target-forged-evidence',{op:'nurbs_surface_iso_target_window',...q,b
 const offCenter=run('off-center-spatial-contact',offCenterSpatialSurface(),'present',{maxSpans:10000})
 assert.equal(offCenter.certifiedCrossing.method,'original-curve-surface-krawczyk')
 assert.notEqual(offCenter.certifiedCrossing.parameterBoxes[0][1][0],.5)
-assert(offCenter.probeSearch.attempts.some((p:any)=>p.kind?.startsWith('curve-surface')&&p.parameter!==.5))
+assert(offCenter.probeSearch.attempts.some((p:Wire)=>p.kind?.startsWith('curve-surface')&&p.parameter!==.5))
 for(const order of [2,4] as const){
  const query=originalPatchFixture(order),before=JSON.stringify(query),reply=request({op:'nurbs_original_affine_patch_contacts',...query})
  assert.equal(JSON.stringify(query),before);assert.equal(reply.ok,true);const r=reply.value;assert(isOriginalPatchContactsReport(r));assert.equal(r.status,'present');assert.equal(r.curvePatchCoverageComplete,true);assert.equal(r.contacts.length,1);assert.deepEqual(r.contacts[0].multiplicities,[order]);assert(!Object.hasOwn(r.contacts[0],'crossingSign'))
  cases.push({name:`original-patch-contact-order-${order}`,status:r.status,multiplicities:r.contacts[0].multiplicities,complete:r.curvePatchCoverageComplete})
 }
-function patchReply(query:any){const reply=request({op:'nurbs_original_affine_patch_contacts',...query});assert.equal(reply.ok,true);assert(isOriginalPatchContactsReport(reply.value));return reply.value}
+function patchReply(query:Wire){const reply=request({op:'nurbs_original_affine_patch_contacts',...query});assert.equal(reply.ok,true);assert(isOriginalPatchContactsReport(reply.value));return reply.value}
 const knot=patchReply(originalPatchKnotFixture());assert.equal(knot.contacts.length,1);assert.deepEqual(knot.contacts[0].multiplicities,[2,1]);assert.deepEqual(knot.contacts[0].parameterBox[0],[1,1]);cases.push({name:'original-patch-one-sided-orders',status:knot.status,multiplicities:knot.contacts[0].multiplicities})
 const zero=patchReply({...originalPatchFixture(2),maxExactWork:0});assert.equal(zero.status,'unresolved');assert.equal(zero.exactWork,0);assert.equal(zero.curvePatchCoverageComplete,false);cases.push({name:'original-patch-zero-exact-work',status:zero.status})
 const finite=originalPatchFixture(2);for(const p of finite.curve.controlPoints)p[1]=2

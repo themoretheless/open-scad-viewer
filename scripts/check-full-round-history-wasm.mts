@@ -3,13 +3,15 @@ import {readFileSync,writeFileSync,mkdirSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import {resolve} from 'node:path'
 import {encodeBinary,decodeBinary} from '../src/core/valueBinaryCodec.ts'
+/** Decoded ABI payload; its shape is asserted at runtime by this script. */
+type Wire = ReturnType<typeof JSON.parse>
 const [wasmPath,nativePath,directory]=process.argv.slice(2)
 assert(wasmPath&&nativePath&&directory)
 mkdirSync(directory,{recursive:true})
 const bytes=readFileSync(wasmPath),nativeBytes=readFileSync(nativePath),native=JSON.parse(nativeBytes.toString('utf8'))
 const module=await WebAssembly.compile(bytes);assert.deepEqual(WebAssembly.Module.imports(module),[])
-const instance=await WebAssembly.instantiate(module,{}),w=instance.exports as any
-function request(value:unknown):any {
+const instance=await WebAssembly.instantiate(module,{}),w=instance.exports as unknown as {memory:WebAssembly.Memory;abi_alloc(n:number):number;abi_free(p:number,n:number):void;abi_request(op:number,p:number,n:number):bigint}
+function request(value:unknown):Wire {
  const data=encodeBinary(value),ptr=w.abi_alloc(data.length);assert(ptr)
  new Uint8Array(w.memory.buffer,ptr,data.length).set(data)
  try{const packed=w.abi_request(0,ptr,data.length),p=Number(packed&0xffffffffn),n=Number(packed>>32n)
@@ -17,7 +19,7 @@ function request(value:unknown):any {
  }finally{w.abi_free(ptr,data.length)}
 }
 const cases:object[]=[]
-function run(name:string,value:unknown,ok:boolean):any {
+function run(name:string,value:unknown,ok:boolean):Wire {
  const start=performance.now(),reply=request(value);assert.equal(reply.ok,ok,`${name}: ${JSON.stringify(reply.error)}`)
  const row={name,ok,elapsedMs:performance.now()-start,error:reply.error};cases.push(row);console.log(JSON.stringify(row));return reply.value
 }
@@ -26,7 +28,7 @@ const restored=run('native-history-exact-replay',{op,action:'restore',history:na
 assert.deepEqual(restored.document,native.history);assert.deepEqual(restored.work,native.work)
 const artifact=native.history.revisions[0].artifact
 const root=run('create-from-native-root',{op,action:'create',artifact},true)
-function transform(scale:number):any {
+function transform(scale:number):Wire {
  const reply=request({op:'brep_nurbs_transform',model:artifact.source,matrix:[[1,0,0,0],[0,1,0,0],[0,0,scale,0],[0,0,0,1]]})
  assert(reply.ok,JSON.stringify(reply.error));return reply.value
 }
@@ -34,7 +36,7 @@ const source=transform(1.25)
 const changed=run('live-source-rebuild',{op,action:'rebase-source',history:root.document,source},true)
 assert.equal(changed.cursor,1);assert.equal(changed.revisionCount,2)
 assert.deepEqual(changed.selectedSourceFaceIds,root.selectedSourceFaceIds)
-assert(changed.document.revisions[1].artifact.geometry.vertices.some((v:any)=>JSON.stringify(v.point[2])==='["15","2"]'))
+assert(changed.document.revisions[1].artifact.geometry.vertices.some((v:Wire)=>JSON.stringify(v.point[2])==='["15","2"]'))
 const undone=run('undo',{op,action:'undo',history:changed.document},true);assert.equal(undone.cursor,0)
 const redone=run('redo',{op,action:'redo',history:undone.document},true);assert.deepEqual(redone.document,changed.document)
 const branch=run('prefix-branch',{op,action:'branch',history:undone.document},true);assert.equal(branch.revisionCount,1)
