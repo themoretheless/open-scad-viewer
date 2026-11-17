@@ -1,0 +1,125 @@
+<script setup lang="ts">
+import { ref, watch } from 'svet'
+import { translate, type Language } from '../i18n/appStrings'
+import type { WorkspaceProjectFile } from '../app/workspaceDocument'
+
+/**
+ * Editor tabs for the main document and auxiliary project files reachable
+ * through `include <...>` / `use <...>`, plus the project library paths.
+ * The main document stays in the main editor; auxiliary files are edited here.
+ */
+const props = defineProps<{
+  locale: Language
+  mainFileName: string
+  files: readonly WorkspaceProjectFile[]
+  activePath: string | null
+  activeSource: string
+  libraryPaths: readonly string[]
+  error: string | null
+}>()
+const emit = defineEmits<{
+  select: [path: string | null]
+  add: [path: string]
+  rename: [from: string, to: string]
+  remove: [path: string]
+  'update-source': [source: string]
+  'library-paths': [text: string]
+}>()
+
+const t = (key: string, params?: Record<string, string | number>) => translate(props.locale, key, params)
+const newPath = ref('')
+const renamePath = ref('')
+const libraryText = ref(props.libraryPaths.join('\n'))
+watch(
+  () => props.libraryPaths.join('\n'),
+  text => {
+    libraryText.value = text
+  },
+)
+watch(
+  () => props.activePath,
+  path => {
+    renamePath.value = path ?? ''
+  },
+)
+
+const inputValue = (event: Event) => (event.target as HTMLInputElement).value
+function submitAdd() {
+  emit('add', newPath.value)
+  newPath.value = ''
+}
+function submitRename() {
+  if (props.activePath !== null) emit('rename', props.activePath, renamePath.value)
+}
+function onSourceInput(event: Event) {
+  emit('update-source', inputValue(event))
+}
+function onLibraryChange(event: Event) {
+  libraryText.value = inputValue(event)
+  emit('library-paths', libraryText.value)
+}
+</script>
+
+<template>
+  <div class="project-files" data-testid="project-files">
+    <div class="project-tabs" role="tablist" :aria-label="t('projectFiles')">
+      <button
+        type="button"
+        role="tab"
+        class="project-tab"
+        data-testid="project-tab-main"
+        :aria-selected="activePath === null"
+        @click="emit('select', null)"
+      >{{ mainFileName }}</button>
+      <button
+        v-for="file in files"
+        :key="file.path"
+        type="button"
+        role="tab"
+        class="project-tab"
+        :data-testid="`project-tab-${file.path}`"
+        :aria-selected="activePath === file.path"
+        @click="emit('select', file.path)"
+      >{{ file.path }}</button>
+    </div>
+    <details class="project-settings">
+      <summary>{{ t('projectSettings') }}</summary>
+      <div class="project-row">
+        <input :value="newPath" data-testid="project-new-path" type="text" @input="newPath = inputValue($event)" autocomplete="off" :aria-label="t('projectNewFilePath')" :placeholder="t('projectNewFilePlaceholder')">
+        <button type="button" data-testid="project-add" @click="submitAdd">{{ t('projectAddFile') }}</button>
+      </div>
+      <div v-if="activePath !== null" class="project-row">
+        <input :value="renamePath" data-testid="project-rename-path" type="text" @input="renamePath = inputValue($event)" autocomplete="off" :aria-label="t('projectRenameFile')">
+        <button type="button" data-testid="project-rename" @click="submitRename">{{ t('projectRenameFile') }}</button>
+        <button type="button" data-testid="project-delete" @click="emit('remove', activePath)">{{ t('projectDeleteFile') }}</button>
+      </div>
+      <label class="project-library">
+        <span>{{ t('projectLibraryPaths') }}</span>
+        <textarea data-testid="project-library-paths" rows="2" spellcheck="false" :value="libraryText" :placeholder="t('projectLibraryPathsPlaceholder')" @change="onLibraryChange" />
+      </label>
+    </details>
+    <div v-if="error" class="message error" role="alert" data-testid="project-error">{{ t(error) }}</div>
+    <textarea
+      v-if="activePath !== null"
+      class="code project-source"
+      data-testid="project-source"
+      wrap="off"
+      spellcheck="false"
+      autocomplete="off"
+      :aria-label="t('projectFileEditor', { path: activePath })"
+      :value="activeSource"
+      @input="onSourceInput"
+    />
+  </div>
+</template>
+
+<style scoped>
+.project-files { display: flex; flex-direction: column; gap: 4px; }
+.project-tabs { display: flex; gap: 2px; overflow-x: auto; }
+.project-tab { white-space: nowrap; padding: 2px 8px; border-radius: 4px 4px 0 0; }
+.project-tab[aria-selected='true'] { font-weight: 600; border-bottom: 2px solid currentColor; }
+.project-row { display: flex; gap: 4px; margin: 4px 0; }
+.project-row input { flex: 1; min-width: 0; }
+.project-library { display: flex; flex-direction: column; gap: 2px; }
+.project-source { flex: 1; min-height: 240px; width: 100%; resize: none; font-family: var(--font-mono, monospace); }
+</style>

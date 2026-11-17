@@ -203,7 +203,7 @@ export class BuildCoordinator {
       existing &&
       existing.request.documentRevision === input.documentRevision &&
       existing.request.source === input.source &&
-      existing.request.project === input.project &&
+      geometryProjectSourcesEqual(existing.request.project, input.project) &&
       existing.lifecycle !== 'terminal' &&
       existing.lifecycle !== 'superseded'
     ) {
@@ -992,4 +992,24 @@ export class BuildCoordinator {
     })
     return true
   }
+}
+
+/**
+ * Content equality for build project context. Callers rebuild the project
+ * object for every request, so reference identity would never dedupe.
+ */
+export function geometryProjectSourcesEqual(
+  left: GeometryProjectSources | undefined,
+  right: GeometryProjectSources | undefined,
+): boolean {
+  if (left === right) return true
+  if (left === undefined || right === undefined) return false
+  if (left.entrypoint !== right.entrypoint || left.files.length !== right.files.length) return false
+  const leftPaths = left.libraryPaths ?? []
+  const rightPaths = right.libraryPaths ?? []
+  if (leftPaths.length !== rightPaths.length || leftPaths.some((path, index) => path !== rightPaths[index]))
+    return false
+  return left.files.every(
+    (file, index) => file.path === right.files[index]!.path && file.source === right.files[index]!.source,
+  )
 }

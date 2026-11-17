@@ -1,3 +1,4 @@
+import type { GeometryProjectSources } from '../kernel/geometryBuildEngine'
 import { createRendererOperations } from './useBuildAndRendererLifecycle/rendererOperations'
 import {
   computed,
@@ -44,6 +45,8 @@ export interface SweepViewportProgressSnapshot {
 export interface UseBuildAndRendererLifecycleOptions {
   canvasRef: Ref<HTMLCanvasElement | null>
   code: Ref<string>
+  /** Multi-file project context for `include` / `use`, or `undefined` for a single document. */
+  project?: () => GeometryProjectSources | undefined
   lang: Ref<Language>
   autoRender: Ref<boolean>
   sourceViewportVisible: ComputedRef<boolean>
@@ -412,7 +415,7 @@ export function useBuildAndRendererLifecycle(options: UseBuildAndRendererLifecyc
       const source = options.code.value
       buildSources.clear()
       buildSources.set(documentRevision, source)
-      buildCoordinator!.requestBuild({ documentRevision, source, quality })
+      buildCoordinator!.requestBuild({ documentRevision, source, quality, project: options.project?.() })
     } catch (caught) {
       handleWorkerError(caught)
       return

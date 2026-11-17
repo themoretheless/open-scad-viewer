@@ -25,6 +25,8 @@ import { useViewportDisplayControls } from './composables/useViewportDisplayCont
 import { useWorkspaceFileActions } from './composables/useWorkspaceFileActions'
 import { useWorkspacePersistenceLifecycle } from './composables/useWorkspacePersistenceLifecycle'
 import { useWorkspaceModes } from './composables/useWorkspaceModes'
+import { useProjectFiles } from './composables/useProjectFiles'
+import ProjectFilesPanel from './components/ProjectFilesPanel.svt'
 import { useMainSourceHistory } from './composables/useMainSourceHistory'
 import { useCustomizerSource, useGeometryAnalysis } from './composables/useSourceInspection'
 import { useCommandDispatch, usePaletteCommands, type MainToolsHandle } from './composables/useAppCommands'
@@ -281,6 +283,17 @@ const {
   code, editor, workspaceDocument, lang, customizerParameters, bumpWorkspaceEditGeneration, scheduleWorkspacePersistence
 })
 
+const projectFiles = useProjectFiles({
+  workspaceDocument,
+  persist: () => {
+    bumpWorkspaceEditGeneration()
+    scheduleWorkspacePersistence()
+  },
+  onProjectChanged: () => {
+    advanceBuildGeneration(performance.now())
+    if (autoRender.value) scheduleRender()
+  },
+})
 const stale = computed(() => renderedSource.value !== '' && (renderedSource.value !== code.value || renderedQuality.value === 'preview'))
 const sourceMatchesEditor = computed(() => renderedSource.value !== '' && renderedSource.value === code.value)
 const exportEligibility = computed(() => geometryExportEligibility({
@@ -298,7 +311,7 @@ const {
   code, editor, selectedEditorName, sceneMeshes, sourceMatchesEditor, getRenderer: () => getRenderer(), showNotice, translate: t
 })
 const build = useBuildAndRendererLifecycle({
-  canvasRef, code, lang, autoRender, sourceViewportVisible, viewportController, sceneController, sceneMeshes, meshVisibility, selectedMesh, selectedHit, isolated,
+  canvasRef, code, project: () => projectFiles.project.value, lang, autoRender, sourceViewportVisible, viewportController, sceneController, sceneMeshes, meshVisibility, selectedMesh, selectedHit, isolated,
   measurement, measureActive, displayMode, shadingModel, matcapId, envId, shadowsEnabled, renderThemeId, selectionMode, gridVisible, gridStep, error, editorDiagnostic,
   warnings, meshCount, triangleCount, volume, surfaceArea, renderDuration, rendering, renderingQuality, renderedQuality, renderedSource, gpuOk, rendererInitializing,
   rendererUnavailableMessage, mainSelectedIndices, mainShiftSelection, sweepViewportProgress, defaultMaterialState, effectiveCanvasColor, applySection, syncSectionRange,
@@ -687,6 +700,22 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
           </template>
         </FormaRegion>
 
+        <ProjectFilesPanel
+          :locale="lang"
+          :main-file-name="fileName"
+          :files="projectFiles.files.value"
+          :active-path="projectFiles.activePath.value"
+          :active-source="projectFiles.activeSource.value"
+          :library-paths="projectFiles.libraryPaths.value"
+          :error="projectFiles.error.value"
+          @select="path => (projectFiles.activePath.value = path)"
+          @add="projectFiles.addFile"
+          @rename="projectFiles.renameFile"
+          @remove="projectFiles.removeFile"
+          @update-source="projectFiles.updateActiveSource"
+          @library-paths="projectFiles.setLibraryPaths"
+        />
+
         <div v-if="findOpen" class="find-bar" role="search" @keydown="handleFindKeydown">
           <input
             ref="findInputRef"
@@ -715,8 +744,8 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
           <button type="button" :aria-label="t('closeSearch')" @click="closeEditorFind">×</button>
         </div>
 
-        <div v-if="editorEngine === 'codemirror'" ref="codeMirrorHostRef" class="code-editor code-editor-cm" data-editor-engine="codemirror" />
-        <div v-else class="code-editor" :style="{ '--line-number-digits': Math.max(2, String(editorLineCount).length) }">
+        <div v-if="editorEngine === 'codemirror'" v-show="projectFiles.activePath.value === null" ref="codeMirrorHostRef" class="code-editor code-editor-cm" data-editor-engine="codemirror" />
+        <div v-else v-show="projectFiles.activePath.value === null" class="code-editor" :style="{ '--line-number-digits': Math.max(2, String(editorLineCount).length) }">
         <div v-if="foldedLines.size" class="folded-editor code" aria-label="Свернутый код">
           <div v-for="row in foldedRows" :key="row.line" class="folded-row">
             <span class="folded-number">{{ row.line + 1 }}</span>
