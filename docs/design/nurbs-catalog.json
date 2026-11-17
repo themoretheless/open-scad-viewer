@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 428,
-  "unallocatedCount": 572,
+  "specifiedCount": 429,
+  "unallocatedCount": 571,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -11007,6 +11007,30 @@
       "remainingQualification": [
         "Evaluate ordered exact signed-distance samples with one shared polyhedral face preparation.",
         "One certified retained-face preparation is reused across exact point queries. The shared work budget covers all samples and errors refuse the whole batch.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0429",
+      "name": "Точная проверка сферического зазора относительно плоскогранного B-rep-тела",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::exact_polyhedral_ball_clearance",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "docs/qualification/nurbs-curvature-field-429-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-429-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify an exact clearance ball as inside, outside, tangent or crossing polyhedral material.",
+        "Exact squared radius comparisons against signed boundary distance distinguish both tangency sides, strict clearance, and boundary crossing with a retained nearest witness.",
         "WASM and application integration are separate."
       ]
     }

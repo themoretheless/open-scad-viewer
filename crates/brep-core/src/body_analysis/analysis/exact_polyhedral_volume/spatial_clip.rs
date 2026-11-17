@@ -452,3 +452,71 @@ fn point_in_face(
         FaceLocation::Outside
     })
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PolyhedralBallRelation {
+    Inside,
+    InsideTangent,
+    CrossesBoundary,
+    BoundaryPoint,
+    OutsideTangent,
+    Outside,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralBallClearance {
+    pub relation: PolyhedralBallRelation,
+    pub signed_distance_squared_mm2: Q,
+    pub nearest_mm: [Q; 3],
+    pub face: usize,
+    pub exact_work: u64,
+}
+
+/// Compare a closed ball with the material of a qualified polyhedral solid.
+/// The radius is an exact rational length in millimeters. Tangency is kept
+/// distinct from strict clearance and from crossing the material boundary.
+pub fn exact_polyhedral_ball_clearance(
+    solid: &QualifiedClosedSolid,
+    center_mm: &[Q; 3],
+    radius_mm: &Q,
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralBallClearance> {
+    use std::cmp::Ordering;
+
+    if radius_mm.is_negative() || radius_mm.numer().bits().max(radius_mm.denom().bits()) > 8192 {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Expected a nonnegative radius within the exact bit limit",
+        ));
+    }
+    super::validate_work(max_exact_work)?;
+    let mut remaining = max_exact_work;
+    spend(&mut remaining, 8)?;
+    if remaining == 0 {
+        return Err(super::work_exhausted());
+    }
+    let result = exact_polyhedral_signed_distance(solid, center_mm, remaining)?;
+    let signed = result.signed_distance_squared_mm2;
+    let radius_squared = radius_mm.pow(2);
+    let relation = match (
+        signed.signum().cmp(&Q::zero()),
+        signed.abs().cmp(&radius_squared),
+    ) {
+        (Ordering::Equal, Ordering::Equal) => PolyhedralBallRelation::BoundaryPoint,
+        (_, Ordering::Less) => PolyhedralBallRelation::CrossesBoundary,
+        (Ordering::Less, Ordering::Equal) => PolyhedralBallRelation::InsideTangent,
+        (Ordering::Less, Ordering::Greater) => PolyhedralBallRelation::Inside,
+        (Ordering::Greater, Ordering::Equal) => PolyhedralBallRelation::OutsideTangent,
+        (Ordering::Greater, Ordering::Greater) => PolyhedralBallRelation::Outside,
+        (Ordering::Equal, Ordering::Greater) => {
+            unreachable!("zero distance cannot exceed a squared radius")
+        }
+    };
+    Ok(ExactPolyhedralBallClearance {
+        relation,
+        signed_distance_squared_mm2: signed,
+        nearest_mm: result.nearest_mm,
+        face: result.face,
+        exact_work: max_exact_work - remaining + result.exact_work,
+    })
+}

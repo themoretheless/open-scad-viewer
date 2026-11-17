@@ -2901,3 +2901,54 @@ fn signed_distance_batch_refuses_out_of_budget_coordinates_and_accepts_empty_inp
             .is_empty()
     );
 }
+
+#[test]
+fn exact_ball_clearance_distinguishes_both_sides_of_a_hole_wall() {
+    use brep_core::{
+        analysis::{PolyhedralBallRelation::*, exact_polyhedral_ball_clearance},
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    for (x, expected) in [
+        (3, [Inside, InsideTangent, CrossesBoundary]),
+        (5, [Outside, OutsideTangent, CrossesBoundary]),
+    ] {
+        let center = [q(x, 4), q(3, 2), q(1, 1)];
+        for (radius, expected) in [q(1, 8), q(1, 4), q(3, 8)].into_iter().zip(expected) {
+            let report =
+                exact_polyhedral_ball_clearance(solid, &center, &radius, 1_000_000).unwrap();
+            assert_eq!(report.relation, expected);
+            assert_eq!(report.nearest_mm, [q(1, 1), q(3, 2), q(1, 1)]);
+            assert!(
+                exact_polyhedral_ball_clearance(solid, &center, &radius, report.exact_work).is_ok()
+            );
+            assert!(
+                exact_polyhedral_ball_clearance(solid, &center, &radius, report.exact_work - 1)
+                    .is_err()
+            );
+        }
+    }
+}
+
+#[test]
+fn exact_ball_clearance_handles_zero_radius_on_a_retained_face() {
+    use brep_core::analysis::{PolyhedralBallRelation::*, exact_polyhedral_ball_clearance};
+    use num_rational::BigRational as Q;
+    let solid = shifted_oblique_solid(0.);
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let center = [q(3, 2), q(0, 1), q(5, 2)];
+    let report = exact_polyhedral_ball_clearance(&solid, &center, &q(0, 1), 1_000_000).unwrap();
+    assert_eq!(report.relation, BoundaryPoint);
+    assert_eq!(report.nearest_mm, center);
+    assert_eq!(
+        exact_polyhedral_ball_clearance(&solid, &center, &q(1, 8), 1_000_000)
+            .unwrap()
+            .relation,
+        CrossesBoundary
+    );
+    assert!(exact_polyhedral_ball_clearance(&solid, &center, &q(-1, 8), 1_000_000).is_err());
+}
