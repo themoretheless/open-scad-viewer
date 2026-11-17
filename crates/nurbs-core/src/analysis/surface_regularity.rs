@@ -34,6 +34,8 @@ pub fn inspect(surface: &Surface, max_cells: usize) -> Result<Report> {
         surface, &mut triangular_work, max_cells / 2,
     ).is_some() || crate::surface_injectivity::rational_quadrilateral::certify(
         surface, &mut triangular_work, max_cells / 2,
+    ).is_some() || crate::surface_injectivity::rational_jordan::certify(
+        surface, &mut triangular_work, max_cells / 2,
     ).is_some() || crate::surface_injectivity::rational_cones::certify(
         surface, &mut triangular_work, max_cells / 2,
     ).is_some() || crate::surface_injectivity::rational_rails::certify(
