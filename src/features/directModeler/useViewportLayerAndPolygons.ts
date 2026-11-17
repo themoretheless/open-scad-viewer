@@ -1,3 +1,4 @@
+import type { DirectExtrusionOperation } from '../../app/directExtrusion'
 import {createViewportOperations} from './useViewportLayerAndPolygons/viewportOperations'
 import {
   computed,
@@ -41,7 +42,7 @@ export interface UseViewportLayerAndPolygonsOptions {
   hovered: Ref<string>
   /** Scene ids a failed calculation points at (selection state `invalid`); tinted through the per-triangle hue hook. */
   invalidIds?: Readonly<Ref<readonly string[]>>
-  extrusionMode: Ref<'new' | 'union' | 'difference'>
+  extrusionMode: Ref<DirectExtrusionOperation>
   previewBody: ShallowRef<ReturnType<typeof directExtrusionTool> | null>
   previewReplacesTarget: ComputedRef<boolean>
   renderBodies: ComputedRef<DirectBody[]>

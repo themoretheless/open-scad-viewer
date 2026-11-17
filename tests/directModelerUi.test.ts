@@ -3835,6 +3835,36 @@ it.each(['Extrude · E','Revolve'])('retries %s preview after a worker crash and
  }finally{vi.useRealTimers()}
 })
 
+it.each(['Extrude · E','Revolve'])('C9: %s offers Intersect and sends extra target bodies in one command',async command=>{
+ const requests:Array<{kind:string;options:Record<string,unknown>}>=[]
+ const ui=await mount();await ui.click('Cube');await ui.click('Split');await ui.click('Apply · Enter');await settle();await ui.click('Profile')
+ previewWorkerRun.mockImplementation(job=>{if(['extrusion','revolve'].includes(job.kind))requests.push(job as {kind:string;options:Record<string,unknown>});return undefined})
+ const bodies=ui.doc().bodies.map(b=>b.id);expect(bodies.length).toBeGreaterThanOrEqual(2)
+ vi.useFakeTimers()
+ try{
+  await ui.click(command);await vi.advanceTimersByTimeAsync(100)
+  expect(ui.all().some(n=>n.props['data-extra-targets']!==undefined)).toBe(false)
+  await ui.click('Intersect');await vi.advanceTimersByTimeAsync(100)
+  expect(ui.button('Intersect').props['aria-checked']).toBe(true)
+  const fieldset=ui.all().find(n=>n.props['data-extra-targets']!==undefined)!
+  expect(ui.text(fieldset)).toContain('Also apply to bodies')
+  const boxes=ui.all(fieldset).filter(n=>n.tag==='input')
+  const primary=requests.at(-1)!.options.targetId
+  expect(boxes.map(n=>n.props.value)).toEqual(bodies.filter(id=>id!==primary))
+  boxes[0].props['onUpdate:modelValue']([boxes[0].props.value]);await nextTick();await vi.advanceTimersByTimeAsync(100)
+  expect(requests.at(-1)!.options).toMatchObject({operation:'intersection',targetId:primary,targetIds:[boxes[0].props.value]})
+  await ui.click('New');await vi.advanceTimersByTimeAsync(100)
+  expect(requests.at(-1)!.options).toMatchObject({operation:'new',targetIds:[]})
+ }finally{vi.useRealTimers()}
+})
+it('C9: the extra target list is labelled in Russian',async()=>{
+ const ui=await mount({locale:'ru'});await ui.click('Cube');await ui.click('Разрезать');await commandKey(ui,'Enter');await settle();await ui.click('Profile')
+ expect(ui.doc().bodies).toHaveLength(2)
+ await ui.click('Выдавить · E');await settle(250);await ui.click('Пересечь');await settle(250)
+ const fieldset=ui.all().find(n=>n.props['data-extra-targets']!==undefined)!
+ expect(ui.text(fieldset)).toContain('Также применить к телам')
+})
+
 it.each([
  ['Extrude · E',false],['Extrude · E',true],['Revolve',false],['Revolve',true],
 ] as const)('ignores cancelled retry for %s with late failure=%s after reopening',async(command,lateFailure)=>{
@@ -5165,8 +5195,9 @@ it('C2 tab order: one stop for the extrusion result mode, arrows switch it, and 
  const key=async(name:string)=>{const prevented=vi.fn();group.props.onKeydown({key:name,currentTarget:group,preventDefault:prevented,stopPropagation(){}});await flushClearance();return prevented}
  expect(await key('ArrowRight')).toHaveBeenCalled()
  expect(ui.button('Add').props['aria-checked']).toBe(true);expect(tabStops(ui,card())[0]).toBe('button:Add')
- await key('ArrowRight');await key('ArrowRight');expect(ui.button('New').props['aria-checked']).toBe(true)
- await key('ArrowLeft');expect(ui.button('Cut').props['aria-checked']).toBe(true);expect(ui.button('New').props.tabindex).toBe(-1)
+ await key('ArrowRight');await key('ArrowRight');expect(ui.button('Intersect').props['aria-checked']).toBe(true)
+ await key('ArrowRight');expect(ui.button('New').props['aria-checked']).toBe(true)
+ await key('ArrowLeft');expect(ui.button('Intersect').props['aria-checked']).toBe(true);expect(ui.button('New').props.tabindex).toBe(-1)
  expect(await key('Tab')).not.toHaveBeenCalled()
  const before=ui.doc();await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
  await commandKey(ui,'k',undefined,{ctrlKey:true});await nextTick()

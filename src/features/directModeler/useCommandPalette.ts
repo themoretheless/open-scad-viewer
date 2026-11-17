@@ -1,3 +1,4 @@
+import type { DirectExtrusionOperation } from '../../app/directExtrusion'
 import { storageGet, storageSet } from '../../core/safeStorage'
 import { type PaletteCommand } from '../../app/commandSearch'
 import { primitiveKinds, download, isProfileCommand, profileBooleanOperation, type Pane } from './helpers'
@@ -48,7 +49,7 @@ export interface CommandPaletteOptions {
   exportBlender: () => Promise<void>
   exportBodySvg: () => Promise<void>
   extraSelection: Ref<string[]>
-  extrusionMode: Ref<"union" | "difference" | "new">
+  extrusionMode: Ref<DirectExtrusionOperation>
   faceSketch: () => Promise<void>
   filletSegments: Ref<number>
   fit: (pane: Pane, selectedOnly?: boolean) => void

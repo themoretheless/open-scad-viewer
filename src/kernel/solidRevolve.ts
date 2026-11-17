@@ -7,8 +7,9 @@ import {booleanNurbsBrep,revolveBrepProfile,createFacetedBrepRevolve,tessellateN
 import {stringifyMeshJson} from '../exchange/meshJson'
 import {callGeometryRust} from './geometry/kernel'
 import {transformBrepProfile} from './geometry/brepProfile'
+import {directExtrusionTargets,type DirectExtrusionOperation} from '../app/directExtrusion'
 export interface SolidRevolveOptions extends DirectRevolveOptions {
- sketchId:string;geometry:'exact'|'faceted';operation:'new'|'union'|'difference';targetId:string;id:string;name:string;tessellation:number
+ sketchId:string;geometry:'exact'|'faceted';operation:DirectExtrusionOperation;targetId:string;targetIds?:string[];id:string;name:string;tessellation:number
 }
 function authoredRevolve(sketch:DirectSketch, options:SolidRevolveOptions) {
  if(!sketch.retainedProfile)requirePolylineSketch(sketch)
@@ -37,8 +38,22 @@ function authoredRevolve(sketch:DirectSketch, options:SolidRevolveOptions) {
  return brep
 }
 
-/** One result for both preview and commit, including empty Boolean results. */
+/**
+ * One result for both preview and commit, including empty Boolean results.
+ * Extra `targetIds` are combined independently with the same tool; every target is computed
+ * before the document changes, so a refusal on any target leaves all bodies intact.
+ */
 export function applySolidRevolve(document:DirectDocument,options:SolidRevolveOptions):DirectDocument {
+ const targets=directExtrusionTargets(options)
+ if(targets.length<2)return applySingleRevolve(document,{...options,targetIds:[]})
+ const results=new Map(targets.map(targetId=>{
+  const next=applySingleRevolve(document,{...options,targetId,targetIds:[]})
+  return [targetId,next.bodies.find(b=>b.id===targetId)??null] as const
+ }))
+ const next={...document,bodies:document.bodies.flatMap(b=>{if(!results.has(b.id))return [b];const body=results.get(b.id);return body?[body]:[]})}
+ return parseDirectDocument(stringifyMeshJson(next))
+}
+function applySingleRevolve(document:DirectDocument,options:SolidRevolveOptions):DirectDocument {
  const sketch=document.sketches.find(s=>s.id===options.sketchId)
  if(!sketch)throw Error('Select a sketch.')
  if(!sketch.retainedProfile||options.geometry!=='exact')requirePolylineSketch(sketch)

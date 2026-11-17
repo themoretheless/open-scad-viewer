@@ -50,7 +50,7 @@ import ModelingFloorGrid from '../components/ModelingFloorGrid.svt'
 import ModelingGridControls from '../components/ModelingGridControls.svt'
 import WorkspaceActionBar from '../components/WorkspaceActionBar.svt'
 import {createSolidPreviewWorker} from '../kernel/solidPreviewWorker'
-import { sameSketchPlane } from '../app/directExtrusion'
+import { sameSketchPlane, type DirectExtrusionOperation as ExtrusionMode } from '../app/directExtrusion'
 import { useModelingGrid } from '../app/modelingGrid'
 import { resolveModelingSnap, type SnapKind, type SnapGeometry } from '../app/modelingSnaps'
 import CommandPalette from '../components/CommandPalette.svt'
@@ -313,7 +313,7 @@ function beginCorner(kind: 'fillet'|'dogear') { boxSelect.value=false; if (!sele
 function applySketchEdit(){const next=sketchEditResult.value;if(!next||sketchEditPending.value)return;return commitInWorker(()=>next,()=>{operation.value=null})}
 function applyCorner(){return applySketchEdit()}
 const profileIds = ref<string[]>([]), previewEmpty = ref(false)
-const baseZ = ref(0), extrusionMode = ref<'new' | 'union' | 'difference'>('new'), targetBody = ref('')
+const baseZ = ref(0), extrusionMode = ref<ExtrusionMode>('new'), targetBody = ref(''), extraTargetBodies = ref<string[]>([])
 const copyCount = ref(8), copySweep = ref(360), copyX = ref(0), copyY = ref(0)
 const previewBody = shallowRef<ReturnType<typeof directExtrusionTool> | null>(null), previewError = ref('')
 const solidPreviewRevision=ref(0),solidPreviewRetryVisible=ref(false)
@@ -1255,14 +1255,17 @@ function beginExtrude(kind: 'extrude'|'revolve' = 'extrude') {
   const support=document.value.bodies.find(b=>b.id===selectedSketch.value!.supportBodyId)
   if(support){targetBody.value=support.id;extrusionMode.value='union';height.value=Math.abs(height.value)||10;baseZ.value=0}
   else if(!document.value.bodies.some(b=>b.id===targetBody.value))extrusionMode.value='new'
-  fitNextPreview = true; operation.value = kind; mode.value = '3d'; previewError.value = ''
+  fitNextPreview = true; operation.value = kind; mode.value = '3d'; previewError.value = ''; extraTargetBodies.value = []
   if (!document.value.bodies.some(b => b.id === targetBody.value)) targetBody.value = document.value.bodies[0]?.id ?? ''
 }
 const profileChoices=computed(()=>document.value.sketches.filter(s=>s.closed&&samePlane(s.plane,selectedSketch.value?.plane)))
-function extrusionOptions(id='preview') { return {sketchIds:[...profileIds.value],height:height.value,offset:baseZ.value,operation:extrusionMode.value,targetId:targetBody.value,id,segments:brepSegments.value} }
+/** C9: further bodies the same tool combines with, never repeating the primary target. */
+const extraTargetIds=computed(()=>extrusionMode.value==='new'?[]:extraTargetBodies.value.filter(id=>id!==targetBody.value&&document.value.bodies.some(b=>b.id===id)))
+const extraTargetChoices=computed(()=>document.value.bodies.filter(b=>b.id!==targetBody.value))
+function extrusionOptions(id='preview') { return {sketchIds:[...profileIds.value],height:height.value,offset:baseZ.value,operation:extrusionMode.value,targetId:targetBody.value,targetIds:[...extraTargetIds.value],id,segments:brepSegments.value} }
 // C2: the result mode is one tab stop; arrow keys move the checked radio (roving tabindex).
 function extrusionModeKey(e: KeyboardEvent) {
-  const modes = ['new', 'union', 'difference'] as const
+  const modes = ['new', 'union', 'difference', 'intersection'] as const
   const step = ({ ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 } as Record<string, number>)[e.key]
   if (!step) return
   e.preventDefault(); e.stopPropagation()
@@ -1271,9 +1274,9 @@ function extrusionModeKey(e: KeyboardEvent) {
   const group = e.currentTarget as HTMLElement | null
   void nextTick(() => group?.querySelector?.<HTMLElement>('[data-mode="' + next + '"]')?.focus())
 }
-function setExtrusionMode(value: 'new'|'union'|'difference') {
+function setExtrusionMode(value: ExtrusionMode) {
   extrusionMode.value=value
-  if(selectedSketch.value?.supportBodyId && value!=='new')height.value=Math.abs(height.value)*(value==='difference'?-1:1)
+  if(selectedSketch.value?.supportBodyId && value!=='new')height.value=Math.abs(height.value)*(value==='difference'||value==='intersection'?-1:1)
 }
 /** The preview result commits in the worker; the command closes and selects only once it landed. */
 function extrude() {
@@ -1321,9 +1324,9 @@ async function duplicate() {
  finally{if(generation===directTransformGeneration)directTransformPending.value=false}
 }
 
-watch([document, () => props.open, operation, selectedSketch, profileIds, activeGroup, height, baseZ, brepSegments, revolveAxis, revolveOffset, revolveAngle, revolveSegments, revolveGeometry, extrusionMode, targetBody, solidPreviewRevision, invalidQuantitiesKey], () => {
+watch([document, () => props.open, operation, selectedSketch, profileIds, activeGroup, height, baseZ, brepSegments, revolveAxis, revolveOffset, revolveAngle, revolveSegments, revolveGeometry, extrusionMode, targetBody, extraTargetIds, solidPreviewRevision, invalidQuantitiesKey], () => {
   if (!props.open || Object.keys(invalidQuantities.value).length || !solidActive.value || !selectedSketch.value) {invalidateSolidPreview();previewIdentity='';return}
-  const identity=[operation.value,selectedSketch.value.id,profileIds.value.join(','),activeGroup.value,extrusionMode.value,targetBody.value,revolveGeometry.value].join('\n');invalidateSolidPreview(identity===previewIdentity&&!!previewBody.value);previewIdentity=identity
+  const identity=[operation.value,selectedSketch.value.id,profileIds.value.join(','),activeGroup.value,extrusionMode.value,targetBody.value,extraTargetIds.value.join(','),revolveGeometry.value].join('\n');invalidateSolidPreview(identity===previewIdentity&&!!previewBody.value);previewIdentity=identity
   const generation=previewGeneration
   previewPending.value=true
   previewTimer = setTimeout(async () => {
@@ -1331,7 +1334,7 @@ watch([document, () => props.open, operation, selectedSketch, profileIds, active
       const id=crypto.randomUUID(),source=document.value
       const result=operation.value==='extrude'
         ? await previewWorker.run({kind:'extrusion',document:source,options:extrusionOptions(id)})
-        : await previewWorker.run({kind:'revolve',document:source,options:{...revolveOptions(),sketchId:selectedSketch.value!.id,geometry:revolveGeometry.value,operation:extrusionMode.value,targetId:targetBody.value,id,tessellation:brepSegments.value,
+        : await previewWorker.run({kind:'revolve',document:source,options:{...revolveOptions(),sketchId:selectedSketch.value!.id,geometry:revolveGeometry.value,operation:extrusionMode.value,targetId:targetBody.value,targetIds:[...extraTargetIds.value],id,tessellation:brepSegments.value,
             name:selectedSketch.value!.name+' · '+(revolveGeometry.value==='faceted'?label('гранёный B-rep','faceted B-rep'):label('точный B-rep','exact B-rep'))}})
       if(generation!==previewGeneration)return
       solidPreviewResult.value=result;previewError.value='';clearErrorMark()
@@ -3103,7 +3106,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             <div v-if="pane === '2d' && drawMeasure" class="live-measure">{{ drawMeasure }}</div>
             <div v-if="pane === '3d' && solidActive" class="operation-card">
               <strong>{{ operation === 'revolve' ? label('Вращение профиля', 'Revolve profile') : label('Выдавливание', 'Extrusion') }}</strong><small v-if="operation === 'extrude'">{{ label('Тяните зелёную ручку или введите размер', 'Drag the green handle or enter a dimension') }}</small>
-              <div class="segmented" role="radiogroup" :aria-label="label('Режим результата','Result mode')" @keydown="extrusionModeKey"><button v-for="(name,value) in {new:label('Новое','New'),union:label('Добавить','Add'),difference:label('Вычесть','Cut')}" :key="value" type="button" role="radio" :aria-checked="extrusionMode === value" :tabindex="extrusionMode === value ? 0 : -1" :data-mode="value" @click="setExtrusionMode(value)">{{ name }}</button></div>
+              <div class="segmented" role="radiogroup" :aria-label="label('Режим результата','Result mode')" @keydown="extrusionModeKey"><button v-for="(name,value) in {new:label('Новое','New'),union:label('Добавить','Add'),difference:label('Вычесть','Cut'),intersection:label('Пересечь','Intersect')}" :key="value" type="button" role="radio" :aria-checked="extrusionMode === value" :tabindex="extrusionMode === value ? 0 : -1" :data-mode="value" @click="setExtrusionMode(value)">{{ name }}</button></div>
               <fieldset v-if="operation==='extrude' && profileChoices.length>1" class="profile-choices"><legend>{{ label('Контуры профиля', 'Profile contours') }}</legend><label v-for="sketch in profileChoices" :key="sketch.id"><input v-model="profileIds" type="checkbox" :value="sketch.id">{{ sketch.name }}</label><small>{{ label('Внутренние контуры образуют отверстия; вложенные островки сохраняются.', 'Inner contours form holes; nested islands remain solid.') }}</small></fieldset>
               <small v-if="selectedSketch?.supportBodyId">{{ label('Добавить — наружу от грани. Вычесть — внутрь тела.', 'Add extends outward from the face. Cut goes into the body.') }}</small>
               <small v-if="previewPending" role="status">{{ label('Вычисление предпросмотра… Esc — отмена.', 'Calculating preview… Esc to cancel.') }}</small>
@@ -3119,6 +3122,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <small>{{ label('Пунктир слева — ось вращения. Контур должен лежать по одну сторону от неё.', 'The dashed line on the left is the rotation axis. Keep the profile on one side of it.') }}</small>
               </template>
               <label v-if="extrusionMode !== 'new'">{{ label('Тело', 'Body') }}<select v-model="targetBody"><option v-for="b in document.bodies" :key="b.id" :value="b.id">{{ b.name }}</option></select></label>
+              <fieldset v-if="extrusionMode !== 'new' && extraTargetChoices.length" class="profile-choices" data-extra-targets><legend>{{ label('Также применить к телам', 'Also apply to bodies') }}</legend><label v-for="b in extraTargetChoices" :key="b.id"><input v-model="extraTargetBodies" type="checkbox" :value="b.id">{{ b.name }}</label><small>{{ label('Каждое тело комбинируется с инструментом отдельно.', 'Each body is combined with the tool separately.') }}</small></fieldset>
               <small v-if="previewError" id="solid-preview-error" role="alert">{{ previewError }}</small>
               <small v-if="previewError && previewBody" data-preview-retained>{{ label('Показан последний корректный предпросмотр.', 'Showing the last valid preview.') }}</small>
               <button v-if="solidPreviewRetryVisible" type="button" :disabled="previewPending || Object.keys(invalidQuantities).length>0" @click="solidPreviewRevision++">{{ label('Повторить вычисление','Retry calculation') }}</button>

@@ -23,7 +23,7 @@ export function directRevolveTool(sketch: DirectSketch, options: DirectRevolveOp
   return body
 }
 
-export function applyDirectRevolve(document: DirectDocument, sketchId:string, options:DirectRevolveOptions, operation:'new'|'union'|'difference', targetId:string, id:string):DirectDocument {
+export function applyDirectRevolve(document: DirectDocument, sketchId:string, options:DirectRevolveOptions, operation:'new'|'union'|'difference'|'intersection', targetId:string, id:string):DirectDocument {
   const next=parseDirectDocument(stringifyMeshJson(document)),sketch=next.sketches.find(s=>s.id===sketchId)
   if(!sketch) throw new Error('Select a sketch.')
   const tool=directRevolveTool(sketch,options)
