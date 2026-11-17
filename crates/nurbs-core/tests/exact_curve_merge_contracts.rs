@@ -2724,3 +2724,62 @@ fn doubly_periodic_simplification_reports_a_missing_second_period() {
     assert_eq!(report.removed, [0, 0]);
     assert!(report.surface.is_none());
 }
+
+fn surface_with_two_identical_u_turns() -> nurbs_core::surface::Surface {
+    let mut source = doubly_periodic_tensor();
+    source.knots_u = (-1..=9).map(f64::from).collect();
+    source.control_points = source
+        .control_points
+        .iter()
+        .take(4)
+        .cycle()
+        .take(9)
+        .cloned()
+        .collect();
+    source.weights = source
+        .weights
+        .iter()
+        .take(4)
+        .cycle()
+        .take(9)
+        .cloned()
+        .collect();
+    source
+}
+
+#[test]
+fn exact_period_reduction_recovers_one_turn_on_either_surface_axis() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::reduce_exact_periodic_surface_period, surface::Axis,
+    };
+    let source = surface_with_two_identical_u_turns();
+    let result = reduce_exact_periodic_surface_period(&source, Axis::U, 1_000_000).unwrap();
+    assert_eq!(result.turns, 2);
+    let surface = result.surface.unwrap();
+    assert_eq!(surface, doubly_periodic_tensor());
+    assert!(
+        reduce_exact_periodic_surface_period(&source, Axis::U, result.work_used - 1)
+            .unwrap()
+            .surface
+            .is_none()
+    );
+    let source_v = nurbs_geometry::surface_transpose::transpose(&source).unwrap();
+    let result_v = reduce_exact_periodic_surface_period(&source_v, Axis::V, 1_000_000).unwrap();
+    assert_eq!(result_v.turns, 2);
+    assert_eq!(
+        result_v.surface,
+        Some(nurbs_geometry::surface_transpose::transpose(&surface).unwrap())
+    );
+}
+
+#[test]
+fn exact_period_reduction_checks_every_transverse_weight() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::reduce_exact_periodic_surface_period, surface::Axis,
+    };
+    let mut source = surface_with_two_identical_u_turns();
+    source.weights[5][3] = 2.;
+    let result = reduce_exact_periodic_surface_period(&source, Axis::U, 1_000_000).unwrap();
+    assert_eq!(result.turns, 1);
+    assert_eq!(result.surface, Some(source));
+}

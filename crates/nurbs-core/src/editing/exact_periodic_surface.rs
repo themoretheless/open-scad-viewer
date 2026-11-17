@@ -1298,3 +1298,126 @@ pub fn simplify_exact_doubly_periodic_surface(
         refusal: None,
     })
 }
+
+#[derive(Clone, Debug)]
+pub struct PeriodReductionReport {
+    pub surface: Option<Surface>,
+    /// Number of identical turns represented by the returned single turn.
+    pub turns: usize,
+    pub work_used: u64,
+    pub refusal: Option<GaugeMergeRefusal>,
+}
+
+/// Reduce repeated periodic storage to the shortest supported cyclic basis
+/// on one axis. Every control, weight and knot translate must agree exactly.
+/// The active domain starts at the original seam and spans one retained turn.
+pub fn reduce_exact_periodic_surface_period(
+    source: &Surface,
+    axis: Axis,
+    max_work: u64,
+) -> Result<PeriodReductionReport> {
+    source.validate()?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact period reduction work must be in 1..=1000000",
+    )?;
+    let reference = row(source, axis, 0);
+    let refused = |work_used, reason| PeriodReductionReport {
+        surface: None,
+        turns: 0,
+        work_used,
+        refusal: Some(reason),
+    };
+    if !crate::analysis::curve_partition_agreement::verify_periodic_source_closure(&reference)? {
+        return Ok(refused(0, GaugeMergeRefusal::Join(Refusal::InvalidOutput)));
+    }
+
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let cycle = reference.control_points.len() - reference.degree;
+    let shortest = match find_repeated_cycle(source, &reference, axis, &mut work) {
+        Ok(shortest) => shortest,
+        Err(reason) => return Ok(refused(work.used, GaugeMergeRefusal::Exact(reason))),
+    };
+    let mut result = source.clone();
+    let count = shortest + reference.degree;
+    let knot_count = count + reference.degree + 1;
+    match axis {
+        Axis::U => {
+            result.knots_u.truncate(knot_count);
+            result.control_points.truncate(count);
+            result.weights.truncate(count);
+        }
+        Axis::V => {
+            result.knots_v.truncate(knot_count);
+            for (points, weights) in result.control_points.iter_mut().zip(&mut result.weights) {
+                points.truncate(count);
+                weights.truncate(count);
+            }
+        }
+    }
+    if result.validate().is_err() {
+        return Ok(refused(
+            work.used,
+            GaugeMergeRefusal::Join(Refusal::InvalidOutput),
+        ));
+    }
+    Ok(PeriodReductionReport {
+        surface: Some(result),
+        turns: cycle / shortest,
+        work_used: work.used,
+        refusal: None,
+    })
+}
+
+fn find_repeated_cycle(
+    source: &Surface,
+    reference: &crate::curve::Curve,
+    axis: Axis,
+    work: &mut Work,
+) -> std::result::Result<usize, ExactRefusal> {
+    let count = reference.control_points.len();
+    let cycle = count - reference.degree;
+    let transverse = match axis {
+        Axis::U => source.control_points[0].len(),
+        Axis::V => source.control_points.len(),
+    };
+    for candidate in reference.degree + 1..=cycle / 2 {
+        if cycle % candidate != 0 {
+            continue;
+        }
+        let repeats = |i: usize, j: usize| {
+            let ((a, b), (c, d)) = match axis {
+                Axis::U => ((i, j), (i % candidate, j)),
+                Axis::V => ((j, i), (j, i % candidate)),
+            };
+            source.weights[a][b] == source.weights[c][d]
+                && source.control_points[a][b] == source.control_points[c][d]
+        };
+        work.charge(((count - candidate) * transverse) as u64)?;
+        if !(candidate..count).all(|i| (0..transverse).all(|j| repeats(i, j))) {
+            continue;
+        }
+        let first = work.lift(reference.knots[reference.degree])?;
+        let last = work.lift(reference.knots[reference.degree + candidate])?;
+        let period = work.op(&last, &first, |a, b| a - b)?;
+        if period <= BigRational::from_integer(0.into()) {
+            continue;
+        }
+        let mut exact = true;
+        for pair in reference.knots.iter().zip(&reference.knots[candidate..]) {
+            let a = work.lift(*pair.0)?;
+            let b = work.lift(*pair.1)?;
+            if work.op(&b, &a, |a, b| a - b)? != period {
+                exact = false;
+                break;
+            }
+        }
+        if exact {
+            return Ok(candidate);
+        }
+    }
+    Ok(cycle)
+}

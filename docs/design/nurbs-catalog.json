@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 530,
-  "unallocatedCount": 470,
+  "specifiedCount": 531,
+  "unallocatedCount": 469,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13606,6 +13606,27 @@
       "remainingQualification": [
         "Reduce redundant knots on both periodic axes and retain both parameter domains atomically.",
         "Reduce U and V under one budget, report the net control reduction per axis, and publish only after both cyclic passes succeed.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0531",
+      "name": "Точное сокращение повторяющихся оборотов периодической NURBS-поверхности",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::reduce_exact_periodic_surface_period",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-531-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-531-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Prove literal cyclic repeat periods in the full weighted tensor and retain the shortest supported cycle.",
+        "Require exact rational knot translations and literal repeats of all tensor controls and weights before truncating the repeated turns.",
         "WASM and application integration are separate."
       ]
     }
