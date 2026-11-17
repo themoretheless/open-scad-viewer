@@ -6,6 +6,7 @@ use crate::{
     numerics::interval_vec3::{cross, norm},
     numeric, resource,
     surface::Surface,
+    trim_domain::{Location, TrimDomain},
 };
 pub(crate) mod jets;
 pub(crate) mod first_jets;
@@ -31,6 +32,7 @@ struct Cell {
     domain: [[f64; 2]; 2],
     area: Interval,
     serial: usize,
+    trim_location: Location,
 }
 impl Cell {
     fn gap(&self) -> f64 {
@@ -104,6 +106,7 @@ fn cell(s: &Surface, span: [usize; 2], domain: [[f64; 2]; 2], serial: usize) -> 
         domain,
         area: Interval::new(lo, hi)?,
         serial,
+        trim_location: Location::Unresolved,
     })
 }
 
@@ -240,9 +243,25 @@ pub fn periodic_trim_patch_area(
     max_surface_cells: usize,
     max_trim_cells: usize,
 ) -> Result<TrimmedAreaReport> {
-    use crate::trim_domain::{Location, TrimDomain};
+    let trim = TrimDomain::new(&patch.trim.loops, tolerance_uv)?;
+    trimmed_surface_area(
+        &patch.surface,
+        &trim,
+        tolerance,
+        max_surface_cells,
+        max_trim_cells,
+    )
+}
 
-    let surface = &patch.surface;
+/// Integrate a previously prepared trim domain on a NURBS surface.
+/// During subdivision, determinate parent classifications apply to both children.
+pub fn trimmed_surface_area(
+    surface: &Surface,
+    trim: &TrimDomain,
+    tolerance: f64,
+    max_surface_cells: usize,
+    max_trim_cells: usize,
+) -> Result<TrimmedAreaReport> {
     surface.validate()?;
     check(
         tolerance.is_finite()
@@ -251,7 +270,6 @@ pub fn periodic_trim_patch_area(
             && (1..=1_000_000).contains(&max_trim_cells),
         "Trimmed area needs positive finite tolerance and valid surface and trim cell limits",
     )?;
-    let trim = TrimDomain::new(&patch.trim.loops, tolerance_uv)?;
     let active = |knots: &[f64], degree, count| {
         (degree..count)
             .filter(|&i| knots[i] < knots[i + 1])
@@ -277,10 +295,10 @@ pub fn periodic_trim_patch_area(
     }
 
     let mut trim_cells = 0;
-    let mut make_cell = |span, domain, serial| -> Result<Cell> {
+    let mut make_cell = |span, domain, serial, parent_location| -> Result<Cell> {
         let remaining = max_trim_cells - trim_cells;
-        let location = if remaining == 0 {
-            Location::Unresolved
+        let location = if parent_location != Location::Unresolved || remaining == 0 {
+            parent_location
         } else {
             let report = trim.classify(domain, remaining.min(100_000))?;
             trim_cells += report.cells;
@@ -292,9 +310,11 @@ pub fn periodic_trim_patch_area(
                 domain,
                 area: Interval::point(0.),
                 serial,
+                trim_location: location,
             });
         }
         let mut candidate = cell(surface, span, domain, serial)?;
+        candidate.trim_location = location;
         if location == Location::Unresolved {
             candidate.area.lo = 0.;
         }
@@ -309,7 +329,7 @@ pub fn periodic_trim_patch_area(
                 [surface.knots_u[u], surface.knots_u[u + 1]],
                 [surface.knots_v[v], surface.knots_v[v + 1]],
             ];
-            heap.push(make_cell([u, v], domain, cells)?);
+            heap.push(make_cell([u, v], domain, cells, Location::Unresolved)?);
             cells += 1;
         }
     }
@@ -340,8 +360,8 @@ pub fn periodic_trim_patch_area(
         let mut right = parent.domain;
         left[axis][1] = mid;
         right[axis][0] = mid;
-        let left = make_cell(parent.span, left, cells)?;
-        let right = make_cell(parent.span, right, cells + 1)?;
+        let left = make_cell(parent.span, left, cells, parent.trim_location)?;
+        let right = make_cell(parent.span, right, cells + 1, parent.trim_location)?;
         cells += 2;
         total = Interval::new(
             (total.lo - parent.area.lo).next_down(),

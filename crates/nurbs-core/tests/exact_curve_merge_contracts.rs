@@ -6078,3 +6078,67 @@ fn periodic_trim_surface_area_retains_conservative_bounds_when_trim_budget_runs_
     assert!(!area.within_tolerance);
     assert_eq!(coarse.trim_cells, 1);
 }
+
+#[test]
+fn trimmed_surface_area_reuses_proved_inside_cells_after_trim_budget_exhaustion() {
+    use nurbs_core::{
+        analysis::surface_measure::{area, trimmed_surface_area},
+        surface::Surface,
+        trim_domain::{Location, TrimDomain},
+    };
+    let surface = Surface {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![0., 0., 1., 1.],
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: vec![
+            vec![vec![0., 0., 0.], vec![0., 1., 0.]],
+            vec![vec![1., 0., 0.], vec![1., 1., 1.]],
+        ],
+        weights: vec![vec![1.; 2]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let wire = Curve::from_polyline(vec![
+        vec![-1., -1.],
+        vec![2., -1.],
+        vec![2., 2.],
+        vec![-1., 2.],
+        vec![-1., -1.],
+    ])
+    .unwrap();
+    let trim = TrimDomain::new(&[vec![wire]], 1e-10).unwrap();
+    let initial = trim.classify([[0., 1.], [0., 1.]], 100).unwrap();
+    assert_eq!(initial.location, Location::Inside);
+    let proved = trimmed_surface_area(&surface, &trim, 1e-4, 5000, initial.cells).unwrap();
+    let bounds = proved.area.unwrap();
+    assert_eq!(proved.trim_cells, initial.cells);
+    assert!(bounds.cells > 1 && bounds.within_tolerance, "{bounds:?}");
+    let reference = area(&surface, 1e-5, 20_000).unwrap().bounds;
+    assert!(bounds.bounds[0] <= reference[1] && reference[0] <= bounds.bounds[1]);
+}
+
+#[test]
+fn trimmed_surface_area_accepts_reusable_domain_for_disjoint_support() {
+    use nurbs_core::{analysis::surface_measure::trimmed_surface_area, trim_domain::TrimDomain};
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let surface = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let wire = Curve::from_polyline(vec![
+        vec![5., 5.],
+        vec![6., 5.],
+        vec![6., 6.],
+        vec![5., 6.],
+        vec![5., 5.],
+    ])
+    .unwrap();
+    let trim = TrimDomain::new(&[vec![wire]], 1e-10).unwrap();
+    for _ in 0..2 {
+        let report = trimmed_surface_area(&surface, &trim, 1e-8, 100, 1000).unwrap();
+        let area = report.area.unwrap();
+        assert!(area.bounds[0] == 0. && area.bounds[1] < 1e-8);
+        assert!(area.within_tolerance);
+    }
+}
