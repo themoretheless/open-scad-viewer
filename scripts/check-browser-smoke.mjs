@@ -16,6 +16,9 @@ import { runControlModels } from './browserSmokeControlModels.mjs'
 const root = path.resolve(process.env.SMOKE_DIST ?? 'dist')
 const directory = path.resolve(process.argv.slice(2).find(arg => !arg.startsWith('--')) ?? 'tmp/browser-smoke')
 const updateBaseline = process.argv.includes('--update-baseline')
+// axe-core (devDependency) is injected into the page only by this smoke run, never bundled.
+const AXE_SCRIPT = path.resolve('node_modules/axe-core/axe.min.js')
+const AXE_ROUTE = '/__smoke/axe.min.js'
 const baselineDirectory = path.resolve('tests/browser/baselines')
 // Font rasterization differs per OS, so each platform keeps its own baseline.
 const baselineFile = path.join(baselineDirectory, `keyboard-shortcuts-${process.platform}.png`)
@@ -47,6 +50,12 @@ const server = createServer(async (req, res) => {
     // app stops polling, as a plain static host would without logging a failed request.
     if (url.pathname === '/favicon.ico' || url.pathname === '/__openscada/mcp-editor') {
       res.writeHead(204).end()
+      return
+    }
+    // Same-origin route for axe-core so the app's CSP ('script-src self') admits it.
+    if (url.pathname === AXE_ROUTE) {
+      res.setHeader('Content-Type', 'text/javascript')
+      res.end(await readFile(AXE_SCRIPT))
       return
     }
     const file = path.resolve(root, '.' + (url.pathname === '/' ? '/index.html' : decodeURIComponent(url.pathname)))
@@ -162,6 +171,22 @@ try {
 
   await step('main window passes the accessibility audit', async () => {
     assert.deepEqual(await page.evaluate(() => window.__osvTest.accessibility()), [])
+  })
+
+  await step('main window passes the axe-core WCAG 2.1 A/AA audit', async () => {
+    await page.addScriptTag({ url: AXE_ROUTE })
+    const violations = await page.evaluate(async () => {
+      const result = await window.axe.run(document, {
+        runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] },
+        resultTypes: ['violations'],
+      })
+      return result.violations.map(violation => ({
+        id: violation.id,
+        impact: violation.impact,
+        nodes: violation.nodes.map(node => node.target.join(' ')),
+      }))
+    })
+    assert.deepEqual(violations, [], `axe-core violations:\n${JSON.stringify(violations, null, 2)}`)
   })
 
   await step('command palette opens, cancels and restores focus', async () => {
