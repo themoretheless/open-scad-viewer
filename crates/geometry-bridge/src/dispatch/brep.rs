@@ -10,6 +10,7 @@ const OPS: &[&str] = &[
     "brep_locate_exact_periodic_trim_contour_station",
     "brep_enclose_exact_periodic_trim_contour_station",
     "brep_divide_exact_periodic_trim_contour_by_length",
+    "brep_bound_exact_periodic_trim_patch_area",
     "brep_build_exact_periodic_trim_sheet",
     "brep_build_exact_periodic_trim_sheet_with_bindings",
     "brep_build_exact_periodic_trim_sheet_with_input_bindings",
@@ -92,6 +93,7 @@ pub(crate) fn route(v: Value) -> Routed {
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
         "brep_partition_closed_ss" => closed_ss::partition(v),
+        "brep_bound_exact_periodic_trim_patch_area" => brep::exact_periodic_trim_patch_area_request(&v),
         "brep_divide_exact_periodic_trim_contour_by_length" => brep::exact_periodic_trim_contour_division_request(&v),
         "brep_enclose_exact_periodic_trim_contour_station" => brep::exact_periodic_trim_contour_station_bounds_request(&v),
         "brep_locate_exact_periodic_trim_contour_station" => brep::exact_periodic_trim_contour_station_request(&v),

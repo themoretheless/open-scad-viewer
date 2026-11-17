@@ -351,3 +351,44 @@ fn contour_division_operation_keeps_proved_boxes_under_cell_limit() {
     assert!(response["value"]["stations"].is_null());
     assert_eq!(response["value"]["refusalStage"], "build");
 }
+
+fn patch_area_request(cells: usize, tolerance: f64) -> Value {
+    let mut request = request();
+    request["op"] = json!("brep_bound_exact_periodic_trim_patch_area");
+    request["outerContour"] = json!(0);
+    request["toleranceMm2"] = json!(tolerance);
+    request["maxCells"] = json!(cells);
+    request
+}
+
+#[test]
+fn patch_area_operation_subtracts_holes_and_retains_coarse_bounds() {
+    for (cells, tolerance, status) in [(100, 1e-8, "tolerance"), (10, 1e-30, "bounded")] {
+        let response = run(&patch_area_request(cells, tolerance));
+        assert_eq!(response["ok"], true, "{response}");
+        let report = &response["value"];
+        assert_eq!(report["status"], status);
+        assert_eq!(report["withinTolerance"], status == "tolerance");
+        assert_eq!(report["minimumCells"], 10);
+        for (axis, expected) in report["boundsMm2"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip([-0.75, -0.5, 0.])
+        {
+            assert!(axis[0].as_f64().unwrap() <= expected && expected <= axis[1].as_f64().unwrap());
+        }
+    }
+}
+
+#[test]
+fn patch_area_operation_reports_missing_cells_and_non_outer_contour() {
+    let mut request = patch_area_request(9, 1e-8);
+    let limited = run(&request);
+    assert_eq!(limited["value"]["status"], "workLimit");
+    assert!(limited["value"]["boundsMm2"].is_null());
+    request["outerContour"] = json!(1);
+    assert_eq!(run(&request)["value"]["status"], "unavailable");
+    request["maxWork"] = json!(1);
+    assert_eq!(run(&request)["value"]["status"], "buildRefused");
+}

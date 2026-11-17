@@ -1008,3 +1008,55 @@ pub fn exact_periodic_trim_contour_division_request(
         "refusalStage": null,
     }))
 }
+
+/// Enclose the signed YZ, ZX and XY projected areas of one periodic trim face.
+pub fn exact_periodic_trim_patch_area_request(
+    request: &value_codec::Value,
+) -> Result<value_codec::Value> {
+    use crate::field;
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    use value_codec::json;
+
+    let source: nurbs_core::surface::Surface = field(request, "surface")?;
+    let contours: Vec<Vec<[f64; 2]>> = field(request, "contours")?;
+    let outer: usize = field(request, "outerContour")?;
+    let tolerance: f64 = field(request, "toleranceMm2")?;
+    let max_work: u64 = field(request, "maxWork")?;
+    let max_cells: usize = field(request, "maxCells")?;
+    if outer >= contours.len()
+        || !tolerance.is_finite()
+        || tolerance <= 0.
+        || !(1..=100_000).contains(&max_cells)
+    {
+        return Err(input(
+            "Invalid outer contour, tolerance, or cell limit for periodic trim area",
+        ));
+    }
+    let contours = contours.iter().map(Vec::as_slice).collect::<Vec<_>>();
+    let edges = build_exact_periodic_surface_trim_input_edges(&source, &contours, max_work)?;
+    let work_used = edges.geometry.work_used;
+    if edges.geometry.patches.is_none() {
+        return Ok(json!({
+            "boundsMm2": null, "withinTolerance": false, "cells": 0, "minimumCells": null,
+            "workUsed": work_used, "status": "buildRefused",
+        }));
+    }
+    let report = edges.bound_input_patch_projected_area(outer, tolerance, max_cells)?;
+    let status = if report.minimum_cells == 0 {
+        "unavailable"
+    } else if report.bounds.is_none() {
+        "workLimit"
+    } else if report.within_tolerance {
+        "tolerance"
+    } else {
+        "bounded"
+    };
+    Ok(json!({
+        "boundsMm2": report.bounds,
+        "withinTolerance": report.within_tolerance,
+        "cells": report.cells,
+        "minimumCells": report.minimum_cells,
+        "workUsed": work_used,
+        "status": status,
+    }))
+}

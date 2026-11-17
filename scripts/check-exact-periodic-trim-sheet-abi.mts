@@ -21,6 +21,7 @@ interface Report {
     topologyIds: { edges: string[] }
   } | null
   edgeBindings?: { edgeId: string; contour: number; segment: number; interval?: [number, number]; parameters?: [Rational, Rational] }[]
+  boundsMm2?: [number, number][] | null
   stations?: { parameterBounds: [number, number] | null; pointBoundsMm: [number, number][] | null; status: string }[] | null
   pointBoundsMm?: [number, number][] | null
   parameterBounds?: [number, number] | null
@@ -183,3 +184,17 @@ const coarseDivision = call(request.maxWork, divisionOp, { ...divisionOptions, m
 assert.equal(coarseDivision.stations?.[1].status, 'workLimit')
 assert.ok(coarseDivision.stations?.[1].pointBoundsMm)
 console.log('WASM ABI returned ordered equal-length contour station boxes and closure.')
+
+const patchAreaOp = 'brep_bound_exact_periodic_trim_patch_area'
+const patchArea = call(request.maxWork, patchAreaOp, { outerContour: 0, maxCells: 100, toleranceMm2: 1e-8 })
+assert.equal(patchArea.status, 'tolerance')
+assert.ok(patchArea.boundsMm2)
+assert.equal(patchArea.boundsMm2.length, 3)
+for (const [index, [lo, hi]] of patchArea.boundsMm2.entries()) {
+  const value = [-0.75, -0.5, 0][index]
+  assert.ok(lo <= value && value <= hi)
+}
+const patchAreaLimited = call(request.maxWork, patchAreaOp, { outerContour: 0, maxCells: 9, toleranceMm2: 1e-8 })
+assert.equal(patchAreaLimited.status, 'workLimit')
+assert.equal(patchAreaLimited.boundsMm2, null)
+console.log('WASM ABI enclosed signed projected areas with hole subtraction.')
