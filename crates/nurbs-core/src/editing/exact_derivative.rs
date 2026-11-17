@@ -15,7 +15,10 @@ mod curvature;
 pub(super) mod extraction;
 mod higher;
 mod planar_integral;
-pub use planar_integral::{ExactPlanarAreaOutcome, ExactPlanarAreaReport, exact_planar_boundary_area};
+pub use planar_integral::{
+    ExactPlanarAreaOutcome, ExactPlanarAreaReport, ExactPlanarMass, ExactPlanarMassOutcome,
+    ExactPlanarMassReport, exact_planar_boundary_area, exact_planar_boundary_mass,
+};
 pub(super) mod proof;
 mod speed;
 mod torsion;

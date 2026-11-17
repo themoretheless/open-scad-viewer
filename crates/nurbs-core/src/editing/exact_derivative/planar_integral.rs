@@ -1,5 +1,5 @@
 //! Exact Green area of polynomial spans and rational line segments.
-use super::{PResult, Refusal, extraction};
+use super::{PResult, Refusal, add, differentiated, extraction, poly};
 use crate::{
     Result, check, core::bounded_rational::Work, curve::Curve, trim::trim_domain::exact_loop_joins,
 };
@@ -52,27 +52,16 @@ pub fn exact_planar_boundary_area(
 
 fn integrate(curves: &[Curve], work: &mut Work) -> PResult<ExactPlanarAreaOutcome> {
     let mut twice_area = Q::zero();
-    for (index, curve) in curves.iter().enumerate() {
-        for span in curve.degree..curve.control_points.len() {
-            let a = curve.knots[span];
-            let b = curve.knots[span + 1];
-            if a == b {
-                continue;
-            }
-            let a = work.lift(a)?;
-            let b = work.lift(b)?;
-            let width = work.op(&b, &a, |a, b| a - b)?;
-            let h = extraction::span(curve, span, &a, &width, work)?;
-            let [x, y, w] = [&h[0], &h[1], &h[2]];
-            let contribution = if w.len() == 1 {
-                polynomial_green(x, y, &w[0], work)?
-            } else if curve.degree == 1 {
-                segment_green(x, y, w, work)?
-            } else {
-                return Ok(ExactPlanarAreaOutcome::UnsupportedRationalSpan { curve: index, span });
-            };
-            twice_area = work.op(&twice_area, &contribution, |a, b| a + b)?;
-        }
+    if let Some((curve, span)) = visit_spans(curves, work, |[x, y, w], work| {
+        let contribution = if w.len() == 1 {
+            polynomial_green(x, y, &w[0], work)?
+        } else {
+            segment_green(x, y, w, work)?
+        };
+        twice_area = work.op(&twice_area, &contribution, |a, b| a + b)?;
+        Ok(())
+    })? {
+        return Ok(ExactPlanarAreaOutcome::UnsupportedRationalSpan { curve, span });
     }
     let two = Q::from_integer(2.into());
     Ok(ExactPlanarAreaOutcome::Area(work.op(
@@ -80,6 +69,30 @@ fn integrate(curves: &[Curve], work: &mut Work) -> PResult<ExactPlanarAreaOutcom
         &two,
         |a, b| a / b,
     )?))
+}
+
+fn visit_spans(
+    curves: &[Curve],
+    work: &mut Work,
+    mut visit: impl FnMut([&[Q]; 3], &mut Work) -> PResult<()>,
+) -> PResult<Option<(usize, usize)>> {
+    for (index, curve) in curves.iter().enumerate() {
+        for span in curve.degree..curve.control_points.len() {
+            let [a, b] = [curve.knots[span], curve.knots[span + 1]];
+            if a == b {
+                continue;
+            }
+            let a = work.lift(a)?;
+            let b = work.lift(b)?;
+            let width = work.op(&b, &a, |a, b| a - b)?;
+            let h = extraction::span(curve, span, &a, &width, work)?;
+            if h[2].len() != 1 && curve.degree != 1 {
+                return Ok(Some((index, span)));
+            }
+            visit([&h[0], &h[1], &h[2]], work)?;
+        }
+    }
+    Ok(None)
 }
 
 fn polynomial_green(x: &[Q], y: &[Q], w: &Q, work: &mut Work) -> PResult<Q> {
@@ -105,13 +118,9 @@ fn polynomial_green(x: &[Q], y: &[Q], w: &Q, work: &mut Work) -> PResult<Q> {
 
 fn segment_green(x: &[Q], y: &[Q], w: &[Q], work: &mut Work) -> PResult<Q> {
     let zero = Q::zero();
-    let end = |a: &[Q], work: &mut Work| {
-        a.iter()
-            .try_fold(Q::zero(), |sum, v| work.op(&sum, v, |a, b| a + b))
-    };
-    let x1 = end(x, work)?;
-    let y1 = end(y, work)?;
-    let w1 = end(w, work)?;
+    let x1 = at_one(x, work)?;
+    let y1 = at_one(y, work)?;
+    let w1 = at_one(w, work)?;
     if !w[0].is_positive() || !w1.is_positive() {
         return Err(Refusal::UnprovedDenominator);
     }
@@ -120,4 +129,155 @@ fn segment_green(x: &[Q], y: &[Q], w: &[Q], work: &mut Work) -> PResult<Q> {
     let cross = work.op(&a, &b, |a, b| a - b)?;
     let denominator = work.op(&w[0], &w1, |a, b| a * b)?;
     Ok(work.op(&cross, &denominator, |a, b| a / b)?)
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPlanarMass {
+    pub signed_area: Q,
+    /// Signed integrals of x and y over the oriented area.
+    pub first_moments: [Q; 2],
+    /// Absent for zero net signed area.
+    pub centroid: Option<[Q; 2]>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ExactPlanarMassOutcome {
+    Mass(ExactPlanarMass),
+    UnsupportedRationalSpan {
+        contour: usize,
+        curve: usize,
+        span: usize,
+    },
+    UnprovedClosure {
+        contour: usize,
+    },
+    Refused(Refusal),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPlanarMassReport {
+    pub outcome: ExactPlanarMassOutcome,
+    pub work_used: u64,
+}
+
+/// Compute exact signed area, first moments and centroid for closed planar
+/// contours made of polynomial spans or degree-one rational spans. Opposite
+/// winding subtracts a hole. A zero signed area has no centroid. The input
+/// winding defines the integral and must be appropriate for the material.
+pub fn exact_planar_boundary_mass(
+    loops: &[Vec<Curve>],
+    max_work: u64,
+) -> Result<ExactPlanarMassReport> {
+    check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work) && (1..=256).contains(&loops.len()),
+        "Exact planar mass needs bounded contours and a valid work budget",
+    )?;
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    for (contour, curves) in loops.iter().enumerate() {
+        if exact_loop_joins(curves)? != Some(true) {
+            return Ok(ExactPlanarMassReport {
+                outcome: ExactPlanarMassOutcome::UnprovedClosure { contour },
+                work_used: 0,
+            });
+        }
+    }
+    let outcome = integrate_mass(loops, &mut work).unwrap_or_else(ExactPlanarMassOutcome::Refused);
+    Ok(ExactPlanarMassReport {
+        outcome,
+        work_used: work.used,
+    })
+}
+
+fn integrate_mass(loops: &[Vec<Curve>], work: &mut Work) -> PResult<ExactPlanarMassOutcome> {
+    let mut total = [Q::zero(), Q::zero(), Q::zero()];
+    for (contour, curves) in loops.iter().enumerate() {
+        if let Some((curve, span)) = visit_spans(curves, work, |[x, y, w], work| {
+            let values = if w.len() == 1 {
+                polynomial_mass(x, y, &w[0], work)?
+            } else {
+                let cross = segment_green(x, y, w, work)?;
+                let w1 = at_one(w, work)?;
+                let mut values = [cross, Q::zero(), Q::zero()];
+                for (k, h) in [x, y].into_iter().enumerate() {
+                    let zero = Q::zero();
+                    let a = work.op(h.first().unwrap_or(&zero), &w[0], |a, b| a / b)?;
+                    let end = at_one(h, work)?;
+                    let b = work.op(&end, &w1, |a, b| a / b)?;
+                    let mean = work.op(&a, &b, |a, b| (a + b) / Q::from_integer(2.into()))?;
+                    values[k + 1] = work.op(&values[0], &mean, |a, b| a * b)?;
+                }
+                values
+            };
+            for (sum, value) in total.iter_mut().zip(values) {
+                *sum = work.op(sum, &value, |a, b| a + b)?;
+            }
+            Ok(())
+        })? {
+            return Ok(ExactPlanarMassOutcome::UnsupportedRationalSpan {
+                contour,
+                curve,
+                span,
+            });
+        }
+    }
+    let [area, x, y] = total;
+    let signed_area = work.op(&area, &Q::from_integer(2.into()), |a, b| a / b)?;
+    let three = Q::from_integer(3.into());
+    let first_moments = [
+        work.op(&x, &three, |a, b| a / b)?,
+        work.op(&y, &three, |a, b| a / b)?,
+    ];
+    let centroid = if signed_area.is_zero() {
+        None
+    } else {
+        Some([
+            work.op(&first_moments[0], &signed_area, |a, b| a / b)?,
+            work.op(&first_moments[1], &signed_area, |a, b| a / b)?,
+        ])
+    };
+    Ok(ExactPlanarMassOutcome::Mass(ExactPlanarMass {
+        signed_area,
+        first_moments,
+        centroid,
+    }))
+}
+
+fn polynomial_mass(x: &[Q], y: &[Q], w: &Q, work: &mut Work) -> PResult<[Q; 3]> {
+    if !w.is_positive() {
+        return Err(Refusal::UnprovedDenominator);
+    }
+    let x = x.to_vec();
+    let y = y.to_vec();
+    let dx = differentiated(&x, work)?;
+    let dy = differentiated(&y, work)?;
+    let a = poly::multiply(&x, &dy, work)?;
+    let b = poly::multiply(&y, &dx, work)?;
+    let cross = add(&a, &b, true, work)?;
+    let w2 = work.op(w, w, |a, b| a * b)?;
+    let w3 = work.op(&w2, w, |a, b| a * b)?;
+    let mut result = [Q::zero(), Q::zero(), Q::zero()];
+    for (output, polynomial, denominator) in [
+        (0, cross.clone(), &w2),
+        (1, poly::multiply(&x, &cross, work)?, &w3),
+        (2, poly::multiply(&y, &cross, work)?, &w3),
+    ] {
+        let integral = polynomial
+            .iter()
+            .enumerate()
+            .try_fold(Q::zero(), |sum, (i, q)| {
+                let denominator = Q::from_integer((i + 1).into());
+                let term = work.op(q, &denominator, |a, b| a / b)?;
+                work.op(&sum, &term, |a, b| a + b)
+            })?;
+        result[output] = work.op(&integral, denominator, |a, b| a / b)?;
+    }
+    Ok(result)
+}
+
+fn at_one(a: &[Q], work: &mut Work) -> PResult<Q> {
+    Ok(a.iter()
+        .try_fold(Q::zero(), |sum, v| work.op(&sum, v, |a, b| a + b))?)
 }

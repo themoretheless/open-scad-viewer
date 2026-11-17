@@ -1,0 +1,30 @@
+{
+  "id": "NURBS-0322",
+  "testedBase": "809135853a77e9151fc22a027ebde74ca822e255",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_mass_contracts",
+    "--test",
+    "exact_planar_boundary_area_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 3,
+  "scope": [
+    "Compute signed exact rational area, first moments and centroid of oriented polynomial and rational-linear contours.",
+    "Exact closed oriented loops; polynomial spans or rational line segments. Zero net area has no centroid."
+  ],
+  "logSha256": "b925ef90c4d29b5cebc03252a618bc7a68b7b24c541f9833b3349011f001eb17",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_derivative.rs": "c552d973828468d250b07e4a0d62a9b99196a67523c96e410fe92053879ba898",
+    "crates/nurbs-core/src/editing/exact_derivative/planar_integral.rs": "63957e2e9288168e11c15c33c48651000be4b6a115429668149ecd2f6e224c77",
+    "crates/nurbs-core/tests/exact_planar_mass_contracts.rs": "d685c5fb5b854716cdc2e502625f30d692bf03d1fa84f1236ee9242a5337010e"
+  }
+}
