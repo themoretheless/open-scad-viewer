@@ -74,7 +74,7 @@ fn cell(c: &Curve, span: usize, domain: [f64; 2], origin: [f64; 2]) -> Result<In
 }
 pub fn measure(curves: &[Curve], tolerance_mm2: f64, max_cells: usize) -> Result<Report> {
     check(
-        (2..=256).contains(&curves.len())
+        (1..=256).contains(&curves.len())
             && tolerance_mm2.is_finite()
             && tolerance_mm2 > 0.
             && (1..=100000).contains(&max_cells),

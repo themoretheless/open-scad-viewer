@@ -1,0 +1,31 @@
+{
+  "id": "NURBS-0320",
+  "testedBase": "8c6841250cbe5af592379b3e786ade6f44d2d5af",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_projected_face_area_contracts",
+    "--test",
+    "exact_planar_trim_projection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 4,
+  "scope": [
+    "Enclose physical signed area for projected rational trim contours using outward integration and the metric of the exact inverse plane chart.",
+    "Signed boundary integration, oppositely oriented holes, shared cell budget and physical plane scaling. Material interpretation requires valid simple loops."
+  ],
+  "logSha256": "3390b5d2c2025077ad0129c77035cb228b6ad7eb58744bb97ba50e5c69a14ab5",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis.rs": "6a71e649467ef354521ce9ecdd4048dd609d27ed4d730f820a4d688c0b219499",
+    "crates/nurbs-core/src/analysis/planar_face_area.rs": "6567435552ec80c84c561a927551456aca85af3f7c8f63be7f4ffbb83f73694d",
+    "crates/nurbs-core/src/trim/planar_area.rs": "37b17b0dbfbb0dcbbcd9282ad55f401a458ca6f20ac2aa7c65af7c8987e41a01",
+    "crates/nurbs-core/tests/exact_projected_face_area_contracts.rs": "2dc76daae3a71372e4936b7e8f874a700d08dfb80e74acbcbe6e2d21b61ca103"
+  }
+}

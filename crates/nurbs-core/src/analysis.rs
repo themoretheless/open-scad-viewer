@@ -71,3 +71,5 @@ pub mod normal_cone;
 pub mod exact_affine_hull;
 
 pub mod planar_trim_projection;
+
+pub mod planar_face_area;
