@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 346,
-  "unallocatedCount": 654,
+  "specifiedCount": 347,
+  "unallocatedCount": 653,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8914,6 +8914,30 @@
       "remainingQualification": [
         "Classify interior/interior, boundary/boundary and both mixed face contact strata on the exact support clock.",
         "Mixed classifications retain open winding limits and exact closed boundary points. A conservative upper cover retains contacts that cannot be assigned a proved stratum.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0347",
+      "name": "Доказуемый учёт разворотов совпадающих рациональных контуров NURBS-граней",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Пересечения",
+      "nativeApi": "nurbs_core::analysis::exact_plane_intersection::refine_planar_face_boundary_extents",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/exact_plane_intersection.rs",
+        "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs",
+        "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs",
+        "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs",
+        "crates/nurbs-core/src/analysis/exact_plane_intersection/contact_partition.rs",
+        "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs",
+        "docs/qualification/nurbs-curvature-field-347-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-347-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Extend certified common boundary coverage using stationary points of rational spans that follow the support line.",
+        "The rational quotient derivative locates stationary witnesses. Rational roots of linear and quadratic equations are evaluated exactly. Other roots supply exact rational samples from isolated normalized parameter brackets; returned intervals are certified inner coverage.",
         "WASM and application integration are separate."
       ]
     }

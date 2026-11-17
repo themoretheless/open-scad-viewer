@@ -12,7 +12,7 @@ use crate::{
     curve::Curve,
     editing::{
         exact_derivative::{PResult, Refusal, add},
-        rational_factor::polynomial::Poly,
+        rational_factor::polynomial::{Poly, multiply},
     },
 };
 use num_rational::BigRational as Q;
@@ -157,12 +157,19 @@ fn line_equation(homogeneous: &[Poly], coefficients: &[Q; 3], work: &mut Work) -
         })
 }
 
+#[derive(Clone, Copy)]
+pub(crate) enum SpanLineCoverage {
+    Endpoints,
+    Contacts,
+    Refined { stationary_width: f64 },
+}
+
 /// Certified coordinate ranges and exact isolated contacts of the line.
 pub(crate) fn exact_span_line_ranges(
     source: &Curve,
     coefficients: &[Q; 3],
     axis: usize,
-    include_isolated: bool,
+    coverage: SpanLineCoverage,
     work: &mut Work,
 ) -> PResult<Vec<[Q; 2]>> {
     use super::chart_nonnegative::{evaluate, sum};
@@ -181,8 +188,32 @@ pub(crate) fn exact_span_line_ranges(
             Ok(work.op(&value, &weight, |a, b| a / b)?)
         };
         if equation.is_empty() {
-            result.push([coordinate(&zero, work)?, coordinate(&one, work)?]);
-        } else if include_isolated {
+            let start = coordinate(&zero, work)?;
+            let end = coordinate(&one, work)?;
+            if let SpanLineCoverage::Refined { stationary_width } = coverage {
+                let (mut lo, mut hi) = if start <= end {
+                    (start, end)
+                } else {
+                    (end, start)
+                };
+                for station in stationary_witnesses(
+                    &homogeneous[axis],
+                    &homogeneous[2],
+                    stationary_width,
+                    work,
+                )? {
+                    let value = coordinate(&station, work)?;
+                    if value < lo {
+                        lo = value;
+                    } else if value > hi {
+                        hi = value;
+                    }
+                }
+                result.push([lo, hi]);
+            } else {
+                result.push([start, end]);
+            }
+        } else if !matches!(coverage, SpanLineCoverage::Endpoints) {
             let mut roots = rational_interior_roots(&equation, work)?;
             if equation[0].is_zero() {
                 roots.push(zero.clone());
@@ -197,6 +228,36 @@ pub(crate) fn exact_span_line_ranges(
         }
     }
     Ok(result)
+}
+
+fn stationary_witnesses(
+    component: &Poly,
+    weight: &Poly,
+    max_width: f64,
+    work: &mut Work,
+) -> PResult<Vec<Q>> {
+    use super::chart_nonnegative::derivative;
+    let dw = derivative(weight, work)?;
+    let dc = derivative(component, work)?;
+    let forward = multiply(&dc, weight, work)?;
+    let backward = multiply(component, &dw, work)?;
+    let power = add(&forward, &backward, true, work)?;
+    let exact = rational_interior_roots(&power, work)?;
+    if power.len() <= 2 || !exact.is_empty() {
+        return Ok(exact);
+    }
+    let width = work.lift(max_width)?;
+    let two = Q::from_integer(2.into());
+    isolate_power(&power, [0., 1.], Some(&width), work)?
+        .into_iter()
+        .map(|root| {
+            let [lo, hi] = root.parameter;
+            let lo = work.lift(lo)?;
+            let hi = work.lift(hi)?;
+            let sum = work.op(&lo, &hi, |a, b| a + b)?;
+            Ok(work.op(&sum, &two, |a, b| a / b)?)
+        })
+        .collect()
 }
 
 fn rational_interior_roots(power: &Poly, work: &mut Work) -> PResult<Vec<Q>> {

@@ -49,7 +49,7 @@ pub(super) fn interior_contact_factors(power: &Poly, work: &mut Work) -> PResult
     ])
 }
 
-fn derivative(power: &Poly, work: &mut Work) -> PResult<Poly> {
+pub(super) fn derivative(power: &Poly, work: &mut Work) -> PResult<Poly> {
     power
         .iter()
         .enumerate()

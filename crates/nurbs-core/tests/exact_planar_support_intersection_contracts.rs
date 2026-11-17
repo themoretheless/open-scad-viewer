@@ -11,8 +11,8 @@ use nurbs_core::{
             build_planar_intersection_segments, classify_planar_face_contacts,
             intersect_planar_face_boundaries, intersect_planar_face_boundary_contacts,
             intersect_planar_supports, intersect_trimmed_planar_faces,
-            optimize_planar_intersection_segment_storage, store_planar_intersection_segment,
-            store_trimmed_planar_intersection,
+            optimize_planar_intersection_segment_storage, refine_planar_face_boundary_extents,
+            store_planar_intersection_segment, store_trimmed_planar_intersection,
         },
         planar_coplanar_ray::CoplanarRayPartitionOptions,
         planar_trim_projection::ProjectedTrimmedFace,
@@ -800,5 +800,69 @@ fn retains_singleton_mixed_contacts_and_uncertainty_when_winding_is_limited() {
             .possible
             .iter()
             .any(|r| r[0] <= q(0, 1) && r[1] >= q(1, 3))
+    );
+}
+
+fn folded_boundary(last: f64) -> Vec<Curve> {
+    vec![
+        Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 1., 1., 1.],
+            control_points: vec![vec![0., 0.], vec![2., 0.], vec![last, 0.]],
+            weights: vec![1., 2., 1.],
+            periodic: false,
+        },
+        Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 2., 3., 3.],
+            control_points: vec![vec![last, 0.], vec![1., 1.], vec![0., 1.], vec![0., 0.]],
+            weights: vec![1.; 4],
+            periodic: false,
+        },
+    ]
+}
+
+#[test]
+fn recovers_exact_weighted_fold_extent_past_both_endpoints() {
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.loops = vec![folded_boundary(0.)];
+    b.loops = vec![rectangle([1., 2.], [0., 1.], false)];
+    let previous = intersect_planar_face_boundary_contacts(&a, &b, WORK).unwrap();
+    assert!(
+        matches!(previous.outcome, PlanarBoundaryIntersection::Transverse { shared_boundary, .. } if shared_boundary.is_empty())
+    );
+    let refined = refine_planar_face_boundary_extents(&a, &b, 1e-8, WORK).unwrap();
+    let PlanarBoundaryIntersection::Transverse {
+        shared_boundary, ..
+    } = refined.outcome
+    else {
+        panic!("{:?}", refined.outcome);
+    };
+    assert_eq!(shared_boundary, [[q(1, 1), q(4, 3)]]);
+}
+
+#[test]
+fn certifies_inner_extent_using_a_rational_witness_near_irrational_stationary_point() {
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.loops = vec![folded_boundary(1.)];
+    b.loops = vec![rectangle([1.25, 2.], [0., 1.], true)];
+    let refined = refine_planar_face_boundary_extents(&a, &b, 1e-8, WORK).unwrap();
+    let PlanarBoundaryIntersection::Transverse {
+        shared_boundary, ..
+    } = refined.outcome
+    else {
+        panic!("{:?}", refined.outcome);
+    };
+    let [band] = shared_boundary.as_slice() else {
+        panic!("{shared_boundary:?}");
+    };
+    assert_eq!(band[0], q(5, 4));
+    assert!(band[1] > q(149, 100) && band[1] < q(2, 1));
+    let limited = refine_planar_face_boundary_extents(&a, &b, 1e-8, refined.work_used - 1).unwrap();
+    assert_eq!(
+        limited.outcome,
+        PlanarBoundaryIntersection::Refused(
+            nurbs_core::editing::exact_derivative::Refusal::ResourceLimit
+        )
     );
 }

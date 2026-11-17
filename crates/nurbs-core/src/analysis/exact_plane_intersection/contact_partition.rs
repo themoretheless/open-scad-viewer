@@ -4,7 +4,10 @@ use super::{
     SupportPlaneIntersection, Work, intersect_bands, intersect_planar_supports, trim_both_faces,
     validate_partition_options,
 };
-use crate::{Result, analysis::planar_coplanar_ray::exact_boundary_ranges};
+use crate::{
+    Result, analysis::planar_coplanar_ray::exact_boundary_ranges,
+    editing::exact_projective::pcurve_seam_isolation::SpanLineCoverage,
+};
 use num_rational::BigRational as Q;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -87,14 +90,16 @@ fn classify(
         Ok(ranges) => ranges,
         Err(reason) => return Ok(PlanarFaceContactPartition::Refused(reason)),
     };
-    let left_boundary = match exact_boundary_ranges(left, &line, true, work)? {
+    let left_boundary = match exact_boundary_ranges(left, &line, SpanLineCoverage::Contacts, work)?
+    {
         Ok(boundary) => boundary,
         Err(reason) => return Ok(PlanarFaceContactPartition::Refused(reason)),
     };
-    let right_boundary = match exact_boundary_ranges(right, &line, true, work)? {
-        Ok(boundary) => boundary,
-        Err(reason) => return Ok(PlanarFaceContactPartition::Refused(reason)),
-    };
+    let right_boundary =
+        match exact_boundary_ranges(right, &line, SpanLineCoverage::Contacts, work)? {
+            Ok(boundary) => boundary,
+            Err(reason) => return Ok(PlanarFaceContactPartition::Refused(reason)),
+        };
     Ok(PlanarFaceContactPartition::Transverse(Box::new(
         TransverseFaceContacts {
             line,

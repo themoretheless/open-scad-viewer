@@ -275,7 +275,7 @@ pub use storage::{
 mod boundary;
 pub use boundary::{
     PlanarBoundaryIntersection, PlanarBoundaryIntersectionReport, intersect_planar_face_boundaries,
-    intersect_planar_face_boundary_contacts,
+    intersect_planar_face_boundary_contacts, refine_planar_face_boundary_extents,
 };
 
 mod contact_partition;

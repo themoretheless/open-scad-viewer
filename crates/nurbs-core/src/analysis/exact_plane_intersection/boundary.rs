@@ -3,7 +3,10 @@ use super::{
     ExactSupportLine, ProjectedTrimmedFace, Refusal, SupportPlaneIntersection, Work,
     intersect_bands, intersect_planar_supports,
 };
-use crate::{Result, analysis::planar_coplanar_ray::exact_boundary_ranges};
+use crate::{
+    Result, analysis::planar_coplanar_ray::exact_boundary_ranges, check,
+    editing::exact_projective::pcurve_seam_isolation::SpanLineCoverage,
+};
 use num_rational::BigRational as Q;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -34,7 +37,7 @@ pub fn intersect_planar_face_boundaries(
     right: &ProjectedTrimmedFace,
     max_work: u64,
 ) -> Result<PlanarBoundaryIntersectionReport> {
-    intersect(left, right, max_work, false)
+    intersect(left, right, max_work, SpanLineCoverage::Endpoints)
 }
 
 /// Certify shared boundary intervals and isolated rational contacts of
@@ -46,14 +49,36 @@ pub fn intersect_planar_face_boundary_contacts(
     right: &ProjectedTrimmedFace,
     max_work: u64,
 ) -> Result<PlanarBoundaryIntersectionReport> {
-    intersect(left, right, max_work, true)
+    intersect(left, right, max_work, SpanLineCoverage::Contacts)
+}
+
+/// Include excursions of coincident rational spans by evaluating exact
+/// stationary parameters or rational witnesses in isolated stationary brackets.
+/// The width limits each bracket in its local normalized span parameter.
+/// Returned intervals are certified subsets of the boundary image.
+pub fn refine_planar_face_boundary_extents(
+    left: &ProjectedTrimmedFace,
+    right: &ProjectedTrimmedFace,
+    stationary_width: f64,
+    max_work: u64,
+) -> Result<PlanarBoundaryIntersectionReport> {
+    check(
+        stationary_width.is_finite() && stationary_width > 0. && stationary_width <= 1.,
+        "Boundary extent refinement needs a normalized stationary width in (0, 1]",
+    )?;
+    intersect(
+        left,
+        right,
+        max_work,
+        SpanLineCoverage::Refined { stationary_width },
+    )
 }
 
 fn intersect(
     left: &ProjectedTrimmedFace,
     right: &ProjectedTrimmedFace,
     max_work: u64,
-    include_isolated: bool,
+    coverage: SpanLineCoverage,
 ) -> Result<PlanarBoundaryIntersectionReport> {
     let support = intersect_planar_supports(&left.projection, &right.projection, max_work)?;
     let mut work = Work {
@@ -62,7 +87,7 @@ fn intersect(
     };
     let outcome = match support.outcome {
         SupportPlaneIntersection::Line(line) => {
-            match shared(left, right, &line, include_isolated, &mut work)? {
+            match shared(left, right, &line, coverage, &mut work)? {
                 Ok(shared_boundary) => PlanarBoundaryIntersection::Transverse {
                     line,
                     shared_boundary,
@@ -86,14 +111,14 @@ fn shared(
     left: &ProjectedTrimmedFace,
     right: &ProjectedTrimmedFace,
     line: &ExactSupportLine,
-    include_isolated: bool,
+    coverage: SpanLineCoverage,
     work: &mut Work,
 ) -> Result<std::result::Result<Vec<[Q; 2]>, Refusal>> {
-    let a = match exact_boundary_ranges(left, line, include_isolated, work)? {
+    let a = match exact_boundary_ranges(left, line, coverage, work)? {
         Ok(ranges) => ranges,
         Err(reason) => return Ok(Err(reason)),
     };
-    let b = match exact_boundary_ranges(right, line, include_isolated, work)? {
+    let b = match exact_boundary_ranges(right, line, coverage, work)? {
         Ok(ranges) => ranges,
         Err(reason) => return Ok(Err(reason)),
     };
