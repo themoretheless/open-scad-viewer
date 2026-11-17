@@ -257,3 +257,9 @@ mod split_trim;
 pub use split_trim::{
     SurfacePlaneTrimSplit, SurfacePlaneTrimSplitReport, split_surface_cell_by_plane,
 };
+
+mod stitch;
+pub use stitch::{
+    SurfacePlaneGraphJunction, SurfacePlaneGraphStrip, SurfacePlaneGraphStripCell,
+    SurfacePlaneGraphStripOptions, SurfacePlaneGraphStripReport, stitch_surface_plane_graph_strip,
+};

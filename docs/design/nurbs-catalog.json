@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 367,
-  "unallocatedCount": 633,
+  "specifiedCount": 368,
+  "unallocatedCount": 632,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9430,6 +9430,32 @@
       "remainingQualification": [
         "Build complementary counterclockwise trim loops along a certified per-cell surface-plane section.",
         "A monotone shared UV trace splits the original knot rectangle. Opposite trace directions and exact perimeter joins form complementary counterclockwise loops, with side labels derived from the certified graph orientation.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0368",
+      "name": "Доказуемая сшивка ветвей плоского сечения NURBS через узловые швы",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::stitch_surface_plane_graph_strip",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs",
+        "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/samples.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/stitch.rs",
+        "crates/nurbs-geometry/src/curve.rs",
+        "crates/nurbs-geometry/src/surface.rs",
+        "docs/qualification/nurbs-curvature-field-368-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-368-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify a continuous section graph across consecutive original knot cells using exact one-sided seam polynomials.",
+        "The two one-sided homogeneous polynomials agree at each shared knot. A unique shared root is bracketed in the original solved clock, including repeated knots and nonbinary roots.",
         "WASM and application integration are separate."
       ]
     }

@@ -2,10 +2,11 @@ use num_rational::BigRational as Q;
 use nurbs_core::{
     editing::exact_surface_derivative::{
         PlaneGraphPosition, Refusal, SurfacePlaneGraphSampleOptions, SurfacePlaneGraphStatus,
-        SurfacePlanePolylineOptions, SurfacePlaneSide, SurfacePlaneWorldPolylineOptions,
-        approximate_surface_plane_graph, approximate_surface_plane_graph_xyz,
-        audit_surface_plane_graphs, audit_surface_plane_side, refine_surface_plane_side,
-        sample_surface_plane_graph, split_surface_cell_by_plane, store_surface_plane_section_curve,
+        SurfacePlaneGraphStripOptions, SurfacePlanePolylineOptions, SurfacePlaneSide,
+        SurfacePlaneWorldPolylineOptions, approximate_surface_plane_graph,
+        approximate_surface_plane_graph_xyz, audit_surface_plane_graphs, audit_surface_plane_side,
+        refine_surface_plane_side, sample_surface_plane_graph, split_surface_cell_by_plane,
+        stitch_surface_plane_graph_strip, store_surface_plane_section_curve,
         store_surface_plane_section_pair,
     },
     surface::Surface,
@@ -675,4 +676,87 @@ fn closes_corner_to_corner_trims_and_rejects_a_boundary_only_section() {
     )
     .unwrap();
     assert!(matches!(report.outcome, Err(Refusal::UnprovedIdentity)));
+}
+
+fn repeated_seam_patch() -> Surface {
+    Surface {
+        degree_u: 1,
+        degree_v: 2,
+        knots_u: vec![-2., -2., 5., 5.],
+        knots_v: vec![0., 0., 0., 1., 1., 2., 2., 2.],
+        control_points: [[-1., -2., -1., -3., -1.], [2., 2., 2., 3., 2.]]
+            .into_iter()
+            .enumerate()
+            .map(|(i, row)| {
+                row.into_iter()
+                    .enumerate()
+                    .map(|(j, z)| vec![i as f64, j as f64, z])
+                    .collect()
+            })
+            .collect(),
+        weights: vec![vec![1.; 5]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    }
+}
+
+#[test]
+fn stitches_a_nonbinary_section_root_across_a_repeated_original_knot() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let patch = repeated_seam_patch();
+    let options = SurfacePlaneGraphStripOptions {
+        solve_axis: UvAxis::U,
+        solved_span: 1,
+        transverse_spans: [2, 4],
+        max_normalized_width: 1e-19,
+        max_work: WORK,
+    };
+    let report = stitch_surface_plane_graph_strip(&patch, [0., 0., 1.], 0., options).unwrap();
+    let strip = report.outcome.unwrap();
+    assert_eq!(
+        strip.cells.iter().map(|cell| cell.span).collect::<Vec<_>>(),
+        [[1, 2], [1, 4]]
+    );
+    let [junction] = strip.junctions.as_slice() else {
+        panic!("{:?}", strip.junctions);
+    };
+    assert_eq!(junction.transverse, 1.);
+    let exact = Q::new(1.into(), 3.into());
+    assert!(junction.solved[0] <= exact && exact <= junction.solved[1]);
+    assert!(
+        &junction.solved[1] - &junction.solved[0]
+            <= q(7) * Q::from_float(options.max_normalized_width).unwrap()
+    );
+    let flipped = stitch_surface_plane_graph_strip(&patch, [0., 0., -1.], 0., options)
+        .unwrap()
+        .outcome
+        .unwrap();
+    assert_eq!(flipped.junctions, strip.junctions);
+    let limited = stitch_surface_plane_graph_strip(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneGraphStripOptions {
+            max_work: report.work_used - 1,
+            ..options
+        },
+    )
+    .unwrap();
+    assert_eq!(limited.outcome, Err(Refusal::ResourceLimit));
+}
+
+#[test]
+fn refuses_a_strip_whose_continuation_lacks_a_graph() {
+    use nurbs_core::editing::exact_projective::UvAxis;
+    let mut patch = repeated_seam_patch();
+    patch.control_points[0][4][2] = 1.;
+    let options = SurfacePlaneGraphStripOptions {
+        solve_axis: UvAxis::U,
+        solved_span: 1,
+        transverse_spans: [2, 4],
+        max_normalized_width: 1e-12,
+        max_work: WORK,
+    };
+    let report = stitch_surface_plane_graph_strip(&patch, [0., 0., 1.], 0., options).unwrap();
+    assert_eq!(report.outcome, Err(Refusal::UnprovedIdentity));
 }
