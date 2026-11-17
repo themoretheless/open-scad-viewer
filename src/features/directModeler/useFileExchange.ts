@@ -17,6 +17,11 @@ import { formatMeshImportNotice } from '../../exchange/meshImportReport'
 import { stringifyMeshJson } from '../../exchange/meshJson'
 import type { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
 import { download, type Pane } from './helpers'
+import {
+  documentUnit,
+  stlExportPositionsFromMillimetres,
+  stlImportPositionsToMillimetres,
+} from '../../app/documentUnits'
 import { useSvgExchange } from './useSvgExchange'
 
 export interface UseFileExchangeOptions {
@@ -66,6 +71,8 @@ export interface UseFileExchangeOptions {
   fit: (pane: Pane, selectedOnly?: boolean) => void
   pickObject: (id: string, pane: Pane, additive?: boolean) => void
 }
+
+const isStlFormat = (format: MeshExportFormat) => format === 'stl' || format === 'stl_binary'
 
 export function useFileExchange(options: UseFileExchangeOptions) {
   const {
@@ -265,7 +272,18 @@ export function useFileExchange(options: UseFileExchangeOptions) {
     workspace.value?.focus()
     try {
       const artifact = await historyWorker.run(
-        { kind: 'meshExport', mesh: body.mesh, target: format, options: {} },
+        {
+          kind: 'meshExport',
+          // STL has no unit field: write its coordinates in the document unit.
+          mesh: isStlFormat(format)
+            ? {
+                positions: stlExportPositionsFromMillimetres(body.mesh.positions, documentUnit(before)),
+                indices: body.mesh.indices,
+              }
+            : body.mesh,
+          target: format,
+          options: {},
+        },
         {
           onProgress: progress => {
             if (current()) meshImportProgress.value = progress
@@ -322,13 +340,18 @@ export function useFileExchange(options: UseFileExchangeOptions) {
       // Publishing the document must not make its watcher cancel this completed import.
       historyPending.value = false
       const id = crypto.randomUUID()
+      // STL coordinates are unitless and read in the document unit; the kernel stores millimetres.
+      const positions =
+        imported.format === 'stl'
+          ? stlImportPositionsToMillimetres(imported.positions, documentUnit(before))
+          : imported.positions
       await commitInWorker(
         () => {
           const d = history.document
           d.bodies.push({
             id,
             name: stripMeshExtension(file.name) || imported.format.toUpperCase(),
-            mesh: { positions: imported.positions, indices: imported.indices },
+            mesh: { positions, indices: imported.indices },
           })
           return d
         },

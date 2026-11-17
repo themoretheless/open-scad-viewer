@@ -1,9 +1,13 @@
 import { bodyPoints, type DirectBody } from '../app/directModeling'
 import { inspectPolygonMesh } from './geometry/polygon'
 import { cross3, unit3, dot3 } from '../app/directSketchGeometry'
+import { MM_PER_UNIT, stepLengthUnit, stepLengthUnitEntities, type DocumentLengthUnit } from '../app/documentUnits'
 const UTF8_ENCODER = new TextEncoder()
-/** ISO 10303-21/AP214 faceted BREP in millimetres. No analytic surface reconstruction. */
-export function exportFacetedStep(bodies: DirectBody[]): string {
+/**
+ * ISO 10303-21/AP214 faceted BREP. Kernel millimetres are written in `unit` (document units),
+ * with the matching STEP length-unit declaration. No analytic surface reconstruction.
+ */
+export function exportFacetedStep(bodies: DirectBody[], unit: DocumentLengthUnit = 'mm'): string {
   if (!bodies.length) throw Error('Select bodies to export.')
   const entities: string[] = [],
     add = (s: string) => {
@@ -15,7 +19,8 @@ export function exportFacetedStep(bodies: DirectBody[]): string {
       const s = String(v)
       return s.includes('.') || /e/i.test(s) ? s.replace('e', 'E') : s + '.'
     },
-    tuple = (p: number[]) => `(${num(p[0]!)},${num(p[1]!)},${num(p[2]!)})`
+    tuple = (p: number[]) => `(${num(p[0]!)},${num(p[1]!)},${num(p[2]!)})`,
+    lengthTuple = (p: number[]) => tuple(unit === 'mm' ? p : p.map(v => v / MM_PER_UNIT[unit]))
   const app = add("APPLICATION_CONTEXT('automotive_design')")
   add(`APPLICATION_PROTOCOL_DEFINITION('international standard','automotive_design',2000,${app})`)
   const pc = add(`PRODUCT_CONTEXT('',${app},'mechanical')`),
@@ -24,7 +29,7 @@ export function exportFacetedStep(bodies: DirectBody[]): string {
     dc = add(`PRODUCT_DEFINITION_CONTEXT('part definition',${app},'design')`),
     definition = add(`PRODUCT_DEFINITION('design','',${formation},${dc})`),
     shape = add(`PRODUCT_DEFINITION_SHAPE('','',${definition})`)
-  const length = add('(LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.))'),
+  const length = stepLengthUnitEntities(unit, add),
     angle = add('(NAMED_UNIT(*) PLANE_ANGLE_UNIT() SI_UNIT($,.RADIAN.))'),
     solidAngle = add('(NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT())'),
     uncertainty = add(`UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-6),${length},'distance_accuracy_value','')`),
@@ -35,7 +40,7 @@ export function exportFacetedStep(bodies: DirectBody[]): string {
     const r = inspectPolygonMesh(b.mesh)
     if (!r.closed || r.signedVolumeMm3 <= 0) throw Error('STEP export requires closed outward-oriented solids.')
     const p = bodyPoints(b),
-      points = p.map(pt => add(`CARTESIAN_POINT('',${tuple(pt)})`)),
+      points = p.map(pt => add(`CARTESIAN_POINT('',${lengthTuple(pt)})`)),
       faces: string[] = []
     for (let i = 0; i < b.mesh.indices.length; i += 3) {
       const i0 = b.mesh.indices[i]!,
@@ -67,14 +72,12 @@ export function importFacetedStep(text: string): DirectBody[] {
   if (text.length > 20_000_000) throw Error('STEP file exceeds 20 MB.')
   if (!text.startsWith('ISO-10303-21;') || !text.includes('END-ISO-10303-21;'))
     throw Error('Invalid STEP exchange file.')
-  if (/\b(ADVANCED_FACE|MANIFOLD_SOLID_BREP|BREP_WITH_VOIDS|MAPPED_ITEM|CONVERSION_BASED_UNIT)\s*\(/i.test(text))
+  if (/\b(ADVANCED_FACE|MANIFOLD_SOLID_BREP|BREP_WITH_VOIDS|MAPPED_ITEM)\s*\(/i.test(text))
     throw Error(
-      'This importer supports planar FACETED_BREP in SI units only; analytic faces, void shells, mapped instances and converted units are not supported.',
+      'This importer supports planar FACETED_BREP only; analytic faces, void shells and mapped instances are not supported.',
     )
-  const units = [...text.matchAll(/SI_UNIT\(\s*(\$|\.\w+\.)\s*,\s*\.METRE\.\s*\)/gi)].map(m => m[1]!.toUpperCase())
-  if (!units.length || new Set(units).size !== 1 || !['.MILLI.', '$'].includes(units[0]!))
-    throw Error('STEP must use uniform metres or millimetres.')
-  const scale = units[0] === '$' ? 1000 : 1
+  // STEP is self-describing: its declared unit (mm, cm, m or inch) converts to kernel millimetres.
+  const scale = MM_PER_UNIT[stepLengthUnit(text)]
   const entities = new Map<string, { type: string; args: string }>()
   for (const m of text.matchAll(/#(\d+)\s*=\s*([A-Z_0-9]+)\s*\(((?:[^']|'(?:[^']|'')*')*?)\)\s*;/gi)) {
     if (entities.has(m[1]!)) throw Error('Duplicate STEP entity.')

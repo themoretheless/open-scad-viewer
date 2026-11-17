@@ -14222,3 +14222,88 @@ it('C7 tangent arc: stores the start point on the polyline end and keeps it when
   expect(a.center[0] + a.radius * Math.cos(t)).toBeCloseTo(10, 9)
   expect(a.center[1] + a.radius * Math.sin(t)).toBeCloseTo(0, 9)
 })
+
+it('N5 units picker stores the document unit, round-trips it and refuses unknown units', async () => {
+  const ui = await mount()
+  const picker = () => ui.all().find(n => n.tag === 'select' && n.props['aria-label'] === 'Document units')!
+  expect(picker().props.value).toBe('mm')
+  expect(
+    ui
+      .all(picker())
+      .filter(n => n.tag === 'option')
+      .map(n => n.props.value),
+  ).toEqual(['mm', 'cm', 'm', 'in'])
+  picker().props.onChange({ target: { value: 'in' } })
+  await flushClearance()
+  expect(ui.doc().units).toBe('in')
+  expect(JSON.parse(ui.serialized()).units).toBe('in')
+  expect(picker().props.value).toBe('in')
+  picker().props.onChange({ target: { value: 'ft' } })
+  await flushClearance()
+  expect(ui.doc().units).toBe('in')
+  expect(ui.all().some(n => n.props.role === 'alert' && ui.text(n).includes('Unknown length unit: ft'))).toBe(true)
+  picker().props.onChange({ target: { value: 'mm' } })
+  await flushClearance()
+  expect('units' in ui.doc()).toBe(false)
+})
+
+it('N5 STL import and export use the document unit', async () => {
+  const { importMeshFile } = await import('../src/exchange/meshImport')
+  previewWorkerRun.mockImplementation((job, options) =>
+    job.kind === 'meshImport'
+      ? importMeshFile(job.fileName, job.input, job.options, options.onProgress)
+      : job.kind === 'meshExport'
+        ? Promise.resolve({ data: new Uint8Array(1), mimeType: 'model/stl', extension: 'stl' })
+        : undefined,
+  )
+  const ui = await mount({ initialDocument: { ...meshExportSeed(), units: 'in' } })
+  const facet = (a: number[], b: number[], c: number[]) =>
+    `facet normal 0 0 0\nouter loop\nvertex ${a.join(' ')}\nvertex ${b.join(' ')}\nvertex ${c.join(' ')}\nendloop\nendfacet`
+  const o = [0, 0, 0],
+    x = [1, 0, 0],
+    y = [0, 1, 0],
+    z = [0, 0, 1]
+  const stl = `solid t\n${[facet(o, y, x), facet(o, x, z), facet(o, z, y), facet(x, y, z)].join('\n')}\nendsolid t\n`
+  const bytes = new TextEncoder().encode(stl)
+  const input = ui.all().find(n => n.tag === 'input' && n.props.type === 'file' && n.props.accept?.includes('.stl'))!
+  await input.props.onChange({
+    target: { files: [{ name: 'tet.stl', arrayBuffer: async () => bytes.buffer }], value: 'tet.stl' },
+  })
+  await flushClearance()
+  const tet = ui.doc().bodies.at(-1)!
+  expect(tet.name).toBe('tet')
+  expect(Math.max(...Array.from(tet.mesh.positions))).toBeCloseTo(25.4, 9)
+  await vi.waitFor(() => expect(ui.all().some(n => n.tag === 'button' && n.props['aria-label'] === 'Cube')).toBe(true))
+  await ui.click('Cube')
+  const cube = ui.doc().bodies.find(b => b.name === 'Cube')!
+  await ui.click('Download')
+  const job = previewWorkerRun.mock.calls.map(c => c[0]).find(j => j.kind === 'meshExport')!
+  expect(job.target).toBe('stl_binary')
+  Array.from(job.mesh.positions as Float64Array).forEach((v, i) =>
+    expect(v).toBeCloseTo(cube.mesh.positions[i]! / 25.4, 12),
+  )
+})
+
+it('N5 sketch dimension labels show the document unit', async () => {
+  const ui = await mount({
+    initialDocument: {
+      version: 1,
+      units: 'cm',
+      bodies: [],
+      sketches: [
+        {
+          id: 'line',
+          name: 'Line',
+          closed: false,
+          points: [
+            [0, 0],
+            [25, 0],
+          ],
+          dimensions: [{ kind: 'length', a: 0, b: 1 }],
+        },
+      ],
+    },
+  })
+  const svg = ui.all().find(n => n.tag === 'svg' && n.props['aria-label'] === '2D sketch canvas')!
+  expect(ui.all(svg).some(n => n.tag === 'text' && ui.text(n) === '2.50 cm')).toBe(true)
+})

@@ -1,4 +1,5 @@
 import type { CommitInWorker } from './prepareDocumentCommit'
+import { documentUnit, formatDimensionValue } from '../../app/documentUnits'
 import { primitiveCreationError } from '../../app/primitiveCreationError'
 import { presentKernelError } from '../../i18n/kernelErrors'
 import { primitiveKinds, type Pane } from './helpers'
@@ -303,17 +304,18 @@ export function usePrimitives(options: PrimitivesOptions) {
       })
     })
   }
-  const dimensionLabels = computed(() =>
-    visibleSketches.value.flatMap(s => {
+  const dimensionLabels = computed(() => {
+    const unit = documentUnit(document.value)
+    return visibleSketches.value.flatMap(s => {
       if (!s.dimensions?.length) return []
       return sketchDimensions(s).measurements.map((m, i) => ({
         key: s.id + '-' + i,
         point: m.label,
         lines: m.lines,
-        text: (m.value === null ? '—' : m.value.toFixed(2)) + (s.dimensions![i]!.kind === 'angle' ? '°' : ' mm'),
+        text: formatDimensionValue(m.value, unit, s.dimensions![i]!.kind === 'angle'),
       }))
-    }),
-  )
+    })
+  })
   function addNurbs(kind: 'curve' | 'surface') {
     run(() => {
       const item = kind === 'curve' ? createSolidNurbsCurve() : createSolidNurbsSurface()

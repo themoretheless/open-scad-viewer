@@ -50,7 +50,7 @@ import { activeFrame, coordinateSystemLabel, COORDINATE_SYSTEMS, frameDeltaToWor
 import { cplaneFrame, cplaneFromFrame, pivotFrame, savedPivot, snapPivot, withSavedPivot, type PivotSnap } from '../app/directPivots'
 import { rememberEdgeFeature, recallEdgeFeature, type EdgeFeatureMemory } from '../app/edgeFeatureEditing'
 import { createDirectClipboardPayload, parseDirectClipboardPayload, pasteDirectClipboardPayload } from '../app/directClipboard'
-import { documentUnit, fromMillimetres } from '../app/documentUnits'
+import { DOCUMENT_LENGTH_UNITS, documentUnit, fromMillimetres, parseDocumentLengthUnit } from '../app/documentUnits'
 import { addToIsolation, isolateWithin, pruneIsolation, readIsolation, stepOutIsolation, type IsolationStack } from '../app/isolationStack'
 import ModelingFloorGrid from '../components/ModelingFloorGrid.svt'
 import ModelingGridControls from '../components/ModelingGridControls.svt'
@@ -1316,6 +1316,14 @@ let commitQueue:Promise<unknown>=Promise.resolve()
  * commit settled (so it sees the latest committed state), the worker runs the authoritative
  * parser, and the result commits only if the history did not move meanwhile (Undo, another
  * commit); a stale result is dropped. Errors land in `error`, as `run()` reports them. */
+const UNIT_LABELS={mm:['мм','mm'],cm:['см','cm'],m:['м','m'],in:['дюйм','in']} as const
+/** Document units (N5): metadata only, geometry stays in millimetres; unknown values are refused. */
+function setDocumentUnits(value:unknown){
+ let unit
+ try{unit=parseDocumentLengthUnit(value)}catch(e){error.value=label('Неизвестная единица длины: '+String(value)+'. Допустимо: мм, см, м, дюйм.','Unknown length unit: '+String(value)+'. Allowed: mm, cm, m, in.');return}
+ if(unit===documentUnit(history.document))return
+ void commitInWorker(()=>{const d=history.document;if(unit==='mm')delete d.units;else d.units=unit;return d},()=>{notice.value=label('Единицы документа: '+UNIT_LABELS[unit][0]+'. STL читается и пишется в этих единицах.','Document units: '+UNIT_LABELS[unit][1]+'. STL is read and written in these units.')})
+}
 function commitInWorker(build:()=>DirectDocument|undefined,after?:(next:DirectDocument)=>void,onError?:(message:string)=>void):Promise<boolean>{
  error.value=''
  const task=commitQueue.then(async()=>{
@@ -2644,6 +2652,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <details class="file-menu" @keydown.esc="closeFileMenu" @toggle="sourceWallFileMenuToggle"><summary :title="label('Файл', 'File')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span>{{ label('Файл', 'File') }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div>
         <button type="button" @click="openNewGroupFromMenu">{{ label('Новая группа из кода', 'New group from source') }}</button>
         <button :disabled="restoringDraft" @click="downloadProject">{{ label('Скачать проект JSON', 'Download JSON project') }}</button>
+        <label class="file-units">{{ label('Единицы документа', 'Document units') }}<select data-testid="document-units" :value="documentUnit(document)" :disabled="restoringDraft || historyPending" :aria-label="label('Единицы документа', 'Document units')" @change="setDocumentUnits(($event.target as HTMLSelectElement).value)"><option v-for="unit in DOCUMENT_LENGTH_UNITS" :key="unit" :value="unit">{{ label(UNIT_LABELS[unit][0], UNIT_LABELS[unit][1]) }}</option></select></label>
         <FrozenGraphBodyPanel ref="frozenBodyPanel" :active="props.open&&!commandActive" :ru="ru" v-model:selected-edge="frozenBodyEdge" @display="showFrozenBody" @fit="fit('3d',false,true)" />
         <label class="file-open">{{ label('Открыть Solid / RushGraph NURBS', 'Open Solid / RushGraph NURBS') }}<input type="file" accept=".json,application/json" @change="importFile"></label>
         <button type="button" @click="stlInput?.click()">{{ label('Импорт STL / OBJ / PLY / OFF / AMF / 3MF как тело', 'Import STL / OBJ / PLY / OFF / AMF / 3MF as body') }}</button>

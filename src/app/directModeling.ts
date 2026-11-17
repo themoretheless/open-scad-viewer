@@ -32,7 +32,7 @@ import type { SolidNurbsCurve, SolidNurbsSurface } from '../kernel/solidNurbs'
 import type { NurbsBrep } from '../kernel/geometry/brep'
 import type { DirectStepDisplay, DirectStepSceneProduct, DirectStepSceneTree } from '../kernel/cadNurbsStep'
 import { BrepInspectionCache } from '../kernel/brepInspectionCache'
-import { isDocumentLengthUnit, type DocumentLengthUnit } from './documentUnits'
+import { parseDocumentLengthUnit, type DocumentLengthUnit } from './documentUnits'
 import { validateSlotDefinition, type SlotDefinition } from './sketchPrimitives'
 
 export type Point2 = [number, number]
@@ -201,7 +201,7 @@ function* directDocumentValidation(
     (typeof d.blenderProjectId !== 'string' || !d.blenderProjectId.trim() || d.blenderProjectId.length > 100)
   )
     throw Error('Invalid Blender project identity.')
-  if (d.units !== undefined && !isDocumentLengthUnit(d.units)) throw Error('Invalid document length unit.')
+  if (d.units !== undefined) parseDocumentLengthUnit(d.units)
   if (d.sourceBodies !== undefined && (!Array.isArray(d.sourceBodies) || d.sourceBodies.length > 200))
     throw Error('Invalid source Body collection.')
   const sourceCount = d.sourceBodies?.length ?? 0

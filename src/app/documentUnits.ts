@@ -124,3 +124,98 @@ export function documentUnitScale(source: DocumentLengthUnit, target: DocumentLe
 export function formatLength(valueMm: number, unit: DocumentLengthUnit, decimals = 2): string {
   return `${fromMillimetres(valueMm, unit).toFixed(decimals)} ${unit}`
 }
+
+/** Strict parse for persisted or user-supplied units; unknown names are refused, never defaulted. */
+export function parseDocumentLengthUnit(value: unknown): DocumentLengthUnit {
+  if (isDocumentLengthUnit(value)) return value
+  throw Error(
+    `Unknown document length unit ${JSON.stringify(value)}; expected one of ${DOCUMENT_LENGTH_UNITS.join(', ')}.`,
+  )
+}
+
+/** STL carries no units: its coordinates are read in the document unit and converted to millimetres. */
+export function stlImportPositionsToMillimetres(positions: ArrayLike<number>, unit: DocumentLengthUnit): Float64Array {
+  const factor = MM_PER_UNIT[unit]
+  return Float64Array.from(positions, v => (unit === 'mm' ? v : v * factor))
+}
+
+/** STL export writes coordinates in the document unit. */
+export function stlExportPositionsFromMillimetres(
+  positions: ArrayLike<number>,
+  unit: DocumentLengthUnit,
+): Float64Array {
+  const factor = MM_PER_UNIT[unit]
+  return Float64Array.from(positions, v => (unit === 'mm' ? v : v / factor))
+}
+
+const STEP_SI_PREFIX: Readonly<Record<string, DocumentLengthUnit>> = { $: 'm', '.MILLI.': 'mm', '.CENTI.': 'cm' }
+const STEP_ENTITY = /#(\d+)\s*=\s*((?:[^;']|'(?:[^']|'')*')*);/g
+
+/**
+ * Length unit declared by a STEP exchange file: SI metre with no, MILLI or CENTI prefix, or the
+ * conversion-based INCH defined as 25.4 mm. Any other declaration is refused by name.
+ */
+export function stepLengthUnit(text: string): DocumentLengthUnit {
+  const entities = new Map<string, string>()
+  for (const m of text.matchAll(STEP_ENTITY)) entities.set(m[1]!, m[2]!)
+  const siPrefix = (body: string | undefined) =>
+    /SI_UNIT\(\s*(\$|\.\w+\.)\s*,\s*\.METRE\.\s*\)/i.exec(body ?? '')?.[1]?.toUpperCase()
+  const lengthUnits = [...entities.values()].filter(body => /\bLENGTH_UNIT\s*\(/i.test(body))
+  const declared = new Set<string>()
+  for (const body of lengthUnits) {
+    const conversion = /CONVERSION_BASED_UNIT\s*\(\s*'((?:[^']|'')*)'\s*,\s*#(\d+)\s*\)/i.exec(body)
+    if (conversion) {
+      const name = conversion[1]!.trim().toUpperCase()
+      if (name !== 'INCH') throw Error(`Unknown STEP length unit '${name}'; supported: mm, cm, m, inch.`)
+      const measure = /LENGTH_MEASURE\s*\(\s*([^)]+)\)\s*,\s*#(\d+)/i.exec(entities.get(conversion[2]!) ?? '')
+      const prefix = siPrefix(entities.get(measure?.[2] ?? ''))
+      const baseUnit = prefix ? STEP_SI_PREFIX[prefix] : undefined
+      const mm = measure && baseUnit ? Number(measure[1]!.replace(/D/i, 'E')) * MM_PER_UNIT[baseUnit] : NaN
+      if (!(Math.abs(mm - 25.4) <= 1e-9)) throw Error('STEP INCH unit must be defined as 25.4 mm.')
+      declared.add('in')
+      continue
+    }
+    const prefix = siPrefix(body)
+    if (!prefix) continue
+    const unit = STEP_SI_PREFIX[prefix]
+    if (!unit) throw Error(`Unknown STEP length unit prefix ${prefix}; supported: mm, cm, m, inch.`)
+    declared.add(unit)
+  }
+  // The INCH definition references its SI base unit; the conversion-based unit is the declared one.
+  if (declared.has('in')) {
+    const referenced = new Set<string>()
+    for (const body of lengthUnits) {
+      const conversion = /CONVERSION_BASED_UNIT\s*\(\s*'[^']*'\s*,\s*#(\d+)/i.exec(body)
+      const base = conversion && /,\s*#(\d+)\s*\)\s*$/.exec(entities.get(conversion[1]!) ?? '')
+      if (base) referenced.add(siPrefix(entities.get(base[1]!)) ?? '')
+    }
+    for (const unit of [...declared]) if (unit !== 'in' && referenced.has(unitPrefix(unit))) declared.delete(unit)
+  }
+  if (!declared.size) throw Error('STEP declares no length unit.')
+  if (declared.size !== 1) throw Error('STEP declares more than one length unit.')
+  return [...declared][0] as DocumentLengthUnit
+}
+
+function unitPrefix(unit: string): string {
+  return Object.entries(STEP_SI_PREFIX).find(([, value]) => value === unit)?.[0] ?? ''
+}
+
+/**
+ * STEP length-unit entities for `unit`. `add` appends one entity and returns its `#id`;
+ * the returned id is the length unit to reference from contexts and measures.
+ */
+export function stepLengthUnitEntities(unit: DocumentLengthUnit, add: (entity: string) => string): string {
+  if (unit === 'mm') return add('(LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.))')
+  if (unit === 'cm') return add('(LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.CENTI.,.METRE.))')
+  if (unit === 'm') return add('(LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT($,.METRE.))')
+  const mm = add('(LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.))')
+  const measure = add(`LENGTH_MEASURE_WITH_UNIT(LENGTH_MEASURE(25.4),${mm})`)
+  const exponents = add('DIMENSIONAL_EXPONENTS(1.,0.,0.,0.,0.,0.,0.)')
+  return add(`(CONVERSION_BASED_UNIT('INCH',${measure}) LENGTH_UNIT() NAMED_UNIT(${exponents}))`)
+}
+
+/** Dimension label in document units; angles are unaffected by length units. */
+export function formatDimensionValue(valueMm: number | null, unit: DocumentLengthUnit, angle = false): string {
+  if (valueMm === null) return '—'
+  return angle ? `${valueMm.toFixed(2)}°` : formatLength(valueMm, unit)
+}
