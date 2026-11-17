@@ -2478,3 +2478,52 @@ pub fn triangulate_exact_planar_spatial_polyline(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPlanarPolylineSecondMoments {
+    pub centroid_mm: [Q; 3],
+    pub area_squared_mm4: Q,
+    /// Area-average products of coordinate offsets from the centroid.
+    /// Multiplying by area gives the central second moment integrals.
+    pub normalized_central_moments_mm2: [[Q; 3]; 3],
+    pub exact_work: u64,
+}
+
+/// Integrate central second moments of a simple planar profile at uniform
+/// area density. Normalization by area preserves exact rational values.
+pub fn exact_planar_spatial_polyline_second_moments(
+    contour_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPlanarPolylineSecondMoments> {
+    let properties = exact_planar_spatial_polyline_centroid(contour_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - properties.exact_work;
+    spend(&mut remaining, 24)?;
+    let centroid = properties.centroid_mm;
+    let [u, v] = plane_axes(&properties.area.area_vector_mm2);
+    let denominator = &properties.area.area_vector_mm2[3 - u - v] * Q::from_integer(24.into());
+    let mut moments: [[Q; 3]; 3] = std::array::from_fn(|_| std::array::from_fn(|_| Q::zero()));
+    for pair in contour_mm.windows(2) {
+        spend(&mut remaining, 96)?;
+        let a: [Q; 3] = std::array::from_fn(|i| &pair[0][i] - &centroid[i]);
+        let b: [Q; 3] = std::array::from_fn(|i| &pair[1][i] - &centroid[i]);
+        let twice_area = &a[u] * &b[v] - &a[v] * &b[u];
+        for i in 0..3 {
+            for j in i..3 {
+                let diagonal_terms = &a[i] * &a[j] + &b[i] * &b[j];
+                let mixed_terms = &a[i] * &b[j] + &b[i] * &a[j];
+                moments[i][j] +=
+                    (&diagonal_terms + diagonal_terms.clone() + mixed_terms) * &twice_area;
+            }
+        }
+    }
+    spend(&mut remaining, 16)?;
+    let normalized_central_moments_mm2 = std::array::from_fn(|i| {
+        std::array::from_fn(|j| &moments[i.min(j)][i.max(j)] / &denominator)
+    });
+    Ok(ExactPlanarPolylineSecondMoments {
+        centroid_mm: centroid,
+        area_squared_mm4: properties.area.area_squared_mm4,
+        normalized_central_moments_mm2,
+        exact_work: max_exact_work - remaining,
+    })
+}

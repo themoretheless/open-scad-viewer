@@ -4943,3 +4943,50 @@ fn exact_planar_polyline_triangulation_keeps_reversed_winding_and_ignores_duplic
     }
     assert_eq!(area, q(-12));
 }
+
+#[test]
+fn exact_planar_polyline_second_moments_integrate_a_tilted_rectangle() {
+    use brep_core::analysis::exact_planar_spatial_polyline_second_moments;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x: i64, y: i64| [q(x + 5, 1), q(y - 2, 1), q(x + 2 * y, 1)];
+    let contour = [p(0, 0), p(2, 0), p(2, 6), p(0, 6), p(0, 0)];
+    let report = exact_planar_spatial_polyline_second_moments(&contour, 1_000_000).unwrap();
+    assert_eq!(report.centroid_mm, p(1, 3));
+    assert_eq!(report.area_squared_mm4, q(864, 1));
+    assert_eq!(
+        report.normalized_central_moments_mm2,
+        [
+            [q(1, 3), q(0, 1), q(1, 3)],
+            [q(0, 1), q(3, 1), q(6, 1)],
+            [q(1, 3), q(6, 1), q(37, 3)],
+        ]
+    );
+    assert_eq!(
+        exact_planar_spatial_polyline_second_moments(&contour, report.exact_work).unwrap(),
+        report
+    );
+    assert!(exact_planar_spatial_polyline_second_moments(&contour, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_planar_polyline_second_moments_preserve_negative_mixed_terms_and_winding() {
+    use brep_core::analysis::exact_planar_spatial_polyline_second_moments;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y| [q(x, 1), q(y, 1), q(0, 1)];
+    let contour = [p(0, 0), p(1, 0), p(0, 1), p(0, 0)];
+    let reversed = contour.clone().into_iter().rev().collect::<Vec<_>>();
+    for path in [&contour[..], &reversed] {
+        let report = exact_planar_spatial_polyline_second_moments(path, 1_000_000).unwrap();
+        assert_eq!(report.centroid_mm, [q(1, 3), q(1, 3), q(0, 1)]);
+        assert_eq!(
+            report.normalized_central_moments_mm2,
+            [
+                [q(1, 18), q(-1, 36), q(0, 1)],
+                [q(-1, 36), q(1, 18), q(0, 1)],
+                [q(0, 1), q(0, 1), q(0, 1)],
+            ]
+        );
+    }
+}
