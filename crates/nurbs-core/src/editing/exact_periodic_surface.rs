@@ -1039,3 +1039,81 @@ fn elevate_strip_axes(
     }
     Ok(prepared)
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PeriodicKnotRemovalRefusal {
+    Open(GaugeMergeRefusal),
+    Remove(super::exact_surface_knot_removal::Refusal),
+    Close(PeriodicAssemblyRefusal),
+    NoControlReduction,
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicKnotRemovalReport {
+    pub surface: Option<Surface>,
+    pub work_used: u64,
+    pub refusal: Option<PeriodicKnotRemovalRefusal>,
+}
+
+/// Remove a redundant interior knot from a periodic tensor axis. Open the
+/// original seam, prove exact tensor removal, then restore cyclic storage
+/// on the same parameter domain. Success reduces the stored control count.
+pub fn remove_exact_periodic_surface_knot(
+    source: &Surface,
+    axis: Axis,
+    knot: f64,
+    max_work: u64,
+) -> Result<PeriodicKnotRemovalReport> {
+    use super::exact_surface_knot_removal as removal;
+    use PeriodicKnotRemovalRefusal as Failure;
+
+    let opened = open_exact_periodic_surface_axis(source, axis, max_work)?;
+    let refuse = |work_used, refusal| PeriodicKnotRemovalReport {
+        surface: None,
+        work_used,
+        refusal: Some(refusal),
+    };
+    let Some(surface) = opened.surface else {
+        return Ok(refuse(
+            opened.work_used,
+            Failure::Open(
+                opened
+                    .refusal
+                    .unwrap_or(GaugeMergeRefusal::Exact(ExactRefusal::InvalidOutput)),
+            ),
+        ));
+    };
+    if opened.work_used == max_work {
+        return Ok(refuse(
+            opened.work_used,
+            Failure::Remove(removal::Refusal::ResourceLimit),
+        ));
+    }
+    let removed = removal::remove(&surface, axis, knot, max_work - opened.work_used)?;
+    let mut work = Work {
+        used: opened.work_used + removed.work_used,
+        limit: max_work,
+    };
+    if !removed.removed {
+        return Ok(refuse(
+            work.used,
+            Failure::Remove(removed.refusal.unwrap_or(removal::Refusal::InvalidOutput)),
+        ));
+    }
+    let closed = match close_surface_cycle(removed.surface, axis, &mut work) {
+        Ok(surface) => surface,
+        Err(reason) => return Ok(refuse(work.used, Failure::Close(reason))),
+    };
+    let control_count = |s: &Surface| match axis {
+        Axis::U => s.control_points.len(),
+        Axis::V => s.control_points[0].len(),
+    };
+    if control_count(&closed) >= control_count(source) {
+        return Ok(refuse(work.used, Failure::NoControlReduction));
+    }
+    Ok(PeriodicKnotRemovalReport {
+        surface: Some(closed),
+        work_used: work.used,
+        refusal: None,
+    })
+}

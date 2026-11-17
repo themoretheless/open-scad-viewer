@@ -2534,3 +2534,50 @@ fn periodic_strip_assembly_refuses_unstorable_elevation_along_the_assembly_axis(
         Some(PeriodicAssemblyRefusal::Exact(Refusal::NotRepresentable))
     );
 }
+
+#[test]
+fn periodic_surface_knot_removal_reduces_a_redundant_split() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::{
+            assemble_exact_periodic_surface_axis, partition_exact_periodic_surface_axis,
+            remove_exact_periodic_surface_knot,
+        },
+        surface::Axis,
+    };
+    let source = doubly_periodic_tensor();
+    let strips = partition_exact_periodic_surface_axis(&source, Axis::U, 0., &[0.5, 2.], 1_000_000)
+        .unwrap()
+        .strips
+        .unwrap();
+    let refined = assemble_exact_periodic_surface_axis(&strips, Axis::U, 1_000_000)
+        .unwrap()
+        .surface
+        .unwrap();
+    let report = remove_exact_periodic_surface_knot(&refined, Axis::U, 0.5, 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let reduced = report.surface.unwrap();
+    assert_eq!(reduced, source);
+    assert!(
+        remove_exact_periodic_surface_knot(&refined, Axis::U, 0.5, report.work_used - 1)
+            .unwrap()
+            .surface
+            .is_none()
+    );
+}
+
+#[test]
+fn periodic_surface_knot_removal_preserves_actual_creases() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::{
+            PeriodicKnotRemovalRefusal, remove_exact_periodic_surface_knot,
+        },
+        surface::Axis,
+    };
+    let source = doubly_periodic_tensor();
+    let report = remove_exact_periodic_surface_knot(&source, Axis::V, 1., 1_000_000).unwrap();
+    assert!(report.surface.is_none());
+    assert!(matches!(
+        report.refusal,
+        Some(PeriodicKnotRemovalRefusal::Remove(_))
+    ));
+}
