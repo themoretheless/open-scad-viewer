@@ -1367,7 +1367,7 @@ pub fn open_exact_periodic_curve(source: &Curve, max_work: u64) -> Result<GaugeM
         used: 0,
         limit: max_work,
     };
-    let result = clamp_periodic_curve(source, &mut work);
+    let result = clamp_curve_interval(source, source.domain(), &mut work);
     Ok(match result {
         Ok(curve) => GaugeMergeReport {
             curve: Some(curve),
@@ -1382,8 +1382,9 @@ pub fn open_exact_periodic_curve(source: &Curve, max_work: u64) -> Result<GaugeM
     })
 }
 
-fn clamp_periodic_curve(
+fn clamp_curve_interval(
     source: &Curve,
+    [lo, hi]: [f64; 2],
     work: &mut super::rational_edit::Work,
 ) -> std::result::Result<Curve, super::rational_factor::Refusal> {
     use super::{
@@ -1392,7 +1393,6 @@ fn clamp_periodic_curve(
         rational_factor::Refusal,
     };
     let degree = source.degree;
-    let [lo, hi] = source.domain();
     let (mut net, mut knots) = homogeneous(source, lo, 0, work)?;
     for end in [lo, hi] {
         let multiplicity = knots.iter().filter(|&&knot| knot == end).count();
@@ -1429,4 +1429,49 @@ fn clamp_periodic_curve(
     };
     curve.validate().map_err(|_| Refusal::InvalidOutput)?;
     Ok(curve)
+}
+
+/// Extract a clamped subcurve from one lifted period. The start lies in the
+/// original half-open domain and the end is expressed on that same unwrapped
+/// clock, possibly beyond the original seam. A full turn is allowed.
+pub fn restrict_exact_periodic_curve(
+    source: &Curve,
+    interval: [f64; 2],
+    max_work: u64,
+) -> Result<GaugeMergeReport> {
+    use super::rational_edit::Work;
+
+    let [lo, hi] = interval;
+    crate::check(
+        hi.is_finite() && lo < hi,
+        "Periodic restriction needs an increasing finite interval",
+    )?;
+    let rotated = insert_and_rotate_periodic_curve_seam(source, lo, max_work)?;
+    let mut work = Work {
+        used: rotated.work_used,
+        limit: max_work,
+    };
+    let Some(curve) = rotated.curve else {
+        return Ok(rotated);
+    };
+    if hi > curve.domain()[1] {
+        return Ok(GaugeMergeReport {
+            curve: None,
+            work_used: work.used,
+            refusal: Some(GaugeMergeRefusal::Join(Refusal::NonAdjacentDomain)),
+        });
+    }
+    let out = clamp_curve_interval(&curve, interval, &mut work);
+    Ok(match out {
+        Ok(curve) => GaugeMergeReport {
+            curve: Some(curve),
+            work_used: work.used,
+            refusal: None,
+        },
+        Err(reason) => GaugeMergeReport {
+            curve: None,
+            work_used: work.used,
+            refusal: Some(GaugeMergeRefusal::Exact(reason)),
+        },
+    })
 }

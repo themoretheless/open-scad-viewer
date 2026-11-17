@@ -1391,3 +1391,69 @@ fn opening_periodic_curve_refuses_a_nonrepresentable_endpoint_pole() {
         Some(GaugeMergeRefusal::Exact(ExactRefusal::NotRepresentable))
     );
 }
+
+fn periodic_unit_square() -> Curve {
+    Curve {
+        degree: 1,
+        knots: vec![-1., 0., 1., 2., 3., 4., 5.],
+        control_points: vec![
+            vec![0., 0.],
+            vec![1., 0.],
+            vec![1., 1.],
+            vec![0., 1.],
+            vec![0., 0.],
+        ],
+        weights: vec![1.; 5],
+        periodic: true,
+    }
+}
+
+#[test]
+fn periodic_restriction_preserves_the_unwrapped_clock_across_the_seam() {
+    use nurbs_core::editing::exact_curve_merge::restrict_exact_periodic_curve;
+    let source = periodic_unit_square();
+    let restriction = restrict_exact_periodic_curve(&source, [3.5, 4.5], 1_000_000).unwrap();
+    assert_eq!(restriction.refusal, None);
+    let curve = restriction.curve.unwrap();
+    assert!(!curve.periodic);
+    assert_eq!(curve.knots, vec![3.5, 3.5, 4., 4.5, 4.5]);
+    for t in [3.5, 3.75, 4., 4.25, 4.5] {
+        let original = if t >= 4. { t - 4. } else { t };
+        assert_eq!(
+            curve.evaluate(t).unwrap().point,
+            source.evaluate(original).unwrap().point
+        );
+    }
+    assert!(
+        restrict_exact_periodic_curve(&source, [3.5, 4.5], restriction.work_used)
+            .unwrap()
+            .curve
+            .is_some()
+    );
+    assert!(
+        restrict_exact_periodic_curve(&source, [3.5, 4.5], restriction.work_used - 1)
+            .unwrap()
+            .curve
+            .is_none()
+    );
+}
+
+#[test]
+fn periodic_restriction_accepts_one_turn_and_refuses_more() {
+    use nurbs_core::editing::exact_curve_merge::{
+        GaugeMergeRefusal, restrict_exact_periodic_curve,
+    };
+    let source = periodic_unit_square();
+    let full = restrict_exact_periodic_curve(&source, [2., 6.], 1_000_000)
+        .unwrap()
+        .curve
+        .unwrap();
+    assert_eq!(full.domain(), [2., 6.]);
+    assert_eq!(full.control_points.first(), full.control_points.last());
+    let too_long = restrict_exact_periodic_curve(&source, [2., 6.5], 1_000_000).unwrap();
+    assert!(too_long.curve.is_none());
+    assert_eq!(
+        too_long.refusal,
+        Some(GaugeMergeRefusal::Join(Refusal::NonAdjacentDomain))
+    );
+}

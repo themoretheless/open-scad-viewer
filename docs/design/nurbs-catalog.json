@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 509,
-  "unallocatedCount": 491,
+  "specifiedCount": 510,
+  "unallocatedCount": 490,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13168,6 +13168,26 @@
       "remainingQualification": [
         "Clamp both endpoint spans in exact homogeneous arithmetic and keep the entire active parameter interval.",
         "Refine both endpoint knots to degree multiplicity in exact homogeneous arithmetic, then extract their active control range into one clamped curve.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0510",
+      "name": "Точное извлечение участка периодической NURBS-кривой через шов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::restrict_exact_periodic_curve",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-510-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-510-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Extract a clamped subcurve across the periodic seam with its unwrapped parameter coordinates preserved.",
+        "Rotate to the requested start, lift at most one full turn, and exactly clamp only the requested interval.",
         "WASM and application integration are separate."
       ]
     }

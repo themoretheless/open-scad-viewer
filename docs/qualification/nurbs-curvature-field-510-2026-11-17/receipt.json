@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0510",
+  "testedBase": "463279264701ef3cf534272f5c625d04078096e9",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 74,
+  "scope": [
+    "Extract a clamped subcurve across the periodic seam with its unwrapped parameter coordinates preserved.",
+    "Rotate to the requested start, lift at most one full turn, and exactly clamp only the requested interval."
+  ],
+  "logSha256": "04f4e94a3e6dea7c3ebe30fe74c98ee6cd9187c2b28db5d3f347ce531d0b06ec",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "19d6a067ac2ecb0f5dfa0c96a66f394e4b41b2cebfd88b0c11f96aebf4acd865",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "4a99f5e96e9c82bff54c107361ee7e1b883b24e83bea899459e902be4a0c503f"
+  }
+}
