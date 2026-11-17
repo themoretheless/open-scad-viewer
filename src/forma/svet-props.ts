@@ -134,8 +134,8 @@ export function invokeDirectiveHook(
   const bindings = vnode.dirs
   if (!bindings) return
   for (let i = 0; i < bindings.length; i++) {
-    const binding = bindings[i]
-    if (prevVNode?.dirs?.[i]) binding.oldValue = prevVNode.dirs[i].value
+    const binding = bindings[i]!
+    if (prevVNode?.dirs?.[i]) binding.oldValue = prevVNode.dirs[i]!.value
     const hook = binding.dir[name]
     if (hook) untrack(() => hook(vnode.el, binding, vnode, prevVNode!))
   }
@@ -324,7 +324,7 @@ export function patchElementProps<HostElement = any>(
 
   if (dynamicProps && (patchFlag & 16) === 0) {
     for (let i = 0; i < dynamicProps.length; i++) {
-      const key = dynamicProps[i]
+      const key = dynamicProps[i]!
       const prev = oldProps[key]
       const next = newProps[key]
       if (next !== prev || key === 'value' || key === 'checked' || key === 'selected') {
@@ -380,13 +380,13 @@ export function patchKeyedVNodeChildren<HostNode = any, HostElement = HostNode>(
   let e2 = l2 - 1
 
   while (i <= e1 && i <= e2) {
-    if (isSameVNodeType(c1[i], c2[i])) patch(c1[i], c2[i], container, parentAnchor, namespace)
+    if (isSameVNodeType(c1[i]!, c2[i]!)) patch(c1[i]!, c2[i]!, container, parentAnchor, namespace)
     else break
     i++
   }
 
   while (i <= e1 && i <= e2) {
-    if (isSameVNodeType(c1[e1], c2[e2])) patch(c1[e1], c2[e2], container, parentAnchor, namespace)
+    if (isSameVNodeType(c1[e1]!, c2[e2]!)) patch(c1[e1]!, c2[e2]!, container, parentAnchor, namespace)
     else break
     e1--
     e2--
@@ -395,16 +395,16 @@ export function patchKeyedVNodeChildren<HostNode = any, HostElement = HostNode>(
   if (i > e1) {
     if (i <= e2) {
       const nextPos = e2 + 1
-      const anchor = nextPos < l2 ? getFirstHostNode(c2[nextPos]) : parentAnchor
-      while (i <= e2) patch(null, c2[i++], container, anchor, namespace)
+      const anchor = nextPos < l2 ? getFirstHostNode(c2[nextPos]!) : parentAnchor
+      while (i <= e2) patch(null, c2[i++]!, container, anchor, namespace)
     }
   } else if (i > e2) {
-    while (i <= e1) unmount(c1[i++])
+    while (i <= e1) unmount(c1[i++]!)
   } else {
     const s1 = i, s2 = i
     const keyToNewIndexMap = new Map<any, number>()
     for (i = s2; i <= e2; i++) {
-      if (c2[i].key != null) keyToNewIndexMap.set(c2[i].key, i)
+      if (c2[i]!.key != null) keyToNewIndexMap.set(c2[i]!.key, i)
     }
 
     let patched = 0, moved = false, maxNewIndexSoFar = 0
@@ -412,14 +412,14 @@ export function patchKeyedVNodeChildren<HostNode = any, HostElement = HostNode>(
     const newIndexToOldIndexMap = new Int32Array(toBePatched)
 
     for (i = s1; i <= e1; i++) {
-      const prevChild = c1[i]
+      const prevChild = c1[i]!
       if (patched >= toBePatched) { unmount(prevChild); continue }
       let newIndex: number | undefined
       if (prevChild.key != null) {
         newIndex = keyToNewIndexMap.get(prevChild.key)
       } else {
         for (let j = s2; j <= e2; j++) {
-          if (newIndexToOldIndexMap[j - s2] === 0 && isSameVNodeType(prevChild, c2[j])) {
+          if (newIndexToOldIndexMap[j - s2] === 0 && isSameVNodeType(prevChild, c2[j]!)) {
             newIndex = j
             break
           }
@@ -431,7 +431,7 @@ export function patchKeyedVNodeChildren<HostNode = any, HostElement = HostNode>(
         newIndexToOldIndexMap[newIndex - s2] = i + 1
         if (newIndex >= maxNewIndexSoFar) maxNewIndexSoFar = newIndex
         else moved = true
-        patch(prevChild, c2[newIndex], container, null, namespace)
+        patch(prevChild, c2[newIndex]!, container, null, namespace)
         patched++
       }
     }
@@ -441,8 +441,8 @@ export function patchKeyedVNodeChildren<HostNode = any, HostElement = HostNode>(
 
     for (i = toBePatched - 1; i >= 0; i--) {
       const nextIndex = s2 + i
-      const nextChild = c2[nextIndex]
-      const anchor = nextIndex + 1 < l2 ? getFirstHostNode(c2[nextIndex + 1]) : parentAnchor
+      const nextChild = c2[nextIndex]!
+      const anchor = nextIndex + 1 < l2 ? getFirstHostNode(c2[nextIndex + 1]!) : parentAnchor
       if (newIndexToOldIndexMap[i] === 0) {
         patch(null, nextChild, container, anchor, namespace)
       } else if (moved) {
@@ -459,10 +459,10 @@ function getSequence(arr: Int32Array): number[] {
   let i: number, j: number, u: number, v: number, c: number
   const len = arr.length
   for (i = 0; i < len; i++) {
-    const arrI = arr[i]
+    const arrI = arr[i]!
     if (arrI !== 0) {
-      j = result[result.length - 1]
-      if (arr[j] < arrI) {
+      j = result[result.length - 1]!
+      if (arr[j]! < arrI) {
         p[i] = j
         result.push(i)
         continue
@@ -471,20 +471,20 @@ function getSequence(arr: Int32Array): number[] {
       v = result.length - 1
       while (u < v) {
         c = (u + v) >> 1
-        if (arr[result[c]] < arrI) u = c + 1
+        if (arr[result[c]!]! < arrI) u = c + 1
         else v = c
       }
-      if (arrI < arr[result[u]]) {
-        if (u > 0) p[i] = result[u - 1]
+      if (arrI < arr[result[u]!]!) {
+        if (u > 0) p[i] = result[u - 1]!
         result[u] = i
       }
     }
   }
   u = result.length
-  v = result[u - 1]
+  v = result[u - 1]!
   while (u-- > 0) {
     result[u] = v
-    v = p[v]
+    v = p[v]!
   }
   return result
 }

@@ -28,7 +28,7 @@ function getByPathParts(obj: unknown, parts: readonly string[]): unknown {
   let cur: unknown = obj
   for (let i = 0; i < parts.length; i++) {
     if (cur == null || typeof cur !== 'object') return undefined
-    cur = (cur as Record<string, unknown>)[parts[i]]
+    cur = (cur as Record<string, unknown>)[parts[i]!]
   }
   return cur
 }
@@ -54,7 +54,7 @@ export function evalCompiledAst(ast: CompiledExprAst, ctx: FormaRenderContext): 
     case 'i18n':
       return ctx.i18n[ast.key] ?? ast.key
     case 'state': {
-      const head = ast.path[0]
+      const head = ast.path[0]!
       const rootVal = readStateField(ctx, head)
       return ast.path.length === 1 ? rootVal : getByPathParts(rootVal, ast.path.slice(1))
     }
@@ -159,12 +159,12 @@ function getCompiledActionArgs(act: { args: string[] }): CompiledExprAst[] {
 
 function evalProp(el: FormaElementNode, name: string, ctx: FormaRenderContext): unknown {
   if (name in el.bindings) {
-    const path = splitPathCached(el.bindings[name])
-    const rootVal = readStateField(ctx, path[0])
+    const path = splitPathCached(el.bindings[name]!)
+    const rootVal = readStateField(ctx, path[0]!)
     return path.length === 1 ? rootVal : getByPathParts(rootVal, path.slice(1))
   }
   if (!(name in el.props)) return undefined
-  return evalCompiledAst(compileFormaExpression(el.props[name]), ctx)
+  return evalCompiledAst(compileFormaExpression(el.props[name]!), ctx)
 }
 
 function buildAriaAndDomAttrs(

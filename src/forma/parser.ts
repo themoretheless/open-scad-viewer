@@ -60,7 +60,7 @@ function tokenize(source: string): Token[] {
   const tokens: Token[] = []
   let i = 0
   while (i < cleaned.length) {
-    const ch = cleaned[i]
+    const ch = cleaned[i]!
     if (/\s/.test(ch)) {
       i++
       continue
@@ -88,9 +88,9 @@ function tokenize(source: string): Token[] {
       while (i < cleaned.length && cleaned[i] !== quote) {
         if (cleaned[i] === '\\' && i + 1 < cleaned.length) {
           i++
-          val += cleaned[i]
+          val += cleaned[i]!
         } else {
-          val += cleaned[i]
+          val += cleaned[i]!
         }
         i++
       }
@@ -101,8 +101,8 @@ function tokenize(source: string): Token[] {
     if (/[0-9]/.test(ch) || (ch === '-' && /[0-9]/.test(cleaned[i + 1] ?? ''))) {
       let num = ch
       i++
-      while (i < cleaned.length && /[0-9.a-zA-Z%]/.test(cleaned[i])) {
-        num += cleaned[i]
+      while (i < cleaned.length && /[0-9.a-zA-Z%]/.test(cleaned[i]!)) {
+        num += cleaned[i]!
         i++
       }
       tokens.push({ kind: 'number', value: num })
@@ -111,8 +111,8 @@ function tokenize(source: string): Token[] {
     if (ch === '#' && /[0-9a-fA-F]/.test(cleaned[i + 1] ?? '')) {
       let hex = '#'
       i++
-      while (i < cleaned.length && /[0-9a-fA-F]/.test(cleaned[i])) {
-        hex += cleaned[i]
+      while (i < cleaned.length && /[0-9a-fA-F]/.test(cleaned[i]!)) {
+        hex += cleaned[i]!
         i++
       }
       tokens.push({ kind: 'string', value: JSON.stringify(hex) })
@@ -121,8 +121,8 @@ function tokenize(source: string): Token[] {
     if (/[a-zA-Z_$]/.test(ch)) {
       let id = ch
       i++
-      while (i < cleaned.length && /[a-zA-Z0-9_$.-]/.test(cleaned[i])) {
-        id += cleaned[i]
+      while (i < cleaned.length && /[a-zA-Z0-9_$.-]/.test(cleaned[i]!)) {
+        id += cleaned[i]!
         i++
       }
       tokens.push({ kind: 'ident', value: id })
@@ -139,7 +139,7 @@ function readRawExpression(tokens: Token[], cursor: { idx: number }): string {
   let depthParen = 0
   let depthBracket = 0
   while (cursor.idx < tokens.length) {
-    const tok = tokens[cursor.idx]
+    const tok = tokens[cursor.idx]!
     if (depthParen === 0 && depthBracket === 0) {
       if (tok.kind === 'punct' && (tok.value === ';' || tok.value === ',' || tok.value === '}')) {
         if (tok.value === ';' || tok.value === ',') cursor.idx++
@@ -222,7 +222,7 @@ function parseBlockChildren(
 ): FormaAstNode[] {
   const nodes: FormaAstNode[] = []
   while (cursor.idx < tokens.length) {
-    const tok = tokens[cursor.idx]
+    const tok = tokens[cursor.idx]!
     if (tok.kind === 'punct' && tok.value === '}') {
       cursor.idx++
       break
@@ -294,7 +294,7 @@ function parseBlockChildren(
       cursor.idx++
       let cond = ''
       while (cursor.idx < tokens.length && tokens[cursor.idx]?.value !== '{') {
-        const t = tokens[cursor.idx]
+        const t = tokens[cursor.idx]!
         cond += t.kind === 'string' ? ` ${JSON.stringify(t.value)}` : ` ${t.value}`
         cursor.idx++
       }
@@ -331,13 +331,13 @@ function parseBlockChildren(
           cursor.idx++
           let k = ''
           while (cursor.idx < tokens.length && tokens[cursor.idx]?.value !== '{') {
-            k += ` ${tokens[cursor.idx].value}`
+            k += ` ${tokens[cursor.idx]!.value}`
             cursor.idx++
           }
           keyExpr = k.trim()
           break
         }
-        listExpr += ` ${tokens[cursor.idx].value}`
+        listExpr += ` ${tokens[cursor.idx]!.value}`
         cursor.idx++
       }
       if (tokens[cursor.idx]?.value === '{') cursor.idx++
@@ -367,7 +367,7 @@ function parseElementBody(
   const children: FormaAstNode[] = []
 
   while (cursor.idx < tokens.length) {
-    const tok = tokens[cursor.idx]
+    const tok = tokens[cursor.idx]!
     if (tok.kind === 'punct' && tok.value === '}') {
       cursor.idx++
       break
@@ -423,7 +423,7 @@ export function parseFormaUi(source: string): FormaComponentAst {
   const cursor = { idx: 0 }
   let name = 'FormaComponent'
   while (cursor.idx < tokens.length) {
-    const tok = tokens[cursor.idx]
+    const tok = tokens[cursor.idx]!
     if (tok.kind === 'ident' && tok.value === 'component') {
       cursor.idx++
       name = tokens[cursor.idx]?.value ?? name

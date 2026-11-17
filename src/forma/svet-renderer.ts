@@ -311,7 +311,7 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
     const list = normalizeChildrenArray(vnode.children)
     vnode.children = list
     for (let i = 0; i < list.length; i++) {
-      patch(null, list[i], container, anchor, namespace)
+      patch(null, list[i]!, container, anchor, namespace)
     }
   }
 
@@ -355,7 +355,7 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
           hostSetElementText(container, '')
         }
         for (let i = 0; i < nextList.length; i++) {
-          patch(null, nextList[i], container, anchor, namespace)
+          patch(null, nextList[i]!, container, anchor, namespace)
         }
       }
     } else {
@@ -374,7 +374,7 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
       const children = vnode.children as SvetVNode[]
       if (Array.isArray(children)) {
         for (let i = 0; i < children.length; i++) {
-          moveVNode(children[i], container, anchor)
+          moveVNode(children[i]!, container, anchor)
         }
       }
       hostInsert(vnode.anchor, container, anchor)
@@ -455,7 +455,7 @@ export function createRenderer<HostNode = any, HostElement extends HostNode = Ho
 
   function unmountChildren(children: SvetVNode[]): void {
     for (let i = 0; i < children.length; i++) {
-      if (isVNode(children[i])) unmount(children[i])
+      if (isVNode(children[i])) unmount(children[i]!)
     }
   }
 

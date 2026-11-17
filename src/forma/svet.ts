@@ -45,7 +45,7 @@ function runObserverCleanups(observer: ObserverNode): void {
   if (observer.cleanups.length === 0) return
   const list = observer.cleanups.splice(0)
   for (let i = list.length - 1; i >= 0; i--) {
-    try { list[i]() } catch { /* continue */ }
+    try { list[i]!() } catch { /* continue */ }
   }
 }
 
@@ -139,18 +139,18 @@ function flushEffects(): void {
       }
       let idx = -1
       for (let i = 0; i < pendingEffects.length; i++) {
-        const cand = pendingEffects[i]
+        const cand = pendingEffects[i]!
         if (cand.running) continue
         if (cand.sync) {
-          if (idx < 0 || !pendingEffects[idx].sync || cand.id < pendingEffects[idx].id) {
+          if (idx < 0 || !pendingEffects[idx]!.sync || cand.id < pendingEffects[idx]!.id) {
             idx = i
           }
-        } else if (idx < 0 || (!pendingEffects[idx].sync && cand.id < pendingEffects[idx].id)) {
+        } else if (idx < 0 || (!pendingEffects[idx]!.sync && cand.id < pendingEffects[idx]!.id)) {
           idx = i
         }
       }
       if (idx < 0) break
-      const eff = pendingEffects.splice(idx, 1)[0]
+      const eff = pendingEffects.splice(idx, 1)[0]!
       eff.queued = false
       if (eff.disposed || eff.state === STATE_CLEAN) continue
       if (isEffectDirty(eff)) {
@@ -299,7 +299,7 @@ function disposeScope(scope: OwnerScope): void {
     scope.children.clear()
   }
   for (let i = scope.disposables.length - 1; i >= 0; i--) {
-    try { scope.disposables[i]() } catch { /* continue */ }
+    try { scope.disposables[i]!() } catch { /* continue */ }
   }
   scope.disposables.length = 0
   if (scope.parent?.children) {
@@ -344,7 +344,7 @@ function tokenizeExpr(src: string): ExprTok[] {
   let i = 0
   const n = src.length
   while (i < n) {
-    const ch = src[i]
+    const ch = src[i]!
     if (/\s/.test(ch)) { i++; continue }
     if (ch === '"' || ch === "'") {
       const q = ch
@@ -352,7 +352,7 @@ function tokenizeExpr(src: string): ExprTok[] {
       i++
       while (i < n && src[i] !== q) {
         if (src[i] === '\\' && i + 1 < n) i++
-        s += src[i++]
+        s += src[i++]!
       }
       i++
       tokens.push({ kind: 'str', val: s })
@@ -361,9 +361,9 @@ function tokenizeExpr(src: string): ExprTok[] {
     if (/\d/.test(ch) || (ch === '-' && /\d/.test(src[i + 1] ?? '') && (tokens.length === 0 || tokens.at(-1)!.kind === 'op' || tokens.at(-1)!.val === '('))) {
       let numStr = ch
       i++
-      while (i < n && /[0-9.]/.test(src[i])) numStr += src[i++]
+      while (i < n && /[0-9.]/.test(src[i]!)) numStr += src[i++]!
       let unit = ''
-      while (i < n && /[a-zA-Z%]/.test(src[i])) unit += src[i++]
+      while (i < n && /[a-zA-Z%]/.test(src[i]!)) unit += src[i++]!
       tokens.push(unit ? { kind: 'str', val: numStr + unit } : { kind: 'num', val: numStr })
       continue
     }
@@ -375,7 +375,7 @@ function tokenizeExpr(src: string): ExprTok[] {
     if ('()[].,'.includes(ch)) { tokens.push({ kind: 'punc', val: ch }); i++; continue }
     if (/[a-zA-Z_$#]/.test(ch)) {
       let id = ''
-      while (i < n && /[a-zA-Z0-9_$#-]/.test(src[i])) id += src[i++]
+      while (i < n && /[a-zA-Z0-9_$#-]/.test(src[i]!)) id += src[i++]!
       tokens.push({ kind: 'ident', val: id })
       continue
     }
@@ -414,7 +414,7 @@ export function compileFormaExpression(raw: string): CompiledExprAst {
       if (parts[0] === 'tokens' && parts.length > 1) return { type: 'token', key: parts.slice(1).join('.'), static: true }
       if (parts[0] === 'i18n' && parts.length > 1) return { type: 'i18n', key: parts.slice(1).join('.'), static: false }
       if (parts[0] === 'state' && parts.length > 1) return { type: 'state', path: parts.slice(1), static: false }
-      return { type: 'ident', name: parts[0], path: parts.slice(1), static: false }
+      return { type: 'ident', name: parts[0]!, path: parts.slice(1), static: false }
     }
     if (tok.kind === 'punc' && tok.val === '(') {
       const inner = parseTernary()

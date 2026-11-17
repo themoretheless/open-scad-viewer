@@ -162,7 +162,7 @@ export function registerCompiledSfc(filename: string, comp: Component): void {
 
 function getAsyncCacheKey(loaderStr: string): string {
   const match = loaderStr.match(/\/([^/?'"`()]+?)(?:\.(?:svt|ts|js))?(?:\?[^'"`()]*)?['"`)]/)
-  return match ? match[1] : loaderStr
+  return match ? match[1]! : loaderStr
 }
 
 export function defineAsyncComponent<T extends Component = Component>(
@@ -371,7 +371,7 @@ export function renderList(
     const keys = Object.keys(source)
     const items = new Array(keys.length)
     for (let i = 0, l = keys.length; i < l; i++) {
-      const k = keys[i]
+      const k = keys[i]!
       items[i] = renderItem(source[k], k, i)
     }
     return items

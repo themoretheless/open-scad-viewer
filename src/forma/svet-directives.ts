@@ -30,7 +30,7 @@ export function withModifiers(fn: (...args: any[]) => any, modifiers: string[]):
     cache[cacheKey] ||
     (cache[cacheKey] = (event: any, ...args: any[]) => {
       for (let i = 0; i < modifiers.length; i++) {
-        const guard = modifierGuards[modifiers[i]]
+        const guard = modifierGuards[modifiers[i]!]
         if (guard && guard(event, modifiers)) return
       }
       return fn(event, ...args)
@@ -67,7 +67,7 @@ export function withKeys(fn: (...args: any[]) => any, modifiers: string[]): (eve
 export function withDirectives(vnode: SvetVNode, directives: Array<[Directive, any?, string?, Record<string, boolean>?]>): SvetVNode {
   const bindings: DirectiveBinding[] = vnode.dirs ?? (vnode.dirs = [])
   for (let i = 0; i < directives.length; i++) {
-    const [dir, value, arg, modifiers = {}] = directives[i]
+    const [dir, value, arg, modifiers = {}] = directives[i]!
     if (!dir) continue
     const rawValue = isRef(value) ? value.value : value
     bindings.push({ dir, value: rawValue, oldValue: undefined, arg, modifiers })

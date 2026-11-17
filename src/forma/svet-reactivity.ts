@@ -358,7 +358,7 @@ class EffectScopeImpl implements EffectScope {
     for (const child of this.scopes) child.stop()
     this.scopes.length = 0
     for (let i = this.cleanups.length - 1; i >= 0; i--) {
-      try { this.cleanups[i]() } catch { /* ignore */ }
+      try { this.cleanups[i]!() } catch { /* ignore */ }
     }
     this.cleanups.length = 0
   }

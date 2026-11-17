@@ -44,7 +44,7 @@ export function exitComponentSetup(): void {
     const queue = preSetupQueue.splice(0)
     for (let i = 0; i < queue.length; i++) {
       try {
-        queue[i]()
+        queue[i]!()
       } catch {
         // ignore pre-setup watcher errors
       }
