@@ -9,6 +9,7 @@ import type {Ray3} from '../kernel/geometry/math3d'
 import {DirectHistory,emptyDirectDocument,parseDirectDocument,extrudeDirectSketch,type Point2,type DirectSketch} from '../app/directModeling'
 import {sampleCurve,worldPoint,worldPoints,xyPlane,cross3,dot3,offsetSketch,trimSketchConstraints,extendSketch,carrySketchConstraints,type SketchPlane} from '../app/directSketchGeometry'
 import {droppedConstraintsNotice} from '../app/sketchConstraints'
+import {resolveDependentCurveSketches,dropCurveConstraintsTo,droppedCurveConstraintsNotice} from '../app/sketchCurveConstraints'
 const props=defineProps<{plane:SketchPlane|null;project:(p:readonly number[])=>[number,number]|null;ray:(x:number,y:number)=>Ray3|null;revision:number;locale:string;sessionKey?:string;snapPoints?:number[][]}>()
 const emit=defineEmits<{body:[body:ReturnType<typeof extrudeDirectSketch>,cut:boolean];close:[]}>()
 const storageKey='scad-main-sketches-v1:'+(props.sessionKey??JSON.stringify(props.plane??xyPlane()))
@@ -46,14 +47,14 @@ function down(e:PointerEvent){if(e.button!==0)return;svg.value?.focus();const p=
 }
 function pick(e:PointerEvent,s:DirectSketch){e.stopPropagation();selected.value=s.id
  if(tool.value==='trim'){if(s.editablePath){error.value=label('Для Bézier используйте редактирование узлов.','Use anchor editing for Bézier paths.');return}run(()=>{const p=at(e);if(!p)return;let edge=0,best=Infinity,bestT=0.5;for(let i=0;i<s.points.length-(s.closed?0:1);i++){const a=s.points[i],b=s.points[(i+1)%s.points.length],v=[b[0]-a[0],b[1]-a[1]],t=Math.max(0,Math.min(1,((p[0]-a[0])*v[0]+(p[1]-a[1])*v[1])/(v[0]*v[0]+v[1]*v[1]))),dist=Math.hypot(p[0]-a[0]-v[0]*t,p[1]-a[1]-v[1]*t);if(dist<best){best=dist;edge=i;bestT=t}}
- const {sketches:result,dropped}=trimSketchConstraints(clone(s),edge,bestT,clone(document.value.sketches));notice.value=droppedConstraintsNotice(dropped,props.locale);document.value={...document.value,sketches:document.value.sketches.filter(o=>o.id!==s.id).concat(result.map((o,i)=>({...o,id:i?crypto.randomUUID():s.id})))};commit()})}
+ const {sketches:result,dropped}=trimSketchConstraints(clone(s),edge,bestT,clone(document.value.sketches)),curves=dropCurveConstraintsTo(document.value.sketches,s.id);notice.value=[droppedConstraintsNotice(dropped,props.locale),droppedCurveConstraintsNotice(curves.dropped,props.locale)].filter(Boolean).join(' ');document.value={...document.value,sketches:curves.sketches.filter(o=>o.id!==s.id).concat(result.map((o,i)=>({...o,id:i?crypto.randomUUID():s.id})))};commit()})}
 }
 function beginHandle(e:PointerEvent,kind:string,vertex=0){e.stopPropagation();svg.value?.focus();before=clone(document.value);activeNode.value=vertex;handle={kind,vertex};svg.value?.setPointerCapture(e.pointerId)}
 function move(e:PointerEvent){const p=at(e);if(!p)return;const pointerPoint=p
  if(handle&&current.value){const drag=handle,source=current.value;run(()=>{let s=clone(source);const a=s.analytic
  if(s.editablePath){const side=drag.kind==='in'?'in':'out';let p=drag.kind==='anchor'?setPathAnchorPosition(s.editablePath,drag.vertex,pointerPoint):setAnchorHandle(s.editablePath,drag.vertex,side,pointerPoint);if(drag.kind!=='anchor')p=applyHandleLink(p,drag.vertex,side,handleLink.value);s=withEditableSketchPath(s,p)}
  else if(a){if(drag.kind==='center')a.center=p;else if(drag.kind==='radius')a.radius=Math.max(.01,Math.hypot(p[0]-a.center[0],p[1]-a.center[1]));else {const degrees=Math.atan2(p[1]-a.center[1],p[0]-a.center[0])*180/Math.PI;if(drag.kind==='start'){const end=a.start+a.sweep;a.start=degrees;a.sweep=((end-degrees+360)%360)||360}else a.sweep=((degrees-a.start+360)%360)||360} s.points=sampleCurve(a)}else {s.points[drag.vertex]=p;s=carrySketchConstraints(source,s)}
- document.value={...document.value,sketches:document.value.sketches.map(o=>o.id===s.id?s:o)}
+ document.value={...document.value,sketches:resolveDependentCurveSketches(document.value.sketches.map(o=>o.id===s.id?s:o),[s.id])}
  })}else if(start)draft.value=[start,p]
 }
 function up(){guides.value=[];if(handle){handle=null;before=null;run(commit);return}if(!start)return
@@ -61,8 +62,8 @@ function up(){guides.value=[];if(handle){handle=null;before=null;run(commit);ret
  run(()=>{if(tool.value==='rectangle'){if(Math.abs(a[0]-b[0])<.01||Math.abs(a[1]-b[1])<.01)return;add([a,[b[0],a[1]],b,[a[0],b[1]]],true)}else{const analytic={kind:tool.value as 'circle'|'arc',center:a,radius:Math.hypot(b[0]-a[0],b[1]-a[1]),start:0,sweep:tool.value==='circle'?360:180};add(sampleCurve(analytic),analytic.kind==='circle',analytic)}})
 }
 function cancel(){guides.value=[];snapMarker.value=null;if(before)document.value=before;before=null;handle=null;start=null;draft.value=[]}
-function modify(action:'offset'|'extend'){run(()=>{if(!current.value)return;const s=clone(current.value),next=action==='offset'?offsetSketch(s,offset.value):extendSketch(s,endpoint.value,clone(document.value.sketches));document.value={...document.value,sketches:document.value.sketches.map(o=>o.id===s.id?next:o)};commit()})}
-function curveField(key:'radius'|'start'|'sweep',value:number){run(()=>{const s=clone(current.value!);s.analytic![key]=value;s.points=sampleCurve(s.analytic!);document.value={...document.value,sketches:document.value.sketches.map(o=>o.id===s.id?s:o)};commit()})}
+function modify(action:'offset'|'extend'){run(()=>{if(!current.value)return;const s=clone(current.value),next=action==='offset'?offsetSketch(s,offset.value):extendSketch(s,endpoint.value,clone(document.value.sketches));document.value={...document.value,sketches:resolveDependentCurveSketches(document.value.sketches.map(o=>o.id===s.id?next:o),[s.id])};commit()})}
+function curveField(key:'radius'|'start'|'sweep',value:number){run(()=>{const s=clone(current.value!);s.analytic![key]=value;s.points=sampleCurve(s.analytic!);document.value={...document.value,sketches:resolveDependentCurveSketches(document.value.sketches.map(o=>o.id===s.id?s:o),[s.id])};commit()})}
 function pathOperation(action:'outline'|'simplify'){run(()=>{const s=current.value;if(!s)return;const next=action==='outline'?outlineSketchStroke(s,strokeWidth.value,crypto.randomUUID()):simplifySketchPath(s,simplifyTolerance.value);document.value={...document.value,sketches:action==='outline'?[...document.value.sketches,next]:document.value.sketches.map(o=>o.id===s.id?next:o)};selected.value=next.id;commit()})}
 function extrude(){run(()=>{if(!current.value)return;const s=clone(current.value);s.plane=clone(plane.value);if(cut.value&&!s.retainedProfile){s.plane!.v=s.plane!.v.map(v=>-v) as [number,number,number];s.points=s.points.map(p=>[p[0],-p[1]])}const id=crypto.randomUUID(),body=s.retainedProfile?buildDirectExtrusion({version:1,sketches:[s],bodies:[]},{sketchIds:[s.id],height:cut.value?-depth.value:depth.value,offset:0,targetId:'',operation:'new',id}):extrudeDirectSketch(s,depth.value,id);if(body)emit('body',body,cut.value)})}
 </script>

@@ -213,3 +213,67 @@ export function pruneSketchCurveConstraints<T extends CurveSketch>(sketches: rea
   })
   return changed ? out : (sketches as T[])
 }
+
+/**
+ * Re-solves every circle or arc sketch whose curve constraints reference one of the `changed` sketches, and
+ * then the sketches that depend on those, so dependents follow an edit of the referenced geometry. Each
+ * dependent is solved once (a reference cycle stops there). Throws when a dependent cannot follow, so the
+ * caller refuses the whole edit. Returns the same array when no sketch depends on the changed ones.
+ */
+export function resolveDependentCurveSketches<T extends CurveSketch>(
+  sketches: readonly T[],
+  changed: readonly string[],
+): T[] {
+  let out = sketches as T[]
+  const moved = new Set(changed)
+  const solved = new Set(changed)
+  for (let progress = true; progress;) {
+    progress = false
+    for (let i = 0; i < out.length; i++) {
+      const s = out[i]!
+      if (solved.has(s.id) || !s.curveConstraints?.some(c => moved.has(c.ref))) continue
+      let next: T
+      try {
+        next = solveSketchCurveConstraints(s, out)
+      } catch {
+        throw Error(`A dependent circle or arc sketch cannot follow this edit; the edit was not applied.`)
+      }
+      if (out === sketches) out = [...sketches]
+      out[i] = next
+      solved.add(s.id)
+      moved.add(s.id)
+      progress = true
+    }
+  }
+  return out
+}
+
+/**
+ * Drops the curve constraints that reference `ref` (for example a polyline whose points a trim renumbered)
+ * and reports them, so the caller can tell the user.
+ */
+export function dropCurveConstraintsTo<T extends CurveSketch>(
+  sketches: readonly T[],
+  ref: string,
+): { sketches: T[]; dropped: SketchCurveConstraint[] } {
+  const dropped: SketchCurveConstraint[] = []
+  const out = sketches.map(s => {
+    if (!s.curveConstraints?.some(c => c.ref === ref)) return s
+    dropped.push(...s.curveConstraints.filter(c => c.ref === ref))
+    const kept = s.curveConstraints.filter(c => c.ref !== ref)
+    const next = { ...s }
+    if (kept.length) next.curveConstraints = kept
+    else delete next.curveConstraints
+    return next
+  })
+  return { sketches: dropped.length ? out : (sketches as T[]), dropped }
+}
+
+/** Notice for curve constraints a trim removed, or an empty string. */
+export function droppedCurveConstraintsNotice(dropped: readonly SketchCurveConstraint[], locale: string): string {
+  if (!dropped.length) return ''
+  const names = dropped.map(c => sketchCurveConstraintName(c, locale)).join(', ')
+  return locale === 'ru'
+    ? `Обрезка сняла ограничения окружностей и дуг: ${names}.`
+    : `Trim removed circle and arc constraints: ${names}.`
+}

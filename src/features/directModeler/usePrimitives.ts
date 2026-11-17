@@ -6,6 +6,7 @@ import { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
 import { type DirectSketch, type DirectDocument, type DirectHistory } from '../../app/directModeling'
 import { validateSimpleSketch } from '../../app/directSketchGeometry'
 import { sketchDimensions } from '../../app/directDimensions'
+import { resolveDependentCurveSketches } from '../../app/sketchCurveConstraints'
 import { createSolidNurbsCurve, createSolidNurbsSurface } from '../../kernel/solidNurbs'
 import { type SolidNurbsEditOptions } from '../../kernel/solidNurbsEdit'
 import { computed, ref, watch, onUnmounted, type Ref, type ShallowRef, type ComputedRef } from 'svet'
@@ -108,10 +109,12 @@ function addBridgeCurve(){
 function updateDimensionSketch(sketch:import('../../app/directModeling').DirectSketch){run(()=>{
   if(!history.document.sketches.some(s=>s.id===sketch.id))return
   validateSimpleSketch(sketch.points,sketch.closed)
+  // Circle and arc sketches constrained to this one follow it; a dependent that cannot follow refuses the edit.
+  resolveDependentCurveSketches(history.document.sketches.map(s=>s.id===sketch.id?sketch:s),[sketch.id])
   void commitInWorker(()=>{
    const d=history.document,index=d.sketches.findIndex(s=>s.id===sketch.id)
    if(index<0)return
-   d.sketches[index]=sketch;return d
+   d.sketches[index]=sketch;d.sketches=resolveDependentCurveSketches(d.sketches,[sketch.id]);return d
   })
 })}
 const dimensionLabels=computed(()=>visibleSketches.value.flatMap(s=>{

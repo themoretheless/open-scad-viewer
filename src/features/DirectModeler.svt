@@ -61,7 +61,7 @@ import { bodyPoints, DirectHistory, directBodiesScad, parseDirectDocument, seria
 import type {SolidSketchEditOptions} from '../kernel/solidSketchEdit'
 import { validateSimpleSketch, slotSketch, sampleCurve, bakeSketch, trimSketchConstraints, worldPoint, xyPlane, unit3, cross3, type SketchPlane, type Vec3 } from '../app/directSketchGeometry'
 import { droppedConstraintsNotice } from '../app/sketchConstraints'
-import { pruneSketchCurveConstraints } from '../app/sketchCurveConstraints'
+import { pruneSketchCurveConstraints, dropCurveConstraintsTo, droppedCurveConstraintsNotice } from '../app/sketchCurveConstraints'
 import { storageGet, storageSet } from '../core/safeStorage'
 import type {SolidBooleanOptions} from '../kernel/solidBoolean'
 import { defaultDirectCamera, directExtrusionTool, projectDirectPoint, unprojectDirectXY, unprojectDirectPlane } from '../app/directModelingTools'
@@ -1096,7 +1096,7 @@ function trimAt(id:string,p:Point2){void commitInWorker(()=>{
  const d=history.document,s=d.sketches.find(s=>s.id===id);if(!s)return
  let best=Infinity,index=0,t=0
  for(let i=0;i<(s.closed?s.points.length:s.points.length-1);i++){const a=s.points[i],b=s.points[(i+1)%s.points.length],vx=b[0]-a[0],vy=b[1]-a[1],f=Math.max(0,Math.min(1,((p[0]-a[0])*vx+(p[1]-a[1])*vy)/(vx*vx+vy*vy))),dist=Math.hypot(p[0]-a[0]-f*vx,p[1]-a[1]-f*vy);if(dist<best){best=dist;index=i;t=f}}
- const {sketches:pieces,dropped}=trimSketchConstraints(s,index,t,d.sketches.filter(o=>samePlane(o.plane,s.plane)));if(dropped.length)notice.value=droppedConstraintsNotice(dropped,props.locale);pieces.forEach((p,i)=>{if(i)p.id=crypto.randomUUID()});d.sketches=d.sketches.filter(o=>o.id!==id);d.sketches.push(...pieces);return d
+ const {sketches:pieces,dropped}=trimSketchConstraints(s,index,t,d.sketches.filter(o=>samePlane(o.plane,s.plane)));const curves=dropCurveConstraintsTo(d.sketches,id);if(dropped.length||curves.dropped.length)notice.value=[droppedConstraintsNotice(dropped,props.locale),droppedCurveConstraintsNotice(curves.dropped,props.locale)].filter(Boolean).join(' ');pieces.forEach((p,i)=>{if(i)p.id=crypto.randomUUID()});d.sketches=curves.sketches.filter(o=>o.id!==id);d.sketches.push(...pieces);return d
 })}
 
 function run(action: () => void) { error.value = ''; try { action() } catch (e) { error.value = e instanceof Error ? e.message : String(e) } }
@@ -3367,7 +3367,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <small v-if="!gpuActive">{{ label('Металлическость и шероховатость видны в WebGPU; здесь показан базовый цвет.','Metallic and roughness require WebGPU; this view shows base color.') }}</small>
       </template>
       <button v-if="selectedBody?.material" @click="resetBodyMaterial">{{ label('Сбросить материал','Reset material') }}</button>
-      <SketchDimensionPanel v-if="selectedSketch && !selectedSketch.retainedProfile" :key="selectedSketch.id" :sketch="selectedSketch" :locale="locale" @change="updateDimensionSketch" />
+      <SketchDimensionPanel v-if="selectedSketch && !selectedSketch.retainedProfile" :key="selectedSketch.id" :sketch="selectedSketch" :sketches="document.sketches" :locale="locale" @change="updateDimensionSketch" />
       <section v-if="selectedBody" class="body-diagnostics" :aria-label="label('Измерения','Measurements')">
         <button @click="measurementOpen=!measurementOpen" :aria-pressed="measurementOpen">{{ label('Измерения','Measurements') }}</button>
         <template v-if="measurementOpen">

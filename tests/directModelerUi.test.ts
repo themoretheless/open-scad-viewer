@@ -1,4 +1,5 @@
 import {setImmediate as realSetImmediate} from 'node:timers'
+import { sketchCurveConstraintResidual } from '../src/app/sketchCurveConstraints'
 import {createSolidNurbsCurve} from '../src/kernel/solidNurbs'
 import {createRenderer,h,nextTick,shallowReactive,shallowRef} from 'svet'
 import {it,expect,vi,afterEach,beforeAll} from 'vitest'
@@ -1229,6 +1230,33 @@ it('keeps the document intact and explains conflicting length dimensions',async(
  input.props['onUpdate:modelValue']('20 mm');await nextTick();await ui.click('Apply dimension 0')
  expect(ui.doc()).toEqual(before)
  expect(ui.all().some(n=>n.props.role==='alert'&&ui.text(n).includes('Dimensions conflict'))).toBe(true)
+})
+
+it('adds a circle tangent constraint in the dimension panel, re-solves it when the referenced sketch changes and undoes both',async()=>{
+ const ui=await mount();await ui.click('Circle');await ui.click('Sketch dimensions')
+ await vi.waitFor(()=>expect(ui.all().some(n=>n.tag==='button'&&ui.text(n)==='Add circle constraint')).toBe(true))
+ const select=(name:string)=>ui.all().find(n=>n.tag==='select'&&n.props['aria-label']===name)!
+ select('Curve constraint kind').props['onUpdate:modelValue']('tangent_line');await nextTick()
+ select('Curve constraint segment').props['onUpdate:modelValue'](1);await nextTick()
+ const start=ui.doc();await ui.click('Add circle constraint');await flushClearance()
+ const circleOf=(d:typeof start)=>d.sketches.find(s=>s.id==='circle')!,profileOf=(d:typeof start)=>d.sketches.find(s=>s.id==='s')!
+ const added=ui.doc();expect(circleOf(added).curveConstraints).toEqual([{kind:'tangent_line',ref:'s',a:1,b:2}])
+ expect(sketchCurveConstraintResidual(circleOf(added).analytic!,circleOf(added).curveConstraints![0]!,profileOf(added))).toBeLessThan(1e-5)
+ expect(ui.all().some(n=>ui.text(n).startsWith('tangent to segment · Profile'))).toBe(true)
+ await commandKey(ui,'Escape');await ui.click('Profile');await ui.click('Sketch dimensions');await vi.waitFor(()=>expect(ui.all().some(n=>n.tag==='button'&&ui.text(n)==='Add dimension')).toBe(true))
+ await ui.click('Add dimension');await flushClearance();const dimensioned=ui.doc()
+ const input=ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Dimension 0')!
+ input.props['onUpdate:modelValue']('15 mm');await nextTick();await ui.click('Apply dimension 0');await flushClearance()
+ const edited=ui.doc();expect(profileOf(edited).points[1]![0]).toBeCloseTo(15)
+ expect(circleOf(edited).analytic!.center).not.toEqual(circleOf(added).analytic!.center)
+ expect(sketchCurveConstraintResidual(circleOf(edited).analytic!,circleOf(edited).curveConstraints![0]!,profileOf(edited))).toBeLessThan(1e-5)
+ await ui.click('↶');expect(ui.doc()).toEqual(dimensioned)
+ await ui.click('↶');expect(ui.doc()).toEqual(added)
+ await ui.click('↶');expect(ui.doc()).toEqual(start)
+ await ui.click('↷');expect(ui.doc()).toEqual(added)
+ await commandKey(ui,'Escape');await ui.click('Circle');await ui.click('Sketch dimensions');await vi.waitFor(()=>expect(ui.all().some(n=>n.props['aria-label']==='Delete circle constraint 0')).toBe(true))
+ await ui.click('Delete circle constraint 0');await flushClearance();expect(circleOf(ui.doc()).curveConstraints).toBeUndefined()
+ await ui.click('↶');expect(ui.doc()).toEqual(added)
 })
 
 it('retains geometry and identities through 20 edits, command cancellation, full Undo/Redo and draft reload',async()=>{

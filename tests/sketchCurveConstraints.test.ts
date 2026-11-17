@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import {
   addSketchCurveConstraint,
+  dropCurveConstraintsTo,
+  droppedCurveConstraintsNotice,
   pruneSketchCurveConstraints,
+  resolveDependentCurveSketches,
   sketchCurveConstraintName,
   sketchCurveConstraintResidual,
   validateSketchCurveConstraints,
@@ -13,6 +16,7 @@ import {
   type DirectSketch,
 } from '../src/app/directModeling'
 import { sampleCurve, type AnalyticCurve } from '../src/app/directSketchGeometry'
+import { applySolidPointEdit } from '../src/kernel/solidPointEdit'
 
 const circle = (
   id: string,
@@ -131,5 +135,62 @@ describe('sketch curve constraints', () => {
       'касание окружностей (внутреннее)',
     )
     expect(sketchCurveConstraintName({ kind: 'concentric', ref: 'R' }, 'en')).toBe('concentric')
+  })
+  it('re-solves dependent circles transitively when a referenced sketch moves', () => {
+    const a = addSketchCurveConstraint(circle('A', [3, 4], 2), { kind: 'concentric', ref: 'R' }, [ref])
+    const b = addSketchCurveConstraint(circle('B', [20, 0], 1), { kind: 'tangent_circle', ref: 'A', internal: false }, [
+      a,
+    ])
+    const all = [ref, a, b]
+    expect(resolveDependentCurveSketches(all, ['L'])).toBe(all)
+    const moved = circle('R', [7, 1], 5)
+    const out = resolveDependentCurveSketches([moved, a, b], ['R'])
+    expect(out[1]!.analytic!.center[0]).toBeCloseTo(7, 6)
+    expect(out[1]!.analytic!.center[1]).toBeCloseTo(1, 6)
+    expect(sketchCurveConstraintResidual(out[2]!.analytic!, b.curveConstraints![0]!, out[1]!)).toBeLessThan(1e-5)
+    expect(out[0]).toBe(moved)
+  })
+
+  // Concentric with R and a held radius of 3 tangent to y=0: fully determined, so moving the line cannot be followed.
+  const pinned = () => {
+    const r = circle('R', [10, 3], 1)
+    let a = { ...circle('A', [10, 3], 3), dimensions: [{ kind: 'radius' }] } as DirectSketch
+    a = addSketchCurveConstraint(a, { kind: 'concentric', ref: 'R' }, [r, line])
+    a = addSketchCurveConstraint(a, { kind: 'tangent_line', ref: 'L', a: 0, b: 1 }, [r, line])
+    return [line, r, a]
+  }
+
+  it('refuses an edit the dependent cannot follow', () => {
+    const [, r, a] = pinned()
+    const lifted = { ...line, points: line.points.map(([x, y]) => [x, y + 1] as [number, number]) }
+    expect(() => resolveDependentCurveSketches([lifted, r!, a!], ['L'])).toThrow(/cannot follow/)
+  })
+
+  it('follows a dragged polyline vertex in the point edit and refuses an unreachable drag', () => {
+    const a = addSketchCurveConstraint(circle('A', [10, 6], 3), { kind: 'tangent_line', ref: 'L', a: 0, b: 1 }, [line])
+    const doc = { ...emptyDirectDocument(), sketches: [line, a] }
+    const out = applySolidPointEdit(doc, { kind: 'sketch-vertex', id: 'L', index: 1, point: [20, 8] })
+    const c = out.sketches[1]!
+    expect(sketchCurveConstraintResidual(c.analytic!, c.curveConstraints![0]!, out.sketches[0]!)).toBeLessThan(1e-5)
+    expect(() =>
+      applySolidPointEdit(
+        { ...emptyDirectDocument(), sketches: pinned() },
+        { kind: 'sketch-vertex', id: 'L', index: 1, point: [20, 8] },
+      ),
+    ).toThrow(/cannot follow/)
+  })
+
+  it('drops constraints to a trimmed sketch and reports them in RU and EN', () => {
+    const a = addSketchCurveConstraint(circle('A', [10, 6], 3), { kind: 'tangent_line', ref: 'L', a: 0, b: 1 }, [line])
+    const all = [line, a]
+    expect(dropCurveConstraintsTo(all, 'X').sketches).toBe(all)
+    const { sketches, dropped } = dropCurveConstraintsTo(all, 'L')
+    expect(sketches[1]!.curveConstraints).toBeUndefined()
+    expect(dropped).toEqual([{ kind: 'tangent_line', ref: 'L', a: 0, b: 1 }])
+    expect(droppedCurveConstraintsNotice(dropped, 'en')).toBe(
+      'Trim removed circle and arc constraints: tangent to segment.',
+    )
+    expect(droppedCurveConstraintsNotice(dropped, 'ru')).toContain('касание отрезка')
+    expect(droppedCurveConstraintsNotice([], 'en')).toBe('')
   })
 })
