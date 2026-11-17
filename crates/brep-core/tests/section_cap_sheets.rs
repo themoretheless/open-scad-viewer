@@ -3773,3 +3773,64 @@ fn exact_path_boundary_events_join_across_vertices_and_preserve_endpoints() {
     assert_eq!(reverse.events[1].before, Some(Interior));
     assert_eq!(reverse.events[1].after, Some(Exterior));
 }
+
+#[test]
+fn bounded_path_length_breakdown_counts_each_location_and_stationary_boundary() {
+    use brep_core::{
+        analysis::bounded_polyhedral_path_length_breakdown,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64| Q::from_integer(n.into());
+    let point = |x, z| [q(x), Q::new(3.into(), 2.into()), q(z)];
+    let path = [
+        point(-1, 1),
+        point(5, 1),
+        point(5, 2),
+        point(4, 2),
+        point(4, 2),
+        point(-1, 2),
+    ];
+    let report = bounded_polyhedral_path_length_breakdown(solid, &path, 1e-6, 1_000_000).unwrap();
+    assert_eq!(report.interior_bounds_mm, [q(3), q(3)]);
+    assert_eq!(report.boundary_bounds_mm, [q(3), q(3)]);
+    assert_eq!(report.exterior_bounds_mm, [q(7), q(7)]);
+    assert_eq!(
+        bounded_polyhedral_path_length_breakdown(solid, &path, 1e-6, report.exact_work).unwrap(),
+        report
+    );
+    assert!(
+        bounded_polyhedral_path_length_breakdown(solid, &path, 1e-6, report.exact_work - 1)
+            .is_err()
+    );
+}
+
+#[test]
+fn bounded_path_length_breakdown_certifies_irrational_lengths() {
+    use brep_core::{
+        analysis::bounded_polyhedral_path_length_breakdown,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64| Q::from_integer(n.into());
+    let point = |x, z| [q(x), q(x), q(z)];
+    let path = [point(-1, 1), point(5, 1), point(5, 2), point(-1, 2)];
+    let tol = 1e-9;
+    let report = bounded_polyhedral_path_length_breakdown(solid, &path, tol, 1_000_000).unwrap();
+    for ([lo, hi], offset, radicand) in [
+        (report.interior_bounds_mm, q(0), q(18)),
+        (report.boundary_bounds_mm, q(0), q(18)),
+        (report.exterior_bounds_mm, q(1), q(72)),
+    ] {
+        assert!(lo >= offset && (&lo - &offset).pow(2) < radicand);
+        assert!((&hi - &offset).pow(2) > radicand);
+        assert!(hi - lo <= Q::from_float(tol).unwrap());
+    }
+    assert!(bounded_polyhedral_path_length_breakdown(solid, &path, 0.0, 1_000_000).is_err());
+}

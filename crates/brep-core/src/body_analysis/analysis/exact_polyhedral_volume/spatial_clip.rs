@@ -989,3 +989,60 @@ pub fn exact_polyhedral_path_boundary_events(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BoundedPolyhedralPathLengthBreakdown {
+    pub interior_bounds_mm: [Q; 2],
+    pub boundary_bounds_mm: [Q; 2],
+    pub exterior_bounds_mm: [Q; 2],
+    pub exact_work: u64,
+}
+
+/// Enclose the distance traveled in each location. The requested absolute
+/// tolerance bounds the width of each enclosure independently.
+pub fn bounded_polyhedral_path_length_breakdown(
+    solid: &QualifiedClosedSolid,
+    points_mm: &[[Q; 3]],
+    tolerance_mm: f64,
+    max_exact_work: u64,
+) -> Result<BoundedPolyhedralPathLengthBreakdown> {
+    let tolerance = enclosure_width(tolerance_mm)?;
+    let partition = exact_polyhedral_path_partition(solid, points_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - partition.exact_work;
+    let [mut interior, mut boundary, mut exterior] = [Vec::new(), Vec::new(), Vec::new()];
+    for (pair, parts) in points_mm.windows(2).zip(partition.spans) {
+        spend(&mut remaining, 12)?;
+        let mut fractions = [Q::zero(), Q::zero(), Q::zero()];
+        for part in parts {
+            spend(&mut remaining, 4)?;
+            let [lo, hi] = part.parameters;
+            let index = match part.location {
+                PolyhedralPathLocation::Interior => 0,
+                PolyhedralPathLocation::Boundary => 1,
+                PolyhedralPathLocation::Exterior => 2,
+            };
+            fractions[index] += hi - lo;
+        }
+        let direction = std::array::from_fn(|i| &pair[1][i] - &pair[0][i]);
+        let length_squared = dot(&direction, &direction);
+        if length_squared.is_zero() {
+            continue;
+        }
+        for (fraction, squares) in
+            fractions
+                .into_iter()
+                .zip([&mut interior, &mut boundary, &mut exterior])
+        {
+            if fraction.is_positive() {
+                spend(&mut remaining, 4)?;
+                squares.push(fraction.pow(2) * &length_squared);
+            }
+        }
+    }
+    Ok(BoundedPolyhedralPathLengthBreakdown {
+        interior_bounds_mm: bound_root_sum(interior, tolerance.clone(), &mut remaining)?,
+        boundary_bounds_mm: bound_root_sum(boundary, tolerance.clone(), &mut remaining)?,
+        exterior_bounds_mm: bound_root_sum(exterior, tolerance, &mut remaining)?,
+        exact_work: max_exact_work - remaining,
+    })
+}
