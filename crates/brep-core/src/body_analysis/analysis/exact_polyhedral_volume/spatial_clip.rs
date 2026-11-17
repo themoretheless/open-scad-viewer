@@ -4213,3 +4213,56 @@ pub fn clip_path_to_exact_coplanar_polyline_boolean_extrusion(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BoundedCoplanarPolylineBooleanExtrusionArea {
+    pub cap_bounds_mm2: [Q; 2],
+    pub wall_bounds_mm2: [Q; 2],
+    pub total_bounds_mm2: [Q; 2],
+    pub exact_work: u64,
+}
+
+/// Enclose the surface area of a rational Boolean extrusion. The total
+/// enclosure has width at most the requested tolerance.
+pub fn bounded_coplanar_polyline_boolean_extrusion_area(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    operation: CoplanarPolylineBoolean,
+    sweep_mm: &[Q; 3],
+    tolerance_mm2: f64,
+    max_exact_work: u64,
+) -> Result<BoundedCoplanarPolylineBooleanExtrusionArea> {
+    let tolerance = enclosure_width(tolerance_mm2)? / Q::from_integer(2.into());
+    let (footprint, mut remaining) = prepare_boolean_extrusion_queries(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        operation,
+        sweep_mm,
+        max_exact_work,
+    )?;
+    spend(&mut remaining, 12)?;
+    // The footprint normal is the sum of edge cross products and hence
+    // already has length equal to the combined area of the two caps.
+    let cap = dot(&footprint.normal, &footprint.normal);
+    let mut walls = Vec::new();
+    for [a, b] in footprint.edges {
+        spend(&mut remaining, 24)?;
+        let edge: [Q; 3] = std::array::from_fn(|i| &b[i] - &a[i]);
+        let cross = [(1, 2), (2, 0), (0, 1)]
+            .map(|(i, j)| &edge[i] * &sweep_mm[j] - &edge[j] * &sweep_mm[i]);
+        walls.push(dot(&cross, &cross));
+    }
+    let cap_bounds_mm2 = bound_root_sum(vec![cap], tolerance.clone(), &mut remaining)?;
+    let wall_bounds_mm2 = bound_root_sum(walls, tolerance, &mut remaining)?;
+    let total_bounds_mm2 = std::array::from_fn(|i| &cap_bounds_mm2[i] + &wall_bounds_mm2[i]);
+    Ok(BoundedCoplanarPolylineBooleanExtrusionArea {
+        cap_bounds_mm2,
+        wall_bounds_mm2,
+        total_bounds_mm2,
+        exact_work: max_exact_work - remaining,
+    })
+}

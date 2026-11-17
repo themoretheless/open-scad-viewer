@@ -6550,3 +6550,63 @@ fn exact_boolean_extrusion_path_clip_keeps_isolated_cap_contact_and_wall_travel(
         ]
     );
 }
+
+#[test]
+fn bounded_boolean_extrusion_area_counts_both_caps_and_hole_walls() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Difference, bounded_coplanar_polyline_boolean_extrusion_area,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y| [q(x), q(y), q(0)];
+    let rect = |lo, hi| [p(lo, lo), p(hi, lo), p(hi, hi), p(lo, hi), p(lo, lo)];
+    let a = rect(0, 6);
+    let b = rect(2, 4);
+    let sweep = [q(0), q(0), q(-2)];
+    let get = |budget| {
+        bounded_coplanar_polyline_boolean_extrusion_area(
+            &a,
+            &[],
+            &b,
+            &[],
+            Difference,
+            &sweep,
+            1e-9,
+            budget,
+        )
+    };
+    let report = get(1_000_000).unwrap();
+    assert_eq!(report.cap_bounds_mm2, [q(64), q(64)]);
+    assert_eq!(report.wall_bounds_mm2, [q(64), q(64)]);
+    assert_eq!(report.total_bounds_mm2, [q(128), q(128)]);
+    assert_eq!(get(report.exact_work).unwrap(), report);
+    assert!(get(report.exact_work - 1).is_err());
+}
+
+#[test]
+fn bounded_boolean_extrusion_area_encloses_irrational_oblique_walls() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Intersection, bounded_coplanar_polyline_boolean_extrusion_area,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y| [q(x), q(y), q(0)];
+    let a = [p(0, 0), p(2, 0), p(2, 3), p(0, 3), p(0, 0)];
+    let tolerance = 1e-9;
+    let report = bounded_coplanar_polyline_boolean_extrusion_area(
+        &a,
+        &[],
+        &a,
+        &[],
+        Intersection,
+        &[q(1), q(0), q(2)],
+        tolerance,
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(report.cap_bounds_mm2, [q(12), q(12)]);
+    let [lo, hi] = report.total_bounds_mm2;
+    assert!(lo > q(20) && (&lo - q(20)).pow(2) < q(180));
+    assert!((&hi - q(20)).pow(2) > q(180));
+    assert!(hi - lo <= Q::from_float(tolerance).unwrap());
+}
