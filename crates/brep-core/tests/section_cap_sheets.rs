@@ -981,3 +981,52 @@ fn refuses_an_inward_inferred_solid_after_capping() {
     assert_eq!(error.code, "BREP_CLOSED_SOLID_UNPROVED");
     assert_eq!(source, before);
 }
+
+#[test]
+fn reports_unproved_boundary_of_the_capped_candidate() {
+    use brep_core::planar_cap::{SectionAttachmentOptions, inspect_inferred_section_solid};
+    let source = open_prism_with_nonbinary_cap_support();
+    let report = inspect_inferred_section_solid(
+        &source,
+        SectionAttachmentOptions {
+            max_exact_work: 1_000_000,
+            max_verification_cells: 10_000,
+            support_tolerance_mm: 1e-14,
+        },
+        closed_solid_policy::policy(),
+    )
+    .unwrap();
+    assert_eq!(report.cap_faces.len(), 1);
+    assert_eq!(report.support_error_upper.len(), 1);
+    let boundary = &report.admission.geometry().boundary;
+    assert!(!boundary.proven);
+    assert!(boundary.agreement.has_exact_counterexample());
+    assert!(report.admission.geometry().nesting.is_none());
+    assert!(report.admission.solid().is_none());
+    assert!(report.admission.candidate().shells[0].closed);
+    assert_eq!(report.admission.candidate().edges, source.edges);
+}
+
+#[test]
+fn reports_inward_orientation_after_proving_the_boundary() {
+    use brep_core::planar_cap::{SectionAttachmentOptions, inspect_inferred_section_solid};
+    let (mut source, _) = open_hollow_prism();
+    for face in &mut source.shells[0].faces {
+        face.reversed = !face.reversed;
+    }
+    let report = inspect_inferred_section_solid(
+        &source,
+        SectionAttachmentOptions {
+            max_exact_work: 1_000_000,
+            max_verification_cells: 10_000,
+            support_tolerance_mm: 0.,
+        },
+        closed_solid_policy::policy(),
+    )
+    .unwrap();
+    let geometry = report.admission.geometry();
+    assert!(geometry.boundary.proven);
+    assert!(geometry.nesting.is_some());
+    assert_eq!(geometry.orientations[0].outward, Some(false));
+    assert!(report.admission.solid().is_none());
+}

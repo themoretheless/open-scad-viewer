@@ -6,7 +6,7 @@ use super::{
 use crate::{
     Body, Model,
     analysis::{CertifiedFreeformVolume, certified_freeform_volume},
-    closed_solid::{AdmissionPolicy, QualifiedClosedSolid, qualify},
+    closed_solid::{AdmissionPolicy, ClosedSolidAdmission, QualifiedClosedSolid, qualify},
 };
 use num_rational::BigRational;
 use nurbs_core::{Error, Result};
@@ -79,17 +79,55 @@ pub fn build_inferred_section_solid(
     support_tolerance_mm: f64,
     options: SectionSolidOptions,
 ) -> Result<BoundedSectionSolid> {
-    require_standalone_shell(source)?;
-    let bounded = close_shell_with_bounded_inferred_section_caps(
+    let report = inspect_inferred_section_solid(
         source,
-        0,
         SectionAttachmentOptions {
             max_exact_work: options.max_exact_work,
             max_verification_cells: options.max_verification_cells,
             support_tolerance_mm,
         },
+        options.admission,
     )?;
-    qualify_bounded_attachment(source, bounded, options)
+    let section = finish_admission(
+        report.admission,
+        report.cap_faces,
+        report.attachment_exact_work,
+        report.attachment_verification_cells,
+        options,
+    )?;
+    Ok(BoundedSectionSolid {
+        section,
+        support_error_upper: report.support_error_upper,
+    })
+}
+
+pub struct InferredSectionSolidAdmission {
+    pub admission: ClosedSolidAdmission,
+    pub cap_faces: Vec<usize>,
+    pub support_error_upper: Vec<BigRational>,
+    pub attachment_exact_work: u64,
+    pub attachment_verification_cells: usize,
+}
+
+/// Inspect the capped candidate's boundary, nesting and orientation evidence.
+/// An unproved admission retains the candidate and complete stage evidence.
+/// Capping errors are returned directly. Volume integration is a separate stage.
+pub fn inspect_inferred_section_solid(
+    source: &Model,
+    attachment_options: SectionAttachmentOptions,
+    policy: AdmissionPolicy,
+) -> Result<InferredSectionSolidAdmission> {
+    require_standalone_shell(source)?;
+    let bounded = close_shell_with_bounded_inferred_section_caps(source, 0, attachment_options)?;
+    let attachment = bounded.attachment;
+    let admission = admit_model(source, attachment.model, policy)?;
+    Ok(InferredSectionSolidAdmission {
+        admission,
+        cap_faces: attachment.cap_faces,
+        support_error_upper: bounded.support_error_upper,
+        attachment_exact_work: attachment.exact_work,
+        attachment_verification_cells: attachment.verification_cells,
+    })
 }
 
 fn qualify_bounded_attachment(
@@ -116,20 +154,42 @@ fn qualify_attachment(
     attachment: AttachedSectionCaps,
     options: SectionSolidOptions,
 ) -> Result<SectionSolid> {
-    let mut model = attachment.model;
+    let admission = admit_model(source, attachment.model, options.admission)?;
+    finish_admission(
+        admission,
+        attachment.cap_faces,
+        attachment.exact_work,
+        attachment.verification_cells,
+        options,
+    )
+}
+
+fn admit_model(
+    source: &Model,
+    mut model: Model,
+    policy: AdmissionPolicy,
+) -> Result<ClosedSolidAdmission> {
     model.bodies.push(Body {
         outer_shell: 0,
         inner_shells: Vec::new(),
     });
     model.inherit_topology_ids(&[source]);
-    let solid = qualify(model, options.admission)?
-        .into_solid()
-        .ok_or_else(|| {
-            Error::new(
-                "BREP_CLOSED_SOLID_UNPROVED",
-                "Section caps did not establish an embedded outward material boundary",
-            )
-        })?;
+    qualify(model, policy)
+}
+
+fn finish_admission(
+    admission: ClosedSolidAdmission,
+    cap_faces: Vec<usize>,
+    attachment_exact_work: u64,
+    attachment_verification_cells: usize,
+    options: SectionSolidOptions,
+) -> Result<SectionSolid> {
+    let solid = admission.into_solid().ok_or_else(|| {
+        Error::new(
+            "BREP_CLOSED_SOLID_UNPROVED",
+            "Section caps did not establish an embedded outward material boundary",
+        )
+    })?;
     let volume = certified_freeform_volume(
         solid.model(),
         options.volume_tolerance_mm3,
@@ -137,9 +197,9 @@ fn qualify_attachment(
     )?;
     Ok(SectionSolid {
         solid,
-        cap_faces: attachment.cap_faces,
+        cap_faces,
         volume,
-        attachment_exact_work: attachment.exact_work,
-        attachment_verification_cells: attachment.verification_cells,
+        attachment_exact_work,
+        attachment_verification_cells,
     })
 }
