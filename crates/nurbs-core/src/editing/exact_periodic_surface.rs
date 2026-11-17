@@ -284,3 +284,35 @@ fn rebuild_surface_axis(
         .map_err(|_| ExactRefusal::InvalidOutput)?;
     Ok(refined)
 }
+
+/// Extract a clamped rectangle across both periodic seams in the original
+/// parameter units. Each interval covers at most one turn on its axis.
+/// Both axis edits must be exactly storable and share one work budget.
+pub fn restrict_exact_doubly_periodic_surface(
+    source: &Surface,
+    u: [f64; 2],
+    v: [f64; 2],
+    max_work: u64,
+) -> Result<Report> {
+    crate::check(
+        [u, v]
+            .iter()
+            .all(|[lo, hi]| lo.is_finite() && hi.is_finite() && lo < hi),
+        "Periodic surface rectangle needs increasing finite intervals",
+    )?;
+    let first = restrict_exact_periodic_surface_axis(source, Axis::U, u, max_work)?;
+    let Some(strip) = first.surface else {
+        return Ok(first);
+    };
+    if first.work_used == max_work {
+        return Ok(Report {
+            surface: None,
+            work_used: first.work_used,
+            refusal: Some(GaugeMergeRefusal::Exact(ExactRefusal::ResourceLimit)),
+        });
+    }
+    let mut second =
+        restrict_exact_periodic_surface_axis(&strip, Axis::V, v, max_work - first.work_used)?;
+    second.work_used += first.work_used;
+    Ok(second)
+}

@@ -1837,3 +1837,78 @@ fn exact_periodic_surface_strip_rejects_intervals_longer_than_one_turn() {
         Some(GaugeMergeRefusal::Join(Refusal::NonAdjacentDomain))
     );
 }
+
+fn doubly_periodic_tensor() -> nurbs_core::surface::Surface {
+    let profile = periodic_unit_square();
+    nurbs_core::surface::Surface {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: profile.knots.clone(),
+        knots_v: profile.knots,
+        control_points: profile
+            .control_points
+            .iter()
+            .map(|a| {
+                profile
+                    .control_points
+                    .iter()
+                    .map(|b| vec![a[0], b[0], a[1] + b[1]])
+                    .collect()
+            })
+            .collect(),
+        weights: vec![vec![1.; 5]; 5],
+        periodic_u: true,
+        periodic_v: true,
+    }
+}
+
+#[test]
+fn periodic_rectangle_preserves_the_tensor_across_both_seams() {
+    use nurbs_core::editing::exact_periodic_surface::restrict_exact_doubly_periodic_surface;
+    let source = doubly_periodic_tensor();
+    let u = [3.5, 4.5];
+    let v = [3.75, 4.25];
+    let report = restrict_exact_doubly_periodic_surface(&source, u, v, 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let rectangle = report.surface.unwrap();
+    assert!(!rectangle.periodic_u && !rectangle.periodic_v);
+    assert_eq!(rectangle.knots_u, vec![3.5, 3.5, 4., 4.5, 4.5]);
+    assert_eq!(rectangle.knots_v, vec![3.75, 3.75, 4., 4.25, 4.25]);
+    for a in [3.5, 3.75, 4., 4.25, 4.5] {
+        for b in [3.75, 3.875, 4., 4.125, 4.25] {
+            assert_eq!(
+                rectangle.evaluate(a, b).unwrap().point,
+                source.evaluate(a % 4., b % 4.).unwrap().point
+            );
+        }
+    }
+    assert!(
+        restrict_exact_doubly_periodic_surface(&source, u, v, report.work_used)
+            .unwrap()
+            .surface
+            .is_some()
+    );
+    assert!(
+        restrict_exact_doubly_periodic_surface(&source, u, v, report.work_used - 1)
+            .unwrap()
+            .surface
+            .is_none()
+    );
+}
+
+#[test]
+fn periodic_rectangle_returns_no_partial_strip_on_second_axis_refusal() {
+    use nurbs_core::editing::{
+        exact_curve_merge::{GaugeMergeRefusal, Refusal},
+        exact_periodic_surface::restrict_exact_doubly_periodic_surface,
+    };
+    let source = doubly_periodic_tensor();
+    let report =
+        restrict_exact_doubly_periodic_surface(&source, [3.5, 4.5], [3., 7.25], 1_000_000).unwrap();
+    assert!(report.work_used > 0);
+    assert!(report.surface.is_none());
+    assert_eq!(
+        report.refusal,
+        Some(GaugeMergeRefusal::Join(Refusal::NonAdjacentDomain))
+    );
+}
