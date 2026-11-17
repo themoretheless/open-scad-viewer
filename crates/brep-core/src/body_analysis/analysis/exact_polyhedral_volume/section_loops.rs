@@ -275,3 +275,39 @@ fn contains_point(ring: &[[Q; 2]], [x, y]: &[Q; 2], remaining: &mut u64) -> Resu
     }
     Ok(inside)
 }
+
+#[derive(Clone, Debug)]
+pub struct BoundedPolyhedralSectionPerimeter {
+    /// Outward rational bounds for the sum of all contour lengths.
+    pub bounds_mm: [Q; 2],
+    pub loops: Vec<PolyhedralSectionLoop>,
+    pub exact_work: u64,
+}
+
+/// Bound the total perimeter of a strict transverse section. Both material
+/// exteriors and hole boundaries contribute their full length.
+pub fn bounded_polyhedral_section_perimeter(
+    solid: &QualifiedClosedSolid,
+    normal: [f64; 3],
+    offset: f64,
+    max_width_mm: f64,
+    max_exact_work: u64,
+) -> Result<BoundedPolyhedralSectionPerimeter> {
+    let width = super::enclosure_width(max_width_mm)?;
+    let section = exact_polyhedral_section_loops(solid, normal, offset, max_exact_work)?;
+    let mut remaining = max_exact_work - section.exact_work;
+    let mut squares = Vec::new();
+    for ring in &section.loops {
+        let points = &ring.points_mm;
+        for (a, b) in points.iter().zip(points.iter().cycle().skip(1)) {
+            spend(&mut remaining, 9)?;
+            squares.push(a.iter().zip(b).map(|(a, b)| (a - b).pow(2)).sum());
+        }
+    }
+    let bounds_mm = super::bound_root_sum(squares, width, &mut remaining)?;
+    Ok(BoundedPolyhedralSectionPerimeter {
+        bounds_mm,
+        loops: section.loops,
+        exact_work: max_exact_work - remaining,
+    })
+}

@@ -2228,3 +2228,50 @@ fn exact_section_centroid_lifts_a_nonbinary_point_to_the_oblique_plane() {
     assert_eq!(report.centroid_mm, Some([q(3, 2), q(0, 1), q(7, 6)]));
     assert_eq!(report.section.area_squared_mm4, q(44, 1));
 }
+
+#[test]
+fn section_perimeter_includes_holes_and_disjoint_contours() {
+    use brep_core::{
+        analysis::bounded_polyhedral_section_perimeter,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    for (normal, offset, length, count) in [
+        ([0., 0., 1.], 1., 20, 2),
+        ([1., 0., 0.], 1.5, 14, 2),
+        ([1., 0., 0.], 5., 0, 0),
+    ] {
+        let report =
+            bounded_polyhedral_section_perimeter(solid, normal, offset, 1e-10, 1_000_000).unwrap();
+        assert_eq!(report.loops.len(), count);
+        assert_eq!(
+            report.bounds_mm,
+            [length; 2].map(|n| Q::from_integer(n.into()))
+        );
+    }
+}
+
+#[test]
+fn bounds_exact_oblique_section_length_at_the_requested_precision() {
+    use brep_core::analysis::bounded_polyhedral_section_perimeter;
+    use num_rational::BigRational as Q;
+    let solid = shifted_oblique_solid(0.);
+    let normal = [-1., -1., 3.];
+    let report =
+        bounded_polyhedral_section_perimeter(&solid, normal, 2., 1e-10, 1_000_000).unwrap();
+    let [lower, upper] = report.bounds_mm;
+    let expected = Q::from_float(2. * (8_f64.sqrt() + 6_f64.sqrt())).unwrap();
+    assert!(lower < expected && expected < upper);
+    assert!(upper - lower <= Q::from_float(1e-10).unwrap());
+    assert!(
+        bounded_polyhedral_section_perimeter(&solid, normal, 2., 1e-10, report.exact_work).is_ok()
+    );
+    assert!(
+        bounded_polyhedral_section_perimeter(&solid, normal, 2., 1e-10, report.exact_work - 1)
+            .is_err()
+    );
+    assert!(bounded_polyhedral_section_perimeter(&solid, normal, 2., f64::NAN, 1_000_000).is_err());
+}
