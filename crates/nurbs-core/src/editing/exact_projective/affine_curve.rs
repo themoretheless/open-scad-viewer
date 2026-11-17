@@ -84,10 +84,40 @@ impl AffineMap {
     }
 
     pub(super) fn store(&self, value: f64, work: &mut Work) -> PResult<f64> {
+        Ok(self.store_knot(value, work)?)
+    }
+
+    fn store_knot(&self, value: f64, work: &mut Work) -> std::result::Result<f64, super::Error> {
         let value = work.lift(value)?;
         let offset = work.op(&value, &self.old_start, |a, b| a - b)?;
         let delta = work.op(&offset, &self.scale, |a, b| a * b)?;
         let absolute = work.op(&self.new_start, &delta, |a, b| a + b)?;
-        Ok(work.float(&absolute)?)
+        work.float(&absolute)
     }
+}
+
+/// Apply an already proved positive speed ratio using the same exact knot map
+/// as the public endpoint-based affine clock.
+pub(in crate::editing) fn scale_curve_clock(
+    source: &Curve,
+    start: f64,
+    scale: Q,
+    work: &mut Work,
+) -> std::result::Result<Curve, crate::editing::rational_factor::Refusal> {
+    use crate::editing::rational_factor::Refusal;
+
+    let map = AffineMap {
+        old_start: work.lift(source.domain()[0])?,
+        new_start: work.lift(start)?,
+        scale,
+    };
+    let knots = source
+        .knots
+        .iter()
+        .map(|&knot| map.store_knot(knot, work))
+        .collect::<std::result::Result<_, _>>()?;
+    let mut curve = source.clone();
+    curve.knots = knots;
+    curve.validate().map_err(|_| Refusal::InvalidOutput)?;
+    Ok(curve)
 }

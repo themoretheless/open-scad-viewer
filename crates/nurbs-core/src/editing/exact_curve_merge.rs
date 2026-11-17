@@ -666,3 +666,50 @@ pub fn compare_exact_curve_geometric_seam(
     report.work_used = work.used;
     Ok(report)
 }
+
+/// Merge clamped curves with a regular G1 seam into one curve with a C1 seam.
+/// The left clock is retained. A positive affine map places the right curve
+/// at the seam and matches its first derivative without changing its shape.
+pub fn merge_with_exact_c1_clock(
+    left: &Curve,
+    right: &Curve,
+    max_work: u64,
+) -> Result<GaugeMergeReport> {
+    use super::{
+        exact_projective::affine_curve::scale_curve_clock, rational_edit::Work,
+        rational_factor::Refusal as ExactRefusal,
+    };
+
+    let seam = compare_exact_curve_geometric_seam(left, right, max_work)?;
+    let refused = |reason, work_used| GaugeMergeReport {
+        curve: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    if let Some(reason) = seam.refusal {
+        return Ok(refused(reason, seam.work_used));
+    }
+    let Some(scale) = seam.speed_scale else {
+        return Ok(refused(
+            GaugeMergeRefusal::Join(Refusal::SeamMismatch),
+            seam.work_used,
+        ));
+    };
+    let mut work = Work {
+        used: seam.work_used,
+        limit: max_work,
+    };
+    let aligned = match scale_curve_clock(right, left.domain()[1], scale, &mut work) {
+        Ok(curve) => curve,
+        Err(reason) => return Ok(refused(GaugeMergeRefusal::Exact(reason), work.used)),
+    };
+    if work.used == max_work {
+        return Ok(refused(
+            GaugeMergeRefusal::Exact(ExactRefusal::ResourceLimit),
+            work.used,
+        ));
+    }
+    let mut merged = merge_with_exact_degree_elevation(left, &aligned, max_work - work.used)?;
+    merged.work_used += work.used;
+    Ok(merged)
+}

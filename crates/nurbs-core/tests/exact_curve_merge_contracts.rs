@@ -687,3 +687,60 @@ fn exact_geometric_curve_seam_rejects_opposite_and_stationary_tangents() {
         None
     );
 }
+
+fn clock_segment(domain: [f64; 2], x: [f64; 2]) -> Curve {
+    Curve {
+        degree: 1,
+        knots: vec![domain[0], domain[0], domain[1], domain[1]],
+        control_points: vec![vec![x[0], 0.], vec![x[1], 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    }
+}
+
+#[test]
+fn c1_clock_merge_accepts_a_nondyadic_scale_with_exact_knots() {
+    use nurbs_core::editing::exact_curve_merge::merge_with_exact_c1_clock;
+    let left = clock_segment([0., 1.], [0., 3.]);
+    let right = clock_segment([10., 13.], [3., 9.]);
+    let report = merge_with_exact_c1_clock(&left, &right, 1_000_000).unwrap();
+    let curve = report.curve.unwrap();
+    assert_eq!(report.refusal, None);
+    assert_eq!(curve.knots, vec![0., 0., 1., 3., 3.]);
+    for t in [0., 0.5, 1., 2., 3.] {
+        assert_eq!(curve.evaluate(t).unwrap().point, vec![3. * t, 0.]);
+    }
+    assert!(
+        merge_with_exact_c1_clock(&left, &right, report.work_used)
+            .unwrap()
+            .curve
+            .is_some()
+    );
+    assert!(
+        merge_with_exact_c1_clock(&left, &right, report.work_used - 1)
+            .unwrap()
+            .curve
+            .is_none()
+    );
+}
+
+#[test]
+fn c1_clock_merge_refuses_inexact_knots_and_reversed_tangents() {
+    use nurbs_core::editing::{
+        exact_curve_merge::{GaugeMergeRefusal, merge_with_exact_c1_clock},
+        rational_factor,
+    };
+    let left = clock_segment([0., 1.], [0., 3.]);
+    for (end, expected) in [
+        (
+            7.,
+            GaugeMergeRefusal::Exact(rational_factor::Refusal::NotRepresentable),
+        ),
+        (-3., GaugeMergeRefusal::Join(Refusal::SeamMismatch)),
+    ] {
+        let right = clock_segment([10., 12.], [3., end]);
+        let report = merge_with_exact_c1_clock(&left, &right, 1_000_000).unwrap();
+        assert!(report.curve.is_none());
+        assert_eq!(report.refusal, Some(expected));
+    }
+}

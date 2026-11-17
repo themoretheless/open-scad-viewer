@@ -3,7 +3,7 @@ use crate::core::bounded_rational::{Error, Work};
 use crate::{Result, check, curve::Curve, surface::Surface};
 use num_rational::BigRational as Q;
 use num_traits::{Signed, Zero};
-mod affine_curve;
+pub(super) mod affine_curve;
 pub use affine_curve::affine_curve_clock;
 mod affine_surface;
 pub use affine_surface::affine_surface_clock;
