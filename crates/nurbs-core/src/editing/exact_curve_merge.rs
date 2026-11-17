@@ -1401,11 +1401,35 @@ fn clamp_curve_interval(
     [lo, hi]: [f64; 2],
     work: &mut super::rational_edit::Work,
 ) -> std::result::Result<Curve, super::rational_factor::Refusal> {
-    use super::{
-        exact_knot_insertion::{homogeneous, refine_homogeneous},
-        rational_edit::store,
-        rational_factor::Refusal,
+    use super::{rational_edit::store, rational_factor::Refusal};
+
+    let degree = source.degree;
+    let (active, clamped_knots) = clamp_curve_net(source, [lo, hi], work)?;
+    let channels: Vec<Vec<_>> = (0..active[0].len())
+        .map(|axis| active.iter().map(|row| row[axis].clone()).collect())
+        .collect();
+    let (control_points, weights) = store(&channels, work)?;
+    let curve = Curve {
+        degree,
+        knots: clamped_knots,
+        control_points,
+        weights,
+        periodic: false,
     };
+    curve.validate().map_err(|_| Refusal::InvalidOutput)?;
+    Ok(curve)
+}
+
+pub(super) fn clamp_curve_net(
+    source: &Curve,
+    [lo, hi]: [f64; 2],
+    work: &mut super::rational_edit::Work,
+) -> std::result::Result<
+    (Vec<Vec<num_rational::BigRational>>, Vec<f64>),
+    super::rational_factor::Refusal,
+> {
+    use super::exact_knot_insertion::{homogeneous, refine_homogeneous};
+
     let degree = source.degree;
     let (mut net, mut knots) = homogeneous(source, lo, 0, work)?;
     for end in [lo, hi] {
@@ -1426,23 +1450,11 @@ fn clamp_curve_interval(
     // At degree multiplicity the first and last active span each have
     // a single endpoint pole. Copy their active control range, replacing
     // the inactive exterior knots by one extra copy of each endpoint.
-    let active = &net[first - 1..last];
-    let channels: Vec<Vec<_>> = (0..active[0].len())
-        .map(|axis| active.iter().map(|row| row[axis].clone()).collect())
-        .collect();
-    let (control_points, weights) = store(&channels, work)?;
+    let active = net.drain(first - 1..last).collect();
     let mut clamped_knots = vec![lo];
     clamped_knots.extend_from_slice(&knots[first..last + degree]);
     clamped_knots.push(hi);
-    let curve = Curve {
-        degree,
-        knots: clamped_knots,
-        control_points,
-        weights,
-        periodic: false,
-    };
-    curve.validate().map_err(|_| Refusal::InvalidOutput)?;
-    Ok(curve)
+    Ok((active, clamped_knots))
 }
 
 /// Extract a clamped subcurve from one lifted period. The start lies in the

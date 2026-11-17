@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 514,
-  "unallocatedCount": 486,
+  "specifiedCount": 515,
+  "unallocatedCount": 485,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13270,6 +13270,27 @@
       "remainingQualification": [
         "Insert a periodic seam in exact homogeneous arithmetic with one common tensor weight gauge.",
         "Apply cyclic Boehm insertion in exact homogeneous arithmetic to all rows then store one tensor-wide weight gauge before rotating.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0515",
+      "name": "Точное раскрытие периода NURBS-поверхности по U или V",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::open_exact_periodic_surface_axis",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-515-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-515-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamp one periodic surface axis in exact homogeneous arithmetic with a single tensor-wide weight gauge.",
+        "Clamp a complete period of each homogeneous row, then store the assembled tensor in one exact weight gauge while keeping the transverse axis.",
         "WASM and application integration are separate."
       ]
     }

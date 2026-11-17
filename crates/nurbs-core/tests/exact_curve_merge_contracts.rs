@@ -1675,3 +1675,89 @@ fn exact_surface_seam_insertion_refuses_inexact_later_rows_atomically() {
         Some(GaugeMergeRefusal::Exact(Refusal::NotRepresentable))
     );
 }
+
+#[test]
+fn exact_surface_opening_preserves_both_parameter_domains_and_tensor_weights() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::open_exact_periodic_surface_axis,
+        surface::{Axis, extrude},
+    };
+    let mut profile = periodic_unit_square();
+    profile.degree = 2;
+    profile.knots = vec![-2., -1., 0., 1., 2., 3., 4., 5., 6.];
+    profile.control_points.push(vec![1., 0.]);
+    profile.weights.push(1.);
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let mut source = extrude(&profile, [0., 0., 2.]).unwrap();
+    for weights in &mut source.weights {
+        weights[1] = 3.;
+    }
+    let report = open_exact_periodic_surface_axis(&source, Axis::U, 1_000_000).unwrap();
+    let opened = report.surface.unwrap();
+    assert!(!opened.periodic_u);
+    assert_eq!(opened.knots_u, vec![0., 0., 0., 1., 2., 3., 4., 4., 4.]);
+    assert_eq!(opened.knots_v, source.knots_v);
+    let transposed = nurbs_geometry::surface_transpose::transpose(&source).unwrap();
+    let opened_v = open_exact_periodic_surface_axis(&transposed, Axis::V, 1_000_000)
+        .unwrap()
+        .surface
+        .unwrap();
+    assert_eq!(
+        opened_v,
+        nurbs_geometry::surface_transpose::transpose(&opened).unwrap()
+    );
+    for u in [0., 0.25, 1., 2.75, 4.] {
+        for v in [0., 0.25, 0.5, 1.] {
+            let actual = opened.evaluate(u, v).unwrap().point;
+            let expected = source.evaluate(u, v).unwrap().point;
+            assert!(
+                actual
+                    .into_iter()
+                    .zip(expected)
+                    .all(|(a, b)| (a - b).abs() < 1e-13)
+            );
+        }
+    }
+    assert!(
+        open_exact_periodic_surface_axis(&source, Axis::U, report.work_used - 1)
+            .unwrap()
+            .surface
+            .is_none()
+    );
+}
+
+#[test]
+fn exact_surface_opening_rejects_an_unstorable_endpoint_in_any_row() {
+    use nurbs_core::{
+        editing::{
+            exact_curve_merge::GaugeMergeRefusal,
+            exact_periodic_surface::open_exact_periodic_surface_axis, rational_factor::Refusal,
+        },
+        surface::{Axis, extrude},
+    };
+    let profile = Curve {
+        degree: 2,
+        knots: vec![-2., -1., 0., 1., 2., 3., 4., 5., 6.],
+        control_points: vec![
+            vec![0., 0., 0.],
+            vec![1., 0., 0.],
+            vec![1., 1., 0.],
+            vec![0., 1., 0.],
+            vec![0., 0., 0.],
+            vec![1., 0., 0.],
+        ],
+        weights: vec![1.; 6],
+        periodic: true,
+    };
+    let mut source = extrude(&profile, [0., 0., 2.]).unwrap();
+    source.weights[1][1] = 2.;
+    source.weights[5][1] = 2.;
+    let report = open_exact_periodic_surface_axis(&source, Axis::U, 1_000_000).unwrap();
+    assert!(report.surface.is_none());
+    assert_eq!(
+        report.refusal,
+        Some(GaugeMergeRefusal::Exact(Refusal::NotRepresentable))
+    );
+}

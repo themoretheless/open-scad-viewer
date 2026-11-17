@@ -2,11 +2,15 @@
 use super::{
     exact_curve_merge::{GaugeMergeRefusal, Refusal, rotate_periodic_curve_at_exact_knot},
     exact_tensor_edit::row,
+    rational_edit::Work,
+    rational_factor::Refusal as ExactRefusal,
 };
 use crate::{
     Result,
     surface::{Axis, Surface},
 };
+
+use num_rational::BigRational;
 
 #[derive(Clone, Debug)]
 pub struct Report {
@@ -89,8 +93,6 @@ pub fn insert_and_rotate_periodic_surface_seam(
     parameter: f64,
     max_work: u64,
 ) -> Result<Report> {
-    use super::{rational_edit::Work, rational_factor::Refusal as ExactRefusal};
-
     source.validate()?;
     crate::check(
         (1..=cad_predicates::MAX_WORK).contains(&max_work),
@@ -108,7 +110,9 @@ pub fn insert_and_rotate_periodic_surface_seam(
         used: 0,
         limit: max_work,
     };
-    let refined = match refine_surface_axis(source, axis, parameter, &mut work) {
+    let refined = match rebuild_surface_axis(source, axis, true, &mut work, |row, work| {
+        super::exact_curve_merge::refine_periodic_seam_net(row, parameter, work)
+    }) {
         Ok(refined) => refined,
         Err(reason) => {
             return Ok(Report {
@@ -131,28 +135,69 @@ pub fn insert_and_rotate_periodic_surface_seam(
     Ok(report)
 }
 
-fn refine_surface_axis(
+/// Open a full periodic axis at its current seam, leaving the transverse
+/// axis and both parameter domains unchanged.
+pub fn open_exact_periodic_surface_axis(
     source: &Surface,
     axis: Axis,
-    parameter: f64,
-    work: &mut super::rational_edit::Work,
-) -> std::result::Result<Surface, super::rational_factor::Refusal> {
-    use super::{
-        exact_curve_merge::refine_periodic_seam_net, rational_edit::store, rational_factor::Refusal,
+    max_work: u64,
+) -> Result<Report> {
+    source.validate()?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact periodic surface work must be in 1..=1000000",
+    )?;
+    let reference = row(source, axis, 0);
+    if !crate::analysis::curve_partition_agreement::verify_periodic_source_closure(&reference)? {
+        return Ok(Report {
+            surface: None,
+            work_used: 0,
+            refusal: Some(GaugeMergeRefusal::Join(Refusal::InvalidOutput)),
+        });
+    }
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
     };
-    use num_rational::BigRational;
+    let domain = reference.domain();
+    let opened = rebuild_surface_axis(source, axis, false, &mut work, |row, work| {
+        super::exact_curve_merge::clamp_curve_net(row, domain, work)
+    });
+    Ok(match opened {
+        Ok(surface) => Report {
+            surface: Some(surface),
+            work_used: work.used,
+            refusal: None,
+        },
+        Err(reason) => Report {
+            surface: None,
+            work_used: work.used,
+            refusal: Some(GaugeMergeRefusal::Exact(reason)),
+        },
+    })
+}
+
+fn rebuild_surface_axis(
+    source: &Surface,
+    axis: Axis,
+    periodic: bool,
+    work: &mut Work,
+    transform: impl Fn(
+        &crate::curve::Curve,
+        &mut Work,
+    ) -> std::result::Result<(Vec<Vec<BigRational>>, Vec<f64>), ExactRefusal>,
+) -> std::result::Result<Surface, ExactRefusal> {
+    use super::rational_edit::store;
 
     let [nu, nv] = [source.control_points.len(), source.control_points[0].len()];
-    let (transverse, degree, cycle) = match axis {
-        Axis::U => (nv, source.degree_u, nu + 1 - source.degree_u),
-        Axis::V => (nu, source.degree_v, nv + 1 - source.degree_v),
+    let (transverse, degree) = match axis {
+        Axis::U => (nv, source.degree_u),
+        Axis::V => (nu, source.degree_v),
     };
-    let mut channels: [Vec<BigRational>; 4] =
-        std::array::from_fn(|_| Vec::with_capacity(transverse * cycle));
+    let mut channels: [Vec<BigRational>; 4] = std::array::from_fn(|_| Vec::new());
     let mut knots = Vec::new();
     for index in 0..transverse {
-        let (net, refined_knots) =
-            refine_periodic_seam_net(&row(source, axis, index), parameter, work)?;
+        let (net, refined_knots) = transform(&row(source, axis, index), work)?;
         knots = refined_knots;
         for pole in net {
             for (channel, value) in channels.iter_mut().zip(pole) {
@@ -161,11 +206,13 @@ fn refine_surface_axis(
         }
     }
     let (points, weights) = store(&channels, work)?;
-    let count = cycle + degree;
+    let count = knots.len() - degree - 1;
+    let cycle = if periodic { count - degree } else { count };
     let mut refined = source.clone();
     match axis {
         Axis::U => {
             refined.knots_u = knots;
+            refined.periodic_u = periodic;
             refined.control_points = (0..count)
                 .map(|i| {
                     (0..nv)
@@ -179,6 +226,7 @@ fn refine_surface_axis(
         }
         Axis::V => {
             refined.knots_v = knots;
+            refined.periodic_v = periodic;
             refined.control_points = (0..nu)
                 .map(|i| {
                     (0..count)
@@ -191,6 +239,8 @@ fn refine_surface_axis(
                 .collect();
         }
     }
-    refined.validate().map_err(|_| Refusal::InvalidOutput)?;
+    refined
+        .validate()
+        .map_err(|_| ExactRefusal::InvalidOutput)?;
     Ok(refined)
 }
