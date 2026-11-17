@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 486,
-  "unallocatedCount": 514,
+  "specifiedCount": 487,
+  "unallocatedCount": 513,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12683,6 +12683,35 @@
       "remainingQualification": [
         "Measure exact overlap of two planar profile extrusions with collinear sweeps.",
         "Translate the second footprint along the common sweep, certify exact coplanarity and measure the overlap area. Multiply its projected sweep height by the common axial parameter length.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0487",
+      "name": "Точная замкнутая оболочка пересечения параллельных профильных выдавливаний",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::mesh_exact_parallel_planar_profile_extrusion_overlap",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "docs/qualification/nurbs-curvature-field-487-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-487-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Construct the exact closed triangle mesh of positive-volume collinear extrusion overlap.",
+        "Extrude the exact common footprint over the clipped axial range and place the result in the shared slab. Require agreement with independent exact overlap volume.",
         "WASM and application integration are separate."
       ]
     }

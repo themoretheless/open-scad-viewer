@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0487",
+  "testedBase": "0bc26c7926c62a7dfd05e895819ac135026df569",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 298,
+  "scope": [
+    "Construct the exact closed triangle mesh of positive-volume collinear extrusion overlap.",
+    "Extrude the exact common footprint over the clipped axial range and place the result in the shared slab. Require agreement with independent exact overlap volume."
+  ],
+  "logSha256": "552696498fb910747b9857e465d8417fee2b4f5d315bd31466aa16cd2ca1069d",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "0a7faa774c654b9a671df0c15b164f293e212413b4511353f7e63dd569b813bc",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "1fb72be867af2e4c79cc4e57c8e8cd838f86d56ea5ad6b584e3bd2e38e8bdcb5",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs": "40baecbd069d8a0c1849336d4935875dd4bd63caf74c56dc6b9042cd253a8b8c",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs": "8ede062350dde59a85651b267d276bf360e29d8b374169c9e434cf3e7b9805f7"
+  }
+}

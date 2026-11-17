@@ -6952,3 +6952,96 @@ fn exact_parallel_profile_extrusion_overlap_distinguishes_contacts_and_disjoint_
         .is_err()
     );
 }
+
+#[test]
+fn exact_parallel_extrusion_overlap_mesh_is_closed_and_placed_in_the_common_slab() {
+    use brep_core::analysis::mesh_exact_parallel_planar_profile_extrusion_overlap;
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y, z| [q(x), q(y), q(z)];
+    let rect = |lo, hi, z| {
+        [
+            p(lo, lo, z),
+            p(hi, lo, z),
+            p(hi, hi, z),
+            p(lo, hi, z),
+            p(lo, lo, z),
+        ]
+    };
+    let a = rect(0, 6, 0);
+    let hole = rect(2, 4, 0);
+    let b = rect(1, 5, 3);
+    let mesh = |budget| {
+        mesh_exact_parallel_planar_profile_extrusion_overlap(
+            &a,
+            &[&hole],
+            &p(0, 0, 4),
+            &b,
+            &[],
+            &p(0, 0, -2),
+            budget,
+        )
+    };
+    let report = mesh(1_000_000).unwrap();
+    assert_eq!(report.volume_mm3, q(24));
+    assert!(
+        report
+            .vertices_mm
+            .iter()
+            .all(|point| [q(1), q(3)].contains(&point[2]))
+    );
+    let mut incidence = std::collections::BTreeMap::<_, Vec<_>>::new();
+    let mut six_volume = q(0);
+    for &[a, b, c] in &report.triangles {
+        for (i, j) in [(a, b), (b, c), (c, a)] {
+            incidence
+                .entry([i.min(j), i.max(j)])
+                .or_default()
+                .push(i < j);
+        }
+        let [a, b, c] = [a, b, c].map(|index| &report.vertices_mm[index]);
+        for (i, j, k) in [(0, 1, 2), (1, 2, 0), (2, 0, 1)] {
+            six_volume += &a[i] * (&b[j] * &c[k] - &b[k] * &c[j]);
+        }
+    }
+    assert!(
+        incidence
+            .values()
+            .all(|pair| pair.len() == 2 && pair[0] != pair[1])
+    );
+    assert_eq!(six_volume, q(144));
+    assert_eq!(mesh(report.exact_work).unwrap(), report);
+    assert!(mesh(report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_parallel_extrusion_overlap_mesh_is_empty_for_cap_contact_or_separate_footprints() {
+    use brep_core::analysis::mesh_exact_parallel_planar_profile_extrusion_overlap;
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y, z| [q(x), q(y), q(z)];
+    let ring = |x, z| {
+        [
+            p(x, 0, z),
+            p(x + 2, 0, z),
+            p(x + 2, 2, z),
+            p(x, 2, z),
+            p(x, 0, z),
+        ]
+    };
+    let a = ring(0, 0);
+    for b in [ring(0, 2), ring(3, 0)] {
+        let report = mesh_exact_parallel_planar_profile_extrusion_overlap(
+            &a,
+            &[],
+            &p(0, 0, 2),
+            &b,
+            &[],
+            &p(0, 0, 2),
+            1_000_000,
+        )
+        .unwrap();
+        assert!(report.vertices_mm.is_empty() && report.triangles.is_empty());
+        assert_eq!(report.volume_mm3, q(0));
+    }
+}
