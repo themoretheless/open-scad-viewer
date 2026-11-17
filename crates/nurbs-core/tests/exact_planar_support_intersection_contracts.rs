@@ -14,9 +14,9 @@ use nurbs_core::{
             enclose_algebraic_planar_boundary_point, intersect_planar_face_boundaries,
             intersect_planar_face_boundary_contacts, intersect_planar_supports,
             intersect_trimmed_planar_faces, match_quadratic_planar_boundary_contacts,
-            optimize_planar_intersection_segment_storage, refine_planar_face_boundary_extents,
-            resolve_planar_face_boundary_intersection, store_planar_intersection_segment,
-            store_trimmed_planar_intersection,
+            optimize_planar_intersection_segment_storage, order_algebraic_boundary_clocks,
+            refine_planar_face_boundary_extents, resolve_planar_face_boundary_intersection,
+            store_planar_intersection_segment, store_trimmed_planar_intersection,
         },
         planar_coplanar_ray::CoplanarRayPartitionOptions,
         planar_trim_projection::ProjectedTrimmedFace,
@@ -1184,4 +1184,73 @@ fn encloses_rational_clock_values_exactly_and_bounds_algebraic_work() {
     let limited = enclose_algebraic_planar_boundary_point(&line, &irrational, 1e-8, 1).unwrap();
     assert_eq!(limited.outcome, Err(Refusal::ResourceLimit));
     assert!(limited.work_used <= 1);
+}
+
+#[test]
+fn orders_close_quadratic_branches_without_rounding_them_to_the_same_clock() {
+    let epsilon = q(1, 2).pow(120);
+    let root = |constant, upper_root| AlgebraicBoundaryClock::Quadratic {
+        linear: q(0, 1),
+        constant,
+        upper_root,
+    };
+    let shifted = AlgebraicBoundaryClock::Quadratic {
+        linear: -q(2, 1) * &epsilon,
+        constant: epsilon.pow(2) - q(2, 1),
+        upper_root: true,
+    };
+    let points = [
+        shifted,
+        root(q(-2, 1) - &epsilon, true),
+        root(q(-2, 1), true),
+        root(q(-2, 1), false),
+        root(q(-2, 1) - &epsilon, false),
+        AlgebraicBoundaryClock::Rational(q(7, 5)),
+        root(q(-2, 1), true),
+        AlgebraicBoundaryClock::Rational(q(3, 2)),
+    ];
+    let report = order_algebraic_boundary_clocks(&points, WORK).unwrap();
+    assert_eq!(
+        report.outcome.unwrap(),
+        vec![
+            vec![4],
+            vec![3],
+            vec![5],
+            vec![2, 6],
+            vec![1],
+            vec![0],
+            vec![7]
+        ]
+    );
+}
+
+#[test]
+fn groups_reducible_representations_and_refuses_invalid_roots_or_exhausted_work() {
+    use nurbs_core::editing::exact_derivative::Refusal;
+    let points = [
+        AlgebraicBoundaryClock::Quadratic {
+            linear: q(-3, 1),
+            constant: q(9, 4),
+            upper_root: false,
+        },
+        AlgebraicBoundaryClock::Rational(q(5, 2)),
+        AlgebraicBoundaryClock::Rational(q(3, 2)),
+        AlgebraicBoundaryClock::Quadratic {
+            linear: q(-2, 1),
+            constant: q(3, 4),
+            upper_root: true,
+        },
+    ];
+    let report = order_algebraic_boundary_clocks(&points, WORK).unwrap();
+    assert_eq!(report.outcome.unwrap(), vec![vec![0, 2, 3], vec![1]]);
+    let limited = order_algebraic_boundary_clocks(&points, report.work_used - 1).unwrap();
+    assert_eq!(limited.outcome, Err(Refusal::ResourceLimit));
+    assert!(limited.work_used < report.work_used);
+    let invalid = [AlgebraicBoundaryClock::Quadratic {
+        linear: q(0, 1),
+        constant: q(1, 1),
+        upper_root: true,
+    }];
+    let report = order_algebraic_boundary_clocks(&invalid, WORK).unwrap();
+    assert_eq!(report.outcome, Err(Refusal::InvalidOutput));
 }

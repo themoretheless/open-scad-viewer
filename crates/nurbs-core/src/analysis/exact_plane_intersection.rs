@@ -275,12 +275,13 @@ pub use storage::{
 mod boundary;
 pub use boundary::{
     AdaptiveBoundaryOptions, AdaptiveBoundaryReport, AlgebraicBoundaryClock,
-    AlgebraicBoundaryEnclosure, AlgebraicBoundaryEnclosureReport, AlgebraicPlanarContactReport,
-    AlgebraicPlanarContacts, BoundaryResolution, BoundedPlanarBoundaryIntersection,
-    BoundedPlanarBoundaryReport, PlanarBoundaryIntersection, PlanarBoundaryIntersectionReport,
-    bound_planar_face_boundary_intersection, enclose_algebraic_planar_boundary_point,
-    intersect_planar_face_boundaries, intersect_planar_face_boundary_contacts,
-    match_quadratic_planar_boundary_contacts, refine_planar_face_boundary_extents,
+    AlgebraicBoundaryEnclosure, AlgebraicBoundaryEnclosureReport, AlgebraicBoundaryOrderReport,
+    AlgebraicPlanarContactReport, AlgebraicPlanarContacts, BoundaryResolution,
+    BoundedPlanarBoundaryIntersection, BoundedPlanarBoundaryReport, PlanarBoundaryIntersection,
+    PlanarBoundaryIntersectionReport, bound_planar_face_boundary_intersection,
+    enclose_algebraic_planar_boundary_point, intersect_planar_face_boundaries,
+    intersect_planar_face_boundary_contacts, match_quadratic_planar_boundary_contacts,
+    order_algebraic_boundary_clocks, refine_planar_face_boundary_extents,
     resolve_planar_face_boundary_intersection,
 };
 

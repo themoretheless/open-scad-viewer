@@ -219,3 +219,6 @@ pub use algebraic_enclosure::{
     AlgebraicBoundaryEnclosure, AlgebraicBoundaryEnclosureReport,
     enclose_algebraic_planar_boundary_point,
 };
+
+mod algebraic_order;
+pub use algebraic_order::{AlgebraicBoundaryOrderReport, order_algebraic_boundary_clocks};
