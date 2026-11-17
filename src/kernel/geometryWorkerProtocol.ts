@@ -47,6 +47,8 @@ export interface GeometryBuildRequest extends GeometryJobEnvelope {
   selectionSurfaces?: boolean
   type: 'build'
   source: string
+  /** Multi-file project context; `source` is the entrypoint's text. */
+  project?: import('./geometryBuildEngine').GeometryProjectSources | undefined
 }
 
 export interface GeometryCancelRequest extends Omit<GeometryJobEnvelope, 'quality' | 'sourceSha256'> {

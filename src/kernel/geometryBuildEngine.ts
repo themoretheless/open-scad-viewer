@@ -13,7 +13,8 @@ import {
   GeometryLanguageContractError,
   planGeometrySourceExecution,
 } from '../core/geometryExecution'
-import { parseOpenSCAD, warmGeometryKernel } from '../language/openscadParser'
+import { parseOpenSCAD, parseOpenScadProject, warmGeometryKernel } from '../language/openscadParser'
+import { OpenScadProject } from '../language/openScadProject'
 import { buildBrepSemanticScene } from './brepSemanticScene'
 import { lowerOpenSCADToSemanticProgram } from '../language/semantic/semanticProgramLowerer'
 import { sha256Hex } from '../core/sha256'
@@ -53,9 +54,32 @@ const MANIFESTS: Readonly<Record<GeometryEngineClass, GeometryEngineManifest>> =
   brep: BREP_MANIFEST,
 })
 
+/**
+ * Auxiliary sources for a multi-file OpenSCAD build. The build source is the
+ * entrypoint at `entrypoint`; `include <...>` / `use <...>` resolve through the
+ * project VFS, first next to the importer, then in `libraryPaths`.
+ */
+export interface GeometryProjectSources {
+  readonly entrypoint: string
+  readonly files: readonly { readonly path: string; readonly source: string }[]
+  readonly libraryPaths?: readonly string[] | undefined
+}
+
 export interface GeometryBuildRequest {
   quality: GeometryQuality
   purpose: GeometryBuildPurpose
+  project?: GeometryProjectSources | undefined
+}
+
+/** Build the immutable project snapshot for one entrypoint source and its auxiliary files. */
+export function geometryProjectSnapshot(source: string, project: GeometryProjectSources): OpenScadProject {
+  return new OpenScadProject({
+    entrypoint: project.entrypoint,
+    files: [
+      { kind: 'source', path: project.entrypoint, source },
+      ...project.files.map(file => ({ kind: 'source' as const, path: file.path, source: file.source })),
+    ],
+  })
 }
 
 export interface GeometryBuildControl {
@@ -98,6 +122,15 @@ class MeshBackendProvider implements GeometryBackendProvider {
     request: GeometryBuildRequest,
     control: GeometryBuildControl = {},
   ): Promise<GeometryEvaluationResult> {
+    if (request.project !== undefined) {
+      return parseOpenScadProject(geometryProjectSnapshot(source, request.project), {
+        quality: request.quality,
+        shouldAbort: control.shouldAbort,
+        onYield: control.onYield,
+        onSweepPreview: control.onSweepPreview,
+        libraryPaths: request.project.libraryPaths,
+      })
+    }
     return parseOpenSCAD(source, {
       quality: request.quality,
       shouldAbort: control.shouldAbort,

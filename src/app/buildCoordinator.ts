@@ -1,3 +1,4 @@
+import type { GeometryProjectSources } from '../kernel/geometryBuildEngine'
 import { countOperation } from '../dev/operationCounters'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
@@ -45,6 +46,8 @@ export interface GeometryBuildInput {
   documentRevision: DocumentRevision
   source: string
   quality: GeometryQuality
+  /** Multi-file project context for `include` / `use`; `source` is the entrypoint text. */
+  project?: GeometryProjectSources | undefined
 }
 
 export type BuildCoordinatorStatus = 'idle' | 'building' | 'ready' | 'failed' | 'cancelled' | 'stale' | 'disposed'
@@ -200,6 +203,7 @@ export class BuildCoordinator {
       existing &&
       existing.request.documentRevision === input.documentRevision &&
       existing.request.source === input.source &&
+      existing.request.project === input.project &&
       existing.lifecycle !== 'terminal' &&
       existing.lifecycle !== 'superseded'
     ) {
@@ -215,6 +219,7 @@ export class BuildCoordinator {
       source: input.source,
       sourceSha256: sha256Hex(input.source),
       ...(this.options.selectionSurfaces ? { selectionSurfaces: true } : {}),
+      ...(input.project === undefined ? {} : { project: input.project }),
       quality: input.quality,
     }
     const record: JobRecord = {

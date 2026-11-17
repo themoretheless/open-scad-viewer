@@ -197,6 +197,7 @@ async function runBuild(request: GeometryBuildRequest, planned: GeometryExecutio
       {
         quality: request.quality,
         purpose: request.quality,
+        project: request.project,
       },
       job.initialization.signal,
     )
@@ -219,6 +220,7 @@ async function runBuild(request: GeometryBuildRequest, planned: GeometryExecutio
       {
         quality: request.quality,
         purpose: request.quality,
+        project: request.project,
       },
       {
         shouldAbort: () => job.cancelled !== null || staleReplacement(request) !== undefined,

@@ -307,6 +307,43 @@ export function hasValidEventEnvelope(candidate: Record<string, unknown>): boole
   )
 }
 
+const MAX_PROJECT_FILES = 127
+const MAX_PROJECT_LIBRARY_PATHS = 16
+const MAX_PROJECT_PATH_CHARACTERS = 1_024
+
+function isBoundedProjectPath(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= MAX_PROJECT_PATH_CHARACTERS &&
+    isWellFormedUnicode(value)
+  )
+}
+
+/** Shape check only; path canonicalization and containment stay with the project VFS. */
+function isGeometryProjectSources(value: unknown): boolean {
+  if (!isRecord(value) || !hasExactKeys(value, ['entrypoint', 'files'], ['libraryPaths'])) return false
+  const project = value as Record<string, unknown>
+  if (!isBoundedProjectPath(project.entrypoint)) return false
+  if (!Array.isArray(project.files) || project.files.length > MAX_PROJECT_FILES) return false
+  let characters = 0
+  for (const file of project.files as unknown[]) {
+    if (!isRecord(file) || !hasExactKeys(file, ['path', 'source'])) return false
+    const entry = file as Record<string, unknown>
+    if (!isBoundedProjectPath(entry.path) || typeof entry.source !== 'string' || !isWellFormedUnicode(entry.source))
+      return false
+    characters += entry.source.length
+    if (characters > MAX_GEOMETRY_SOURCE_CHARACTERS * 16) return false
+  }
+  const libraryPaths = project.libraryPaths
+  return (
+    libraryPaths === undefined ||
+    (Array.isArray(libraryPaths) &&
+      libraryPaths.length <= MAX_PROJECT_LIBRARY_PATHS &&
+      libraryPaths.every(isBoundedProjectPath))
+  )
+}
+
 export function isGeometryWorkerRequest(value: unknown): value is GeometryWorkerRequest {
   try {
     if (!isRecord(value) || !hasBoundedDataProperties(value, 12)) return false
@@ -323,8 +360,9 @@ export function isGeometryWorkerRequest(value: unknown): value is GeometryWorker
         hasExactKeys(
           value,
           ['protocolVersion', 'type', 'documentRevision', 'jobId', 'source', 'sourceSha256', 'quality'],
-          ['selectionSurfaces', 'acknowledgeSweepPreviews'],
+          ['selectionSurfaces', 'acknowledgeSweepPreviews', 'project'],
         ) &&
+        (build.project === undefined || isGeometryProjectSources(build.project)) &&
         (build.acknowledgeSweepPreviews === undefined || typeof build.acknowledgeSweepPreviews === 'boolean') &&
         (build.selectionSurfaces === undefined || typeof build.selectionSurfaces === 'boolean') &&
         typeof build.source === 'string' &&

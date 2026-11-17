@@ -1,3 +1,4 @@
+import { normalizeOpenScadProjectPath } from '../language/openScadProject'
 import { isRushFrontend } from '../language/rushFrontendDetect'
 import { parseParameterPresets, type ParameterPreset } from './parameterPresets'
 
@@ -8,7 +9,7 @@ import { parseParameterPresets, type ParameterPreset } from './parameterPresets'
  * to a multi-file workspace without coupling migrations to Vue components.
  */
 
-export const WORKSPACE_SCHEMA_VERSION = 2 as const
+export const WORKSPACE_SCHEMA_VERSION = 3 as const
 export const WORKSPACE_STORAGE_KEY = 'open-scad-viewer.workspace'
 export const WORKSPACE_RECOVERY_KEY_PREFIX = 'open-scad-viewer.workspace.recovery.'
 export const WORKSPACE_LEGACY_SOURCE_KEY = 'scad-code'
@@ -23,10 +24,23 @@ export interface WorkspaceDocumentSnapshot {
   readonly fileName: string
   readonly source: string
   readonly parameterPresets: readonly ParameterPreset[]
+  /**
+   * Auxiliary project sources reachable from the main document through
+   * `include <...>` / `use <...>`. Paths are canonical project-relative paths;
+   * the main document itself lives at `fileName`.
+   */
+  readonly projectFiles: readonly WorkspaceProjectFile[]
+  /** Project-relative library directories searched after the importer's directory. */
+  readonly libraryPaths: readonly string[]
   /** Monotonic persistence generation for both source and metadata edits. */
   readonly mutation: number
   readonly revision: number
   readonly updatedAt: number
+}
+
+export interface WorkspaceProjectFile {
+  readonly path: string
+  readonly source: string
 }
 
 export interface WorkspaceStorage {
@@ -51,10 +65,16 @@ export interface CreateWorkspaceDocumentOptions {
   mutation?: number
   revision?: number
   updatedAt?: number
+  projectFiles?: readonly WorkspaceProjectFile[]
+  libraryPaths?: readonly string[]
 }
 
 export const MAX_WORKSPACE_SOURCE_LENGTH = 250_000
 export const MAX_WORKSPACE_FILE_NAME_LENGTH = 255
+export const MAX_WORKSPACE_PROJECT_FILES = 127
+export const MAX_WORKSPACE_LIBRARY_PATHS = 16
+/** Total UTF-8 budget for the main document plus every auxiliary project source. */
+export const MAX_WORKSPACE_PROJECT_TOTAL_BYTES = 4 * 1024 * 1024
 const MAX_LEGACY_TABS = 64
 const MAX_LEGACY_TABS_SERIALIZED_LENGTH = 4 * 1024 * 1024
 
@@ -89,6 +109,8 @@ export function createWorkspaceDocument(
     fileName: options.fileName ?? 'model.scad',
     source,
     parameterPresets: [],
+    projectFiles: options.projectFiles ?? [],
+    libraryPaths: options.libraryPaths ?? [],
     mutation: options.mutation ?? revision,
     revision,
     updatedAt: options.updatedAt ?? Date.now(),
@@ -116,15 +138,26 @@ function parameterPresetsJson(presets: readonly ParameterPreset[]): string {
 
 export function updateWorkspaceDocument(
   previous: WorkspaceDocumentSnapshot,
-  update: { source?: string; fileName?: string; parameterPresets?: readonly ParameterPreset[] },
+  update: {
+    source?: string
+    fileName?: string
+    parameterPresets?: readonly ParameterPreset[]
+    projectFiles?: readonly WorkspaceProjectFile[]
+    libraryPaths?: readonly string[]
+  },
   updatedAt = Date.now(),
 ): WorkspaceDocumentSnapshot {
   const source = update.source ?? previous.source
   const fileName = update.fileName ?? previous.fileName
   const parameterPresets = update.parameterPresets ?? previous.parameterPresets
+  const projectFiles = update.projectFiles ?? previous.projectFiles
+  const libraryPaths = update.libraryPaths ?? previous.libraryPaths
+  const projectChanged =
+    !projectFilesEqual(projectFiles, previous.projectFiles) || !stringListsEqual(libraryPaths, previous.libraryPaths)
   if (
     source === previous.source &&
     fileName === previous.fileName &&
+    !projectChanged &&
     (parameterPresets === previous.parameterPresets ||
       parameterPresetsJson(parameterPresets) === parameterPresetsJson(previous.parameterPresets))
   )
@@ -134,8 +167,10 @@ export function updateWorkspaceDocument(
     source,
     fileName,
     parameterPresets,
+    projectFiles,
+    libraryPaths,
     mutation: previous.mutation + 1,
-    revision: previous.revision + (source === previous.source ? 0 : 1),
+    revision: previous.revision + (source === previous.source && !projectChanged ? 0 : 1),
     updatedAt,
   })
 }
@@ -206,20 +241,105 @@ export function parseWorkspaceRecovery(serialized: string): WorkspaceRecoveryRec
   }
 }
 
+function stringListsEqual(left: readonly string[], right: readonly string[]): boolean {
+  return left === right || (left.length === right.length && left.every((value, index) => value === right[index]))
+}
+
+function projectFilesEqual(left: readonly WorkspaceProjectFile[], right: readonly WorkspaceProjectFile[]): boolean {
+  return (
+    left === right ||
+    (left.length === right.length &&
+      left.every((file, index) => file.path === right[index]!.path && file.source === right[index]!.source))
+  )
+}
+
+function canonicalProjectPath(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  try {
+    return normalizeOpenScadProjectPath(value)
+  } catch {
+    return null
+  }
+}
+
+function parseProjectFiles(value: unknown, fileName: string, sourceBytes: number): WorkspaceProjectFile[] | null {
+  if (!Array.isArray(value) || value.length > MAX_WORKSPACE_PROJECT_FILES) return null
+  const seen = new Set<string>([canonicalProjectPath(fileName) ?? fileName])
+  const files: WorkspaceProjectFile[] = []
+  let totalBytes = sourceBytes
+  for (const entry of value as unknown[]) {
+    if (!entry || typeof entry !== 'object') return null
+    const { path: rawPath, source } = entry as { path?: unknown; source?: unknown }
+    const path = canonicalProjectPath(rawPath)
+    if (path === null || seen.has(path) || typeof source !== 'string') return null
+    totalBytes += workspaceSourceByteLength(source)
+    if (totalBytes > MAX_WORKSPACE_PROJECT_TOTAL_BYTES) return null
+    seen.add(path)
+    files.push(Object.freeze({ path, source }))
+  }
+  return files
+}
+
+function parseLibraryPaths(value: unknown): string[] | null {
+  if (!Array.isArray(value) || value.length > MAX_WORKSPACE_LIBRARY_PATHS) return null
+  const paths: string[] = []
+  for (const entry of value as unknown[]) {
+    const path = canonicalProjectPath(entry)
+    if (path === null) return null
+    if (!paths.includes(path)) paths.push(path)
+  }
+  return paths
+}
+
+type WorkspaceRecordV1 = Record<string, unknown> & { schemaVersion: 1 }
+type WorkspaceRecordV2 = Record<string, unknown> & { schemaVersion: 2; parameterPresets: unknown }
+type WorkspaceRecordV3 = Record<string, unknown> & {
+  schemaVersion: 3
+  parameterPresets: unknown
+  projectFiles: unknown
+  libraryPaths: unknown
+}
+
+/**
+ * Forward-only migrations, one per schema step. Each step is total over the
+ * previous version's record shape; validation runs once on the final shape.
+ */
+export const WORKSPACE_MIGRATIONS = Object.freeze({
+  1: (record: WorkspaceRecordV1): WorkspaceRecordV2 => ({ ...record, schemaVersion: 2, parameterPresets: [] }),
+  2: (record: WorkspaceRecordV2): WorkspaceRecordV3 => ({
+    ...record,
+    schemaVersion: 3,
+    projectFiles: [],
+    libraryPaths: [],
+  }),
+})
+
+/** Migrate a persisted record to the current schema, or `null` for unknown or future versions. */
+export function migrateWorkspaceRecord(value: unknown): WorkspaceRecordV3 | null {
+  if (!value || typeof value !== 'object') return null
+  let record = value as Record<string, unknown>
+  if (record.schemaVersion === 1) record = WORKSPACE_MIGRATIONS[1](record as WorkspaceRecordV1)
+  if (record.schemaVersion === 2) record = WORKSPACE_MIGRATIONS[2](record as WorkspaceRecordV2)
+  return record.schemaVersion === WORKSPACE_SCHEMA_VERSION ? (record as WorkspaceRecordV3) : null
+}
+
 /** Validate a structured-cloned snapshot read from IndexedDB. */
 export function parseWorkspaceDocumentValue(value: unknown): WorkspaceDocumentSnapshot | null {
-  if (!value || typeof value !== 'object') return null
-  const candidate = value as Partial<Record<keyof WorkspaceDocumentSnapshot, unknown>>
+  const candidate = migrateWorkspaceRecord(value)
   if (
-    (candidate.schemaVersion !== WORKSPACE_SCHEMA_VERSION && candidate.schemaVersion !== 1) ||
+    candidate === null ||
     !validDocumentId(candidate.documentId) ||
     !validFileName(candidate.fileName) ||
-    typeof candidate.source !== 'string' ||
-    workspaceSourceByteLength(candidate.source) > MAX_WORKSPACE_SOURCE_LENGTH
+    typeof candidate.source !== 'string'
   )
     return null
-  const parameterPresets = candidate.schemaVersion === 1 ? [] : parseParameterPresets(candidate.parameterPresets)
+  const sourceBytes = workspaceSourceByteLength(candidate.source)
+  if (sourceBytes > MAX_WORKSPACE_SOURCE_LENGTH) return null
+  const parameterPresets = parseParameterPresets(candidate.parameterPresets)
   if (parameterPresets === null) return null
+  const projectFiles = parseProjectFiles(candidate.projectFiles, candidate.fileName, sourceBytes)
+  const libraryPaths = parseLibraryPaths(candidate.libraryPaths)
+  if (projectFiles === null || libraryPaths === null) return null
   const revision = finiteRevision(candidate.revision)
   // Schema v1 originally shipped without a general mutation counter. Treat
   // its geometry revision as the migration baseline, then persist mutation on
@@ -233,6 +353,8 @@ export function parseWorkspaceDocumentValue(value: unknown): WorkspaceDocumentSn
     fileName: candidate.fileName,
     source: candidate.source,
     parameterPresets,
+    projectFiles,
+    libraryPaths,
     mutation,
     revision,
     updatedAt,
@@ -257,6 +379,8 @@ export function workspaceDocumentsEqual(
     left.fileName === right.fileName &&
     left.source === right.source &&
     parameterPresetsJson(left.parameterPresets) === parameterPresetsJson(right.parameterPresets) &&
+    projectFilesEqual(left.projectFiles, right.projectFiles) &&
+    stringListsEqual(left.libraryPaths, right.libraryPaths) &&
     left.mutation === right.mutation &&
     left.revision === right.revision &&
     left.updatedAt === right.updatedAt
