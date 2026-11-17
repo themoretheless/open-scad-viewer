@@ -5608,3 +5608,104 @@ fn exact_coplanar_overlap_cells_split_at_crossings_and_ignore_edge_only_contact(
             .is_empty()
     );
 }
+
+#[test]
+fn exact_coplanar_boolean_cells_preserve_holes_and_material_for_all_operations() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::*, decompose_exact_coplanar_planar_polyline_region_boolean,
+        exact_planar_spatial_polyline_area,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y| [q(x), q(y), q(0)];
+    let rect = |a, b, c, d| [p(a, b), p(c, b), p(c, d), p(a, d), p(a, b)];
+    let a = rect(0, 0, 6, 6);
+    let hole = rect(2, 2, 4, 4);
+    let b = rect(1, 1, 5, 5);
+    for (operation, expected) in [
+        (Intersection, 12),
+        (Union, 36),
+        (Difference, 20),
+        (SymmetricDifference, 24),
+    ] {
+        let report = decompose_exact_coplanar_planar_polyline_region_boolean(
+            &a,
+            &[&hole],
+            &b,
+            &[],
+            operation,
+            1_000_000,
+        )
+        .unwrap();
+        let area: Q = report
+            .cells_mm
+            .iter()
+            .map(|cell| {
+                let mut ring = cell.clone();
+                ring.push(cell[0].clone());
+                exact_planar_spatial_polyline_area(&ring, 1_000_000)
+                    .unwrap()
+                    .area_vector_mm2[2]
+                    .clone()
+            })
+            .sum();
+        assert_eq!(area, q(expected));
+        assert_eq!(
+            decompose_exact_coplanar_planar_polyline_region_boolean(
+                &a,
+                &[&hole],
+                &b,
+                &[],
+                operation,
+                report.exact_work
+            )
+            .unwrap(),
+            report
+        );
+        assert!(
+            decompose_exact_coplanar_planar_polyline_region_boolean(
+                &a,
+                &[&hole],
+                &b,
+                &[],
+                operation,
+                report.exact_work - 1
+            )
+            .is_err()
+        );
+    }
+}
+
+#[test]
+fn exact_coplanar_boolean_cells_merge_simultaneous_boundary_events() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::*, decompose_exact_coplanar_planar_polyline_region_boolean,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y| [q(x), q(y), q(0)];
+    let a = [p(0, 0), p(4, 0), p(4, 1), p(0, 1), p(0, 0)];
+    let b = [p(0, 1), p(4, 1), p(4, 2), p(0, 2), p(0, 1)];
+    for op in [Union, SymmetricDifference] {
+        let report = decompose_exact_coplanar_planar_polyline_region_boolean(
+            &a,
+            &[],
+            &b,
+            &[],
+            op,
+            1_000_000,
+        )
+        .unwrap();
+        assert_eq!(report.cells_mm, [vec![p(0, 0), p(4, 0), p(4, 2), p(0, 2)]]);
+    }
+    let same = decompose_exact_coplanar_planar_polyline_region_boolean(
+        &a,
+        &[],
+        &a,
+        &[],
+        Difference,
+        1_000_000,
+    )
+    .unwrap();
+    assert!(same.cells_mm.is_empty());
+}

@@ -3170,6 +3170,57 @@ pub fn decompose_exact_coplanar_planar_polyline_region_overlap(
     second_holes_mm: &[&[[Q; 3]]],
     max_exact_work: u64,
 ) -> Result<ExactCoplanarPolylineRegionOverlapCells> {
+    let report = decompose_exact_coplanar_planar_polyline_region_boolean(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        CoplanarPolylineBoolean::Intersection,
+        max_exact_work,
+    )?;
+    Ok(ExactCoplanarPolylineRegionOverlapCells {
+        cells_mm: report.cells_mm,
+        exact_work: report.exact_work,
+    })
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CoplanarPolylineBoolean {
+    Intersection,
+    Union,
+    Difference,
+    SymmetricDifference,
+}
+
+impl CoplanarPolylineBoolean {
+    fn contains(self, [first, second]: [bool; 2]) -> bool {
+        match self {
+            Self::Intersection => first && second,
+            Self::Union => first || second,
+            Self::Difference => first && !second,
+            Self::SymmetricDifference => first != second,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactCoplanarPolylineRegionBooleanCells {
+    /// Convex cells with disjoint interiors, oriented like the first profile.
+    pub cells_mm: Vec<Vec<[Q; 3]>>,
+    pub exact_work: u64,
+}
+
+/// Decompose a regularized Boolean result into exact convex cells. The
+/// result is the closure of the selected area, discarding isolated
+/// zero-area remnants. Difference subtracts the second from the first.
+pub fn decompose_exact_coplanar_planar_polyline_region_boolean(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    operation: CoplanarPolylineBoolean,
+    max_exact_work: u64,
+) -> Result<ExactCoplanarPolylineRegionBooleanCells> {
     super::validate_work(max_exact_work)?;
     let mut remaining = max_exact_work;
     let first = prepare_planar_polyline_region(first_outer_mm, first_holes_mm, &mut remaining)?;
@@ -3217,67 +3268,55 @@ pub fn decompose_exact_coplanar_planar_polyline_region_overlap(
         let lo = &window[0];
         let hi = &window[1];
         let mid = (lo + hi) / &two;
-        let a = profile_slice_crossings(&first, [u, v], &mid, &mut remaining)?;
-        let b = profile_slice_crossings(&second, [u, v], &mid, &mut remaining)?;
-        let mut a = a.chunks_exact(2).peekable();
-        let mut b = b.chunks_exact(2).peekable();
-        while let (Some(a_band), Some(b_band)) = (a.peek(), b.peek()) {
-            spend(&mut remaining, 8)?;
-            let lower = if a_band[0].0 >= b_band[0].0 {
-                &a_band[0]
-            } else {
-                &b_band[0]
-            };
-            let upper = if a_band[1].0 <= b_band[1].0 {
-                &a_band[1]
-            } else {
-                &b_band[1]
-            };
-            if lower.0 < upper.0 {
-                spend(&mut remaining, 64)?;
-                let mut cell = vec![
-                    lift(lo, &profile_edge_ordinate(lower.1, [u, v], lo)),
-                    lift(hi, &profile_edge_ordinate(lower.1, [u, v], hi)),
-                    lift(hi, &profile_edge_ordinate(upper.1, [u, v], hi)),
-                    lift(lo, &profile_edge_ordinate(upper.1, [u, v], lo)),
-                ];
-                cell.dedup();
-                if cell.first() == cell.last() {
-                    cell.pop();
-                }
-                if normal[axis].is_negative() {
-                    cell.reverse();
-                }
-                cells_mm.push(cell);
+        let bands = profile_boolean_slice_bands(
+            [&first, &second],
+            [u, v],
+            &mid,
+            operation,
+            &mut remaining,
+        )?;
+        for [lower, upper] in bands {
+            spend(&mut remaining, 64)?;
+            let mut cell = vec![
+                lift(lo, &profile_edge_ordinate(lower, [u, v], lo)),
+                lift(hi, &profile_edge_ordinate(lower, [u, v], hi)),
+                lift(hi, &profile_edge_ordinate(upper, [u, v], hi)),
+                lift(lo, &profile_edge_ordinate(upper, [u, v], lo)),
+            ];
+            cell.dedup();
+            if cell.first() == cell.last() {
+                cell.pop();
             }
-            let comparison = a_band[1].0.cmp(&b_band[1].0);
-            if !comparison.is_gt() {
-                a.next();
+            if normal[axis].is_negative() {
+                cell.reverse();
             }
-            if !comparison.is_lt() {
-                b.next();
-            }
+            cells_mm.push(cell);
         }
     }
-    Ok(ExactCoplanarPolylineRegionOverlapCells {
+    Ok(ExactCoplanarPolylineRegionBooleanCells {
         cells_mm,
         exact_work: max_exact_work - remaining,
     })
 }
 
-fn profile_slice_crossings<'a>(
-    face: &'a FaceBoundary,
+type PlanarProfileEdge = [[Q; 3]; 2];
+
+fn profile_boolean_slice_bands<'a>(
+    faces: [&'a FaceBoundary; 2],
     axes: [usize; 2],
     at: &Q,
+    operation: CoplanarPolylineBoolean,
     remaining: &mut u64,
-) -> Result<Vec<(Q, &'a [[Q; 3]; 2])>> {
+) -> Result<Vec<[&'a PlanarProfileEdge; 2]>> {
     let [u, _] = axes;
     let mut crossings = Vec::new();
-    for edge in &face.segments {
-        spend(remaining, 4)?;
-        if (&edge[0][u] < at) != (&edge[1][u] < at) {
-            spend(remaining, 12)?;
-            crossings.push((profile_edge_ordinate(edge, axes, at), edge));
+    for (index, face) in faces.into_iter().enumerate() {
+        for edge in &face.segments {
+            spend(remaining, 4)?;
+            if (&edge[0][u] < at) != (&edge[1][u] < at) {
+                spend(remaining, 12)?;
+                crossings.push((profile_edge_ordinate(edge, axes, at), edge, index));
+            }
         }
     }
     let count = crossings.len() as u64;
@@ -3285,11 +3324,29 @@ fn profile_slice_crossings<'a>(
         remaining,
         count.saturating_mul(8 * (u64::from(count.checked_ilog2().unwrap_or(0)) + 1)),
     )?;
-    crossings.sort_unstable_by(|a, b| a.0.cmp(&b.0));
-    if crossings.len() % 2 != 0 {
+    crossings.sort_unstable_by(|a, b| a.0.cmp(&b.0).then(a.2.cmp(&b.2)));
+    let mut inside = [false; 2];
+    let mut lower = None;
+    let mut bands = Vec::new();
+    for group in crossings.chunk_by(|a, b| a.0 == b.0) {
+        let before = operation.contains(inside);
+        for (_, _, index) in group {
+            spend(remaining, 4)?;
+            inside[*index] = !inside[*index];
+        }
+        let edge = group[0].1;
+        match (before, operation.contains(inside)) {
+            (false, true) => lower = Some(edge),
+            (true, false) => {
+                bands.push([lower.take().expect("open selected band"), edge]);
+            }
+            _ => {}
+        }
+    }
+    if inside != [false; 2] {
         return Err(refuse("Unexpected open planar slice"));
     }
-    Ok(crossings)
+    Ok(bands)
 }
 
 fn profile_edge_ordinate([a, b]: &[[Q; 3]; 2], [u, v]: [usize; 2], at: &Q) -> Q {
