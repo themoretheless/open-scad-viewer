@@ -392,3 +392,32 @@ fn patch_area_operation_reports_missing_cells_and_non_outer_contour() {
     request["maxWork"] = json!(1);
     assert_eq!(run(&request)["value"]["status"], "buildRefused");
 }
+
+#[test]
+fn directional_area_operation_admits_both_normal_orientations() {
+    let mut request = patch_area_request(100, 1e-8);
+    request["op"] = json!("brep_bound_exact_periodic_trim_directional_area");
+    for sign in [-1., 1.] {
+        request["normal"] = json!([sign, sign, 0.]);
+        let response = run(&request);
+        assert_eq!(response["ok"], true, "{response}");
+        let report = &response["value"];
+        let expected = -sign * 1.25 / 2.0_f64.sqrt();
+        assert_eq!(report["status"], "tolerance");
+        assert_eq!(report["minimumCells"], 10);
+        assert!(report["boundsMm2"][0].as_f64().unwrap() <= expected);
+        assert!(report["boundsMm2"][1].as_f64().unwrap() >= expected);
+    }
+}
+
+#[test]
+fn directional_area_operation_checks_normal_and_preserves_cell_shortage() {
+    let mut request = patch_area_request(9, 1e-8);
+    request["op"] = json!("brep_bound_exact_periodic_trim_directional_area");
+    request["normal"] = json!([0., 0., 0.]);
+    assert_eq!(run(&request)["ok"], false);
+    request["normal"] = json!([1., 1., 0.]);
+    let response = run(&request);
+    assert_eq!(response["value"]["status"], "workLimit");
+    assert!(response["value"]["boundsMm2"].is_null());
+}

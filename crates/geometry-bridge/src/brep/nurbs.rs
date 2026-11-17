@@ -1013,6 +1013,24 @@ pub fn exact_periodic_trim_contour_division_request(
 pub fn exact_periodic_trim_patch_area_request(
     request: &value_codec::Value,
 ) -> Result<value_codec::Value> {
+    periodic_trim_patch_area_response(request, None)
+}
+
+/// Enclose the signed projected area in the direction of the requested normal.
+pub fn exact_periodic_trim_directional_area_request(
+    request: &value_codec::Value,
+) -> Result<value_codec::Value> {
+    let normal: [f64; 3] = crate::field(request, "normal")?;
+    if normal.iter().any(|n| !n.is_finite()) || normal == [0.; 3] {
+        return Err(input("Projected area needs a nonzero finite normal"));
+    }
+    periodic_trim_patch_area_response(request, Some(normal))
+}
+
+fn periodic_trim_patch_area_response(
+    request: &value_codec::Value,
+    normal: Option<[f64; 3]>,
+) -> Result<value_codec::Value> {
     use crate::field;
     use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
     use value_codec::json;
@@ -1041,21 +1059,38 @@ pub fn exact_periodic_trim_patch_area_request(
             "workUsed": work_used, "status": "buildRefused",
         }));
     }
-    let report = edges.bound_input_patch_projected_area(outer, tolerance, max_cells)?;
-    let status = if report.minimum_cells == 0 {
+    let (bounds, cells, minimum_cells, within_tolerance) = if let Some(normal) = normal {
+        let report =
+            edges.bound_input_patch_area_along_normal(outer, normal, tolerance, max_cells)?;
+        (
+            json!(report.bounds),
+            report.cells,
+            report.minimum_cells,
+            report.within_tolerance,
+        )
+    } else {
+        let report = edges.bound_input_patch_projected_area(outer, tolerance, max_cells)?;
+        (
+            json!(report.bounds),
+            report.cells,
+            report.minimum_cells,
+            report.within_tolerance,
+        )
+    };
+    let status = if minimum_cells == 0 {
         "unavailable"
-    } else if report.bounds.is_none() {
+    } else if bounds.is_null() {
         "workLimit"
-    } else if report.within_tolerance {
+    } else if within_tolerance {
         "tolerance"
     } else {
         "bounded"
     };
     Ok(json!({
-        "boundsMm2": report.bounds,
-        "withinTolerance": report.within_tolerance,
-        "cells": report.cells,
-        "minimumCells": report.minimum_cells,
+        "boundsMm2": bounds,
+        "withinTolerance": within_tolerance,
+        "cells": cells,
+        "minimumCells": minimum_cells,
         "workUsed": work_used,
         "status": status,
     }))

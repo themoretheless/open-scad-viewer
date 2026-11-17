@@ -21,7 +21,7 @@ interface Report {
     topologyIds: { edges: string[] }
   } | null
   edgeBindings?: { edgeId: string; contour: number; segment: number; interval?: [number, number]; parameters?: [Rational, Rational] }[]
-  boundsMm2?: [number, number][] | null
+  boundsMm2?: [number, number] | [number, number][] | null
   stations?: { parameterBounds: [number, number] | null; pointBoundsMm: [number, number][] | null; status: string }[] | null
   pointBoundsMm?: [number, number][] | null
   parameterBounds?: [number, number] | null
@@ -188,9 +188,9 @@ console.log('WASM ABI returned ordered equal-length contour station boxes and cl
 const patchAreaOp = 'brep_bound_exact_periodic_trim_patch_area'
 const patchArea = call(request.maxWork, patchAreaOp, { outerContour: 0, maxCells: 100, toleranceMm2: 1e-8 })
 assert.equal(patchArea.status, 'tolerance')
-assert.ok(patchArea.boundsMm2)
+assert.ok(patchArea.boundsMm2 && patchArea.boundsMm2.every(Array.isArray))
 assert.equal(patchArea.boundsMm2.length, 3)
-for (const [index, [lo, hi]] of patchArea.boundsMm2.entries()) {
+for (const [index, [lo, hi]] of (patchArea.boundsMm2 as [number, number][]).entries()) {
   const value = [-0.75, -0.5, 0][index]
   assert.ok(lo <= value && value <= hi)
 }
@@ -198,3 +198,15 @@ const patchAreaLimited = call(request.maxWork, patchAreaOp, { outerContour: 0, m
 assert.equal(patchAreaLimited.status, 'workLimit')
 assert.equal(patchAreaLimited.boundsMm2, null)
 console.log('WASM ABI enclosed signed projected areas with hole subtraction.')
+
+const directionalAreaOp = 'brep_bound_exact_periodic_trim_directional_area'
+const directional = call(request.maxWork, directionalAreaOp, {
+  outerContour: 0, normal: [1, 1, 0], maxCells: 100, toleranceMm2: 1e-8,
+})
+assert.equal(directional.status, 'tolerance')
+assert.ok(directional.boundsMm2)
+const [areaLo, areaHi] = directional.boundsMm2
+assert.equal(typeof areaLo, 'number')
+assert.equal(typeof areaHi, 'number')
+assert.ok(areaLo <= -1.25 / Math.sqrt(2) && -1.25 / Math.sqrt(2) <= areaHi)
+console.log('WASM ABI enclosed the signed area in an oblique projection.')
