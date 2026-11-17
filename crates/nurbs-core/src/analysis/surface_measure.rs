@@ -262,6 +262,50 @@ pub fn trimmed_surface_area(
     max_surface_cells: usize,
     max_trim_cells: usize,
 ) -> Result<TrimmedAreaReport> {
+    trimmed_surface_area_in_domain(
+        surface,
+        trim,
+        None,
+        tolerance,
+        max_surface_cells,
+        max_trim_cells,
+    )
+}
+
+/// Enclose the retained surface area inside a finite UV rectangle.
+/// The window is intersected with the active surface domain.
+pub fn trimmed_surface_area_in_window(
+    surface: &Surface,
+    trim: &TrimDomain,
+    window: [[f64; 2]; 2],
+    tolerance: f64,
+    max_surface_cells: usize,
+    max_trim_cells: usize,
+) -> Result<TrimmedAreaReport> {
+    check(
+        window
+            .iter()
+            .all(|&[lo, hi]| lo.is_finite() && hi.is_finite() && lo < hi),
+        "Trimmed area window needs finite increasing UV intervals",
+    )?;
+    trimmed_surface_area_in_domain(
+        surface,
+        trim,
+        Some(window),
+        tolerance,
+        max_surface_cells,
+        max_trim_cells,
+    )
+}
+
+fn trimmed_surface_area_in_domain(
+    surface: &Surface,
+    trim: &TrimDomain,
+    window: Option<[[f64; 2]; 2]>,
+    tolerance: f64,
+    max_surface_cells: usize,
+    max_trim_cells: usize,
+) -> Result<TrimmedAreaReport> {
     surface.validate()?;
     check(
         tolerance.is_finite()
@@ -270,22 +314,44 @@ pub fn trimmed_surface_area(
             && (1..=1_000_000).contains(&max_trim_cells),
         "Trimmed area needs positive finite tolerance and valid surface and trim cell limits",
     )?;
-    let active = |knots: &[f64], degree, count| {
+    let active = |knots: &[f64], degree: usize, count: usize, axis: usize| {
         (degree..count)
-            .filter(|&i| knots[i] < knots[i + 1])
+            .filter_map(|i| {
+                let [start, end] = [knots[i], knots[i + 1]];
+                let [lo, hi] = window.map_or([start, end], |window| {
+                    [start.max(window[axis][0]), end.min(window[axis][1])]
+                });
+                (lo < hi).then_some((i, [lo, hi]))
+            })
             .collect::<Vec<_>>()
     };
     let u = active(
         &surface.knots_u,
         surface.degree_u,
         surface.control_points.len(),
+        0,
     );
     let v = active(
         &surface.knots_v,
         surface.degree_v,
         surface.control_points[0].len(),
+        1,
     );
     let minimum_surface_cells = u.len() * v.len();
+    if minimum_surface_cells == 0 {
+        return Ok(TrimmedAreaReport {
+            area: Some(AreaReport {
+                value: 0.,
+                bounds: [0.; 2],
+                error_upper: 0.,
+                within_tolerance: true,
+                cells: 0,
+                stop_reason: StopReason::Tolerance,
+            }),
+            minimum_surface_cells,
+            trim_cells: 0,
+        });
+    }
     if minimum_surface_cells > max_surface_cells {
         return Ok(TrimmedAreaReport {
             area: None,
@@ -323,13 +389,14 @@ pub fn trimmed_surface_area(
 
     let mut cells = 0;
     let mut heap = BinaryHeap::new();
-    for u in u {
-        for &v in &v {
-            let domain = [
-                [surface.knots_u[u], surface.knots_u[u + 1]],
-                [surface.knots_v[v], surface.knots_v[v + 1]],
-            ];
-            heap.push(make_cell([u, v], domain, cells, Location::Unresolved)?);
+    for (u, u_domain) in u {
+        for &(v, v_domain) in &v {
+            heap.push(make_cell(
+                [u, v],
+                [u_domain, v_domain],
+                cells,
+                Location::Unresolved,
+            )?);
             cells += 1;
         }
     }

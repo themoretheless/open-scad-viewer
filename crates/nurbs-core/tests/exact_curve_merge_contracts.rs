@@ -6142,3 +6142,98 @@ fn trimmed_surface_area_accepts_reusable_domain_for_disjoint_support() {
         assert!(area.within_tolerance);
     }
 }
+
+#[test]
+fn trimmed_surface_area_window_clips_seam_spans_and_hole() {
+    use nurbs_core::{
+        analysis::surface_measure::trimmed_surface_area_in_window,
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
+        trim_domain::TrimDomain,
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let hole = [
+        [0.125, 0.25],
+        [0.375, 0.25],
+        [0.375, 0.75],
+        [0.125, 0.75],
+        [0.125, 0.25],
+    ];
+    let patches = build_exact_periodic_surface_trim_patches(&source, &[&outer, &hole], 1_000_000)
+        .unwrap()
+        .patches
+        .unwrap();
+    let patch = &patches[0];
+    let trim = TrimDomain::new(&patch.trim.loops, 1e-10).unwrap();
+    let report = trimmed_surface_area_in_window(
+        &patch.surface,
+        &trim,
+        [[3.75, 4.25], [0.375, 0.625]],
+        0.01,
+        5000,
+        500_000,
+    )
+    .unwrap();
+    assert_eq!(report.minimum_surface_cells, 2);
+    let area = report.area.unwrap();
+    assert!(
+        area.bounds[0] <= 0.1875 && 0.1875 <= area.bounds[1],
+        "{area:?}"
+    );
+    assert!(area.within_tolerance);
+}
+
+#[test]
+fn trimmed_surface_area_window_returns_zero_for_disjoint_and_clips_partial_support() {
+    use nurbs_core::{
+        analysis::surface_measure::trimmed_surface_area_in_window,
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
+        trim_domain::TrimDomain,
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let patches = build_exact_periodic_surface_trim_patches(&source, &[&outer], 1_000_000)
+        .unwrap()
+        .patches
+        .unwrap();
+    let patch = &patches[0];
+    let trim = TrimDomain::new(&patch.trim.loops, 1e-10).unwrap();
+    let empty =
+        trimmed_surface_area_in_window(&patch.surface, &trim, [[5., 6.], [0.25, 0.5]], 1e-6, 1, 1)
+            .unwrap();
+    assert_eq!(empty.area.unwrap().bounds, [0.; 2]);
+    assert_eq!(empty.trim_cells, 0);
+    let partial = trimmed_surface_area_in_window(
+        &patch.surface,
+        &trim,
+        [[3.25, 3.75], [0.25, 0.5]],
+        0.01,
+        5000,
+        500_000,
+    )
+    .unwrap()
+    .area
+    .unwrap();
+    assert!(partial.bounds[0] <= 0.125 && 0.125 <= partial.bounds[1]);
+    assert!(partial.within_tolerance);
+}

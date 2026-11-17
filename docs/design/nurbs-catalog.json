@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 606,
-  "unallocatedCount": 394,
+  "specifiedCount": 607,
+  "unallocatedCount": 393,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15132,6 +15132,26 @@
       "remainingQualification": [
         "Reuse prepared trim domains and transfer exact inside or outside classifications to descendants.",
         "Verify refinement of proved inside cells after exhausting trim work and repeatable area queries on prepared domains.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0607",
+      "name": "Гарантированная площадь обрезанной поверхности внутри UV-окна",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::trimmed_surface_area_in_window",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "docs/qualification/nurbs-curvature-field-607-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-607-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Integrate retained surface area inside a selected UV rectangle clipped against the active knot domain.",
+        "Verify clipped knot spans across a seam, partial holes, disjoint windows, and intersection with the active support.",
         "WASM and application integration are separate."
       ]
     }
