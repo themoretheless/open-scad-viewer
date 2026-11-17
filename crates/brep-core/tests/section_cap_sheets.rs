@@ -3300,3 +3300,55 @@ fn swept_face_ranges_retain_full_span_contacts_at_path_endpoints() {
         assert_eq!(hit.last_parameter_bounds, [q(1, 1), q(1, 1)]);
     }
 }
+
+#[test]
+fn exact_zero_radius_face_contacts_preserve_the_gap_over_a_hole() {
+    use brep_core::{
+        analysis::exact_polyhedral_path_boundary_contacts,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let path = [[q(-1, 1), q(3, 2), q(2, 1)], [q(5, 1), q(3, 2), q(2, 1)]];
+    let report = exact_polyhedral_path_boundary_contacts(solid, &path, 1_000_000).unwrap();
+    let cap = report
+        .contacts
+        .iter()
+        .find(|entry| entry.face == result.section.cap_faces[0])
+        .unwrap();
+    assert_eq!(cap.intervals, [[q(1, 6), q(1, 3)], [q(1, 2), q(5, 6)]]);
+    assert!(exact_polyhedral_path_boundary_contacts(solid, &path, report.exact_work).is_ok());
+    assert!(exact_polyhedral_path_boundary_contacts(solid, &path, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_zero_radius_face_contacts_include_transverse_points_and_stationary_spans() {
+    use brep_core::analysis::exact_polyhedral_path_boundary_contacts;
+    use num_rational::BigRational as Q;
+    let solid = shifted_oblique_solid(0.);
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |z| [q(3, 2), q(0, 1), z];
+    let path = [
+        point(q(7, 2)),
+        point(q(5, 2)),
+        point(q(5, 2)),
+        point(q(-1, 2)),
+    ];
+    let report = exact_polyhedral_path_boundary_contacts(&solid, &path, 1_000_000).unwrap();
+    assert_eq!(
+        report
+            .contacts
+            .iter()
+            .map(|hit| (hit.span, hit.intervals.clone()))
+            .collect::<Vec<_>>(),
+        [
+            (0, vec![[q(1, 1), q(1, 1)]]),
+            (1, vec![[q(0, 1), q(1, 1)]]),
+            (2, vec![[q(2, 3), q(2, 3)]]),
+            (2, vec![[q(0, 1), q(0, 1)]]),
+        ]
+    );
+}

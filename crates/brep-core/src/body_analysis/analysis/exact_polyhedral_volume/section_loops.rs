@@ -565,7 +565,7 @@ fn validate_query_point(point_mm: &[Q; 3]) -> Result<()> {
     Ok(())
 }
 
-mod clip;
+pub(super) mod clip;
 pub use clip::{
     BoundedPolyhedralSectionPathLength, ExactPolyhedralSectionClip,
     ExactPolyhedralSectionPolylineClip, bounded_polyhedral_section_path_length,

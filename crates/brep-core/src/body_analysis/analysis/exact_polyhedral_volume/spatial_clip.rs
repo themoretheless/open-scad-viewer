@@ -530,3 +530,95 @@ pub use sweep_clearance::{
     bounded_polyhedral_swept_path_first_contact, exact_polyhedral_swept_ball_clearance,
     exact_polyhedral_swept_path_clearance, exact_polyhedral_swept_path_material,
 };
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PolyhedralPathFaceContacts {
+    pub span: usize,
+    pub face: usize,
+    /// Closed local parameter intervals, including isolated intersections.
+    pub intervals: Vec<[Q; 2]>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralPathBoundaryContacts {
+    /// Nonempty contacts in path order, then by source face index.
+    pub contacts: Vec<PolyhedralPathFaceContacts>,
+    pub exact_work: u64,
+}
+
+/// Compute the full set of zero-radius contacts between a spatial polyline
+/// and the boundary of a qualified polyhedral solid. Coplanar overlaps are
+/// clipped against the retained face, so holes can split the contact set.
+pub fn exact_polyhedral_path_boundary_contacts(
+    solid: &QualifiedClosedSolid,
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralPathBoundaryContacts> {
+    use super::section_loops::clip::clip_planar_segment;
+
+    if points_mm.len() < 2 {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Contact path requires at least two points",
+        ));
+    }
+    let mut remaining = max_exact_work;
+    let faces = prepare_faces(solid, &mut remaining)?;
+    for point in points_mm {
+        spend(&mut remaining, 1)?;
+        validate_point(point)?;
+    }
+    let mut contacts = Vec::new();
+    for (span, pair) in points_mm.windows(2).enumerate() {
+        let (start, end) = (&pair[0], &pair[1]);
+        let direction: [Q; 3] = std::array::from_fn(|i| &end[i] - &start[i]);
+        spend(&mut remaining, 3)?;
+        for (&face, boundary) in &faces {
+            spend(&mut remaining, 24)?;
+            let normal = face_normal(boundary)?;
+            let delta = std::array::from_fn(|i| &boundary.origin[i] - &start[i]);
+            let numerator = dot(normal, &delta);
+            let denominator = dot(normal, &direction);
+            let axes = plane_axes(normal);
+            let intervals = if denominator.is_zero() {
+                if !numerator.is_zero() {
+                    continue;
+                }
+                clip_planar_segment(
+                    boundary.segments.iter().map(|[a, b]| (a, b)),
+                    axes,
+                    start,
+                    end,
+                    &mut remaining,
+                    |point, remaining| {
+                        Ok(point_in_face(&boundary.segments, point, axes, remaining)?
+                            != FaceLocation::Outside)
+                    },
+                )?
+            } else {
+                let t = numerator / denominator;
+                if t.is_negative() || t > Q::one() {
+                    continue;
+                }
+                let point = std::array::from_fn(|i| &start[i] + &t * &direction[i]);
+                if point_in_face(&boundary.segments, &point, axes, &mut remaining)?
+                    == FaceLocation::Outside
+                {
+                    continue;
+                }
+                vec![[t.clone(), t]]
+            };
+            if !intervals.is_empty() {
+                contacts.push(PolyhedralPathFaceContacts {
+                    span,
+                    face,
+                    intervals,
+                });
+            }
+        }
+    }
+    Ok(ExactPolyhedralPathBoundaryContacts {
+        contacts,
+        exact_work: max_exact_work - remaining,
+    })
+}

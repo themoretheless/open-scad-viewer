@@ -107,9 +107,25 @@ fn clip_segment(
     end: &[Q; 3],
     remaining: &mut u64,
 ) -> Result<Vec<[Q; 2]>> {
+    let segments = loops.iter().flat_map(|ring| {
+        let points = &ring.points_mm;
+        points.iter().zip(points.iter().cycle().skip(1))
+    });
+    clip_planar_segment(segments, axes, start, end, remaining, |point, remaining| {
+        classify_section_loops(loops, axes, point, remaining).map(is_material)
+    })
+}
+
+pub(in crate::body_analysis::analysis::exact_polyhedral_volume) fn clip_planar_segment<'a>(
+    segments: impl IntoIterator<Item = (&'a [Q; 3], &'a [Q; 3])>,
+    axes: [usize; 2],
+    start: &[Q; 3],
+    end: &[Q; 3],
+    remaining: &mut u64,
+    mut contains: impl FnMut(&[Q; 3], &mut u64) -> Result<bool>,
+) -> Result<Vec<[Q; 2]>> {
     if start == end {
-        let location = classify_section_loops(loops, axes, start, remaining)?;
-        return Ok(if is_material(location) {
+        return Ok(if contains(start, remaining)? {
             vec![[Q::zero(), Q::one()]]
         } else {
             Vec::new()
@@ -121,29 +137,26 @@ fn clip_segment(
     let zero = Q::zero();
     let one = Q::one();
     let mut boundary = BTreeSet::new();
-    for ring in loops {
-        let points = &ring.points_mm;
-        for (a, b) in points.iter().zip(points.iter().cycle().skip(1)) {
-            spend(remaining, 32 + 8 * u64::from((boundary.len() + 2).ilog2()))?;
-            let relative = axes.map(|i| &a[i] - &start[i]);
-            let edge = axes.map(|i| &b[i] - &a[i]);
-            let denominator = cross(&direction, &edge);
-            if !denominator.is_zero() {
-                let t = cross(&relative, &edge) / &denominator;
-                let u = cross(&relative, &direction) / denominator;
-                if zero <= t && t <= one && zero <= u && u <= one {
-                    boundary.insert(t);
-                }
-            } else if cross(&relative, &direction).is_zero() {
-                let t = (&a[axes[axis]] - &origin[axis]) / &direction[axis];
-                let u = (&b[axes[axis]] - &origin[axis]) / &direction[axis];
-                let (lo, hi) = if t <= u { (t, u) } else { (u, t) };
-                let lo = lo.max(zero.clone());
-                let hi = hi.min(one.clone());
-                if lo <= hi {
-                    boundary.insert(lo);
-                    boundary.insert(hi);
-                }
+    for (a, b) in segments {
+        spend(remaining, 32 + 8 * u64::from((boundary.len() + 2).ilog2()))?;
+        let relative = axes.map(|i| &a[i] - &start[i]);
+        let edge = axes.map(|i| &b[i] - &a[i]);
+        let denominator = cross(&direction, &edge);
+        if !denominator.is_zero() {
+            let t = cross(&relative, &edge) / &denominator;
+            let u = cross(&relative, &direction) / denominator;
+            if zero <= t && t <= one && zero <= u && u <= one {
+                boundary.insert(t);
+            }
+        } else if cross(&relative, &direction).is_zero() {
+            let t = (&a[axes[axis]] - &origin[axis]) / &direction[axis];
+            let u = (&b[axes[axis]] - &origin[axis]) / &direction[axis];
+            let (lo, hi) = if t <= u { (t, u) } else { (u, t) };
+            let lo = lo.max(zero.clone());
+            let hi = hi.min(one.clone());
+            if lo <= hi {
+                boundary.insert(lo);
+                boundary.insert(hi);
             }
         }
     }
@@ -158,8 +171,7 @@ fn clip_segment(
         }
         let t = (lo + hi) / Q::from_integer(2.into());
         let sample = std::array::from_fn(|i| &start[i] + &t * (&end[i] - &start[i]));
-        let location = classify_section_loops(loops, axes, &sample, remaining)?;
-        if is_material(location) {
+        if contains(&sample, remaining)? {
             append_interval(&mut intervals, lo, hi);
         }
     }
