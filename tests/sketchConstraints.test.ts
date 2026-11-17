@@ -10,6 +10,7 @@ import {
   dimensionSolverExtras,
   sketchDimensionStatus,
   sketchDimensions,
+  signedSketchAngle,
 } from '../src/app/directDimensions'
 import {
   emptyDirectDocument,
@@ -98,7 +99,7 @@ describe('persistent sketch constraints', () => {
     expect(() => validateSketchConstraints({ ...many, constraints: [{ kind: 'horizontal', a: 0, b: 1 }] })).toThrow()
   })
 
-  it('refuses a length edit when a non-length dimension is combined with constraints', () => {
+  it('edits a length while holding an angle dimension with constraints', () => {
     const s: DirectSketch = {
       ...addSketchConstraint(quad(), { kind: 'horizontal', a: 0, b: 1 }),
       dimensions: [
@@ -106,7 +107,49 @@ describe('persistent sketch constraints', () => {
         { kind: 'angle', a: 0, b: 1, c: 2 },
       ],
     }
-    expect(() => editSketchDimension(s, 0, 12)).toThrow(/conflict/)
+    const angle = signedSketchAngle(s.points, 0, 1, 2)!
+    const edited = editSketchDimension(s, 0, 12)
+    expect(
+      Math.hypot(edited.points[1][0] - edited.points[0][0], edited.points[1][1] - edited.points[0][1]),
+    ).toBeCloseTo(12, 6)
+    expect(signedSketchAngle(edited.points, 0, 1, 2)).toBeCloseTo(angle, 4)
+    expect(allHold(edited)).toBe(true)
+  })
+
+  it('edits an angle dimension with constraints, keeps its sign and refuses forbidden angles', () => {
+    const s: DirectSketch = {
+      ...addSketchConstraint(quad(), { kind: 'horizontal', a: 0, b: 1 }),
+      dimensions: [{ kind: 'angle', a: 0, b: 1, c: 2 }],
+    }
+    for (const value of [-60, -120, -90, 45, 180]) {
+      const edited = editSketchDimension(s, 0, value)
+      expect(signedSketchAngle(edited.points, 0, 1, 2)! * Math.sign(value) - Math.abs(value)).toBeCloseTo(0, 4)
+      expect(allHold(edited)).toBe(true)
+      expect(sketchDimensions(edited).measurements[0]!.value!).toBeCloseTo(value === 180 ? 180 : value, 4)
+    }
+    // 1–2 vertical and 0–1 horizontal force a right angle at point 1.
+    expect(() => addSketchConstraint(s, { kind: 'vertical', a: 1, b: 2 }, dimensionSolverExtras(s))).toThrow(/conflict/)
+    const locked: DirectSketch = {
+      ...addSketchConstraint(addSketchConstraint(quad(), { kind: 'horizontal', a: 0, b: 1 }), {
+        kind: 'vertical',
+        a: 1,
+        b: 2,
+      }),
+      dimensions: [{ kind: 'angle', a: 0, b: 1, c: 2 }],
+    }
+    expect(() => editSketchDimension(locked, 0, -60)).toThrow(/conflict/)
+    expect(Math.abs(signedSketchAngle(editSketchDimension(locked, 0, -90).points, 0, 1, 2)!)).toBeCloseTo(90, 4)
+    expect(() => editSketchDimension(s, 0, 200)).toThrow(/between/)
+    const state = sketchDimensionStatus(locked)
+    expect(state).not.toBeNull()
+  })
+
+  it('holds an angle dimension while adding a constraint', () => {
+    const base: DirectSketch = { ...quad(), dimensions: [{ kind: 'angle', a: 3, b: 0, c: 1 }] }
+    const angle = signedSketchAngle(base.points, 3, 0, 1)!
+    const s = addSketchConstraint(base, { kind: 'horizontal', a: 2, b: 3 }, dimensionSolverExtras(base))
+    expect(signedSketchAngle(s.points, 3, 0, 1)).toBeCloseTo(angle, 4)
+    expect(allHold(s)).toBe(true)
   })
 
   it('edits a horizontal dimension while keeping constraints and other offsets', () => {
