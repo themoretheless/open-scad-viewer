@@ -496,12 +496,8 @@ pub fn trimmed_surface_centroid(
         if cell.area.hi == 0. {
             continue;
         }
-        let point = first_jets::calculate(surface, cell.span, cell.domain)?[0];
-        let anchor = &surface.control_points[cell.span[0] - surface.degree_u]
-            [cell.span[1] - surface.degree_v];
-        for axis in 0..3 {
-            let relative = point[axis]
-                .add(Interval::point(anchor[axis]).sub(Interval::point(origin[axis]))?)?;
+        let position = cell_position_relative_to(surface, cell, origin)?;
+        for (axis, relative) in position.into_iter().enumerate() {
             support[axis][0] = support[axis][0].min(relative.lo);
             support[axis][1] = support[axis][1].max(relative.hi);
             moment[axis] = moment[axis].add(relative.mul(cell.area)?)?;
@@ -518,5 +514,91 @@ pub fn trimmed_surface_centroid(
     Ok(TrimmedCentroidReport {
         measure,
         centroid_bounds: Some(centroid_bounds),
+    })
+}
+
+fn cell_position_relative_to(
+    surface: &Surface,
+    cell: &Cell,
+    origin: &[f64],
+) -> Result<[Interval; 3]> {
+    let mut point = first_jets::calculate(surface, cell.span, cell.domain)?[0];
+    let anchor =
+        &surface.control_points[cell.span[0] - surface.degree_u][cell.span[1] - surface.degree_v];
+    for axis in 0..3 {
+        point[axis] =
+            point[axis].add(Interval::point(anchor[axis]).sub(Interval::point(origin[axis]))?)?;
+    }
+    Ok(point)
+}
+
+#[derive(Clone, Debug)]
+pub struct TrimmedInertiaReport {
+    pub measure: TrimmedAreaReport,
+    /// Symmetric inertia tensor for unit areal density, with an interval per entry.
+    pub inertia_bounds: Option<[[[f64; 2]; 3]; 3]>,
+}
+
+/// Bound the uniform-area inertia tensor of a trimmed surface about a fixed
+/// world point. Area tolerance controls subdivision. Tensor widths describe
+/// the remaining uncertainty in each entry.
+pub fn trimmed_surface_area_inertia(
+    surface: &Surface,
+    trim: &TrimDomain,
+    origin: [f64; 3],
+    area_tolerance: f64,
+    max_surface_cells: usize,
+    max_trim_cells: usize,
+) -> Result<TrimmedInertiaReport> {
+    check(
+        origin.iter().all(|x| x.is_finite()),
+        "Inertia reference point must be finite",
+    )?;
+    let (measure, cells) = trimmed_surface_area_in_domain(
+        surface,
+        trim,
+        None,
+        area_tolerance,
+        max_surface_cells,
+        max_trim_cells,
+    )?;
+    if measure.area.is_none() {
+        return Ok(TrimmedInertiaReport {
+            measure,
+            inertia_bounds: None,
+        });
+    }
+    let mut tensor = [[Interval::point(0.); 3]; 3];
+    for cell in &cells {
+        if cell.area.hi == 0. {
+            continue;
+        }
+        let position = cell_position_relative_to(surface, cell, &origin)?;
+        let mut squares = [Interval::point(0.); 3];
+        for (output, x) in squares.iter_mut().zip(position) {
+            let square = x.mul(x)?;
+            *output = square.intersect(0., square.hi)?;
+        }
+        for (i, row) in tensor.iter_mut().enumerate() {
+            let diagonal = squares[(i + 1) % 3].add(squares[(i + 2) % 3])?;
+            row[i] = row[i].add(diagonal.mul(cell.area)?)?;
+            for j in i + 1..3 {
+                let product = position[i].mul(position[j])?.mul(cell.area)?;
+                row[j] = row[j].sub(product)?;
+            }
+        }
+    }
+    let mut bounds = [[[0.; 2]; 3]; 3];
+    for (i, row) in tensor.into_iter().enumerate() {
+        bounds[i][i] = [row[i].lo.max(0.), row[i].hi];
+        for j in i + 1..3 {
+            let interval = [row[j].lo, row[j].hi];
+            bounds[i][j] = interval;
+            bounds[j][i] = interval;
+        }
+    }
+    Ok(TrimmedInertiaReport {
+        measure,
+        inertia_bounds: Some(bounds),
     })
 }

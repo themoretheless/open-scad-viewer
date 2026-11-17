@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 608,
-  "unallocatedCount": 392,
+  "specifiedCount": 609,
+  "unallocatedCount": 391,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15172,6 +15172,26 @@
       "remainingQualification": [
         "Enclose a world-space area centroid using first moments on the certified trim partition.",
         "Check the analytic centroid of a nonplanar seam-spanning patch with a hole and withhold coordinates without a positive area proof.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0609",
+      "name": "Гарантированный тензор инерции обрезанной NURBS-поверхности относительно точки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::trimmed_surface_area_inertia",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "docs/qualification/nurbs-curvature-field-609-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-609-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the symmetric unit-density inertia tensor from certified trimmed surface cells.",
+        "Check analytic diagonal and off-diagonal entries of a seam-spanning patch with a hole, symmetry, and conservative budget behavior.",
         "WASM and application integration are separate."
       ]
     }
