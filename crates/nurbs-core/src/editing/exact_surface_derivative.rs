@@ -321,3 +321,8 @@ fn apply(source: &Surface, field: Field, max_work: u64) -> Result<Report> {
         },
     })
 }
+
+mod plane_side;
+pub use plane_side::{
+    SurfacePlaneAudit, SurfacePlaneCell, SurfacePlaneSide, audit_surface_plane_side,
+};

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 358,
-  "unallocatedCount": 642,
+  "specifiedCount": 359,
+  "unallocatedCount": 641,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9210,6 +9210,28 @@
       "remainingQualification": [
         "Build exact rational spatial and chart geometry contained in proven transverse section components with bounded endpoint setbacks.",
         "Inward sides of separated algebraic endpoint brackets give rational subsegments wholly inside verified material. Exact chart lifting synchronizes both pcurves, and singleton contacts retain their original event.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0359",
+      "name": "Точная классификация рациональной NURBS-поверхности по сторонам плоскости",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::audit_surface_plane_side",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs",
+        "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-359-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-359-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify the signed plane residual on every original rational surface knot cell.",
+        "The exact Bernstein ratios bound the plane residual over each closed original UV cell. Exact corners can certify straddling. Mixed coefficient signs without opposing corner witnesses are unresolved.",
         "WASM and application integration are separate."
       ]
     }
