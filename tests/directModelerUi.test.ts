@@ -954,6 +954,25 @@ it('applies a seed already present at mount and preserves Undo across reopening'
   expect(ui.doc()).toEqual(undone)
 })
 
+it('C1 applies a seed with one parse (commitParsed, no synchronous commit) and keeps Undo', async () => {
+  const { DirectHistory } = await import('../src/app/directModeling')
+  const commit = vi.spyOn(DirectHistory.prototype, 'commit'),
+    parsed = vi.spyOn(DirectHistory.prototype, 'commitParsed')
+  try {
+    const seed = cylinderSeed(),
+      ui = await mount({ seedDocument: seed })
+    expect(parsed).toHaveBeenCalledTimes(1)
+    expect(commit).not.toHaveBeenCalled()
+    expect(ui.doc().bodies.map(body => body.id)).toEqual(['imported-cylinder'])
+    expect(ui.doc().bodies[0].brep).toEqual(seed.bodies[0].brep)
+    await ui.click('↶')
+    expect(ui.doc().bodies.map(body => body.id)).toEqual(['b'])
+  } finally {
+    commit.mockRestore()
+    parsed.mockRestore()
+  }
+})
+
 it('defers a closed workspace seed until opening and does not replay it over later edits', async () => {
   const ui = await mount({ open: false, seedDocument: cylinderSeed() })
   expect(ui.doc().bodies.map(body => body.id)).toEqual(['b'])

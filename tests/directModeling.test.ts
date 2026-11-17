@@ -298,3 +298,26 @@ it('preserves project identity after async restore without materializing old geo
   expect(history.document.blenderProjectId).toBe('project-identity')
   expect(history.undo().sketches[0].name).toBe('L')
 })
+
+it('C1 commitParsed commits a fresh parse like commit() without parsing it again', () => {
+  const edited = emptyDirectDocument()
+  edited.sketches.push(sketch())
+  const text = JSON.stringify(edited)
+  const viaCommit = new DirectHistory(),
+    viaParsed = new DirectHistory()
+  viaCommit.commit(parseDirectDocument(text))
+  viaParsed.commitParsed(parseDirectDocument(text))
+  expect(viaParsed.document).toEqual(viaCommit.document)
+  expect(viaParsed.snapshotKey).toBe(viaCommit.snapshotKey)
+  expect(viaParsed.canUndo).toBe(true)
+  const key = viaParsed.snapshotKey
+  viaParsed.commitParsed(parseDirectDocument(text))
+  expect(viaParsed.snapshotKey).toBe(key)
+  expect(viaParsed.undo().sketches).toHaveLength(0)
+  expect(viaParsed.canUndo).toBe(false)
+  expect(() =>
+    new DirectHistory().commitParsed(parseDirectDocument(text), () => {
+      throw Error('locked')
+    }),
+  ).toThrow('locked')
+})

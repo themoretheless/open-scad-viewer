@@ -914,6 +914,12 @@ export class DirectHistory {
       }),
     })
   }
+  /** Commits a document the caller has just produced with `parseDirectDocument` and hands over:
+   * the history keeps that object as its current state without re-serializing, re-parsing or
+   * copying it. The caller must not keep or mutate it afterwards (read `document` instead). */
+  commitParsed(document: DirectDocument, validateChange?: (resolved: DirectDocument) => void) {
+    this.commitValidated(document, validateChange)
+  }
   /** Loader must run the authoritative parser; no history changes while it runs. */
   async commitAsync(
     load: () => Promise<DirectDocument>,

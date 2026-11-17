@@ -2570,8 +2570,10 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
     const next = parseDirectDocument(stringifyMeshJson(seed))
     next.blenderProjectId ??= crypto.randomUUID()
     cancelGesture()
-    history.commit(next)
-    selection.value = next.bodies[0]?.id ?? ''
+    const first = next.bodies[0]?.id ?? ''
+    // `next` is a fresh authoritative parse: hand it over instead of parsing it a second time.
+    history.commitParsed(next)
+    selection.value = first
     extraSelection.value = []; faceIndex.value = edgeIndex.value = -1
     edgeIndexes.value = []; openingFaces.value = []
     operation.value = null; advancedOp.value = null; previewBody.value = null

@@ -215,6 +215,28 @@ for (const scene of scenes.filter(scene => !sceneFilter || scene.name.includes(s
       next = renamed()
     },
   )
+  // C1: applying a seed document parses it once; before, `commit()` parsed it a second time.
+  const seedText = stringifyMeshJson(renamed())
+  await measure(
+    name,
+    'seed apply: parse + synchronous commit (before C1)',
+    'DirectModeler seedDocument watch -> history.commit',
+    'preview',
+    () => history.commit(parseDirectDocument(seedText)),
+    () => {
+      history = new DirectHistory(document)
+    },
+  )
+  await measure(
+    name,
+    'seed apply: parse + commitParsed (C1)',
+    'DirectModeler seedDocument watch -> history.commitParsed',
+    'preview',
+    () => history.commitParsed(parseDirectDocument(seedText)),
+    () => {
+      history = new DirectHistory(document)
+    },
+  )
   let validated = parseDirectDocument(stringifyMeshJson(renamed()))
   await measure(
     name,
