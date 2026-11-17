@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0613",
+  "testedBase": "962e7bd04745918911f258e341f7b41a28cace67",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 202,
+  "scope": [
+    "Enclose area centroid and central inertia for a clipped UV subregion of a trimmed surface.",
+    "Verify analytic area, centroid and central tensor after clipping a seam-spanning patch and its hole, plus disjoint windows."
+  ],
+  "logSha256": "4a1a87caeb8354ee17b1e0c61a6180368a8ebeab9ac6f43aa711527f2a79aa3d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "0eb2b9c2faf9494d2c755613a6509654296a7b9fae30b2e3f1f860a80d90862d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "2feac67f08550375d3bfa58397084186973c17e8eaf992850087def0d2fef47b",
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "b386034a3d0bccb8692ff195ac55fffd50649e232b2314f7754ad7952d346e52"
+  }
+}

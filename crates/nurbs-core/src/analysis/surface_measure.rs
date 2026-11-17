@@ -283,12 +283,7 @@ pub fn trimmed_surface_area_in_window(
     max_surface_cells: usize,
     max_trim_cells: usize,
 ) -> Result<TrimmedAreaReport> {
-    check(
-        window
-            .iter()
-            .all(|&[lo, hi]| lo.is_finite() && hi.is_finite() && lo < hi),
-        "Trimmed area window needs finite increasing UV intervals",
-    )?;
+    validate_trim_window(window)?;
     trimmed_surface_area_in_domain(
         surface,
         trim,
@@ -298,6 +293,15 @@ pub fn trimmed_surface_area_in_window(
         max_trim_cells,
     )
     .map(|(report, _)| report)
+}
+
+fn validate_trim_window(window: [[f64; 2]; 2]) -> Result<()> {
+    check(
+        window
+            .iter()
+            .all(|&[lo, hi]| lo.is_finite() && hi.is_finite() && lo < hi),
+        "Trimmed area window needs finite increasing UV intervals",
+    )
 }
 
 fn trimmed_surface_area_in_domain(
@@ -598,10 +602,48 @@ pub fn trimmed_surface_central_inertia(
     max_surface_cells: usize,
     max_trim_cells: usize,
 ) -> Result<TrimmedCentralInertiaReport> {
-    let (measure, cells) = trimmed_surface_area_in_domain(
+    trimmed_surface_central_inertia_in_domain(
         surface,
         trim,
         None,
+        area_tolerance,
+        max_surface_cells,
+        max_trim_cells,
+    )
+}
+
+/// Enclose centroid and central inertia of the retained surface inside a UV window.
+pub fn trimmed_surface_central_inertia_in_window(
+    surface: &Surface,
+    trim: &TrimDomain,
+    window: [[f64; 2]; 2],
+    area_tolerance: f64,
+    max_surface_cells: usize,
+    max_trim_cells: usize,
+) -> Result<TrimmedCentralInertiaReport> {
+    validate_trim_window(window)?;
+    trimmed_surface_central_inertia_in_domain(
+        surface,
+        trim,
+        Some(window),
+        area_tolerance,
+        max_surface_cells,
+        max_trim_cells,
+    )
+}
+
+fn trimmed_surface_central_inertia_in_domain(
+    surface: &Surface,
+    trim: &TrimDomain,
+    window: Option<[[f64; 2]; 2]>,
+    area_tolerance: f64,
+    max_surface_cells: usize,
+    max_trim_cells: usize,
+) -> Result<TrimmedCentralInertiaReport> {
+    let (measure, cells) = trimmed_surface_area_in_domain(
+        surface,
+        trim,
+        window,
         area_tolerance,
         max_surface_cells,
         max_trim_cells,
