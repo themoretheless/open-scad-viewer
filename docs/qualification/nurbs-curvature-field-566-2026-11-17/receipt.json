@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0566",
+  "testedBase": "d02ed762abbf39d168f5c5e4fc5765a57d11ca86",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 141,
+  "scope": [
+    "Recover directed rational source parameters before orientation normalization of outer and hole contours.",
+    "Verify exact directed intervals under reversed winding and splitting across a periodic seam, and withhold mappings on refusal."
+  ],
+  "logSha256": "d05a43d5947a82dfc73eeea073d470f9b35d394a59f4dbef0c1189383de4b223",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "dccd96cf92a0281163d3c0c39d557d84e4e720942e7f82d468fafccc9c6c8de2",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "c2f2ff5fd25b17ca413a80a099d9288b435ff8514348b0fa324ca557ae9a2952"
+  }
+}

@@ -3762,6 +3762,15 @@ pub fn build_exact_periodic_surface_trim_components(
     contours: &[&[[f64; 2]]],
     max_work: u64,
 ) -> Result<PeriodicTrimComponentsReport> {
+    build_periodic_trim_components(source, contours, max_work, &mut [])
+}
+
+fn build_periodic_trim_components(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    max_work: u64,
+    reversed: &mut [bool],
+) -> Result<PeriodicTrimComponentsReport> {
     let lifted = lift_exact_periodic_surface_region_components(source, contours, max_work)?;
     let Some(components) = lifted.components else {
         return Ok(PeriodicTrimComponentsReport {
@@ -3792,11 +3801,12 @@ pub fn build_exact_periodic_surface_trim_components(
             };
             for (i, contour) in contours.enumerate() {
                 result.contours.push(contour.contour);
-                result.loops.push(store_periodic_trim_loop(
-                    &contour.vertices,
-                    i == 0,
-                    &mut work,
-                )?);
+                let (curves, was_reversed) =
+                    store_periodic_trim_loop(&contour.vertices, i == 0, &mut work)?;
+                if let Some(flag) = reversed.get_mut(contour.contour) {
+                    *flag = was_reversed;
+                }
+                result.loops.push(curves);
             }
             Ok(result)
         })
@@ -3819,7 +3829,7 @@ fn store_periodic_trim_loop(
     vertices: &[[BigRational; 2]],
     ccw: bool,
     work: &mut Work,
-) -> std::result::Result<Vec<crate::curve::Curve>, ExactRefusal> {
+) -> std::result::Result<(Vec<crate::curve::Curve>, bool), ExactRefusal> {
     use crate::curve::Curve;
     use num_traits::{Signed, Zero};
 
@@ -3837,17 +3847,19 @@ fn store_periodic_trim_loop(
         .iter()
         .map(|[u, v]| Ok(vec![work.float(u)?, work.float(v)?]))
         .collect::<std::result::Result<Vec<_>, ExactRefusal>>()?;
-    if area.is_positive() != ccw {
+    let reversed = area.is_positive() != ccw;
+    if reversed {
         points.reverse();
     }
-    (0..points.len() - 1)
+    let curves = (0..points.len() - 1)
         .step_by(255)
         .map(|start| {
             let end = (start + 256).min(points.len());
             Curve::from_polyline(points[start..end].to_vec())
                 .map_err(|_| ExactRefusal::InvalidOutput)
         })
-        .collect()
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    Ok((curves, reversed))
 }
 
 #[derive(Clone, Debug)]
@@ -3883,9 +3895,18 @@ pub fn build_exact_periodic_surface_trim_patches(
     contours: &[&[[f64; 2]]],
     max_work: u64,
 ) -> Result<PeriodicTrimPatchReport> {
+    build_periodic_trim_patches(source, contours, max_work, &mut [])
+}
+
+fn build_periodic_trim_patches(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    max_work: u64,
+    reversed: &mut [bool],
+) -> Result<PeriodicTrimPatchReport> {
     use PeriodicTrimPatchRefusal as Failure;
 
-    let trims = build_exact_periodic_surface_trim_components(source, contours, max_work)?;
+    let trims = build_periodic_trim_components(source, contours, max_work, reversed)?;
     let refused = |reason, work_used| PeriodicTrimPatchReport {
         patches: None,
         work_used,
@@ -4121,9 +4142,18 @@ pub fn build_exact_periodic_surface_trim_edges(
     contours: &[&[[f64; 2]]],
     max_work: u64,
 ) -> Result<PeriodicTrimEdgesReport> {
+    build_periodic_trim_edges(source, contours, max_work, &mut [])
+}
+
+fn build_periodic_trim_edges(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    max_work: u64,
+    reversed: &mut [bool],
+) -> Result<PeriodicTrimEdgesReport> {
     use PeriodicTrimEdgeRefusal as Failure;
 
-    let report = build_exact_periodic_surface_trim_patches(source, contours, max_work)?;
+    let report = build_periodic_trim_patches(source, contours, max_work, reversed)?;
     let mut work_used = report.work_used;
     let refused = |refusal, work_used, refused_curve| PeriodicTrimEdgesReport {
         patches: None,
@@ -4193,4 +4223,60 @@ pub fn build_exact_periodic_surface_trim_edges(
         refused_curve: None,
         refusal: None,
     })
+}
+
+/// Directed parameters on a segment in the original input sample order.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PeriodicTrimInputEdgeSource {
+    pub contour: usize,
+    pub segment: usize,
+    /// Parameters at the generated edge start and end. Descends for a reversed contour.
+    pub parameters: [BigRational; 2],
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimInputEdges {
+    pub geometry: PeriodicTrimEdgesReport,
+    /// Same patch, loop and edge order as the geometry. Empty on refusal.
+    pub sources: Vec<Vec<Vec<PeriodicTrimInputEdgeSource>>>,
+}
+
+/// Build periodic trim edges and retain their parameters in the caller's
+/// contour order, including contours reoriented to bound holes or outer wires.
+pub fn build_exact_periodic_surface_trim_input_edges(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    max_work: u64,
+) -> Result<PeriodicTrimInputEdges> {
+    use num_traits::One;
+
+    let mut reversed = vec![false; contours.len().min(256)];
+    let geometry = build_periodic_trim_edges(source, contours, max_work, &mut reversed)?;
+    let mut sources = Vec::new();
+    for patch in geometry.patches.iter().flatten() {
+        let mut loops = Vec::new();
+        for path in patch.edge_sources()? {
+            let mut edges = Vec::with_capacity(path.len());
+            for edge in path {
+                let mut segment = edge.segment;
+                let [lo, hi] = edge.interval.map(BigRational::from_float);
+                let (Some(lo), Some(hi)) = (lo, hi) else {
+                    return Err(crate::input("Nonfinite periodic trim source interval"));
+                };
+                let mut parameters = [lo, hi];
+                if reversed[edge.contour] {
+                    segment = contours[edge.contour].len() - 2 - segment;
+                    parameters = parameters.map(|t| BigRational::one() - t);
+                }
+                edges.push(PeriodicTrimInputEdgeSource {
+                    contour: edge.contour,
+                    segment,
+                    parameters,
+                });
+            }
+            loops.push(edges);
+        }
+        sources.push(loops);
+    }
+    Ok(PeriodicTrimInputEdges { geometry, sources })
 }

@@ -4387,3 +4387,69 @@ fn periodic_trim_edge_sources_continue_segment_indices_across_chunk_clocks() {
         (0..8).collect::<Vec<_>>()
     );
 }
+
+#[test]
+fn periodic_trim_input_edges_restore_original_segment_indices_and_direction() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let outer = [
+        [3.25, 3.25],
+        [3.25, 0.75],
+        [0.75, 0.75],
+        [0.75, 3.25],
+        [3.25, 3.25],
+    ];
+    let hole = [
+        [0.125, 0.125],
+        [0.625, 0.125],
+        [0.625, 0.625],
+        [0.125, 0.625],
+        [0.125, 0.125],
+    ];
+    let result = build_exact_periodic_surface_trim_input_edges(
+        &doubly_periodic_tensor(),
+        &[&hole, &outer],
+        1_000_000,
+    )
+    .unwrap();
+    let paths = &result.sources[0];
+    assert_eq!(paths[0].len(), 8);
+    for (oriented_segment, pieces) in paths[0].chunks_exact(2).enumerate() {
+        for (edge, expected) in pieces.iter().zip([[1., 0.5], [0.5, 0.]]) {
+            assert_eq!((edge.contour, edge.segment), (1, 3 - oriented_segment));
+            assert_eq!(
+                edge.parameters,
+                expected.map(|t| num_rational::BigRational::from_float(t).unwrap()),
+            );
+        }
+    }
+    for (i, edge) in paths[1].iter().enumerate() {
+        assert_eq!((edge.contour, edge.segment), (0, 3 - i));
+        assert_eq!(
+            edge.parameters,
+            [1., 0.].map(|t| num_rational::BigRational::from_float(t).unwrap())
+        );
+    }
+}
+
+#[test]
+fn periodic_trim_input_edges_withhold_sources_on_refusal() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let source = doubly_periodic_tensor();
+    let result = build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1).unwrap();
+    assert!(result.geometry.patches.is_none());
+    assert!(result.sources.is_empty());
+    let accepted =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    assert_eq!(accepted.sources[0][0][0].segment, 0);
+    assert_eq!(
+        accepted.sources[0][0][0].parameters,
+        [0., 0.5].map(|t| num_rational::BigRational::from_float(t).unwrap()),
+    );
+}
