@@ -9,7 +9,7 @@
  */
 import type { MeshData } from '../core/mesh'
 import { DEFAULT_DISPLAY_BUDGET, sameDisplayBudget, type DisplayBudget } from './displayScheduler'
-import { carryMeshPublication } from './sceneDelta'
+import { carryMeshPublication, deltaMeshFromMeshData, diffSceneEntities } from './sceneDelta'
 import { countOperation } from '../dev/operationCounters'
 import { CameraHistory, cameraStatesEqual, type CameraHistorySnapshot, type CameraState } from './cameraHistory'
 import { clampGestureDistance, computeOrbitUpdate, computePanUpdate, computeWheelDistance } from './cameraGestures'
@@ -302,7 +302,8 @@ export class RecordingRenderer implements PublicRenderer {
     this.record('setMeshes')
     if (this.status.status !== 'ready') return
     const { selected, selectedHit, isolated, measurement } = this
-    const kept = carryMeshPublication(this.meshes, meshes, { selected, selectedHit, isolated, measurement }, options)
+    const previous = this.meshes
+    const kept = carryMeshPublication(previous, meshes, { selected, selectedHit, isolated, measurement }, options)
     this.meshes = meshes
     this.visibility = meshes.map(() => true)
     this.selected = kept.selected
@@ -311,8 +312,18 @@ export class RecordingRenderer implements PublicRenderer {
     this.measurement = kept.measurement
     this.sceneUploads++
     countOperation('viewportSceneUploads')
-    const bytes = meshes.reduce((sum, mesh) => sum + mesh.vertices.byteLength + mesh.indices.byteLength, 0)
-    this.uploadMetrics = { geometryUploadBytes: bytes, geometryBuffersCreated: meshes.length, reusedEntities: 0 }
+    // Mirror the WebGPU delta: only added or geometry-changed entities upload.
+    const delta = diffSceneEntities(previous.map(deltaMeshFromMeshData), meshes.map(deltaMeshFromMeshData))
+    const uploaded = [...delta.added, ...delta.geometryChanged]
+    const bytes = uploaded.reduce(
+      (sum, index) => sum + meshes[index]!.vertices.byteLength + meshes[index]!.indices.byteLength,
+      0,
+    )
+    this.uploadMetrics = {
+      geometryUploadBytes: bytes,
+      geometryBuffersCreated: uploaded.length * 2,
+      reusedEntities: meshes.length - uploaded.length,
+    }
     this.pendingFrameToken = options.frameToken ?? null
     this.requestRender()
   }

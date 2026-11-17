@@ -7,6 +7,7 @@ import { diagnosticFromBuildError } from '../../language/editorDiagnostics'
 import { presentLanguageError } from '../../i18n/kernelErrors'
 import { withSelectionSurfaces } from '../../kernel/meshSurfaceGroups'
 import { planScenePublication } from '../../app/scenePublication'
+import { reconcileCarriedSelection, SceneIntentGenerations } from '../../app/sceneDeltaPublication'
 import type { WebGPURenderer } from '../../render/webgpuRenderer'
 import { createViewportRenderer } from '../../render/viewportRendererFactory'
 import { getDisplayBudget, subscribeDisplayBudget } from '../../render/displayBudgetSetting'
@@ -16,6 +17,8 @@ import type {RendererOperationsContext} from './rendererOperationsContext'
 export function createRendererOperations(context: RendererOperationsContext) {
 // One subscription per lifecycle; it always targets the current renderer.
 let unsubscribeDisplayBudget: (() => void) | null = null
+// Publication intents are tagged with their document revision; older ones are dropped.
+const publicationGenerations = new SceneIntentGenerations()
 async function initializeViewportRenderer() {
     const canvas = context.options.canvasRef.value
     if (!canvas || !context.options.isComponentActive() || !context.options.sourceViewportVisible.value || context.options.rendererInitializing.value) return
@@ -236,6 +239,7 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
       reduced: response.reduced,
     }, { buildGeneration: context.buildGeneration, source: context.options.code.value })
     if (!publicationPlan.publish) return
+    if (!publicationGenerations.accept(response.documentRevision)) return
     const effectiveQuality = publicationPlan.effectiveQuality
 
     try {
@@ -259,7 +263,8 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
 
       const frameToken = context.nextPerformanceFrameToken++
       context.renderer?.setMeshes(displayMeshes, {
-        frameToken, preserveInteraction: false, // planScenePublication owns selection here.
+        // Scene-delta path: unchanged entities keep GPU buffers, selection and hover.
+        frameToken,
         animate: context.options.renderedSource.value !== '' && !sameSourceSnapshot,
         preserveMeasurement: publication.measurementMayBePreserved,
       })
@@ -271,15 +276,13 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
       })
       context.renderer?.setMeshVisibilityBatch(context.options.meshVisibility.value)
       context.options.sceneController.applyRendererHover(null)
-      if (publication.nextSelectedIndex !== null) {
-        const previousFaceMesh = previousFaceHit ? previousMeshes[previousFaceHit.meshIndex] : undefined
-        const faceRestored = previousFaceHit && previousFaceMesh
-          && context.renderer?.restoreNativeFaceSelection(previousFaceMesh, previousFaceHit, publication.nextSelectedIndex)
-        if (!faceRestored) context.renderer?.selectMesh(publication.nextSelectedIndex)
-        if (publication.nextIsolated) context.renderer?.toggleIsolateSelection()
-      } else {
-        context.options.sceneController.applyRendererSelection(null, false, null)
+      const previousFaceMesh = previousFaceHit ? previousMeshes[previousFaceHit.meshIndex] : undefined
+      if (context.renderer) {
+        reconcileCarriedSelection(context.renderer, publication, previousFaceHit && previousFaceMesh
+          ? { mesh: previousFaceMesh, hit: previousFaceHit }
+          : null)
       }
+      if (publication.nextSelectedIndex === null) context.options.sceneController.applyRendererSelection(null, false, null)
       if (context.mainEditSelection?.source === source) {
         const index = context.mainEditSelection.index < 0
           ? displayMeshes.length - 1
