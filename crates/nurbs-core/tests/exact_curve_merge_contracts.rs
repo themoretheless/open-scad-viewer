@@ -1604,3 +1604,74 @@ fn exact_periodic_surface_rotation_refuses_an_inexact_translated_knot() {
         Some(GaugeMergeRefusal::Exact(ExactRefusal::NotRepresentable))
     );
 }
+
+#[test]
+fn exact_surface_seam_insertion_preserves_relative_weights_between_rows() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::insert_and_rotate_periodic_surface_seam,
+        surface::{Axis, extrude},
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let mut source = extrude(&profile, [0., 0., 2.]).unwrap();
+    for weights in &mut source.weights {
+        weights[1] = 3.;
+    }
+    let report = insert_and_rotate_periodic_surface_seam(&source, Axis::U, 0.5, 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let moved = report.surface.unwrap();
+    assert_eq!(moved.knots_u, vec![0., 0.5, 1., 2., 3., 4., 4.5, 5.]);
+    let transposed = nurbs_geometry::surface_transpose::transpose(&source).unwrap();
+    let other = insert_and_rotate_periodic_surface_seam(&transposed, Axis::V, 0.5, 1_000_000)
+        .unwrap()
+        .surface
+        .unwrap();
+    assert_eq!(
+        other,
+        nurbs_geometry::surface_transpose::transpose(&moved).unwrap()
+    );
+    for t in [0.5, 0.75, 2., 4., 4.5] {
+        for v in [0.25, 0.5, 0.75] {
+            let expected = source.evaluate(t % 4., v).unwrap().point;
+            let actual = moved.evaluate(t, v).unwrap().point;
+            assert!(
+                expected
+                    .into_iter()
+                    .zip(actual)
+                    .all(|(a, b)| (a - b).abs() < 1e-13)
+            );
+        }
+    }
+    assert!(
+        insert_and_rotate_periodic_surface_seam(&source, Axis::U, 0.5, report.work_used - 1)
+            .unwrap()
+            .surface
+            .is_none()
+    );
+}
+
+#[test]
+fn exact_surface_seam_insertion_refuses_inexact_later_rows_atomically() {
+    use nurbs_core::{
+        editing::{
+            exact_curve_merge::GaugeMergeRefusal,
+            exact_periodic_surface::insert_and_rotate_periodic_surface_seam,
+            rational_factor::Refusal,
+        },
+        surface::{Axis, extrude},
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let mut source = extrude(&profile, [0., 0., 2.]).unwrap();
+    source.weights[1][1] = 2.;
+    let report = insert_and_rotate_periodic_surface_seam(&source, Axis::U, 0.5, 1_000_000).unwrap();
+    assert!(report.surface.is_none());
+    assert_eq!(
+        report.refusal,
+        Some(GaugeMergeRefusal::Exact(Refusal::NotRepresentable))
+    );
+}

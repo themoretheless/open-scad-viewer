@@ -1293,9 +1293,38 @@ fn insert_periodic_seam(
     parameter: f64,
     work: &mut super::rational_edit::Work,
 ) -> std::result::Result<Curve, super::rational_factor::Refusal> {
-    use super::{
-        exact_knot_insertion::homogeneous, rational_edit::store, rational_factor::Refusal,
+    use super::{rational_edit::store, rational_factor::Refusal};
+    use num_rational::BigRational as Q;
+
+    let p = source.degree;
+    let (net, knots) = refine_periodic_seam_net(source, parameter, work)?;
+    let channels: Vec<Vec<Q>> = (0..net[0].len())
+        .map(|axis| net.iter().map(|row| row[axis].clone()).collect())
+        .collect();
+    let (mut points, mut weights) = store(&channels, work)?;
+    points.extend_from_within(..p);
+    weights.extend_from_within(..p);
+
+    let refined = Curve {
+        degree: p,
+        knots,
+        control_points: points,
+        weights,
+        periodic: true,
     };
+    refined.validate().map_err(|_| Refusal::InvalidOutput)?;
+    rotate_periodic_storage(&refined, 1, work)
+}
+
+pub(super) fn refine_periodic_seam_net(
+    source: &Curve,
+    parameter: f64,
+    work: &mut super::rational_edit::Work,
+) -> std::result::Result<
+    (Vec<Vec<num_rational::BigRational>>, Vec<f64>),
+    super::rational_factor::Refusal,
+> {
+    use super::{exact_knot_insertion::homogeneous, rational_factor::Refusal};
     use num_rational::BigRational as Q;
 
     let p = source.degree;
@@ -1309,13 +1338,6 @@ fn insert_periodic_seam(
     let base = rotate_periodic_storage(source, span - p, work)?;
     let (net, linear_knots) = homogeneous(&base, parameter, 1, work)?;
     let cycle = n - p + 1;
-    let channels: Vec<Vec<Q>> = (0..net[0].len())
-        .map(|axis| net[..cycle].iter().map(|row| row[axis].clone()).collect())
-        .collect();
-    let (mut points, mut weights) = store(&channels, work)?;
-    points.extend_from_within(..p);
-    weights.extend_from_within(..p);
-
     let [lo, hi] = base.domain();
     let start = work.lift(lo)?;
     let end = work.lift(hi)?;
@@ -1335,15 +1357,7 @@ fn insert_periodic_seam(
             Ok(work.float(&mapped)?)
         })
         .collect::<std::result::Result<Vec<_>, Refusal>>()?;
-    let refined = Curve {
-        degree: p,
-        knots,
-        control_points: points,
-        weights,
-        periodic: true,
-    };
-    refined.validate().map_err(|_| Refusal::InvalidOutput)?;
-    rotate_periodic_storage(&refined, 1, work)
+    Ok((net.into_iter().take(cycle).collect(), knots))
 }
 
 /// Open one complete period at the current seam by exactly clamping the

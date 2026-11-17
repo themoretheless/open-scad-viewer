@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 513,
-  "unallocatedCount": 487,
+  "specifiedCount": 514,
+  "unallocatedCount": 486,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13249,6 +13249,27 @@
       "remainingQualification": [
         "Rotate an existing periodic surface knot and the complete rational control net without rounding.",
         "Prove the shared cyclic knot translation once and apply the same literal index permutation to the complete tensor net.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0514",
+      "name": "Точный перенос шва NURBS-поверхности внутрь участка по U или V",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::insert_and_rotate_periodic_surface_seam",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-514-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-514-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Insert a periodic seam in exact homogeneous arithmetic with one common tensor weight gauge.",
+        "Apply cyclic Boehm insertion in exact homogeneous arithmetic to all rows then store one tensor-wide weight gauge before rotating.",
         "WASM and application integration are separate."
       ]
     }
