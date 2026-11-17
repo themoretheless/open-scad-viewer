@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0329",
+  "testedBase": "d02005412adf56c68080827b50212c65b61ad6cb",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_principal_plane_moment_contracts",
+    "--test",
+    "exact_world_plane_mass_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 5,
+  "scope": [
+    "Represent exact world-space principal axis lines by algebraic orthogonal projectors and retain the full plane under isotropy.",
+    "Exact polynomial or rational-linear boundaries. Distinct signed principal moments select unoriented lines; equal moments select the entire supporting plane."
+  ],
+  "logSha256": "f7b7053c140eb6f93a60ee6173dc43ce46e9bbcb5310f093632d39be968b7ce2",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_planar_face_mass.rs": "ec6467a44b30237bdfca5ef67152db95af6660570b0fd2f75afaf485d6c4f6a2",
+    "crates/nurbs-core/tests/exact_principal_plane_moment_contracts.rs": "e6c0b6e7cc5d9c888270447e622da2787c293a8347c97d4de2ee941b7971c83e"
+  }
+}

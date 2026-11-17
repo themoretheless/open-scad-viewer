@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 328,
-  "unallocatedCount": 672,
+  "specifiedCount": 329,
+  "unallocatedCount": 671,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8534,6 +8534,25 @@
       "remainingQualification": [
         "Enclose both world-space in-plane principal moments and their sum from certified rational boundary moment bounds.",
         "Closed rational planar contours. Signed area must be separated from zero. Width targets apply to the underlying projected integrals.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0329",
+      "name": "Точные главные направления плоской NURBS-грани в виде ортогональных проекторов",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::analysis::exact_planar_face_mass::exact_projected_face_principal_directions",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/exact_planar_face_mass.rs",
+        "crates/nurbs-core/tests/exact_principal_plane_moment_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-329-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-329-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Represent exact world-space principal axis lines by algebraic orthogonal projectors and retain the full plane under isotropy.",
+        "Exact polynomial or rational-linear boundaries. Distinct signed principal moments select unoriented lines; equal moments select the entire supporting plane.",
         "WASM and application integration are separate."
       ]
     }

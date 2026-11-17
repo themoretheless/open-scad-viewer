@@ -248,3 +248,97 @@ fn principal_pair(
         area_scale_squared,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPrincipalPlaneDirections {
+    pub moments: ExactPrincipalPlaneMoments,
+    /// Orthogonal projector onto the supporting plane.
+    pub plane_projector: [[Q; 3]; 3],
+    /// The signed axis projectors are
+    /// (plane_projector ± deviator / sqrt(moments.half_gap_squared)) / 2.
+    /// Minus corresponds to the smaller signed moment. Isotropy leaves this absent.
+    pub deviator: Option<[[Q; 3]; 3]>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ExactPrincipalDirectionOutcome {
+    Directions(ExactPrincipalPlaneDirections),
+    ZeroSignedArea,
+    MassRefused(ExactWorldPlaneMassOutcome),
+    DirectionRefused(Refusal),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPrincipalDirectionReport {
+    pub outcome: ExactPrincipalDirectionOutcome,
+    pub work_used: u64,
+}
+
+/// Represent the principal axes as exact algebraic orthogonal projectors.
+/// Axis lines have no arbitrary vector sign. Equal moments leave the whole
+/// supporting plane as the eigenspace. Signed zero area has no centroidal axes.
+pub fn exact_projected_face_principal_directions(
+    face: &ProjectedTrimmedFace,
+    max_work: u64,
+) -> Result<ExactPrincipalDirectionReport> {
+    let report = exact_projected_face_mass(face, max_work)?;
+    let mut work = Work {
+        used: report.work_used,
+        limit: max_work,
+    };
+    let outcome = match report.outcome {
+        ExactWorldPlaneMassOutcome::Mass(mass) => match mass.centroidal_second_moments {
+            Some(tensor) => principal_directions(
+                &face.projection,
+                &tensor,
+                mass.area_scale_squared,
+                &mut work,
+            )
+            .map(ExactPrincipalDirectionOutcome::Directions)
+            .unwrap_or_else(ExactPrincipalDirectionOutcome::DirectionRefused),
+            None => ExactPrincipalDirectionOutcome::ZeroSignedArea,
+        },
+        refusal => ExactPrincipalDirectionOutcome::MassRefused(refusal),
+    };
+    Ok(ExactPrincipalDirectionReport {
+        outcome,
+        work_used: work.used,
+    })
+}
+
+fn principal_directions(
+    projection: &PlanarSurfaceProjection,
+    tensor: &[[Q; 3]; 3],
+    area_scale_squared: Q,
+    work: &mut Work,
+) -> Exact<ExactPrincipalPlaneDirections> {
+    let moments = principal_pair(tensor, area_scale_squared, work)?;
+    let [x, y] = projection.retained_axes;
+    let mut n = std::array::from_fn::<_, 3, _>(|_| Q::zero());
+    n[x] = -&projection.slopes[0];
+    n[y] = -&projection.slopes[1];
+    n[projection.omitted_axis] = Q::one();
+    let mut plane_projector = std::array::from_fn(|_| std::array::from_fn(|_| Q::zero()));
+    let mut deviator = (!moments.is_isotropic()).then(|| plane_projector.clone());
+    for i in 0..3 {
+        for j in i..3 {
+            let product = work.op(&n[i], &n[j], |a, b| a * b)?;
+            let normal = work.op(&product, &moments.area_scale_squared, |a, b| a / b)?;
+            let identity = Q::from_integer(usize::from(i == j).into());
+            let plane = work.op(&identity, &normal, |a, b| a - b)?;
+            if let Some(d) = deviator.as_mut() {
+                let center = work.op(&moments.midpoint, &plane, |a, b| a * b)?;
+                let remainder = work.op(&tensor[i][j], &center, |a, b| a - b)?;
+                d[i][j] = remainder.clone();
+                d[j][i] = remainder;
+            }
+            plane_projector[i][j] = plane.clone();
+            plane_projector[j][i] = plane;
+        }
+    }
+    Ok(ExactPrincipalPlaneDirections {
+        moments,
+        plane_projector,
+        deviator,
+    })
+}

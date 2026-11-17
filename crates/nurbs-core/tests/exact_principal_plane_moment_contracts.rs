@@ -103,3 +103,53 @@ fn distinguishes_zero_signed_area_from_exhausted_spectrum_budget() {
         ExactPrincipalPlaneOutcome::ZeroSignedArea
     );
 }
+
+#[test]
+fn algebraic_projectors_select_the_correct_tilted_principal_axes() {
+    use nurbs_core::analysis::exact_planar_face_mass::{
+        ExactPrincipalDirectionOutcome, exact_projected_face_principal_directions,
+    };
+    let report = exact_projected_face_principal_directions(&chart(true), WORK).unwrap();
+    let ExactPrincipalDirectionOutcome::Directions(axes) = report.outcome else {
+        panic!("{:?}", report.outcome);
+    };
+    assert_eq!(axes.moments.half_gap_squared, q(1, 144));
+    let d = axes.deviator.unwrap();
+    let small = [1, 1, 2];
+    let large = [1, -1, 0];
+    for i in 0..3 {
+        for j in 0..3 {
+            let half = q(1, 2);
+            let signed = &d[i][j] * q(12, 1);
+            assert_eq!(
+                (&axes.plane_projector[i][j] - &signed) * &half,
+                q(small[i] * small[j], 6)
+            );
+            assert_eq!(
+                (&axes.plane_projector[i][j] + &signed) * &half,
+                q(large[i] * large[j], 2)
+            );
+        }
+    }
+}
+
+#[test]
+fn retains_the_plane_without_choosing_axes_for_an_isotropic_face() {
+    use nurbs_core::analysis::exact_planar_face_mass::{
+        ExactPrincipalDirectionOutcome, exact_projected_face_principal_directions,
+    };
+    let report = exact_projected_face_principal_directions(&chart(false), WORK).unwrap();
+    let ExactPrincipalDirectionOutcome::Directions(axes) = report.outcome else {
+        panic!("{:?}", report.outcome);
+    };
+    assert!(axes.moments.is_isotropic());
+    assert!(axes.deviator.is_none());
+    assert_eq!(
+        axes.plane_projector,
+        [
+            [q(1, 1), q(0, 1), q(0, 1)],
+            [q(0, 1), q(1, 1), q(0, 1)],
+            [q(0, 1), q(0, 1), q(0, 1)],
+        ]
+    );
+}
