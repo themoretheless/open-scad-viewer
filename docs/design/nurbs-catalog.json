@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 601,
-  "unallocatedCount": 399,
+  "specifiedCount": 602,
+  "unallocatedCount": 398,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15034,6 +15034,25 @@
         "Expose signed projected area along an arbitrary normal through the binary ABI.",
         "Verify oblique area with holes, opposite normals, invalid normals and inadequate cells through the shared geometry dispatch.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0602",
+      "name": "Гарантированные границы максимальной ориентированной проекции периодической грани",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::bound_input_patch_max_projected_area",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-602-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-602-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose maximum signed projected area over all unit normals via the oriented area vector.",
+        "Verify an analytic nonplanar optimum with a hole, a matching optimal normal, and complete bounds under a cell limit.",
+        "WASM and application integration are separate."
       ]
     }
   ],

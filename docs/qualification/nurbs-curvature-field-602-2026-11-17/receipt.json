@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0602",
+  "testedBase": "4b9f413748773dda114d3b5cb8e419552a2715aa",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 184,
+  "scope": [
+    "Enclose maximum signed projected area over all unit normals via the oriented area vector.",
+    "Verify an analytic nonplanar optimum with a hole, a matching optimal normal, and complete bounds under a cell limit."
+  ],
+  "logSha256": "cfcb6294ac8ac05085b7084e00c7296f5ade8fd5ed75e3830df63d1738a5eb69",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "666395b58d8743f10049a498b4c900799880b2527dd49b87f56afecf9a1cbefb",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "d35bb14cb62cc22dfd3ea9683aa65ca9dff815ebe581d1c4a28457ae7e8b2ac9"
+  }
+}

@@ -6256,3 +6256,54 @@ impl PeriodicTrimInputEdges {
         })
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimMaximumProjection {
+    /// Bounds on the maximum signed projected area over all unit normals.
+    /// The lower endpoint also bounds the surface area from below.
+    pub maximum_bounds: Option<[f64; 2]>,
+    pub cells: usize,
+    pub minimum_cells: usize,
+    pub within_tolerance: bool,
+}
+
+impl PeriodicTrimInputEdges {
+    /// Enclose the largest oriented area projection of a trimmed patch.
+    /// The optimum is the norm of its oriented area vector by
+    /// Cauchy–Schwarz. The upper bound concerns the projection alone.
+    pub fn bound_input_patch_max_projected_area(
+        &self,
+        outer_contour: usize,
+        tolerance: f64,
+        max_cells: usize,
+    ) -> Result<PeriodicTrimMaximumProjection> {
+        use crate::distance_bounds::{Interval, box_distance};
+
+        crate::check(
+            tolerance.is_finite() && tolerance > 0.,
+            "Maximum projected area needs positive finite tolerance",
+        )?;
+        let component_tolerance = (tolerance * 0.5).max(f64::from_bits(1));
+        let area =
+            self.bound_input_patch_projected_area(outer_contour, component_tolerance, max_cells)?;
+        let maximum_bounds = area
+            .bounds
+            .map(|[[x0, x1], [y0, y1], [z0, z1]]| -> Result<[f64; 2]> {
+                let components = [
+                    Interval::new(x0, x1)?,
+                    Interval::new(y0, y1)?,
+                    Interval::new(z0, z1)?,
+                ];
+                let (lo, hi) = box_distance(&components, &[Interval::point(0.); 3])?;
+                Ok([lo, hi])
+            })
+            .transpose()?;
+        Ok(PeriodicTrimMaximumProjection {
+            within_tolerance: maximum_bounds
+                .is_some_and(|[lo, hi]| (hi - lo).next_up() <= tolerance),
+            maximum_bounds,
+            cells: area.cells,
+            minimum_cells: area.minimum_cells,
+        })
+    }
+}
