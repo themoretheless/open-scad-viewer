@@ -539,3 +539,37 @@ pub fn certified_display_levels(
         .collect::<Result<Vec<_>>>()
         .map(Some)
 }
+
+pub struct PeriodicTrimSheetDisplay {
+    pub sheet: brep_core::feature_ops::periodic_trim_sheet::PeriodicTrimSheetReport,
+    pub tessellation: Option<Tessellation>,
+}
+
+/// Build exact trimmed NURBS sheets and sample them with the existing
+/// B-rep tessellator. Each face keeps its identity in the display mesh.
+pub fn tessellate_exact_periodic_trim_sheet(
+    source: &nurbs_core::surface::Surface,
+    contours: &[&[[f64; 2]]],
+    tolerance_mm: f64,
+    max_work: u64,
+    segments: usize,
+) -> Result<PeriodicTrimSheetDisplay> {
+    if !(1..=32).contains(&segments) {
+        return Err(input("B-rep tessellation segments must be 1..32"));
+    }
+    let sheet = brep_core::feature_ops::periodic_trim_sheet::build_exact_periodic_trim_sheet(
+        source,
+        contours,
+        tolerance_mm,
+        max_work,
+    )?;
+    let tessellation = sheet
+        .model
+        .as_ref()
+        .map(|model| nurbs(model, segments))
+        .transpose()?;
+    Ok(PeriodicTrimSheetDisplay {
+        sheet,
+        tessellation,
+    })
+}

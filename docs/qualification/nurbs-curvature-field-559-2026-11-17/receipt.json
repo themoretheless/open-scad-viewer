@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0559",
+  "testedBase": "2607344d80a7d723089b2b0f4ae1cbe5fdc126cc",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "brep-core",
+    "--test",
+    "exact_periodic_trim_display_contracts",
+    "--test",
+    "exact_periodic_trim_sheet_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 2,
+  "scope": [
+    "Connect exact periodic trim sheet authoring to the native B-rep display tessellator.",
+    "Tessellate the exact open model through the shared edge registry, retaining face identity and separate outer and hole boundary loops."
+  ],
+  "logSha256": "cb0ff5579dd715e1d1d65f5d7f2a45c8d2db52628c41cd58017390bb95b67fa7",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "1dd9c0c83206de63c4f0a3738dfacfa920d818841ece9679869fb77bfe0c6c66",
+    "crates/geometry-bridge/tests/exact_periodic_trim_display_contracts.rs": "8d304ae8bf41c9cf0d90abd6d7e21fe1331d174ad2a663934b563a866f5743bc",
+    "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs": "97b7fd5b080390d43bec94bc261773cef08ef8e610930e91f52d309aca62f722"
+  }
+}
