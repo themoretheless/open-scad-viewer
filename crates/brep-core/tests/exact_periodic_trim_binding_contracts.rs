@@ -1,4 +1,7 @@
-use brep_core::feature_ops::periodic_trim_sheet::build_exact_periodic_trim_sheet_with_bindings;
+use brep_core::feature_ops::periodic_trim_sheet::{
+    build_exact_periodic_trim_sheet_with_bindings,
+    build_exact_periodic_trim_sheet_with_edge_bindings,
+};
 use nurbs_core::{
     curve::Curve,
     surface::{Surface, extrude},
@@ -100,4 +103,67 @@ fn refused_build_has_no_contour_bindings() {
     assert!(report.sheet.refusal.is_some());
     assert!(report.sheet.model.is_none());
     assert!(report.contour_bindings.as_slice().is_empty());
+}
+
+#[test]
+fn split_segment_intervals_resolve_to_their_persistent_brep_edges() {
+    let hole = [
+        [0.125, 0.25],
+        [0.375, 0.25],
+        [0.375, 0.75],
+        [0.125, 0.75],
+        [0.125, 0.25],
+    ];
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let result = build_exact_periodic_trim_sheet_with_edge_bindings(
+        &support(),
+        &[&hole, &outer],
+        1e-8,
+        1_000_000,
+    )
+    .unwrap();
+    let model = result.bound_sheet.sheet.model.unwrap();
+    assert_eq!(result.edge_bindings.len(), model.edges.len());
+    let face = &model.faces[0];
+    for (wire, contour) in [(face.outer, 1), (face.holes[0], 0)] {
+        for coedge in &model.loops[wire].coedges {
+            let binding = &result.edge_bindings[coedge.edge];
+            assert_eq!(binding.edge_id, model.1.edges[coedge.edge]);
+            assert_eq!(binding.source.contour, contour);
+            let segment = binding.source.segment as f64;
+            assert_eq!(
+                binding.source.interval,
+                model.edges[coedge.edge].curve.domain().map(|t| t - segment),
+            );
+        }
+    }
+    let split: Vec<_> = result
+        .edge_bindings
+        .iter()
+        .filter(|binding| binding.source.contour == 1 && binding.source.segment == 0)
+        .map(|binding| binding.source.interval)
+        .collect();
+    assert_eq!(split, [[0., 0.5], [0.5, 1.]]);
+}
+
+#[test]
+fn refused_build_withholds_persistent_edge_sources() {
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let report =
+        build_exact_periodic_trim_sheet_with_edge_bindings(&support(), &[&outer], 1e-8, 1).unwrap();
+    assert!(report.bound_sheet.sheet.model.is_none());
+    assert!(report.bound_sheet.sheet.refusal.is_some());
+    assert!(report.edge_bindings.is_empty());
 }

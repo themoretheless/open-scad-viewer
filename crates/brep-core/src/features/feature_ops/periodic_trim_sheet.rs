@@ -4,7 +4,8 @@ use crate::{
 };
 use nurbs_core::{
     editing::exact_periodic_surface::{
-        PeriodicTrimEdge, PeriodicTrimEdgeRefusal, build_exact_periodic_surface_trim_edges,
+        PeriodicTrimEdge, PeriodicTrimEdgeRefusal, PeriodicTrimEdgeSource,
+        build_exact_periodic_surface_trim_edges,
     },
     surface::Surface,
 };
@@ -31,6 +32,19 @@ pub struct BoundPeriodicTrimSheet {
     pub contour_bindings: Vec<PeriodicTrimContourBinding>,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct PeriodicTrimEdgeBinding {
+    pub edge_id: TopoId,
+    pub source: PeriodicTrimEdgeSource,
+}
+
+#[derive(Clone, Debug)]
+pub struct EdgeBoundPeriodicTrimSheet {
+    pub bound_sheet: BoundPeriodicTrimSheet,
+    /// Bindings in model edge order. Empty when construction is refused.
+    pub edge_bindings: Vec<PeriodicTrimEdgeBinding>,
+}
+
 /// Author one open shell per filled component, retaining exact world edges,
 /// paired pcurves, and holes. Distinct components keep separate topology.
 pub fn build_exact_periodic_trim_sheet(
@@ -52,19 +66,42 @@ pub fn build_exact_periodic_trim_sheet_with_bindings(
     tolerance_mm: f64,
     max_work: u64,
 ) -> Result<BoundPeriodicTrimSheet> {
+    Ok(build_sheet(source, contours, tolerance_mm, max_work, false)?.bound_sheet)
+}
+
+/// Build an open sheet with the source segment intervals of its persistent edges.
+pub fn build_exact_periodic_trim_sheet_with_edge_bindings(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    tolerance_mm: f64,
+    max_work: u64,
+) -> Result<EdgeBoundPeriodicTrimSheet> {
+    build_sheet(source, contours, tolerance_mm, max_work, true)
+}
+
+fn build_sheet(
+    source: &Surface,
+    contours: &[&[[f64; 2]]],
+    tolerance_mm: f64,
+    max_work: u64,
+    bind_edges: bool,
+) -> Result<EdgeBoundPeriodicTrimSheet> {
     let error = |message| Error::new("BREP_PERIODIC_TRIM_SHEET", message);
     if !tolerance_mm.is_finite() || tolerance_mm <= 0. {
         return Err(error("Periodic trim sheet needs positive finite tolerance"));
     }
     let report = build_exact_periodic_surface_trim_edges(source, contours, max_work)?;
     let Some(patches) = report.patches else {
-        return Ok(BoundPeriodicTrimSheet {
-            sheet: PeriodicTrimSheetReport {
-                model: None,
-                work_used: report.work_used,
-                refusal: report.refusal,
+        return Ok(EdgeBoundPeriodicTrimSheet {
+            bound_sheet: BoundPeriodicTrimSheet {
+                sheet: PeriodicTrimSheetReport {
+                    model: None,
+                    work_used: report.work_used,
+                    refusal: report.refusal,
+                },
+                contour_bindings: Vec::new(),
             },
-            contour_bindings: Vec::new(),
+            edge_bindings: Vec::new(),
         });
     };
     let mut topology = brep_topology::Model {
@@ -77,7 +114,11 @@ pub fn build_exact_periodic_trim_sheet_with_bindings(
         tolerance_mm,
     };
     let mut wire_owners = vec![None; contours.len()];
+    let mut edge_sources = Vec::new();
     for patch in patches {
+        if bind_edges {
+            edge_sources.extend(patch.edge_sources()?.into_iter().flatten());
+        }
         let face = topology.faces.len();
         let outer = topology.loops.len();
         for path in patch.loops {
@@ -161,13 +202,27 @@ pub fn build_exact_periodic_trim_sheet_with_bindings(
             })
         })
         .collect::<Result<Vec<_>>>()?;
-    Ok(BoundPeriodicTrimSheet {
-        sheet: PeriodicTrimSheetReport {
-            model: Some(model),
-            work_used: report.work_used,
-            refusal: None,
+    if bind_edges && edge_sources.len() != model.1.edges.len() {
+        return Err(error("Periodic trim source and edge counts differ"));
+    }
+    let edge_bindings = edge_sources
+        .into_iter()
+        .zip(&model.1.edges)
+        .map(|(source, edge_id)| PeriodicTrimEdgeBinding {
+            edge_id: edge_id.clone(),
+            source,
+        })
+        .collect();
+    Ok(EdgeBoundPeriodicTrimSheet {
+        bound_sheet: BoundPeriodicTrimSheet {
+            sheet: PeriodicTrimSheetReport {
+                model: Some(model),
+                work_used: report.work_used,
+                refusal: None,
+            },
+            contour_bindings,
         },
-        contour_bindings,
+        edge_bindings,
     })
 }
 

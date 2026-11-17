@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0564",
+  "testedBase": "a67bae53d9e49bcc5028cb62b9f2c7526c4e2197",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "exact_periodic_trim_binding_contracts",
+    "--test",
+    "exact_periodic_trim_sheet_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 4,
+  "scope": [
+    "Resolve exact seam-split source intervals to persistent B-rep edge identities.",
+    "Verify identity and source interval alignment on outer and hole coedges plus atomic refusal."
+  ],
+  "logSha256": "376aa70794786ee3610b402e1409bdb2445b1a2a49431a4c2e501a01d7ceafd1",
+  "sourceSha256": {
+    "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs": "57aefa16e54e4a0efab828d645378c5f306a37aef52a267d3fd45fccb756dd35",
+    "crates/brep-core/tests/exact_periodic_trim_binding_contracts.rs": "28c7220bc0c07217b1521439861f3f171475bae961d8763df6c1c5366f1b50eb"
+  }
+}
