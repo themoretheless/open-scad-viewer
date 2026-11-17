@@ -36,7 +36,7 @@ beforeAll(async()=>{
  await import('../src/features/GcodePanel.svt')
  await import('../src/features/LaserCamPanel.svt')
 })
-import {extrudeDirectSketch,parseDirectDocument,type DirectDocument} from '../src/app/directModeling'
+import {extrudeDirectSketch,parseDirectDocument,type DirectBody,type DirectDocument} from '../src/app/directModeling'
 import {projectDirectPoint,unprojectDirectXY,defaultDirectCamera} from '../src/app/directModelingTools'
 import {solidTopology} from '../src/app/directSolidTools'
 import {sampleCurve} from '../src/app/directSketchGeometry'
@@ -1582,6 +1582,22 @@ it('C8 acceptance: flange with a hole array and fastener instances along a NURBS
  expect(ui.doc().bodies.find(b=>b.id==='flange')).toEqual(flange)
  await ui.click('↶');expect(placed('bolt')).toHaveLength(0);expect(placed('hole')).toEqual(holes)
  await ui.click('↷');expect(placed('bolt')).toEqual(bolts)
+ const beforeCut=ui.doc(),cutters=beforeCut.bodies.filter(b=>b.id==='hole'||b.instance?.sourceId==='hole')
+ const {applySolidBoolean}=await import('../src/kernel/solidBoolean')
+ expect(()=>applySolidBoolean(beforeCut,{operation:'difference',a:['flange'],b:['hole'],segments:2,ru:false})).toThrow(expect.objectContaining({code:'DIRECT_BOOLEAN_INSTANCE_SOURCE'}))
+ const fromInstance=applySolidBoolean(beforeCut,{operation:'difference',a:[cutters[1].id],b:['bolt',...beforeCut.bodies.filter(b=>b.instance?.sourceId==='bolt').map(b=>b.id)],segments:2,ru:false})
+ expect(fromInstance.document.bodies.find(b=>b.id===cutters[1].id)!.instance).toBeUndefined()
+ const volume=(m:{positions:ArrayLike<number>;indices:ArrayLike<number>})=>{let v=0;const p=m.positions,ix=m.indices;for(let i=0;i<ix.length;i+=3){const [a,b,c]=[ix[i]*3,ix[i+1]*3,ix[i+2]*3];v+=p[a]*(p[b+1]*p[c+2]-p[b+2]*p[c+1])-p[a+1]*(p[b]*p[c+2]-p[b+2]*p[c])+p[a+2]*(p[b]*p[c+1]-p[b+1]*p[c])}return Math.abs(v)/6}
+ await ui.click('Flange');for(const c of cutters)await ui.click(c.name,true)
+ await ui.click('Subtract: A − B');await flushClearance();await commandKey(ui,'Enter')
+ const cut=ui.doc(),drilled=cut.bodies.find(b=>b.id==='flange')!
+ expect(cut.bodies.some(b=>b.id==='hole'||b.instance?.sourceId==='hole')).toBe(false)
+ expect(placed('bolt')).toEqual(bolts)
+ expect(drilled.brep!.faces.length-flange!.brep!.faces.length).toBe(6*4)
+ const exact=(b:DirectBody)=>volume(tessellateNurbsBrep(b.brep!,16))
+ const removed=exact(flange!)-exact(drilled),hole=exact(beforeCut.bodies.find(b=>b.id==='hole')!)
+ expect(removed/(6*hole)).toBeCloseTo(1,2)
+ await ui.click('↶');expect(ui.doc()).toEqual(beforeCut)
 })
 
 it('refuses direct instance geometry edits and source edits affecting a locked instance',async()=>{

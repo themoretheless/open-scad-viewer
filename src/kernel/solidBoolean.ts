@@ -25,6 +25,8 @@ export function applySolidBoolean(source:DirectDocument,options:SolidBooleanOpti
  if(!a.length||!b.length)throw new DirectInputError('DIRECT_BOOLEAN_OPERANDS',label('Заполните оба поля: A — из чего вычитаем, B — что вычитаем.','Fill both fields: A is what to subtract from, B is what to subtract.'),a.length?'booleanB':'booleanA')
  const ids=[...a,...b]
  if(new Set(ids).size!==ids.length)throw new DirectInputError('DIRECT_BOOLEAN_DUPLICATE',label('Тело должно быть только в одном поле A или B.','Each body must occur once, in either A or B.'),undefined,ids.filter((id,i)=>ids.indexOf(id)!==i))
+ const removing=new Set(ids.slice(1)),orphans=d.bodies.filter(body=>body.instance&&removing.has(body.instance.sourceId)&&!removing.has(body.id)&&body.id!==a[0])
+ if(orphans.length)throw new DirectInputError('DIRECT_BOOLEAN_INSTANCE_SOURCE',label('Операция удалит исходник, на который ссылаются оставшиеся связанные экземпляры. Добавьте их в операцию или сделайте независимыми.','The operation would remove a source that remaining linked instances refer to. Add them to the operation or make them independent.'),undefined,orphans.map(body=>body.id))
  const bodyOf=(id:string)=>{const body=d.bodies.find(item=>item.id===id);if(!body)throw Error(label('Тело больше не существует.','A body no longer exists.'));return body}
  let exact=true,toleranceMm=0
  const combine=(left:DirectBody,right:DirectBody,op:BrepBooleanOperation)=>{
@@ -38,6 +40,8 @@ export function applySolidBoolean(source:DirectDocument,options:SolidBooleanOpti
   return result
  },bodyOf(values[0]))
  const result=combine(fold(a),fold(b),operation),removed=new Set(ids)
+ // Instance operands arrive resolved; the result is new geometry, so it no longer follows a source.
+ if(result)delete result.instance
  d.bodies=d.bodies.flatMap(body=>body.id===a[0]?(result?[result]:[]):removed.has(body.id)?[]:[body])
  return {document:d,resultId:result?.id??null,exact,toleranceMm}
 }
