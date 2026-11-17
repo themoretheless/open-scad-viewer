@@ -851,26 +851,34 @@ fn require_linear_span(knots: &[f64], i: usize) -> Result<()> {
 }
 
 fn nearest_segment_point(point: &[Q; 3], a: &[Q; 3], b: &[Q; 3]) -> ([Q; 3], Q) {
+    let (closest, distance_squared, _) = project_segment_point(point, a, b);
+    (closest, distance_squared)
+}
+
+fn project_segment_point(point: &[Q; 3], a: &[Q; 3], b: &[Q; 3]) -> ([Q; 3], Q, Option<Q>) {
     use num_traits::One;
     let delta: [Q; 3] = std::array::from_fn(|i| &b[i] - &a[i]);
     let length_squared: Q = delta.iter().map(|d| d * d).sum();
-    let closest = if length_squared.is_zero() {
-        a.clone()
+    let parameter = if length_squared.is_zero() {
+        None
     } else {
         let projection: Q = delta
             .iter()
             .enumerate()
             .map(|(i, d)| d * (&point[i] - &a[i]))
             .sum();
-        let t = (projection / length_squared).clamp(Q::zero(), Q::one());
-        std::array::from_fn(|i| &a[i] + &t * &delta[i])
+        Some((projection / length_squared).clamp(Q::zero(), Q::one()))
     };
+    let closest = parameter.as_ref().map_or_else(
+        || a.clone(),
+        |t| std::array::from_fn(|i| &a[i] + t * &delta[i]),
+    );
     let distance_squared = point
         .iter()
         .zip(&closest)
         .map(|(p, c)| (p - c).pow(2))
         .sum();
-    (closest, distance_squared)
+    (closest, distance_squared, parameter)
 }
 
 fn lift(p: &[f64]) -> [Q; 3] {
@@ -915,13 +923,14 @@ pub use spatial_clip::{
     ExactPolyhedralPathPartition, ExactPolyhedralPointLocation, ExactPolyhedralSegmentClip,
     ExactPolyhedralSignedDistance, ExactPolyhedralSignedDistanceBatch,
     ExactPolyhedralSweptBallClearance, ExactPolyhedralSweptPathClearance,
-    ExactPolyhedralSweptPathMaterial, ExactSpatialPolylineSimplification, PolyhedralBallRelation,
-    PolyhedralExteriorInterval, PolyhedralInteriorInterval, PolyhedralMaterialPathComponent,
-    PolyhedralPathBoundaryEvent, PolyhedralPathCoverageComponent, PolyhedralPathCoverageLength,
-    PolyhedralPathCoveragePart, PolyhedralPathDifferenceInterval, PolyhedralPathFaceContacts,
-    PolyhedralPathLocation, PolyhedralPathPart, PolyhedralPointLocation,
-    PolyhedralSweptFaceContactRange, PolyhedralSweptFaceContactRanges, PolyhedralSweptPathContact,
-    PolyhedralSweptPathFirstContact, PolyhedralSweptPathRelation,
+    ExactPolyhedralSweptPathMaterial, ExactSpatialPolylineProjection,
+    ExactSpatialPolylineSimplification, PolyhedralBallRelation, PolyhedralExteriorInterval,
+    PolyhedralInteriorInterval, PolyhedralMaterialPathComponent, PolyhedralPathBoundaryEvent,
+    PolyhedralPathCoverageComponent, PolyhedralPathCoverageLength, PolyhedralPathCoveragePart,
+    PolyhedralPathDifferenceInterval, PolyhedralPathFaceContacts, PolyhedralPathLocation,
+    PolyhedralPathPart, PolyhedralPointLocation, PolyhedralSweptFaceContactRange,
+    PolyhedralSweptFaceContactRanges, PolyhedralSweptPathContact, PolyhedralSweptPathFirstContact,
+    PolyhedralSweptPathRelation, SpatialPolylineProjectionHit,
     bounded_polyhedral_path_coverage_lengths, bounded_polyhedral_path_length_breakdown,
     bounded_polyhedral_path_material_length, bounded_polyhedral_swept_face_contact_ranges,
     bounded_polyhedral_swept_path_first_contact, exact_polyhedral_ball_clearance,
@@ -935,5 +944,5 @@ pub use spatial_clip::{
     exact_polyhedral_segment_clip, exact_polyhedral_signed_distance,
     exact_polyhedral_signed_distance_batch, exact_polyhedral_swept_ball_clearance,
     exact_polyhedral_swept_path_clearance, exact_polyhedral_swept_path_material,
-    simplify_exact_spatial_polyline,
+    project_point_to_exact_spatial_polyline, simplify_exact_spatial_polyline,
 };

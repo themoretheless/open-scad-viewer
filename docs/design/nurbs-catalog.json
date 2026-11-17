@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 450,
-  "unallocatedCount": 550,
+  "specifiedCount": 451,
+  "unallocatedCount": 549,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -11633,6 +11633,35 @@
       "remainingQualification": [
         "Remove redundant spatial polyline vertices while preserving the oriented trace.",
         "A rational collinearity and strict between test removes only redundant vertices. Reversals, small bends, closed anchors and original vertex indices are preserved.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0451",
+      "name": "Точная проекция точки на пространственную ломаную со всеми минимумами",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::project_point_to_exact_spatial_polyline",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "docs/qualification/nurbs-curvature-field-451-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-451-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Project onto a spatial polyline and retain all minimizing points and stationary spans.",
+        "Compare exact rational squared distances at clamped segment projections. Keep all minimizing parameters, merging shared vertices and stationary spans.",
         "WASM and application integration are separate."
       ]
     }

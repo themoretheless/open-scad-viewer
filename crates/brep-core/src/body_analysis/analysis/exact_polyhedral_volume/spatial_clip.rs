@@ -1605,3 +1605,86 @@ pub fn simplify_exact_spatial_polyline(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SpatialPolylineProjectionHit {
+    /// Global parameter interval. A stationary span can attain the minimum
+    /// throughout its interval. A singleton input has parameter zero.
+    pub parameters: [Q; 2],
+    pub point_mm: [Q; 3],
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactSpatialPolylineProjection {
+    pub distance_squared_mm2: Q,
+    /// Minimizers in path order, merged at common span endpoints.
+    pub hits: Vec<SpatialPolylineProjectionHit>,
+    pub exact_work: u64,
+}
+
+/// Project a rational point onto a rational spatial polyline using exact
+/// arithmetic. Distinct visits to the same closest point remain distinct.
+pub fn project_point_to_exact_spatial_polyline(
+    points_mm: &[[Q; 3]],
+    query_mm: &[Q; 3],
+    max_exact_work: u64,
+) -> Result<ExactSpatialPolylineProjection> {
+    super::validate_work(max_exact_work)?;
+    let mut remaining = max_exact_work;
+    spend(&mut remaining, 4)?;
+    validate_point(query_mm)?;
+    if points_mm.is_empty() {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Polyline requires at least one point",
+        ));
+    }
+    for point in points_mm {
+        spend(&mut remaining, 4)?;
+        validate_point(point)?;
+    }
+    let first = &points_mm[0];
+    let mut distance_squared_mm2: Q = first
+        .iter()
+        .zip(query_mm)
+        .map(|(p, q)| (p - q).pow(2))
+        .sum();
+    let mut hits: Vec<SpatialPolylineProjectionHit> = vec![SpatialPolylineProjectionHit {
+        parameters: [Q::zero(), Q::zero()],
+        point_mm: first.clone(),
+    }];
+    for (span, pair) in points_mm.windows(2).enumerate() {
+        spend(&mut remaining, 32)?;
+        let (point_mm, distance, t) = super::project_segment_point(query_mm, &pair[0], &pair[1]);
+        if distance > distance_squared_mm2 {
+            continue;
+        }
+        if distance < distance_squared_mm2 {
+            distance_squared_mm2 = distance;
+            hits.clear();
+        }
+        let origin = Q::from_integer(span.into());
+        let [lo, hi] = match t {
+            Some(t) => {
+                let at = origin + t;
+                [at.clone(), at]
+            }
+            None => [origin.clone(), origin + Q::one()],
+        };
+        if let Some(last) = hits.last_mut()
+            && last.parameters[1] == lo
+        {
+            last.parameters[1] = hi;
+        } else {
+            hits.push(SpatialPolylineProjectionHit {
+                parameters: [lo, hi],
+                point_mm,
+            });
+        }
+    }
+    Ok(ExactSpatialPolylineProjection {
+        distance_squared_mm2,
+        hits,
+        exact_work: max_exact_work - remaining,
+    })
+}
