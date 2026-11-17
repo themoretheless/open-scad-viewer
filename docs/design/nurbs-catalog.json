@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 380,
-  "unallocatedCount": 620,
+  "specifiedCount": 381,
+  "unallocatedCount": 619,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9750,6 +9750,34 @@
       "remainingQualification": [
         "Close a shell across multiple exact section planes under common arithmetic and verification limits.",
         "Caps are staged under cumulative work and pcurve verification limits. The selected shell must validate as closed after the last plane. Original edges and vertices are retained.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0381",
+      "name": "Тело из закрытой крышками оболочки с доказанной границей и объёмом",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::planar_cap::build_section_solid",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/solid.rs",
+        "crates/brep-core/src/model/closed_solid.rs",
+        "crates/brep-core/src/body_analysis/analysis/certified_freeform_volume.rs",
+        "crates/brep-core/tests/support/closed_solid_policy.rs",
+        "docs/qualification/nurbs-curvature-field-381-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-381-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Close a standalone shell with section caps, qualify embedded material orientation and bound its positive volume.",
+        "The existing continuous boundary and material qualification gates body creation. Certified flux integration provides a positive volume enclosure for the admitted chart types.",
         "WASM and application integration are separate."
       ]
     }

@@ -193,3 +193,6 @@ pub use discover::{
     DiscoveredSectionCaps, SectionPlane, close_shell_with_section_caps,
     discover_and_attach_section_caps,
 };
+
+mod solid;
+pub use solid::{SectionSolid, SectionSolidOptions, build_section_solid};

@@ -440,3 +440,4 @@ pub use attach_sections::{
     AttachedSectionCaps, DiscoveredSectionCaps, SectionPlane, attach_section_caps,
     close_shell_with_section_caps, discover_and_attach_section_caps,
 };
+pub use attach_sections::{SectionSolid, SectionSolidOptions, build_section_solid};
