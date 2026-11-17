@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 569,
-  "unallocatedCount": 431,
+  "specifiedCount": 570,
+  "unallocatedCount": 430,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14409,6 +14409,25 @@
       ],
       "remainingQualification": [
         "Map an exact source coordinate to every incident persistent edge and its exact parameter.",
+        "Verify identity and source interval alignment on outer and hole coedges plus atomic refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0570",
+      "name": "Восстановление параметра исходного контура по идентификатору и параметру ребра B-rep",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "brep_core::feature_ops::periodic_trim_sheet::InputBoundPeriodicTrimSheet::locate_edge_parameter",
+      "evidence": [
+        "crates/brep-core/src/features/feature_ops/periodic_trim_sheet.rs",
+        "crates/brep-core/tests/exact_periodic_trim_binding_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-570-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-570-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Recover exact original contour parameters from persistent B-rep edge picks.",
         "Verify identity and source interval alignment on outer and hole coedges plus atomic refusal.",
         "WASM and application integration are separate."
       ]

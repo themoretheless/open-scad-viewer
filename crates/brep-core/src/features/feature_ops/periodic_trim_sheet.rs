@@ -101,6 +101,14 @@ pub struct PeriodicTrimEdgeParameter {
     pub parameter: BigRational,
 }
 
+/// One exact parameter on a segment of the original input contour.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PeriodicTrimInputParameter {
+    pub contour: usize,
+    pub segment: usize,
+    pub parameter: BigRational,
+}
+
 impl InputBoundPeriodicTrimSheet {
     /// Find the edges containing a parameter on an original contour segment.
     /// At a split inside the segment, return both incident edges in model order.
@@ -127,21 +135,7 @@ impl InputBoundPeriodicTrimSheet {
             if parameter < from.min(to) || parameter > from.max(to) {
                 continue;
             }
-            let invalid = || {
-                Error::new(
-                    "BREP_PERIODIC_TRIM_SHEET",
-                    "Periodic trim edge binding has an invalid identity or parameter domain",
-                )
-            };
-            if model.1.edges.get(index) != Some(&binding.edge_id) || from == to {
-                return Err(invalid());
-            }
-            let curve = &model.edges[index].curve;
-            curve.validate()?;
-            let [start, end] = curve.domain().map(BigRational::from_float);
-            let (Some(start), Some(end)) = (start, end) else {
-                return Err(invalid());
-            };
+            let [start, end] = bound_edge_domain(model, index, binding)?;
             let fraction = (parameter - from) / (to - from);
             let edge_parameter = &start + fraction * (end - &start);
             hits.push(PeriodicTrimEdgeParameter {
@@ -151,6 +145,57 @@ impl InputBoundPeriodicTrimSheet {
         }
         Ok(hits)
     }
+
+    /// Map an edge parameter back to the original input contour segment.
+    /// An unknown edge ID or a parameter outside the edge returns no hit.
+    pub fn locate_edge_parameter(
+        &self,
+        edge_id: TopoId,
+        parameter: &BigRational,
+    ) -> Result<Option<PeriodicTrimInputParameter>> {
+        let Some(model) = &self.bound_sheet.sheet.model else {
+            return Ok(None);
+        };
+        if self.edge_bindings.len() != model.edges.len() {
+            return Err(edge_count_error());
+        }
+        let Some(index) = model.1.edges.iter().position(|id| *id == edge_id) else {
+            return Ok(None);
+        };
+        let binding = self.edge_bindings.get(index).ok_or_else(edge_count_error)?;
+        let [start, end] = bound_edge_domain(model, index, binding)?;
+        if parameter < &start || parameter > &end {
+            return Ok(None);
+        }
+        let fraction = (parameter - &start) / (end - start);
+        let [from, to] = &binding.source.parameters;
+        Ok(Some(PeriodicTrimInputParameter {
+            contour: binding.source.contour,
+            segment: binding.source.segment,
+            parameter: from + fraction * (to - from),
+        }))
+    }
+}
+
+fn bound_edge_domain(
+    model: &Model,
+    index: usize,
+    binding: &PeriodicTrimInputEdgeBinding,
+) -> Result<[BigRational; 2]> {
+    let invalid = || {
+        Error::new(
+            "BREP_PERIODIC_TRIM_SHEET",
+            "Periodic trim edge binding has an invalid identity or parameter domain",
+        )
+    };
+    let [from, to] = &binding.source.parameters;
+    if model.1.edges.get(index) != Some(&binding.edge_id) || from == to {
+        return Err(invalid());
+    }
+    let curve = &model.edges.get(index).ok_or_else(invalid)?.curve;
+    curve.validate()?;
+    let [start, end] = curve.domain().map(BigRational::from_float);
+    Ok([start.ok_or_else(invalid)?, end.ok_or_else(invalid)?])
 }
 
 /// Build an exact sheet and trace persistent edges back to the caller's

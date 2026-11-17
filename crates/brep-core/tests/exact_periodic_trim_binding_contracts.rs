@@ -295,3 +295,79 @@ fn input_parameter_lookup_skips_refused_sheet_and_detects_identity_mismatch() {
     result.edge_bindings.swap(0, 1);
     assert!(result.locate_input_parameter(0, 0, &parameter).is_err());
 }
+
+#[test]
+fn edge_parameter_round_trips_to_original_contours_and_includes_split_endpoints() {
+    use num_rational::BigRational;
+    let rational = |n: i64, d: i64| BigRational::new(n.into(), d.into());
+    let outer = [
+        [3.5, 0.125],
+        [3.5, 0.875],
+        [0.5, 0.875],
+        [0.5, 0.125],
+        [3.5, 0.125],
+    ];
+    let hole = [
+        [0.125, 0.25],
+        [0.375, 0.25],
+        [0.375, 0.75],
+        [0.125, 0.75],
+        [0.125, 0.25],
+    ];
+    let result = build_exact_periodic_trim_sheet_with_input_bindings(
+        &support(),
+        &[&outer, &hole],
+        1e-8,
+        1_000_000,
+    )
+    .unwrap();
+    for (contour, segment, parameter, count) in [
+        (0, 3, rational(1, 2), 2),
+        (0, 3, rational(1, 3), 1),
+        (1, 3, rational(2, 3), 1),
+    ] {
+        let hits = result
+            .locate_input_parameter(contour, segment, &parameter)
+            .unwrap();
+        assert_eq!(hits.len(), count);
+        for hit in hits {
+            let original = result
+                .locate_edge_parameter(hit.edge_id, &hit.parameter)
+                .unwrap()
+                .unwrap();
+            assert_eq!(
+                (original.contour, original.segment, original.parameter),
+                (contour, segment, parameter.clone())
+            );
+        }
+    }
+}
+
+#[test]
+fn edge_parameter_returns_no_hit_outside_domain_or_for_unknown_id() {
+    use num_rational::BigRational;
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_trim_sheet_with_input_bindings(&support(), &[&outer], 1e-8, 1_000_000)
+            .unwrap();
+    let model = result.bound_sheet.sheet.model.as_ref().unwrap();
+    let outside = BigRational::new(3.into(), 4.into());
+    assert!(
+        result
+            .locate_edge_parameter(model.1.edges[0], &outside)
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        result
+            .locate_edge_parameter(model.1.vertices[0], &outside)
+            .unwrap()
+            .is_none()
+    );
+}
