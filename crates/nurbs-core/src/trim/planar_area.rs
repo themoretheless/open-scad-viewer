@@ -31,7 +31,7 @@ impl Ord for Cell {
         (self.area.hi - self.area.lo).total_cmp(&(b.area.hi - b.area.lo))
     }
 }
-fn cross(a: &[Interval], b: &[Interval]) -> Result<Interval> {
+pub(super) fn cross(a: &[Interval], b: &[Interval]) -> Result<Interval> {
     a[0].mul(b[1])?.sub(a[1].mul(b[0])?)
 }
 fn cell(c: &Curve, span: usize, domain: [f64; 2], origin: [f64; 2]) -> Result<Interval> {

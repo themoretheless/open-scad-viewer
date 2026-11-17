@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 324,
-  "unallocatedCount": 676,
+  "specifiedCount": 325,
+  "unallocatedCount": 675,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8452,6 +8452,28 @@
       "remainingQualification": [
         "Transform exact signed planar area and integral moments to XYZ while retaining the exact algebraic area factor.",
         "Polynomial and rational-linear contours with signed winding. Integral moments carry one exact square-root scale; the centroid is rational XYZ.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0325",
+      "name": "Сертифицированные интервалы моментов площади произвольных рациональных плоских контуров",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::trim::planar_mass_bounds::bound_planar_boundary_moments",
+      "evidence": [
+        "crates/nurbs-core/src/trim.rs",
+        "crates/nurbs-core/src/trim/planar_mass_bounds.rs",
+        "crates/nurbs-core/src/trim/planar_area.rs",
+        "crates/nurbs-foundation/src/distance/curve_jets.rs",
+        "crates/nurbs-core/tests/certified_planar_moment_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-325-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-325-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Integrate six signed area moments using outward rational interval jets and adaptive cell refinement.",
+        "Exact closed 2D contours, positive rational weights, separate tolerances by moment order. Exhausted cell budgets retain outward enclosures.",
         "WASM and application integration are separate."
       ]
     }
