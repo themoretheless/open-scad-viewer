@@ -5910,3 +5910,123 @@ fn exact_coplanar_boolean_loops_keep_opposite_winding_for_holes() {
     areas.sort();
     assert_eq!(areas, [q(-36), q(4)]);
 }
+
+#[test]
+fn exact_coplanar_boolean_mesh_is_conforming_at_partially_shared_edges() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Union, boundary_of_exact_coplanar_planar_polyline_region_boolean,
+        triangulate_exact_coplanar_planar_polyline_region_boolean,
+    };
+    use num_rational::BigRational as Q;
+    use std::collections::{BTreeMap, BTreeSet};
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y| [q(x), q(y), q(0)];
+    let rect = |a, b, c, d| [p(a, b), p(c, b), p(c, d), p(a, d), p(a, b)];
+    let a = rect(0, 0, 2, 4);
+    let b = rect(2, 1, 4, 3);
+    let mesh = triangulate_exact_coplanar_planar_polyline_region_boolean(
+        &a,
+        &[],
+        &b,
+        &[],
+        Union,
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(
+        mesh.vertices_mm.iter().collect::<BTreeSet<_>>().len(),
+        mesh.vertices_mm.len()
+    );
+    let mut incidence = BTreeMap::new();
+    let mut twice_area = q(0);
+    for [a, b, c] in mesh.triangles {
+        for (from, to) in [(a, b), (b, c), (c, a)] {
+            *incidence.entry((from.min(to), from.max(to))).or_insert(0) +=
+                if from < to { 1 } else { -1 };
+        }
+        let [a, b, c] = [
+            &mesh.vertices_mm[a],
+            &mesh.vertices_mm[b],
+            &mesh.vertices_mm[c],
+        ];
+        let signed = (&b[0] - &a[0]) * (&c[1] - &a[1]) - (&b[1] - &a[1]) * (&c[0] - &a[0]);
+        assert!(signed > q(0));
+        twice_area += signed;
+    }
+    assert_eq!(twice_area, q(24));
+    let actual: BTreeSet<_> = incidence
+        .into_iter()
+        .filter_map(|((a, b), sign)| match sign {
+            0 => None,
+            1 => Some([mesh.vertices_mm[a].clone(), mesh.vertices_mm[b].clone()]),
+            -1 => Some([mesh.vertices_mm[b].clone(), mesh.vertices_mm[a].clone()]),
+            _ => panic!("invalid incidence"),
+        })
+        .collect();
+    let expected = boundary_of_exact_coplanar_planar_polyline_region_boolean(
+        &a,
+        &[],
+        &b,
+        &[],
+        Union,
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(actual, expected.edges_mm.into_iter().collect());
+    assert!(
+        triangulate_exact_coplanar_planar_polyline_region_boolean(
+            &a,
+            &[],
+            &b,
+            &[],
+            Union,
+            mesh.exact_work
+        )
+        .is_ok()
+    );
+    assert!(
+        triangulate_exact_coplanar_planar_polyline_region_boolean(
+            &a,
+            &[],
+            &b,
+            &[],
+            Union,
+            mesh.exact_work - 1
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn exact_coplanar_boolean_mesh_preserves_tilted_hole_and_winding() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Difference,
+        triangulate_exact_coplanar_planar_polyline_region_boolean,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x: i64, y: i64| [q(x), q(y), q(7 - x - y)];
+    let rect = |lo, hi| [p(lo, lo), p(lo, hi), p(hi, hi), p(hi, lo), p(lo, lo)];
+    let outer = rect(0, 6);
+    let cut = rect(2, 4);
+    let mesh = triangulate_exact_coplanar_planar_polyline_region_boolean(
+        &outer,
+        &[],
+        &cut,
+        &[],
+        Difference,
+        1_000_000,
+    )
+    .unwrap();
+    let mut twice_area = q(0);
+    for triangle in mesh.triangles {
+        let [a, b, c] = triangle.map(|i| &mesh.vertices_mm[i]);
+        let signed = (&b[0] - &a[0]) * (&c[1] - &a[1]) - (&b[1] - &a[1]) * (&c[0] - &a[0]);
+        assert!(signed < q(0));
+        twice_area += signed;
+        let x = &a[0] + &b[0] + &c[0];
+        let y = &a[1] + &b[1] + &c[1];
+        assert!(!(q(6) < x && x < q(12) && q(6) < y && y < q(12)));
+    }
+    assert_eq!(twice_area, q(-64));
+}

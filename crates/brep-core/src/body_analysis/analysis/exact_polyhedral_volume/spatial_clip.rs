@@ -3575,3 +3575,88 @@ fn polar_angle_less(a: &[Q; 2], b: &[Q; 2]) -> bool {
         std::cmp::Ordering::Equal => (&a[0] * &b[1] - &a[1] * &b[0]).is_positive(),
     }
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactCoplanarPolylineBooleanMesh {
+    pub vertices_mm: Vec<[Q; 3]>,
+    /// Positively sized triangles, oriented like the first input profile.
+    pub triangles: Vec<[usize; 3]>,
+    pub exact_work: u64,
+}
+
+/// Build a conforming exact mesh for a regularized planar Boolean result.
+/// Split every shared cell side at all incident vertices before triangulating.
+pub fn triangulate_exact_coplanar_planar_polyline_region_boolean(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    operation: CoplanarPolylineBoolean,
+    max_exact_work: u64,
+) -> Result<ExactCoplanarPolylineBooleanMesh> {
+    use std::ops::Bound::Excluded;
+
+    let (report, [u, v]) = planar_profile_boolean_cells(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        operation,
+        max_exact_work,
+    )?;
+    let mut remaining = max_exact_work - report.exact_work;
+    let mut vertices_mm = Vec::new();
+    let key = |point: &[Q; 3]| [point[u].clone(), point[v].clone()];
+    let mut indices = BTreeMap::new();
+    for point in report.cells_mm.iter().flatten() {
+        let depth = u64::from((indices.len() + 1).ilog2()) + 1;
+        spend(&mut remaining, 16 * depth)?;
+        indices.entry(key(point)).or_insert_with(|| {
+            let index = vertices_mm.len();
+            vertices_mm.push(point.clone());
+            index
+        });
+    }
+
+    let lookup_cost = 16 * (u64::from((indices.len() + 1).ilog2()) + 1);
+    let mut triangles = Vec::new();
+    for cell in report.cells_mm {
+        spend(&mut remaining, 24)?;
+        let count = Q::from_integer(cell.len().into());
+        let center =
+            std::array::from_fn(|i| cell.iter().map(|point| &point[i]).sum::<Q>() / &count);
+        let center_index = vertices_mm.len();
+        vertices_mm.push(center);
+        let mut ring = Vec::new();
+        for (a, b) in cell.iter().zip(cell.iter().cycle().skip(1)) {
+            spend(&mut remaining, lookup_cost)?;
+            let start = key(a);
+            let end = key(b);
+            ring.push(indices[&start]);
+            if a[u] != b[u] {
+                continue;
+            }
+            spend(&mut remaining, lookup_cost)?;
+            let forward = start < end;
+            let (lo, hi) = if forward { (start, end) } else { (end, start) };
+            let mut interior = indices.range((Excluded(lo), Excluded(hi)));
+            while let Some((_, &index)) = if forward {
+                interior.next()
+            } else {
+                interior.next_back()
+            } {
+                spend(&mut remaining, 4)?;
+                ring.push(index);
+            }
+        }
+        spend(&mut remaining, 4 * ring.len() as u64)?;
+        for (&a, &b) in ring.iter().zip(ring.iter().cycle().skip(1)) {
+            triangles.push([center_index, a, b]);
+        }
+    }
+    Ok(ExactCoplanarPolylineBooleanMesh {
+        vertices_mm,
+        triangles,
+        exact_work: max_exact_work - remaining,
+    })
+}
