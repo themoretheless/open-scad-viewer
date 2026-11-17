@@ -129,7 +129,25 @@ describe('OpenSCAD MCP server', () => {
     }
     expect(listed.tools.map(tool => tool.name).sort()).toEqual(
       [
+        'brep_inspect_contacts',
+        'brep_solid_distance',
+        'cad_drawing_sheet',
+        'cad_export_iges',
+        'cad_import_iges',
+        'cad_import_step',
+        'cad_iso286_fit',
+        'cae_frame_analyze',
+        'cae_printed_solid_analyze',
+        'cae_truss_analyze',
+        'cam_inspect_gcode',
+        'cam_laser_section_plan',
+        'cam_print_readiness',
+        'cam_slice_gcode',
+        'direct_create_document',
+        'direct_inspect_document',
         'mesh_convert',
+        'mesh_inspect',
+        'mesh_repair',
         'rush_check',
         'rush_compile',
         'rush_export',
@@ -158,6 +176,7 @@ describe('OpenSCAD MCP server', () => {
         'openscad_compare',
         'openscad_customize',
         'openscad_customize_model',
+        'openscad_delete_model',
         'openscad_direct_transaction',
         'openscad_export',
         'openscad_export_handoff_bundle',
@@ -173,6 +192,7 @@ describe('OpenSCAD MCP server', () => {
         'openscad_official_status',
         'openscad_parameter_sweep',
         'openscad_save_model',
+        'sketch_solve',
       ].sort(),
     )
     for (const tool of listed.tools) {
@@ -949,8 +969,13 @@ describe('OpenSCAD MCP server', () => {
       prompts: Array<{ name: string; description?: string }>
     }
     expect(listed.prompts.map(prompt => prompt.name).sort()).toEqual([
+      'cad_step_iges_roundtrip_audit',
+      'cae_structural_optimization',
+      'cam_print_and_slice_workflow',
+      'direct_brep_modeling_workflow',
       'openscad_customize_workflow',
       'openscad_review_model',
+      'rush_assembly_clearance_review',
     ])
 
     const prompt = (await request('prompts/get', {
