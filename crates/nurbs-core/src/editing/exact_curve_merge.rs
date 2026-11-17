@@ -441,21 +441,14 @@ pub fn compare_exact_curve_seam_jets(
         work_used,
         refusal: Some(reason),
     };
-    for (invalid, reason) in [
-        (left.periodic || right.periodic, Refusal::Periodic),
-        (
-            left.control_points[0].len() != right.control_points[0].len(),
-            Refusal::DimensionMismatch,
-        ),
-        (!clamped(left) || !clamped(right), Refusal::NonClamped),
-        (
-            left.domain()[1] != right.domain()[0],
-            Refusal::NonAdjacentDomain,
-        ),
-    ] {
-        if invalid {
-            return Ok(refused(GaugeMergeRefusal::Join(reason), 0));
-        }
+    if let Some(reason) = seam_geometry_incompatibility(left, right) {
+        return Ok(refused(GaugeMergeRefusal::Join(reason), 0));
+    }
+    if left.domain()[1] != right.domain()[0] {
+        return Ok(refused(
+            GaugeMergeRefusal::Join(Refusal::NonAdjacentDomain),
+            0,
+        ));
     }
     let mut work = Work {
         used: 0,
@@ -487,6 +480,19 @@ pub fn compare_exact_curve_seam_jets(
         work_used: work.used,
         refusal: None,
     })
+}
+
+fn seam_geometry_incompatibility(left: &Curve, right: &Curve) -> Option<Refusal> {
+    [
+        (left.periodic || right.periodic, Refusal::Periodic),
+        (
+            left.control_points[0].len() != right.control_points[0].len(),
+            Refusal::DimensionMismatch,
+        ),
+        (!clamped(left) || !clamped(right), Refusal::NonClamped),
+    ]
+    .into_iter()
+    .find_map(|(incompatible, reason)| incompatible.then_some(reason))
 }
 
 fn exact_endpoint_jets(
@@ -570,4 +576,93 @@ fn exact_endpoint_jets(
         jets[2].push(acceleration);
     }
     Ok(jets)
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactCurveGeometricSeamReport {
+    /// Highest verified geometric continuity order, up to G2.
+    pub continuity_order: Option<usize>,
+    /// Positive ratio of the right tangent to the left tangent for G1 or G2.
+    pub speed_scale: Option<num_rational::BigRational>,
+    /// Tangential correction for G2, in the left tangent basis.
+    pub acceleration_scale: Option<num_rational::BigRational>,
+    pub work_used: u64,
+    pub refusal: Option<GaugeMergeRefusal>,
+}
+
+/// Prove geometric continuity between the end of the first clamped curve
+/// and the start of the second, allowing unrelated parameter intervals.
+/// Stationary endpoints can establish G0 but require higher-order analysis
+/// to establish a tangent direction.
+pub fn compare_exact_curve_geometric_seam(
+    left: &Curve,
+    right: &Curve,
+    max_work: u64,
+) -> Result<ExactCurveGeometricSeamReport> {
+    use super::rational_edit::Work;
+    use num_traits::{Signed, Zero};
+
+    left.validate()?;
+    right.validate()?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact geometric seam work must be in 1..=1000000",
+    )?;
+    let mut report = ExactCurveGeometricSeamReport {
+        continuity_order: None,
+        speed_scale: None,
+        acceleration_scale: None,
+        work_used: 0,
+        refusal: None,
+    };
+    if let Some(reason) = seam_geometry_incompatibility(left, right) {
+        report.refusal = Some(GaugeMergeRefusal::Join(reason));
+        return Ok(report);
+    }
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let mut compare = || {
+        let [a, da, dda] = exact_endpoint_jets(left, true, &mut work)?;
+        let [b, db, ddb] = exact_endpoint_jets(right, false, &mut work)?;
+        if a != b {
+            return Ok(());
+        }
+        report.continuity_order = Some(0);
+        let Some(axis) = da.iter().position(|value| !value.is_zero()) else {
+            return Ok(());
+        };
+        let scale = work.op(&db[axis], &da[axis], |a, b| a / b)?;
+        if !scale.is_positive() {
+            return Ok(());
+        }
+        for (a, b) in da.iter().zip(db) {
+            if work.op(a, &scale, |a, scale| a * scale)? != b {
+                return Ok(());
+            }
+        }
+        let squared = work.op(&scale, &scale, |a, b| a * b)?;
+        report.continuity_order = Some(1);
+        report.speed_scale = Some(scale);
+        let mut difference = Vec::new();
+        for (a, b) in dda.iter().zip(ddb) {
+            let corrected = work.op(a, &squared, |a, square| a * square)?;
+            difference.push(work.op(&b, &corrected, |a, b| a - b)?);
+        }
+        let acceleration = work.op(&difference[axis], &da[axis], |a, b| a / b)?;
+        for (a, b) in da.iter().zip(difference) {
+            if work.op(a, &acceleration, |a, acceleration| a * acceleration)? != b {
+                return Ok(());
+            }
+        }
+        report.continuity_order = Some(2);
+        report.acceleration_scale = Some(acceleration);
+        Ok::<_, super::rational_factor::Refusal>(())
+    };
+    if let Err(reason) = compare() {
+        report.refusal = Some(GaugeMergeRefusal::Exact(reason));
+    }
+    report.work_used = work.used;
+    Ok(report)
 }

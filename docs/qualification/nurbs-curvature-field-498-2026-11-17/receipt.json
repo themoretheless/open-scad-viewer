@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0498",
+  "testedBase": "e52e9c8c671ffd817e34ed8e775796f0f5fabe7d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 50,
+  "scope": [
+    "Prove G0/G1/G2 seam continuity independently of the source parameter clocks.",
+    "Compare exact Cartesian jets using a positive tangent scale and an exact tangential acceleration correction. Stationary tangents do not prove G1 or G2."
+  ],
+  "logSha256": "c1c8fabc4643bf4bfa3678f2087e7530384a578bfa15c2a3838b6a4e767f0483",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "d04355f423860dd4df943a30a9e8a03907eb5036a1b69e24458dce53bab1eac4",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "174612b781e46fd88ed28974402c7b99cc86a9fb32f6ac7e06154b984266a59e"
+  }
+}

@@ -614,3 +614,76 @@ fn exact_curve_seam_jets_distinguish_matching_first_derivatives_from_c2() {
         Some(0)
     );
 }
+
+#[test]
+fn exact_geometric_curve_seam_proves_g2_with_different_parameter_speeds() {
+    use num_rational::BigRational as Q;
+    use nurbs_core::editing::exact_curve_merge::compare_exact_curve_geometric_seam;
+    let left = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![0.5, 0.], vec![1., 1.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let mut right = Curve {
+        knots: vec![10., 10., 10., 12., 12., 12.],
+        control_points: vec![vec![1., 1.], vec![1.5, 2.], vec![2., 4.]],
+        weights: vec![3.; 3],
+        ..left.clone()
+    };
+    let report = compare_exact_curve_geometric_seam(&left, &right, 1_000_000).unwrap();
+    assert_eq!(report.continuity_order, Some(2));
+    assert_eq!(report.speed_scale, Some(Q::new(1.into(), 2.into())));
+    assert_eq!(report.acceleration_scale, Some(Q::from_integer(0.into())));
+    assert_eq!(
+        compare_exact_curve_geometric_seam(&left, &right, report.work_used).unwrap(),
+        report
+    );
+    assert!(
+        compare_exact_curve_geometric_seam(&left, &right, report.work_used - 1)
+            .unwrap()
+            .refusal
+            .is_some()
+    );
+    right.control_points[2][1] = 5.;
+    assert_eq!(
+        compare_exact_curve_geometric_seam(&left, &right, 1_000_000)
+            .unwrap()
+            .continuity_order,
+        Some(1)
+    );
+}
+
+#[test]
+fn exact_geometric_curve_seam_rejects_opposite_and_stationary_tangents() {
+    use nurbs_core::editing::exact_curve_merge::compare_exact_curve_geometric_seam;
+    let left = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![1., 0.], vec![2., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let mut right = Curve {
+        control_points: vec![vec![2., 0.], vec![1., 0.], vec![0., 0.]],
+        ..left.clone()
+    };
+    assert_eq!(
+        compare_exact_curve_geometric_seam(&left, &right, 1_000_000)
+            .unwrap()
+            .continuity_order,
+        Some(0)
+    );
+    right.control_points[1][0] = 2.;
+    let report = compare_exact_curve_geometric_seam(&left, &right, 1_000_000).unwrap();
+    assert_eq!(report.continuity_order, Some(0));
+    assert!(report.speed_scale.is_none());
+    right.control_points[0][0] = 3.;
+    assert_eq!(
+        compare_exact_curve_geometric_seam(&left, &right, 1_000_000)
+            .unwrap()
+            .continuity_order,
+        None
+    );
+}

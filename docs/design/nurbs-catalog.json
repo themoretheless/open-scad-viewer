@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 497,
-  "unallocatedCount": 503,
+  "specifiedCount": 498,
+  "unallocatedCount": 502,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12924,6 +12924,26 @@
       "remainingQualification": [
         "Compare exact rational position, first and second derivatives on both sides of a shared parameter.",
         "Differentiate endpoint homogeneous splines in the original knot clock and apply the exact quotient rule. Report signed rational residuals, including rational linear second derivatives.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0498",
+      "name": "Точная проверка геометрической гладкости стыка NURBS-кривых до G2",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::compare_exact_curve_geometric_seam",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-498-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-498-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Prove G0/G1/G2 seam continuity independently of the source parameter clocks.",
+        "Compare exact Cartesian jets using a positive tangent scale and an exact tangential acceleration correction. Stationary tangents do not prove G1 or G2.",
         "WASM and application integration are separate."
       ]
     }
