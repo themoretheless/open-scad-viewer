@@ -35,9 +35,9 @@ export interface AnchorEdge {
 export const SUBSHAPE_TOLERANCE = 1e-5
 
 const close = (a: readonly number[], b: readonly number[]) =>
-  a.length === b.length && a.every((v, i) => Math.abs(v - b[i]) <= SUBSHAPE_TOLERANCE)
+  a.length === b.length && a.every((v, i) => Math.abs(v - b[i]!) <= SUBSHAPE_TOLERANCE)
 const lexLess = (a: readonly number[], b: readonly number[]) => {
-  for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) return a[i] < b[i]
+  for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) return a[i]! < b[i]!
   return a.length < b.length
 }
 // Ids built from the edge index (`body:edge:3`, `body:mesh-edge:3`) do not survive renumbering.
@@ -56,7 +56,10 @@ export function edgeSignature(edge: AnchorEdge): EdgeSignature {
 export function resolveFace(faces: readonly AnchorFace[], signature: FaceSignature): number {
   let found = -1
   for (let i = 0; i < faces.length; i++) {
-    if (!close(faces[i].normal as number[], signature.normal) || !close(faces[i].center as number[], signature.center))
+    if (
+      !close(faces[i]!.normal as number[], signature.normal) ||
+      !close(faces[i]!.center as number[], signature.center)
+    )
       continue
     if (found >= 0) return -1
     found = i
@@ -71,8 +74,8 @@ export function resolveEdge(edges: readonly AnchorEdge[], signature: EdgeSignatu
   }
   let found = -1
   for (let i = 0; i < edges.length; i++) {
-    const other = edgeSignature(edges[i])
-    if (other.ends.length !== signature.ends.length || !other.ends.every((p, k) => close(p, signature.ends[k])))
+    const other = edgeSignature(edges[i]!)
+    if (other.ends.length !== signature.ends.length || !other.ends.every((p, k) => close(p, signature.ends[k]!)))
       continue
     if (found >= 0) return -1
     found = i
