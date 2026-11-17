@@ -2,8 +2,8 @@
   "schema": "open-scad-viewer/qualification-refreeze-status",
   "schemaVersion": 1,
   "statusId": "g0-v108-g1-v125-refreeze-status-v1",
-  "recordedAt": "2026-11-16",
-  "reason": "Re-freeze for reproducible geometry kernel 61b587 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and the origin/main merge with its brep-core and nurbs-core refactors; preserve the finite G1 contract and reset all clean-run work.",
+  "recordedAt": "2026-11-17",
+  "reason": "Re-freeze for reproducible geometry kernel 9cb8eb (runtime v13) after the Fillet operation contract for audited multi-edge fillet, the nested graph column Boolean and off-axis sphere tracing across a cone apex plane; preserve the finite G1 contract and reset all clean-run work.",
   "qualificationClaim": "none",
   "qualificationApproval": "not-approved",
   "g0Closed": false,
@@ -3984,19 +3984,19 @@
     {
       "id": "fingerprint",
       "path": "docs/qualification/g0-toolchain-fingerprints-v108.json",
-      "sha256": "be5ce6e1c8e7031a2fa295647c506805f43ec0dc4326050f9644b50165b47362",
-      "byteLength": 1610059
+      "sha256": "61093e2c45666859984a953fdd1b2ec5815cfbc44d412a3c9ffe54440ac7ec28",
+      "byteLength": 1621124
     },
     {
       "id": "plan",
       "path": "docs/qualification/semantic-manifold-g1-plan-v125.json",
-      "sha256": "0b1b8f27fe530426ab675cd6702ccfaf5b1e6caec97421a7e08cad5947c88e8f",
-      "byteLength": 80782
+      "sha256": "9214c2513d999e63b05c2b34b0e2b0c8e93ebe1d4190262fa31b66c6a65edaf7",
+      "byteLength": 80766
     }
   ],
   "inputSnapshot": {
     "canonicalization": "UTF-8 records sorted by path: path + NUL + lowercase-file-sha256 + LF",
-    "sha256": "675df685fd96d54ac67fe237d6dc43103c09f5c1081b6c52a4ebbe45f1d53896",
+    "sha256": "8dae39ecbc66a0bb8e09a4e0246844d4e12889425460f6eaad2d2262db7e4b8d",
     "byteLength": 799399,
     "files": [
       {
@@ -4676,8 +4676,8 @@
       },
       {
         "path": "crates/brep-core/src/boolean/operations/boolean.rs",
-        "sha256": "795600f5cdbe33830502fae33061b6714dad8048a7fc403d57c0c0d2668ac65f",
-        "byteLength": 10950
+        "sha256": "176a6752628986b26cce351d735c15e42eaa52672401f4d84d470ed195f2415d",
+        "byteLength": 11253
       },
       {
         "path": "crates/brep-core/src/boolean/operations/edge_features.rs",
@@ -5131,8 +5131,8 @@
       },
       {
         "path": "crates/brep-core/src/features/analytic_features/analytic_fillet.rs",
-        "sha256": "ea485905d1282c842047237571dff2e1ccff6976fc7585856b9bb37536ca62cb",
-        "byteLength": 19157
+        "sha256": "2e2787920bf5a57e1e0986089a8904ae4e9925a726e1d614031f2e6c8d88d763",
+        "byteLength": 19301
       },
       {
         "path": "crates/brep-core/src/features/analytic_features/audited_bent_rmf_sweep.rs",
@@ -7331,8 +7331,8 @@
       },
       {
         "path": "crates/brep-core/src/source_body/graph_body.rs",
-        "sha256": "a0be4904ec0c21069b971e7a63fb4a49a7d1de898d42b1a8912841ce316a6199",
-        "byteLength": 7776
+        "sha256": "1085479d416c8877e5ff35e8930c6cc1dde0a896fd09d25f655ce7b00f446454",
+        "byteLength": 7792
       },
       {
         "path": "crates/brep-core/src/source_body/graph_body/tests.rs",
@@ -9276,13 +9276,13 @@
       },
       {
         "path": "crates/brep-intersect/src/sphere_cone/sphere_cone_component.rs",
-        "sha256": "27fa3a26744fdb562d12ec741b5081c77bae69c70e749c87005f7765a5df44ee",
-        "byteLength": 18533
+        "sha256": "55f53a78edf359c1b4cfca4e05d63ca58fd10b0326fe2ed7b028478ef86f2617",
+        "byteLength": 19753
       },
       {
         "path": "crates/brep-intersect/src/sphere_cone/tests/mod.rs",
-        "sha256": "e4e86b64827b54b4b8dd832190eb2ab4d489b87218a83a53b11388e5f7547626",
-        "byteLength": 25887
+        "sha256": "f5e593306a096350f47e90d108501fe2c40541c81da8ff99787389fb63d9c245",
+        "byteLength": 27902
       },
       {
         "path": "crates/brep-intersect/src/sphere_cylinder/cylinder_patch_curve.rs",
@@ -11521,8 +11521,8 @@
       },
       {
         "path": "crates/geometry-bridge/tests/gear_tessellation.rs",
-        "sha256": "643c1490ae7c69fef52c98e2117e3a7d79492132d98837c7f0fb7c12a7d3edd0",
-        "byteLength": 4888
+        "sha256": "69618f5515bd93bd545a0643501252bf24770de6d27d32db7161c71c1abb3b7b",
+        "byteLength": 4959
       },
       {
         "path": "crates/geometry-bridge/tests/general_boundary_certificate.rs",
@@ -20026,13 +20026,13 @@
       },
       {
         "path": "docs/design/nurbs-api-map.md",
-        "sha256": "6f11690166d2e89a0ae2cc65edc9e601b90dfdf6808adb71d66ae0a6823882ad",
-        "byteLength": 243334
+        "sha256": "7301df6739ab3a1fbd49337bd1b2a0116f596f836b2d5747b384a61358c4e29d",
+        "byteLength": 244181
       },
       {
         "path": "docs/design/nurbs-catalog.json",
-        "sha256": "452e9b05dc1a38bd3029eb1e69600c1527a3b693b82c04d0b90b4969ec5d9a63",
-        "byteLength": 405171
+        "sha256": "6ec2bdc3270077e5bb0b736d116d82b955a5ccfc017ab4205167d0294afd0e42",
+        "byteLength": 406360
       },
       {
         "path": "docs/design/nurbs-exact-degree-reduction.md",
@@ -20851,8 +20851,8 @@
       },
       {
         "path": "docs/qualification/g0-v108-g1-v125-refreeze-review.md",
-        "sha256": "81c9f34786482a35e1b63dfde90b2d4d5cc42c525111fc74a25b3b8d9c077e9e",
-        "byteLength": 2110
+        "sha256": "e67adebdff7d3d5b786bf123a2a938955526b90dbb3826954336af0f934b8edd",
+        "byteLength": 2257
       },
       {
         "path": "docs/qualification/g0-v11-g1-v28-refreeze-review.md",
@@ -24815,23 +24815,23 @@
         "byteLength": 1731
       },
       {
-        "path": "docs/qualification/runtime-direct-api-61b587-2026-11-16/node.json",
-        "sha256": "99c3459022a5903de64da6e37e32a0b2390f5efced38ea8361c2ed7e772287e4",
-        "byteLength": 36113
+        "path": "docs/qualification/runtime-direct-api-9cb8eb-2026-11-17/node.json",
+        "sha256": "6b02e29c16193200724fbe4817c774e8c319a3fedcd52d2f10c7bf7a82ed92ec",
+        "byteLength": 36114
       },
       {
-        "path": "docs/qualification/runtime-direct-api-61b587-2026-11-16/report.json",
-        "sha256": "dbe480c5dc20699b11dab9927acd8a568867ab81ab46c88a4fe0ae50b35403fa",
+        "path": "docs/qualification/runtime-direct-api-9cb8eb-2026-11-17/report.json",
+        "sha256": "615f5f3aa614067866fd5f80e4309e4ab596e5f6951832fdec74431042755ec9",
         "byteLength": 1183
       },
       {
-        "path": "docs/qualification/runtime-direct-api-61b587-2026-11-16/runtime-api-baseline.json",
-        "sha256": "4a048b7615bd1f5839ebf7a4eca75a3e3ae940351f4a3a0bb93e13d785a38d14",
+        "path": "docs/qualification/runtime-direct-api-9cb8eb-2026-11-17/runtime-api-baseline.json",
+        "sha256": "6f422d275686ff612ca36e8fc9646fa20f2fc884c0a742be3a5877db1b365a68",
         "byteLength": 950
       },
       {
-        "path": "docs/qualification/runtime-direct-api-61b587-2026-11-16/runtime-binding.json",
-        "sha256": "a216687ac1740a508d8c3498bebe69b5365b81ff9f724b06c00ae884ca634855",
+        "path": "docs/qualification/runtime-direct-api-9cb8eb-2026-11-17/runtime-binding.json",
+        "sha256": "55bd7436bdc1df87bf2c2284fabc1cc976f2e3d6734f1791175ae79b9a785633",
         "byteLength": 1618
       },
       {
@@ -24900,14 +24900,14 @@
         "byteLength": 1610
       },
       {
-        "path": "docs/qualification/runtime-provider-61b58706d141-2026-11-16.json",
-        "sha256": "c0045c6a7f981febece4c2987962d6c07a9fb16e5bce6786d744cb113d6b1d65",
-        "byteLength": 1681
-      },
-      {
         "path": "docs/qualification/runtime-provider-91521ffbc325-2026-10-31.json",
         "sha256": "52136718c815349a399bec349787b9419580976f1e58620742e091516a1cf4c8",
         "byteLength": 1591
+      },
+      {
+        "path": "docs/qualification/runtime-provider-9cb8ebbc7747-2026-11-17.json",
+        "sha256": "a60dca6d5693b03b96a6c9ca71cff31bc4c82d24416eb20404878b159c6694ec",
+        "byteLength": 1681
       },
       {
         "path": "docs/qualification/runtime-provider-baf58e7051b0-2026-11-02.json",
@@ -27186,8 +27186,8 @@
       },
       {
         "path": "package.json",
-        "sha256": "006161c78fbcc8956990397783c073832f361a228ffb97008e54a333bfa1a438",
-        "byteLength": 11121
+        "sha256": "4e2b758b7b0b5c02e5815aeeb30aaabcf9678cc6b6540f3eb3bf173708f4f81d",
+        "byteLength": 11192
       },
       {
         "path": "rust-toolchain.toml",
@@ -29081,7 +29081,7 @@
       },
       {
         "path": "scripts/refresh-qualification-fingerprints.mjs",
-        "sha256": "24f379e461514d8629adb2cb7a658a7997e0ddbe8be0db679df4de3a3bf17e10",
+        "sha256": "d4af46702a6900899dcd5795e600c67f0ade9a2a5c7f6a3f3d6b454170a49ffd",
         "byteLength": 23388
       },
       {
@@ -30541,18 +30541,18 @@
       },
       {
         "path": "src/app/directDimensions.ts",
-        "sha256": "81cc0defbbc4c2664412aa6102bf445c5da3d2c46d5394e6f7b1023b5826de82",
-        "byteLength": 5365
+        "sha256": "b4b108e3355531adcf92273909c31d0a09f126ef0650d0abff95c975a99f304b",
+        "byteLength": 11425
       },
       {
         "path": "src/app/directExtrusion.ts",
-        "sha256": "1c49d6b1992b54517d3752e9510f3d5470db9ae0efed499965a2e677e316d606",
-        "byteLength": 5889
+        "sha256": "69f8e02f4c5b53d8785cdfe4c9cd6e27cccadf46d53ab76ef64cbdb35827f747",
+        "byteLength": 7410
       },
       {
         "path": "src/app/directModeling.ts",
-        "sha256": "9122c185dfb3be7f6d001a075a5facfc81a0222a372814c78d28c4cc24cb0106",
-        "byteLength": 42955
+        "sha256": "7dae4d353b0218826f50f36d58099faf45dce34fa894bf10fe298c37e9b9ffa1",
+        "byteLength": 43374
       },
       {
         "path": "src/app/directModelingTools.ts",
@@ -30561,8 +30561,8 @@
       },
       {
         "path": "src/app/directProfileTools.ts",
-        "sha256": "d1c04a0979791558a026f22694311fe74acfa380259bf93eb24d70645ef3cdb0",
-        "byteLength": 2472
+        "sha256": "7228e2da219f79a6dca1a70b168d9be13171dcd48d0571568b1c41a520b28ee6",
+        "byteLength": 2513
       },
       {
         "path": "src/app/directSketchGeometry.ts",
@@ -30751,8 +30751,8 @@
       },
       {
         "path": "src/app/retainedSketchProfile.ts",
-        "sha256": "ff42306f720e7422f380dd17eaebe61064218ec01822594d3264e950d1d2672e",
-        "byteLength": 3960
+        "sha256": "0fcc082e30174985c6e925dc0c65dfe5435395fb714fbe15480c909e26c94ffe",
+        "byteLength": 3984
       },
       {
         "path": "src/app/rovingFocus.ts",
@@ -30911,8 +30911,8 @@
       },
       {
         "path": "src/composables/useBuildAndRendererLifecycle/rendererOperations.ts",
-        "sha256": "ff1937fe0654e50546706937240e53b9fe0f424bdeddd7b6f23f7ca6934e691a",
-        "byteLength": 18147
+        "sha256": "1374463b8191bc36d4761b87ee8fd5297b98c8dd3cc8ff1b33c842fe098d1517",
+        "byteLength": 18202
       },
       {
         "path": "src/composables/useBuildAndRendererLifecycle/rendererOperationsContext.ts",
@@ -30951,8 +30951,8 @@
       },
       {
         "path": "src/composables/useSourceProvenanceCaret.ts",
-        "sha256": "beecf8ee57c405d51624f20672f2ff459c9db01ee7ec1804067d85170249f1a2",
-        "byteLength": 5202
+        "sha256": "69b3bf4df9067821c270d799c6bf56170020e0065984067195041fd3e610d7ef",
+        "byteLength": 5230
       },
       {
         "path": "src/composables/useTransientNotice.ts",
@@ -30961,8 +30961,8 @@
       },
       {
         "path": "src/composables/useViewportDisplayControls.ts",
-        "sha256": "8d897025547c18534a34f6370d0c2422b5d860b99420de9622cdb9a8d1725f04",
-        "byteLength": 15445
+        "sha256": "47eb33ae0990fa26bf0e4b203f56d2b2a1c1a98ccf745e5da1818ca9df814ba0",
+        "byteLength": 15456
       },
       {
         "path": "src/composables/useWorkspaceFileActions.ts",
@@ -30986,8 +30986,8 @@
       },
       {
         "path": "src/core/bytes.ts",
-        "sha256": "e403008493606f7170f5f75dbed8d7e9cb5b2a10fe82a9245dd8909ca2e3fe8a",
-        "byteLength": 252
+        "sha256": "8e8572014e59fa5e875d37f0960a4c9ea3038573babd17ab77065e497277d414",
+        "byteLength": 280
       },
       {
         "path": "src/core/clonedBufferBudget.ts",
@@ -31001,7 +31001,7 @@
       },
       {
         "path": "src/core/currentRuntimeGeometryEvidence.ts",
-        "sha256": "484a2a59e46009ee2159207eb4185bd53808df2accb3ead472fccdf85d19dcec",
+        "sha256": "9962c50b8bbb20a82c3e66e97a050003aa3745910ebe8bb215abaca95c6f0cbc",
         "byteLength": 658
       },
       {
@@ -31026,8 +31026,8 @@
       },
       {
         "path": "src/core/geometryRouting.ts",
-        "sha256": "de9ffef38ba969c5cabebf08abec60821bdeb39bb08474199b80928929c75ee4",
-        "byteLength": 6438
+        "sha256": "bff4e4c3ae6d61ac0bf980f0b9f52d5d12f37d705daa96abb72a0cce63b9db3c",
+        "byteLength": 6536
       },
       {
         "path": "src/core/languageContract.ts",
@@ -31121,8 +31121,8 @@
       },
       {
         "path": "src/core/scene.ts",
-        "sha256": "47adac39ad9c7ed52a05f5d402d50a17f34d5ed1df4a340fcaaae6b38006d5b0",
-        "byteLength": 10391
+        "sha256": "49e467c729335b8f0be9045dd7f90eebcdb34d1f75a24f86285dd86490c8500c",
+        "byteLength": 10359
       },
       {
         "path": "src/core/semanticProgram.ts",
@@ -31131,13 +31131,13 @@
       },
       {
         "path": "src/core/semanticProgram/semanticResultItems.ts",
-        "sha256": "c4548c91675adc2547141938c433667dba635f2a01b6d5c86d4b421a2e74e4eb",
-        "byteLength": 7277
+        "sha256": "e457c910f8bbe0401a1fe413cf1f4444b858fb01ef9992ee34565f9b9c573e7c",
+        "byteLength": 7304
       },
       {
         "path": "src/core/sha256.ts",
-        "sha256": "f3f4ebd5e8116659893bf0cad118b51409d41974c4e67747df99f91192b2124b",
-        "byteLength": 3982
+        "sha256": "8bfa354484a5985c0ede82d0b3b18deae5643026696fa078ed478402c42b5e8b",
+        "byteLength": 4048
       },
       {
         "path": "src/core/topologyLineage.ts",
@@ -31151,13 +31151,13 @@
       },
       {
         "path": "src/core/utf8Order.ts",
-        "sha256": "64ddcb2374839bd451b4678e47e394cd46e835c2fe522ca82bb06f2fa3c14fbf",
-        "byteLength": 2039
+        "sha256": "561055ac8097fd194bedbf825dbfc2a9f289d16cae782ff6a6a7e008aa15d512",
+        "byteLength": 2095
       },
       {
         "path": "src/core/valueBinaryCodec.ts",
-        "sha256": "0e87d22515ad6dbf54419d75371ab171992463f77fdecda31c58c8e5ab5e9176",
-        "byteLength": 9834
+        "sha256": "38206d1d89838cd79ce208bbad66bb9d620404015a373d26aecdf6908ae369b8",
+        "byteLength": 9882
       },
       {
         "path": "src/core/workerHandlerRuntime.ts",
@@ -31171,8 +31171,8 @@
       },
       {
         "path": "src/data/examples.ts",
-        "sha256": "4397e08ec5eca3e3ec9df9b3468fdae38dd23559893b66de2a2cc6f6df5caca3",
-        "byteLength": 4711
+        "sha256": "bf7abf15744df8cfb612a5737093d089164d22365197a73b4c8fe2324a806afe",
+        "byteLength": 4978
       },
       {
         "path": "src/data/functionReference.ts",
@@ -31181,8 +31181,8 @@
       },
       {
         "path": "src/dev/vrEmulator.ts",
-        "sha256": "464f4e1a1988da7e5136a7fbff46c48f50e6165fbbb0bc73c6f50d4c6f012f3e",
-        "byteLength": 3592
+        "sha256": "8fd067b921366b90380e4813d29138dfe81780d74eb01833b7a77a65102c9dea",
+        "byteLength": 3604
       },
       {
         "path": "src/exchange/assemblyFrameExport.ts",
@@ -31341,8 +31341,8 @@
       },
       {
         "path": "src/fabrication/gcodePreviewGeometry.ts",
-        "sha256": "bdc55674e81652e651581c48fde48274388d961f138229704eda7f0f9efc72ad",
-        "byteLength": 11123
+        "sha256": "dd7f6fb02c1d3e8bdc4662caa361cf070b74f672f950f8f55259e3ee0ce514db",
+        "byteLength": 11232
       },
       {
         "path": "src/fabrication/gcodePreviewProtocol.ts",
@@ -31356,8 +31356,8 @@
       },
       {
         "path": "src/fabrication/gcodePreviewTransport.ts",
-        "sha256": "4b826d0f290ea936b006aa946ca6a3d251141a5d7487610ae2b50d9f35155e52",
-        "byteLength": 3076
+        "sha256": "9d4bfcb1828d14c22a89be7a4d1508c3364b570d00545bc740aa0a0da78c614a",
+        "byteLength": 3107
       },
       {
         "path": "src/fabrication/gcodePreviewWorker.ts",
@@ -31366,8 +31366,8 @@
       },
       {
         "path": "src/fabrication/gcodePreviewWorkerTransport.ts",
-        "sha256": "2b25e8becd5b8e8a57e79ec358698191aec80c06a2a22d92fc5c8d90814b41d5",
-        "byteLength": 2849
+        "sha256": "10226ba89c4e4b642846d2da4764bc02c6b3919ddf4b68b811220f872008e048",
+        "byteLength": 2818
       },
       {
         "path": "src/fabrication/laserProfiles.ts",
@@ -31386,8 +31386,8 @@
       },
       {
         "path": "src/fabrication/latticeGraphProtocol.ts",
-        "sha256": "09fb569770852bddc34de50da3903cadfbcdf0694a3b006421c6790dea224679",
-        "byteLength": 3312
+        "sha256": "b6782320c89dac3b0f57ac9e47054332d18c56673356cf1693489d36af453d59",
+        "byteLength": 3319
       },
       {
         "path": "src/fabrication/latticePrintReport.ts",
@@ -31401,8 +31401,8 @@
       },
       {
         "path": "src/fabrication/latticeStrength.ts",
-        "sha256": "35479992615694a34456bbecedc6e17c437013841cbd4d97a1ae2055a277ed37",
-        "byteLength": 6968
+        "sha256": "5a6b502aed8ad8552b3868ebd136b583920723752bc975005e7b2ad119bbdc5b",
+        "byteLength": 7062
       },
       {
         "path": "src/fabrication/printReadiness.ts",
@@ -31461,8 +31461,8 @@
       },
       {
         "path": "src/features/directModeler/useAdvancedPreview.ts",
-        "sha256": "b68dc60816d4924dc0a54b18dcde98b16293f1c2d3d3ce65d8d40bde76f6143a",
-        "byteLength": 14839
+        "sha256": "f8a93f99c5bceec1f088d8e6354b44e226d7a31b59049319074f9c843f233baa",
+        "byteLength": 14921
       },
       {
         "path": "src/features/directModeler/useBooleanOperations.ts",
@@ -31471,8 +31471,8 @@
       },
       {
         "path": "src/features/directModeler/useCommandPalette.ts",
-        "sha256": "63778937fd19ba241b3ea1c67b978510f3bfb136a83f52f54a695f6a4400f5dd",
-        "byteLength": 40138
+        "sha256": "3e5ccadc5a96a132f1f6f85330b1951aa90b5a46692f88c246f18a5bf67d34f0",
+        "byteLength": 40658
       },
       {
         "path": "src/features/directModeler/useDiagnostics.ts",
@@ -31501,13 +31501,13 @@
       },
       {
         "path": "src/features/directModeler/useNurbsMatching.ts",
-        "sha256": "8da38f6af1e7e6070e9a1f277f61a1bb605378a78b3906189ad4fe8cc7857c1f",
-        "byteLength": 28475
+        "sha256": "26cf7938fbdec61874d2e50c3c04e311932f899465ed6b4c91e1e41d1b34890f",
+        "byteLength": 28494
       },
       {
         "path": "src/features/directModeler/usePrimitives.ts",
-        "sha256": "f629425264deb604db6ec0ac3f667201070a046cba08f7ea0e64c9ec81dd575e",
-        "byteLength": 10266
+        "sha256": "a976debafc1cf0d38d2aa4be2620dd333337bac7473c9ef925e07d1520503b37",
+        "byteLength": 10285
       },
       {
         "path": "src/features/directModeler/useSceneTree.ts",
@@ -31531,8 +31531,8 @@
       },
       {
         "path": "src/features/directModeler/useViewportLayerAndPolygons.ts",
-        "sha256": "93643e06e9f40e6cd1dde0571f7cd79c0ce9d6467a1e292107b18246909b118d",
-        "byteLength": 19970
+        "sha256": "005be54f50e4b06fdf76469a192b52bbc45580ca360421e6fe482a26b40f0ba9",
+        "byteLength": 20038
       },
       {
         "path": "src/features/directModeler/useViewportLayerAndPolygons/viewportOperations.ts",
@@ -31576,8 +31576,8 @@
       },
       {
         "path": "src/i18n/appStrings.ts",
-        "sha256": "2ba2185b35804d5bd73b2c630717e539664e7ab404324297787a79fb76a726a4",
-        "byteLength": 40363
+        "sha256": "57e6f863869d24943a9eb54e5dc7ccda33633c01c030a372dfe7b7b6263c8db8",
+        "byteLength": 40787
       },
       {
         "path": "src/kernel/annularG2Evidence.ts",
@@ -32521,8 +32521,8 @@
       },
       {
         "path": "src/kernel/solidPointEdit.ts",
-        "sha256": "e715ccebff51f8a2779a79e296c41cb43868a95876207be0537ab20fa0311405",
-        "byteLength": 2734
+        "sha256": "333d84fc404ccee2389d96dcce18e514e296f697b5709292f40376d423e57c55",
+        "byteLength": 3051
       },
       {
         "path": "src/kernel/solidPreviewWorker.ts",
@@ -32551,13 +32551,13 @@
       },
       {
         "path": "src/kernel/solidRevolve.ts",
-        "sha256": "ed25112902ef584da32be5151c310697003bedf37ef115c4bf27281c8a8ecdbb",
-        "byteLength": 4895
+        "sha256": "cae89fc9f152f2ffc8420e5af1887a32e69093dfc6e1490e0f72c85894f2bff3",
+        "byteLength": 5818
       },
       {
         "path": "src/kernel/solidSceneEdit.ts",
-        "sha256": "f73e9814aedc44aebce87b98df0cee12f2d87f59108264105cc5a334422535bf",
-        "byteLength": 4985
+        "sha256": "76f2466d338b4b8e9bfd30f2fcd8d64cec27808d0f0a66ce782208ce6e784701",
+        "byteLength": 6505
       },
       {
         "path": "src/kernel/solidSelfIntersection.ts",
@@ -33281,8 +33281,8 @@
       },
       {
         "path": "src/main.ts",
-        "sha256": "30f6b9968f46f6333fb45e2d8eacbb54764812cbf389c7183a9cc18aec1e0391",
-        "byteLength": 3246
+        "sha256": "1a184d08fbef5deadaec3c3ba8737d8b6d2b316be38127497f0b7104f5148a9d",
+        "byteLength": 3268
       },
       {
         "path": "src/mcp/artifactHash.ts",
@@ -33331,8 +33331,8 @@
       },
       {
         "path": "src/mcp/createServer/persistedFailureStatus.ts",
-        "sha256": "a55e83e4b6c2b0e9e1db12593a36de06c5a0cb242dfea8d57f830a483dfc2959",
-        "byteLength": 9184
+        "sha256": "bd8d585044b7fa12bf975f939d8a8356812828cab4653be22271a040290c9467",
+        "byteLength": 9233
       },
       {
         "path": "src/mcp/directGeometry.worker.mjs",
@@ -33351,8 +33351,8 @@
       },
       {
         "path": "src/mcp/directGeometryProtocol/isDirectGeometryBuildRequest.ts",
-        "sha256": "6e436661c80248633c4bd862c50493ed36be1822b1fb3ed75e80d472560503d9",
-        "byteLength": 18028
+        "sha256": "0867c3a46f6c847a7174ee087ef226bceaa6bb155de9eacb6ed4aedaf1918f6b",
+        "byteLength": 18062
       },
       {
         "path": "src/mcp/directGeometryProtocol/serializeDirectGeometryError.ts",
@@ -33381,8 +33381,8 @@
       },
       {
         "path": "src/mcp/duckdbModelStore.ts",
-        "sha256": "e1e2e3d957033666e3f8981acc1ab2efdb8d530ca988e67949d3ee1fce0a73bf",
-        "byteLength": 18249
+        "sha256": "e156140e34e07400f7523d466fccba0101244b43cc85d5281127d498d52d3a08",
+        "byteLength": 18240
       },
       {
         "path": "src/mcp/duckdbModelStore/boundedLimit.ts",
@@ -33411,8 +33411,8 @@
       },
       {
         "path": "src/mcp/geometryService/boundedText.ts",
-        "sha256": "b21b79dee2781a7e8c51bc08f6ddc05101b745ec0ad023dde3af5ef7f43cebdd",
-        "byteLength": 11754
+        "sha256": "d399db2113c7841c34b3ea0d9e3afab28141a1429f1116f30ec069c37abee39c",
+        "byteLength": 11919
       },
       {
         "path": "src/mcp/independentArtifactCache.ts",
@@ -33491,8 +33491,8 @@
       },
       {
         "path": "src/mcp/publicError/isAbortError.ts",
-        "sha256": "a5d31e7ca40ff854ee3700d9823086b98ddde7e6e943fecd8a5684b86b9cebf9",
-        "byteLength": 3312
+        "sha256": "87a2979fb68725f5869bb35a998155db223eb45096d7bd927a215ba6fdecbce2",
+        "byteLength": 3318
       },
       {
         "path": "src/mcp/publicError/publicToolError.ts",
@@ -33541,8 +33541,8 @@
       },
       {
         "path": "src/mcp/rushGraphModify.ts",
-        "sha256": "e5ab32ce9105f1bb789937aaffa96a803e9c0e4e5c853f5612327e27ab46d165",
-        "byteLength": 5349
+        "sha256": "5e2bb5fa603a59905faeb2407a5592a47fa045a0ce0e3bcb8a624b3c013fc1ef",
+        "byteLength": 5412
       },
       {
         "path": "src/mcp/rushGraphNurbsRuntime.ts",
@@ -33561,8 +33561,8 @@
       },
       {
         "path": "src/mcp/rushGraphReport.ts",
-        "sha256": "dbfa35cae938caed4d74b20d71418ae41a0aa4b6d3a63cc0b1ee4b5d7d9a0e31",
-        "byteLength": 7395
+        "sha256": "c7da980e79648bcd6f3b85e08c139522c52e2638b272eddffb198324f178a450",
+        "byteLength": 7447
       },
       {
         "path": "src/mcp/rushGraphSvgTools.ts",
@@ -33596,28 +33596,28 @@
       },
       {
         "path": "src/parser/assetEvaluator/compatibilityDxfProfile.ts",
-        "sha256": "04fc76ee80b6f6161f2cce4f6f9ae1de4922248e25fb662049184f81286e3c4b",
-        "byteLength": 3891
+        "sha256": "bc70845e7766c0768ba49f99cbab66c8a4007dc0a873bcba2d939c96331fa066",
+        "byteLength": 3941
       },
       {
         "path": "src/parser/assetEvaluator/makeImport.ts",
-        "sha256": "dcac2bb144ad4d91a69ca9b1e389207b7c937049d121e05a090044fa1f9ac232",
-        "byteLength": 12038
+        "sha256": "419c643e424497b3429f7fe692267d4c7c7ee5b466a404f860cb16f58031a1e7",
+        "byteLength": 12090
       },
       {
         "path": "src/parser/assetEvaluator/surfaceCallSource.ts",
-        "sha256": "0485b1708bb75266dec6de976854aa1c30d572a671c246e38c5a1ec20a245780",
-        "byteLength": 9758
+        "sha256": "37ff382f2445f7b4a21426cf451f206df61717bb69e1b66a634ab8babcaa3683",
+        "byteLength": 9808
       },
       {
         "path": "src/parser/astDiscovery.ts",
-        "sha256": "1c0089d39dcf6da2dddc5f9b7511aad23aeca0bbb7bb33f66a63ba9e58c23a67",
-        "byteLength": 9396
+        "sha256": "fca43c289fa18efbd01710afffab19aafe30beacf0a113c40f1f7f17f3368334",
+        "byteLength": 9496
       },
       {
         "path": "src/parser/expressionEvaluator.ts",
-        "sha256": "52d53cdeeca0c3fe1be65fa6fdb1b96138bd4856a1240a50ff2e18af11ae37a3",
-        "byteLength": 19771
+        "sha256": "40a5ff7042fb0b7167b8e9e49409bccb82f05fb9dd95a57ceb01506320823ddd",
+        "byteLength": 19844
       },
       {
         "path": "src/parser/geometryEvaluator.ts",
@@ -33631,18 +33631,18 @@
       },
       {
         "path": "src/parser/geometryEvaluator/differenceChildren.ts",
-        "sha256": "b8879bb930ae416b7074efb73fd78413bb46a267ae49d1064ebd420825b87bd1",
-        "byteLength": 12560
+        "sha256": "825ac5bf41be1f61eb3db764645d82b05df16826ad39669f0a6d079afa9073dc",
+        "byteLength": 12797
       },
       {
         "path": "src/parser/geometryEvaluator/dxfRotateExtrude.ts",
-        "sha256": "f28d25857b5f5ef0ebc942aae7346d6ab5b80d1ab2f7a41fd8f6913b8c253275",
-        "byteLength": 5742
+        "sha256": "9da83b7ca9a214df0e524ef749be86fe0ae9a7160326d7836ad305e893e72e05",
+        "byteLength": 5820
       },
       {
         "path": "src/parser/geometryEvaluator/segments.ts",
-        "sha256": "cca20ae92ca430437a25033d5b1d184cbb392418845aeab45c5a50213d2552e7",
-        "byteLength": 16648
+        "sha256": "03feed73211c2edaf287a84ebdefd21aab1f37b7cfe2593c2aa51d33c8666496",
+        "byteLength": 16735
       },
       {
         "path": "src/parser/types.ts",
@@ -33786,8 +33786,8 @@
       },
       {
         "path": "src/render/gpuWboit.ts",
-        "sha256": "43055ac339d0e8ceef92493f62492b20f1364703e38c29a8652493bb697ddd3f",
-        "byteLength": 10525
+        "sha256": "89be9845892bdf4514091a3548c7200eb879f30f51dfc25865c9648455f89555",
+        "byteLength": 10469
       },
       {
         "path": "src/render/gpuZeroCopyPipeline.ts",
@@ -33961,8 +33961,8 @@
       },
       {
         "path": "src/render/webgpuRenderer.ts",
-        "sha256": "696c192c6b71a2760c9856053445c1b28111cb49bf3a48d9cfbd95137692b5a8",
-        "byteLength": 86220
+        "sha256": "93dba250f01ad14d8dc56a288106716a0930b145800e5a30ad7868bb3ebac61c",
+        "byteLength": 85037
       },
       {
         "path": "src/styles/app-shell-global.css",
@@ -34606,8 +34606,8 @@
       },
       {
         "path": "tests/directExtrusion.test.ts",
-        "sha256": "f1db14d4c3ccf987eb9592d14b1b33f8e0ed291b122b483c4baf510f0c4f6938",
-        "byteLength": 11653
+        "sha256": "f4086d384e99fdd2603c95897e82c5e7fbbe6067e8eb51eab94abcbfdafbd3d6",
+        "byteLength": 13703
       },
       {
         "path": "tests/directGeometryProtocol.test.ts",
@@ -34621,8 +34621,8 @@
       },
       {
         "path": "tests/directModelerUi.test.ts",
-        "sha256": "4346437a6f3b08e35c3e63a572e00091a8b34c5ae06474c8b8edfdfeb443b959",
-        "byteLength": 429954
+        "sha256": "6b74e59e93f2cf7f915ea281a3c7ac113aa0fa0458178ec06003e03b948be756",
+        "byteLength": 433042
       },
       {
         "path": "tests/directModeling.test.ts",
@@ -35181,8 +35181,8 @@
       },
       {
         "path": "tests/gpuWboit.test.ts",
-        "sha256": "e6a11cb49636b450eb3839c0afd33bd389d1f71607ae748da88116efc15661a0",
-        "byteLength": 9359
+        "sha256": "61f2f0f5a858e5b88073b934b632b00a5c6b1e40bafa968a23fa552bbb8f5fb3",
+        "byteLength": 9189
       },
       {
         "path": "tests/gpuZeroCopyPipeline.test.ts",
@@ -38124,6 +38124,12 @@
   "changedBindings": [
     {
       "kind": "g0-artifact",
+      "id": "root-package-manifest",
+      "previousSha256": "006161c78fbcc8956990397783c073832f361a228ffb97008e54a333bfa1a438",
+      "currentSha256": "4e2b758b7b0b5c02e5815aeeb30aaabcf9678cc6b6540f3eb3bf173708f4f81d"
+    },
+    {
+      "kind": "g0-artifact",
       "id": "crates-lockfile",
       "previousSha256": "378a7430cebfbe8e901f50b965f3d762c930d00a5a33df5c4969fb310ac0d0fa",
       "currentSha256": "7725127410b7d544a975b5f1ca1d21479313053e1a8d05657700a90d7891c930"
@@ -38606,7 +38612,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1060",
       "previousSha256": "0f6cf6079da4e0e2c7654d3877e8bc318ad6fc7910c626f67a86d1a6fe15e2d4",
-      "currentSha256": "24f379e461514d8629adb2cb7a658a7997e0ddbe8be0db679df4de3a3bf17e10"
+      "currentSha256": "d4af46702a6900899dcd5795e600c67f0ade9a2a5c7f6a3f3d6b454170a49ffd"
     },
     {
       "kind": "g0-artifact",
@@ -38636,7 +38642,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1097",
       "previousSha256": "7e21db24f6bd95c086b0a5bc871ea608203437a20336191be12ec3511a6600d8",
-      "currentSha256": "4346437a6f3b08e35c3e63a572e00091a8b34c5ae06474c8b8edfdfeb443b959"
+      "currentSha256": "6b74e59e93f2cf7f915ea281a3c7ac113aa0fa0458178ec06003e03b948be756"
     },
     {
       "kind": "g0-artifact",
@@ -38660,13 +38666,13 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1167",
       "previousSha256": "4529c4c1f237ecd7ea2c4a875ae0a9e0ef63b497325fbfdd80dd07d1ab5fe971",
-      "currentSha256": "6f11690166d2e89a0ae2cc65edc9e601b90dfdf6808adb71d66ae0a6823882ad"
+      "currentSha256": "7301df6739ab3a1fbd49337bd1b2a0116f596f836b2d5747b384a61358c4e29d"
     },
     {
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1168",
       "previousSha256": "315864afbe377864a498ade509b883bb872652f6d5e1124ed35e9574f4053ad8",
-      "currentSha256": "452e9b05dc1a38bd3029eb1e69600c1527a3b693b82c04d0b90b4969ec5d9a63"
+      "currentSha256": "6ec2bdc3270077e5bb0b736d116d82b955a5ccfc017ab4205167d0294afd0e42"
     },
     {
       "kind": "g0-artifact",
@@ -38708,7 +38714,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1213",
       "previousSha256": "b64ecf420caefb1069a79cf6757856b76a3b1bb01f17989894b89183b2b0968d",
-      "currentSha256": "795600f5cdbe33830502fae33061b6714dad8048a7fc403d57c0c0d2668ac65f"
+      "currentSha256": "176a6752628986b26cce351d735c15e42eaa52672401f4d84d470ed195f2415d"
     },
     {
       "kind": "g0-artifact",
@@ -38756,7 +38762,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-2087",
       "previousSha256": "34c245cf281f4c43f8e154d7f131500c552aeac7a83af8735a4bdfb681e0ac2d",
-      "currentSha256": "643c1490ae7c69fef52c98e2117e3a7d79492132d98837c7f0fb7c12a7d3edd0"
+      "currentSha256": "69618f5515bd93bd545a0643501252bf24770de6d27d32db7161c71c1abb3b7b"
     },
     {
       "kind": "g0-artifact",
@@ -38844,6 +38850,42 @@
     },
     {
       "kind": "g0-artifact",
+      "id": "geometry-v3-source-3086",
+      "previousSha256": "de9ffef38ba969c5cabebf08abec60821bdeb39bb08474199b80928929c75ee4",
+      "currentSha256": "bff4e4c3ae6d61ac0bf980f0b9f52d5d12f37d705daa96abb72a0cce63b9db3c"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-3092",
+      "previousSha256": "47adac39ad9c7ed52a05f5d402d50a17f34d5ed1df4a340fcaaae6b38006d5b0",
+      "currentSha256": "49e467c729335b8f0be9045dd7f90eebcdb34d1f75a24f86285dd86490c8500c"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-3094",
+      "previousSha256": "f3f4ebd5e8116659893bf0cad118b51409d41974c4e67747df99f91192b2124b",
+      "currentSha256": "8bfa354484a5985c0ede82d0b3b18deae5643026696fa078ed478402c42b5e8b"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-3096",
+      "previousSha256": "4397e08ec5eca3e3ec9df9b3468fdae38dd23559893b66de2a2cc6f6df5caca3",
+      "currentSha256": "bf7abf15744df8cfb612a5737093d089164d22365197a73b4c8fe2324a806afe"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-3098",
+      "previousSha256": "464f4e1a1988da7e5136a7fbff46c48f50e6165fbbb0bc73c6f50d4c6f012f3e",
+      "currentSha256": "8fd067b921366b90380e4813d29138dfe81780d74eb01833b7a77a65102c9dea"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-3102",
+      "previousSha256": "30f6b9968f46f6333fb45e2d8eacbb54764812cbf389c7183a9cc18aec1e0391",
+      "currentSha256": "1a184d08fbef5deadaec3c3ba8737d8b6d2b316be38127497f0b7104f5148a9d"
+    },
+    {
+      "kind": "g0-artifact",
       "id": "geometry-v3-source-3108",
       "previousSha256": "bbd48017c6905dd918684557766f614f66d1319e4b06f7cced704c8a61e8803a",
       "currentSha256": "e660d1278de96c02ca99bf4e10591e4c746317630246e9f1af05ca840ad19309"
@@ -38858,7 +38900,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3113",
       "previousSha256": "3a1878866fc5ca791ac547908111623fe7b2ec3c3f90180a30734905cafacb37",
-      "currentSha256": "e1e2e3d957033666e3f8981acc1ab2efdb8d530ca988e67949d3ee1fce0a73bf"
+      "currentSha256": "e156140e34e07400f7523d466fccba0101244b43cc85d5281127d498d52d3a08"
     },
     {
       "kind": "g0-artifact",
@@ -38912,7 +38954,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3136",
       "previousSha256": "2ff8c0bd35caa16507018ab3ebec178eaa978be57b0fde9c64f79a5beeb9db90",
-      "currentSha256": "e5ab32ce9105f1bb789937aaffa96a803e9c0e4e5c853f5612327e27ab46d165"
+      "currentSha256": "5e2bb5fa603a59905faeb2407a5592a47fa045a0ce0e3bcb8a624b3c013fc1ef"
     },
     {
       "kind": "g0-artifact",
@@ -38924,7 +38966,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3140",
       "previousSha256": "ef4740dae87830e428e3722abd10d7b1c235b60ed322b7b20b5638dc1e2e2a0f",
-      "currentSha256": "dbfa35cae938caed4d74b20d71418ae41a0aa4b6d3a63cc0b1ee4b5d7d9a0e31"
+      "currentSha256": "c7da980e79648bcd6f3b85e08c139522c52e2638b272eddffb198324f178a450"
     },
     {
       "kind": "g0-artifact",
@@ -38966,19 +39008,19 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3187",
       "previousSha256": "5cf6aec6d01b5b8ab9fc4353df839bca99d095ca505fb57412867057f26cc964",
-      "currentSha256": "81cc0defbbc4c2664412aa6102bf445c5da3d2c46d5394e6f7b1023b5826de82"
+      "currentSha256": "b4b108e3355531adcf92273909c31d0a09f126ef0650d0abff95c975a99f304b"
     },
     {
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3189",
       "previousSha256": "86344cc6c0bace3873928ea06656e307c9b399167fe6c4c0df4cbaf086e76aea",
-      "currentSha256": "1c49d6b1992b54517d3752e9510f3d5470db9ae0efed499965a2e677e316d606"
+      "currentSha256": "69f8e02f4c5b53d8785cdfe4c9cd6e27cccadf46d53ab76ef64cbdb35827f747"
     },
     {
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3190",
       "previousSha256": "25da7c858e54a39bdf178ef9405a59446741a10108015f78257349fbf71f973d",
-      "currentSha256": "9122c185dfb3be7f6d001a075a5facfc81a0222a372814c78d28c4cc24cb0106"
+      "currentSha256": "7dae4d353b0218826f50f36d58099faf45dce34fa894bf10fe298c37e9b9ffa1"
     },
     {
       "kind": "g0-artifact",
@@ -38988,9 +39030,39 @@
     },
     {
       "kind": "g0-artifact",
+      "id": "geometry-v3-source-3192",
+      "previousSha256": "d1c04a0979791558a026f22694311fe74acfa380259bf93eb24d70645ef3cdb0",
+      "currentSha256": "7228e2da219f79a6dca1a70b168d9be13171dcd48d0571568b1c41a520b28ee6"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-3203",
+      "previousSha256": "bdc55674e81652e651581c48fde48274388d961f138229704eda7f0f9efc72ad",
+      "currentSha256": "dd7f6fb02c1d3e8bdc4662caa361cf070b74f672f950f8f55259e3ee0ce514db"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-3206",
+      "previousSha256": "4b826d0f290ea936b006aa946ca6a3d251141a5d7487610ae2b50d9f35155e52",
+      "currentSha256": "9d4bfcb1828d14c22a89be7a4d1508c3364b570d00545bc740aa0a0da78c614a"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-3208",
+      "previousSha256": "2b25e8becd5b8e8a57e79ec358698191aec80c06a2a22d92fc5c8d90814b41d5",
+      "currentSha256": "10226ba89c4e4b642846d2da4764bc02c6b3919ddf4b68b811220f872008e048"
+    },
+    {
+      "kind": "g0-artifact",
       "id": "geometry-v3-source-3220",
       "previousSha256": "c65c2f2a9aa1c32c06e0495bb5a75932c5c6fdbaa2f825540f1e924878073834",
       "currentSha256": "117ab5f90fcd27d4945b2383c91caf11f42cef93aea35c3917b34d499817e67c"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-3242",
+      "previousSha256": "09fb569770852bddc34de50da3903cadfbcdf0694a3b006421c6790dea224679",
+      "currentSha256": "b6782320c89dac3b0f57ac9e47054332d18c56673356cf1693489d36af453d59"
     },
     {
       "kind": "g0-artifact",
@@ -39024,6 +39096,12 @@
     },
     {
       "kind": "g0-artifact",
+      "id": "geometry-v3-source-3333",
+      "previousSha256": "ff42306f720e7422f380dd17eaebe61064218ec01822594d3264e950d1d2672e",
+      "currentSha256": "0fcc082e30174985c6e925dc0c65dfe5435395fb714fbe15480c909e26c94ffe"
+    },
+    {
+      "kind": "g0-artifact",
       "id": "geometry-v3-source-3342",
       "previousSha256": "51a3fd1c2a3023468ea89b0d76d8be7bf5201f12969c88b44921356f9abcfc5e",
       "currentSha256": "7e4de698b5f2627348c3771b6ae5c46077f7ea562bfc534af8b626cc999daece"
@@ -39048,9 +39126,21 @@
     },
     {
       "kind": "g0-artifact",
+      "id": "geometry-v3-source-3405",
+      "previousSha256": "e715ccebff51f8a2779a79e296c41cb43868a95876207be0537ab20fa0311405",
+      "currentSha256": "333d84fc404ccee2389d96dcce18e514e296f697b5709292f40376d423e57c55"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-3410",
+      "previousSha256": "ed25112902ef584da32be5151c310697003bedf37ef115c4bf27281c8a8ecdbb",
+      "currentSha256": "cae89fc9f152f2ffc8420e5af1887a32e69093dfc6e1490e0f72c85894f2bff3"
+    },
+    {
+      "kind": "g0-artifact",
       "id": "geometry-v3-source-3412",
       "previousSha256": "0eb20d59fc29779946e9e42c5b0a43e221de2320d798ce2fa3bc0f44060c6def",
-      "currentSha256": "f73e9814aedc44aebce87b98df0cee12f2d87f59108264105cc5a334422535bf"
+      "currentSha256": "76f2466d338b4b8e9bfd30f2fcd8d64cec27808d0f0a66ce782208ce6e784701"
     },
     {
       "kind": "g0-artifact",
@@ -39066,9 +39156,15 @@
     },
     {
       "kind": "g0-artifact",
+      "id": "geometry-v3-source-3471",
+      "previousSha256": "0e87d22515ad6dbf54419d75371ab171992463f77fdecda31c58c8e5ab5e9176",
+      "currentSha256": "38206d1d89838cd79ce208bbad66bb9d620404015a373d26aecdf6908ae369b8"
+    },
+    {
+      "kind": "g0-artifact",
       "id": "geometry-v3-source-3484",
       "previousSha256": "13330725989518503bec92c582fa438883481dbf807eb1dce50e7d1304294f1b",
-      "currentSha256": "696c192c6b71a2760c9856053445c1b28111cb49bf3a48d9cfbd95137692b5a8"
+      "currentSha256": "93dba250f01ad14d8dc56a288106716a0930b145800e5a30ad7868bb3ebac61c"
     },
     {
       "kind": "g0-artifact",
@@ -39110,7 +39206,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3513",
       "previousSha256": "20be179d65c80324b54495b95de8fc63a3662954c991ce2e3a61d10cd957c831",
-      "currentSha256": "ea485905d1282c842047237571dff2e1ccff6976fc7585856b9bb37536ca62cb"
+      "currentSha256": "2e2787920bf5a57e1e0986089a8904ae4e9925a726e1d614031f2e6c8d88d763"
     },
     {
       "kind": "g0-artifact",
@@ -39248,7 +39344,13 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3646",
       "previousSha256": "26e3fdf5c7bbc50b72364efa4a4a69c0209247f3547313b1978db388fa4cf16e",
-      "currentSha256": "27fa3a26744fdb562d12ec741b5081c77bae69c70e749c87005f7765a5df44ee"
+      "currentSha256": "55f53a78edf359c1b4cfca4e05d63ca58fd10b0326fe2ed7b028478ef86f2617"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-3647",
+      "previousSha256": "e4e86b64827b54b4b8dd832190eb2ab4d489b87218a83a53b11388e5f7547626",
+      "currentSha256": "f5e593306a096350f47e90d108501fe2c40541c81da8ff99787389fb63d9c245"
     },
     {
       "kind": "g0-artifact",
@@ -39342,6 +39444,12 @@
     },
     {
       "kind": "g0-artifact",
+      "id": "geometry-v3-source-3976",
+      "previousSha256": "e403008493606f7170f5f75dbed8d7e9cb5b2a10fe82a9245dd8909ca2e3fe8a",
+      "currentSha256": "8e8572014e59fa5e875d37f0960a4c9ea3038573babd17ab77065e497277d414"
+    },
+    {
+      "kind": "g0-artifact",
       "id": "geometry-v3-source-3978",
       "previousSha256": "72e3a44e8320737db0b46e838b056b4ae262925bb0d1979ae15cb8441d5f0c56",
       "currentSha256": "b779280034eb1ceca22b93cd6dcf667d3a1a000519db159c0e749e4400e5147e"
@@ -39354,21 +39462,39 @@
     },
     {
       "kind": "g0-artifact",
+      "id": "geometry-v3-source-3982",
+      "previousSha256": "c4548c91675adc2547141938c433667dba635f2a01b6d5c86d4b421a2e74e4eb",
+      "currentSha256": "e457c910f8bbe0401a1fe413cf1f4444b858fb01ef9992ee34565f9b9c573e7c"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-3984",
+      "previousSha256": "64ddcb2374839bd451b4678e47e394cd46e835c2fe522ca82bb06f2fa3c14fbf",
+      "currentSha256": "561055ac8097fd194bedbf825dbfc2a9f289d16cae782ff6a6a7e008aa15d512"
+    },
+    {
+      "kind": "g0-artifact",
       "id": "geometry-v3-source-3986",
       "previousSha256": "b32667b2e92c50451017009daad7f1b1bfd105ecf79243ab97bc2e610305b146",
-      "currentSha256": "b68dc60816d4924dc0a54b18dcde98b16293f1c2d3d3ce65d8d40bde76f6143a"
+      "currentSha256": "f8a93f99c5bceec1f088d8e6354b44e226d7a31b59049319074f9c843f233baa"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-3987",
+      "previousSha256": "63778937fd19ba241b3ea1c67b978510f3bfb136a83f52f54a695f6a4400f5dd",
+      "currentSha256": "3e5ccadc5a96a132f1f6f85330b1951aa90b5a46692f88c246f18a5bf67d34f0"
     },
     {
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3990",
       "previousSha256": "9db2287f935ec4689504e3cfef3b50ad7e9be53f97341902f92c9a1467f74469",
-      "currentSha256": "8da38f6af1e7e6070e9a1f277f61a1bb605378a78b3906189ad4fe8cc7857c1f"
+      "currentSha256": "26cf7938fbdec61874d2e50c3c04e311932f899465ed6b4c91e1e41d1b34890f"
     },
     {
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3991",
       "previousSha256": "bf2c662dd02b3a77665b14fb48f43fd4841622fdc6fbf5c61be58596af532659",
-      "currentSha256": "f629425264deb604db6ec0ac3f667201070a046cba08f7ea0e64c9ec81dd575e"
+      "currentSha256": "a976debafc1cf0d38d2aa4be2620dd333337bac7473c9ef925e07d1520503b37"
     },
     {
       "kind": "g0-artifact",
@@ -39386,7 +39512,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3995",
       "previousSha256": "a57f69080021bd0a8d428f9ae115fe93a89182ad20792f0839727715fd39d515",
-      "currentSha256": "2ba2185b35804d5bd73b2c630717e539664e7ab404324297787a79fb76a726a4"
+      "currentSha256": "57e6f863869d24943a9eb54e5dc7ccda33633c01c030a372dfe7b7b6263c8db8"
     },
     {
       "kind": "g0-artifact",
@@ -39404,7 +39530,13 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3999",
       "previousSha256": "8f316a715ec96711d8757bb704d285b7ccc73267d7296a23db40b4f1c5f3bf8c",
-      "currentSha256": "a55e83e4b6c2b0e9e1db12593a36de06c5a0cb242dfea8d57f830a483dfc2959"
+      "currentSha256": "bd8d585044b7fa12bf975f939d8a8356812828cab4653be22271a040290c9467"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-4000",
+      "previousSha256": "6e436661c80248633c4bd862c50493ed36be1822b1fb3ed75e80d472560503d9",
+      "currentSha256": "0867c3a46f6c847a7174ee087ef226bceaa6bb155de9eacb6ed4aedaf1918f6b"
     },
     {
       "kind": "g0-artifact",
@@ -39416,7 +39548,13 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-4004",
       "previousSha256": "9106a9747cb1e53ea5e97f84a704238f374296a3e591f6522f7cfab06b63f408",
-      "currentSha256": "b21b79dee2781a7e8c51bc08f6ddc05101b745ec0ad023dde3af5ef7f43cebdd"
+      "currentSha256": "d399db2113c7841c34b3ea0d9e3afab28141a1429f1116f30ec069c37abee39c"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-4007",
+      "previousSha256": "a5d31e7ca40ff854ee3700d9823086b98ddde7e6e943fecd8a5684b86b9cebf9",
+      "currentSha256": "87a2979fb68725f5869bb35a998155db223eb45096d7bd927a215ba6fdecbce2"
     },
     {
       "kind": "g0-artifact",
@@ -39477,6 +39615,18 @@
       "id": "geometry-v3-source-4352",
       "previousSha256": "cf00a9d766606d0380550b5fda1e887d1f565228f2e3cd109979fc0e1532a777",
       "currentSha256": "6de77acb549b79c67976e8e77aea325b24f5ec1a5aa7b1aa1186676754e45e7f"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-4374",
+      "previousSha256": "43055ac339d0e8ceef92493f62492b20f1364703e38c29a8652493bb697ddd3f",
+      "currentSha256": "89be9845892bdf4514091a3548c7200eb879f30f51dfc25865c9648455f89555"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-4377",
+      "previousSha256": "35479992615694a34456bbecedc6e17c437013841cbd4d97a1ae2055a277ed37",
+      "currentSha256": "5a6b502aed8ad8552b3868ebd136b583920723752bc975005e7b2ad119bbdc5b"
     },
     {
       "kind": "g0-artifact",
@@ -39645,6 +39795,12 @@
       "id": "geometry-v3-source-5060",
       "previousSha256": "2f07a71b448ff6d268a13d6a2978e6f3d9b5a0e642a329b33d201a1b18a18035",
       "currentSha256": "7d8d60cf22434af22d9820d2201fd9e37fb39adae1fa303d1f7cd6a294f99806"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-5061",
+      "previousSha256": "a0be4904ec0c21069b971e7a63fb4a49a7d1de898d42b1a8912841ce316a6199",
+      "currentSha256": "1085479d416c8877e5ff35e8930c6cc1dde0a896fd09d25f655ce7b00f446454"
     },
     {
       "kind": "g0-artifact",
@@ -40220,13 +40376,25 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-6789",
       "previousSha256": "ea659b7bba863d3890a22ad2046aedf915f324c84e7c3faa026821e476014b15",
-      "currentSha256": "ff1937fe0654e50546706937240e53b9fe0f424bdeddd7b6f23f7ca6934e691a"
+      "currentSha256": "1374463b8191bc36d4761b87ee8fd5297b98c8dd3cc8ff1b33c842fe098d1517"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-6794",
+      "previousSha256": "beecf8ee57c405d51624f20672f2ff459c9db01ee7ec1804067d85170249f1a2",
+      "currentSha256": "69b3bf4df9067821c270d799c6bf56170020e0065984067195041fd3e610d7ef"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-6796",
+      "previousSha256": "8d897025547c18534a34f6370d0c2422b5d860b99420de9622cdb9a8d1725f04",
+      "currentSha256": "47eb33ae0990fa26bf0e4b203f56d2b2a1c1a98ccf745e5da1818ca9df814ba0"
     },
     {
       "kind": "g0-artifact",
       "id": "geometry-v3-source-6799",
       "previousSha256": "26180a52682dc2c57f8a5a2c366abe7b876aa24ab4da2c42f9183c18269facc7",
-      "currentSha256": "484a2a59e46009ee2159207eb4185bd53808df2accb3ead472fccdf85d19dcec"
+      "currentSha256": "9962c50b8bbb20a82c3e66e97a050003aa3745910ebe8bb215abaca95c6f0cbc"
     },
     {
       "kind": "g0-artifact",
@@ -40256,7 +40424,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-6833",
       "previousSha256": "25ea96082bd9d1d395b986b459ccb10f4cd0a0f9015e5758b43f7d2aed8b787e",
-      "currentSha256": "93643e06e9f40e6cd1dde0571f7cd79c0ce9d6467a1e292107b18246909b118d"
+      "currentSha256": "005be54f50e4b06fdf76469a192b52bbc45580ca360421e6fe482a26b40f0ba9"
     },
     {
       "kind": "g0-artifact",
@@ -40266,9 +40434,33 @@
     },
     {
       "kind": "g0-artifact",
+      "id": "geometry-v3-source-6870",
+      "previousSha256": "04fc76ee80b6f6161f2cce4f6f9ae1de4922248e25fb662049184f81286e3c4b",
+      "currentSha256": "bc70845e7766c0768ba49f99cbab66c8a4007dc0a873bcba2d939c96331fa066"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-6871",
+      "previousSha256": "dcac2bb144ad4d91a69ca9b1e389207b7c937049d121e05a090044fa1f9ac232",
+      "currentSha256": "419c643e424497b3429f7fe692267d4c7c7ee5b466a404f860cb16f58031a1e7"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-6872",
+      "previousSha256": "0485b1708bb75266dec6de976854aa1c30d572a671c246e38c5a1ec20a245780",
+      "currentSha256": "37ff382f2445f7b4a21426cf451f206df61717bb69e1b66a634ab8babcaa3683"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-6873",
+      "previousSha256": "1c0089d39dcf6da2dddc5f9b7511aad23aeca0bbb7bb33f66a63ba9e58c23a67",
+      "currentSha256": "fca43c289fa18efbd01710afffab19aafe30beacf0a113c40f1f7f17f3368334"
+    },
+    {
+      "kind": "g0-artifact",
       "id": "geometry-v3-source-6874",
       "previousSha256": "9ca7a9554bef7b3e41a42ab9d86cafe19f56d0ef397f76352c59343750afdacf",
-      "currentSha256": "52d53cdeeca0c3fe1be65fa6fdb1b96138bd4856a1240a50ff2e18af11ae37a3"
+      "currentSha256": "40a5ff7042fb0b7167b8e9e49409bccb82f05fb9dd95a57ceb01506320823ddd"
     },
     {
       "kind": "g0-artifact",
@@ -40280,13 +40472,19 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-6877",
       "previousSha256": "cb6e759c21a2f260bf2b89a01e7cddd78d3899f448e28941e8e52199a2d6ba17",
-      "currentSha256": "b8879bb930ae416b7074efb73fd78413bb46a267ae49d1064ebd420825b87bd1"
+      "currentSha256": "825ac5bf41be1f61eb3db764645d82b05df16826ad39669f0a6d079afa9073dc"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-6878",
+      "previousSha256": "f28d25857b5f5ef0ebc942aae7346d6ab5b80d1ab2f7a41fd8f6913b8c253275",
+      "currentSha256": "9da83b7ca9a214df0e524ef749be86fe0ae9a7160326d7836ad305e893e72e05"
     },
     {
       "kind": "g0-artifact",
       "id": "geometry-v3-source-6879",
       "previousSha256": "0edadd5170e773ba9c0c22cec64d8ee2a0b51059d0216c5d71af329622a92ada",
-      "currentSha256": "cca20ae92ca430437a25033d5b1d184cbb392418845aeab45c5a50213d2552e7"
+      "currentSha256": "03feed73211c2edaf287a84ebdefd21aab1f37b7cfe2593c2aa51d33c8666496"
     },
     {
       "kind": "g0-artifact",
@@ -40386,6 +40584,12 @@
     },
     {
       "kind": "g0-artifact",
+      "id": "geometry-v3-source-7068",
+      "previousSha256": "f1db14d4c3ccf987eb9592d14b1b33f8e0ed291b122b483c4baf510f0c4f6938",
+      "currentSha256": "f4086d384e99fdd2603c95897e82c5e7fbbe6067e8eb51eab94abcbfdafbd3d6"
+    },
+    {
+      "kind": "g0-artifact",
       "id": "geometry-v3-source-7080",
       "previousSha256": "efb3c6f7e8c0c28a9d49bfdc6547e538a89f9ce2bc9930f458860e7e23edf91a",
       "currentSha256": "080ac3cc94852cb2eabd5bb65736dc4863baedbc0f5a2e1483435d0353de737b"
@@ -40401,6 +40605,12 @@
       "id": "geometry-v3-source-7153",
       "previousSha256": "a85b5f3f603065ac6d7f054d22b9c92778835221858bff025498743df880809a",
       "currentSha256": "9c0af35aa5d519e0069e219a3fd41fa4f05c8d6cc2ef281a5c6d1fa7092e6ad0"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-7174",
+      "previousSha256": "e6a11cb49636b450eb3839c0afd33bd389d1f71607ae748da88116efc15661a0",
+      "currentSha256": "61f2f0f5a858e5b88073b934b632b00a5c6b1e40bafa968a23fa552bbb8f5fb3"
     },
     {
       "kind": "g0-artifact",
@@ -40451,10 +40661,16 @@
       "currentSha256": "a35cc4330a2f2e783e654754308c1300d36ab43694a4a1518f433cfb1b5575a0"
     },
     {
+      "kind": "g1-artifact",
+      "id": "root-package-manifest",
+      "previousSha256": "006161c78fbcc8956990397783c073832f361a228ffb97008e54a333bfa1a438",
+      "currentSha256": "4e2b758b7b0b5c02e5815aeeb30aaabcf9678cc6b6540f3eb3bf173708f4f81d"
+    },
+    {
       "kind": "g1-bundle",
       "id": "g1-candidate-bundle",
       "previousSha256": "ec81383dbe4029f9d98e725cd8a03486c25ea3cb925737557362eedbdbb20448",
-      "currentSha256": "95ff16fea87f8210d43ad0067dcb6a36015208825de5c5ba86350038fadf6c56"
+      "currentSha256": "1b86931524942d6333eb2bc94e5b30601725b43a136d0b3f65ae9f02ce83311f"
     },
     {
       "kind": "g1-bundle",
@@ -40466,13 +40682,13 @@
       "kind": "g1-bundle",
       "id": "g1-mcp-support-bundle",
       "previousSha256": "ac58bcfa9fdf2f68220e52e30de06fe927c0e17a364df81772b5d6f5c81a518c",
-      "currentSha256": "a5a057186cf028f3971523b7bacc83a6533f5509d843e874512a53ff65b5044c"
+      "currentSha256": "bec13a32c58f6cce32df0ed2e6e182f4e097fa6f5d04ec972e198ab13bf69bb8"
     },
     {
       "kind": "g1-bundle",
       "id": "g1-pinned-legacy-support-bundle",
       "previousSha256": "4488ec13f5177b7e46092b987db2eea1f43520269486a1a114ec70e2ada8ebd4",
-      "currentSha256": "2ac7a7285902d1efbcfeede3eca7ebe972e6884a94a5bf1dd5ff9554b7f1437a"
+      "currentSha256": "eb158cf08fb91d377c251194794d77c04935fe34d9f6ffe5b34776b1110e07c2"
     }
   ],
   "executionNotes": [

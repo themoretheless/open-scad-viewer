@@ -85,6 +85,18 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({}),
   }),
+  // v18: Fillet operation contract for audited multi-edge fillet, nested graph column Boolean and
+  // off-axis sphere tracing across a cone apex plane. Measured production build: 18,553,202 raw
+  // WASM bytes, 6,616,898 packed geometry bytes and 12,530,943 asset bytes. The index,
+  // DirectModeler and wasmStreaming chunks measure 256,134, 500,918 and 196,179 bytes; the
+  // kernel change is Rust-only, so the DirectModeler growth over v17 (496,707) comes from main.
+  '9cb8ebbc7747c61730a2bc707a9bd4e235fc900c60cfe042a3919929535b4b31':Object.freeze({
+    version:18,geometryChunkBytes:6_625_000,totalAssetBytes:12_539_000,rawGeometryBytes:18_562_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:501_500,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

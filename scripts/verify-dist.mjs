@@ -179,7 +179,7 @@ for (const required of ['.html', '.css', '.js']) {
 }
 for (const file of files) {
   // Raw streaming WASM: the geometry kernel takes the rawGeometryBytes of its delivery profile
-  // (61b587, runtime v13 record: 18,531,352 bytes); other kernels keep 17,700,000.
+  // (9cb8eb, runtime v13 record: 18,553,202 bytes); other kernels keep 17,700,000.
   const streamingWasmLimit = /^wasm\/(geometry-kernel|language-kernel|photogrammetry)\.wasm$/.test(file.path)
     ? (file.path === 'wasm/geometry-kernel.wasm' ? geometryDelivery.rawGeometryBytes ?? 17_700_000 : 17_700_000)
     : undefined
