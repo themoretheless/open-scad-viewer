@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 575,
-  "unallocatedCount": 425,
+  "specifiedCount": 576,
+  "unallocatedCount": 424,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14523,6 +14523,25 @@
       ],
       "remainingQualification": [
         "Evaluate exact one-sided rational derivatives in original contour direction and retain geometric creases.",
+        "Verify exact directed intervals under reversed winding and splitting across a periodic seam, and withhold mappings on refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0576",
+      "name": "Точная классификация касательных стыков периодической обрезки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::classify_input_tangent_join",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-576-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-576-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Distinguish exact C1, oriented G1, reversal, corner, stationary and one-sided joins.",
         "Verify exact directed intervals under reversed winding and splitting across a periodic seam, and withhold mappings on refusal.",
         "WASM and application integration are separate."
       ]

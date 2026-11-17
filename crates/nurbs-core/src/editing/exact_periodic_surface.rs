@@ -4304,6 +4304,24 @@ pub struct PeriodicTrimTangentReport {
     pub refusal: Option<ExactRefusal>,
 }
 
+/// Exact first-order classification in the original contour parameter.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PeriodicTrimTangentJoin {
+    OneSided,
+    Stationary,
+    C1,
+    G1,
+    Reversal,
+    Corner,
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimTangentJoinReport {
+    pub join: Option<PeriodicTrimTangentJoin>,
+    pub work_used: u64,
+    pub refusal: Option<ExactRefusal>,
+}
+
 #[derive(Default)]
 struct PeriodicTrimInputSample {
     point: Option<[BigRational; 3]>,
@@ -4364,6 +4382,42 @@ impl PeriodicTrimInputEdges {
         };
         Ok(PeriodicTrimTangentReport {
             tangents,
+            work_used: work.used,
+            refusal,
+        })
+    }
+
+    /// Classify the exact first-order join at a source segment parameter.
+    /// A missing sample or a refusal leaves the classification absent.
+    pub fn classify_input_tangent_join(
+        &self,
+        contour: usize,
+        segment: usize,
+        parameter: &BigRational,
+        max_work: u64,
+    ) -> Result<PeriodicTrimTangentJoinReport> {
+        crate::check(
+            (1..=cad_predicates::MAX_WORK).contains(&max_work),
+            "Exact periodic trim tangent join work must be in 1..=1000000",
+        )?;
+        let mut work = Work {
+            used: 0,
+            limit: max_work,
+        };
+        let result = self
+            .evaluate_input_sample(contour, segment, parameter, true, &mut work)
+            .and_then(|sample| {
+                sample
+                    .point
+                    .map(|_| classify_trim_tangent_pair(&sample.tangents, &mut work))
+                    .transpose()
+            });
+        let (join, refusal) = match result {
+            Ok(join) => (join, None),
+            Err(reason) => (None, Some(reason)),
+        };
+        Ok(PeriodicTrimTangentJoinReport {
+            join,
             work_used: work.used,
             refusal,
         })
@@ -4438,6 +4492,39 @@ impl PeriodicTrimInputEdges {
             }
         }
         Ok(sample)
+    }
+}
+
+fn classify_trim_tangent_pair(
+    tangents: &PeriodicTrimInputTangents,
+    work: &mut Work,
+) -> std::result::Result<PeriodicTrimTangentJoin, ExactRefusal> {
+    use PeriodicTrimTangentJoin::*;
+    use num_traits::{Signed, Zero};
+
+    let (Some(before), Some(after)) = (&tangents.before, &tangents.after) else {
+        return Ok(OneSided);
+    };
+    let Some(axis) = before.iter().position(|component| !component.is_zero()) else {
+        return Ok(Stationary);
+    };
+    if after.iter().all(Zero::is_zero) {
+        return Ok(Stationary);
+    }
+    if before == after {
+        return Ok(C1);
+    }
+    for (a, b) in before.iter().zip(after) {
+        let left = work.op(a, &after[axis], |x, y| x * y)?;
+        let right = work.op(b, &before[axis], |x, y| x * y)?;
+        if left != right {
+            return Ok(Corner);
+        }
+    }
+    if before[axis].is_positive() == after[axis].is_positive() {
+        Ok(G1)
+    } else {
+        Ok(Reversal)
     }
 }
 

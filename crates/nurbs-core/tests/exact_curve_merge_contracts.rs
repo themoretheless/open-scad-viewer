@@ -4580,3 +4580,73 @@ fn periodic_trim_tangents_withhold_values_under_exhausted_budget() {
     assert!(report.tangents.is_none());
     assert_eq!(report.refusal, Some(Refusal::ResourceLimit));
 }
+
+#[test]
+fn periodic_trim_tangent_join_classifies_exact_corner_and_endpoints() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicTrimTangentJoin, build_exact_periodic_surface_trim_input_edges,
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    for (n, d, expected) in [
+        (1, 2, PeriodicTrimTangentJoin::Corner),
+        (1, 3, PeriodicTrimTangentJoin::C1),
+        (1, 1, PeriodicTrimTangentJoin::OneSided),
+    ] {
+        let t = num_rational::BigRational::new(n.into(), d.into());
+        assert_eq!(
+            result
+                .classify_input_tangent_join(0, 0, &t, 1_000_000)
+                .unwrap()
+                .join,
+            Some(expected)
+        );
+    }
+}
+
+#[test]
+fn periodic_trim_tangent_join_distinguishes_collinear_speeds_and_reversal() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicTrimTangentJoin, build_exact_periodic_surface_trim_input_edges,
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let mut result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    let seam = num_rational::BigRational::new(1.into(), 2.into());
+    for (y, expected) in [
+        (-1., PeriodicTrimTangentJoin::G1),
+        (-0.5, PeriodicTrimTangentJoin::C1),
+        (0.5, PeriodicTrimTangentJoin::Reversal),
+        (0., PeriodicTrimTangentJoin::Stationary),
+    ] {
+        let curve = &mut result.geometry.patches.as_mut().unwrap()[0].loops[0][1].curve;
+        *curve.control_points.last_mut().unwrap() = vec![0., y, 0.25];
+        let report = result
+            .classify_input_tangent_join(0, 0, &seam, 1_000_000)
+            .unwrap();
+        assert_eq!(report.join, Some(expected));
+    }
+}
