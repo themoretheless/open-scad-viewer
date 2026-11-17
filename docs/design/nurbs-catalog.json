@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 366,
-  "unallocatedCount": 634,
+  "specifiedCount": 367,
+  "unallocatedCount": 633,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9405,6 +9405,31 @@
       "remainingQualification": [
         "Store a synchronized XYZ edge and UV trim curve with exact continuous agreement certification.",
         "Shared integer knots synchronize a stored spatial edge and a trace in the original UV coordinates. An exact squared-distance polynomial certifies the gap throughout every interval.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0367",
+      "name": "Разрез узловой ячейки NURBS плоскостью с парными замкнутыми контурами обрезки",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::split_surface_cell_by_plane",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs",
+        "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/store_pair.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/split_trim.rs",
+        "crates/nurbs-core/src/trim/trim_domain.rs",
+        "docs/qualification/nurbs-curvature-field-367-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-367-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Build complementary counterclockwise trim loops along a certified per-cell surface-plane section.",
+        "A monotone shared UV trace splits the original knot rectangle. Opposite trace directions and exact perimeter joins form complementary counterclockwise loops, with side labels derived from the certified graph orientation.",
         "WASM and application integration are separate."
       ]
     }

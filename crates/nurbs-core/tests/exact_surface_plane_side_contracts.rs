@@ -5,7 +5,7 @@ use nurbs_core::{
         SurfacePlanePolylineOptions, SurfacePlaneSide, SurfacePlaneWorldPolylineOptions,
         approximate_surface_plane_graph, approximate_surface_plane_graph_xyz,
         audit_surface_plane_graphs, audit_surface_plane_side, refine_surface_plane_side,
-        sample_surface_plane_graph, store_surface_plane_section_curve,
+        sample_surface_plane_graph, split_surface_cell_by_plane, store_surface_plane_section_curve,
         store_surface_plane_section_pair,
     },
     surface::Surface,
@@ -567,4 +567,112 @@ fn verifies_the_lifted_gap_of_a_curved_pair_between_vertices() {
     }
     let exact = store_surface_plane_section_pair(&patch, [0., 0., 1.], 0., options, 0.).unwrap();
     assert!(matches!(exact.outcome, Err(Refusal::UnprovedIdentity)));
+}
+
+#[test]
+fn splits_an_original_cell_into_closed_complementary_sign_regions() {
+    use nurbs_core::{
+        editing::exact_projective::UvAxis,
+        trim::trim_domain::{Location, TrimDomain, exact_loop_joins},
+    };
+    let mut patch = surface(1, vec![-2., -2., 4., 4.], &[-1., 1.]);
+    patch.weights = vec![vec![1.; 2]; 2];
+    let options = SurfacePlaneWorldPolylineOptions {
+        span: [1, 1],
+        solve_axis: UvAxis::U,
+        max_xyz_error: 1e-12,
+        max_segments: 1,
+        max_work: WORK,
+    };
+    let report = split_surface_cell_by_plane(&patch, [0., 0., 1.], 0., options, 0.).unwrap();
+    let split = report.outcome.unwrap();
+    for (loops, x, other) in [(&split.negative, 0., 2.), (&split.positive, 2., 0.)] {
+        assert_eq!(exact_loop_joins(loops).unwrap(), Some(true));
+        let domain = TrimDomain::new(&[loops.to_vec()], 1e-8).unwrap();
+        let inside = domain.classify_point([x, 0.5], 100).unwrap();
+        assert_eq!(inside.location, Location::Inside);
+        assert_eq!(inside.winding, Some(1));
+        assert_eq!(
+            domain.classify_point([other, 0.5], 100).unwrap().location,
+            Location::Outside
+        );
+    }
+    assert_eq!(
+        split.negative[0].control_points,
+        split.section.pcurve.control_points
+    );
+    let reversed = split_surface_cell_by_plane(&patch, [0., 0., -1.], 0., options, 0.)
+        .unwrap()
+        .outcome
+        .unwrap();
+    assert_eq!(
+        reversed.negative[0].control_points,
+        split.positive[0].control_points
+    );
+    assert_eq!(
+        reversed.positive[0].control_points,
+        split.negative[0].control_points
+    );
+    let limited = split_surface_cell_by_plane(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldPolylineOptions {
+            max_work: report.work_used - 1,
+            ..options
+        },
+        0.,
+    )
+    .unwrap();
+    assert!(matches!(limited.outcome, Err(Refusal::ResourceLimit)));
+}
+
+#[test]
+fn closes_corner_to_corner_trims_and_rejects_a_boundary_only_section() {
+    use nurbs_core::{
+        editing::exact_projective::UvAxis,
+        trim::trim_domain::{Location, TrimDomain, exact_loop_joins},
+    };
+    let mut diagonal = surface(1, vec![0., 0., 1., 1.], &[0., -1.]);
+    diagonal.weights = vec![vec![1.; 2]; 2];
+    diagonal.control_points[0][1][2] = 1.;
+    diagonal.control_points[1][1][2] = 0.;
+    let options = SurfacePlaneWorldPolylineOptions {
+        span: [1, 1],
+        solve_axis: UvAxis::V,
+        max_xyz_error: 1e-12,
+        max_segments: 1,
+        max_work: WORK,
+    };
+    let split = split_surface_cell_by_plane(&diagonal, [0., 0., 1.], 0., options, 0.)
+        .unwrap()
+        .outcome
+        .unwrap();
+    for (loops, point) in [
+        (&split.negative, [0.75, 0.25]),
+        (&split.positive, [0.25, 0.75]),
+    ] {
+        assert_eq!(exact_loop_joins(loops).unwrap(), Some(true));
+        assert_eq!(loops[1].control_points.len(), 3);
+        let d = TrimDomain::new(&[loops.to_vec()], 1e-8)
+            .unwrap()
+            .classify_point(point, 100)
+            .unwrap();
+        assert_eq!(d.location, Location::Inside);
+        assert_eq!(d.winding, Some(1));
+    }
+    let mut edge = surface(1, vec![0., 0., 1., 1.], &[0., 1.]);
+    edge.weights = vec![vec![1.; 2]; 2];
+    let report = split_surface_cell_by_plane(
+        &edge,
+        [0., 0., 1.],
+        0.,
+        SurfacePlaneWorldPolylineOptions {
+            solve_axis: UvAxis::U,
+            ..options
+        },
+        1e-6,
+    )
+    .unwrap();
+    assert!(matches!(report.outcome, Err(Refusal::UnprovedIdentity)));
 }

@@ -252,3 +252,8 @@ pub use store_pair::{
     StoredSurfacePlaneSectionPair, StoredSurfacePlaneSectionPairReport,
     store_surface_plane_section_pair,
 };
+
+mod split_trim;
+pub use split_trim::{
+    SurfacePlaneTrimSplit, SurfacePlaneTrimSplitReport, split_surface_cell_by_plane,
+};

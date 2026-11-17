@@ -11,7 +11,7 @@ use crate::{
         exact_projective::pcurve_gap::certify_pcurve_edge_gap,
     },
 };
-use num_traits::{ToPrimitive, Zero};
+use num_traits::{Signed, ToPrimitive, Zero};
 
 #[derive(Clone, Debug)]
 pub struct StoredSurfacePlaneSectionPair {
@@ -38,6 +38,34 @@ pub fn store_surface_plane_section_pair(
     options: SurfacePlaneWorldPolylineOptions,
     correspondence_tolerance: f64,
 ) -> Result<StoredSurfacePlaneSectionPairReport> {
+    let domain = validate_pair(surface, normal, offset, options, correspondence_tolerance)?;
+    let mut work = Work {
+        used: 0,
+        limit: options.max_work,
+    };
+    let outcome = store_section(
+        surface,
+        normal,
+        offset,
+        options,
+        correspondence_tolerance,
+        domain,
+        &mut work,
+    )
+    .map(|(pair, _)| pair);
+    Ok(StoredSurfacePlaneSectionPairReport {
+        outcome,
+        work_used: work.used,
+    })
+}
+
+pub(super) fn validate_pair(
+    surface: &Surface,
+    normal: [f64; 3],
+    offset: f64,
+    options: SurfacePlaneWorldPolylineOptions,
+    correspondence_tolerance: f64,
+) -> Result<[[f64; 2]; 2]> {
     validate(surface, normal, offset, options.max_work)?;
     check(
         options.max_xyz_error.is_finite()
@@ -47,44 +75,48 @@ pub fn store_surface_plane_section_pair(
             && (1..=255).contains(&options.max_segments),
         "Section pairing needs finite tolerances and 1..255 segments",
     )?;
-    let domain = cell_domain(surface, options.span)?;
-    let mut work = Work {
-        used: 0,
-        limit: options.max_work,
+    cell_domain(surface, options.span)
+}
+
+pub(super) fn store_section(
+    surface: &Surface,
+    normal: [f64; 3],
+    offset: f64,
+    options: SurfacePlaneWorldPolylineOptions,
+    correspondence_tolerance: f64,
+    domain: [[f64; 2]; 2],
+    work: &mut Work,
+) -> PResult<(StoredSurfacePlaneSectionPair, bool)> {
+    let tolerance = work.lift(options.max_xyz_error)?;
+    let correspondence_tolerance = work.lift(correspondence_tolerance)?;
+    let tracing_budget = if correspondence_tolerance.is_zero() {
+        &tolerance
+    } else {
+        (&tolerance).min(&correspondence_tolerance)
     };
-    let outcome = (|| {
-        let tolerance = work.lift(options.max_xyz_error)?;
-        let correspondence_tolerance = work.lift(correspondence_tolerance)?;
-        let tracing_budget = if correspondence_tolerance.is_zero() {
-            &tolerance
-        } else {
-            (&tolerance).min(&correspondence_tolerance)
-        };
-        let half = work.op(tracing_budget, &Q::from_integer(2.into()), |a, b| a / b)?;
-        let world = build(surface, normal, offset, options, domain, &half, &mut work)?;
-        let spatial = store_world(&world, normal, offset, &tolerance, &mut work)?;
-        let pcurve = store_uv(&world.uv, domain, &mut work)?;
-        if !certify_pcurve_edge_gap(
-            surface,
-            &pcurve,
-            &spatial.curve,
-            &correspondence_tolerance,
-            &mut work,
-        )
-        .map_err(trace_refusal)?
-        {
-            return Err(Refusal::UnprovedIdentity);
-        }
-        Ok(StoredSurfacePlaneSectionPair {
+    let half = work.op(tracing_budget, &Q::from_integer(2.into()), |a, b| a / b)?;
+    let world = build(surface, normal, offset, options, domain, &half, work)?;
+    let spatial = store_world(&world, normal, offset, &tolerance, work)?;
+    let pcurve = store_uv(&world.uv, domain, work)?;
+    if !certify_pcurve_edge_gap(
+        surface,
+        &pcurve,
+        &spatial.curve,
+        &correspondence_tolerance,
+        work,
+    )
+    .map_err(trace_refusal)?
+    {
+        return Err(Refusal::UnprovedIdentity);
+    }
+    Ok((
+        StoredSurfacePlaneSectionPair {
             spatial,
             pcurve,
             correspondence_tolerance,
-        })
-    })();
-    Ok(StoredSurfacePlaneSectionPairReport {
-        outcome,
-        work_used: work.used,
-    })
+        },
+        world.graph.derivative[0].is_positive(),
+    ))
 }
 
 fn store_uv(uv: &[[Q; 2]], domain: [[f64; 2]; 2], work: &mut Work) -> PResult<Curve> {
