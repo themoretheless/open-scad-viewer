@@ -5,14 +5,15 @@ use nurbs_core::{
             PlanarProjectionOutcome, PlanarSurfaceProjection, project_planar_surface,
         },
         exact_plane_intersection::{
-            BoundedPlanarBoundaryIntersection, ExactPlanarIntersectionSegment,
-            PlanarBoundaryIntersection, PlanarFaceContactPartition, PlanarIntersectionSegments,
-            PlanarSegmentStorage, StoredPlanarIntersection, SupportPlaneIntersection,
-            TrimmedPlanarIntersection, bound_planar_face_boundary_intersection,
-            build_planar_intersection_segments, classify_planar_face_contacts,
-            intersect_planar_face_boundaries, intersect_planar_face_boundary_contacts,
-            intersect_planar_supports, intersect_trimmed_planar_faces,
-            optimize_planar_intersection_segment_storage, refine_planar_face_boundary_extents,
+            AdaptiveBoundaryOptions, BoundaryResolution, BoundedPlanarBoundaryIntersection,
+            ExactPlanarIntersectionSegment, PlanarBoundaryIntersection, PlanarFaceContactPartition,
+            PlanarIntersectionSegments, PlanarSegmentStorage, StoredPlanarIntersection,
+            SupportPlaneIntersection, TrimmedPlanarIntersection,
+            bound_planar_face_boundary_intersection, build_planar_intersection_segments,
+            classify_planar_face_contacts, intersect_planar_face_boundaries,
+            intersect_planar_face_boundary_contacts, intersect_planar_supports,
+            intersect_trimmed_planar_faces, optimize_planar_intersection_segment_storage,
+            refine_planar_face_boundary_extents, resolve_planar_face_boundary_intersection,
             store_planar_intersection_segment, store_trimmed_planar_intersection,
         },
         planar_coplanar_ray::CoplanarRayPartitionOptions,
@@ -940,4 +941,86 @@ fn encloses_irrational_isolated_boundary_contacts_without_marking_them_exact() {
             nurbs_core::editing::exact_derivative::Refusal::ResourceLimit
         )
     );
+}
+
+#[test]
+fn resolves_uncertain_boundary_length_in_xyz_and_preserves_earlier_bounds() {
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.loops = vec![folded_boundary(1.)];
+    b.loops = vec![rectangle([1.25, 2.], [0., 1.], false)];
+    // Lift the x axis to the line [x, 0, x], so physical length is sqrt(2) times its clock width.
+    a.projection.omitted_axis = 2;
+    a.projection.retained_axes = [0, 1];
+    a.projection.slopes = [q(1, 1), q(0, 1)];
+    // Shear the right contour so its bottom edge follows z = x.
+    for point in b
+        .loops
+        .iter_mut()
+        .flatten()
+        .flat_map(|curve| &mut curve.control_points)
+    {
+        point[1] += point[0];
+    }
+    let opts = AdaptiveBoundaryOptions {
+        xyz_tolerance: 1e-7,
+        max_passes: 25,
+        max_work: WORK,
+    };
+    let first = resolve_planar_face_boundary_intersection(
+        &a,
+        &b,
+        AdaptiveBoundaryOptions {
+            max_passes: 1,
+            ..opts
+        },
+    )
+    .unwrap();
+    assert_eq!(first.resolution, BoundaryResolution::PassLimit);
+    assert_eq!(first.passes, 1);
+    let refined = resolve_planar_face_boundary_intersection(&a, &b, opts).unwrap();
+    assert_eq!(refined.resolution, BoundaryResolution::WithinTolerance);
+    assert!(refined.passes > 1);
+    let BoundedPlanarBoundaryIntersection::Transverse {
+        proven, possible, ..
+    } = &refined.bounds
+    else {
+        panic!("{:?}", refined.bounds);
+    };
+    let squared = (&possible[0][1] - &proven[0][1]).pow(2) * q(2, 1);
+    assert_eq!(refined.max_unresolved_length_squared, Some(squared));
+    let limited = resolve_planar_face_boundary_intersection(
+        &a,
+        &b,
+        AdaptiveBoundaryOptions {
+            max_work: first.work_used,
+            ..opts
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        limited.resolution,
+        BoundaryResolution::Refused(nurbs_core::editing::exact_derivative::Refusal::ResourceLimit)
+    );
+    assert_eq!(limited.bounds, first.bounds);
+    assert_eq!(limited.passes, 1);
+}
+
+#[test]
+fn exact_overlap_meets_the_geometric_target_on_first_pass() {
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.loops = vec![folded_boundary(0.)];
+    b.loops = vec![rectangle([1., 2.], [0., 1.], false)];
+    let report = resolve_planar_face_boundary_intersection(
+        &a,
+        &b,
+        AdaptiveBoundaryOptions {
+            xyz_tolerance: 1e-15,
+            max_passes: 4,
+            max_work: WORK,
+        },
+    )
+    .unwrap();
+    assert_eq!(report.resolution, BoundaryResolution::WithinTolerance);
+    assert_eq!(report.passes, 1);
+    assert_eq!(report.max_unresolved_length_squared, Some(q(0, 1)));
 }

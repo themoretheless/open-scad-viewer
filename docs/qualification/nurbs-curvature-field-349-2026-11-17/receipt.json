@@ -1,0 +1,36 @@
+{
+  "id": "NURBS-0349",
+  "testedBase": "3dbe8a182eecd41ea2e777b44792edfaefa4da8a",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_support_intersection_contracts",
+    "--test",
+    "exact_coplanar_face_ray_contracts",
+    "--test",
+    "exact_pcurve_line_contact_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 30,
+  "scope": [
+    "Refine the maximum unresolved connected boundary interval against an exact squared XYZ length target.",
+    "Successful passes enlarge lower coverage and shrink upper coverage. The largest remaining connected interval is measured in XYZ. Stopping after a successful pass retains certified coverage."
+  ],
+  "logSha256": "d70de7fc7fbdc76243ec3ccefea2540e4feadb21f8a25ef903344f52e29f3e59",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_plane_intersection.rs": "4330d045fc2a244d7a02398462741191f8de502d19ed2afe400cb2720f974ee6",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs": "258cd74416c18ffd1b6e0b2fe34376402282fd9e3d6684e1efbdd49b43bd2949",
+    "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs": "8ecc32973151d7420dc5105546669a51ea0b083b733e0e2120a6eef62e90a951",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "55137e1800836f53aa2255c6bcbcbe539e97f81560cfbd5eb263775493dadfe8",
+    "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs": "3e645a84fc2afe35084b9dadaa0840f83d72f35c40a313b2b2c13a4ceea862cc",
+    "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/adaptive.rs": "8eb99d88c5545bb785ce3caee0d8e69f2146fdcacf25d5fd1fbf56cbead144e4",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation/range_bounds.rs": "d56aa645b4abb0b24bbb79276eea168f4741ce88e0f9f11a03b31bce23696162"
+  }
+}

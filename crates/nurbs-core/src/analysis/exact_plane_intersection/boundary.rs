@@ -167,7 +167,7 @@ pub fn bound_planar_face_boundary_intersection(
         limit: max_work,
     };
     let outcome = match support.outcome {
-        SupportPlaneIntersection::Line(line) => bound_shared(left, right, line, width, &mut work)?,
+        SupportPlaneIntersection::Line(line) => bound_shared(left, right, &line, width, &mut work)?,
         SupportPlaneIntersection::Parallel => BoundedPlanarBoundaryIntersection::Parallel,
         SupportPlaneIntersection::Coincident => BoundedPlanarBoundaryIntersection::Coincident,
         SupportPlaneIntersection::ResourceLimit => {
@@ -183,21 +183,27 @@ pub fn bound_planar_face_boundary_intersection(
 fn bound_shared(
     left: &ProjectedTrimmedFace,
     right: &ProjectedTrimmedFace,
-    line: ExactSupportLine,
+    line: &ExactSupportLine,
     width: f64,
     work: &mut Work,
 ) -> Result<BoundedPlanarBoundaryIntersection> {
-    let a = match bound_boundary_ranges(left, &line, width, work)? {
+    let a = match bound_boundary_ranges(left, line, width, work)? {
         Ok(ranges) => ranges,
         Err(reason) => return Ok(BoundedPlanarBoundaryIntersection::Refused(reason)),
     };
-    let b = match bound_boundary_ranges(right, &line, width, work)? {
+    let b = match bound_boundary_ranges(right, line, width, work)? {
         Ok(ranges) => ranges,
         Err(reason) => return Ok(BoundedPlanarBoundaryIntersection::Refused(reason)),
     };
     Ok(BoundedPlanarBoundaryIntersection::Transverse {
-        line,
+        line: line.clone(),
         proven: intersect_bands(&a.proven, &b.proven, true),
         possible: intersect_bands(&a.possible, &b.possible, true),
     })
 }
+
+mod adaptive;
+pub use adaptive::{
+    AdaptiveBoundaryOptions, AdaptiveBoundaryReport, BoundaryResolution,
+    resolve_planar_face_boundary_intersection,
+};
