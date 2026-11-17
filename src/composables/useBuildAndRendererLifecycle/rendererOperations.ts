@@ -2,7 +2,7 @@ import { meshTransferables } from '../../core/mesh'
 import { type PublishedGeometryBuild } from '../../app/buildCoordinator'
 import { planGeometryPublication } from '../../app/buildPromotionPolicy'
 import { diagnosticFromBuildError } from '../../language/editorDiagnostics'
-import { presentLanguageError } from '../../i18n/kernelErrors'
+import { presentBuildError } from '../../i18n/kernelErrors'
 import { withSelectionSurfaces } from '../../kernel/meshSurfaceGroups'
 import { planScenePublication } from '../../app/scenePublication'
 import { reconcileCarriedSelection, SceneIntentGenerations } from '../../app/sceneDeltaPublication'
@@ -240,7 +240,7 @@ export function createRendererOperations(context: RendererOperationsContext) {
       context.options.error.value =
         response.error.code === 'WORKER_TIMEOUT'
           ? context.options.translate('buildTimeout')
-          : presentLanguageError(response.error, context.options.translate)
+          : presentBuildError(response.error, context.options.lang.value, context.options.translate)
       context.options.editorDiagnostic.value = diagnosticFromBuildError(source, response.error)
       return
     }

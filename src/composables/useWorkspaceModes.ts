@@ -11,6 +11,8 @@ import {
   polygonToMeshObject,
   sceneMeshesToSolidDocument,
 } from '../kernel/solidBridge'
+import { translate } from '../i18n/appStrings'
+import { errorCode, presentBuildError } from '../i18n/kernelErrors'
 import { SOURCE_FILE_EXTENSION } from '../language/rushFrontendDetect'
 
 export interface GroupSourceRequest {
@@ -115,7 +117,10 @@ export function useWorkspaceModes(options: UseWorkspaceModesOptions) {
       if (groupEdit.value?.name === request.name && groupEdit.value.source === request.source) groupEdit.value = null
       return true
     } catch (caught) {
-      if (!abort.signal.aborted) error.value = message(caught)
+      if (!abort.signal.aborted)
+        error.value = presentBuildError({ code: errorCode(caught), message: message(caught) }, lang.value, key =>
+          translate(lang.value, key),
+        )
       return false
     } finally {
       if (solidBuildAbort === abort) solidBuildAbort = null

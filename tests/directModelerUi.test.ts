@@ -13145,6 +13145,23 @@ it('marks the chamfer size field and the body when the exact chamfer is refused'
   await flushClearance()
   expect(invalidRows(ui)).toEqual([])
 })
+it('C4 localizes a geometry worker failure instead of showing its raw English text', async () => {
+  previewWorkerRun.mockImplementation(job =>
+    job.kind === 'bodyEdit'
+      ? Promise.reject(Object.assign(Error('Malformed kernel job step'), { code: 'GEOMETRY_PROTOCOL' }))
+      : undefined,
+  )
+  const ui = await mount()
+  await ui.click('Cube')
+  await ui.click('Edges')
+  await ui.pointer(ui.all(ui.svg()).find(n => n.tag === 'polyline' && n.props.onPointerdown)!)
+  await ui.click('Chamfer 3D')
+  await flushClearance()
+  const alert = ui.all().find(n => n.props.id === 'advanced-command-error')!
+  expect(ui.text(alert)).toContain('A valid result could not be received (GEOMETRY_PROTOCOL).')
+  expect(ui.text(alert)).toContain('Retry the calculation.')
+  expect(ui.text(alert)).not.toContain('Malformed kernel job step')
+})
 it('marks the end radius field when a variable fillet is refused across the worker boundary', async () => {
   previewWorkerRun.mockImplementation(job =>
     job.kind === 'bodyEdit'

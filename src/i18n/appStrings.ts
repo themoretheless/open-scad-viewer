@@ -300,6 +300,26 @@ export const APP_STRINGS: Record<Language, Record<string, string>> = {
     'languageError.nonManifold': 'Полученная геометрия не замкнута (не manifold). Исправьте исходные данные.',
     'languageError.empty': 'Файл не содержит геометрии. Проверьте файл.',
     'languageError.failed': 'Не удалось вычислить вызов. Проверьте аргументы.',
+    'kernelError.exactSolidLimit': 'Группа точных тел слишком велика ({code}).',
+    'kernelError.exactSolidNotBrep': 'Код группы дал сетку, а не точное B-rep тело ({code}).',
+    'kernelError.languageContract': 'Версия языкового контракта не поддерживается вычислителем ({code}).',
+    'kernelStep.splitGroup': 'Разделите группу на несколько групп поменьше.',
+    'kernelStep.useSolidModules': 'Используйте в группе только примитивы и операции, которые строят B-rep.',
+    'openScadWarning.color':
+      'Цвет задан неверно, использовано ближайшее допустимое значение. Проверьте имя цвета или каналы 0..1.',
+    'openScadWarning.fragments':
+      'Параметр разбиения $fn/$fa/$fs исправлен до допустимого значения. Задайте конечное значение не меньше минимума.',
+    'openScadWarning.children': 'Выбор дочерних объектов children() частично пропущен. Проверьте индексы и диапазон.',
+    'openScadWarning.argumentDefaulted':
+      'Аргумент вызова некорректен, использовано значение по умолчанию. Исправьте аргумент.',
+    'openScadWarning.engineLimit':
+      'Достигнут предел вычислителя, деталь уменьшена. Упростите модель или уменьшите параметры.',
+    'openScadWarning.primitive': 'Часть точек или граней примитива пропущена. Проверьте точки и индексы.',
+    'openScadWarning.resize': 'resize() не применён к части осей. Задайте вектор размеров и ненулевой размер по оси.',
+    'openScadWarning.deprecated': 'Использован устаревший параметр. Замените его актуальным.',
+    'openScadWarning.ignoredArgument': 'Один из аргументов не действует. Уберите лишний аргумент.',
+    'openScadWarning.dxfQuery':
+      'Запрос к DXF не выполнен, использовано значение по умолчанию. Проверьте файл DXF, слой и имя.',
     'kernelStep.reduceRadius': 'Уменьшите радиус или выберите другие рёбра.',
     'kernelStep.reduceChamfer': 'Уменьшите размер фаски или выберите другие рёбра.',
     'kernelStep.fixCurve': 'Проверьте узлы, веса и контрольные точки кривой.',
@@ -618,6 +638,25 @@ export const APP_STRINGS: Record<Language, Record<string, string>> = {
     'languageError.nonManifold': 'The resulting geometry is not closed (not manifold). Fix the source data.',
     'languageError.empty': 'The file contains no geometry. Check the file.',
     'languageError.failed': 'The call could not be evaluated. Check its arguments.',
+    'kernelError.exactSolidLimit': 'The exact-solid group is too large ({code}).',
+    'kernelError.exactSolidNotBrep': 'The group source produced a mesh, not an exact B-rep body ({code}).',
+    'kernelError.languageContract': 'The evaluator does not support this language contract version ({code}).',
+    'kernelStep.splitGroup': 'Split the group into several smaller groups.',
+    'kernelStep.useSolidModules': 'Use only primitives and operations that build B-rep in the group.',
+    'openScadWarning.color':
+      'A color value was invalid and the nearest valid value was used. Check the color name or the 0..1 channels.',
+    'openScadWarning.fragments':
+      'A $fn/$fa/$fs resolution value was corrected. Use a finite value at or above the minimum.',
+    'openScadWarning.children': 'Part of the children() selection was skipped. Check the indexes and the range.',
+    'openScadWarning.argumentDefaulted': 'A call argument was invalid and its default was used. Fix the argument.',
+    'openScadWarning.engineLimit':
+      'An evaluator limit was reached and detail was reduced. Simplify the model or reduce the parameters.',
+    'openScadWarning.primitive': 'Some primitive points or faces were skipped. Check the points and indexes.',
+    'openScadWarning.resize':
+      'resize() was not applied on some axes. Pass a size vector and a nonzero extent on each axis.',
+    'openScadWarning.deprecated': 'A legacy parameter was used. Replace it with the current one.',
+    'openScadWarning.ignoredArgument': 'One of the arguments has no effect. Remove the extra argument.',
+    'openScadWarning.dxfQuery': 'A DXF query failed and a default value was used. Check the DXF file, layer and name.',
     'kernelStep.reduceRadius': 'Reduce the radius or select other edges.',
     'kernelStep.reduceChamfer': 'Reduce the chamfer size or select other edges.',
     'kernelStep.fixCurve': 'Check the curve knots, weights and control points.',

@@ -46,6 +46,7 @@ import { BOX_DEFAULTS, generateBox } from './app/boxGenerator'
 import { BUSHING_DEFAULTS, generateBushing } from './app/bushingGenerator'
 import { SPINNER_DEFAULTS, SPINNER_SAFE_DEFAULTS, generateSpinner, generateSpinnerSafe } from './app/spinnerGenerator'
 import { translate, type TranslateParams } from './i18n/appStrings'
+import { presentBuildWarning } from './i18n/kernelErrors'
 import { useAppearance } from './composables/useAppearance'
 import { useEditorFind } from './composables/useEditorFind'
 import { createTextareaEditorAdapter } from './editor/EditorAdapter'
@@ -759,7 +760,7 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
           <template v-else>{{ error }}</template>
         </div>
         <div v-if="warnings.length" class="message warning" role="status">
-          <div v-for="warning in warnings" :key="warning">⚠ {{ warning }}</div>
+          <div v-for="warning in warnings" :key="warning">⚠ {{ presentBuildWarning(warning, t) }}</div>
         </div>
 
         <FormaRegion :source="editorStatsUi" :locale="lang" :state="{ meshesLabel: t('meshes'), meshesValue: formatNumber(meshCount), trianglesLabel: t('triangles'), trianglesValue: formatNumber(triangleCount), hasMeshes: meshCount > 0, volumeLabel: t('volume'), volumeValue: formatNumber(volume, 2), areaLabel: t('area'), areaValue: formatNumber(surfaceArea, 2), statusClass: ['status', stale ? 'stale' : '', rendering ? 'busy' : '', error ? 'failed' : ''].filter(Boolean).join(' '), statusSummary: `${statusText} · ${formatNumber(renderDuration, 0)} ms` }" />

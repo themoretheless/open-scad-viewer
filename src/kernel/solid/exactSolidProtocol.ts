@@ -12,7 +12,7 @@ export interface ExactSolidRequest {
 
 export type ExactSolidResponse =
   | { kind: 'exact-solid'; version: 1; ok: true; document: string }
-  | { kind: 'exact-solid'; version: 1; ok: false; error: { name: string; message: string } }
+  | { kind: 'exact-solid'; version: 1; ok: false; error: { name: string; message: string; code?: string } }
 
 export function isExactSolidRequest(value: unknown): value is ExactSolidRequest {
   if (!value || typeof value !== 'object') return false
@@ -35,7 +35,8 @@ export function isExactSolidResponse(value: unknown): value is ExactSolidRespons
   if (response.ok !== false || !response.error || typeof response.error !== 'object') return false
   const error = response.error as Record<string, unknown>
   return (
-    Object.keys(error).length === 2 &&
+    Object.keys(error).length === (Object.hasOwn(error, 'code') ? 3 : 2) &&
+    (!Object.hasOwn(error, 'code') || (typeof error.code === 'string' && /^[A-Z][A-Z0-9_]{0,79}$/.test(error.code))) &&
     typeof error.name === 'string' &&
     error.name.length <= 100 &&
     typeof error.message === 'string' &&

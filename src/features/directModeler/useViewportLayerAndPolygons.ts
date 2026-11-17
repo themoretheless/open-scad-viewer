@@ -1,4 +1,5 @@
 import type { DirectExtrusionOperation } from '../../app/directExtrusion'
+import { subshapeTriangleHue } from './invalidSubshape'
 import { createViewportOperations } from './useViewportLayerAndPolygons/viewportOperations'
 import {
   computed,
@@ -42,6 +43,8 @@ export interface UseViewportLayerAndPolygonsOptions {
   hovered: Ref<string>
   /** Scene ids a failed calculation points at (selection state `invalid`); tinted through the per-triangle hue hook. */
   invalidIds?: Readonly<Ref<readonly string[]>>
+  /** C4: refused faces/edges as working-mesh triangles per body; tinted instead of the whole body. */
+  invalidTriangles?: Readonly<Ref<ReadonlyMap<string, ReadonlySet<number>>>>
   extrusionMode: Ref<DirectExtrusionOperation>
   previewBody: ShallowRef<ReturnType<typeof directExtrusionTool> | null>
   previewReplacesTarget: ComputedRef<boolean>
@@ -342,24 +345,33 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
       const display = displayMeshFor(b)
       const flat = (display.flat ??= smoothTriangleList(display.mesh.positions, display.mesh.indices))
       const count = display.mesh.indices.length / 3
-      const bodyHue = options.invalidIds?.value.includes(b.id)
-        ? INVALID_HUE
-        : subtract?.a.includes(b.id)
-          ? 45
-          : subtract?.b.includes(b.id)
-            ? 350
-            : options.selectedIds.value.includes(b.id)
-              ? 266
-              : options.hovered.value === b.id
-                ? 190
-                : b.material
-                  ? -1
-                  : 220
+      const invalidTriangles = options.invalidTriangles?.value.get(b.id)
+      const bodyHue =
+        !invalidTriangles?.size && options.invalidIds?.value.includes(b.id)
+          ? INVALID_HUE
+          : subtract?.a.includes(b.id)
+            ? 45
+            : subtract?.b.includes(b.id)
+              ? 350
+              : options.selectedIds.value.includes(b.id)
+                ? 266
+                : options.hovered.value === b.id
+                  ? 190
+                  : b.material
+                    ? -1
+                    : 220
       const faceHighlight = options.selectedBody.value?.id === b.id && options.pickMode.value === 'face'
       const hues = new Float32Array(count)
       for (let i = 0; i < count; i++) {
         const working = display.map ? display.map[i]! : i
-        hues[i] = preview ? -1 : faceHighlight && options.selectedFaceTriangles.value.has(working) ? 40 : bodyHue
+        hues[i] = preview
+          ? -1
+          : subshapeTriangleHue(
+              working,
+              faceHighlight && options.selectedFaceTriangles.value.has(working) ? 40 : bodyHue,
+              invalidTriangles,
+              INVALID_HUE,
+            )
       }
       return [
         {

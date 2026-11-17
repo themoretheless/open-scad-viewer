@@ -1,4 +1,5 @@
 import { parseDirectDocumentAsync, type DirectBody } from '../../app/directModeling'
+import { codedError } from '../../i18n/kernelErrors'
 import { warmGeometryKernel } from '../geometry/kernel'
 import {
   EXACT_SOLID_TIMEOUT_MS,
@@ -43,16 +44,17 @@ export function buildExactSolidsInWorker(
       else resolve(bodies!)
     }
     const abort = () => finish(new DOMException('Operation cancelled', 'AbortError'))
-    const crash: EventListener = () => finish(new Error('Exact-solid worker stopped unexpectedly.'))
+    const crash: EventListener = () => finish(codedError('CAD_CRASH', 'Exact-solid worker stopped unexpectedly.'))
     const message: EventListener = async event => {
       if (settled) return
       worker.removeEventListener('message', message)
       try {
         const response: unknown = (event as MessageEvent).data
-        if (!isExactSolidResponse(response)) throw new Error('Invalid exact-solid worker response.')
+        if (!isExactSolidResponse(response)) throw codedError('CAD_PROTOCOL', 'Invalid exact-solid worker response.')
         if (!response.ok) {
-          const error = new Error(response.error.message)
+          const error: Error & { code?: string } = new Error(response.error.message)
           error.name = response.error.name
+          if (response.error.code) error.code = response.error.code
           throw error
         }
         // Validation inspects the returned B-rep in the receiving realm too.
@@ -66,7 +68,7 @@ export function buildExactSolidsInWorker(
           document.surfaces?.length ||
           document.bodies.some(body => !body.brep)
         )
-          throw new Error('Worker returned non-solid geometry.')
+          throw codedError('EXACT_SOLID_NOT_BREP', 'Worker returned non-solid geometry.')
         finish(undefined, document.bodies)
       } catch (error) {
         finish(error)
@@ -77,7 +79,7 @@ export function buildExactSolidsInWorker(
     worker.addEventListener('messageerror', crash)
     signal?.addEventListener('abort', abort, { once: true })
     timer = setTimeout(
-      () => finish(new Error('Exact-solid build exceeded its 120 second limit.')),
+      () => finish(codedError('CAD_TIMEOUT', 'Exact-solid build exceeded its 120 second limit.')),
       EXACT_SOLID_TIMEOUT_MS,
     )
     if (signal?.aborted) {

@@ -27,6 +27,7 @@ import SceneObjectControls from '../components/SceneObjectControls.svt'
 import CommandActions from '../components/CommandActions.svt'
 import { workbenchCssVars, workbenchLayout } from '../ui/workbenchLayout'
 import { DirectInputError, presentKernelError } from '../i18n/kernelErrors'
+import { invalidSubshapeTriangles } from './directModeler/invalidSubshape'
 import { resolveSelectionState, SELECTION_STATES, SELECTION_STATE_ORDER, selectionStateLabel, type SelectionState } from '../ui/selectionStates'
 import { connectedEdgeChain } from '../app/edgeSelection'
 import CadQuantityInput from '../components/CadQuantityInput.svt'
@@ -386,7 +387,7 @@ const previewWorker=createSolidPreviewWorker()
 let previewGeneration=0,previewIdentity=''
 const solidPreviewResult=shallowRef<DirectDocument|null>(null), previewPending=ref(false)
 // C4: the inspector field and scene objects a failed calculation points at.
-const errorField=ref(''), invalidSceneIds=shallowRef<readonly string[]>([])
+const errorField=ref(''), invalidSceneIds=shallowRef<readonly string[]>([]), invalidTriangles=shallowRef<ReadonlyMap<string,ReadonlySet<number>>>(new Map())
 function markError(error:unknown){
  const presented=presentKernelError(error,props.locale==='ru'?'ru':'en')
  // Curve/surface refusals of the NURBS commands point at their chosen inputs, others at the current selection.
@@ -400,8 +401,12 @@ function markError(error:unknown){
   :[]
  errorField.value=presented.field??''
  invalidSceneIds.value=presented.targetIds.length?presented.targetIds:fallback
+ // C4: a face/edge refusal tints only the selected subshape in the GPU viewport.
+ const body=selectedBody.value
+ const triangles=body&&isTopologyReadyFor(body)?invalidSubshapeTriangles(presented,topology.value,{faceIndexes:openingFaces.value.length?openingFaces.value:[faceIndex.value],edgeIndexes:edgeIndexes.value.length?edgeIndexes.value:[edgeIndex.value]}):[]
+ invalidTriangles.value=body&&triangles.length?new Map([[body.id,new Set(triangles)]]):new Map()
 }
-function clearErrorMark(){errorField.value='';invalidSceneIds.value=[]}
+function clearErrorMark(){errorField.value='';invalidSceneIds.value=[];invalidTriangles.value=new Map()}
 // keepPreview: a parameter edit of the same operation leaves the last preview on screen until its replacement arrives (no blinking).
 function invalidateSolidPreview(keepPreview=false) {
  clearTimeout(previewTimer);previewGeneration++;previewWorker.cancel();previewPending.value=false
@@ -1061,6 +1066,7 @@ const {
   pickMode,
   hovered,
   invalidIds: invalidSceneIds,
+  invalidTriangles,
   extrusionMode,
   previewBody,
   previewReplacesTarget,
