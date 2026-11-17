@@ -3131,3 +3131,96 @@ fn swept_material_relation_flags_zero_radius_boundary_contact() {
         assert_eq!(report.clearance.nearest.distance_squared_mm2, q(0));
     }
 }
+
+#[test]
+fn first_contact_encloses_an_irrational_parameter_on_the_first_hit_span() {
+    use brep_core::{
+        analysis::bounded_polyhedral_swept_path_first_contact,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let path = [
+        [q(-2, 1), q(3, 1), q(5, 2)],
+        [q(-1, 1), q(3, 1), q(5, 2)],
+        [q(1, 1), q(3, 1), q(5, 2)],
+    ];
+    let report =
+        bounded_polyhedral_swept_path_first_contact(solid, &path, &q(1, 1), 1e-7, 1_000_000)
+            .unwrap();
+    let contact = report.contact.unwrap();
+    assert_eq!(contact.span, 1);
+    let [lo, hi] = contact.parameter_bounds;
+    let squared_gap = |t: &Q| (q(1, 1) - q(2, 1) * t).pow(2) + q(1, 4);
+    assert!(squared_gap(&lo) > q(1, 1) && squared_gap(&hi) <= q(1, 1));
+    assert!(hi - lo <= Q::from_float(1e-7).unwrap());
+    assert!(
+        bounded_polyhedral_swept_path_first_contact(
+            solid,
+            &path,
+            &q(1, 1),
+            1e-7,
+            report.exact_work
+        )
+        .is_ok()
+    );
+    assert!(
+        bounded_polyhedral_swept_path_first_contact(
+            solid,
+            &path,
+            &q(1, 1),
+            1e-7,
+            report.exact_work - 1
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn first_contact_includes_tangency_and_initial_contact() {
+    use brep_core::{
+        analysis::bounded_polyhedral_swept_path_first_contact,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x| [q(x, 1), q(3, 1), q(3, 1)];
+    let path = [p(-1), p(5)];
+    let report =
+        bounded_polyhedral_swept_path_first_contact(solid, &path, &q(1, 1), 1e-6, 1_000_000)
+            .unwrap();
+    let [lo, hi] = report.contact.unwrap().parameter_bounds;
+    assert!(lo <= q(1, 6) && q(1, 6) <= hi);
+    assert!(
+        bounded_polyhedral_swept_path_first_contact(solid, &path, &q(1, 2), 1e-6, 1_000_000)
+            .unwrap()
+            .contact
+            .is_none()
+    );
+    let isolated = [[q(-2, 1), q(0, 1), q(15, 4)], [q(0, 1), q(-2, 1), q(15, 4)]];
+    let hit =
+        bounded_polyhedral_swept_path_first_contact(solid, &isolated, &q(9, 4), 1e-6, 1_000_000)
+            .unwrap()
+            .contact
+            .unwrap();
+    assert_eq!(hit.parameter_bounds[1], q(1, 2));
+    assert!(hit.parameter_bounds[0] < q(1, 2));
+    let initial = bounded_polyhedral_swept_path_first_contact(
+        solid,
+        &[p(1), p(5)],
+        &q(1, 1),
+        1e-6,
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(
+        initial.contact.unwrap().parameter_bounds,
+        [q(0, 1), q(0, 1)]
+    );
+}

@@ -273,3 +273,86 @@ fn delta(a: &[Q; 3], b: &[Q; 3]) -> [Q; 3] {
 fn at(origin: &[Q; 3], direction: &[Q; 3], t: &Q) -> [Q; 3] {
     std::array::from_fn(|i| &origin[i] + t * &direction[i])
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PolyhedralSweptPathContact {
+    /// Zero-based span, with the earlier span chosen at a shared vertex.
+    pub span: usize,
+    /// Outward bounds for the first local contact parameter in [0, 1].
+    pub parameter_bounds: [Q; 2],
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PolyhedralSweptPathFirstContact {
+    /// No contact means the swept balls never meet the retained boundary.
+    pub contact: Option<PolyhedralSweptPathContact>,
+    pub exact_work: u64,
+}
+
+/// Enclose the first time a closed swept ball meets a retained boundary.
+/// The search uses exact prefix minimum distance, so even a single instant
+/// of tangency counts. Parameter width is local to the first contacting span.
+pub fn bounded_polyhedral_swept_path_first_contact(
+    solid: &QualifiedClosedSolid,
+    centers_mm: &[[Q; 3]],
+    radius_mm: &Q,
+    max_parameter_width: f64,
+    max_exact_work: u64,
+) -> Result<PolyhedralSweptPathFirstContact> {
+    let radius_squared = squared_radius(radius_mm)?;
+    let width = super::super::enclosure_width(max_parameter_width)?;
+    if centers_mm.len() < 2 {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Sweep path requires at least two centers",
+        ));
+    }
+    let mut remaining = max_exact_work;
+    let faces = prepare_faces(solid, &mut remaining)?;
+    for center in centers_mm {
+        spend(&mut remaining, 1)?;
+        validate_point(center)?;
+    }
+    let initial = super::nearest_boundary(&faces, &centers_mm[0], &mut remaining)?;
+    let mut contact = if initial.distance_squared_mm2 <= radius_squared {
+        Some(PolyhedralSweptPathContact {
+            span: 0,
+            parameter_bounds: [Q::zero(), Q::zero()],
+        })
+    } else {
+        None
+    };
+    if contact.is_none() {
+        for (span, pair) in centers_mm.windows(2).enumerate() {
+            let [start, end] = [&pair[0], &pair[1]];
+            let sweep = swept_segment(&faces, start, end, &radius_squared, &mut remaining)?;
+            if sweep.clearance == Ordering::Greater {
+                continue;
+            }
+            let direction = delta(end, start);
+            let (mut lo, mut hi) = (Q::zero(), Q::one());
+            let two = Q::from_integer(2.into());
+            while &hi - &lo > width {
+                spend(&mut remaining, 16)?;
+                let mid = (&lo + &hi) / &two;
+                let center = at(start, &direction, &mid);
+                let prefix =
+                    swept_segment(&faces, start, &center, &radius_squared, &mut remaining)?;
+                if prefix.clearance == Ordering::Greater {
+                    lo = mid;
+                } else {
+                    hi = mid;
+                }
+            }
+            contact = Some(PolyhedralSweptPathContact {
+                span,
+                parameter_bounds: [lo, hi],
+            });
+            break;
+        }
+    }
+    Ok(PolyhedralSweptPathFirstContact {
+        contact,
+        exact_work: max_exact_work - remaining,
+    })
+}
