@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0598",
+  "testedBase": "ef657181a3fe0da4ec672bcb2a1e7e1cddbaaf7f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 180,
+  "scope": [
+    "Sum consistently oriented outer and inner wire integrals for one periodic patch under one cell budget.",
+    "Verify hole subtraction in canonical face orientation, both original winding choices, and complete bounds under shared cell limits."
+  ],
+  "logSha256": "ef1ba2b0e2a3156dc1a9ced5252d7b946766532e04091df3359eafb5fcd3c81f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "246cdf39fb4a99f043ca5f1db5c0bc32d591f4ae156a130f5788ad3bddd65f0c",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "e8e0918a347239b7fdac8bb4e2cf535ea4fca08f6ce4b6df8038e12f33c7aff6"
+  }
+}

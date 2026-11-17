@@ -6016,26 +6016,90 @@ impl PeriodicTrimInputEdges {
         tolerance: f64,
         max_cells: usize,
     ) -> Result<PeriodicTrimProjectedAreaBounds> {
-        use crate::distance_bounds::Interval;
-        crate::check(
-            tolerance.is_finite() && tolerance > 0. && (1..=100_000).contains(&max_cells),
-            "Periodic trim area needs positive finite tolerance and 1..100000 cells",
-        )?;
         let pieces = self.input_contour_pieces(contour)?;
-        let minimum_cells = pieces.len();
-        let mut report = PeriodicTrimProjectedAreaBounds {
-            bounds: None,
-            cells: 0,
-            minimum_cells,
-            within_tolerance: false,
-        };
-        if pieces.is_empty() || minimum_cells > max_cells {
-            return Ok(report);
-        }
+        bound_trim_projected_area(&[pieces], true, tolerance, max_cells)
+    }
 
-        let reversed = pieces[0].1.parameters[0] > pieces[0].1.parameters[1];
-        let mut stack = Vec::with_capacity(minimum_cells);
-        let share = tolerance / minimum_cells as f64;
+    /// Enclose the oriented projections of the patch selected by its outer
+    /// input contour. Canonical face orientation accounts for hole subtraction.
+    pub fn bound_input_patch_projected_area(
+        &self,
+        outer_contour: usize,
+        tolerance: f64,
+        max_cells: usize,
+    ) -> Result<PeriodicTrimProjectedAreaBounds> {
+        let mut loops = Vec::new();
+        if let Some(patches) = &self.geometry.patches {
+            crate::check(
+                patches.len() == self.sources.len(),
+                "Periodic trim area patch count differs",
+            )?;
+            for (patch, sources) in patches.iter().zip(&self.sources) {
+                if patch.patch.trim.contours.first() != Some(&outer_contour) {
+                    continue;
+                }
+                crate::check(
+                    loops.is_empty()
+                        && patch.loops.len() == sources.len()
+                        && patch.loops.len() == patch.patch.trim.contours.len(),
+                    "Periodic trim area patch has inconsistent loops",
+                )?;
+                for ((edges, sources), &contour) in patch
+                    .loops
+                    .iter()
+                    .zip(sources)
+                    .zip(&patch.patch.trim.contours)
+                {
+                    crate::check(
+                        !edges.is_empty()
+                            && edges.len() == sources.len()
+                            && sources.iter().all(|source| source.contour == contour),
+                        "Periodic trim area loop has inconsistent edge bindings",
+                    )?;
+                    loops.push(
+                        edges
+                            .iter()
+                            .zip(sources)
+                            .map(|(edge, source)| (&edge.curve, source))
+                            .collect(),
+                    );
+                }
+            }
+        }
+        bound_trim_projected_area(&loops, false, tolerance, max_cells)
+    }
+}
+
+fn bound_trim_projected_area(
+    loops: &[Vec<TrimInputPiece<'_>>],
+    original_direction: bool,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<PeriodicTrimProjectedAreaBounds> {
+    use crate::distance_bounds::Interval;
+    crate::check(
+        tolerance.is_finite() && tolerance > 0. && (1..=100_000).contains(&max_cells),
+        "Periodic trim area needs positive finite tolerance and 1..100000 cells",
+    )?;
+    let minimum_cells = loops.iter().map(Vec::len).sum();
+    let mut report = PeriodicTrimProjectedAreaBounds {
+        bounds: None,
+        cells: 0,
+        minimum_cells,
+        within_tolerance: false,
+    };
+    if minimum_cells == 0 || minimum_cells > max_cells {
+        return Ok(report);
+    }
+
+    let mut stack = Vec::with_capacity(minimum_cells);
+    let share = tolerance / minimum_cells as f64;
+    for pieces in loops {
+        let first = pieces
+            .first()
+            .ok_or_else(|| crate::input("Periodic trim area has an empty loop"))?;
+        let reversed = first.1.parameters[0] > first.1.parameters[1];
+        let negate = original_direction && reversed;
         for ((curve, source), (next, _)) in pieces.iter().zip(pieces.iter().cycle().skip(1)) {
             curve.validate()?;
             let count = curve.control_points.len();
@@ -6056,46 +6120,47 @@ impl PeriodicTrimInputEdges {
                 [lo, hi],
                 trim_projected_area_cell(curve, [lo, hi])?,
                 share,
+                negate,
             ));
             report.cells += 1;
         }
+    }
 
-        let mut sum = [Interval::point(0.); 3];
-        while let Some((curve, [lo, hi], bounds, share)) = stack.pop() {
-            let mid = crate::distance_bounds::midpoint(lo, hi);
-            if report.cells + 2 <= max_cells
-                && lo < mid
-                && mid < hi
-                && bounds.iter().any(|b| (b.hi - b.lo).next_up() > share)
-            {
-                for domain in [[lo, mid], [mid, hi]] {
-                    stack.push((
-                        curve,
-                        domain,
-                        trim_projected_area_cell(curve, domain)?,
-                        share * 0.5,
-                    ));
-                }
-                report.cells += 2;
-            } else {
-                for (sum, bound) in sum.iter_mut().zip(bounds) {
-                    *sum = sum.add(bound)?;
-                }
+    let mut sum = [Interval::point(0.); 3];
+    while let Some((curve, [lo, hi], bounds, share, negate)) = stack.pop() {
+        let mid = crate::distance_bounds::midpoint(lo, hi);
+        if report.cells + 2 <= max_cells
+            && lo < mid
+            && mid < hi
+            && bounds.iter().any(|b| (b.hi - b.lo).next_up() > share)
+        {
+            for domain in [[lo, mid], [mid, hi]] {
+                stack.push((
+                    curve,
+                    domain,
+                    trim_projected_area_cell(curve, domain)?,
+                    share * 0.5,
+                    negate,
+                ));
+            }
+            report.cells += 2;
+        } else {
+            for (sum, bound) in sum.iter_mut().zip(bounds) {
+                let directed = if negate {
+                    Interval::new(-bound.hi, -bound.lo)?
+                } else {
+                    bound
+                };
+                *sum = sum.add(directed)?;
             }
         }
-        let bounds = sum.map(|b| {
-            if reversed {
-                [-b.hi, -b.lo]
-            } else {
-                [b.lo, b.hi]
-            }
-        });
-        report.within_tolerance = bounds
-            .iter()
-            .all(|[lo, hi]| (hi - lo).next_up() <= tolerance);
-        report.bounds = Some(bounds);
-        Ok(report)
     }
+    let bounds = sum.map(|b| [b.lo, b.hi]);
+    report.within_tolerance = bounds
+        .iter()
+        .all(|[lo, hi]| (hi - lo).next_up() <= tolerance);
+    report.bounds = Some(bounds);
+    Ok(report)
 }
 
 fn trim_projected_area_cell(

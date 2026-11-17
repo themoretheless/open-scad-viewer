@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 597,
-  "unallocatedCount": 403,
+  "specifiedCount": 598,
+  "unallocatedCount": 402,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14953,6 +14953,25 @@
       "remainingQualification": [
         "Enclose signed projected areas of positive-weight rational trim curves with interval quadrature.",
         "Verify interval projections on a varying-weight curved edge, known polygon areas, and completeness under cell exhaustion.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0598",
+      "name": "Гарантированные площади проекций обрезанной периодической грани с отверстиями",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::bound_input_patch_projected_area",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-598-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-598-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Sum consistently oriented outer and inner wire integrals for one periodic patch under one cell budget.",
+        "Verify hole subtraction in canonical face orientation, both original winding choices, and complete bounds under shared cell limits.",
         "WASM and application integration are separate."
       ]
     }

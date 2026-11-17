@@ -5702,3 +5702,86 @@ fn periodic_trim_rational_area_bounds_cover_entire_contour_at_cell_limit() {
     assert!(short.bounds.is_none());
     assert_eq!(short.minimum_cells, 6);
 }
+
+#[test]
+fn periodic_trim_patch_projected_area_subtracts_holes_independently_of_input_order() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let mut outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let mut hole = [
+        [0.125, 0.25],
+        [0.375, 0.25],
+        [0.375, 0.75],
+        [0.125, 0.75],
+        [0.125, 0.25],
+    ];
+    for _ in 0..2 {
+        let result =
+            build_exact_periodic_surface_trim_input_edges(&source, &[&hole, &outer], 1_000_000)
+                .unwrap();
+        let report = result
+            .bound_input_patch_projected_area(1, 1e-8, 100)
+            .unwrap();
+        assert_eq!(report.minimum_cells, 10);
+        assert!(report.within_tolerance);
+        for ([lo, hi], expected) in report.bounds.unwrap().into_iter().zip([-0.75, -0.5, 0.]) {
+            assert!(lo <= expected && expected <= hi, "{report:?}");
+        }
+        assert!(
+            result
+                .bound_input_patch_projected_area(0, 1e-8, 100)
+                .unwrap()
+                .bounds
+                .is_none()
+        );
+        outer.reverse();
+        hole.reverse();
+    }
+}
+
+#[test]
+fn periodic_trim_patch_projected_area_reserves_initial_cells_for_every_wire() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let hole = [
+        [0.125, 0.125],
+        [0.625, 0.125],
+        [0.625, 0.625],
+        [0.125, 0.625],
+        [0.125, 0.125],
+    ];
+    let result = build_exact_periodic_surface_trim_input_edges(
+        &doubly_periodic_tensor(),
+        &[&outer, &hole],
+        1_000_000,
+    )
+    .unwrap();
+    let limited = result
+        .bound_input_patch_projected_area(0, 1e-8, 11)
+        .unwrap();
+    assert_eq!(limited.minimum_cells, 12);
+    assert_eq!(limited.cells, 0);
+    assert!(limited.bounds.is_none());
+    let coarse = result
+        .bound_input_patch_projected_area(0, 1e-30, 12)
+        .unwrap();
+    assert!(coarse.bounds.is_some());
+    assert!(!coarse.within_tolerance);
+    assert_eq!(coarse.cells, 12);
+}
