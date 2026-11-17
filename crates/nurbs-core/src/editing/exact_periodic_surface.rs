@@ -2347,15 +2347,45 @@ pub fn classify_exact_periodic_surface_path_point(
     query: [f64; 2],
     max_work: u64,
 ) -> Result<PeriodicPathLocationReport> {
+    let batch = classify_exact_periodic_surface_path_points(source, native, &[query], max_work)?;
+    Ok(PeriodicPathLocationReport {
+        location: batch.locations.and_then(|mut locations| locations.pop()),
+        work_used: batch.work_used,
+        refusal: batch.refusal,
+    })
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicPathLocationBatchReport {
+    pub locations: Option<Vec<PeriodicPathLocation>>,
+    pub work_used: u64,
+    pub refused_query: Option<usize>,
+    pub refusal: Option<PeriodicPathAreaRefusal>,
+}
+
+/// Classify up to 4096 native UV points against one exact lifted polygon.
+/// A failure withholds the entire result and identifies the query when
+/// the failure occurs after the contour has been prepared.
+pub fn classify_exact_periodic_surface_path_points(
+    source: &Surface,
+    native: &[[f64; 2]],
+    queries: &[[f64; 2]],
+    max_work: u64,
+) -> Result<PeriodicPathLocationBatchReport> {
     use PeriodicPathAreaRefusal as Failure;
 
     crate::check(
         native.len() >= 4 && native.first() == native.last(),
         "Periodic point classification needs a closed polygon",
-    );
+    )?;
+    crate::check(
+        queries.len() <= 4096,
+        "Periodic classification supports at most 4096 queries",
+    )?;
     let lift = lift_exact_periodic_surface_path(source, native, max_work)?;
-    let refused = |reason, work_used| PeriodicPathLocationReport {
-        location: None,
+    let refused = |reason, work_used, refused_query| PeriodicPathLocationBatchReport {
+        locations: None,
+        refused_query,
         work_used,
         refusal: Some(reason),
     };
@@ -2363,10 +2393,10 @@ pub fn classify_exact_periodic_surface_path_point(
         let reason = lift
             .refusal
             .unwrap_or(PeriodicLiftRefusal::Arithmetic(ExactRefusal::InvalidOutput));
-        return Ok(refused(Failure::Lift(reason), lift.work_used));
+        return Ok(refused(Failure::Lift(reason), lift.work_used, None));
     };
     if points.first() != points.last() {
-        return Ok(refused(Failure::NonzeroWinding, lift.work_used));
+        return Ok(refused(Failure::NonzeroWinding, lift.work_used, None));
     }
     let mut work = Work {
         used: lift.work_used,
@@ -2376,47 +2406,57 @@ pub fn classify_exact_periodic_surface_path_point(
     for (i, axis) in [Axis::U, Axis::V].into_iter().enumerate() {
         let reference = row(source, axis, 0);
         let [lo, hi] = reference.domain();
-        crate::check(
-            lo <= query[i] && (query[i] < hi || !reference.periodic && query[i] == hi),
-            "Query must lie inside the native domain (half-open on periodic axes)",
-        )?;
+        for query in queries {
+            crate::check(
+                lo <= query[i] && (query[i] < hi || !reference.periodic && query[i] == hi),
+                "Query must lie inside the native domain (half-open on periodic axes)",
+            )?;
+        }
         if reference.periodic {
             domains[i] = Some([lo, hi]);
         }
     }
-    Ok(
-        match classify_lifted_polygon(&points, query, domains, &mut work) {
-            Ok(location) => PeriodicPathLocationReport {
-                location: Some(location),
-                work_used: work.used,
-                refusal: None,
-            },
-            Err(reason) => refused(Failure::Arithmetic(reason), work.used),
-        },
-    )
+    let polygon = match prepare_lifted_polygon(&points, domains, &mut work) {
+        Ok(polygon) => polygon,
+        Err(reason) => return Ok(refused(Failure::Arithmetic(reason), work.used, None)),
+    };
+    let mut locations = Vec::with_capacity(queries.len());
+    for (index, &query) in queries.iter().enumerate() {
+        match classify_lifted_polygon(&polygon, query, &mut work) {
+            Ok(location) => locations.push(location),
+            Err(reason) => return Ok(refused(Failure::Arithmetic(reason), work.used, Some(index))),
+        }
+    }
+    Ok(PeriodicPathLocationBatchReport {
+        locations: Some(locations),
+        work_used: work.used,
+        refused_query: None,
+        refusal: None,
+    })
 }
 
-fn classify_lifted_polygon(
+struct LiftedPolygon {
+    points: Vec<[BigRational; 2]>,
+    periods: [Option<BigRational>; 2],
+    bounds: [[BigRational; 2]; 2],
+}
+
+fn prepare_lifted_polygon(
     points: &[[f64; 2]],
-    query: [f64; 2],
     domains: [Option<[f64; 2]>; 2],
     work: &mut Work,
-) -> std::result::Result<PeriodicPathLocation, ExactRefusal> {
-    use PeriodicPathLocation as Location;
-    use num_traits::ToPrimitive;
-
-    let query = [work.lift(query[0])?, work.lift(query[1])?];
+) -> std::result::Result<LiftedPolygon, ExactRefusal> {
     let points = points
         .iter()
         .map(|&[x, y]| Ok([work.lift(x)?, work.lift(y)?]))
         .collect::<std::result::Result<Vec<_>, ExactRefusal>>()?;
-    let mut periods = [BigRational::default(), BigRational::default()];
-    let mut ranges = [(0, 0); 2];
+    let mut periods = [None, None];
+    let mut bounds = std::array::from_fn(|_| [BigRational::default(), BigRational::default()]);
     for (i, domain) in domains.into_iter().enumerate() {
         if let Some([lo, hi]) = domain {
             let lo = work.lift(lo)?;
             let hi = work.lift(hi)?;
-            periods[i] = work.op(&hi, &lo, |a, b| a - b)?;
+            periods[i] = Some(work.op(&hi, &lo, |a, b| a - b)?);
         }
         let min = points
             .iter()
@@ -2428,15 +2468,35 @@ fn classify_lifted_polygon(
             .map(|p| &p[i])
             .max()
             .ok_or(ExactRefusal::InvalidOutput)?;
-        if domain.is_some() {
+        bounds[i] = [min.clone(), max.clone()];
+    }
+    Ok(LiftedPolygon {
+        points,
+        periods,
+        bounds,
+    })
+}
+
+fn classify_lifted_polygon(
+    polygon: &LiftedPolygon,
+    query: [f64; 2],
+    work: &mut Work,
+) -> std::result::Result<PeriodicPathLocation, ExactRefusal> {
+    use PeriodicPathLocation as Location;
+    use num_traits::ToPrimitive;
+
+    let query = [work.lift(query[0])?, work.lift(query[1])?];
+    let mut ranges = [(0, 0); 2];
+    for (i, [min, max]) in polygon.bounds.iter().enumerate() {
+        if let Some(period) = &polygon.periods[i] {
             let lo = work.op(min, &query[i], |a, b| a - b)?;
             let hi = work.op(max, &query[i], |a, b| a - b)?;
             ranges[i] = (
-                work.op(&lo, &periods[i], |a, b| (a / b).ceil())?
+                work.op(&lo, period, |a, b| (a / b).ceil())?
                     .to_integer()
                     .to_i64()
                     .ok_or(ExactRefusal::ResourceLimit)?,
-                work.op(&hi, &periods[i], |a, b| (a / b).floor())?
+                work.op(&hi, period, |a, b| (a / b).floor())?
                     .to_integer()
                     .to_i64()
                     .ok_or(ExactRefusal::ResourceLimit)?,
@@ -2449,15 +2509,16 @@ fn classify_lifted_polygon(
     for u in ranges[0].0..=ranges[0].1 {
         for v in ranges[1].0..=ranges[1].1 {
             let shift = |i: usize, turns: i64, work: &mut Work| {
-                let delta = work.op(
-                    &periods[i],
-                    &BigRational::from_integer(turns.into()),
-                    |a, b| a * b,
-                )?;
+                let Some(period) = &polygon.periods[i] else {
+                    return Ok(query[i].clone());
+                };
+                let delta = work.op(period, &BigRational::from_integer(turns.into()), |a, b| {
+                    a * b
+                })?;
                 work.op(&query[i], &delta, |a, b| a + b)
             };
             let p = [shift(0, u, work)?, shift(1, v, work)?];
-            match classify_polygon_copy(&points, &p, work)? {
+            match classify_polygon_copy(&polygon.points, &p, work)? {
                 Location::Boundary => return Ok(Location::Boundary),
                 Location::Inside => location = Location::Inside,
                 Location::Outside => {}

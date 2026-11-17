@@ -3432,3 +3432,46 @@ fn periodic_point_classification_refuses_nonclosing_lifts() {
     );
     assert!(report.location.is_none());
 }
+
+#[test]
+fn periodic_point_batch_reuses_the_contour_and_preserves_order() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicPathLocation as L, classify_exact_periodic_surface_path_point,
+        classify_exact_periodic_surface_path_points,
+    };
+    let source = doubly_periodic_tensor();
+    let path = [[3.5, 3.5], [0.5, 3.5], [0.5, 0.5], [3.5, 0.5], [3.5, 3.5]];
+    let queries = [[0., 0.], [0.5, 0.], [2., 0.], [0., 0.]];
+    let report =
+        classify_exact_periodic_surface_path_points(&source, &path, &queries, 1_000_000).unwrap();
+    assert_eq!(
+        report.locations,
+        Some(vec![L::Inside, L::Boundary, L::Outside, L::Inside])
+    );
+    let separate_work: u64 = queries
+        .into_iter()
+        .map(|q| {
+            classify_exact_periodic_surface_path_point(&source, &path, q, 1_000_000)
+                .unwrap()
+                .work_used
+        })
+        .sum();
+    assert!(report.work_used < separate_work);
+    let short =
+        classify_exact_periodic_surface_path_points(&source, &path, &queries, report.work_used - 1)
+            .unwrap();
+    assert_eq!(short.refused_query, Some(3));
+    assert!(short.locations.is_none());
+}
+
+#[test]
+fn periodic_batch_classification_rejects_nonpolygon_inputs() {
+    use nurbs_core::editing::exact_periodic_surface::classify_exact_periodic_surface_path_points;
+    let source = doubly_periodic_tensor();
+    for path in [&[][..], &[[0., 0.], [0., 0.]][..]] {
+        assert!(
+            classify_exact_periodic_surface_path_points(&source, path, &[[0., 0.]], 1_000_000)
+                .is_err()
+        );
+    }
+}

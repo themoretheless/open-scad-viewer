@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0545",
+  "testedBase": "3d12f3d4555b2e1fd8c090ac04609cbb350bbd52",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 147,
+  "scope": [
+    "Prepare one lifted periodic polygon and classify an ordered batch of native queries with one budget.",
+    "Prepare exact vertices, periods and bounds once and classify every query with one arithmetic budget."
+  ],
+  "logSha256": "0eb8d707616b1f6bf23993e9a712a81a29ea0a1a2bcdb85569cbdc9fb947ecdf",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "dd88fe97cee1169a701864e4b9d0b6bff9978698d316da38d99467f090793195",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "66043c62c1cecc2597462db55a3d12c995c40bf8127080347b5080f9e0c4c084"
+  }
+}

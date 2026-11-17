@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 544,
-  "unallocatedCount": 456,
+  "specifiedCount": 545,
+  "unallocatedCount": 455,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -13900,6 +13900,27 @@
       "remainingQualification": [
         "Classify native UV points against periodic copies of a closed polygon lift using exact edge predicates.",
         "Enumerate exact query translates within the lifted bounds and classify with rational boundary and even-odd crossing tests.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0545",
+      "name": "Точная пакетная классификация UV-точек относительно периодического контура",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::classify_exact_periodic_surface_path_points",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "docs/qualification/nurbs-curvature-field-545-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-545-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Prepare one lifted periodic polygon and classify an ordered batch of native queries with one budget.",
+        "Prepare exact vertices, periods and bounds once and classify every query with one arithmetic budget.",
         "WASM and application integration are separate."
       ]
     }
