@@ -4018,6 +4018,67 @@ pub fn locate_points_in_exact_coplanar_polyline_boolean_extrusion(
     queries_mm: &[[Q; 3]],
     max_exact_work: u64,
 ) -> Result<ExactCoplanarPolylineBooleanExtrusionLocations> {
+    let (footprint, mut remaining) = prepare_boolean_extrusion_queries(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        operation,
+        sweep_mm,
+        max_exact_work,
+    )?;
+    let origin = &first_outer_mm[0];
+    let mut locations = Vec::new();
+    for query in queries_mm {
+        spend(&mut remaining, 28)?;
+        validate_point(query)?;
+        let mut location = PolyhedralPathLocation::Exterior;
+        if !footprint.edges.is_empty() {
+            let t = footprint.parameter(query, origin);
+            if !t.is_negative() && t <= Q::one() {
+                let base = std::array::from_fn(|i| &query[i] - &t * &sweep_mm[i]);
+                location =
+                    match point_in_face(&footprint.edges, &base, footprint.axes, &mut remaining)? {
+                        FaceLocation::Outside => PolyhedralPathLocation::Exterior,
+                        FaceLocation::Boundary => PolyhedralPathLocation::Boundary,
+                        FaceLocation::Inside if t.is_zero() || t.is_one() => {
+                            PolyhedralPathLocation::Boundary
+                        }
+                        FaceLocation::Inside => PolyhedralPathLocation::Interior,
+                    };
+            }
+        }
+        locations.push(location);
+    }
+    Ok(ExactCoplanarPolylineBooleanExtrusionLocations {
+        locations,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+struct BooleanExtrusionFootprint {
+    edges: Vec<[[Q; 3]; 2]>,
+    axes: [usize; 2],
+    normal: [Q; 3],
+    height: Q,
+}
+
+impl BooleanExtrusionFootprint {
+    fn parameter(&self, point: &[Q; 3], origin: &[Q; 3]) -> Q {
+        let offset = std::array::from_fn(|i| &point[i] - &origin[i]);
+        dot(&self.normal, &offset) / &self.height
+    }
+}
+
+fn prepare_boolean_extrusion_queries(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    operation: CoplanarPolylineBoolean,
+    sweep_mm: &[Q; 3],
+    max_exact_work: u64,
+) -> Result<(BooleanExtrusionFootprint, u64)> {
     validate_point(sweep_mm)?;
     if sweep_mm.iter().all(Zero::is_zero) {
         return Err(Error::new(
@@ -4049,30 +4110,106 @@ pub fn locate_points_in_exact_coplanar_polyline_boolean_extrusion(
     if height.is_zero() && !report.edges_mm.is_empty() {
         return Err(refuse("Extrusion vector lies in the profile plane"));
     }
-    let mut locations = Vec::new();
-    for query in queries_mm {
-        spend(&mut remaining, 28)?;
-        validate_point(query)?;
-        let mut location = PolyhedralPathLocation::Exterior;
-        if !report.edges_mm.is_empty() {
-            let offset = std::array::from_fn(|i| &query[i] - &origin[i]);
-            let t = dot(&normal, &offset) / &height;
-            if !t.is_negative() && t <= Q::one() {
-                let base = std::array::from_fn(|i| &query[i] - &t * &sweep_mm[i]);
-                location = match point_in_face(&report.edges_mm, &base, axes, &mut remaining)? {
-                    FaceLocation::Outside => PolyhedralPathLocation::Exterior,
-                    FaceLocation::Boundary => PolyhedralPathLocation::Boundary,
-                    FaceLocation::Inside if t.is_zero() || t.is_one() => {
-                        PolyhedralPathLocation::Boundary
-                    }
-                    FaceLocation::Inside => PolyhedralPathLocation::Interior,
-                };
-            }
-        }
-        locations.push(location);
+    Ok((
+        BooleanExtrusionFootprint {
+            edges: report.edges_mm,
+            axes,
+            normal,
+            height,
+        },
+        remaining,
+    ))
+}
+
+/// Clip each span to the closed material of a rational extrusion. The
+/// result retains cap and wall contacts, including isolated contacts.
+pub fn clip_path_to_exact_coplanar_polyline_boolean_extrusion(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    operation: CoplanarPolylineBoolean,
+    sweep_mm: &[Q; 3],
+    path_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralPathMaterialClip> {
+    use super::section_loops::clip::clip_planar_segment;
+
+    if path_mm.len() < 2 {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Clip path requires at least two vertices",
+        ));
     }
-    Ok(ExactCoplanarPolylineBooleanExtrusionLocations {
-        locations,
+    let (footprint, mut remaining) = prepare_boolean_extrusion_queries(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        operation,
+        sweep_mm,
+        max_exact_work,
+    )?;
+    let origin = &first_outer_mm[0];
+    let mut projected = Vec::new();
+    for point in path_mm {
+        spend(&mut remaining, 28)?;
+        validate_point(point)?;
+        if !footprint.edges.is_empty() {
+            let t = footprint.parameter(point, origin);
+            let base: [Q; 3] = std::array::from_fn(|i| &point[i] - &t * &sweep_mm[i]);
+            projected.push((t, base));
+        }
+    }
+    let mut span_intervals = Vec::new();
+    if footprint.edges.is_empty() {
+        span_intervals.resize_with(path_mm.len() - 1, Vec::new);
+    }
+    for pair in projected.windows(2) {
+        spend(&mut remaining, 16)?;
+        let (start_t, start) = &pair[0];
+        let (end_t, end) = &pair[1];
+        let delta = end_t - start_t;
+        let unit = Q::zero()..=Q::one();
+        let axial = if delta.is_zero() {
+            if !unit.contains(start_t) {
+                span_intervals.push(Vec::new());
+                continue;
+            }
+            [Q::zero(), Q::one()]
+        } else {
+            let at_bottom = -start_t / &delta;
+            let at_top = (Q::one() - start_t) / delta;
+            [
+                at_bottom.clone().min(at_top.clone()).max(Q::zero()),
+                at_bottom.max(at_top).min(Q::one()),
+            ]
+        };
+        if axial[0] > axial[1] {
+            span_intervals.push(Vec::new());
+            continue;
+        }
+        let planar = clip_planar_segment(
+            footprint.edges.iter().map(|[a, b]| (a, b)),
+            footprint.axes,
+            start,
+            end,
+            &mut remaining,
+            |point, remaining| {
+                Ok(
+                    point_in_face(&footprint.edges, point, footprint.axes, remaining)?
+                        != FaceLocation::Outside,
+                )
+            },
+        )?;
+        span_intervals.push(intersect_closed_intervals(
+            &planar,
+            &[axial],
+            &mut remaining,
+        )?);
+    }
+    Ok(ExactPolyhedralPathMaterialClip {
+        span_intervals,
         exact_work: max_exact_work - remaining,
     })
 }

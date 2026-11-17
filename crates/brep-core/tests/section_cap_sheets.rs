@@ -6440,3 +6440,113 @@ fn exact_boolean_extrusion_locations_handle_point_contacts_and_empty_profiles() 
         .is_err()
     );
 }
+
+#[test]
+fn exact_boolean_extrusion_path_clip_preserves_axial_limits_and_footprint_holes() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Difference, clip_path_to_exact_coplanar_polyline_boolean_extrusion,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y| [q(x, 1), q(y, 1), q(0, 1)];
+    let rect = |lo, hi| [p(lo, lo), p(hi, lo), p(hi, hi), p(lo, hi), p(lo, lo)];
+    let a = rect(0, 6);
+    let b = rect(2, 4);
+    let sweep = [q(1, 3), q(0, 1), q(-2, 1)];
+    let at = |x, y, t: Q| {
+        let base = p(x, y);
+        std::array::from_fn(|i| &base[i] + &t * &sweep[i])
+    };
+    let path = [at(-1, 3, q(-1, 4)), at(7, 3, q(5, 4))];
+    let report = clip_path_to_exact_coplanar_polyline_boolean_extrusion(
+        &a,
+        &[],
+        &b,
+        &[],
+        Difference,
+        &sweep,
+        &path,
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(
+        report.span_intervals,
+        [vec![[q(1, 6), q(3, 8)], [q(5, 8), q(5, 6)]]]
+    );
+    assert_eq!(
+        clip_path_to_exact_coplanar_polyline_boolean_extrusion(
+            &a,
+            &[],
+            &b,
+            &[],
+            Difference,
+            &sweep,
+            &path,
+            report.exact_work
+        )
+        .unwrap(),
+        report
+    );
+    assert!(
+        clip_path_to_exact_coplanar_polyline_boolean_extrusion(
+            &a,
+            &[],
+            &b,
+            &[],
+            Difference,
+            &sweep,
+            &path,
+            report.exact_work - 1
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn exact_boolean_extrusion_path_clip_keeps_isolated_cap_contact_and_wall_travel() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Difference, clip_path_to_exact_coplanar_polyline_boolean_extrusion,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y, z| [q(x, 1), q(y, 1), q(z, 1)];
+    let rect = |lo, hi| {
+        [
+            p(lo, lo, 0),
+            p(hi, lo, 0),
+            p(hi, hi, 0),
+            p(lo, hi, 0),
+            p(lo, lo, 0),
+        ]
+    };
+    let a = rect(0, 6);
+    let b = rect(2, 4);
+    let sweep = p(0, 0, 2);
+    let path = [
+        p(-1, 1, 1),
+        p(1, 1, -1),
+        p(2, 3, -1),
+        p(2, 3, 3),
+        p(2, 3, 3),
+    ];
+    let report = clip_path_to_exact_coplanar_polyline_boolean_extrusion(
+        &a,
+        &[],
+        &b,
+        &[],
+        Difference,
+        &sweep,
+        &path,
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(
+        report.span_intervals,
+        [
+            vec![[q(1, 2), q(1, 2)]],
+            vec![],
+            vec![[q(1, 4), q(3, 4)]],
+            vec![],
+        ]
+    );
+}
