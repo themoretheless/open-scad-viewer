@@ -17,13 +17,23 @@ export class ByteLruCache<V> {
   private total = 0
 
   constructor(
-    readonly budgetBytes: number,
+    private budget: number,
     private readonly onEvict: (key: string, value: V) => void = () => {},
     private readonly pinned: (key: string) => boolean = () => false,
   ) {}
 
   get bytes() {
     return this.total
+  }
+
+  get budgetBytes() {
+    return this.budget
+  }
+
+  /** Change the byte budget; shrinking evicts unpinned entries at once. */
+  setBudget(bytes: number) {
+    this.budget = bytes
+    this.trim()
   }
 
   get size() {
@@ -84,7 +94,7 @@ export class ByteLruCache<V> {
   /** Evict oldest unpinned entries until the budget holds; `keep` is the entry just inserted. */
   private evict(keep: string) {
     for (const key of [...this.entries.keys()]) {
-      if (this.total <= this.budgetBytes) return
+      if (this.total <= this.budget) return
       if (key !== keep && !this.pinned(key)) this.delete(key)
     }
   }
@@ -99,7 +109,7 @@ export class GpuResidencyCache {
   private readonly pins = new Set<(key: string) => boolean>()
   readonly lru: ByteLruCache<ResidentResource>
 
-  constructor(readonly budgetBytes: number) {
+  constructor(budgetBytes: number) {
     this.lru = new ByteLruCache<ResidentResource>(
       budgetBytes,
       (_key, value) => value.destroy(),
@@ -120,6 +130,15 @@ export class GpuResidencyCache {
 
   get bytes() {
     return this.lru.bytes
+  }
+
+  get budgetBytes() {
+    return this.lru.budgetBytes
+  }
+
+  /** Follow the display plan budget; shrinking evicts unpinned buffers at once. */
+  setBudget(bytes: number) {
+    this.lru.setBudget(bytes)
   }
 
   /** Destroy every entry regardless of pins. */

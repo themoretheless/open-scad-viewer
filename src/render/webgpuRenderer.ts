@@ -74,7 +74,7 @@ import { MeshDrawBundle } from './meshDrawBundle'
 import { ViewFrustum } from './viewFrustum'
 import { MeshInstances } from '../kernel/meshInstances'
 import { computeOrbitCameraFrame } from './orbitCameraProjection'
-import { DEFAULT_DISPLAY_BUDGET, type DisplayBudget } from './displayScheduler'
+import type { DisplayBudget } from './displayScheduler'
 import { MeshDisplayController } from './meshDisplayController'
 import { GpuResidencyCache } from './gpuResidencyCache'
 import { combineBounds, measureMeshBounds, type MeshBoundsCache } from './meshBounds'
@@ -1677,7 +1677,9 @@ export class WebGPURenderer {
 
   /** Display-quality budget used by the LOD scheduler; changing it reselects levels on the next frame. */
   setDisplayBudget(budget: DisplayBudget) {
-    if (this.display.setBudget(budget)) this.requestRender()
+    if (!this.display.setBudget(budget)) return
+    this.residency?.cache.setBudget(budget.budgetBytes)
+    this.requestRender()
   }
 
   getDisplayBudget(): DisplayBudget {
@@ -2089,7 +2091,7 @@ export class WebGPURenderer {
     if (this.residency?.dev !== dev) {
       this.display.dropDeviceState()
       this.residency?.geometry.dispose()
-      const cache = new GpuResidencyCache(DEFAULT_DISPLAY_BUDGET.budgetBytes)
+      const cache = new GpuResidencyCache(this.display.displayBudget.budgetBytes)
       this.residency = { dev, cache, geometry: new GpuGeometryCache(cache, ({ vb }) => this.nativePicking.release(vb)) }
     }
     return this.residency
