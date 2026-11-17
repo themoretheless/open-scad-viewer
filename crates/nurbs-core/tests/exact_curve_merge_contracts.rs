@@ -4989,3 +4989,60 @@ fn periodic_trim_range_length_refuses_unstorable_clock_and_insufficient_budget()
             .is_err()
     );
 }
+
+#[test]
+fn periodic_trim_rational_range_encloses_unstorable_cuts_across_seam() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let q = |n: i64, d: i64| num_rational::BigRational::new(n.into(), d.into());
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [3.5, 0.875],
+        [0.5, 0.875],
+        [0.5, 0.125],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    let report = result
+        .measure_rational_input_segment_range_length(0, 3, [&q(4, 5), &q(1, 3)], 1e-8, 100)
+        .unwrap();
+    assert_eq!(report.minimum_cells, 4);
+    let length = report.length.unwrap();
+    assert!(num_rational::BigRational::from_float(length.bounds[0]).unwrap() <= q(7, 15));
+    assert!(num_rational::BigRational::from_float(length.bounds[1]).unwrap() >= q(7, 15));
+    assert!(length.within_tolerance && length.cells <= 100);
+}
+
+#[test]
+fn periodic_trim_rational_range_reserves_cells_for_both_enclosures() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let q = |n: i64, d: i64| num_rational::BigRational::new(n.into(), d.into());
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let result = build_exact_periodic_surface_trim_input_edges(
+        &doubly_periodic_tensor(),
+        &[&outer],
+        1_000_000,
+    )
+    .unwrap();
+    let limited = result
+        .measure_rational_input_segment_range_length(0, 0, [&q(1, 3), &q(2, 3)], 1e-8, 3)
+        .unwrap();
+    assert_eq!(limited.minimum_cells, 4);
+    assert!(limited.length.is_none());
+    let exact = result
+        .measure_rational_input_segment_range_length(0, 0, [&q(1, 4), &q(3, 4)], 1e-8, 2)
+        .unwrap();
+    assert_eq!(exact.minimum_cells, 2);
+    assert_eq!(exact.length.unwrap().cells, 2);
+}

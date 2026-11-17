@@ -4898,26 +4898,67 @@ impl PeriodicTrimInputEdges {
             if lo >= hi {
                 continue;
             }
-            curve.validate()?;
-            let [start, end] = curve.domain().map(BigRational::from_float);
-            let (Some(start), Some(end)) = (start, end) else {
-                return Err(crate::input("Invalid periodic trim edge clock"));
-            };
-            let scale = (end - &start) / (to - from);
-            let store = |parameter: &BigRational| {
-                let clock = &start + (parameter - from) * &scale;
+            let clocks = map_trim_input_interval(curve, source, [lo, hi])?;
+            let store = |clock: &BigRational| {
                 clock
                     .to_f64()
-                    .filter(|stored| BigRational::from_float(*stored).as_ref() == Some(&clock))
+                    .filter(|stored| BigRational::from_float(*stored).as_ref() == Some(clock))
                     .ok_or_else(|| {
                         crate::input("Periodic trim length cut is not exactly representable")
                     })
             };
-            let x = store(lo)?;
-            let y = store(hi)?;
+            let x = store(&clocks[0])?;
+            let y = store(&clocks[1])?;
             curves.push((curve, Some([x.min(y), x.max(y)])));
         }
         measure_periodic_trim_curves(curves, tolerance, max_cells)
+    }
+
+    /// Enclose the length of a rational input range using outward and inward
+    /// edge intervals. The shared cell budget includes both integrations.
+    pub fn measure_rational_input_segment_range_length(
+        &self,
+        contour: usize,
+        segment: usize,
+        range: [&BigRational; 2],
+        tolerance: f64,
+        max_cells: usize,
+    ) -> Result<PeriodicTrimContourLength> {
+        use num_traits::{One, Zero};
+
+        let [a, b] = range;
+        let (low, high) = (a.min(b), a.max(b));
+        crate::check(
+            low >= &BigRational::zero() && high <= &BigRational::one() && low < high,
+            "Periodic trim length range needs distinct parameters in [0,1]",
+        )?;
+        crate::check(
+            range
+                .iter()
+                .all(|t| t.numer().bits() <= 4096 && t.denom().bits() <= 4096),
+            "Periodic trim length parameter exceeds the rational size limit",
+        )?;
+        let mut jobs = Vec::new();
+        for (curve, source) in self.input_segment_pieces(contour, segment)? {
+            let [from, to] = &source.parameters;
+            let lo = low.max(from.min(to));
+            let hi = high.min(from.max(to));
+            if lo >= hi {
+                continue;
+            }
+            let [x, y] = map_trim_input_interval(curve, source, [lo, hi])?;
+            let [a, b] = trim_clock_bracket((&x).min(&y))?;
+            let [c, d] = trim_clock_bracket((&x).max(&y))?;
+            if a == b && c == d {
+                jobs.push((curve, Some([a, d]), LengthBoundSide::Both));
+            } else {
+                jobs.push((curve, Some([a, d]), LengthBoundSide::Upper));
+                if b < c {
+                    jobs.push((curve, Some([b, c]), LengthBoundSide::Lower));
+                }
+            }
+        }
+        measure_periodic_trim_length_jobs(jobs, tolerance, max_cells)
     }
 
     fn input_segment_pieces(
@@ -4972,8 +5013,63 @@ impl PeriodicTrimInputEdges {
     }
 }
 
+fn map_trim_input_interval(
+    curve: &Curve,
+    source: &PeriodicTrimInputEdgeSource,
+    range: [&BigRational; 2],
+) -> Result<[BigRational; 2]> {
+    curve.validate()?;
+    let [start, end] = curve.domain().map(BigRational::from_float);
+    let (Some(start), Some(end)) = (start, end) else {
+        return Err(crate::input("Invalid periodic trim edge clock"));
+    };
+    let [from, to] = &source.parameters;
+    let scale = (end - &start) / (to - from);
+    Ok(range.map(|parameter| &start + (parameter - from) * &scale))
+}
+
+fn trim_clock_bracket(clock: &BigRational) -> Result<[f64; 2]> {
+    use num_traits::ToPrimitive;
+    let invalid = || crate::input("Cannot enclose periodic trim edge clock");
+    let rounded = clock.to_f64().ok_or_else(invalid)?;
+    let stored = BigRational::from_float(rounded).ok_or_else(invalid)?;
+    let bracket = match stored.cmp(clock) {
+        std::cmp::Ordering::Less => [rounded, rounded.next_up()],
+        std::cmp::Ordering::Equal => [rounded; 2],
+        std::cmp::Ordering::Greater => [rounded.next_down(), rounded],
+    };
+    let [lo, hi] = bracket.map(BigRational::from_float);
+    if lo.as_ref().is_some_and(|v| v <= clock) && hi.as_ref().is_some_and(|v| v >= clock) {
+        Ok(bracket)
+    } else {
+        Err(invalid())
+    }
+}
+
+#[derive(Clone, Copy)]
+enum LengthBoundSide {
+    Both,
+    Lower,
+    Upper,
+}
+
 fn measure_periodic_trim_curves(
     curves: Vec<(&Curve, Option<[f64; 2]>)>,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<PeriodicTrimContourLength> {
+    measure_periodic_trim_length_jobs(
+        curves
+            .into_iter()
+            .map(|(curve, interval)| (curve, interval, LengthBoundSide::Both))
+            .collect(),
+        tolerance,
+        max_cells,
+    )
+}
+
+fn measure_periodic_trim_length_jobs(
+    curves: Vec<(&Curve, Option<[f64; 2]>, LengthBoundSide)>,
     tolerance: f64,
     max_cells: usize,
 ) -> Result<PeriodicTrimContourLength> {
@@ -4987,7 +5083,7 @@ fn measure_periodic_trim_curves(
         "Periodic trim length needs positive finite tolerance and 1..100000 cells",
     )?;
     let mut spans = Vec::with_capacity(curves.len());
-    for (curve, interval) in &curves {
+    for (curve, interval, _) in &curves {
         curve.validate()?;
         let [lo, hi] = interval.unwrap_or_else(|| curve.domain());
         spans.push(
@@ -5008,9 +5104,10 @@ fn measure_periodic_trim_curves(
     let piece_tolerance = (tolerance / curves.len() as f64).max(f64::from_bits(1));
     let mut remaining_minimum = minimum_cells;
     let mut cells = 0;
-    let mut bounds = Interval::point(0.);
+    let mut lo = 0.0_f64;
+    let mut hi = 0.0_f64;
     let mut stop = StopReason::PrecisionLimit;
-    for ((curve, interval), minimum) in curves.into_iter().zip(spans) {
+    for ((curve, interval, side), minimum) in curves.into_iter().zip(spans) {
         remaining_minimum -= minimum;
         let report = length_on_interval(
             curve,
@@ -5022,10 +5119,14 @@ fn measure_periodic_trim_curves(
             stop = StopReason::WorkLimit;
         }
         cells += report.cells;
-        bounds = bounds.add(Interval::new(report.bounds[0], report.bounds[1])?)?;
+        if !matches!(side, LengthBoundSide::Upper) {
+            lo = (lo + report.bounds[0]).next_down().max(0.);
+        }
+        if !matches!(side, LengthBoundSide::Lower) {
+            hi = (hi + report.bounds[1]).next_up();
+        }
     }
-    let lo = bounds.lo.max(0.);
-    let hi = bounds.hi;
+    Interval::new(lo, hi)?;
     let value = lo + (hi - lo) * 0.5;
     let error_upper = (value - lo).max(hi - value).next_up();
     let within_tolerance = error_upper <= tolerance;

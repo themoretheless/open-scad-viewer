@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0583",
+  "testedBase": "321a65cadca79bce9a81f3d1b3e6694825b3b48d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 159,
+  "scope": [
+    "Enclose length when exact rational edge cuts cannot be stored as binary64.",
+    "Verify inward and outward rational clock bracketing under a shared cell budget, including reversal and seam subdivision."
+  ],
+  "logSha256": "05368df5d7adcf2e43156e65001f2515aaa5e4bb83c55c5df3b21160e5f7a2cf",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "932d286e9d35b9a267d55a39dee6ef7d578a89e6543d33bbe8ea7c39bdac363f",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "fdddba43601d5ed6e1f92472ddbd933392fa6922e9a8d1fcfda2f0fc3df7ca94"
+  }
+}

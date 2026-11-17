@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 582,
-  "unallocatedCount": 418,
+  "specifiedCount": 583,
+  "unallocatedCount": 417,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14660,6 +14660,25 @@
       "remainingQualification": [
         "Enclose clipped 3D lengths across the seam using exact clock mapping and one cell budget.",
         "Verify both input directions, seam endpoint ownership, exact clock conversion, and all-or-none coverage with a cell budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0583",
+      "name": "Гарантированные границы длины для рациональных диапазонов периодической обрезки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::measure_rational_input_segment_range_length",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-583-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-583-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose length when exact rational edge cuts cannot be stored as binary64.",
+        "Verify inward and outward rational clock bracketing under a shared cell budget, including reversal and seam subdivision.",
         "WASM and application integration are separate."
       ]
     }
