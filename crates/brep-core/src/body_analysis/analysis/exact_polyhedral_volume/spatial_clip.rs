@@ -1956,3 +1956,87 @@ fn closest_spatial_segments(a: &[[Q; 3]], b: &[[Q; 3]]) -> (Q, [Q; 2], [[Q; 3]; 
     }
     best.expect("endpoint projections always exist")
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BoundedSpatialPolylineSimplification {
+    pub points_mm: Vec<[Q; 3]>,
+    pub source_vertices: Vec<usize>,
+    /// Squared error bound for an order-preserving continuous traversal.
+    pub deviation_squared_mm2: Q,
+    pub exact_work: u64,
+}
+
+/// Simplify a spatial polyline within a rational distance tolerance. A chord
+/// is accepted only if its clamped projections of the source vertices are
+/// monotone and within tolerance. Interpolating those projections along
+/// each original span proves a continuous bound in both directions.
+/// Topology preservation requires a separate test.
+pub fn simplify_bounded_spatial_polyline(
+    points_mm: &[[Q; 3]],
+    tolerance_mm: &Q,
+    max_exact_work: u64,
+) -> Result<BoundedSpatialPolylineSimplification> {
+    super::validate_work(max_exact_work)?;
+    if points_mm.is_empty()
+        || tolerance_mm.is_negative()
+        || tolerance_mm.numer().bits().max(tolerance_mm.denom().bits()) > 8192
+    {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Expected a nonempty path and a bounded nonnegative tolerance",
+        ));
+    }
+    let mut remaining = max_exact_work;
+    for point in points_mm {
+        spend(&mut remaining, 4)?;
+        validate_point(point)?;
+    }
+    let tolerance_squared = tolerance_mm.pow(2);
+    let mut source_vertices = vec![0];
+    let mut deviation_squared_mm2 = Q::zero();
+    let mut pending = Vec::new();
+    if points_mm.len() > 1 {
+        pending.push([0, points_mm.len() - 1]);
+    }
+    while let Some([first, last]) = pending.pop() {
+        spend(&mut remaining, 4)?;
+        let a = &points_mm[first];
+        let b = &points_mm[last];
+        let mut previous = Q::zero();
+        let mut worst = Q::zero();
+        let mut furthest = None;
+        let mut reversal = None;
+        for (offset, point) in points_mm[first + 1..last].iter().enumerate() {
+            spend(&mut remaining, 32)?;
+            let (_, distance, t) = super::project_segment_point(point, a, b);
+            let t = t.unwrap_or_default();
+            let index = first + 1 + offset;
+            if t < previous {
+                reversal = Some(index);
+                break;
+            }
+            previous = t;
+            if distance > worst {
+                worst = distance;
+                furthest = Some(index);
+            }
+        }
+        if let Some(split) = reversal.or(furthest.filter(|_| a == b || worst > tolerance_squared)) {
+            pending.push([split, last]);
+            pending.push([first, split]);
+        } else {
+            deviation_squared_mm2 = deviation_squared_mm2.max(worst);
+            source_vertices.push(last);
+        }
+    }
+    let points_mm = source_vertices
+        .iter()
+        .map(|&index| points_mm[index].clone())
+        .collect();
+    Ok(BoundedSpatialPolylineSimplification {
+        points_mm,
+        source_vertices,
+        deviation_squared_mm2,
+        exact_work: max_exact_work - remaining,
+    })
+}

@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0455",
+  "testedBase": "1f06fbf8f61926d517c3f0d4c2143033b8b5476b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 234,
+  "scope": [
+    "Simplify spatial paths with a continuous order-preserving error bound.",
+    "Accept chords only after exact monotone projection and squared deviation tests. Linear interpolation bounds the full traversal, with an explicit topology limitation."
+  ],
+  "logSha256": "c97727307403fcb051a70f95ccad7680a921ed937206de570855b0c94ddd21b7",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "bad951ddec57a3e192cb5aa512219606d6f8952b1b9742715481a3a22585e56a",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "4cfa88494764d86a875f91d34c515ea66970c8aa701ba15f1c3b3fb48dd66282",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs": "69ffee4c0042e0e6dddccb425a171ba714be0c166e3a51ca532b1a7057dc93b9",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs": "8ede062350dde59a85651b267d276bf360e29d8b374169c9e434cf3e7b9805f7"
+  }
+}

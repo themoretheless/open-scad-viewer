@@ -4517,3 +4517,40 @@ fn exact_spatial_polyline_distance_handles_parallel_ties_and_stationary_spans() 
     assert_eq!(report.distance_squared_mm2, q(0, 1));
     assert_eq!(report.parameters, [q(0, 1), q(1, 1)]);
 }
+
+#[test]
+fn bounded_spatial_polyline_simplification_certifies_full_span_deviation() {
+    use brep_core::analysis::simplify_bounded_spatial_polyline;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y| [q(x, 1), q(y, 10), q(0, 1)];
+    let path = [p(0, 0), p(1, 1), p(2, -1), p(3, 0)];
+    let report = simplify_bounded_spatial_polyline(&path, &q(1, 10), 1_000_000).unwrap();
+    assert_eq!(report.source_vertices, [0, 3]);
+    assert_eq!(report.points_mm, [p(0, 0), p(3, 0)]);
+    assert_eq!(report.deviation_squared_mm2, q(1, 100));
+    let tighter = simplify_bounded_spatial_polyline(&path, &q(1, 100), 1_000_000).unwrap();
+    assert_eq!(tighter.source_vertices, [0, 1, 2, 3]);
+    assert_eq!(tighter.deviation_squared_mm2, q(0, 1));
+    assert_eq!(
+        simplify_bounded_spatial_polyline(&path, &q(1, 10), report.exact_work).unwrap(),
+        report
+    );
+    assert!(simplify_bounded_spatial_polyline(&path, &q(1, 10), report.exact_work - 1).is_err());
+}
+
+#[test]
+fn bounded_spatial_polyline_simplification_preserves_retracing_and_a_closed_anchor() {
+    use brep_core::analysis::simplify_bounded_spatial_polyline;
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x| [q(x), q(0), q(0)];
+    let path = [p(0), p(3), p(1), p(4)];
+    let report = simplify_bounded_spatial_polyline(&path, &q(0), 1_000_000).unwrap();
+    assert_eq!(report.source_vertices, [0, 1, 2, 3]);
+    let closed = [p(0), p(1), p(2), p(0)];
+    let report = simplify_bounded_spatial_polyline(&closed, &q(0), 1_000_000).unwrap();
+    assert_eq!(report.source_vertices, [0, 2, 3]);
+    assert_eq!(report.points_mm, [p(0), p(2), p(0)]);
+    assert!(simplify_bounded_spatial_polyline(&path, &q(-1), 1_000_000).is_err());
+}
