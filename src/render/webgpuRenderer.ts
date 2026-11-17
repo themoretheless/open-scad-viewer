@@ -14,6 +14,7 @@ import {
 import { NativePickingCache } from './nativePickingCache'
 import { warmGeometryKernel } from '../kernel/geometry/kernel'
 import { acquireWebGPUDevice, watchDeviceFailures } from './gpuDeviceManager'
+import { computeSurfaceSize, createDepthTarget } from './surfaceResources'
 import { clientRayInKernel, projectPointInKernel } from '../kernel/geometry/viewport'
 import type { MeshData } from '../core/mesh'
 import {
@@ -109,7 +110,6 @@ import {
   GRID_FADE_DISTANCES,
   GRID_MIN_EXTENT,
   MAX_DEPTH_CANDIDATES,
-  MAX_DPR,
   MAX_ORBIT_PITCH,
   WHEEL_HISTORY_IDLE_MS,
   type Bounds,
@@ -1351,9 +1351,9 @@ export class WebGPURenderer {
     const canvas = this.canvas, dev = this.dev
     if (!canvas || !dev || !this.initialized || this.lost) return false
 
-    const cssWidth = Number.isFinite(canvas.clientWidth) ? Math.max(0, canvas.clientWidth) : 0
-    const cssHeight = Number.isFinite(canvas.clientHeight) ? Math.max(0, canvas.clientHeight) : 0
-    if (cssWidth <= 0 || cssHeight <= 0) {
+    const rawDpr = typeof devicePixelRatio === 'number' ? devicePixelRatio : 1
+    const size = computeSurfaceSize(canvas.clientWidth, canvas.clientHeight, rawDpr, dev.limits.maxTextureDimension2D)
+    if (!size) {
       const changed = this.drawable || !!this.depth
       this.drawable = false
       this.depth?.destroy()
@@ -1365,24 +1365,16 @@ export class WebGPURenderer {
       return changed
     }
 
-    const rawDpr = typeof devicePixelRatio === 'number' && Number.isFinite(devicePixelRatio) ? devicePixelRatio : 1
-    const dpr = Math.min(MAX_DPR, Math.max(1, rawDpr))
-    const maxDimension = Math.max(1, dev.limits.maxTextureDimension2D)
-    const scale = Math.min(dpr, maxDimension / cssWidth, maxDimension / cssHeight)
-    const width = Math.max(1, Math.min(maxDimension, Math.round(cssWidth * scale)))
-    const height = Math.max(1, Math.min(maxDimension, Math.round(cssHeight * scale)))
+    const { width, height } = size
     const changed = canvas.width !== width || canvas.height !== height || !this.depth
 
     if (canvas.width !== width) canvas.width = width
     if (canvas.height !== height) canvas.height = height
     if (changed) {
       this.depth?.destroy()
-      this.depth = dev.createTexture({
-        size: [width, height],
-        format: 'depth24plus',
-        usage: GPUTextureUsage.RENDER_ATTACHMENT,
-      })
-      this.depthView = this.depth.createView()
+      const target = createDepthTarget(dev, size)
+      this.depth = target.texture
+      this.depthView = target.view
       if (this.csgDepthStencil) {
         this.csgDepthStencil.destroy()
         this.csgDepthStencil = null
