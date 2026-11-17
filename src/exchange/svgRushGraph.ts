@@ -37,7 +37,7 @@ export async function svgProfileRushGraph(contours: SvgContours, height: number)
     for (let inner = 0; inner < sections.length; inner++) {
       for (let outer = 0; outer < sections.length; outer++) {
         if (inner === outer) continue
-        if ([0, 1].some(axis => bounds[inner].min[axis]! < bounds[outer].min[axis]! || bounds[inner].max[axis]! > bounds[outer].max[axis]!)) continue
+        if ([0, 1].some(axis => bounds[inner]!.min[axis]! < bounds[outer]!.min[axis]! || bounds[inner]!.max[axis]! > bounds[outer]!.max[axis]!)) continue
         const remaining = kernel.boolean2('difference', [sections[inner]!, sections[outer]!])
         const contained = kernel.isEmpty(remaining)
         kernel.delete(remaining)

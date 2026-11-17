@@ -226,7 +226,7 @@ export async function decodeOpenScadAmfText(
     if (candidates.length !== 1) {
       return dataError('E_IMPORT_INVALID_DATA', 'Compressed AMF ZIP must contain exactly one .amf document.', 'amf')
     }
-    return decodeAmfUtf8(candidates[0][1])
+    return decodeAmfUtf8(candidates[0]![1])
   }
   return decodeAmfUtf8(bytes)
 }
@@ -265,7 +265,7 @@ export function modelPathFromPackage(files: ReadonlyMap<string, Uint8Array>): st
   if (startParts.length !== 1) {
     return dataError('E_IMPORT_INVALID_DATA', '3MF package must contain exactly one official StartPart relationship.', '3mf')
   }
-  const relationship = startParts[0]
+  const relationship = startParts[0]!
   const targetMode = attributeNs(relationship, 'targetmode', null)?.trim().toLowerCase()
   if (targetMode !== undefined && targetMode !== 'internal') {
     return dataError('E_IMPORT_UNSUPPORTED_FEATURE', '3MF StartPart cannot target an external resource.', '3mf')
@@ -314,9 +314,9 @@ export function parse3mfTransform(value: string | undefined, scale: number): Mat
   const numbers = tokens.map(token => finiteNumber(token, '3MF transform', '3mf'))
   // 3MF serializes a row-vector 4x3 affine matrix; convert to our column-vector 4x4 form.
   return [
-    numbers[0], numbers[3], numbers[6], numbers[9] * scale,
-    numbers[1], numbers[4], numbers[7], numbers[10] * scale,
-    numbers[2], numbers[5], numbers[8], numbers[11] * scale,
+    numbers[0]!, numbers[3]!, numbers[6]!, numbers[9]! * scale,
+    numbers[1]!, numbers[4]!, numbers[7]!, numbers[10]! * scale,
+    numbers[2]!, numbers[5]!, numbers[8]!, numbers[11]! * scale,
     0, 0, 0, 1,
   ]
 }

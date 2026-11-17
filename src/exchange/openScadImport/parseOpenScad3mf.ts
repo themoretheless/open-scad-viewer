@@ -35,7 +35,7 @@ export async function parseOpenScad3mfWithBudget(
   if (resourceElements.length !== 1 || buildElements.length !== 1) {
     return dataError('E_IMPORT_INVALID_DATA', '3MF model requires exactly one core resources and build element.', '3mf')
   }
-  const resources = resourceElements[0], build = buildElements[0]
+  const resources = resourceElements[0]!, build = buildElements[0]!
   const objects = new Map<string, ThreeMfObject>()
   const resourceIds = new Set<string>()
   for (const resource of resources.children.filter(child => child.namespaceUri === THREE_MF_CORE_NAMESPACE)) {
@@ -137,7 +137,7 @@ export function cleanContour(points: readonly OpenScadImportPoint2[]): OpenScadI
     const previous = output.at(-1)
     if (!previous || previous[0] !== point[0] || previous[1] !== point[1]) output.push([point[0], point[1]])
   }
-  if (output.length > 1 && output[0][0] === output.at(-1)![0] && output[0][1] === output.at(-1)![1]) output.pop()
+  if (output.length > 1 && output[0]![0] === output.at(-1)![0] && output[0]![1] === output.at(-1)![1]) output.pop()
   return output
 }
 
@@ -155,7 +155,7 @@ export function geometry2D(
       if (contour.length < 3) continue
       let area = 0
       for (let index = 0; index < contour.length; index++) {
-        const a = contour[index], b = contour[(index + 1) % contour.length]
+        const a = contour[index]!, b = contour[(index + 1) % contour.length]!
         area += a[0] * b[1] - b[0] * a[1]
       }
       if (area === 0) continue
@@ -220,11 +220,11 @@ export function dxfPairs(text: string): DxfPair[] {
   if (lines.length % 2 !== 0) return dataError('E_IMPORT_INVALID_DATA', 'DXF must contain group-code/value line pairs.', 'dxf')
   const pairs: DxfPair[] = []
   for (let line = 0; line < lines.length; line += 2) {
-    const code = Number(lines[line].trim())
+    const code = Number(lines[line]!.trim())
     if (!Number.isSafeInteger(code) || code < 0 || code > 1071) {
       return dataError('E_IMPORT_INVALID_DATA', `DXF group code on line ${line + 1} is invalid.`, 'dxf')
     }
-    pairs.push({ code, value: lines[line + 1].trim() })
+    pairs.push({ code, value: lines[line + 1]!.trim() })
     if (pairs.length > OPENSCAD_IMPORT_MAX_XML_ELEMENTS * 4) {
       return dataError(
         'E_IMPORT_LIMIT',
@@ -251,7 +251,7 @@ export function dxfSections(pairs: readonly DxfPair[]): ReadonlyMap<string, read
     current = null
   }
   for (let index = 0; index < pairs.length; index++) {
-    const pair = pairs[index]
+    const pair = pairs[index]!
     if (pair.code === 0 && pair.value.toUpperCase() === 'SECTION') {
       flush()
       const name = pairs[++index]
@@ -356,7 +356,7 @@ export function stitchDxfSegments(segments: readonly DxfSegment[]): OpenScadImpo
     const degree = new Map<string, number>()
     const endpointKey = (point: OpenScadImportPoint2): string => `${Math.round(point[0] * 1024)},${Math.round(point[1] * 1024)}`
     for (const segment of source) {
-      for (const endpoint of [segment.points[0], segment.points.at(-1)!]) {
+      for (const endpoint of [segment.points[0]!, segment.points.at(-1)!]) {
         const key = endpointKey(endpoint)
         const next = (degree.get(key) ?? 0) + 1
         if (next > 2) return dataError('E_IMPORT_INVALID_DATA', `DXF layer ${layer} contains a branch vertex.`, 'dxf')
@@ -366,21 +366,21 @@ export function stitchDxfSegments(segments: readonly DxfSegment[]): OpenScadImpo
     const pending = [...source]
     while (pending.length) {
       const openIndex = pending.findIndex(segment => (
-        degree.get(endpointKey(segment.points[0])) === 1
+        degree.get(endpointKey(segment.points[0]!)) === 1
         || degree.get(endpointKey(segment.points.at(-1)!)) === 1
       ))
-      const first = pending.splice(openIndex < 0 ? pending.length - 1 : openIndex, 1)[0]
+      const first = pending.splice(openIndex < 0 ? pending.length - 1 : openIndex, 1)[0]!
       const path = [...first.points]
       let changed = true
-      while (changed && !pointNear(path[0], path.at(-1)!)) {
+      while (changed && !pointNear(path[0]!, path.at(-1)!)) {
         changed = false
         for (let index = 0; index < pending.length; index++) {
-          const candidate = pending[index]
-          const start = candidate.points[0], end = candidate.points.at(-1)!
+          const candidate = pending[index]!
+          const start = candidate.points[0]!, end = candidate.points.at(-1)!
           if (pointNear(path.at(-1)!, start)) path.push(...candidate.points.slice(1))
           else if (pointNear(path.at(-1)!, end)) path.push(...[...candidate.points].reverse().slice(1))
-          else if (pointNear(path[0], end)) path.unshift(...candidate.points.slice(0, -1))
-          else if (pointNear(path[0], start)) path.unshift(...[...candidate.points].reverse().slice(0, -1))
+          else if (pointNear(path[0]!, end)) path.unshift(...candidate.points.slice(0, -1))
+          else if (pointNear(path[0]!, start)) path.unshift(...[...candidate.points].reverse().slice(0, -1))
           else continue
           pending.splice(index, 1)
           changed = true
@@ -388,7 +388,7 @@ export function stitchDxfSegments(segments: readonly DxfSegment[]): OpenScadImpo
         }
       }
       if (path.length >= 3) {
-        if (pointNear(path[0], path.at(-1)!)) path.pop()
+        if (pointNear(path[0]!, path.at(-1)!)) path.pop()
         regions.push({ contours: [path], fillRule: 'evenodd', layer })
       }
     }
@@ -400,5 +400,5 @@ export function dxfPolyline(
   points: readonly OpenScadImportPoint2[],
   closed: boolean,
 ): OpenScadImportPoint2[] {
-  return closed ? [...points, points[0]] : [...points]
+  return closed ? [...points, points[0]!] : [...points]
 }

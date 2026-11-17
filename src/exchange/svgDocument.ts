@@ -61,7 +61,7 @@ export function parseSvgTransformMatrix(transformAttr: string): SvgMatrix2D {
     if (!match) throw new Error(`Unsupported or malformed SVG transform near "${trimmed.slice(cursor, cursor + 24)}".`)
     cursor = tokenRegex.lastIndex
     const kind = match[1]
-    const rawArgs = match[2].trim()
+    const rawArgs = match[2]!.trim()
     if (!rawArgs) throw new Error(`Empty SVG transform arguments in ${kind}().`)
     const args = rawArgs.split(/[\s,]+/).filter(Boolean).map(Number)
     if (!args.length || args.some(v => !Number.isFinite(v) || Math.abs(v) > 1e9)) {
@@ -70,22 +70,22 @@ export function parseSvgTransformMatrix(transformAttr: string): SvgMatrix2D {
     let next: SvgMatrix2D
     if (kind === 'matrix') {
       if (args.length !== 6) throw new Error('SVG matrix() requires 6 finite numbers.')
-      next = [args[0], args[1], args[2], args[3], args[4], args[5]]
+      next = [args[0]!, args[1]!, args[2]!, args[3]!, args[4]!, args[5]!]
     } else if (kind === 'translate') {
       if (args.length !== 1 && args.length !== 2) throw new Error('SVG translate() requires 1 or 2 arguments.')
-      next = [1, 0, 0, 1, args[0], args[1] ?? 0]
+      next = [1, 0, 0, 1, args[0]!, args[1] ?? 0]
     } else if (kind === 'scale') {
       if (args.length !== 1 && args.length !== 2) throw new Error('SVG scale() requires 1 or 2 arguments.')
-      const sx = args[0], sy = args[1] ?? sx
+      const sx = args[0]!, sy = args[1] ?? sx
       next = [sx, 0, 0, sy, 0, 0]
     } else if (kind === 'rotate') {
       if (args.length !== 1 && args.length !== 3) throw new Error('SVG rotate() requires 1 or 3 arguments.')
-      const rad = (args[0] * Math.PI) / 180
+      const rad = (args[0]! * Math.PI) / 180
       const c = Math.cos(rad), s = Math.sin(rad)
       if (args.length === 1) {
         next = [c, s, -s, c, 0, 0]
       } else {
-        const cx = args[1], cy = args[2]
+        const cx = args[1]!, cy = args[2]!
         next = multiplySvgMatrices(
           multiplySvgMatrices([1, 0, 0, 1, cx, cy], [c, s, -s, c, 0, 0]),
           [1, 0, 0, 1, -cx, -cy],
@@ -93,17 +93,17 @@ export function parseSvgTransformMatrix(transformAttr: string): SvgMatrix2D {
       }
     } else if (kind === 'skewX') {
       if (args.length !== 1) throw new Error('SVG skewX() requires 1 argument.')
-      const t = Math.tan((args[0] * Math.PI) / 180)
+      const t = Math.tan((args[0]! * Math.PI) / 180)
       if (!Number.isFinite(t) || Math.abs(t) > 1e6) throw new Error('Degenerate SVG skewX() angle.')
       next = [1, 0, t, 1, 0, 0]
     } else {
       if (args.length !== 1) throw new Error('SVG skewY() requires 1 argument.')
-      const t = Math.tan((args[0] * Math.PI) / 180)
+      const t = Math.tan((args[0]! * Math.PI) / 180)
       if (!Number.isFinite(t) || Math.abs(t) > 1e6) throw new Error('Degenerate SVG skewY() angle.')
       next = [1, t, 0, 1, 0, 0]
     }
     current = multiplySvgMatrices(current, next)
-    while (cursor < trimmed.length && /[\s,]/.test(trimmed[cursor])) cursor++
+    while (cursor < trimmed.length && /[\s,]/.test(trimmed[cursor]!)) cursor++
   }
   const det = current[0] * current[3] - current[1] * current[2]
   if (!Number.isFinite(det) || Math.abs(det) <= 1e-12) {

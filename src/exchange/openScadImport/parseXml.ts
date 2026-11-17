@@ -21,7 +21,7 @@ export function parseXml(text: string, format: OpenScadImportFormat): XmlElement
   let cursor = 0
   let elements = 0
   const skipWhitespace = (): void => {
-    while (cursor < text.length && /\s/u.test(text[cursor])) cursor++
+    while (cursor < text.length && /\s/u.test(text[cursor]!)) cursor++
   }
   const name = (): string => {
     const start = cursor
@@ -29,7 +29,7 @@ export function parseXml(text: string, format: OpenScadImportFormat): XmlElement
       return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML contains an invalid element or attribute name.`, format)
     }
     cursor++
-    while (cursor < text.length && xmlNameCharacter(text[cursor], false)) cursor++
+    while (cursor < text.length && xmlNameCharacter(text[cursor]!, false)) cursor++
     return text.slice(start, cursor)
   }
   while (cursor < text.length) {
@@ -132,7 +132,7 @@ export function parseXml(text: string, format: OpenScadImportFormat): XmlElement
       if (parts.length > 2 || parts.some(part => part === '')) {
         return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML qualified name is invalid.`, format)
       }
-      return { prefix: parts.length === 2 ? parts[0] : '', localName: parts.at(-1)! }
+      return { prefix: parts.length === 2 ? parts[0]! : '', localName: parts.at(-1)! }
     }
     const elementQName = qname(elementName)
     const namespaceUri = namespaces[elementQName.prefix] ?? null
@@ -189,7 +189,7 @@ export function parseXml(text: string, format: OpenScadImportFormat): XmlElement
   if (stack.length !== 1 || document.children.length !== 1 || document.text.trim() !== '') {
     return dataError('E_IMPORT_INVALID_DATA', `${format.toUpperCase()} XML must contain exactly one root element.`, format)
   }
-  return document.children[0]
+  return document.children[0]!
 }
 
 export function childElements(element: XmlElement, localName: string): readonly XmlElement[] {
@@ -309,9 +309,11 @@ export function multiply4(left: Matrix4, right: Matrix4): Matrix4 {
   const output = new Array<number>(16).fill(0)
   for (let row = 0; row < 4; row++) {
     for (let column = 0; column < 4; column++) {
+      let sum = 0
       for (let index = 0; index < 4; index++) {
-        output[row * 4 + column] += left[row * 4 + index] * right[index * 4 + column]
+        sum += left[row * 4 + index]! * right[index * 4 + column]!
       }
+      output[row * 4 + column] = sum
     }
   }
   return output as unknown as Matrix4
@@ -354,7 +356,7 @@ export function appendRawMesh(
   const m8 = matrix[8], m9 = matrix[9], m10 = matrix[10], m11 = matrix[11]
   const srcVertices = mesh.vertices
   for (let offset = 0; offset < srcVertices.length; offset += 3) {
-    const x = srcVertices[offset], y = srcVertices[offset + 1], z = srcVertices[offset + 2]
+    const x = srcVertices[offset]!, y = srcVertices[offset + 1]!, z = srcVertices[offset + 2]!
     targetVertices.push(
       m0 * x + m1 * y + m2 * z + m3,
       m4 * x + m5 * y + m6 * z + m7,
@@ -371,17 +373,17 @@ export function appendRawMesh(
   if (determinant < 0) {
     for (let offset = 0; offset < srcTriangles.length; offset += 3) {
       targetTriangles.push(
-        vertexOffset + srcTriangles[offset],
-        vertexOffset + srcTriangles[offset + 2],
-        vertexOffset + srcTriangles[offset + 1],
+        vertexOffset + srcTriangles[offset]!,
+        vertexOffset + srcTriangles[offset + 2]!,
+        vertexOffset + srcTriangles[offset + 1]!,
       )
     }
   } else {
     for (let offset = 0; offset < srcTriangles.length; offset += 3) {
       targetTriangles.push(
-        vertexOffset + srcTriangles[offset],
-        vertexOffset + srcTriangles[offset + 1],
-        vertexOffset + srcTriangles[offset + 2],
+        vertexOffset + srcTriangles[offset]!,
+        vertexOffset + srcTriangles[offset + 1]!,
+        vertexOffset + srcTriangles[offset + 2]!,
       )
     }
   }

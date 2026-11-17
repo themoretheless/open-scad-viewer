@@ -115,7 +115,7 @@ export async function parseOpenScadAmf(file: OpenScadProjectFile): Promise<OpenS
 
 export function crc32(bytes: Uint8Array): number {
   let value = 0xffffffff
-  for (const byte of bytes) value = CRC_TABLE[(value ^ byte) & 0xff] ^ (value >>> 8)
+  for (const byte of bytes) value = CRC_TABLE[(value ^ byte) & 0xff]! ^ (value >>> 8)
   return (value ^ 0xffffffff) >>> 0
 }
 

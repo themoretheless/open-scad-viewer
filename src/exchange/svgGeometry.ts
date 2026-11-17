@@ -10,10 +10,10 @@ function bounded(contours: SvgContours) {
   if (contours.reduce((n, ring) => n + ring.length, 0) > 20000) throw new Error('SVG exceeds 20000 contour points.')
   if (!contours.length || contours.some(ring => ring.length < 3 || ring.some(p => p.length !== 2 || !p.every(Number.isFinite)))) throw new Error('SVG has no finite area.')
   for (const ring of contours) {
-    const [x, y] = ring[0]
+    const [x, y] = ring[0] as [number, number]
     const twiceArea = ring.reduce((sum, a, i) => {
-      const b = ring[(i + 1) % ring.length]
-      return sum + (a[0] - x) * (b[1] - y) - (b[0] - x) * (a[1] - y)
+      const b = ring[(i + 1) % ring.length]!
+      return sum + (a[0]! - x) * (b[1]! - y) - (b[0]! - x) * (a[1]! - y)
     }, 0)
     if (!Number.isFinite(twiceArea) || twiceArea === 0) throw new Error('SVG has no finite area.')
   }
@@ -75,10 +75,10 @@ export async function meshSvgContours(meshes: readonly SvgProjectionMesh[], opti
   const face = options.face
   if (face && (!Number.isInteger(face.meshIndex) || face.meshIndex < 0 || !meshes[face.meshIndex]
     || !Number.isInteger(face.triangleIndex) || face.triangleIndex < 0
-    || face.triangleIndex * 3 + 2 >= meshes[face.meshIndex].indices.length)) {
+    || face.triangleIndex * 3 + 2 >= meshes[face.meshIndex]!.indices.length)) {
     throw new Error('Select a valid planar face.')
   }
-  const selected = face ? [meshes[face.meshIndex]] : meshes
+  const selected = face ? [meshes[face.meshIndex]!] : meshes
   for (const mesh of selected) {
     if (mesh.vertices.length % 6 || mesh.indices.length % 3 || mesh.transform.length !== 16
       || !mesh.transform.every(Number.isFinite)

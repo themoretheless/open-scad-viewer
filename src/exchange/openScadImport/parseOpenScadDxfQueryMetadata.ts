@@ -67,11 +67,11 @@ export function parseOpenScadDxfIntermediate(file: OpenScadProjectFile): OpenSca
   const blockEntities = sections.get('BLOCKS') ?? []
   const blocks = new Map<string, DxfBlock>()
   for (let cursor = 0; cursor < blockEntities.length;) {
-    const header = blockEntities[cursor++]
+    const header = blockEntities[cursor++]!
     if (header.type !== 'BLOCK') continue
     const name = dxfValue(header, 2, dxfValue(header, 3, ''))
     const members: DxfEntity[] = []
-    while (cursor < blockEntities.length && blockEntities[cursor].type !== 'ENDBLK') members.push(blockEntities[cursor++])
+    while (cursor < blockEntities.length && blockEntities[cursor]!.type !== 'ENDBLK') members.push(blockEntities[cursor++]!)
     if (cursor < blockEntities.length) cursor++
     if (name) blocks.set(name, {
       base: [dxfNumber(header, 10, 0), dxfNumber(header, 20, 0)],
@@ -94,7 +94,7 @@ export function parseOpenScadDxfIntermediate(file: OpenScadProjectFile): OpenSca
         'DXF query record count',
         'dxf',
       )
-      querySegments.push({ layer, start: points[index - 1], end: points[index] })
+      querySegments.push({ layer, start: points[index - 1]!, end: points[index]! })
     }
   }
   const addPolyline = (
@@ -110,7 +110,7 @@ export function parseOpenScadDxfIntermediate(file: OpenScadProjectFile): OpenSca
   }
   const visit = (items: readonly DxfEntity[], matrix: Matrix2, inheritedLayer: string, stack: readonly string[]): void => {
     for (let cursor = 0; cursor < items.length; cursor++) {
-      const entity = items[cursor]
+      const entity = items[cursor]!
       const layer = entityLayer(entity, inheritedLayer)
       if (entity.type === 'LINE') {
         addPolyline([
@@ -121,17 +121,17 @@ export function parseOpenScadDxfIntermediate(file: OpenScadProjectFile): OpenSca
         addPolyline(dxfLwPolyline(entity), (dxfInteger(entity, 70) & 1) !== 0, layer, matrix)
       } else if (entity.type === 'POLYLINE') {
         const vertices: OpenScadImportPoint2[] = []
-        while (cursor + 1 < items.length && items[cursor + 1].type === 'VERTEX') {
-          const vertex = items[++cursor]
+        while (cursor + 1 < items.length && items[cursor + 1]!.type === 'VERTEX') {
+          const vertex = items[++cursor]!
           vertices.push([dxfNumber(vertex, 10), dxfNumber(vertex, 20)])
         }
-        if (cursor + 1 < items.length && items[cursor + 1].type === 'SEQEND') cursor++
+        if (cursor + 1 < items.length && items[cursor + 1]!.type === 'SEQEND') cursor++
         if (vertices.length >= 2) addPolyline(vertices, (dxfInteger(entity, 70) & 1) !== 0, layer, matrix)
       } else if (entity.type === 'CIRCLE') {
         const center: OpenScadImportPoint2 = [dxfNumber(entity, 10), dxfNumber(entity, 20)]
         const radius = dxfNumber(entity, 40)
         const contour = arcPoints(center, radius, radius, 0, Math.PI * 2).slice(0, -1).map(point => transform2(matrix, point))
-        if (contour.length >= 2) recordQuerySegments([...contour, contour[0]], layer)
+        if (contour.length >= 2) recordQuerySegments([...contour, contour[0]!], layer)
         regions.push({ contours: [contour], fillRule: 'evenodd', layer })
       } else if (entity.type === 'ARC') {
         const start = dxfNumber(entity, 50) * Math.PI / 180
@@ -161,7 +161,7 @@ export function parseOpenScadDxfIntermediate(file: OpenScadProjectFile): OpenSca
         )
         if (Math.abs(sweep - Math.PI * 2) < 1e-8) {
           const contour = curve.slice(0, -1).map(point => transform2(matrix, point))
-          if (contour.length >= 2) recordQuerySegments([...contour, contour[0]], layer)
+          if (contour.length >= 2) recordQuerySegments([...contour, contour[0]!], layer)
           regions.push({ contours: [contour], fillRule: 'evenodd', layer })
         } else addPolyline(curve, false, layer, matrix)
       } else if (entity.type === 'INSERT') {

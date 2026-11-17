@@ -94,6 +94,6 @@ export function convertedMeshFileName(inputName: string, extension: string): str
 /** Latin-1 view of the first `length` bytes, for header sniffing. */
 export function asciiPrefix(bytes: Uint8Array, length: number): string {
   let out = ''
-  for (let i = 0; i < Math.min(length, bytes.byteLength); i++) out += String.fromCharCode(bytes[i])
+  for (let i = 0; i < Math.min(length, bytes.byteLength); i++) out += String.fromCharCode(bytes[i]!)
   return out
 }

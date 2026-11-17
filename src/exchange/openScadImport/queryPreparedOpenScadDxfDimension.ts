@@ -36,25 +36,25 @@ export function queryPreparedOpenScadDxfDimension(
   let value: number | undefined
   if (type === 0) {
     const radians = dimension.angle * Math.PI / 180
-    const x = points[4][0] - points[3][0]
-    const y = points[4][1] - points[3][1]
+    const x = points[4]![0] - points[3]![0]
+    const y = points[4]![1] - points[3]![1]
     value = Math.abs(x * Math.cos(radians) + y * Math.sin(radians))
   } else if (type === 1) {
-    value = Math.hypot(points[4][0] - points[3][0], points[4][1] - points[3][1])
+    value = Math.hypot(points[4]![0] - points[3]![0], points[4]![1] - points[3]![1])
   } else if (type === 2) {
     const first = Math.atan2(
-      points[0][0] - points[5][0],
-      points[0][1] - points[5][1],
+      points[0]![0] - points[5]![0],
+      points[0]![1] - points[5]![1],
     ) * 180 / Math.PI
     const second = Math.atan2(
-      points[4][0] - points[3][0],
-      points[4][1] - points[3][1],
+      points[4]![0] - points[3]![0],
+      points[4]![1] - points[3]![1],
     ) * 180 / Math.PI
     value = Math.abs(first - second)
   } else if (type === 3 || type === 4) {
-    value = Math.hypot(points[5][0] - points[0][0], points[5][1] - points[0][1])
+    value = Math.hypot(points[5]![0] - points[0]![0], points[5]![1] - points[0]![1])
   } else if (type === 6) {
-    value = (dimension.type & 64) !== 0 ? points[3][0] : points[3][1]
+    value = (dimension.type & 64) !== 0 ? points[3]![0] : points[3]![1]
   }
   if (value === undefined) {
     diagnostics.push(dxfQueryDiagnostic(
@@ -148,10 +148,10 @@ export function buildDxfQueryPaths(
   const follow = (initialLine: number, initialPoint: 0 | 1): OpenScadImportPoint2[] => {
     let currentLine = initialLine
     let currentPoint = initialPoint
-    const path: OpenScadImportPoint2[] = [lines[currentLine].points[currentPoint]]
+    const path: OpenScadImportPoint2[] = [lines[currentLine]!.points[currentPoint]]
     while (true) {
       const otherPoint = currentPoint === 0 ? 1 : 0
-      const line = lines[currentLine]
+      const line = lines[currentLine]!
       const reference = line.points[otherPoint]
       const referenceKey = line.keys[otherPoint]
       path.push(reference)
@@ -160,7 +160,7 @@ export function buildDxfQueryPaths(
       let nextLine: number | undefined
       let nextPoint: 0 | 1 = 0
       for (const candidate of grid.get(referenceKey) ?? []) {
-        const candLine = lines[candidate]
+        const candLine = lines[candidate]!
         if (candLine.disabled) continue
         if (candLine.keys[0] === referenceKey) {
           nextLine = candidate
@@ -183,14 +183,14 @@ export function buildDxfQueryPaths(
   while (enabled.size > 0) {
     let initial: readonly [number, 0 | 1] | undefined
     for (const lineIndex of enabled) {
-      const lineKeys = lines[lineIndex].keys
+      const lineKeys = lines[lineIndex]!.keys
       for (const endpoint of [0, 1] as const) {
         const cell = grid.get(lineKeys[endpoint])
         let hasNeighbor = false
         if (cell) {
           for (let i = 0; i < cell.length; i++) {
-            const candidate = cell[i]
-            if (candidate !== lineIndex && !lines[candidate].disabled) {
+            const candidate = cell[i]!
+            if (candidate !== lineIndex && !lines[candidate]!.disabled) {
               hasNeighbor = true
               break
             }
@@ -233,10 +233,10 @@ export function queryPreparedOpenScadDxfCross(
     transform.layer,
     transform.origin,
     transform.scale,
-  ).filter(path => path.length === 2)
+  ).filter((path): path is [OpenScadImportPoint2, OpenScadImportPoint2] => path.length === 2)
   if (paths.length >= 2) {
-    const [firstStart, firstEnd] = paths[0]
-    const [secondStart, secondEnd] = paths[1]
+    const [firstStart, firstEnd] = paths[0]!
+    const [secondStart, secondEnd] = paths[1]!
     const denominator = (secondEnd[1] - secondStart[1]) * (firstEnd[0] - firstStart[0])
       - (secondEnd[0] - secondStart[0]) * (firstEnd[1] - firstStart[1])
     if (denominator !== 0) {

@@ -157,7 +157,7 @@ export function transformLoadedGeometry(
   const srcVertices = source.vertices
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity
   for (let offset = 0; offset < srcVertices.length; offset += 3) {
-    const x = srcVertices[offset], y = srcVertices[offset + 1], z = srcVertices[offset + 2]
+    const x = srcVertices[offset]!, y = srcVertices[offset + 1]!, z = srcVertices[offset + 2]!
     if (x < minX) minX = x; if (x > maxX) maxX = x
     if (y < minY) minY = y; if (y > maxY) maxY = y
     if (z < minZ) minZ = z; if (z > maxZ) maxZ = z
@@ -165,9 +165,9 @@ export function transformLoadedGeometry(
   const centerX = (minX + maxX) / 2, centerY = (minY + maxY) / 2, centerZ = (minZ + maxZ) / 2
   const vertices = new Float64Array(srcVertices.length)
   for (let offset = 0; offset < srcVertices.length; offset += 3) {
-    vertices[offset] = srcVertices[offset] - centerX
-    vertices[offset + 1] = srcVertices[offset + 1] - centerY
-    vertices[offset + 2] = srcVertices[offset + 2] - centerZ
+    vertices[offset] = srcVertices[offset]! - centerX
+    vertices[offset + 1] = srcVertices[offset + 1]! - centerY
+    vertices[offset + 2] = srcVertices[offset + 2]! - centerZ
   }
   return geometry3D(source.format, vertices, source.triangles)
 }
@@ -337,7 +337,7 @@ export function resolveDxfQueryTransform(
     const supplied: unknown = options.origin
     if (Array.isArray(supplied) && supplied.length === 2
       && supplied.every(value => typeof value === 'number')) {
-      origin = [supplied[0], supplied[1]]
+      origin = [supplied[0] as number, supplied[1] as number]
       if (!origin.every(Number.isFinite)) {
         diagnostics.push(dxfQueryDiagnostic(
           'OPENSCAD_DXF_QUERY_INVALID_ORIGIN',

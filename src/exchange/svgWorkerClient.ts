@@ -29,12 +29,12 @@ function checkJob(job: SvgJob): SvgJob {
       if (faceId === undefined ? offset !== triangle * 3 : srcFaceIds[offset / 3] !== faceId) continue
       if (indices.length >= 60000) throw new RangeError('SVG projection is limited to 20000 triangles.')
       for (let corner = 0; corner < 3; corner++) {
-        const source = srcIndices[offset + corner]
+        const source = srcIndices[offset + corner]!
         let target = remap.get(source)
         if (target === undefined) {
           target = vertices.length / 6; remap.set(source, target)
           const base = source * 6
-          vertices.push(srcVertices[base], srcVertices[base + 1], srcVertices[base + 2], srcVertices[base + 3], srcVertices[base + 4], srcVertices[base + 5])
+          vertices.push(srcVertices[base]!, srcVertices[base + 1]!, srcVertices[base + 2]!, srcVertices[base + 3]!, srcVertices[base + 4]!, srcVertices[base + 5]!)
         }
         indices.push(target)
       }
