@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 491,
-  "unallocatedCount": 509,
+  "specifiedCount": 492,
+  "unallocatedCount": 508,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12802,6 +12802,26 @@
       "remainingQualification": [
         "Partition the original NURBS curve at several absolute parameters under one exact work budget.",
         "Apply exact seam restrictions in increasing order. Preserve each source interval and return the failing cut index without publishing a partial partition.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0492",
+      "name": "Точная склейка NURBS-кривых с согласованием масштаба рациональных весов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::merge_with_weight_scaling",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-492-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-492-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Join clamped adjacent NURBS curves with different weight gauges without rounding.",
+        "Align the rational seam gauges before exact global storage. Equal Cartesian seam poles and adjacent source domains preserve both laws; unstoreable gauges are refused atomically.",
         "WASM and application integration are separate."
       ]
     }

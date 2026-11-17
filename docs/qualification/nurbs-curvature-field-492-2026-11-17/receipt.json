@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0492",
+  "testedBase": "c384338b3bb4dcd3bf406ad4dca726db75d39041",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 38,
+  "scope": [
+    "Join clamped adjacent NURBS curves with different weight gauges without rounding.",
+    "Align the rational seam gauges before exact global storage. Equal Cartesian seam poles and adjacent source domains preserve both laws; unstoreable gauges are refused atomically."
+  ],
+  "logSha256": "fc5d6de313b27e7546568f8c3dc5d9918ceefdfb6334d472d5d04216b7502511",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "264aa0de0ea457b2038ac81e8a8fc7169beba6b2ab986f8510112aa48342ec70",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "bcab5d46173cab35a892ca729d42d9f465a88134e321801e03183e09a1e566dc"
+  }
+}
