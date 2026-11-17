@@ -2401,3 +2401,81 @@ fn clamps_to_a_section_vertex_and_reports_empty_sections() {
             .is_none()
     );
 }
+
+#[test]
+fn finds_projected_interior_and_hole_boundary_witnesses_for_material_distance() {
+    use brep_core::{
+        analysis::{PolyhedralSectionMaterialWitness, exact_polyhedral_section_material_distance},
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |a: i64, b: i64| Q::new(a.into(), b.into());
+    let normal = [0., 0., 1.];
+    let point = [q(1, 2), q(1, 2), q(2, 1)];
+    let report =
+        exact_polyhedral_section_material_distance(solid, normal, 1., &point, 1_000_000).unwrap();
+    assert_eq!(
+        report.nearest,
+        Some(PolyhedralSectionMaterialWitness::Interior {
+            point_mm: [q(1, 2), q(1, 2), q(1, 1)],
+            distance_squared_mm2: q(1, 1),
+        })
+    );
+    assert!(
+        exact_polyhedral_section_material_distance(solid, normal, 1., &point, report.exact_work)
+            .is_ok()
+    );
+    assert!(
+        exact_polyhedral_section_material_distance(
+            solid,
+            normal,
+            1.,
+            &point,
+            report.exact_work - 1
+        )
+        .is_err()
+    );
+
+    for (x, distance) in [(q(5, 4), q(17, 16)), (q(1, 1), q(1, 1))] {
+        let point = [x, q(3, 2), q(2, 1)];
+        let report =
+            exact_polyhedral_section_material_distance(solid, normal, 1., &point, 1_000_000)
+                .unwrap();
+        let Some(PolyhedralSectionMaterialWitness::Boundary(hit)) = report.nearest else {
+            panic!("expected hole boundary")
+        };
+        assert_eq!(hit.point_mm, [q(1, 1), q(3, 2), q(1, 1)]);
+        assert_eq!(hit.distance_squared_mm2, distance);
+    }
+    assert!(
+        exact_polyhedral_section_material_distance(solid, normal, 5., &point, 1_000_000)
+            .unwrap()
+            .nearest
+            .is_none()
+    );
+}
+
+#[test]
+fn uses_true_orthogonal_projection_on_an_oblique_section() {
+    use brep_core::analysis::{
+        PolyhedralSectionMaterialWitness, exact_polyhedral_section_material_distance,
+    };
+    use num_rational::BigRational as Q;
+    let solid = shifted_oblique_solid(0.);
+    let q = |a: i64, b: i64| Q::new(a.into(), b.into());
+    let projected = [q(3, 2), q(0, 1), q(7, 6)];
+    let query = [q(1, 2), q(-1, 1), q(25, 6)];
+    let report =
+        exact_polyhedral_section_material_distance(&solid, [-1., -1., 3.], 2., &query, 1_000_000)
+            .unwrap();
+    assert_eq!(
+        report.nearest,
+        Some(PolyhedralSectionMaterialWitness::Interior {
+            point_mm: projected,
+            distance_squared_mm2: q(11, 1),
+        })
+    );
+}

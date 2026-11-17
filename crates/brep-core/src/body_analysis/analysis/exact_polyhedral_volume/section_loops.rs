@@ -430,16 +430,113 @@ pub fn exact_polyhedral_section_distance(
     point_mm: &[Q; 3],
     max_exact_work: u64,
 ) -> Result<ExactPolyhedralSectionDistance> {
-    use num_traits::{One, Zero};
-
     validate_query_point(point_mm)?;
     let section = exact_polyhedral_section_loops(solid, normal, offset, max_exact_work)?;
     let mut remaining = max_exact_work - section.exact_work;
+    let nearest = nearest_contour(&section.loops, point_mm, &mut remaining)?;
+    Ok(ExactPolyhedralSectionDistance {
+        nearest,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PolyhedralSectionMaterialWitness {
+    Interior {
+        point_mm: [Q; 3],
+        distance_squared_mm2: Q,
+    },
+    Boundary(PolyhedralSectionNearestPoint),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralSectionMaterialDistance {
+    /// No witness when the section is empty.
+    pub nearest: Option<PolyhedralSectionMaterialWitness>,
+    pub exact_work: u64,
+}
+
+/// Find the nearest point in the closed material region of a transverse
+/// section. For an off-plane query, exact orthogonal projection is tested
+/// before resolving the nearest contour, including hole boundaries.
+pub fn exact_polyhedral_section_material_distance(
+    solid: &QualifiedClosedSolid,
+    normal: [f64; 3],
+    offset: f64,
+    point_mm: &[Q; 3],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralSectionMaterialDistance> {
+    validate_query_point(point_mm)?;
+    let section = exact_polyhedral_section_loops(solid, normal, offset, max_exact_work)?;
+    let mut remaining = max_exact_work - section.exact_work;
+    let nearest = if section.loops.is_empty() {
+        None
+    } else {
+        spend(&mut remaining, 32)?;
+        let n = super::lift(&normal);
+        let norm_squared: Q = n.iter().map(|value| value * value).sum();
+        let residual = n
+            .iter()
+            .zip(point_mm)
+            .map(|(axis, point)| axis * point)
+            .sum::<Q>()
+            - Q::from_float(offset).unwrap();
+        let scale = &residual / &norm_squared;
+        let projected = std::array::from_fn(|i| &point_mm[i] - &scale * &n[i]);
+        let location = classify_section_loops(
+            &section.loops,
+            projected_axes(normal),
+            &projected,
+            &mut remaining,
+        )?;
+        let plane_distance = &residual * scale;
+        match location {
+            PolyhedralSectionPointLocation::Material => {
+                Some(PolyhedralSectionMaterialWitness::Interior {
+                    point_mm: projected,
+                    distance_squared_mm2: plane_distance,
+                })
+            }
+            PolyhedralSectionPointLocation::Boundary {
+                ring,
+                segment,
+                face,
+            } => Some(PolyhedralSectionMaterialWitness::Boundary(
+                PolyhedralSectionNearestPoint {
+                    distance_squared_mm2: plane_distance,
+                    point_mm: projected,
+                    ring,
+                    segment,
+                    face,
+                },
+            )),
+            PolyhedralSectionPointLocation::Outside => {
+                nearest_contour(&section.loops, point_mm, &mut remaining)?
+                    .map(PolyhedralSectionMaterialWitness::Boundary)
+            }
+            PolyhedralSectionPointLocation::OffPlane => {
+                unreachable!("classified in plane coordinates")
+            }
+        }
+    };
+    Ok(ExactPolyhedralSectionMaterialDistance {
+        nearest,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn nearest_contour(
+    loops: &[PolyhedralSectionLoop],
+    point_mm: &[Q; 3],
+    remaining: &mut u64,
+) -> Result<Option<PolyhedralSectionNearestPoint>> {
+    use num_traits::{One, Zero};
+
     let mut nearest: Option<PolyhedralSectionNearestPoint> = None;
-    for (ring, contour) in section.loops.iter().enumerate() {
+    for (ring, contour) in loops.iter().enumerate() {
         let points = &contour.points_mm;
         for (segment, (a, b)) in points.iter().zip(points.iter().cycle().skip(1)).enumerate() {
-            spend(&mut remaining, 40)?;
+            spend(remaining, 40)?;
             let delta: [Q; 3] = std::array::from_fn(|i| &b[i] - &a[i]);
             let length_squared: Q = delta.iter().map(|d| d * d).sum();
             let projection: Q = delta
@@ -468,10 +565,7 @@ pub fn exact_polyhedral_section_distance(
             }
         }
     }
-    Ok(ExactPolyhedralSectionDistance {
-        nearest,
-        exact_work: max_exact_work - remaining,
-    })
+    Ok(nearest)
 }
 
 fn validate_query_point(point_mm: &[Q; 3]) -> Result<()> {
