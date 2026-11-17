@@ -1253,3 +1253,71 @@ fn exact_periodic_knot_rotation_refuses_rounded_translations() {
         Some(GaugeMergeRefusal::Exact(ExactRefusal::NotRepresentable))
     );
 }
+
+#[test]
+fn periodic_seam_insertion_preserves_a_weighted_quadratic_across_the_wrap() {
+    use nurbs_core::editing::exact_curve_merge::insert_and_rotate_periodic_curve_seam;
+    let source = Curve {
+        degree: 2,
+        knots: vec![-2., -1., 0., 1., 2., 3., 4., 5., 6.],
+        control_points: vec![
+            vec![0., 0.],
+            vec![1., 0.],
+            vec![1., 1.],
+            vec![0., 1.],
+            vec![0., 0.],
+            vec![1., 0.],
+        ],
+        weights: vec![1., 1., 1., 2., 1., 1.],
+        periodic: true,
+    };
+    let report = insert_and_rotate_periodic_curve_seam(&source, 0.5, 1_000_000).unwrap();
+    assert_eq!(report.refusal, None);
+    let curve = report.curve.unwrap();
+    assert!(curve.periodic);
+    assert_eq!(curve.domain(), [0.5, 4.5]);
+    assert_eq!(curve.control_points.len(), source.control_points.len() + 1);
+    for i in 0..=32 {
+        let t = 0.5 + i as f64 / 8.;
+        let u = if t >= 4. { t - 4. } else { t };
+        let expected = source.evaluate(u).unwrap().point;
+        let actual = curve.evaluate(t).unwrap().point;
+        for (a, b) in expected.into_iter().zip(actual) {
+            assert!((a - b).abs() < 1e-13);
+        }
+    }
+    assert!(
+        insert_and_rotate_periodic_curve_seam(&source, 0.5, report.work_used - 1)
+            .unwrap()
+            .curve
+            .is_none()
+    );
+}
+
+#[test]
+fn periodic_seam_insertion_refuses_nonrepresentable_cartesian_refinement() {
+    use nurbs_core::editing::exact_curve_merge::{
+        GaugeMergeRefusal, insert_and_rotate_periodic_curve_seam,
+    };
+    use nurbs_core::editing::rational_factor::Refusal as ExactRefusal;
+    let source = Curve {
+        degree: 2,
+        knots: vec![-2., -1., 0., 1., 3., 4., 5., 6., 8.],
+        control_points: vec![
+            vec![0., 0.],
+            vec![1., 0.],
+            vec![1., 1.],
+            vec![0., 1.],
+            vec![0., 0.],
+            vec![1., 0.],
+        ],
+        weights: vec![1.; 6],
+        periodic: true,
+    };
+    let refused = insert_and_rotate_periodic_curve_seam(&source, 0.5, 1_000_000).unwrap();
+    assert!(refused.curve.is_none());
+    assert_eq!(
+        refused.refusal,
+        Some(GaugeMergeRefusal::Exact(ExactRefusal::NotRepresentable))
+    );
+}

@@ -1178,7 +1178,6 @@ pub fn rotate_periodic_curve_at_exact_knot(
     }
     let degree = source.degree;
     let n = source.control_points.len();
-    let cycle = n - degree;
     let Some(shift) = source.knots[degree..n].iter().position(|&k| k == parameter) else {
         return Ok(refused(GaugeMergeRefusal::Join(Refusal::SeamMismatch), 0));
     };
@@ -1186,43 +1185,163 @@ pub fn rotate_periodic_curve_at_exact_knot(
         used: 0,
         limit: max_work,
     };
+    match rotate_periodic_storage(source, shift, &mut work) {
+        Err(ExactRefusal::InvalidOutput) => Ok(refused(
+            GaugeMergeRefusal::Join(Refusal::InvalidOutput),
+            work.used,
+        )),
+        Ok(rotated) => Ok(GaugeMergeReport {
+            curve: Some(rotated),
+            work_used: work.used,
+            refusal: None,
+        }),
+        Err(reason) => Ok(refused(GaugeMergeRefusal::Exact(reason), work.used)),
+    }
+}
+
+fn rotate_periodic_storage(
+    source: &Curve,
+    shift: usize,
+    work: &mut super::rational_edit::Work,
+) -> std::result::Result<Curve, super::rational_factor::Refusal> {
+    use super::rational_factor::Refusal as ExactRefusal;
+
+    let n = source.control_points.len();
+    let cycle = n - source.degree;
     let mut rotated = source.clone();
-    let mut remap = || -> std::result::Result<(), ExactRefusal> {
-        let [lo, hi] = source.domain();
-        let lo = work.lift(lo)?;
-        let hi = work.lift(hi)?;
-        let period = work.op(&hi, &lo, |a, b| a - b)?;
-        for (i, knot) in rotated.knots.iter_mut().enumerate() {
-            let index = i + shift;
-            // Keep all overlapping knots literal and translate only the
-            // newly exposed suffix of the infinite periodic knot sequence.
-            *knot = if index < source.knots.len() {
-                source.knots[index]
-            } else {
-                let base = work.lift(source.knots[index - cycle])?;
-                let mapped = work.op(&base, &period, |a, b| a + b)?;
-                work.float(&mapped)?
-            };
-        }
-        Ok(())
-    };
-    if let Err(reason) = remap() {
-        return Ok(refused(GaugeMergeRefusal::Exact(reason), work.used));
+    let [lo, hi] = source.domain();
+    let lo = work.lift(lo)?;
+    let hi = work.lift(hi)?;
+    let period = work.op(&hi, &lo, |a, b| a - b)?;
+    for (i, knot) in rotated.knots.iter_mut().enumerate() {
+        let index = i + shift;
+        // Keep all overlapping knots literal and translate only the
+        // newly exposed suffix of the infinite periodic knot sequence.
+        *knot = if index < source.knots.len() {
+            source.knots[index]
+        } else {
+            let base = work.lift(source.knots[index - cycle])?;
+            let mapped = work.op(&base, &period, |a, b| a + b)?;
+            work.float(&mapped)?
+        };
     }
     for i in 0..n {
         let original = (i + shift) % cycle;
         rotated.control_points[i].clone_from(&source.control_points[original]);
         rotated.weights[i] = source.weights[original];
     }
-    if rotated.validate().is_err() {
-        return Ok(refused(
-            GaugeMergeRefusal::Join(Refusal::InvalidOutput),
-            work.used,
-        ));
+    rotated
+        .validate()
+        .map_err(|_| ExactRefusal::InvalidOutput)?;
+    Ok(rotated)
+}
+
+/// Rotate a periodic spline to a seam in the active domain. If the seam
+/// is inside a span, insert one exact cyclic Boehm knot first. Refuse any
+/// knot or homogeneous net that cannot be stored without changing the law.
+pub fn insert_and_rotate_periodic_curve_seam(
+    source: &Curve,
+    parameter: f64,
+    max_work: u64,
+) -> Result<GaugeMergeReport> {
+    use super::rational_edit::Work;
+
+    source.validate()?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact periodic seam work must be in 1..=1000000",
+    )?;
+    let [lo, hi] = source.domain();
+    if !crate::analysis::curve_partition_agreement::verify_periodic_source_closure(source)? {
+        return Ok(GaugeMergeReport {
+            curve: None,
+            work_used: 0,
+            refusal: Some(GaugeMergeRefusal::Join(Refusal::InvalidOutput)),
+        });
     }
-    Ok(GaugeMergeReport {
-        curve: Some(rotated),
-        work_used: work.used,
-        refusal: None,
+    if !(lo <= parameter && parameter < hi) {
+        return Ok(GaugeMergeReport {
+            curve: None,
+            work_used: 0,
+            refusal: Some(GaugeMergeRefusal::Join(Refusal::SeamMismatch)),
+        });
+    }
+    if source.knots.contains(&parameter) {
+        return rotate_periodic_curve_at_exact_knot(source, parameter, max_work);
+    }
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let result = insert_periodic_seam(source, parameter, &mut work);
+    Ok(match result {
+        Ok(curve) => GaugeMergeReport {
+            curve: Some(curve),
+            work_used: work.used,
+            refusal: None,
+        },
+        Err(reason) => GaugeMergeReport {
+            curve: None,
+            work_used: work.used,
+            refusal: Some(GaugeMergeRefusal::Exact(reason)),
+        },
     })
+}
+
+fn insert_periodic_seam(
+    source: &Curve,
+    parameter: f64,
+    work: &mut super::rational_edit::Work,
+) -> std::result::Result<Curve, super::rational_factor::Refusal> {
+    use super::{
+        exact_knot_insertion::homogeneous, rational_edit::store, rational_factor::Refusal,
+    };
+    use num_rational::BigRational as Q;
+
+    let p = source.degree;
+    let n = source.control_points.len();
+    if n >= 256 {
+        return Err(Refusal::InvalidOutput);
+    }
+    let span = source.knots.partition_point(|&k| k < parameter) - 1;
+    // Pin the last occurrence of the preceding knot at index p so the
+    // insertion changes only the first p cyclic controls.
+    let base = rotate_periodic_storage(source, span - p, work)?;
+    let (net, linear_knots) = homogeneous(&base, parameter, 1, work)?;
+    let cycle = n - p + 1;
+    let channels: Vec<Vec<Q>> = (0..net[0].len())
+        .map(|axis| net[..cycle].iter().map(|row| row[axis].clone()).collect())
+        .collect();
+    let (mut points, mut weights) = store(&channels, work)?;
+    points.extend_from_within(..p);
+    weights.extend_from_within(..p);
+
+    let [lo, hi] = base.domain();
+    let start = work.lift(lo)?;
+    let end = work.lift(hi)?;
+    let period = work.op(&end, &start, |a, b| a - b)?;
+    let active = &linear_knots[p..p + cycle];
+    let knots = (0..cycle + 2 * p + 1)
+        .map(|i| {
+            let index = i as isize - p as isize;
+            let turn = index.div_euclid(cycle as isize);
+            let knot = active[index.rem_euclid(cycle as isize) as usize];
+            if turn == 0 {
+                return Ok(knot);
+            }
+            let value = work.lift(knot)?;
+            let turn = Q::from_integer(turn.into());
+            let mapped = work.op(&value, &period, |a, b| a + &turn * b)?;
+            Ok(work.float(&mapped)?)
+        })
+        .collect::<std::result::Result<Vec<_>, Refusal>>()?;
+    let refined = Curve {
+        degree: p,
+        knots,
+        control_points: points,
+        weights,
+        periodic: true,
+    };
+    refined.validate().map_err(|_| Refusal::InvalidOutput)?;
+    rotate_periodic_storage(&refined, 1, work)
 }
