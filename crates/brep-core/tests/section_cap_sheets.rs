@@ -5814,3 +5814,99 @@ fn exact_coplanar_boolean_boundary_keeps_opposite_hole_orientation() {
     assert_eq!(twice_area, q(64));
     assert_eq!(report.edges_mm.len(), 12);
 }
+
+#[test]
+fn exact_coplanar_boolean_loops_keep_point_touching_components_separate() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Union, exact_planar_spatial_polyline_area,
+        loops_of_exact_coplanar_planar_polyline_region_boolean,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y| [q(x), q(y), q(0)];
+    let rect = |lo, hi| [p(lo, lo), p(hi, lo), p(hi, hi), p(lo, hi), p(lo, lo)];
+    let a = rect(0, 2);
+    let b = rect(2, 4);
+    let mut reverse = a.clone();
+    reverse.reverse();
+    for (contour, expected) in [(a, q(4)), (reverse, q(-4))] {
+        let report = loops_of_exact_coplanar_planar_polyline_region_boolean(
+            &contour,
+            &[],
+            &b,
+            &[],
+            Union,
+            1_000_000,
+        )
+        .unwrap();
+        assert_eq!(report.loops_mm.len(), 2);
+        for ring in &report.loops_mm {
+            assert_eq!(ring.first(), ring.last());
+            assert!(ring.contains(&p(2, 2)));
+            assert_eq!(
+                exact_planar_spatial_polyline_area(ring, 1_000_000)
+                    .unwrap()
+                    .area_vector_mm2[2],
+                expected
+            );
+        }
+        assert_eq!(
+            loops_of_exact_coplanar_planar_polyline_region_boolean(
+                &contour,
+                &[],
+                &b,
+                &[],
+                Union,
+                report.exact_work
+            )
+            .unwrap(),
+            report
+        );
+        assert!(
+            loops_of_exact_coplanar_planar_polyline_region_boolean(
+                &contour,
+                &[],
+                &b,
+                &[],
+                Union,
+                report.exact_work - 1
+            )
+            .is_err()
+        );
+    }
+}
+
+#[test]
+fn exact_coplanar_boolean_loops_keep_opposite_winding_for_holes() {
+    use brep_core::analysis::{
+        CoplanarPolylineBoolean::Difference, exact_planar_spatial_polyline_area,
+        loops_of_exact_coplanar_planar_polyline_region_boolean,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y| [q(x), q(y), q(0)];
+    let rect = |lo, hi| [p(lo, lo), p(lo, hi), p(hi, hi), p(hi, lo), p(lo, lo)];
+    let a = rect(0, 6);
+    let b = rect(2, 4);
+    let report = loops_of_exact_coplanar_planar_polyline_region_boolean(
+        &a,
+        &[],
+        &b,
+        &[],
+        Difference,
+        1_000_000,
+    )
+    .unwrap();
+    let mut areas = report
+        .loops_mm
+        .iter()
+        .map(|ring| {
+            exact_planar_spatial_polyline_area(ring, 1_000_000)
+                .unwrap()
+                .area_vector_mm2[2]
+                .clone()
+        })
+        .collect::<Vec<_>>();
+    areas.sort();
+    assert_eq!(areas, [q(-36), q(4)]);
+}

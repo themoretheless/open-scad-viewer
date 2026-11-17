@@ -3393,6 +3393,25 @@ pub fn boundary_of_exact_coplanar_planar_polyline_region_boolean(
     operation: CoplanarPolylineBoolean,
     max_exact_work: u64,
 ) -> Result<ExactCoplanarPolylineBooleanBoundary> {
+    let (report, _) = planar_profile_boolean_boundary(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        operation,
+        max_exact_work,
+    )?;
+    Ok(report)
+}
+
+fn planar_profile_boolean_boundary(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    operation: CoplanarPolylineBoolean,
+    max_exact_work: u64,
+) -> Result<(ExactCoplanarPolylineBooleanBoundary, [usize; 2])> {
     let (report, [u, v]) = planar_profile_boolean_cells(
         first_outer_mm,
         first_holes_mm,
@@ -3445,8 +3464,114 @@ pub fn boundary_of_exact_coplanar_planar_polyline_region_boolean(
     if winding != 0 {
         return Err(refuse("Unbalanced planar cell seam"));
     }
-    Ok(ExactCoplanarPolylineBooleanBoundary {
-        edges_mm,
+    Ok((
+        ExactCoplanarPolylineBooleanBoundary {
+            edges_mm,
+            exact_work: max_exact_work - remaining,
+        },
+        [u, v],
+    ))
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactCoplanarPolylineBooleanBoundaryLoops {
+    /// Directed walks with their initial vertex repeated at the end.
+    /// Junction coordinates may be shared across walks.
+    pub loops_mm: Vec<Vec<[Q; 3]>>,
+    pub exact_work: u64,
+}
+
+/// Assemble the directed boundary of a regularized planar Boolean result.
+/// At a junction, pair rays around the incident material sector.
+pub fn loops_of_exact_coplanar_planar_polyline_region_boolean(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    operation: CoplanarPolylineBoolean,
+    max_exact_work: u64,
+) -> Result<ExactCoplanarPolylineBooleanBoundaryLoops> {
+    let (report, [u, v]) = planar_profile_boolean_boundary(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        operation,
+        max_exact_work,
+    )?;
+    let mut remaining = max_exact_work - report.exact_work;
+    let edges = report.edges_mm;
+    let mut outgoing = BTreeMap::<&[Q; 3], Vec<usize>>::new();
+    let mut twice_area = Q::zero();
+    for (index, [a, b]) in edges.iter().enumerate() {
+        let depth = u64::from((outgoing.len() + 1).ilog2()) + 1;
+        spend(&mut remaining, 16 + 8 * depth)?;
+        twice_area += &a[u] * &b[v] - &a[v] * &b[u];
+        outgoing.entry(a).or_default().push(index);
+    }
+    let positive = twice_area.is_positive();
+    let mut successor = Vec::with_capacity(edges.len());
+    let mut predecessor = vec![false; edges.len()];
+    let lookup_cost = 8 * (u64::from((outgoing.len() + 1).ilog2()) + 1);
+    for [start, end] in &edges {
+        spend(&mut remaining, lookup_cost)?;
+        let candidates = outgoing
+            .get(end)
+            .ok_or_else(|| refuse("Open Boolean boundary"))?;
+        let reverse = [&start[u] - &end[u], &start[v] - &end[v]];
+        let mut best: Option<([Q; 2], usize)> = None;
+        for &index in candidates {
+            spend(&mut remaining, 24)?;
+            let tip = &edges[index][1];
+            let ray = [&tip[u] - &end[u], &tip[v] - &end[v]];
+            let cross = &reverse[0] * &ray[1] - &reverse[1] * &ray[0];
+            let angle = [
+                &reverse[0] * &ray[0] + &reverse[1] * &ray[1],
+                if positive { -cross } else { cross },
+            ];
+            if best
+                .as_ref()
+                .is_none_or(|(current, _)| polar_angle_less(&angle, current))
+            {
+                best = Some((angle, index));
+            }
+        }
+        let (_, next) = best.ok_or_else(|| refuse("Open Boolean boundary"))?;
+        if std::mem::replace(&mut predecessor[next], true) {
+            return Err(refuse("Ambiguous Boolean boundary junction"));
+        }
+        successor.push(next);
+    }
+    let mut visited = vec![false; edges.len()];
+    let mut loops_mm = Vec::new();
+    for start in 0..edges.len() {
+        if visited[start] {
+            continue;
+        }
+        let mut ring = vec![edges[start][0].clone()];
+        let mut current = start;
+        loop {
+            spend(&mut remaining, 4)?;
+            visited[current] = true;
+            ring.push(edges[current][1].clone());
+            current = successor[current];
+            if current == start {
+                break;
+            }
+        }
+        loops_mm.push(ring);
+    }
+    Ok(ExactCoplanarPolylineBooleanBoundaryLoops {
+        loops_mm,
         exact_work: max_exact_work - remaining,
     })
+}
+
+fn polar_angle_less(a: &[Q; 2], b: &[Q; 2]) -> bool {
+    let lower = |[x, y]: &[Q; 2]| y.is_negative() || (y.is_zero() && x.is_negative());
+    match lower(a).cmp(&lower(b)) {
+        std::cmp::Ordering::Less => true,
+        std::cmp::Ordering::Greater => false,
+        std::cmp::Ordering::Equal => (&a[0] * &b[1] - &a[1] * &b[0]).is_positive(),
+    }
 }
