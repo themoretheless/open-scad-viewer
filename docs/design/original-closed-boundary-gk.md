@@ -239,7 +239,10 @@ collinear with strict order along that side and the internal knots
 preserve continuity. Evaluating active endpoints in homogeneous form
 keeps the chart coverage proof exact. The tensor iso-trace solver admits
 a higher-degree or multispan UV representation after a separate proof of
-affine-clock identity on all its original knot spans. Partial world intervals remain diagnostic windows.
+affine-clock identity on all its original knot spans. For an unclamped
+curve, the candidate affine clock uses the endpoints of an exact active
+restriction, while the identity is checked against the original basis.
+Partial world intervals remain diagnostic windows.
 
 The common boundary can be an authored chain of edges. The audit checks
 that both faces cover the complete natural rectangle, with exact
@@ -252,7 +255,8 @@ The joint exact-domain audit can also certify an inset or curved outer
 contour inside the natural rectangle. It establishes the actual simple
 CCW trim loops, hole nesting, and exact lifts before the projected
 partition proof. The partition bounds the UV control hulls within each
-proved chart, checks the opposite shared chain and certifies the merged
+proved chart, using exact active restrictions when stored poles extend
+beyond the chart. It checks the opposite shared chain and certifies the merged
 projected exterior. The sum of the two projected outer-loop windings
 then has magnitude at most one, which excludes overlapping interiors.
 Strictly nested holes cannot add contact across that partition.

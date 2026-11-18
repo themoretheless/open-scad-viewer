@@ -180,27 +180,78 @@ fn audited_chart_domain(
         s.knots_v[s.control_points[0].len()],
     ];
     // The verified lift and loop simplicity apply to the active traversal.
-    // Here the complete UV control hull conservatively places that same
-    // traversal in the rectangle on which projection injectivity is proved.
+    // Certify that traversal is in the rectangle of the chart projection.
     for index in std::iter::once(face.outer).chain(face.holes.iter().copied()) {
         for c in &model.loops[index].coedges {
-            let p = &c.pcurve;
-            charge(cells, limit, p.control_points.len())?;
-            if p.periodic
+            if c.pcurve.periodic
                 || c.trim().is_some_and(|t| {
                     t.periodic_lift != [[0; 2]; 2]
                         || t.curve_parameter != model.edges[c.edge].curve.domain()
                 })
-                || !p
-                    .control_points
-                    .iter()
-                    .all(|p| (0..2).all(|axis| lower[axis] <= p[axis] && p[axis] <= upper[axis]))
             {
                 return None;
             }
+            chart_curve_hull(c, [lower, upper], cells, limit)?;
         }
     }
     Some(())
+}
+
+fn chart_curve_hull(
+    coedge: &crate::Coedge,
+    [lower, upper]: [[f64; 2]; 2],
+    cells: &mut usize,
+    limit: usize,
+) -> Option<()> {
+    let curve = &coedge.pcurve;
+    let within = |p: &Curve| {
+        p.control_points
+            .iter()
+            .all(|p| (0..2).all(|axis| lower[axis] <= p[axis] && p[axis] <= upper[axis]))
+    };
+    charge(cells, limit, curve.control_points.len())?;
+    if within(curve) {
+        return Some(());
+    }
+    let domain = curve.domain();
+    let range = coedge.trim().map_or(domain, |trim| {
+        let [a, b] = trim.pcurve_parameter;
+        [a.min(b), a.max(b)]
+    });
+    let work = ((limit - *cells) as u64).min(cad_predicates::MAX_WORK);
+    if work == 0 {
+        return None;
+    }
+    let restricted;
+    let curve = if range == domain {
+        curve
+    } else {
+        let report = exact_knot_insertion::restrict(curve, range, work).ok()?;
+        charge(cells, limit, report.work_used as usize)?;
+        restricted = report.curve?;
+        charge(cells, limit, restricted.control_points.len())?;
+        if within(&restricted) {
+            return Some(());
+        }
+        &restricted
+    };
+    let [lo, hi] = curve.domain();
+    if curve.knots[..=curve.degree].iter().all(|t| *t == lo)
+        && curve.knots[curve.control_points.len()..]
+            .iter()
+            .all(|t| *t == hi)
+    {
+        return None;
+    }
+    let work = ((limit - *cells) as u64).min(cad_predicates::MAX_WORK);
+    if work == 0 {
+        return None;
+    }
+    let report = clamp_exact_curve(curve, work).ok()?;
+    charge(cells, limit, report.work_used as usize)?;
+    let active = report.curve?;
+    charge(cells, limit, active.control_points.len())?;
+    within(&active).then_some(())
 }
 
 fn interior_holes(

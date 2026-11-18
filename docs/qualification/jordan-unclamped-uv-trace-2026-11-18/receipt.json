@@ -1,0 +1,35 @@
+{
+  "sourceBase": "186614c5948d406d3dd62063834219923338b2ac",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Exact unclamped active UV clock in the tensor lift and shared Jordan contact. Covers a curved spatial seam with out-of-chart stored poles, one-short refusal and changed-clock rejection.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2047 filtered out; finished in 1.17s",
+      "file": "brep.log.gz",
+      "sha256": "7a3d275fcbbbc3c75e6717b5dd3e512d012b987d2d6b5701880d67b8e3aace20"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2007 filtered out; finished in 14.81s",
+      "file": "shell.log.gz",
+      "sha256": "c451e971aa9071a5fee7d23aaaecce0a209637e31ad5162571563ff62ae3f2ab"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --test exact_trimmed_multispan_surface --test exact_trimmed_surface_lift",
+      "result": "test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s / test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "file": "lift.log.gz",
+      "sha256": "6f345ec6dfcb4f3c613f5a6105d848e3a0e7066334d3c69c45bd61d29743a72c"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "5b11cc5dd50e445c1cd955817a2d32f3e4181da8cbb30bbd69c995cf815446bd",
+    "count": 4919
+  }
+}

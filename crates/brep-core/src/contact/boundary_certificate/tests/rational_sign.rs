@@ -670,6 +670,22 @@ fn check_audited_inset_jordan_contact(reference: &crate::Model, shared: usize) {
         closed: false,
         faces: (0..2).map(|face| brep_topology::FaceUse { face, reversed: false }).collect(),
     }];
+    for c in model.0.loops.iter_mut().flat_map(|wire| &mut wire.coedges) {
+        if c.edge != common {
+            continue;
+        }
+        let a = &c.pcurve.control_points[0];
+        let b = &c.pcurve.control_points[1];
+        c.pcurve = crate::Curve {
+            degree: 2,
+            knots: vec![-2., -1., 0., 1., 2., 3., 4.],
+            control_points: [-0.25, 0.25, 0.75, 1.25].map(|t| {
+                a.iter().zip(b).map(|(a, b)| a + t * (b - a)).collect()
+            }).to_vec(),
+            weights: vec![1.; 4],
+            periodic: false,
+        };
+    }
     model.rebuild_topology_ids();
     model.validate().unwrap();
 

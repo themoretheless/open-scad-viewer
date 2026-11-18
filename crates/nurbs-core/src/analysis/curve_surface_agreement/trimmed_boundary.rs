@@ -45,6 +45,12 @@ fn lifted_basis(
     Some((indices, knots))
 }
 
+pub(super) fn uv_clamped(p: &Curve) -> bool {
+    let [lo, hi] = p.domain();
+    p.knots[..=p.degree].iter().all(|&k| k == lo)
+        && p.knots[p.control_points.len()..].iter().all(|&k| k == hi)
+}
+
 pub(super) fn verify(
     c: &Curve,
     p: &Curve,
@@ -55,6 +61,7 @@ pub(super) fn verify(
     max_work: u64,
 ) -> Result<Option<cad_predicates::BezierIdentityDecision>> {
     let pd = p.domain();
+    let clamped = uv_clamped(p);
     let count = p.control_points.len();
     if s.control_points
         .len()
@@ -70,18 +77,34 @@ pub(super) fn verify(
         || count > 4096
         || c.control_points.iter().any(|p| p.len() != 3)
         || p.control_points.iter().any(|p| p.len() != 2)
-        || !p.knots[..=p.degree].iter().all(|k| *k == pd[0])
-        || !p.knots[count..].iter().all(|k| *k == pd[1])
     {
         return Ok(None);
     }
     let mut affine_work = 0;
-    let a = &p.control_points[0];
-    let z = &p.control_points[count - 1];
+    let active;
+    let endpoints = if clamped {
+        p
+    } else {
+        if max_work == 0 {
+            return Ok(None);
+        }
+        let report = crate::editing::exact_curve_merge::clamp_exact_curve(p, max_work)?;
+        let Some(curve) = report.curve else {
+            return Ok(None);
+        };
+        if report.work_used >= max_work {
+            return Ok(None);
+        }
+        affine_work = report.work_used;
+        active = curve;
+        &active
+    };
+    let a = &endpoints.control_points[0];
+    let z = endpoints.control_points.last().unwrap();
     if !(0..2).any(|axis| a[axis] == z[axis] && a[1 - axis] != z[1 - axis]) {
         return Ok(None);
     }
-    if p.degree != 1 || count != 2 || p.weights[0] != p.weights[1] {
+    if !clamped || p.degree != 1 || count != 2 || p.weights[0] != p.weights[1] {
         let affine = Curve {
             degree: 1,
             knots: vec![pd[0], pd[0], pd[1], pd[1]],
@@ -90,15 +113,19 @@ pub(super) fn verify(
             periodic: false,
         };
         let Some(proof) = crate::curve_partition_agreement::verify_exact_bspline_restriction(
-            p, &affine, max_work,
+            p,
+            &affine,
+            max_work - affine_work,
         )?
         else {
             return Ok(None);
         };
-        if proof.outcome != cad_predicates::BezierIdentity::Equal || proof.work_used >= max_work {
+        if proof.outcome != cad_predicates::BezierIdentity::Equal
+            || proof.work_used >= max_work - affine_work
+        {
             return Ok(None);
         }
-        affine_work = proof.work_used;
+        affine_work += proof.work_used;
     }
     let counts = [s.control_points.len(), s.control_points[0].len()];
     let degrees = [s.degree_u, s.degree_v];
