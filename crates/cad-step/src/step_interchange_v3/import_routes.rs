@@ -990,23 +990,28 @@ impl StepSharedAssembly {
         if axis >= 3 || !coordinate.is_finite() {
             return Err(refuse("STEP coordinate split requires axis 0..2 and a finite coordinate"));
         }
-        let model = self.materialize(index)?;
-        let [min, max] = definition_control_bounds(&model);
-        let tolerance = model.tolerance_mm;
-        let empty = || Model::empty(tolerance);
-        if coordinate <= min[axis] { return Ok([empty()?, model]); }
-        if coordinate >= max[axis] { return Ok([model, empty()?]); }
-        // Pad every artificial face outside the complete positive-weight control hull.
-        let margin = (0..3).map(|i| max[i] - min[i]).fold(model.tolerance_mm, f64::max);
-        let lo = min.map(|v| (v - margin).next_down());
-        let mut hi = max.map(|v| (v + margin).next_up());
-        hi[axis] = coordinate;
-        if lo.iter().chain(&hi).any(|v| !v.is_finite()) {
-            return Err(refuse("STEP coordinate split exceeds finite bounds"));
+        split_placed_model(self.materialize(index)?, axis, coordinate)
+    }
+
+    /// Return a solid for each interval between ordered parallel cuts, including both end intervals.
+    pub fn coordinate_layers(&self, index: usize, axis: usize, cuts: &[f64]) -> Result<Vec<Model>> {
+        if axis >= 3 || cuts.len() > 256 || cuts.iter().any(|x| !x.is_finite())
+            || cuts.windows(2).any(|pair| pair[0] >= pair[1]) {
+            return Err(refuse("STEP layers require an axis and up to 256 strictly increasing finite coordinates"));
         }
-        let clip = brep_core::cuboid(lo, hi)?;
-        Ok([brep_core::boolean(&model, &clip, "intersection")?,
-            brep_core::boolean(&model, &clip, "difference")?])
+        let mut remaining = self.materialize(index)?;
+        let mut layers = Vec::with_capacity(cuts.len() + 1);
+        for &cut in cuts {
+            if remaining.bodies.is_empty() {
+                layers.push(Model::empty(remaining.tolerance_mm)?);
+            } else {
+                let [low, high] = split_placed_model(remaining, axis, cut)?;
+                layers.push(low);
+                remaining = high;
+            }
+        }
+        layers.push(remaining);
+        Ok(layers)
     }
 
     /// Compare two placed versions of a solid, preserving both directions of change.
@@ -1602,6 +1607,25 @@ impl StepSharedAssembly {
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
         brep_core::transform::affine(&self.definitions[occurrence.definition], occurrence.transform)
     }
+}
+
+fn split_placed_model(model: Model, axis: usize, coordinate: f64) -> Result<[Model; 2]> {
+    let [min, max] = definition_control_bounds(&model);
+    let tolerance = model.tolerance_mm;
+    let empty = || Model::empty(tolerance);
+    if coordinate <= min[axis] { return Ok([empty()?, model]); }
+    if coordinate >= max[axis] { return Ok([model, empty()?]); }
+    // Pad every artificial face outside the complete positive-weight control hull.
+    let margin = (0..3).map(|i| max[i] - min[i]).fold(model.tolerance_mm, f64::max);
+    let lo = min.map(|v| (v - margin).next_down());
+    let mut hi = max.map(|v| (v + margin).next_up());
+    hi[axis] = coordinate;
+    if lo.iter().chain(&hi).any(|v| !v.is_finite()) {
+        return Err(refuse("STEP coordinate split exceeds finite bounds"));
+    }
+    let clip = brep_core::cuboid(lo, hi)?;
+    Ok([brep_core::boolean(&model, &clip, "intersection")?,
+        brep_core::boolean(&model, &clip, "difference")?])
 }
 
 fn plane_may_intersect_box(normal: [f64; 3], offset: f64, [min, max]: [[f64; 3]; 2]) -> bool {

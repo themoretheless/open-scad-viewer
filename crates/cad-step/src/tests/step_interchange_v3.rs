@@ -4010,3 +4010,25 @@ fn stock_layout_reports_allowance_and_missing_material_across_part_placements() 
     assert!(scene.stock_layout_delta(0, &[]).is_err());
     assert!(scene.stock_layout_delta(0, &[4]).is_err());
 }
+
+#[test]
+fn nonuniform_layers_keep_empty_intervals_and_account_for_placed_stock() {
+    let stock = brep_core::cuboid([0.; 3], [2., 3., 6.]).unwrap();
+    let placed = crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., 1., 10.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![stock], vec![placed]).unwrap();
+    let layers = scene.coordinate_layers(0, 2, &[8., 11., 14., 17., 18.]).unwrap();
+    assert_eq!(layers.len(), 6);
+    for (layer, expected) in layers.iter().zip([0., 6., 18., 12., 0., 0.]) {
+        if expected == 0. { assert!(layer.bodies.is_empty()); } else {
+            assert_eq!(layer.validate().unwrap().boundary_edge_count, 0);
+            let mass = brep_core::analysis::mass_properties(layer, 1e-8, 100_000).unwrap();
+            assert!((mass.signed_volume_mm3 - expected).abs() < 1e-8);
+        }
+    }
+    assert_eq!(scene.coordinate_layers(0, 2, &[]).unwrap().len(), 1);
+    for cuts in [&[2., 1.][..], &[1., 1.], &[f64::NAN], &[0.; 257]] {
+        assert!(scene.coordinate_layers(0, 2, cuts).is_err());
+    }
+}
