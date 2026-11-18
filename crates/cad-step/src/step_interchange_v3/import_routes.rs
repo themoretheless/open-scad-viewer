@@ -1258,6 +1258,27 @@ impl StepSharedAssembly {
         Ok(regions)
     }
 
+    /// Material occupied by at least two occurrences, with multiple overlaps counted once.
+    /// Propagate an unresolved pair or union instead of returning a partial solid.
+    pub fn interference_material(&self, max_pairs: usize) -> Result<Model> {
+        let pairs = self.interference_candidates(max_pairs)?;
+        let mut combined: Option<Model> = None;
+        for [first, second] in pairs {
+            let common = self.intersect_occurrences(first, second)?;
+            if !common.bodies.is_empty() {
+                combined = Some(match combined {
+                    None => common,
+                    Some(previous) => brep_core::boolean(&previous, &common, "union")?,
+                });
+            }
+        }
+        match combined {
+            Some(model) => Ok(model),
+            None => Model::empty(self.definitions.iter().map(|model| model.tolerance_mm)
+                .fold(DEFAULT_STEP_TOLERANCE_MM, f64::max)),
+        }
+    }
+
     fn interference_candidates(&self, max_pairs: usize) -> Result<Vec<[usize; 2]>> {
         let pairs = self.proximity_candidates(0.)?;
         if pairs.len() > max_pairs {

@@ -4095,3 +4095,21 @@ fn interference_regions_report_closed_geometry_and_volumes_for_each_colliding_pa
     assert!(scene.interference_regions(2, 1e-8, 100_000).is_err());
     assert!(scene.interference_regions(3, f64::NAN, 100_000).is_err());
 }
+
+#[test]
+fn combined_interference_counts_triple_overlap_only_once() {
+    let block = brep_core::cuboid([0.; 3], [3., 2., 2.]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![block],
+        vec![placed(0.), placed(1.), placed(2.), placed(10.)]).unwrap();
+    let combined = scene.interference_material(3).unwrap();
+    assert_eq!(combined.bodies.len(), 1);
+    assert_eq!(combined.validate().unwrap().boundary_edge_count, 0);
+    let props = brep_core::analysis::mass_properties(&combined, 1e-8, 100_000).unwrap();
+    assert!((props.signed_volume_mm3 - 12.).abs() < 1e-8);
+    assert!(scene.interference_material(2).is_err());
+    let separate = scene.extract_occurrences(&[0, 3]).unwrap();
+    assert!(separate.interference_material(0).unwrap().bodies.is_empty());
+}

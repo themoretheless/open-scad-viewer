@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0866",
+  "testedBase": "7383abfff18f2dd8926e7bc464d6c3cb062fddae",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 213,
+  "scope": [
+    "Union pair intersections to recover the region occupied by at least two assembly occurrences.",
+    "Three overlapping blocks yield one closed 12 cubic millimetre region, compared with 20 summed pairwise. Check distant placements and bounded pair work."
+  ],
+  "logSha256": "754db15bb90523ff349a64109f240fb65d463e4de7ac1e9bc612336749323b74",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "fef5fd1aa3f13fb2d27c6153ed57d6e8b15b050e4bb5ca986a19013b85e57533",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "731edcea6e5c6538ba615a762b4821e9fa4ad64709821aedda3a37948e9c7e9c"
+  }
+}
