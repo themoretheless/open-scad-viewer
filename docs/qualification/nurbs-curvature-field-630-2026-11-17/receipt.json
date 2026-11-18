@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0630",
+  "testedBase": "47220bfeab4972002bf93ee192eed5f3e05ffd37",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 225,
+  "scope": [
+    "Combine surface pieces with independent positive areal density bounds and carry the density through mass, centroid and inertia.",
+    "Check all density interval corners against analytic separated-centroid mass and inertia, retain unit-density coverage, and reject nonpositive or invalid density."
+  ],
+  "logSha256": "ea5489809f68cf71734c09de6a9c5b265b86a7403751ccc8ff428a3453c749b5",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "e60292b1b8c9914cb585a3013154aff333811e26676d6d008f9a923bd0974e49",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "8e8ec031cff129c69cf6b008ec9ec7d342d0eb4236b88b80535cb00897381722"
+  }
+}

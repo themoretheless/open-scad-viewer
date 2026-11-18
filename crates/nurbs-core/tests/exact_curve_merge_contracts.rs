@@ -7292,3 +7292,58 @@ fn combine_periodic_trim_reports_preserves_island_mass_properties() {
         periodic_trim_patch_set_central_inertia(&patches, 0.005, 1e-10, 2, 1_000_000).unwrap();
     assert!(incomplete.mass_properties_bounds().is_none());
 }
+
+#[test]
+fn density_weighted_assembly_brackets_mass_center_and_parallel_axis_correction() {
+    use nurbs_core::analysis::surface_measure::{
+        SurfaceMassPropertiesBounds, combine_surface_mass_properties_with_density,
+    };
+    let pieces = [(2., 0., [1., 2.]), (1., 3., [3., 4.])].map(|(area, x, density)| {
+        (
+            SurfaceMassPropertiesBounds {
+                area_bounds: [area; 2],
+                centroid_bounds: [[x; 2], [0.; 2], [0.; 2]],
+                central_inertia_bounds: [[1., 0., 0.], [0., 2., 0.], [0., 0., 3.]]
+                    .map(|row| row.map(|x| [x; 2])),
+            },
+            density,
+        )
+    });
+    let assembled = combine_surface_mass_properties_with_density(&pieces).unwrap();
+    for first in [1., 2.] {
+        for second in [3., 4.] {
+            let mass = 2. * first + second;
+            let center = 3. * second / mass;
+            let correction = 18. * first * second / mass;
+            for (bounds, expected) in [
+                (assembled.mass_bounds, mass),
+                (assembled.centroid_bounds[0], center),
+                (assembled.central_inertia_bounds[0][0], first + second),
+                (assembled.central_inertia_bounds[1][1], 2. * (first + second) + correction),
+                (assembled.central_inertia_bounds[2][2], 3. * (first + second) + correction),
+            ] {
+                assert!(bounds[0] <= expected && expected <= bounds[1]);
+            }
+        }
+    }
+}
+
+#[test]
+fn density_weighted_assembly_rejects_invalid_density_and_matches_unit_density() {
+    use nurbs_core::analysis::surface_measure::{
+        combine_surface_mass_properties, combine_surface_mass_properties_with_density,
+        periodic_trim_patch_set_central_inertia,
+    };
+    let patches = periodic_trim_patches_with_nested_island();
+    let piece = periodic_trim_patch_set_central_inertia(&patches, 0.005, 1e-10, 20_000, 1_000_000)
+        .unwrap()
+        .mass_properties_bounds()
+        .unwrap();
+    let unit = combine_surface_mass_properties(&[piece]).unwrap();
+    let weighted = combine_surface_mass_properties_with_density(&[(piece, [1.; 2])]).unwrap();
+    assert!(weighted.mass_bounds[0] <= unit.area_bounds[0]);
+    assert!(weighted.mass_bounds[1] >= unit.area_bounds[1]);
+    for density in [[0., 1.], [2., 1.], [-1., 1.], [1., f64::INFINITY]] {
+        assert!(combine_surface_mass_properties_with_density(&[(piece, density)]).is_err());
+    }
+}

@@ -1004,26 +1004,77 @@ pub struct SurfaceMassPropertiesBounds {
 pub fn combine_surface_mass_properties(
     pieces: &[SurfaceMassPropertiesBounds],
 ) -> Result<SurfaceMassPropertiesBounds> {
-    check(
-        !pieces.is_empty(),
-        "Surface mass properties require at least one piece",
-    )?;
-    let first = &pieces[0];
+    let combined = combine_mass_properties(pieces.iter().map(|piece| {
+        Ok(SurfaceAssemblyMassBounds {
+            mass_bounds: piece.area_bounds,
+            centroid_bounds: piece.centroid_bounds,
+            central_inertia_bounds: piece.central_inertia_bounds,
+        })
+    }))?;
+    Ok(SurfaceMassPropertiesBounds {
+        area_bounds: combined.mass_bounds,
+        centroid_bounds: combined.centroid_bounds,
+        central_inertia_bounds: combined.central_inertia_bounds,
+    })
+}
+
+/// Certified mass properties of a surface assembly with density applied.
+#[derive(Clone, Copy, Debug)]
+pub struct SurfaceAssemblyMassBounds {
+    pub mass_bounds: [f64; 2],
+    pub centroid_bounds: [[f64; 2]; 3],
+    pub central_inertia_bounds: [[[f64; 2]; 3]; 3],
+}
+
+/// Combine pieces with independent, uniform areal density intervals.
+/// Every area and density interval must be strictly positive.
+pub fn combine_surface_mass_properties_with_density(
+    pieces: &[(SurfaceMassPropertiesBounds, [f64; 2])],
+) -> Result<SurfaceAssemblyMassBounds> {
+    combine_mass_properties(pieces.iter().map(|(piece, [lo, hi])| {
+        let density = Interval::new(*lo, *hi)?;
+        let area = Interval::new(piece.area_bounds[0], piece.area_bounds[1])?;
+        check(
+            density.lo > 0. && area.lo > 0.,
+            "Surface area and areal density must be strictly positive",
+        )?;
+        let mass = area.mul(density)?;
+        let mut inertia = symmetric_tensor_intervals(piece.central_inertia_bounds)?;
+        for row in &mut inertia {
+            for moment in row {
+                *moment = moment.mul(density)?;
+            }
+        }
+        Ok(SurfaceAssemblyMassBounds {
+            mass_bounds: [mass.lo, mass.hi],
+            centroid_bounds: piece.centroid_bounds,
+            central_inertia_bounds: inertia.map(|row| row.map(|moment| [moment.lo, moment.hi])),
+        })
+    }))
+}
+
+fn combine_mass_properties(
+    pieces: impl Iterator<Item = Result<SurfaceAssemblyMassBounds>> + Clone,
+) -> Result<SurfaceAssemblyMassBounds> {
+    let Some(first) = pieces.clone().next().transpose()? else {
+        return Err(crate::input("Surface mass properties require at least one piece"));
+    };
     let first_centroid = centroid_intervals(first.centroid_bounds)?;
     let origin = first_centroid.map(|coordinate| {
         Interval::point(crate::distance_bounds::midpoint(coordinate.lo, coordinate.hi))
     });
     let mut hull = first_centroid;
-    let mut area = Interval::point(0.);
+    let mut mass = Interval::point(0.);
     let mut first_moments = [Interval::point(0.); 3];
-    for piece in pieces {
-        let weight = Interval::new(piece.area_bounds[0], piece.area_bounds[1])?;
+    for piece in pieces.clone() {
+        let piece = piece?;
+        let weight = Interval::new(piece.mass_bounds[0], piece.mass_bounds[1])?;
         check(
             weight.lo > 0.,
-            "Each surface piece must have strictly positive area",
+            "Each surface piece must have strictly positive mass or area",
         )?;
-        let summed_area = area.add(weight)?;
-        area = summed_area.intersect(area.lo.max(weight.lo), summed_area.hi)?;
+        let sum = mass.add(weight)?;
+        mass = sum.intersect(mass.lo.max(weight.lo), sum.hi)?;
         let centroid = centroid_intervals(piece.centroid_bounds)?;
         for i in 0..3 {
             hull[i].lo = hull[i].lo.min(centroid[i].lo);
@@ -1036,14 +1087,15 @@ pub fn combine_surface_mass_properties(
     let mut centroid = origin;
     for i in 0..3 {
         centroid[i] = origin[i]
-            .add(first_moments[i].div(area)?)?
+            .add(first_moments[i].div(mass)?)?
             .intersect(hull[i].lo, hull[i].hi)?;
     }
     let mut inertia = [[Interval::point(0.); 3]; 3];
     for piece in pieces {
+        let piece = piece?;
         let translated = translate_inertia(
             piece.central_inertia_bounds,
-            Interval::new(piece.area_bounds[0], piece.area_bounds[1])?,
+            Interval::new(piece.mass_bounds[0], piece.mass_bounds[1])?,
             centroid_intervals(piece.centroid_bounds)?,
             centroid,
         )?;
@@ -1053,8 +1105,8 @@ pub fn combine_surface_mass_properties(
             }
         }
     }
-    Ok(SurfaceMassPropertiesBounds {
-        area_bounds: [area.lo, area.hi],
+    Ok(SurfaceAssemblyMassBounds {
+        mass_bounds: [mass.lo, mass.hi],
         centroid_bounds: centroid.map(|coordinate| [coordinate.lo, coordinate.hi]),
         central_inertia_bounds: inertia.map(|row| row.map(|value| [value.lo, value.hi])),
     })

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 629,
-  "unallocatedCount": 371,
+  "specifiedCount": 630,
+  "unallocatedCount": 370,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15592,6 +15592,25 @@
       "remainingQualification": [
         "Combine independently bounded surface pieces by area-weighted centroid and interval parallel-axis recentering.",
         "Check separated centroids, nested-island measurement assembled from independent reports, and refusal of missing or nonpositive area.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0630",
+      "name": "Масса, центр и тензор инерции сборки NURBS-поверхностей с различной плотностью",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::combine_surface_mass_properties_with_density",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-630-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-630-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Combine surface pieces with independent positive areal density bounds and carry the density through mass, centroid and inertia.",
+        "Check all density interval corners against analytic separated-centroid mass and inertia, retain unit-density coverage, and reject nonpositive or invalid density.",
         "WASM and application integration are separate."
       ]
     }
