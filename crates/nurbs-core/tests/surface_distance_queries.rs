@@ -57,3 +57,23 @@ fn work_limit_and_invalid_queries_remain_explicit() {
         assert!(distance(&s, &s, 1e-4, b).is_err());
     }
 }
+
+#[test]
+fn nested_panels_have_interior_clearance_in_both_orders() {
+    use nurbs_core::analysis::curve_measure::{inspect_surface_surface_clearance as inspect, ClearanceDecision::*};
+    let mut outer = panel(0.);
+    let mut inner = panel(3.);
+    outer.weights = vec![vec![1.; 2]; 2];
+    inner.weights = outer.weights.clone();
+    for point in inner.control_points.iter_mut().flatten() {
+        for x in &mut point[..2] { *x = 1. + *x * 0.5; }
+    }
+    for (a, b, outer_index) in [(&outer, &inner, 0), (&inner, &outer, 1)] {
+        let (decision, report) = inspect(a, b, 3., 1e-5, 1000).unwrap();
+        assert_eq!(decision, MeetsMinimum);
+        let [u, v] = report.parameters[outer_index];
+        assert!(2. < u && u < 7. && -3. < v && v < 1.);
+        assert_eq!(inspect(a, b, 3.01, 1e-5, 1000).unwrap().0, BelowMinimum);
+    }
+    assert!(inspect(&inner, &outer, f64::NAN, 1e-5, 1000).is_err());
+}

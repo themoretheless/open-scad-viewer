@@ -1,0 +1,30 @@
+{
+  "id": "NURBS-0908",
+  "testedBase": "40f5024f4bc7c21f0ebcc68e77130acef119da32",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "surface_distance_queries",
+    "--test",
+    "curve_surface_distance"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 467,
+  "scope": [
+    "Use both original patch bounds, spatial witness boxes and exact projected support. Verify nested panels in both orders, an interior UV witness, equality and strict violation."
+  ],
+  "logSha256": "d8ada9308d041e00ed732fa8e5ef6c5bc56e8a802bd62979ec0186919fa03b44",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "ee35d84266f78e0fc5cd73993b9e4af3c5e1fa047f78a0ba9947688453680197",
+    "crates/nurbs-core/tests/surface_distance_queries.rs": "79a35d05836af490467b397c466370dbc3637f7eef9b11971e1d48f1dcd698b8"
+  }
+}

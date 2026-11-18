@@ -2584,18 +2584,41 @@ pub fn inspect_curve_surface_clearance(
 ) -> Result<(ClearanceDecision, crate::curve_surface_distance::Report)> {
     check(minimum.is_finite() && minimum >= 0., "Expected finite nonnegative clearance")?;
     let report = crate::curve_surface_distance::distance(curve,surface,tolerance,max_cells)?;
-    let [lo,hi] = report.distance_interval;
-    let decision = if lo >= minimum { ClearanceDecision::MeetsMinimum }
-        else if hi < minimum || witnesses_below_clearance(&report.point_enclosures[0],&report.point_enclosures[1],minimum) {
-            ClearanceDecision::BelowMinimum
-        } else {
-            let exact = |x| num_rational::BigRational::from_float(x).expect("finite witness coordinate");
-            let direction = std::array::from_fn(|i| exact(report.points[1][i])-exact(report.points[0][i]));
-            if pole_support_proves(curve.control_points.iter(),surface.control_points.iter().flatten(),direction,minimum) {
-                ClearanceDecision::MeetsMinimum
-            } else { ClearanceDecision::Unresolved }
-        };
-    Ok((decision,report))
+    let decision = patch_clearance_decision(report.distance_interval, &report.points,
+        [&report.point_enclosures[0], &report.point_enclosures[1]], minimum,
+        curve.control_points.iter(), surface.control_points.iter().flatten());
+    Ok((decision, report))
+}
+
+/// Check the inclusive minimum clearance across two full positive-weight tensor surfaces.
+/// The returned UV pair locates the sampled upper bound on the original surfaces.
+pub fn inspect_surface_surface_clearance(
+    first: &crate::surface::Surface, second: &crate::surface::Surface,
+    minimum: f64, tolerance: f64, max_cells: usize,
+) -> Result<(ClearanceDecision, crate::surface_distance::SurfaceDistance)> {
+    check(minimum.is_finite() && minimum >= 0., "Expected finite nonnegative clearance")?;
+    let report = crate::surface_distance::distance(first, second, tolerance, max_cells)?;
+    let decision = patch_clearance_decision(report.distance_interval_mm, &report.points,
+        [&report.point_enclosures[0], &report.point_enclosures[1]], minimum,
+        first.control_points.iter().flatten(), second.control_points.iter().flatten());
+    Ok((decision, report))
+}
+
+fn patch_clearance_decision<'a>(
+    [lo, hi]: [f64; 2], points: &[impl AsRef<[f64]>; 2], bounds: [&[[f64; 2]]; 2], minimum: f64,
+    first: impl Iterator<Item=&'a Vec<f64>>, second: impl Iterator<Item=&'a Vec<f64>>,
+) -> ClearanceDecision {
+    if lo >= minimum { return ClearanceDecision::MeetsMinimum; }
+    if hi < minimum || witnesses_below_clearance(bounds[0], bounds[1], minimum) {
+        return ClearanceDecision::BelowMinimum;
+    }
+    let exact = |x| num_rational::BigRational::from_float(x).expect("finite witness coordinate");
+    let direction = std::array::from_fn(|i| exact(points[1].as_ref()[i]) - exact(points[0].as_ref()[i]));
+    if pole_support_proves(first, second, direction, minimum) {
+        ClearanceDecision::MeetsMinimum
+    } else {
+        ClearanceDecision::Unresolved
+    }
 }
 
 /// Check every distinct pair, in index order, against an inclusive minimum.
