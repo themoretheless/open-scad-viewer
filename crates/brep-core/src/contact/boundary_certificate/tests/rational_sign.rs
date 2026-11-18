@@ -523,6 +523,7 @@ fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, 
         check_reversed_multispan_exterior(&spatial, contact.edges[0]);
         check_partitioned_jordan_seam(&spatial, contact.edges[0]);
         check_jordan_contact_with_interior_hole(&spatial, contact.edges[0]);
+        check_audited_inset_jordan_contact(&spatial, contact.edges[0]);
 
         // Put the original XZ image in XY, then move the interiors along
         // a common diagonal. The authored edge curves stay unchanged.
@@ -609,6 +610,89 @@ fn check_jordan_contact_with_interior_hole(reference: &crate::Model, shared: usi
     assert!(certify(&model, [0, 4], used - 1).0.is_none());
     model.0.loops[hole].coedges[0].pcurve.control_points[0][0] = 0.;
     assert!(certify(&model, [0, 4], 3000).0.is_none());
+}
+
+fn check_audited_inset_jordan_contact(reference: &crate::Model, shared: usize) {
+    use crate::face_contacts::{Limits, SharedBoundary};
+    let mut lower = reference.faces[0].surface.clone();
+    // A unit interior weight makes the exact inset cross-section dyadic.
+    lower.weights[1][2] = 1.;
+    let upper = &reference.faces[4];
+    let mut model = reference.clone();
+    model.0.vertices.clear();
+    model.0.edges.clear();
+    model.0.loops.clear();
+    model.0.faces.clear();
+    model.0.bodies.clear();
+
+    let mut edge = |curve: crate::Curve| {
+        let vertices = [0, curve.control_points.len() - 1].map(|i| {
+            let p = &curve.control_points[i];
+            let point = [p[0], p[1], p[2]];
+            if let Some(index) = model.0.vertices.iter().position(|v| v.point == point) {
+                index
+            } else {
+                let index = model.0.vertices.len();
+                model.0.vertices.push(crate::Vertex { point });
+                index
+            }
+        });
+        let index = model.0.edges.len();
+        model.0.edges.push(crate::Edge { curve, vertices, degenerate: false });
+        index
+    };
+    let common = edge(reference.edges[shared].curve.clone());
+    let upper_wire = &reference.loops[upper.outer].coedges;
+    let shared_upper = upper_wire.iter().find(|c| c.edge == shared).unwrap();
+    let mut lower_uses = Vec::new();
+    let corners = [[0., 0.5], [1., 0.5], [1., 1.], [0., 1.]];
+    for i in 0..4 {
+        let pcurve = crate::line(corners[i].to_vec(), corners[(i + 1) % 4].to_vec());
+        let (index, reversed) = if i == 2 {
+            (common, !shared_upper.reversed)
+        } else {
+            let lift = nurbs_core::curve_surface_agreement::lift(
+                &pcurve, &lower, None, 1e-8, 10_000,
+            ).unwrap();
+            (edge(lift.curve.unwrap()), false)
+        };
+        lower_uses.push(crate::Coedge::new(index, reversed, pcurve));
+    }
+    let upper_uses = upper_wire.iter().map(|c| {
+        let index = if c.edge == shared { common } else { edge(reference.edges[c.edge].curve.clone()) };
+        crate::Coedge::new(index, c.reversed, c.pcurve.clone())
+    }).collect();
+    model.0.loops = vec![crate::Loop { coedges: lower_uses }, crate::Loop { coedges: upper_uses }];
+    model.0.faces = [lower, upper.surface.clone()].into_iter().enumerate().map(|(outer, surface)| {
+        crate::Face { surface, outer, holes: Vec::new() }
+    }).collect();
+    model.0.shells = vec![brep_topology::Shell {
+        closed: false,
+        faces: (0..2).map(|face| brep_topology::FaceUse { face, reversed: false }).collect(),
+    }];
+    model.rebuild_topology_ids();
+    model.validate().unwrap();
+
+    let agreement = crate::boundary_agreement::verify_exact(&model, 1_000_000).unwrap();
+    assert!(agreement.all_equal && agreement.all_joins_exact);
+    let trim = crate::face_domain::audit_trim_regions(&model, 1e-8, 1000, 10_000, 100_000).unwrap();
+    assert!(trim.all_valid && trim.faces.iter().all(|f| f.as_ref().unwrap().winding == [Some(1)]));
+    let injectivity = crate::face_injectivity::inspect_with_linear(&model, 10_000, 10_000).unwrap();
+    assert!(injectivity.all_faces_injective, "{injectivity:?}");
+    let jordan = crate::shared_boundary::jordan_partition::certify_audited;
+    assert!(crate::shared_boundary::jordan_partition::certify(&model, [0, 1], 8000).0.is_none());
+    let (contact, used) = jordan(&model, [0, 1], 8000);
+    assert_eq!(contact.unwrap().edges, [common]);
+    assert!(jordan(&model, [0, 1], used - 1).0.is_none());
+
+    let contacts = crate::face_contacts::inspect_with_certificates(
+        &model, 1e-8, Limits {
+            pairs: 1, cells: 10_000, domain_cells: 10_000,
+            cells_per_pair: 8_000, domain_cells_per_pair: 8_000,
+        }, &[], &[], true,
+    ).unwrap();
+    assert!(matches!(&contacts.pairs[0].boundary, Some(SharedBoundary::ExactHull(c)) if c.edges == [common]),
+        "{:?}", contacts.pairs[0]);
 }
 
 fn check_partitioned_jordan_seam(reference: &crate::Model, shared: usize) {

@@ -1,4 +1,4 @@
-//! Two natural charts with a common projection partition a Jordan region along
+//! Two source charts with a common projection partition a Jordan region along
 //! an exactly lifted edge chain. Only the joint exact-domain audit may call
 //! this, after all coedge lifts and domains have been independently checked.
 use crate::{Model, boundary_hull_contact::Certificate};
@@ -51,15 +51,35 @@ impl Projection {
     }
 }
 
+#[cfg(test)]
 pub(crate) fn certify(
     model: &Model,
     faces: [usize; 2],
     limit: usize,
 ) -> (Option<Certificate>, usize) {
+    certify_impl(model, faces, limit, false)
+}
+
+/// The caller has proved exact complete edge lifts, simple CCW outer loops
+/// and strictly nested, mutually disjoint holes on this same model.
+pub(crate) fn certify_audited(
+    model: &Model,
+    faces: [usize; 2],
+    limit: usize,
+) -> (Option<Certificate>, usize) {
+    certify_impl(model, faces, limit, true)
+}
+
+fn certify_impl(
+    model: &Model,
+    faces: [usize; 2],
+    limit: usize,
+    audited: bool,
+) -> (Option<Certificate>, usize) {
     let mut cells = 0;
     let mut ordered = faces;
     ordered.sort_unstable();
-    let result = prove(model, ordered, limit, &mut cells).map(|mut certificate| {
+    let result = prove(model, ordered, limit, &mut cells, audited).map(|mut certificate| {
         certificate.faces = faces;
         certificate
     });
@@ -74,7 +94,13 @@ fn charge(cells: &mut usize, limit: usize, cost: usize) -> Option<()> {
     Some(())
 }
 
-fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> Option<Certificate> {
+fn prove(
+    model: &Model,
+    faces: [usize; 2],
+    limit: usize,
+    cells: &mut usize,
+    audited: bool,
+) -> Option<Certificate> {
     let patches = faces.map(|i| &model.faces[i]);
     let surfaces = patches.map(|f| &f.surface);
     if !surfaces.iter().any(|s| {
@@ -83,7 +109,7 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
         return None;
     }
     let wires = patches.map(|f| model.loops[f.outer].coedges.as_slice());
-    if wires.iter().any(|w| !(4..=128).contains(&w.len())) {
+    if wires.iter().any(|w| !(3..=128).contains(&w.len())) {
         return None;
     }
     // Trim diagnostics may select a proper world subinterval. The
@@ -100,8 +126,14 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
         interior_holes(model, &patch.surface, &patch.holes, cells, limit)?;
     }
     let mut proposals = [None; 2];
-    for ((s, wire), proposal) in surfaces.into_iter().zip(wires).zip(&mut proposals) {
-        natural_wire(s, wire, cells, limit)?;
+    for ((patch, wire), proposal) in patches.into_iter().zip(wires).zip(&mut proposals) {
+        let s = &patch.surface;
+        if natural_wire(s, wire, cells, limit).is_none() {
+            if !audited {
+                return None;
+            }
+            audited_chart_domain(model, patch, cells, limit)?;
+        }
 
         let remaining = limit - *cells;
         if remaining == 0 {
@@ -133,6 +165,52 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
         }
     }
     None
+}
+
+fn audited_chart_domain(
+    model: &Model,
+    face: &crate::Face,
+    cells: &mut usize,
+    limit: usize,
+) -> Option<()> {
+    let s = &face.surface;
+    let lower = [s.knots_u[s.degree_u], s.knots_v[s.degree_v]];
+    let upper = [
+        s.knots_u[s.control_points.len()],
+        s.knots_v[s.control_points[0].len()],
+    ];
+    // The nesting audit uses the first control point of each active hole
+    // as its boundary witness. Untrimmed, unclamped starts cannot supply it.
+    for &hole in &face.holes {
+        charge(cells, limit, 1)?;
+        let first = model.loops[hole].coedges.first()?;
+        let p = &first.pcurve;
+        if first.trim().is_none() && p.knots.first() != Some(&p.domain()[0]) {
+            return None;
+        }
+    }
+    // The verified lift and loop simplicity apply to the active traversal.
+    // Here the complete UV control hull conservatively places that same
+    // traversal in the rectangle on which projection injectivity is proved.
+    for index in std::iter::once(face.outer).chain(face.holes.iter().copied()) {
+        for c in &model.loops[index].coedges {
+            let p = &c.pcurve;
+            charge(cells, limit, p.control_points.len())?;
+            if p.periodic
+                || c.trim().is_some_and(|t| {
+                    t.periodic_lift != [[0; 2]; 2]
+                        || t.curve_parameter != model.edges[c.edge].curve.domain()
+                })
+                || !p
+                    .control_points
+                    .iter()
+                    .all(|p| (0..2).all(|axis| lower[axis] <= p[axis] && p[axis] <= upper[axis]))
+            {
+                return None;
+            }
+        }
+    }
+    Some(())
 }
 
 fn interior_holes(

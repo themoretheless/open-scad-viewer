@@ -248,6 +248,15 @@ chain must be contiguous and opposite. Removing them leaves one
 projected exterior to certify. The contact certificate lists every
 edge of the chain and bounds their original world-space geometry.
 
+The joint exact-domain audit can also certify an inset or curved outer
+contour inside the natural rectangle. It establishes the actual simple
+CCW trim loops, hole nesting, and exact lifts before the projected
+partition proof. The partition bounds the UV control hulls within each
+proved chart, checks the opposite shared chain and certifies the merged
+projected exterior. The sum of the two projected outer-loop windings
+then has magnitude at most one, which excludes overlapping interiors.
+Strictly nested holes cannot add contact across that partition.
+
 A hole may subtract material from either natural chart when its entire
 rational trim lies strictly inside the chart rectangle. The audit checks
 the original control hull first and can use exact subdivision to prove
