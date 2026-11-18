@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 930,
-  "unallocatedCount": 70,
+  "specifiedCount": 931,
+  "unallocatedCount": 69,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21302,6 +21302,25 @@
       ],
       "remainingQualification": [
         "Native AP242 metadata round trip on a single attributed gear body. External CAD interoperability not measured."
+      ]
+    },
+    {
+      "id": "NURBS-0931",
+      "name": "Именованные сборки STEP с повторным использованием NURBS-деталей",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::export_named_step_assembly",
+      "evidence": [
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-named-shared-assembly-931-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-named-shared-assembly-931-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "One name per part definition. Names are written to PRODUCT records; the native shared geometry reader returns definitions and placements."
       ]
     }
   ],

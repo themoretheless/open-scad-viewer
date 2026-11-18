@@ -277,6 +277,7 @@ fn emit_surface_exchange(w: &mut Writer, s: &Surface, exact: bool) -> usize {
 struct AssemblyExport<'a> {
     placements: &'a [(usize, [[f64; 4]; 4])],
     definition_tolerances: &'a [f64],
+    names: Option<(&'a str, &'a [&'a str])>,
 }
 
 fn export_step_direct_impl(
@@ -604,7 +605,7 @@ fn export_step_direct_impl(
         let product = w.emit(format!(
             "PRODUCT({},{},{},(#{product_context}))",
             quote(authored.map_or("model", |product| product.id.as_str())),
-            quote(authored.map_or("model", |product| product.name.as_str())),
+            quote(assembly.as_ref().and_then(|a| a.names.map(|(_, names)| names[0])).unwrap_or_else(|| authored.map_or("model", |product| product.name.as_str()))),
             quote(authored.map_or("", |product| product.description.as_str())),
         ));
         let formation = w.emit(format!("PRODUCT_DEFINITION_FORMATION('1','',#{product})"));
@@ -624,7 +625,7 @@ fn export_step_direct_impl(
         ));
         if let Some(assembly) = assembly {
             let assembly_product = w.emit(format!(
-                "PRODUCT('planet-set','Planet gear set','',(#{product_context}))"
+                "PRODUCT('planet-set',{},'',(#{product_context}))", quote(assembly.names.map_or("Planet gear set", |(name,_)| name))
             ));
             let assembly_formation = w.emit(format!(
                 "PRODUCT_DEFINITION_FORMATION('1','',#{assembly_product})"
@@ -642,7 +643,8 @@ fn export_step_direct_impl(
             let mut definitions = vec![(representation, definition)];
             for (index, &body) in body_entities.iter().enumerate().skip(1) {
                 let product = w.emit(format!(
-                    "PRODUCT('gear-{index}','Gear {index}','',(#{product_context}))"
+                    "PRODUCT('gear-{index}',{},'',(#{product_context}))",
+                    assembly.names.map_or_else(|| quote(&format!("Gear {index}")), |(_,names)| quote(names[index]))
                 ));
                 let formation = w.emit(format!("PRODUCT_DEFINITION_FORMATION('1','',#{product})"));
                 let definition = w.emit(format!(
@@ -866,7 +868,7 @@ pub fn export_planet_gear_occurrences_step(
     let placements: Vec<_> = assembly.placements().iter().copied().map(|matrix| (0, matrix)).collect();
     let (text, _, _) = export_step_direct_impl(
         assembly.prototype(), true, true, STEP_INTERCHANGE_V9_CAPABILITY,
-        None, Some(AssemblyExport { placements: &placements, definition_tolerances: &[assembly.prototype().tolerance_mm] }), false,
+        None, Some(AssemblyExport { placements: &placements, names: None, definition_tolerances: &[assembly.prototype().tolerance_mm] }), false,
     )?;
     Ok(text)
 }
@@ -895,6 +897,19 @@ pub fn export_planetary_gear_set_step(
 
 /// Serialize current shared definitions with their nonsingular orthogonal placements.
 pub fn export_step_shared_assembly(assembly: &crate::StepSharedAssembly) -> Result<String> {
+    export_shared_products(assembly, None)
+}
+
+/// Name the assembly and each reusable part definition in definition-index order.
+pub fn export_named_step_assembly(assembly: &crate::StepSharedAssembly, name: &str, parts: &[&str]) -> Result<String> {
+    if parts.len() != assembly.definitions().len() || std::iter::once(name).chain(parts.iter().copied())
+        .any(|s| s.is_empty() || s.chars().any(char::is_control)) {
+        return Err(refuse("Expected an assembly name and one nonempty printable name per definition"));
+    }
+    export_shared_products(assembly, Some((name, parts)))
+}
+
+fn export_shared_products(assembly: &crate::StepSharedAssembly, names: Option<(&str, &[&str])>) -> Result<String> {
     let definitions = assembly.definitions();
     let occurrences = assembly.occurrences();
     if definitions.is_empty() || occurrences.is_empty() || occurrences.len() > 256 {
@@ -911,7 +926,7 @@ pub fn export_step_shared_assembly(assembly: &crate::StepSharedAssembly) -> Resu
     let model = crate::compose_step_v7_occurrences(definitions)?;
     let tolerances: Vec<_> = definitions.iter().map(|model| model.tolerance_mm).collect();
     let (text, _, _) = export_step_direct_impl(
-        &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(AssemblyExport { placements: &placements, definition_tolerances: &tolerances }), false,
+        &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(AssemblyExport { placements: &placements, names, definition_tolerances: &tolerances }), false,
     )?;
     Ok(text)
 }

@@ -93,3 +93,26 @@ fn compact_gear_step_keeps_face_assignments_and_product_material() {
     assert_eq!(restored.validate().unwrap().boundary_edge_count,0);
     eprintln!("attributed gear STEP bytes: ordinary {} compact {}",normal.len(),small.len());
 }
+
+#[test]
+fn named_assembly_writes_one_product_for_repeated_parts() {
+    use cad_step::{export_named_step_assembly, import_step_shared_assembly, StepAssemblyOccurrence, StepSharedAssembly};
+    let body = brep_core::gear::gear(&GearSpec {teeth:4, ..GearSpec::default()}).unwrap();
+    let pin = brep_core::cuboid([0.;3],[1.,2.,3.]).unwrap();
+    let placed = |definition, x| StepAssemblyOccurrence { definition, transform:
+        [[1.,0.,0.,x],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]] };
+    let assembly = StepSharedAssembly::from_placed_solids(vec![body,pin],
+        vec![placed(0,0.),placed(1,5.),placed(1,10.)]).unwrap();
+    let text = export_named_step_assembly(&assembly,"Spinner A",&["Sun 'A'","Штифт"]).unwrap();
+    let encoded = cad_step::step_interchange_v3::step_xde::encode_step_string("Штифт");
+    for row in ["PRODUCT('model','Sun ''A'''".to_owned(),format!("PRODUCT('gear-1','{encoded}'"),
+        "PRODUCT('planet-set','Spinner A'".to_owned()] {
+        assert_eq!(text.matches(&row).count(),1);
+    }
+    let restored = import_step_shared_assembly(&text).unwrap();
+    assert_eq!(restored.definitions().len(),2);
+    assert_eq!(restored.occurrences().len(),3);
+    assert_eq!(restored.occurrences()[1].definition,restored.occurrences()[2].definition);
+    assert_ne!(restored.occurrences()[1].transform,restored.occurrences()[2].transform);
+    assert!(export_named_step_assembly(&assembly,"Spinner A",&["Sun"]).is_err());
+}
