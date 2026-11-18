@@ -313,7 +313,7 @@ impl MultiSweep<'_> {
         let cap_difference = if cap_identity.is_none() {
             cap_difference::Difference::prepare(caps, &mut out.cells, max_cells)?
         } else { None };
-        let fixed_line_frame = charts::proves_corrected_forward_line(
+        let corrected_frame = charts::prepare_corrected_frame(
             s, closed, &mut out, max_cells, max_exact_work,
         )?;
         let context = cell::Context {
@@ -330,7 +330,7 @@ impl MultiSweep<'_> {
             arc,
             guide_arc,
             shared_guide,
-            fixed_line_frame,
+            corrected_frame,
             poses: atlas.then(Default::default),
             cap_jets: atlas.then(Default::default),
         };

@@ -33,7 +33,7 @@ pub(super) struct Context<'a, 'b> {
     pub(super) arc: Option<arc::ArcMap>,
     pub(super) guide_arc: Option<arc::ArcMap>,
     pub(super) shared_guide: bool,
-    pub(super) fixed_line_frame: bool,
+    pub(super) corrected_frame: Option<CorrectedFrame>,
     // Allocated only for ONE atlas certificate and its ONE aggregate ledger.
     // No source proof or cache credit escapes into another call/budget.
     pub(super) poses: Option<RefCell<BTreeMap<[u64; 2], pose::PairedPose>>>,
@@ -51,10 +51,32 @@ impl Context<'_, '_> {
         max: usize,
     ) -> Result<Option<frame::Report>> {
         let s = self.s;
-        if self.fixed_line_frame {
-            frame::certify_fixed_path(s.path, s.options.normal, s.twist, station, max)
-                .map(Some)
-        } else if self.arc.is_some() {
+        if let Some(corrected) = self.corrected_frame {
+            return match corrected {
+                CorrectedFrame::ForwardLine => {
+                    frame::certify_fixed_path(s.path, s.options.normal, s.twist, station, max)
+                        .map(Some)
+                }
+                CorrectedFrame::Planar { principal_sign } => {
+                    let (twist, traversal) = if self.arc.is_some() {
+                        (&self.zero, phase.traversal)
+                    } else {
+                        (s.twist, station)
+                    };
+                    let mut report = frame::certify_fixed_normal_path(
+                        s.path, s.options.normal, twist, traversal, max,
+                    )?;
+                    if let Some(sign) = principal_sign {
+                        report = frame::apply_planar_principal_phase(report, sign)?;
+                    }
+                    if self.arc.is_some() {
+                        report = frame::compose_and_twist(report, phase, s.twist, station, max)?;
+                    }
+                    Ok(Some(report))
+                }
+            };
+        }
+        if self.arc.is_some() {
             arc_frames::arc_frame(
                 s,
                 station,

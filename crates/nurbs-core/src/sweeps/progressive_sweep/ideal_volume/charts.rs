@@ -163,19 +163,25 @@ pub(super) fn margin(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<f64>
     }
     Ok(lower)
 }
-pub(super) fn proves_corrected_forward_line(
+#[derive(Clone, Copy)]
+pub(super) enum CorrectedFrame {
+    ForwardLine,
+    Planar { principal_sign: Option<f64> },
+}
+
+pub(super) fn prepare_corrected_frame(
     s: &Sweep<'_>,
     closed: bool,
     out: &mut IdealVolumeReport,
     max_cells: usize,
     max_exact_work: u64,
-) -> Result<bool> {
+) -> Result<Option<CorrectedFrame>> {
     if closed
         || s.options.orientation != Orientation::CorrectedFrenet
         || s.frame_laws.is_some()
         || s.orientation_guide.is_some()
     {
-        return Ok(false);
+        return Ok(None);
     }
     // On a forward line, Corrected Frenet keeps the initial perpendicular
     // seed. Only the authored twist contributes frame jets in station units.
@@ -185,7 +191,31 @@ pub(super) fn proves_corrected_forward_line(
     let line = super::super::source_line::certify(s.path, remaining)?;
     out.cells += line.cells;
     out.exact_work += line.cells as u64;
-    Ok(line.certified)
+    if line.certified {
+        return Ok(Some(CorrectedFrame::ForwardLine));
+    }
+    let plane = super::super::source_plane::certify(
+        s.path, s.options.normal, max_exact_work - out.exact_work,
+    )?;
+    out.exact_work += plane.exact_work;
+    if !plane.proved {
+        return Ok(None);
+    }
+    let principal_sign = if s.affine_laws.is_some() {
+        let remaining = (max_cells - out.cells)
+            .min(100000)
+            .min((max_exact_work - out.exact_work) as usize);
+        let (work, sign) = frame::certify_initial_planar_principal_phase(
+            s.path, s.options.normal, remaining,
+        )?;
+        out.cells += work;
+        out.exact_work += work as u64;
+        let Some(sign) = sign else { return Ok(None); };
+        Some(sign)
+    } else {
+        None
+    };
+    Ok(Some(CorrectedFrame::Planar { principal_sign }))
 }
 pub(super) fn original_jets(
     s: &Sweep<'_>,
