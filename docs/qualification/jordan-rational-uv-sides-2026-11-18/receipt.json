@@ -1,0 +1,35 @@
+{
+  "sourceBase": "7b8a7dd7f0352b2ae961da11c1d1c14e08b2252e",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Exact shared Jordan contact with weighted quadratic UV side curves on shared and exterior uses, complete original-clock tensor lifts, and refusal for incomplete world coverage or one-short contact work.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2046 filtered out; finished in 1.32s",
+      "file": "brep.log.gz",
+      "sha256": "2b69bd7e7944bb7f7782c51b0dea3a3dd68526317ab01bb672fa45cf15c70a40"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2006 filtered out; finished in 10.83s",
+      "file": "shell.log.gz",
+      "sha256": "8518e8d7cd51414aa909a53623ab508ce66125b108639da8d29d2cdc5c1919b5"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --test exact_trimmed_multispan_surface --test exact_trimmed_surface_lift",
+      "result": "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s / test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "file": "lift.log.gz",
+      "sha256": "f509f1028d9c734983606c1a877a35bfbffb30b8b92f8d1c24bd04e5bd921dd6"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "c3ed24ae27d68d083471cc8214a93146767cdf4352c4328ba4972301a035b3e5",
+    "count": 4919
+  }
+}

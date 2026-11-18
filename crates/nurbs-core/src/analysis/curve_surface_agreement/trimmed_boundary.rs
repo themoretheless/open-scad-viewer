@@ -65,23 +65,45 @@ pub(super) fn verify(
         || s.degree_v > 32
         || c.periodic
         || p.periodic
-        || p.degree != 1
-        || p.control_points.len() != 2
-        || p.weights[0] != p.weights[1]
+        || !(1..=5).contains(&p.degree)
+        || p.control_points.len() != p.degree + 1
         || c.control_points.iter().any(|p| p.len() != 3)
         || p.control_points.iter().any(|p| p.len() != 2)
-        || !p.knots[..=1].iter().all(|k| *k == pd[0])
-        || !p.knots[2..].iter().all(|k| *k == pd[1])
+        || !p.knots[..=p.degree].iter().all(|k| *k == pd[0])
+        || !p.knots[p.degree + 1..].iter().all(|k| *k == pd[1])
     {
         return Ok(None);
+    }
+    let mut affine_work = 0;
+    let a = &p.control_points[0];
+    let z = &p.control_points[p.degree];
+    if !(0..2).any(|axis| a[axis] == z[axis] && a[1 - axis] != z[1 - axis]) {
+        return Ok(None);
+    }
+    if p.degree != 1 || p.weights[0] != p.weights[1] {
+        let affine = Curve {
+            degree: 1,
+            knots: vec![pd[0], pd[0], pd[1], pd[1]],
+            control_points: vec![a.clone(), z.clone()],
+            weights: vec![1.; 2],
+            periodic: false,
+        };
+        let Some(proof) = crate::curve_partition_agreement::verify_exact_bspline_restriction(
+            p, &affine, max_work,
+        )?
+        else {
+            return Ok(None);
+        };
+        if proof.outcome != cad_predicates::BezierIdentity::Equal || proof.work_used >= max_work {
+            return Ok(None);
+        }
+        affine_work = proof.work_used;
     }
     let counts = [s.control_points.len(), s.control_points[0].len()];
     let degrees = [s.degree_u, s.degree_v];
     let knots = [&s.knots_u, &s.knots_v];
     for fixed in 0..2 {
         let free = 1 - fixed;
-        let a = &p.control_points[0];
-        let z = &p.control_points[1];
         if a[fixed] != z[fixed] || a[free] == z[free] {
             continue;
         }
@@ -208,6 +230,11 @@ pub(super) fn verify(
         values.extend(s.control_points.iter().flatten().flatten().copied());
         values.extend(s.weights.iter().flatten().copied());
         values.extend(s.knots_u.iter().chain(&s.knots_v).copied());
+        if affine_work > 0 {
+            values.extend(p.control_points.iter().flatten().copied());
+            values.extend(p.weights.iter().copied());
+            values.extend(p.knots.iter().copied());
+        }
         let arena = SourceArena::authored(
             "original-trimmed-tensor-boundary",
             1,
@@ -236,7 +263,7 @@ pub(super) fn verify(
             &arena,
             &tolerance,
             Limits {
-                max_work,
+                max_work: max_work - affine_work,
                 ..Limits::default()
             },
             None,
@@ -260,7 +287,10 @@ pub(super) fn verify(
             [arena.leaf(line + 6).unwrap(), arena.leaf(line + 7).unwrap()],
             reversed,
         )
-        .map(Some)
+        .map(|mut proof| {
+            proof.work_used += affine_work;
+            Some(proof)
+        })
         .map_err(|_| crate::input("Invalid original tensor boundary clock proof"));
     }
     Ok(None)

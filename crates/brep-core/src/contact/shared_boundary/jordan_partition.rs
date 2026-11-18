@@ -269,32 +269,72 @@ fn exact_endpoint(value: &BigRational) -> Option<f64> {
 
 fn natural_segment(c: &crate::Coedge, cells: &mut usize, limit: usize) -> Option<[[f64; 2]; 2]> {
     let p = &c.pcurve;
-    if p.periodic
-        || p.degree != 1
-        || p.control_points.len() != 2
-        || p.weights[0] != p.weights[1]
-        || p.knots != [p.knots[0], p.knots[0], p.knots[3], p.knots[3]]
+    let degree = p.degree;
+    if p.periodic || !(1..=5).contains(&degree) || p.control_points.len() != degree + 1 {
+        return None;
+    }
+    let domain = p.domain();
+    if p.knots[..=degree].iter().any(|&t| t != domain[0])
+        || p.knots[degree + 1..].iter().any(|&t| t != domain[1])
     {
         return None;
     }
     let point = |i: usize| [p.control_points[i][0], p.control_points[i][1]];
+    let [a, b] = [point(0), point(degree)];
+    if degree > 1 {
+        charge(cells, limit, degree)?;
+        let axis = usize::from(a[0] == b[0]);
+        if a[axis] == b[axis] || a[1 - axis] != b[1 - axis] {
+            return None;
+        }
+        // The rational derivative numerator is a sum over ordered
+        // pole pairs with positive weights. Strict pole order proves
+        // monotonic traversal of the straight side.
+        if !p.control_points.windows(2).all(|pair| {
+            pair[1][1 - axis] == a[1 - axis]
+                && (if a[axis] < b[axis] {
+                    pair[0][axis] < pair[1][axis]
+                } else {
+                    pair[0][axis] > pair[1][axis]
+                })
+        }) {
+            return None;
+        }
+    }
     let Some(trim) = c.trim() else {
-        return Some([point(0), point(1)]);
+        return Some([a, b]);
     };
     if trim.periodic_lift != [[0; 2]; 2] {
         return None;
     }
-    charge(cells, limit, 1)?;
-    let [lo, hi] = p.domain().map(BigRational::from_float);
+    charge(cells, limit, degree * degree)?;
+    let [lo, hi] = domain.map(BigRational::from_float);
     let (lo, hi) = (lo?, hi?);
+    let poles = p
+        .control_points
+        .iter()
+        .zip(&p.weights)
+        .map(|(p, &w)| {
+            let w = BigRational::from_float(w)?;
+            Some([
+                BigRational::from_float(p[0])? * &w,
+                BigRational::from_float(p[1])? * &w,
+                w,
+            ])
+        })
+        .collect::<Option<Vec<_>>>()?;
     let evaluate = |t: f64| {
         let fraction = (BigRational::from_float(t)? - &lo) / (&hi - &lo);
-        let at = |axis: usize| {
-            let a = BigRational::from_float(point(0)[axis])?;
-            let b = BigRational::from_float(point(1)[axis])?;
-            exact_endpoint(&(&a + &fraction * (b - &a)))
-        };
-        Some([at(0)?, at(1)?])
+        let mut net = poles.clone();
+        for width in (1..=degree).rev() {
+            for i in 0..width {
+                net[i] = std::array::from_fn(|axis| {
+                    &net[i][axis] + &fraction * (&net[i + 1][axis] - &net[i][axis])
+                });
+            }
+        }
+        let [x, y, w] = &net[0];
+        Some([exact_endpoint(&(x / w))?, exact_endpoint(&(y / w))?])
     };
     let [a, b] = trim.pcurve_parameter;
     Some([evaluate(a)?, evaluate(b)?])

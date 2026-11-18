@@ -161,3 +161,22 @@ fn transposed_tensor_axis_and_global_world_weight_gauge_keep_the_same_source_tra
         B::Equal
     );
 }
+
+#[test]
+fn weighted_quadratic_uv_trace_requires_exact_affine_clock() {
+    let (c, mut p, s) = fixture();
+    p.degree = 2;
+    p.knots = vec![-4., -4., -4., 8., 8., 8.];
+    p.control_points.insert(1, vec![0.25, 0.]);
+    p.weights = vec![1., 2., 3.];
+    let check = |p: &Curve, budget| {
+        verify(&c, p, &s, true, [0., 2.], [4., 0.], budget).unwrap()
+    };
+    let proof = check(&p, 1_000_000).unwrap();
+    assert_eq!(proof.outcome, B::Equal);
+    assert!(!check(&p, proof.work_used - 1).is_some_and(|p| p.outcome == B::Equal));
+
+    // Same iso-line image and endpoints, different parameter correspondence.
+    p.control_points[1][0] = 0.375;
+    assert!(!check(&p, 1_000_000).is_some_and(|p| p.outcome == B::Equal));
+}
