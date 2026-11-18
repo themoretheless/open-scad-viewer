@@ -1282,3 +1282,4 @@ fn rational_sphere_and_torus_round_trip_through_126_and_128() {
 }
 
 mod circular_arcs;
+mod placements;

@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0955",
+  "testedBase": "f54c68a3835147302eea45d165940d9ad51b6840",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "86a1abdc70e97781e6f1523b957a6bec59de66e0de0892403be9718fd596abcf",
+    "crates/cad-step/src/iges_interchange_v2/placement.rs": "bdf6c2bae14e83c9df3adf309ee8a8718b66d94f4bd68669e157e2a1eb9b19f2",
+    "crates/cad-step/src/iges_interchange_v2/tests/placements.rs": "147eeb677c0e73733328d442b1d6a9aea4c7b5cc970c752e0b756ad883bf8783",
+    "crates/cad-step/src/iges_interchange_v2/tests/mod.rs": "aca44dded67923360171fb892616803b116c69b57c8b8faf6971adec93855c5d"
+  },
+  "occt": {
+    "center": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "start": [
+      3.0,
+      0.0,
+      0.0
+    ],
+    "end": [
+      0.0,
+      3.0,
+      0.0
+    ],
+    "radius": 3.0,
+    "angle": 1.5707963267948966,
+    "volume": 141.3716688561796,
+    "analytic": 141.3716694115407
+  },
+  "fixtureCommand": "CAD_IGES_PLACEMENT_FIXTURE=/tmp/iges-placement cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib placements::"
+}

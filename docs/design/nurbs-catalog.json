@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 954,
-  "unallocatedCount": 46,
+  "specifiedCount": 955,
+  "unallocatedCount": 45,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21769,7 +21769,27 @@
         "docs/qualification/nurbs-iges-circular-arc-954-2026-11-18/verify.py"
       ],
       "remainingQualification": [
-        "Local XY circular arc, form 0; scaled world coordinates or zero-elevation UV coordinates. Direct and composite edge dispatch. Per-entity placement transforms remain outside this import path."
+        "Local XY circular arc, form 0; scaled world coordinates or zero-elevation UV coordinates. Direct and composite edge dispatch. Rigid curve placements are qualified under NURBS-0955."
+      ]
+    },
+    {
+      "id": "NURBS-0955",
+      "name": "Импорт размещённых кривых IGES с матрицей типа 124",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/placement.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "docs/qualification/nurbs-iges-curve-placement-955-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-iges-curve-placement-955-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-iges-curve-placement-955-2026-11-18/verify.py"
+      ],
+      "remainingQualification": [
+        "One proper rigid form-zero matrix per type 100, 110 or 126 member. Translation follows the declared length units. Mapped UV controls must lie in the parameter plane. Chained matrices and reflections remain unsupported."
       ]
     }
   ],

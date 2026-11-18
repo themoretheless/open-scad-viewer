@@ -655,6 +655,9 @@ fn entity_references(de: usize, entity: &Entity) -> Result<Vec<EntityReference>>
         }
         _ => {}
     }
+    if entity.directory.transform != 0 {
+        refs.push(EntityReference { target: entity.directory.transform, role: "directory transform" });
+    }
     Ok(refs)
 }
 
@@ -894,6 +897,7 @@ enum CompositeVisit {
 }
 
 mod circular_arc;
+mod placement;
 mod composite_join;
 
 struct CurveDispatcher<'a> {
@@ -928,8 +932,10 @@ impl<'a> CurveDispatcher<'a> {
                 format!("IGES composite DE {composite} has missing segment DE {de}"),
             )
         })?;
-        let curve = match entity.directory.ty {
-            100 => circular_arc::read(entity, self.dim, self.scale, self.tolerance_mm)?,
+        let transform = entity.directory.transform;
+        let source_dim = if transform == 0 { self.dim } else { 3 };
+        let mut curve = match entity.directory.ty {
+            100 => circular_arc::read(entity, source_dim, self.scale, self.tolerance_mm)?,
             110 => {
                 let values = &entity.values;
                 if values.len() != 7 {
@@ -942,7 +948,7 @@ impl<'a> CurveDispatcher<'a> {
                 for endpoint in 0..2 {
                     let at = 1 + 3 * endpoint;
                     let mut point = vec![f(values, at, "line X")?, f(values, at + 1, "line Y")?];
-                    if self.dim == 3 {
+                    if source_dim == 3 {
                         point.push(f(values, at + 2, "line Z")?);
                     }
                     for coordinate in &mut point {
@@ -952,7 +958,7 @@ impl<'a> CurveDispatcher<'a> {
                 }
                 Curve::from_polyline(points)?
             }
-            126 => curve126(self.entities, de, self.dim, self.scale)?,
+            126 => curve126(self.entities, de, source_dim, self.scale)?,
             102 => {
                 return Err(composite_error(
                     "BREP_IGES_V2_COMPOSITE_CYCLE",
@@ -969,6 +975,13 @@ impl<'a> CurveDispatcher<'a> {
                 ));
             }
         };
+        if transform != 0 {
+            let matrix = placement::read(self.entities, transform)?;
+            for point in &mut curve.control_points {
+                *point = placement::apply(&matrix, point, self.scale, self.dim)?;
+            }
+            curve.validate()?;
+        }
         if !composite_member {
             return Ok(curve);
         }
@@ -2276,9 +2289,10 @@ pub fn import_iges_v2_with_options(
             ignored.insert("directory-label".into());
         }
         if e.directory.transform != 0 {
-            return Err(refuse(
-                "Per-entity IGES transformations are typed-refused; bake one rigid placement into geometry",
-            ));
+            if !matches!(e.directory.ty, 100 | 110 | 126) {
+                return Err(refuse("IGES directory placement is supported only on curve geometry"));
+            }
+            placement::read(&entities, e.directory.transform)?;
         }
     }
     let builder = Builder {
