@@ -11595,3 +11595,35 @@ fn profiled_radius_workspace_detects_overtravel_between_clear_endpoints() {
         }));
     }
 }
+
+#[test]
+fn minimum_profiled_workspace_clearance_normalizes_the_limiting_plane() {
+    use nurbs_core::analysis::curve_measure::{
+        StopReason, WorkspaceHalfSpace, measure_minimum_profiled_radius_workspace_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 0.25, 1., 1.],
+        control_points: vec![vec![0., 0.], vec![1., 0.], vec![4., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let profile = [(0., 0.), (0.5, 3.), (1., 0.)];
+    let planes = [
+        WorkspaceHalfSpace { normal: &[0., -1.], offset: 4. },
+        WorkspaceHalfSpace { normal: &[10., 0.], offset: 45. },
+    ];
+    let check = |budget| measure_minimum_profiled_radius_workspace_clearance(
+        &curve, &profile, &planes, 1e-5, budget,
+    );
+    assert!(check(5).is_err());
+    let coarse = check(6).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= -0.5 && coarse.gap_bounds[1] >= -0.5);
+    let report = check(4096).unwrap();
+    assert_eq!(report.stop_reason, StopReason::Tolerance);
+    assert_eq!(report.witness_parameter, 0.5);
+    assert_eq!(report.witness_plane, 1);
+    let [lo, hi] = report.gap_bounds;
+    assert!(lo <= -0.5 && -0.5 <= hi && hi - lo <= 1e-5);
+}

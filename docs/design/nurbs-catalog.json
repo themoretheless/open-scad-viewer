@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 759,
-  "unallocatedCount": 241,
+  "specifiedCount": 760,
+  "unallocatedCount": 240,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18113,6 +18113,25 @@
       "remainingQualification": [
         "Classify containment of a spherical tool with a piecewise-linear radius against workspace planes.",
         "Check workspace overtravel caused by an interior radius peak, analytic crossings, nonunit plane residuals and mandatory combined coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0760",
+      "name": "Минимальный запас до границ рабочей области с переменным радиусом инструмента",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::measure_minimum_profiled_radius_workspace_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-760-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-760-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine minimum signed workspace clearance in model units and identify a witnessing plane.",
+        "Check normalized clearance against nonunit planes, the limiting plane and radius break witness, and a certified coarse enclosure.",
         "WASM and application integration are separate."
       ]
     }

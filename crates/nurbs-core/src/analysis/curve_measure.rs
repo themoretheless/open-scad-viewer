@@ -2024,6 +2024,51 @@ pub fn partition_profiled_radius_convex_workspace(
     })
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct WorkspaceMinimumClearance {
+    /// Signed clearance to the most restrictive plane, in model units.
+    /// Negative values indicate that the tool extends outside the workspace.
+    pub gap_bounds: [f64; 2],
+    pub witness_parameter: f64,
+    pub witness_plane: usize,
+    pub work_plane_cells: usize,
+    pub stop_reason: StopReason,
+}
+
+/// Refine the smallest signed plane clearance along a ball toolpath with a
+/// piecewise-linear radius. Plane normals need not be normalized.
+pub fn measure_minimum_profiled_radius_workspace_clearance(
+    curve: &Curve,
+    radius_profile: &[(f64, f64)],
+    planes: &[WorkspaceHalfSpace<'_>],
+    tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspaceMinimumClearance> {
+    validate(tolerance, max_plane_cells)?;
+    check(!planes.is_empty(), "Workspace requires at least one half-space")?;
+    let max_cells = max_plane_cells / planes.len();
+    let (initial, profiles) = prepare_radius_profile(curve, radius_profile, max_cells)?;
+    let dimension = curve.control_points[0].len();
+    let planes = prepare_workspace_planes(planes, dimension)?.into_iter().map(|(normal, offset)| {
+        let length = norm(&normal)?;
+        Ok((normal, offset, length))
+    }).collect::<Result<Vec<_>>>()?;
+    let minimum = measure_minimum_radial_cells(
+        curve, initial, radius_profile[0].0, tolerance, max_cells, planes.len(),
+        |point, index, profile, domain| {
+            let (normal, offset, length) = &planes[index];
+            offset.sub(project_jet(point, normal)?)?.div(*length)?.sub(profiles[profile](domain)?)
+        },
+    )?;
+    Ok(WorkspaceMinimumClearance {
+        gap_bounds: minimum.gap_bounds,
+        witness_parameter: minimum.witness_parameter,
+        witness_plane: minimum.witness_obstacle,
+        work_plane_cells: minimum.work_obstacle_cells,
+        stop_reason: minimum.stop_reason,
+    })
+}
+
 fn workspace_residual_status(residuals: &[[f64; 2]]) -> DirectionalMotionStatus {
     if residuals.iter().any(|[lo, _]| *lo > 0.) {
         DirectionalMotionStatus::Exceeds

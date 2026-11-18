@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0760",
+  "testedBase": "c627527a162c50feffba1f8546fb3d21142b887e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 385,
+  "scope": [
+    "Refine minimum signed workspace clearance in model units and identify a witnessing plane.",
+    "Check normalized clearance against nonunit planes, the limiting plane and radius break witness, and a certified coarse enclosure."
+  ],
+  "logSha256": "0cae0d1f33d1fa176dc38f31addd9f4043df0266b2a438560da6583b09f6e690",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "a1f896bfdbeb6a902215d585b2c781165b2c36d8b6bfb165c9584437aac5cde5",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "2c05ae78ded23d3c9cf9c58e43400759e132e52bb391a28dbce1342584ac4ff8"
+  }
+}
