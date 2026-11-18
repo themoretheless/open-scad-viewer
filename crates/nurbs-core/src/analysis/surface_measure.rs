@@ -1271,7 +1271,7 @@ pub fn periodic_trim_patch_set_area(
         tolerance_uv,
         max_surface_cells,
         max_trim_cells,
-        |_, _| Ok(()),
+        |_, _, _| Ok(()),
     )
 }
 
@@ -1428,6 +1428,69 @@ pub fn periodic_trim_patch_set_central_inertia(
     })
 }
 
+#[derive(Clone, Debug)]
+pub struct TrimmedPatchSetDensityReport {
+    pub measure: TrimmedPatchSetAreaReport,
+    pub mass_properties: Option<SurfaceAssemblyMassBounds>,
+}
+
+/// Measure the mass of periodic trim patches with one areal density interval
+/// per patch in input order. The tolerance applies to geometric area, and the
+/// two integration limits are shared across the entire set.
+pub fn periodic_trim_patch_set_mass_with_density(
+    patches: &[crate::editing::exact_periodic_surface::PeriodicTrimPatch],
+    densities: &[[f64; 2]],
+    tolerance: f64,
+    tolerance_uv: f64,
+    max_surface_cells: usize,
+    max_trim_cells: usize,
+) -> Result<TrimmedPatchSetDensityReport> {
+    check(
+        densities.len() == patches.len()
+            && densities
+                .iter()
+                .all(|&[lo, hi]| lo > 0. && lo <= hi && hi.is_finite()),
+        "Each periodic trim patch requires one strictly positive finite density interval",
+    )?;
+    let mut pieces = Vec::new();
+    let mut component_densities = densities.iter().copied();
+    let measure = measure_periodic_patch_set(
+        patches,
+        tolerance,
+        tolerance_uv,
+        max_surface_cells,
+        max_trim_cells,
+        |surface, cells, area| {
+            let density = component_densities
+                .next()
+                .ok_or_else(|| crate::numeric_err("Missing trim patch density"))?;
+            if area.bounds[0] > 0. {
+                let centroid_bounds = enclose_trimmed_centroid(surface, &cells, area)?;
+                let central_inertia_bounds = enclose_trimmed_inertia(
+                    cells.iter().map(|cell| (surface, cell)),
+                    centroid_intervals(centroid_bounds)?,
+                )?;
+                pieces.push((
+                    SurfaceMassPropertiesBounds {
+                        area_bounds: area.bounds,
+                        centroid_bounds,
+                        central_inertia_bounds,
+                    },
+                    density,
+                ));
+            }
+            Ok(())
+        },
+    )?;
+    let mass_properties = (pieces.len() == patches.len())
+        .then(|| combine_surface_mass_properties_with_density(&pieces))
+        .transpose()?;
+    Ok(TrimmedPatchSetDensityReport {
+        measure,
+        mass_properties,
+    })
+}
+
 fn measure_periodic_patch_set_centroid(
     patches: &[crate::editing::exact_periodic_surface::PeriodicTrimPatch],
     tolerance: f64,
@@ -1443,7 +1506,7 @@ fn measure_periodic_patch_set_centroid(
         tolerance_uv,
         max_surface_cells,
         max_trim_cells,
-        |surface, cells| {
+        |surface, cells, _| {
             let moments = moments.get_or_insert_with(|| {
                 let origin =
                     [0, 1, 2].map(|axis| Interval::point(surface.control_points[0][0][axis]));
@@ -1470,7 +1533,7 @@ fn measure_periodic_patch_set(
     tolerance_uv: f64,
     max_surface_cells: usize,
     max_trim_cells: usize,
-    mut consume_partition: impl FnMut(&Surface, BinaryHeap<Cell>) -> Result<()>,
+    mut consume_partition: impl FnMut(&Surface, BinaryHeap<Cell>, &AreaReport) -> Result<()>,
 ) -> Result<TrimmedPatchSetAreaReport> {
     check(
         (1..=256).contains(&patches.len())
@@ -1535,10 +1598,10 @@ fn measure_periodic_patch_set(
                     / (patches.len() - index),
             (max_trim_cells - trim_cells) / (patches.len() - index),
         )?;
-        consume_partition(&patch.surface, partition)?;
         let area = measure
             .area
             .ok_or_else(|| crate::numeric_err("Missing prepared trim patch area"))?;
+        consume_partition(&patch.surface, partition, &area)?;
         surface_cells += area.cells;
         trim_cells += measure.trim_cells;
         if area.stop_reason == StopReason::WorkLimit {

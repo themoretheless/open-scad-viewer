@@ -7347,3 +7347,55 @@ fn density_weighted_assembly_rejects_invalid_density_and_matches_unit_density() 
         assert!(combine_surface_mass_properties_with_density(&[(piece, density)]).is_err());
     }
 }
+
+#[test]
+fn periodic_trim_set_measures_density_weighted_mass_on_a_shared_partition_budget() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_mass_with_density;
+
+    let patches = periodic_trim_patches_with_nested_island();
+    let report = periodic_trim_patch_set_mass_with_density(
+        &patches, &[[2.; 2], [6.; 2]], 0.005, 1e-10, 20_000, 1_000_000,
+    )
+    .unwrap();
+    let properties = report.mass_properties.unwrap();
+    let mass = 2.875;
+    let center_x = (2. * 0.125 + 6. * 0.015625) / mass;
+    let center_y = 2. * 0.1875 / mass;
+    let inertia_z = 2. * 83. / 768. + 6. * 49. / 12288.
+        - mass * (center_x * center_x + center_y * center_y);
+    for ([lo, hi], expected) in [
+        (properties.mass_bounds, mass),
+        (properties.centroid_bounds[0], center_x),
+        (properties.centroid_bounds[1], center_y),
+        (properties.central_inertia_bounds[2][2], inertia_z),
+    ] {
+        assert!(lo <= expected && expected <= hi, "{lo} .. {hi}: {expected}");
+    }
+    assert_eq!(report.measure.components.len(), 2);
+    assert!(report.measure.total.area.unwrap().cells <= 20_000);
+    assert!(report.measure.total.trim_cells <= 1_000_000);
+}
+
+#[test]
+fn periodic_trim_set_density_mass_requires_aligned_inputs_and_full_coverage() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_mass_with_density;
+
+    let patches = periodic_trim_patches_with_nested_island();
+    for densities in [&[[1.; 2]][..], &[[1.; 2], [0., 1.]][..]] {
+        assert!(
+            periodic_trim_patch_set_mass_with_density(
+                &patches, densities, 0.005, 1e-10, 20_000, 1_000_000,
+            )
+            .is_err()
+        );
+    }
+    for (surface_cells, trim_cells) in [(2, 1_000_000), (20_000, 1)] {
+        let report = periodic_trim_patch_set_mass_with_density(
+            &patches, &[[2.; 2], [6.; 2]], 0.005, 1e-10, surface_cells, trim_cells,
+        )
+        .unwrap();
+        assert!(report.mass_properties.is_none());
+        assert!(report.measure.total.area.is_none());
+        assert!(report.measure.components.is_empty());
+    }
+}

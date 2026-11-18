@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0631",
+  "testedBase": "f3913da3b30f215f949f43ae7a68b1cdb6d3fe60",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 227,
+  "scope": [
+    "Measure and combine density-weighted periodic patches under one pair of integration budgets.",
+    "Check analytic weighted island mass, center and tensor, both shared limits, density alignment, and incomplete coverage."
+  ],
+  "logSha256": "56400b2e0ad470c05b61d586a1ed25c61db7d34da71ee9e934cbbb0ffcebc831",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "43a92d405a701d78d2d1b2eed107330b740cc7dbb6e1b6c2a164d4df086f42c8",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "10dd3998493aa7879521dd5e6e0624fd48ad0614123a1468529d7d5e987cd363"
+  }
+}
