@@ -272,6 +272,13 @@ export interface DirectStepV9Import extends Omit<DirectStepV8Import, 'certificat
 /** Append-only retained geometry-product closure. */
 export const exportDirectStepV9 = (model: NurbsBrep): DirectStepV9Export =>
   callGeometryRust('brep_nurbs_export_step_v9', { model })
+/** Export authored local solids once each, keeping their assembly-space placements. */
+export function exportSharedStepAssembly(
+  definitions: readonly NurbsBrep[],
+  occurrences: readonly { definition: number; transform: readonly (readonly number[])[] }[],
+): string {
+  return callGeometryRust<{ text: string }>('brep_nurbs_export_shared_step', { definitions, occurrences }).text
+}
 export function importDirectStepV9(text: string): DirectStepV9Import {
   if (STEP_V9_REFUSE_RE.test(text)) {
     throw Error('step-interchange/9 direct B-rep route refuses faceted, tessellated, and procedural/CSG product roots')
