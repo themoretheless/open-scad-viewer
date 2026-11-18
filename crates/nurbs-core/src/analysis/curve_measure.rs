@@ -2708,6 +2708,123 @@ pub fn measure_scheduled_curve_clearance(
     max_cells: usize,
 ) -> Result<Option<ScheduledCurveClearance>> {
     validate(tolerance, max_cells)?;
+    let Some(overlap) = prepare_scheduled_overlap(segments, start_times, radii)? else {
+        return Ok(None);
+    };
+    let gap = |progress| overlap.gap(progress);
+    let measure = |(), domain: [f64; 2], witness: &mut ClearanceWitness| {
+        let lower = gap(domain)?.lo;
+        for progress in domain {
+            let upper = gap([progress; 2])?.hi;
+            if upper < witness.0 {
+                *witness = (upper, progress, 0);
+            }
+        }
+        Ok(lower)
+    };
+    let (lower, witness, work_cells, stop_reason) =
+        refine_minimum_clearance([((), [0., 1.])], 0., tolerance, max_cells, measure)?;
+    let time = overlap.time(witness.1)?;
+    Ok(Some(ScheduledCurveClearance {
+        minimum: SynchronizedCurveClearance {
+            gap_bounds: [lower, witness.0],
+            witness_parameter: witness.1,
+            work_cells,
+            stop_reason,
+        },
+        witness_time_bounds: [round_motion_duration(&time, false)?, round_motion_duration(&time, true)?],
+    }))
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ScheduledClearanceCell {
+    /// Time enclosures for the start and end. Status holds between the exact endpoints.
+    pub time_endpoint_bounds: [[f64; 2]; 2],
+    pub gap_bounds: [f64; 2],
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct ScheduledClearancePartition {
+    pub cells: Vec<ScheduledClearanceCell>,
+    pub work_cells: usize,
+}
+
+/// Classify clearance over the time when both tools are scheduled to move.
+/// Progress tolerance is a fraction of the overlap duration.
+pub fn partition_scheduled_curve_clearance(
+    segments: [TimedMotionSegment<'_>; 2],
+    start_times: [f64; 2],
+    radii: [f64; 2],
+    progress_tolerance: f64,
+    max_cells: usize,
+) -> Result<Option<ScheduledClearancePartition>> {
+    use num_traits::Zero;
+
+    validate(progress_tolerance, max_cells)?;
+    let Some(overlap) = prepare_scheduled_overlap(segments, start_times, radii)? else {
+        return Ok(None);
+    };
+    let progress = if overlap.duration.is_zero() { [0.; 2] } else { [0., 1.] };
+    let (cells, work_cells) = partition_enclosed_cells(
+        [((), progress)], progress_tolerance, max_cells,
+        |(), domain| {
+            let gap = overlap.gap(domain)?;
+            let status = if gap.lo > 0. {
+                DirectionalMotionStatus::Within
+            } else if gap.hi <= 0. {
+                DirectionalMotionStatus::Exceeds
+            } else {
+                DirectionalMotionStatus::Undetermined
+            };
+            Ok(((gap, status), status == DirectionalMotionStatus::Undetermined))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(_, [a, b], (gap, status))| {
+        let endpoint = |progress| -> Result<[f64; 2]> {
+            let time = overlap.time(progress)?;
+            Ok([round_motion_duration(&time, false)?, round_motion_duration(&time, true)?])
+        };
+        Ok(ScheduledClearanceCell {
+            time_endpoint_bounds: [endpoint(a)?, endpoint(b)?],
+            gap_bounds: [gap.lo, gap.hi],
+            status,
+        })
+    }).collect::<Result<Vec<_>>>()?;
+    Ok(Some(ScheduledClearancePartition { cells, work_cells }))
+}
+
+struct ScheduledOverlap<'a> {
+    segments: [TimedMotionSegment<'a>; 2],
+    origin: num_rational::BigRational,
+    duration: num_rational::BigRational,
+    maps: [(num_rational::BigRational, num_rational::BigRational); 2],
+    radius: Interval,
+}
+
+impl ScheduledOverlap<'_> {
+    fn time(&self, progress: f64) -> Result<num_rational::BigRational> {
+        Ok(&self.origin + &self.duration * exact_motion_operand(progress)?)
+    }
+
+    fn gap(&self, progress: [f64; 2]) -> Result<Interval> {
+        let position = |index: usize| {
+            let (start, width) = &self.maps[index];
+            let lo = start + width * exact_motion_operand(progress[0])?;
+            let hi = start + width * exact_motion_operand(progress[1])?;
+            let segment = self.segments[index];
+            rounded_window_position(segment.curve, segment.interval, [&lo, &hi])
+        };
+        let (lo, hi) = box_distance(&position(0)?, &position(1)?)?;
+        Interval::new(lo, hi)?.sub(self.radius)
+    }
+}
+
+fn prepare_scheduled_overlap<'a>(
+    segments: [TimedMotionSegment<'a>; 2],
+    start_times: [f64; 2],
+    radii: [f64; 2],
+) -> Result<Option<ScheduledOverlap<'a>>> {
     let curves = segments.map(|segment| segment.curve);
     let windows = segments.map(|segment| segment.interval);
     let radius = validate_affine_clearance(curves, windows, radii)?;
@@ -2725,45 +2842,14 @@ pub fn measure_scheduled_curve_clearance(
         return Ok(None);
     }
     let overlap = end - &origin;
-    let mut maps = Vec::with_capacity(2);
-    for index in 0..2 {
+    let map = |index: usize| -> Result<_> {
         let [a, b] = windows[index];
         let a = exact_motion_operand(a)?;
         let rate = (exact_motion_operand(b)? - &a) / &durations[index];
-        maps.push((&a + (&origin - &starts[index]) * &rate, &overlap * rate));
-    }
-    let gap = |progress: [f64; 2]| -> Result<Interval> {
-        let position = |index: usize| {
-            let (start, width) = &maps[index];
-            let lo = start + width * exact_motion_operand(progress[0])?;
-            let hi = start + width * exact_motion_operand(progress[1])?;
-            rounded_window_position(curves[index], windows[index], [&lo, &hi])
-        };
-        let (lo, hi) = box_distance(&position(0)?, &position(1)?)?;
-        Interval::new(lo, hi)?.sub(radius)
+        Ok((&a + (&origin - &starts[index]) * &rate, &overlap * rate))
     };
-    let measure = |(), domain: [f64; 2], witness: &mut ClearanceWitness| {
-        let lower = gap(domain)?.lo;
-        for progress in domain {
-            let upper = gap([progress; 2])?.hi;
-            if upper < witness.0 {
-                *witness = (upper, progress, 0);
-            }
-        }
-        Ok(lower)
-    };
-    let (lower, witness, work_cells, stop_reason) =
-        refine_minimum_clearance([((), [0., 1.])], 0., tolerance, max_cells, measure)?;
-    let time = origin + overlap * exact_motion_operand(witness.1)?;
-    Ok(Some(ScheduledCurveClearance {
-        minimum: SynchronizedCurveClearance {
-            gap_bounds: [lower, witness.0],
-            witness_parameter: witness.1,
-            work_cells,
-            stop_reason,
-        },
-        witness_time_bounds: [round_motion_duration(&time, false)?, round_motion_duration(&time, true)?],
-    }))
+    let maps = [map(0)?, map(1)?];
+    Ok(Some(ScheduledOverlap { segments, origin, duration: overlap, maps, radius }))
 }
 
 fn affine_progress_position(

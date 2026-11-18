@@ -10896,3 +10896,43 @@ fn scheduled_curve_clearance_handles_partial_overlap_and_separate_durations() {
     let instant = check([0., 8.]).unwrap().unwrap();
     assert_eq!(instant.witness_time_bounds, [8.; 2]);
 }
+
+#[test]
+fn scheduled_clearance_partition_maps_contact_to_absolute_time() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, TimedMotionSegment, partition_scheduled_curve_clearance,
+    };
+    let mut first = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let mut second = first.clone();
+    second.knots = vec![10., 10., 16., 16.];
+    second.control_points = vec![vec![6., 0.], vec![2., 0.]];
+    let check = |first: &Curve, starts| {
+        let segments = [
+            TimedMotionSegment { curve: first, interval: [0., 1.], duration: 8. },
+            TimedMotionSegment { curve: &second, interval: [10., 16.], duration: 4. },
+        ];
+        partition_scheduled_curve_clearance(segments, starts, [0.5; 2], 0.01, 128)
+    };
+    assert!(check(&first, [0., 9.]).unwrap().is_none());
+    let report = check(&first, [0., 2.]).unwrap().unwrap();
+    assert_eq!(report.cells.first().unwrap().time_endpoint_bounds[0], [2.; 2]);
+    assert_eq!(report.cells.last().unwrap().time_endpoint_bounds[1], [6.; 2]);
+    for crossing in [3.5, 4.5] {
+        assert!(report.cells.iter().any(|cell| {
+            let [[lo, _], [_, hi]] = cell.time_endpoint_bounds;
+            lo <= crossing && crossing <= hi && hi - lo < 0.04 && cell.status == Status::Undetermined
+        }));
+    }
+    assert!(report.cells.iter().any(|cell| cell.status == Status::Exceeds));
+    first.control_points[1] = vec![6., 0.];
+    let instant = check(&first, [0., 8.]).unwrap().unwrap();
+    assert_eq!(instant.work_cells, 1);
+    assert_eq!(instant.cells[0].time_endpoint_bounds, [[8.; 2]; 2]);
+    assert_eq!(instant.cells[0].status, Status::Exceeds);
+}
