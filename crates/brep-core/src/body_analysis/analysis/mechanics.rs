@@ -123,15 +123,25 @@ impl AssemblyMass {
     pub fn moment_about_axis(&self, point: [f64; 3], direction: [f64; 3]) -> Result<f64> {
         axial_moment(self.centroid, self.inertia, self.mass, point, direction)
     }
+
+    /// Radial first mass moment in world coordinates, pointing toward the
+    /// heavy side. With kg and mm inputs, components are in kg mm.
+    pub fn static_unbalance(&self, point: [f64; 3], direction: [f64; 3]) -> Result<[f64; 3]> {
+        let unit = unit_axis(point, direction)?;
+        if !self.mass.is_finite() || self.mass <= 0. {
+            return Err(indeterminate("Expected positive finite assembly mass"));
+        }
+        let offset = std::array::from_fn(|i| self.centroid[i] - point[i]);
+        let radial = cross(unit, cross(offset, unit));
+        let unbalance = radial.map(|v| v * self.mass);
+        if unbalance.iter().any(|v| !v.is_finite()) {
+            return Err(indeterminate("Non-finite static unbalance"));
+        }
+        Ok(unbalance)
+    }
 }
 
-fn axial_moment(
-    center: [f64; 3],
-    tensor: [[f64; 3]; 3],
-    mass: f64,
-    point: [f64; 3],
-    axis: [f64; 3],
-) -> Result<f64> {
+fn unit_axis(point: [f64; 3], axis: [f64; 3]) -> Result<[f64; 3]> {
     if axis.iter().chain(&point).any(|v| !v.is_finite()) {
         return Err(indeterminate("Non-finite inertia axis"));
     }
@@ -141,7 +151,17 @@ fn axial_moment(
     }
     let scaled = axis.map(|v| v / scale);
     let norm = dot(scaled, scaled).sqrt();
-    let unit = scaled.map(|v| v / norm);
+    Ok(scaled.map(|v| v / norm))
+}
+
+fn axial_moment(
+    center: [f64; 3],
+    tensor: [[f64; 3]; 3],
+    mass: f64,
+    point: [f64; 3],
+    axis: [f64; 3],
+) -> Result<f64> {
+    let unit = unit_axis(point, axis)?;
     let offset = std::array::from_fn(|i| center[i] - point[i]);
     let perpendicular = cross(offset, unit);
     let moment =

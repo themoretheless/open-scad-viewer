@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 989,
-  "unallocatedCount": 11,
+  "specifiedCount": 990,
+  "unallocatedCount": 10,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22472,6 +22472,25 @@
       ],
       "remainingQualification": [
         "Derived from additive component mass properties. Verified offset bearing by OCCT, nonuniformly scaled mirrored component by analytic box dimensions, and axis magnitude invariance."
+      ]
+    },
+    {
+      "id": "NURBS-0990",
+      "name": "Вектор статического дисбаланса NURBS-сборки относительно оси подшипника",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::analysis::AssemblyMass::static_unbalance",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/analysis/mechanics.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-assembly-static-unbalance-990-2026-11-19/verify.py",
+        "docs/qualification/nurbs-assembly-static-unbalance-990-2026-11-19/occt.log",
+        "docs/qualification/nurbs-assembly-static-unbalance-990-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-assembly-static-unbalance-990-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Static radial first mass moment, in kg mm. Qualified offset, tilted, reversed and centred axes; reference computed from OCCT mass properties with an independent counterweight check."
       ]
     }
   ],
