@@ -1,16 +1,12 @@
 //! Exact knot-line transport through a partition of the original tensor chart.
+use super::super::periodic_uses;
 use crate::{Result, Surface};
 use nurbs_core::{
     continuity::{
         ProjectiveSeam, inspect_projective_seam_collection_with_rational_scale_proposals,
     },
-    editing::{
-        exact_periodic_surface::open_exact_periodic_surface_axis,
-        exact_surface_knot_insertion::tile_tensor_surface,
-    },
-    surface::Axis,
+    editing::exact_surface_knot_insertion::tile_tensor_surface,
 };
-use std::borrow::Cow;
 
 fn cuts(knots: &[f64], degree: usize, count: usize, order: usize) -> Option<Vec<f64>> {
     let [lo, hi] = [knots[degree], knots[count]];
@@ -50,22 +46,11 @@ pub(super) fn inspect(surface: &Surface, order: usize, cells: usize, work: u64) 
         return Ok(report);
     }
     let wraps = [surface.periodic_u, surface.periodic_v];
-    let mut surface = Cow::Borrowed(surface);
-    for (axis, wraps) in [Axis::U, Axis::V].into_iter().zip(wraps) {
-        if !wraps {
-            continue;
-        }
-        let remaining = (work - report.work).min(cad_predicates::MAX_WORK);
-        if remaining == 0 {
-            return Ok(report);
-        }
-        let opened = open_exact_periodic_surface_axis(&surface, axis, remaining)?;
-        report.work += opened.work_used;
-        let Some(chart) = opened.surface else {
-            return Ok(report);
-        };
-        surface = Cow::Owned(chart);
-    }
+    let (surface, used) = periodic_uses::open(surface, work)?;
+    report.work = used;
+    let Some(surface) = surface else {
+        return Ok(report);
+    };
     let (Some(u), Some(v)) = (
         cuts(
             &surface.knots_u,
@@ -397,5 +382,43 @@ mod tests {
         let partial = super::super::super::inspect(&model, limits).unwrap();
         assert!(!partial.g2_certified);
         assert!(partial.unresolved_edges.contains(&0));
+    }
+    #[test]
+    fn classified_wraps_prove_each_requested_order_with_one_budget() {
+        use super::super::super::classified::{Class, Limits, inspect};
+        let model = single_face_torus(periodic_chart(true));
+        let limits = Limits {
+            incidence_steps: 100,
+            agreement_work: 1_000_000,
+            regularity_cells: 100_000,
+            exact_work: 16_000_000,
+        };
+        let classes = [Class::G1, Class::G2];
+        let report = inspect(&model, &classes, limits).unwrap();
+        assert!(report.certified, "{}", report.reason);
+        assert_eq!(report.smooth_edges, [0, 1]);
+        assert_eq!(report.classes, classes);
+        let short = inspect(
+            &model,
+            &classes,
+            Limits {
+                exact_work: report.exact_work - 1,
+                ..limits
+            },
+        )
+        .unwrap();
+        assert!(!short.certified);
+        assert!(short.exact_work < report.exact_work);
+        let zero = inspect(
+            &model,
+            &classes,
+            Limits {
+                exact_work: 0,
+                ..limits
+            },
+        )
+        .unwrap();
+        assert!(!zero.certified);
+        assert_eq!(zero.uncertain_edge, Some(0));
     }
 }

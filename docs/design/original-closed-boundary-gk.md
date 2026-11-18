@@ -138,3 +138,9 @@ proof. Both uses must agree with the same world traversal, including its
 orientation. The audit also requires exact positional agreement and valid
 vertex links. The report lists these edges separately from its standalone
 strip proofs.
+
+The classified BRep audit also accepts paired full uses of opposite sides
+of a periodic chart. It opens the original tensor chart exactly and checks
+each wrap at the order assigned to that edge. The same coefficient budget
+covers exact opening, clock alignment and seam jets. The existing material
+and topology proofs remain independent of this edge audit.

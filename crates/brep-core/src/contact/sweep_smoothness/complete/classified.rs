@@ -51,7 +51,7 @@ fn step(out: &mut Report, max: usize) -> bool {
     }
 }
 /// One owned edge use: face, full parameter side and increasing direction.
-type EdgeUse = (usize, Option<&'static str>, Option<bool>);
+type EdgeUse = (usize, Option<(&'static str, bool)>, bool);
 /// Smooth seams awaiting the shared exact jet proof.
 struct SmoothSeams {
     patches: Vec<Surface>,
@@ -82,11 +82,13 @@ impl Inspection<'_> {
                     if !step(&mut self.out, self.limits.incidence_steps) {
                         return Ok(None);
                     }
-                    let side = coedge_side(&f.surface, &c.pcurve, c.reversed);
+                    let side = periodic_uses::full_use(model, c)
+                        .then(|| coedge_side(&f.surface, &c.pcurve, c.reversed))
+                        .flatten();
                     let owned = uses
                         .get_mut(c.edge)
                         .ok_or_else(|| crate::invalid("Invalid classified boundary edge"))?;
-                    owned.push((face, side.map(|s| s.0), side.map(|s| s.1)));
+                    owned.push((face, side, c.reversed));
                 }
             }
         }
@@ -110,11 +112,35 @@ impl Inspection<'_> {
                 self.out.c0_edges.push(edge);
                 continue;
             }
-            let [(a, Some(ab), Some(ad)), (b, Some(bb), Some(bd))] = owned.as_slice() else {
+            let [(a, Some((ab, ad)), ar), (b, Some((bb, bd)), br)] = owned.as_slice() else {
                 self.out.reason = "classified-boundary-natural-carrier-unproven";
                 return Ok(None);
             };
-            let left = self.model.faces[*a].surface.clone();
+            let carrier = &self.model.faces[*a].surface;
+            if a == b && periodic_uses::opposite_sides(carrier, ab, bb) {
+                if ad != bd || ar == br {
+                    self.out.reason = "classified-boundary-wrap-orientation-unproven";
+                    return Ok(None);
+                }
+                let (opened, used) =
+                    periodic_uses::open(carrier, self.limits.exact_work - self.out.exact_work)?;
+                self.out.exact_work += used;
+                let Some(opened) = opened else {
+                    self.out.reason = "classified-boundary-periodic-opening-unproven";
+                    return Ok(None);
+                };
+                let patch = smooth.patches.len();
+                smooth.patches.push(opened.into_owned());
+                smooth.seams.push(ProjectiveSeam {
+                    patches: [patch, patch],
+                    boundaries: [(*ab).into(), (*bb).into()],
+                    order: class.order(),
+                    normal_scale: 1.,
+                });
+                self.out.smooth_edges.push(edge);
+                continue;
+            }
+            let left = carrier.clone();
             let mut right = self.model.faces[*b].surface.clone();
             if ad != bd {
                 let budget = self.limits.exact_work - self.out.exact_work;

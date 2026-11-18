@@ -84,12 +84,7 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
     for (face, f) in model.faces.iter().enumerate() {
         for wire in std::iter::once(f.outer).chain(f.holes.iter().copied()) {
             for c in &model.loops[wire].coedges {
-                let side = c
-                    .trim()
-                    .is_none_or(|trim| {
-                        trim.curve_parameter == model.edges[c.edge].curve.domain()
-                            && trim.pcurve_parameter == c.pcurve.domain()
-                    })
+                let side = periodic_uses::full_use(model, c)
                     .then(|| coedge_side(&f.surface, &c.pcurve, c.reversed))
                     .flatten();
                 uses[c.edge].push((face, side.map(|s| s.0), side.map(|s| s.1), c.reversed));
