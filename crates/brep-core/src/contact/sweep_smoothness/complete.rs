@@ -157,11 +157,12 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
             .is_some_and(|p| p.all_equal && p.all_joins_exact);
     let proof = graph_jets::qualify(&charts.patches, &seams, limits.exact_work - parameter_work)?;
     let seam_work = parameter_work + proof.exact_work;
-    let face_interiors = interiors::inspect(
+    let face_interiors = interiors::inspect_with_charts(
         model,
         limits.order,
         limits.regularity_cells - regularity.cells,
         limits.exact_work - seam_work,
+        Some(&charts),
     )?;
     let periodic_edge_ids = if world_owned && face_interiors.certified {
         periodic_candidates

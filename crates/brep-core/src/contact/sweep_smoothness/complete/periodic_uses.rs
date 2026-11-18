@@ -221,6 +221,10 @@ impl Charts {
         }
     }
 
+    pub(super) fn prepared(&self, face: usize) -> Option<&Surface> {
+        self.indices[face][0].map(|index| &self.patches[index])
+    }
+
     pub(super) fn native(
         &mut self,
         model: &Model,

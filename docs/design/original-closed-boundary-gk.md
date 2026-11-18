@@ -266,7 +266,10 @@ proves the complete G2 join under the shared budget.
 The complete and classified boundary audits use the same exact opening
 on both incident charts before comparing their jets. Opening and any
 traversal reversal debit the audit's shared work allowance once per
-prepared chart and clock direction. C0 edges
+prepared chart and clock direction. The complete audit also reuses each
+native opened chart for its original internal knot lines and wrap jets.
+Those proofs still check the original wrap axes and charge their own
+tiling and jet work. C0 edges
 remain outside the smooth-seam stage of the classified audit.
 
 The common boundary can be an authored chain of edges. The audit checks

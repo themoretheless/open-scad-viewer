@@ -48,6 +48,19 @@ pub(super) fn inspect(surface: &Surface, order: usize, cells: usize, work: u64) 
     let Some(surface) = surface else {
         return Ok(report);
     };
+    inspect_opened(&surface, wraps, order, cells, work - report.work).map(|mut proof| {
+        proof.work += report.work;
+        proof
+    })
+}
+
+pub(super) fn inspect_opened(
+    surface: &Surface, wraps: [bool; 2], order: usize, cells: usize, work: u64,
+) -> Result<Report> {
+    let mut report = Report { certified: false, cells: 0, work: 0, seams: 0 };
+    if work == 0 || cells == 0 {
+        return Ok(report);
+    }
     let (Some(u), Some(v)) = (
         cuts(
             &surface.knots_u,
@@ -73,13 +86,13 @@ pub(super) fn inspect(surface: &Surface, order: usize, cells: usize, work: u64) 
     }
     report.cells = count;
     let patches = if count == 1 {
-        vec![surface.into_owned()]
+        vec![surface.clone()]
     } else {
         let remaining = (work - report.work).min(cad_predicates::MAX_WORK);
         if remaining == 0 {
             return Ok(report);
         }
-        let tiled = tile_tensor_surface(&surface, &u, &v, remaining)?;
+        let tiled = tile_tensor_surface(surface, &u, &v, remaining)?;
         report.work += tiled.work_used;
         let Some(patches) = tiled.patches else {
             return Ok(report);
@@ -602,6 +615,13 @@ mod tests {
         assert!(opening_work > 0);
         // Each band participates in both shared rims. Its chart is opened once.
         assert_eq!(complete.parameter_work, opening_work);
+        let cold = super::super::inspect(
+            &model, 2, limits.regularity_cells - complete.regularity.cells, limits.exact_work,
+        ).unwrap();
+        assert!(cold.certified);
+        assert_eq!(cold.geometric_seams, complete.face_interiors.geometric_seams);
+        assert_eq!(cold.exact_work, complete.face_interiors.exact_work + opening_work);
+
 
         use super::super::super::classified::{self, Class};
         let classes = [Class::G2; 4];
