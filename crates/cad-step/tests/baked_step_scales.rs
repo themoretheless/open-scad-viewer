@@ -363,6 +363,48 @@ fn branch_motion_moves_two_linked_parts_and_preserves_external_sibling() {
         }
     }
     assert!(cad_step::step_branch_bounds(&result, &["Drive", "Missing"]).is_err());
+    let mass = cad_step::step_branch_mass_properties(
+        &result,
+        &["Drive", "Feed"],
+        1e-8,
+        100_000,
+        |path, part| {
+            assert_eq!(path, ["Drive", "Feed", "Bracket"]);
+            Ok(if part.transform[1][3] == 5. {
+                0.001
+            } else {
+                0.002
+            })
+        },
+    )
+    .unwrap();
+    assert!((mass.mass - 0.144).abs() < 1e-12);
+    for (v, w) in mass.centroid.iter().zip([8., 8., 3.]) {
+        assert!((*v - w).abs() < 1e-9);
+    }
+    // Rotated box sides in world coordinates are 4, 2, 6 mm. The two
+    // centres are separated by 3 mm along Y.
+    let shift = 0.048 * 0.096 / 0.144 * 9.;
+    let diagonal = [
+        0.144 * 40. / 12. + shift,
+        0.144 * 52. / 12.,
+        0.144 * 20. / 12. + shift,
+    ];
+    for (i, row) in mass.inertia.iter().enumerate() {
+        for (j, value) in row.iter().enumerate() {
+            assert!((value - if i == j { diagonal[i] } else { 0. }).abs() < 1e-9);
+        }
+    }
+    assert!(
+        cad_step::step_branch_mass_properties(
+            &result,
+            &["Drive", "Feed"],
+            1e-8,
+            100_000,
+            |_, _| Ok(0.)
+        )
+        .is_err()
+    );
     if let Some(path) = std::env::var_os("CAD_BRANCH_MOTION_FIXTURE") {
         std::fs::write(path, result).unwrap();
     }

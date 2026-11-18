@@ -2403,6 +2403,22 @@ pub fn step_branch_parts_list(text: &str, prefix: &[&str]) -> Result<Vec<StepBra
     }).collect())
 }
 
+/// Mass (kg), world centre (mm) and central inertia (kg mm²) of placements
+/// below a product path. The caller supplies a density in kg/mm³ for each
+/// selected occurrence. Coincident placements contribute independently.
+pub fn step_branch_mass_properties(
+    text: &str, prefix: &[&str], relative_tolerance: f64, max_evaluations_per_definition: usize,
+    mut density: impl FnMut(&[String], &StepAssemblyOccurrence) -> Result<f64>,
+) -> Result<brep_core::analysis::AssemblyMass> {
+    if prefix.is_empty() { return Err(refuse("Expected a nonempty STEP product path")); }
+    let (scene, paths) = import_step_product_paths(text)?;
+    let indices = product_prefix_indices(&paths, prefix);
+    let subset = scene.assembly.extract_occurrences(&indices)?;
+    let densities = indices.iter().map(|&i| density(&paths[i], &scene.assembly.occurrences()[i]))
+        .collect::<Result<Vec<_>>>()?;
+    subset.mass_properties_with_densities(&densities, relative_tolerance, max_evaluations_per_definition)
+}
+
 /// Conservative world-axis bounding box (millimetres) of all placements below
 /// a product path. Untrimmed control nets can extend beyond the physical solid.
 pub fn step_branch_bounds(text: &str, prefix: &[&str]) -> Result<[[f64; 3]; 2]> {
