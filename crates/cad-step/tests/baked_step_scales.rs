@@ -516,6 +516,42 @@ fn branch_motion_moves_two_linked_parts_and_preserves_external_sibling() {
                 < 1e-9
         );
     }
+    let initial_mass = cad_step::step_branch_mass_properties(
+        &original,
+        &["Drive", "Feed"],
+        1e-8,
+        100_000,
+        |_, part| {
+            Ok(if part.transform[0][3] == 2. {
+                0.001
+            } else {
+                0.002
+            })
+        },
+    )
+    .unwrap();
+    let placed = initial_mass.rigidly_placed(motion).unwrap();
+    assert_eq!(placed.mass, initial_mass.mass);
+    for i in 0..3 {
+        assert!((placed.centroid[i] - mass.centroid[i]).abs() < 1e-10);
+        for j in 0..3 {
+            assert!((placed.inertia[i][j] - mass.inertia[i][j]).abs() < 1e-10);
+        }
+    }
+    let oblique_pose = [
+        [0.6, -0.8, 0., 3.],
+        [0.8, 0.6, 0., 4.],
+        [0., 0., 1., 5.],
+        [0., 0., 0., 1.],
+    ];
+    let tilted = mass.rigidly_placed(oblique_pose).unwrap();
+    assert!(
+        (tilted.inertia[0][1] - 0.48 * (mass.inertia[0][0] - mass.inertia[1][1])).abs() < 1e-10
+    );
+    assert!((tilted.inertia[1][0] - tilted.inertia[0][1]).abs() < 1e-10);
+    let mut scaled = motion;
+    scaled[0][1] = -2.;
+    assert!(initial_mass.rigidly_placed(scaled).is_err());
     let bearing = mass.moment_about_axis([5., 4., 0.], [0., 0., -2.]).unwrap();
     assert!((bearing - 4.128).abs() < 1e-9);
     // Rotated box sides in world coordinates are 4, 2, 6 mm. The two

@@ -1,0 +1,13 @@
+{
+  "id": "NURBS-0995",
+  "testedBase": "3a1f26d0b685de27920df34fc79f4856588f7939",
+  "sourceSha256": {
+    "crates/brep-core/src/body_analysis/analysis/mechanics.rs": "35cd924157f1a6097312ce17c8b9e2072e537dbc1473b99d6848e9d201586c61",
+    "crates/cad-step/tests/baked_step_scales.rs": "5cad078f9dfbde3143bd01c4fef900109aa7da5fab9d0857c98bb6aa65e2f434",
+    "crates/brep-core/src/model/transform.rs": "98540eea3df8cbf799840d6f7fb4d89fedc3e8c57f52abad80b38ac2aca123c9",
+    "crates/cad-step/src/step_interchange_v3.rs": "5445597a3f45983d37325e2dc311ed84b0506cfde03a181ede62d83b198b1206"
+  },
+  "fixtureSha256": "96b4dc3abd24914d5d954c25b393471aae3eda9ab0aab75e2de38b317c5f3d85",
+  "command": "CAD_BRANCH_MOTION_FIXTURE=/tmp/osv995.step cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test baked_step_scales",
+  "external": "0.14400000000000002 (8.0, 8.0, 3.0) (0.768, 0.624, 0.528)"
+}

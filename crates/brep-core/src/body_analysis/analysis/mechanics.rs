@@ -118,6 +118,37 @@ pub struct AssemblyMass {
     pub inertia: [[f64; 3]; 3],
 }
 impl AssemblyMass {
+    /// Place previously measured properties under a proper rigid motion.
+    /// Rotates the central inertia tensor and maps the centre to world space.
+    pub fn rigidly_placed(&self, matrix: [[f64; 4]; 4]) -> Result<Self> {
+        if !crate::transform::is_proper_rigid_placement(matrix)
+            || !self.mass.is_finite()
+            || self.mass <= 0.
+        {
+            return Err(indeterminate(
+                "Expected positive mass and a proper rigid placement",
+            ));
+        }
+        let rotation: [[f64; 3]; 3] =
+            std::array::from_fn(|i| std::array::from_fn(|j| matrix[i][j]));
+        let centroid = std::array::from_fn(|i| dot(rotation[i], self.centroid) + matrix[i][3]);
+        let inertia: [[f64; 3]; 3] = std::array::from_fn(|i| {
+            std::array::from_fn(|j| dot(rotation[i], self.inertia.map(|row| dot(row, rotation[j]))))
+        });
+        if centroid
+            .iter()
+            .chain(inertia.iter().flatten())
+            .any(|v| !v.is_finite())
+        {
+            return Err(indeterminate("Non-finite placed mass properties"));
+        }
+        Ok(Self {
+            mass: self.mass,
+            centroid,
+            inertia,
+        })
+    }
+
     /// Combine the assembly with a point mass at a world-space location.
     /// Intrinsic inertia of the added weight is assumed negligible.
     pub fn with_point_mass(&self, position: [f64; 3], added_mass: f64) -> Result<Self> {

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 994,
-  "unallocatedCount": 6,
+  "specifiedCount": 995,
+  "unallocatedCount": 5,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22567,6 +22567,27 @@
       ],
       "remainingQualification": [
         "Positive finite masses with central tensors in a common world frame. Independent OCCT bearing moment and complete assembly tensor checked for offset finite-size bodies."
+      ]
+    },
+    {
+      "id": "NURBS-0995",
+      "name": "Перенос измеренных масс-инерционных характеристик NURBS-подсборки в новую систему размещения",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::analysis::AssemblyMass::rigidly_placed",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/analysis/mechanics.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "crates/brep-core/src/model/transform.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "docs/qualification/nurbs-step-branch-mass-988-2026-11-19/verify.py",
+        "docs/qualification/nurbs-assembly-rigid-inertia-995-2026-11-19/occt.log",
+        "docs/qualification/nurbs-assembly-rigid-inertia-995-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-assembly-rigid-inertia-995-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Proper rigid motions with translation. Full rotated central tensor compared against remeasurement of moved STEP geometry and OCCT. Nonuniform scale refused."
       ]
     }
   ],
