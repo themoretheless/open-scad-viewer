@@ -911,26 +911,33 @@ mod tests {
     }
 
     #[test]
-    fn four_band_solid_preserves_material_under_an_exact_axis_shear() {
+    fn four_band_solid_preserves_material_under_exact_affine_slice_frames() {
         let source = four_periodic_bands();
-        let transform = [
-            [1., 0., 0.5, 2.],
-            [0., 1., -2., -3.],
-            [0., 0., 1., 0.],
-            [0., 0., 0., 1.],
-        ];
-        let model = crate::transform::affine(&source, transform).unwrap();
-        let admission = crate::closed_solid::qualify(model, four_band_policy()).unwrap();
-        let geometry = admission.geometry();
-        assert!(geometry.boundary.proven);
-        assert_eq!(geometry.orientations[0].outward, Some(true));
-        assert_eq!(geometry.boundary.intersections.pairs.pairs.iter()
-            .filter(|p| p.radial_disjoint).count(), 2);
-        let solid = admission.into_solid().expect("sheared torus owns material");
-        let directions = [[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]];
-        for (point, inside) in [([6.0625, -3.125, 0.125], true), ([2., -3., 0.], false)] {
-            assert_eq!(solid.classify_point(point, &directions, 100000, 100000).unwrap().parity,
-                Some(inside), "{point:?}");
+        for height_row in [[0., 0., 1., 0.], [0.25, 0.5, 0.125, -1.]] {
+            let transform = [
+                [1., 0., 0.5, 2.],
+                [0., 1., -2., -3.],
+                height_row,
+                [0., 0., 0., 1.],
+            ];
+            let model = crate::transform::affine(&source, transform).unwrap();
+            let continuity = super::super::super::inspect(&model, super::super::super::Limits {
+                order: 2, exact_work: 16_000_000, agreement_work: 1_000_000, regularity_cells: 100_000,
+            }).unwrap();
+            assert!(continuity.g2_certified, "{height_row:?}: {:?}", continuity.unresolved_edges);
+            let admission = crate::closed_solid::qualify(model, four_band_policy()).unwrap();
+            let geometry = admission.geometry();
+            assert!(geometry.boundary.proven, "{height_row:?}");
+            assert_eq!(geometry.orientations[0].outward, Some(true));
+            assert_eq!(geometry.boundary.intersections.pairs.pairs.iter()
+                .filter(|p| p.radial_disjoint).count(), 2);
+            let solid = admission.into_solid().expect("affine radial shell owns material");
+            let directions = [[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]];
+            for (sample, inside) in [([4., 0.125, 0.125, 1.], true), ([0., 0., 0., 1.], false)] {
+                let point = std::array::from_fn(|i| (0..4).map(|j| transform[i][j] * sample[j]).sum());
+                assert_eq!(solid.classify_point(point, &directions, 100000, 100000).unwrap().parity,
+                    Some(inside), "{point:?}");
+            }
         }
     }
 
