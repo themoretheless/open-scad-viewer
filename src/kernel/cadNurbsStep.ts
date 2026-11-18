@@ -276,8 +276,9 @@ export const exportDirectStepV9 = (model: NurbsBrep): DirectStepV9Export =>
 export function exportSharedStepAssembly(
   definitions: readonly NurbsBrep[],
   occurrences: readonly { definition: number; transform: readonly (readonly number[])[] }[],
+  hierarchy?: { groups: string[]; parents: (number | null)[]; colours?: ({ name: string; rgb: [number, number, number] } | null)[] },
 ): string {
-  return callGeometryRust<{ text: string }>('brep_nurbs_export_shared_step', { definitions, occurrences }).text
+  return callGeometryRust<{ text: string }>('brep_nurbs_export_shared_step', { definitions, occurrences, ...hierarchy }).text
 }
 export function importDirectStepV9(text: string): DirectStepV9Import {
   if (STEP_V9_REFUSE_RE.test(text)) {

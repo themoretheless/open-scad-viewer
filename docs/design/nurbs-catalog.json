@@ -21471,10 +21471,13 @@
         "crates/geometry-bridge/src/dispatch/interchange.rs",
         "crates/geometry-bridge/tests/shared_step_export.rs",
         "docs/qualification/nurbs-grouped-step-939-2026-11-18/receipt.json",
-        "docs/qualification/nurbs-grouped-step-939-2026-11-18/native.log.gz"
+        "docs/qualification/nurbs-grouped-step-939-2026-11-18/native.log.gz",
+        "src/kernel/solidStepAssembly.ts",
+        "tests/exactSolidsFromSource.test.ts",
+        "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/verify_spinner_occt.py"
       ],
       "remainingQualification": [
-        "Single-level groups with optional root placements. Occurrence colors and grouped Solid editor integration remain open."
+        "Flat groups and rigid RGB occurrences checked through Solid export on raw WASM and independently reopened in OCCT. Packaged delivery qualification is separate."
       ]
     },
     {
@@ -21491,10 +21494,13 @@
         "crates/cad-step/tests/edited_gear_step.rs",
         "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/receipt.json",
         "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/native.log.gz",
-        "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/verify_occt.py"
+        "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/verify_occt.py",
+        "src/kernel/solidStepAssembly.ts",
+        "tests/exactSolidsFromSource.test.ts",
+        "docs/qualification/nurbs-occurrence-colours-940-2026-11-18/verify_spinner_occt.py"
       ],
       "remainingQualification": [
-        "Rigid occurrence RGB export; tested independent OCCT readback on a blue and red instance at 0 and 5 mm. Material parameters, native style editing, editor and WASM integration remain open."
+        "RGB appearance on rigid placements. Physical materials, native occurrence-style editing and packaged delivery qualification remain open."
       ]
     }
   ],

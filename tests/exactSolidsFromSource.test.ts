@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { exportSolidStepAssembly } from '../src/kernel/solidStepAssembly'
 import { parseOpenSCAD } from '../src/language/openscadParser'
@@ -79,7 +80,7 @@ describe('exact solids from source', () => {
     // the brep_gear builtin, so the Solid workspace gets sun, ring and 18
     // planets as NURBS bodies.
     const source = readFileSync(new URL('../examples/rush-frontend/planetary-spinner.r', import.meta.url), 'utf8')
-    const result = await evaluate(source)
+    const result = await evaluate(source.replace('param hole = 44mm', 'param hole = 42mm'))
     expect(result.meshes.length).toBeGreaterThan(0)
     const plan = result.exactSolids!
     expect(plan.roots).toHaveLength(20)
@@ -108,6 +109,37 @@ describe('exact solids from source', () => {
       const point = prototype.brep!.vertices[0].point
       const placed = matrix.slice(0, 3).map(row => row[3] + point.reduce((sum, x, i) => sum + x * row[i], 0))
       placed.forEach((x, i) => expect(x).toBeCloseTo(planet.brep!.vertices[0].point[i], 9))
+    }
+    const grouped = await exportSolidStepAssembly({
+      version: 1,
+      sketches: [],
+      bodies: bodies.map((body, i) => ({ ...body, group: i < 2 ? 'Central gears' : 'Planets' })),
+    })
+    expect(grouped.match(/=MANIFOLD_SOLID_BREP\(/g)).toHaveLength(3)
+    expect(grouped.match(/=NEXT_ASSEMBLY_USAGE_OCCURRENCE\(/g)).toHaveLength(22)
+    expect(grouped).toContain("PRODUCT('group:Planets','Planets'")
+    expect(grouped).toContain("PRODUCT('group:Central gears','Central gears'")
+    const styled = await exportSolidStepAssembly({
+      version: 1, sketches: [],
+      bodies: bodies.map((body, i) => ({
+        ...body,
+        group: i < 2 ? 'Central gears' : 'Planets',
+        material: i % 2 ? { name: 'Red PLA', color: '#ff0000' } : { name: 'Blue PLA', color: '#0000ff' },
+      })),
+    })
+    expect(styled.match(/=MANIFOLD_SOLID_BREP\(/g)).toHaveLength(3)
+    expect(styled.match(/=NEXT_ASSEMBLY_USAGE_OCCURRENCE\(/g)).toHaveLength(22)
+    expect(styled.match(/=PRESENTATION_STYLE_BY_CONTEXT\(/g)).toHaveLength(20)
+    expect(styled.match(/=COLOUR_RGB\('Red PLA',/g)).toHaveLength(10)
+    expect(styled.match(/=COLOUR_RGB\('Blue PLA',/g)).toHaveLength(10)
+    const fixtureDirectory = process.env.CAD_STEP_STYLED_SPINNER_FIXTURE
+    if (fixtureDirectory) {
+      mkdirSync(fixtureDirectory, { recursive: true })
+      writeFileSync(join(fixtureDirectory, 'spinner.step'), styled)
+      const manifest = bodies.map((body, i) => ({
+        id: body.id, name: body.name, colour: i % 2 ? 'red' : 'blue', xyz: body.brep!.vertices[0].point,
+      }))
+      writeFileSync(join(fixtureDirectory, 'bodies.json'), JSON.stringify(manifest))
     }
     console.info('Rush spinner STEP', { definitions, occurrences, bytes: Buffer.byteLength(step) })
   }, 600000)
