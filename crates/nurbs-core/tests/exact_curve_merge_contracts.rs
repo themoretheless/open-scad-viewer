@@ -8548,3 +8548,38 @@ fn directional_peak_acceleration_accounts_for_rational_parameter_speed() {
     assert_eq!(result.stop_reason, StopReason::Tolerance);
     assert!(result.bounds[0] <= 0.768 && 0.768 <= result.bounds[1], "{result:?}");
 }
+
+#[test]
+fn directional_peak_jerk_uses_cubed_source_parameter_width() {
+    use nurbs_core::analysis::curve_measure::{StopReason, directional_peak_jerk};
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: vec![vec![0., 0.], vec![0., 0.], vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let result = directional_peak_jerk(&curve, [2.5, 3.5], &[-4., 0.], 1e-8, 32).unwrap();
+    assert_eq!(result.stop_reason, StopReason::Tolerance);
+    assert!(result.bounds[0] <= 6. && 6. <= result.bounds[1]);
+    assert!(result.bounds[1] - result.bounds[0] < 1e-8);
+}
+
+#[test]
+fn directional_peak_jerk_encloses_rational_linear_support() {
+    use nurbs_core::analysis::curve_measure::{StopReason, directional_peak_jerk};
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![6., 0.]],
+        weights: vec![1., 2.],
+        periodic: false,
+    };
+    let exact = 72. / (64. * 1.25_f64.powi(4));
+    for (cells, status) in [(1, StopReason::WorkLimit), (2048, StopReason::Tolerance)] {
+        let report = directional_peak_jerk(&curve, [3., 4.], &[1., 0.], 1e-5, cells).unwrap();
+        assert_eq!(report.stop_reason, status, "{report:?}");
+        assert!(report.bounds[0] <= exact && exact <= report.bounds[1]);
+    }
+    assert!(directional_peak_jerk(&curve, [3., 4.], &[0., 0.], 1e-5, 32).is_err());
+}

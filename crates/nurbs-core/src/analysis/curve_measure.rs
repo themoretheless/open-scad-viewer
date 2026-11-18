@@ -949,6 +949,35 @@ pub fn directional_peak_acceleration(
     })
 }
 
+/// Bounds on the supremum of absolute axial jerk in model units
+/// per cubed original parameter unit.
+#[derive(Clone, Debug)]
+pub struct DirectionalPeakJerkReport {
+    pub bounds: [f64; 2],
+    pub cells: usize,
+    pub stop_reason: StopReason,
+}
+
+/// Certify the peak axial third derivative over an original-parameter window.
+/// Only the span derivatives and their one-sided limits are included.
+pub fn directional_peak_jerk(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalPeakJerkReport> {
+    let report = measure_directional_derivative_peak(
+        curve, interval, direction, tolerance, max_cells, None, 3,
+    )?
+    .peak;
+    Ok(DirectionalPeakJerkReport {
+        bounds: report.bounds,
+        cells: report.cells,
+        stop_reason: report.stop_reason,
+    })
+}
+
 /// Certify peak axial speed over an original-parameter window. The tolerance
 /// limits the width of the reported enclosure.
 pub fn directional_peak_speed(
@@ -1023,7 +1052,7 @@ fn measure_directional_derivative_peak(
     };
     for span in active_spans(curve, interval) {
         if cells == max_cells {
-            return Err(resource("Initial speed spans exceed the work budget"));
+            return Err(resource("Initial derivative spans exceed the work budget"));
         }
         let domain = [
             curve.knots[span].max(interval[0]),
@@ -1039,7 +1068,7 @@ fn measure_directional_derivative_peak(
     let (upper, stop_reason) = loop {
         let (&key, &(span, [a, b])) = pending
             .last_key_value()
-            .ok_or_else(|| crate::numeric_err("Missing speed span coverage"))?;
+            .ok_or_else(|| crate::numeric_err("Missing derivative span coverage"))?;
         let upper = f64::from_bits(key.0).max(lower);
         if (upper - lower).next_up() <= tolerance {
             break (upper, StopReason::Tolerance);
