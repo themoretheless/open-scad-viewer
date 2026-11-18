@@ -1,7 +1,7 @@
 import type { MeshSourceReference } from '../core/mesh'
 import type { CameraState } from './cameraHistory'
 import type { Vec3 } from '../kernel/geometry/math3d'
-import { selectionStateRgb } from '../ui/selectionStates'
+import { selectionStateRgb } from '../core/selectionStates'
 export type { ProjectionMode, StandardView } from './viewportModel'
 
 export type DisplayMode = 'shaded' | 'edges' | 'xray'
@@ -212,7 +212,7 @@ export interface RenderTheme {
 
 /**
  * Built-in render themes. Selection and hover colors come from the selection
- * state table (`src/ui/selectionStates.ts`): `default` and `dark-contrast` use
+ * state table (`src/core/selectionStates.ts`): `default` and `dark-contrast` use
  * its dark-theme colors, `light` its light-theme colors.
  */
 export const THEME_PRESETS: readonly RenderTheme[] = [
