@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0730",
+  "testedBase": "efe6010b5cd6c2cd10a9148da291b7c93364df0d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 355,
+  "scope": [
+    "Enclose the minimum chain clearance with a segment, obstacle and elapsed-time witness.",
+    "Check a closest approach on the later segment, exact elapsed witness time, retained coarse bounds, and a shared work budget."
+  ],
+  "logSha256": "3b83f1e5de241973347c5a3e68721a3ea5f1849eb72d28e3a9b357e5adb3d1ca",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "ecde1a28d1962fb82c25883209b1abae0f8eeb5fe8a5565548d0845fa86dd99d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "6ec34bcfa4bd09bd88d615d5c4931d53c0ffe122f403f717c7b9efcad7aa9ea2"
+  }
+}

@@ -3097,6 +3097,65 @@ pub fn measure_toolpath_chain_violation_duration(
     })
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct ToolpathChainMinimumClearance {
+    pub gap_bounds: [f64; 2],
+    pub within_tolerance: bool,
+    pub witness_segment: usize,
+    pub witness_obstacle: usize,
+    pub witness_parameter: f64,
+    /// Outward-rounded elapsed time of the witness.
+    pub witness_time_bounds: [f64; 2],
+    pub work_obstacle_cells: usize,
+}
+
+/// Measure the minimum signed gap along a timed sequence using one work
+/// budget. Segment clocks affect witness time, while geometry determines gap.
+pub fn measure_minimum_toolpath_chain_clearance(
+    segments: &[TimedMotionSegment<'_>],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<ToolpathChainMinimumClearance> {
+    validate(tolerance, max_obstacle_cells)?;
+    let (minima, mut reserve) =
+        reserve_toolpath_chain_cells(segments, obstacles.len(), max_obstacle_cells)?;
+    let mut remaining = max_obstacle_cells;
+    let mut elapsed = num_rational::BigRational::default();
+    let mut lower = f64::INFINITY;
+    let mut witness: Option<(usize, SphericalMinimumClearance, num_rational::BigRational)> = None;
+    for (index, (&segment, minimum)) in segments.iter().zip(minima).enumerate() {
+        let budget = minimum + (remaining - reserve) / (segments.len() - index);
+        let report = measure_minimum_toolpath_clearance(
+            segment.curve, segment.interval, obstacles, tool_radius, tolerance, budget,
+        )?;
+        lower = lower.min(report.gap_bounds[0]);
+        if witness.as_ref().is_none_or(|(_, current, _)| report.gap_bounds[1] < current.gap_bounds[1]) {
+            let rate = motion_clock_factor(segment.interval, segment.duration)?;
+            let parameter = exact_motion_operand(report.witness_parameter)?;
+            let start = exact_motion_operand(segment.interval[0])?;
+            let time = &elapsed + (parameter - start) * rate;
+            witness = Some((index, report, time));
+        }
+        elapsed += exact_motion_operand(segment.duration)?;
+        reserve -= minimum;
+        remaining -= report.work_obstacle_cells;
+    }
+    let (witness_segment, report, time) =
+        witness.ok_or_else(|| crate::numeric_err("Missing chain clearance witness"))?;
+    let upper = report.gap_bounds[1];
+    Ok(ToolpathChainMinimumClearance {
+        gap_bounds: [lower, upper],
+        within_tolerance: (upper - lower).next_up() <= tolerance,
+        witness_segment,
+        witness_obstacle: report.witness_obstacle,
+        witness_parameter: report.witness_parameter,
+        witness_time_bounds: [round_motion_duration(&time, false)?, round_motion_duration(&time, true)?],
+        work_obstacle_cells: max_obstacle_cells - remaining,
+    })
+}
+
 fn reserve_toolpath_chain_cells(
     segments: &[TimedMotionSegment<'_>],
     obstacle_count: usize,

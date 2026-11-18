@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 729,
-  "unallocatedCount": 271,
+  "specifiedCount": 730,
+  "unallocatedCount": 270,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17543,6 +17543,25 @@
       "remainingQualification": [
         "Bracket the first clearance violation in elapsed chain time across independent segment clocks.",
         "Check elapsed time mapping, earlier unresolved tangency, later confirmed witness, clipped clear prefix, and shared budget refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0730",
+      "name": "Сертифицированный минимальный зазор составной NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_toolpath_chain_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-730-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-730-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the minimum chain clearance with a segment, obstacle and elapsed-time witness.",
+        "Check a closest approach on the later segment, exact elapsed witness time, retained coarse bounds, and a shared work budget.",
         "WASM and application integration are separate."
       ]
     }

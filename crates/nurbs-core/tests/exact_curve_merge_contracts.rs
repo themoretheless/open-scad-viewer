@@ -10595,3 +10595,43 @@ fn first_toolpath_chain_violation_maps_witness_and_earlier_uncertainty_to_time()
     else { panic!("expected first possible contact on the second segment"); };
     assert!(lo <= 9. && 9. <= hi && hi - lo < 0.03);
 }
+
+#[test]
+fn minimum_toolpath_chain_clearance_reports_elapsed_witness_time() {
+    use nurbs_core::analysis::curve_measure::{
+        SphericalObstacle, TimedMotionSegment, ToolpathObstacle,
+        measure_minimum_toolpath_chain_clearance,
+    };
+    let line = |points: [[f64; 2]; 2]| Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: points.map(Vec::from).into(),
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let first = line([[0., 5.], [0., 0.]]);
+    let second = line([[0., 0.], [4., 4.]]);
+    let segments = [
+        TimedMotionSegment { curve: &first, interval: [2., 6.], duration: 7. },
+        TimedMotionSegment { curve: &second, interval: [2., 6.], duration: 3. },
+    ];
+    let obstacles = [ToolpathObstacle::Sphere(SphericalObstacle {
+        center: &[2., 0.], radius: 0.25,
+    })];
+    let check = |budget| {
+        measure_minimum_toolpath_chain_clearance(&segments, &obstacles, 0.25, 1e-4, budget)
+    };
+    assert!(check(1).is_err());
+    let exact = 2_f64.sqrt() - 0.5;
+    let coarse = check(2).unwrap();
+    assert!(!coarse.within_tolerance);
+    assert!(coarse.gap_bounds[0] <= exact && coarse.gap_bounds[1] >= exact);
+    let fine = check(4096).unwrap();
+    assert!(fine.within_tolerance);
+    assert!(fine.gap_bounds[0] <= exact && fine.gap_bounds[1] >= exact);
+    assert_eq!(fine.witness_segment, 1);
+    assert_eq!(fine.witness_obstacle, 0);
+    assert_eq!(fine.witness_parameter, 3.);
+    assert_eq!(fine.witness_time_bounds, [7.75; 2]);
+    assert!(fine.work_obstacle_cells <= 4096);
+}
