@@ -1,5 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { compileRushFrontend } from '../src/language/rushFrontend'
+import { replaceCustomizerValue } from '../src/language/scadCustomizer'
 import { describe, expect, it } from 'vitest'
 import { importDirectStepV9 } from '../src/kernel/cadNurbsStep'
 import { exportSolidStepAssembly } from '../src/kernel/solidStepAssembly'
@@ -168,6 +170,26 @@ describe('exact solids from source', () => {
       writeFileSync(join(fixtureDirectory, 'bodies.json'), JSON.stringify(manifest))
     }
     console.info('Rush spinner STEP', { definitions, occurrences, bytes: Buffer.byteLength(step) })
+  }, 600000)
+
+  it('rebuilds the spinner assembly for both customizer bore settings', async () => {
+    let source = readFileSync(new URL('../examples/rush/planetary-spinner.r', import.meta.url), 'utf8')
+    for (const diameter of [42, 44]) {
+      const hole = compileRushFrontend(source).customizer.find(parameter => parameter.name === 'hole')!
+      source = replaceCustomizerValue(source, hole, diameter)
+      const { exactSolids } = await evaluate(source)
+      const bodies = buildExactSolidBodies(exactSolids!.nodes, exactSolids!.roots)
+      const radius = Math.min(...bodies[0].brep!.vertices.map(({ point }) => Math.hypot(point[0], point[1])))
+      expect(radius).toBeCloseTo(diameter / 2, 7)
+      const step = await exportSolidStepAssembly({ version: 1, sketches: [], bodies })
+      expect(step.match(/=MANIFOLD_SOLID_BREP\(/g)).toHaveLength(3)
+      expect(step.match(/=NEXT_ASSEMBLY_USAGE_OCCURRENCE\(/g)).toHaveLength(20)
+      const directory = process.env.CAD_STEP_SPINNER_BORE_ASSEMBLIES
+      if (directory) {
+        mkdirSync(directory, { recursive: true })
+        writeFileSync(join(directory, `spinner-${diameter}.step`), step)
+      }
+    }
   }, 600000)
 
   it('lowers a helical RushGraph gear through the same builtin', async () => {
