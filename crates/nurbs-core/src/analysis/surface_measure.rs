@@ -766,6 +766,76 @@ impl TrimmedCentralInertiaReport {
     }
 }
 
+/// Enclose the moment about an axis through the reference point of a
+/// symmetric tensor. The direction need not be normalized.
+pub fn bound_directional_inertia(
+    bounds: [[[f64; 2]; 3]; 3],
+    direction: [f64; 3],
+) -> Result<[f64; 2]> {
+    let matrix = symmetric_tensor_intervals(bounds)?;
+    let scale = direction.into_iter().map(f64::abs).fold(0., f64::max);
+    check(
+        scale > 0. && direction.iter().all(|x| x.is_finite()),
+        "Inertia axis must have a finite nonzero direction",
+    )?;
+
+    // A coordinate axis selects the corresponding diagonal exactly.
+    if direction.iter().filter(|&&x| x != 0.).count() == 1 {
+        let i = direction.iter().position(|&x| x != 0.).unwrap();
+        return Ok(bounds[i][i]);
+    }
+
+    let mut axis = [Interval::point(0.); 3];
+    let mut squares = axis;
+    let mut norm_squared = Interval::point(0.);
+    for (i, component) in direction.into_iter().enumerate() {
+        if component == 0. {
+            continue;
+        }
+        let scaled = component / scale;
+        axis[i] = if component.abs() == scale {
+            Interval::point(scaled)
+        } else {
+            Interval::new(scaled.next_down(), scaled.next_up())?
+        };
+        let square = axis[i].mul(axis[i])?;
+        squares[i] = square.intersect(0., square.hi)?;
+        norm_squared = norm_squared.add(squares[i])?;
+    }
+
+    let mut moment = Interval::point(0.);
+    for (i, row) in matrix.iter().enumerate() {
+        if direction[i] == 0. {
+            continue;
+        }
+        let diagonal_weight = squares[i].div(norm_squared)?;
+        moment = moment.add(row[i].mul(diagonal_weight)?)?;
+        for (j, entry) in row.iter().copied().enumerate().skip(i + 1) {
+            if direction[j] == 0. {
+                continue;
+            }
+            let weight = axis[i].mul(axis[j])?.mul(Interval::point(2.))?;
+            moment = moment.add(entry.mul(weight.div(norm_squared)?)?)?;
+        }
+    }
+    Ok([moment.lo, moment.hi])
+}
+
+fn symmetric_tensor_intervals(bounds: [[[f64; 2]; 3]; 3]) -> Result<[[Interval; 3]; 3]> {
+    let mut matrix = [[Interval::point(0.); 3]; 3];
+    for (i, row) in matrix.iter_mut().enumerate() {
+        for (j, value) in row.iter_mut().enumerate() {
+            check(
+                bounds[i][j] == bounds[j][i],
+                "Inertia tensor bounds must be symmetric",
+            )?;
+            let [lo, hi] = bounds[i][j];
+            *value = Interval::new(lo, hi)?;
+        }
+    }
+    Ok(matrix)
+}
+
 type PrincipalMomentBounds = [[f64; 2]; 3];
 
 fn bound_optional_principal_moments(
@@ -801,21 +871,15 @@ pub fn bound_principal_moments_from_tensor(
     tolerance: f64,
 ) -> Result<[[f64; 2]; 3]> {
     validate_moment_tolerance(tolerance)?;
-    let mut matrix = [[Interval::point(0.); 3]; 3];
+    let matrix = symmetric_tensor_intervals(bounds)?;
     let mut low = f64::INFINITY;
     let mut high = f64::NEG_INFINITY;
     let mut off_diagonal_norm = 0.0_f64;
-    for (i, row) in matrix.iter_mut().enumerate() {
+    for (i, row) in matrix.iter().enumerate() {
         let mut radius = 0.0_f64;
-        for (j, value) in row.iter_mut().enumerate() {
-            let [lo, hi] = bounds[i][j];
-            check(
-                bounds[i][j] == bounds[j][i],
-                "Principal moment tensor bounds must be symmetric",
-            )?;
-            *value = Interval::new(lo, hi)?;
+        for (j, value) in row.iter().enumerate() {
             if i != j {
-                radius = (radius + lo.abs().max(hi.abs())).next_up();
+                radius = (radius + value.lo.abs().max(value.hi.abs())).next_up();
             }
         }
         off_diagonal_norm = off_diagonal_norm.max(radius);
@@ -961,6 +1025,13 @@ pub struct TrimmedPatchSetPrincipalInertiaReport {
 }
 
 impl TrimmedPatchSetCentralInertiaReport {
+    /// Enclose the moment about an axis through the common area centroid.
+    pub fn bound_axis_moment(&self, direction: [f64; 3]) -> Result<Option<[f64; 2]>> {
+        self.central_inertia_bounds
+            .map(|bounds| bound_directional_inertia(bounds, direction))
+            .transpose()
+    }
+
     /// Enclose the sorted principal moments of the complete patch set.
     /// Unavailable central inertia remains unavailable in the spectral report.
     pub fn bound_principal_moments(

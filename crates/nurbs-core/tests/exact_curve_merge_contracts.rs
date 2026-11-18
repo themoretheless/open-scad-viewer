@@ -7028,3 +7028,53 @@ fn interval_tensor_eigenvalues_validate_bounds_and_tolerance() {
     tensor[1][1] = [1., f64::INFINITY];
     assert!(bound_principal_moments_from_tensor(tensor, 1.).is_err());
 }
+
+#[test]
+fn directional_inertia_brackets_coupled_interval_tensor_at_all_axis_scales() {
+    use nurbs_core::analysis::surface_measure::bound_directional_inertia;
+
+    let tensor = [
+        [[2., 4.], [0.5, 1.], [0.; 2]],
+        [[0.5, 1.], [6., 8.], [0.; 2]],
+        [[0.; 2], [0.; 2], [9.; 2]],
+    ];
+    for scale in [f64::from_bits(1), 1., f64::MAX] {
+        for (direction, expected) in [
+            ([scale, scale, 0.], [4.5, 7.]),
+            ([-scale, scale, 0.], [3., 5.5]),
+        ] {
+            let [lo, hi] = bound_directional_inertia(tensor, direction).unwrap();
+            assert!(lo <= expected[0] && hi >= expected[1]);
+            assert!((lo - expected[0]).abs() < 1e-12 && (hi - expected[1]).abs() < 1e-12);
+        }
+    }
+    assert_eq!(
+        bound_directional_inertia(tensor, [0., 0., -2.]).unwrap(),
+        [9.; 2]
+    );
+    for direction in [[0.; 3], [f64::NAN, 0., 0.], [0., f64::INFINITY, 0.]] {
+        assert!(bound_directional_inertia(tensor, direction).is_err());
+    }
+}
+
+#[test]
+fn periodic_trim_directional_inertia_includes_island_about_common_centroid() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_central_inertia;
+
+    let patches = periodic_trim_patches_with_nested_island();
+    let report =
+        periodic_trim_patch_set_central_inertia(&patches, 0.005, 1e-10, 20_000, 1_000_000).unwrap();
+    let [lo, hi] = report.bound_axis_moment([1., 1., 0.]).unwrap().unwrap();
+    let area = 1.3125;
+    let cx = 3. / 28.;
+    let cy = 1. / 7.;
+    let var_x = 1. / 16. - 13. / 768. + 49. / 12288. - area * cx * cx;
+    let var_y = 1. / 16. - area * cy * cy;
+    let var_z = 1.5 * 1.5_f64.powi(2) / 12. - 0.25 / 12. + 0.0625 * 0.25 / 12.;
+    let expected = var_z + (var_x + var_y) * 0.5 + area * cx * cy;
+    assert!(lo <= expected && expected <= hi);
+
+    let incomplete =
+        periodic_trim_patch_set_central_inertia(&patches, 0.005, 1e-10, 2, 1_000_000).unwrap();
+    assert_eq!(incomplete.bound_axis_moment([1., 1., 0.]).unwrap(), None);
+}
