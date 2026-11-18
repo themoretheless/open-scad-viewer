@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 974,
-  "unallocatedCount": 26,
+  "specifiedCount": 975,
+  "unallocatedCount": 25,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22162,6 +22162,26 @@
       ],
       "remainingQualification": [
         "Clamped nonperiodic tensor carriers. Only redundant knots and degrees accepted by the exact homogeneous proofs are removed. Existing face count and trimming topology are preserved."
+      ]
+    },
+    {
+      "id": "NURBS-0975",
+      "name": "Точное сжатие пространственного ребра и его параметрических кривых на смежных гранях",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Упрощение геометрии",
+      "nativeApi": "brep_core::Model::compress_edge_with_trims",
+      "evidence": [
+        "crates/brep-core/src/model.rs",
+        "crates/brep-core/src/model/edge_compression.rs",
+        "crates/brep-core/tests/edge_compression.rs",
+        "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs",
+        "docs/qualification/nurbs-shared-edge-trim-compression-975-2026-11-19/contracts.log.gz",
+        "docs/qualification/nurbs-shared-edge-trim-compression-975-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-shared-edge-trim-compression-975-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped curves. Preserves each spatial and UV parameter law independently; existing incidence, orientation and explicit trim intervals are retained."
       ]
     }
   ],

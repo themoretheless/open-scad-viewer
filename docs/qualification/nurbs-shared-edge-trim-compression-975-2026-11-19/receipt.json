@@ -1,0 +1,16 @@
+{
+  "id": "NURBS-0975",
+  "testedBase": "740dae0a07823c805bf267fd5efefb444aa9f694",
+  "sourceSha256": {
+    "crates/brep-core/src/model.rs": "f419faff6dcf91824767f3d81ffaaea05bc1d02e3a7def017db15a20c7292b8c",
+    "crates/brep-core/src/model/edge_compression.rs": "5dda808f8ec9b802860ea06f4c4e798e5cb2d3bc74329b5df4bd3935765a2b29",
+    "crates/brep-core/tests/edge_compression.rs": "b0ffcc9c80ec4a6f07245d01a1be91b267db1d00a67924ab693ca21ed830366a",
+    "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs": "2288c8504eacb909dc0b724a13afa48c2cabf8415c72ca55551e41ba76a17f48"
+  },
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --test edge_compression --test face_compression --test edge_reclock",
+  "cases": [
+    "Shared edge and both independently parameterized UV traces recover original solid",
+    "Opposite coedge traversals and explicit trims preserved",
+    "Insufficient proof budget returns no partial solid"
+  ]
+}
