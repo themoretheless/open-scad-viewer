@@ -454,3 +454,27 @@ fn ring_bolt_window_handles_both_lower_limits_and_empty_layouts() {
     assert_eq!(window(1.,40,0.,25.,2.,6,1.).unwrap(), Unresolved);
     assert!(window(1.,40,0.,40.,2.,6,-1.).is_err());
 }
+
+#[test]
+fn circular_profile_instances_preserve_rational_shape_with_bounded_rotation_error() {
+    use involute::CircularProfilePattern;
+    let mut seed = nurbs_core::curve::Curve::from_polyline(vec![vec![4.,1.,3.],vec![6.,2.,4.]]).unwrap();
+    seed.weights[1] = 2.;
+    let pattern = CircularProfilePattern::new(seed.clone(),32).unwrap();
+    let (quarter,error) = pattern.instance(8).unwrap();
+    assert_eq!(quarter.control_points, vec![vec![-1.,4.,3.],vec![-2.,6.,4.]]);
+    assert_eq!(error,0.);
+    for i in [1, 7, 31] {
+        let (copy,bound) = pattern.instance(i).unwrap();
+        assert_eq!(copy.weights,seed.weights);
+        assert_eq!(copy.knots,seed.knots);
+        let (s,c) = (std::f64::consts::TAU * i as f64 / 32.).sin_cos();
+        for (a,b) in seed.control_points.iter().zip(copy.control_points) {
+            assert!((b[0]-(c*a[0]-s*a[1])).hypot(b[1]-(s*a[0]+c*a[1])) <= bound);
+            assert_eq!(b[2],a[2]);
+        }
+        assert!(bound < 1e-9);
+    }
+    assert!(pattern.instance(32).is_err());
+    assert!(CircularProfilePattern::new(seed,0).is_err());
+}

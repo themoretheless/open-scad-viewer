@@ -252,3 +252,6 @@ pub use spherical::{
 pub use spherical::{StraightBevelFlankCertificate, certify_straight_bevel_flank};
 
 pub(crate) use gear_parameters::atan_positive as certified_atan_positive;
+
+mod circular_pattern;
+pub use circular_pattern::CircularProfilePattern;

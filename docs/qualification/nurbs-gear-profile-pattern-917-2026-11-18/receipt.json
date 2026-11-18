@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0917",
+  "testedBase": "2da3299e386b78a22fdf5dcd582a56b5998c6d33",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 478,
+  "scope": [
+    "Test a weighted spatial profile in a 32-instance array. Verify exact quadrant rotation, nonquadrant rotations including final copy, unchanged weights, knots and height, bounded pole error and invalid indices/count."
+  ],
+  "logSha256": "8fa57950ba8de6f7bdb893ffa7c6a32382af01d93f6de1b3d894e4e82ea613bf",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs": "3c39b91c87b2529f448dd23b7c2e045d5d7b2e77632501599d7f28ba0ce9980e",
+    "crates/nurbs-core/src/construct/curves/involute.rs": "d87e179c8b39c9af98593308b3c6d66ae62aa86891476656910c5d0d9dd3962c",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "439a51fc90f6fd8549836feae0062a37f16a5aad8cfdeade0b65c1ba4ee35728"
+  }
+}

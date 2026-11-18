@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 916,
-  "unallocatedCount": 84,
+  "specifiedCount": 917,
+  "unallocatedCount": 83,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21045,6 +21045,24 @@
       ],
       "remainingQualification": [
         "Certified inner window on the nominal concentric ring with equally spaced equal holes. Boundary overlap can remain unresolved."
+      ]
+    },
+    {
+      "id": "NURBS-0917",
+      "name": "Компактный круговой массив сегмента NURBS-профиля с границей ошибки поворота",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::CircularProfilePattern::instance",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-gear-profile-pattern-917-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-gear-profile-pattern-917-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "One seed segment rotated about the origin Z axis. Error bound covers rotation of the stored curve. Seed fitting and B-rep stitching are separate."
       ]
     }
   ],
