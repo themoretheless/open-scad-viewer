@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 839,
-  "unallocatedCount": 161,
+  "specifiedCount": 840,
+  "unallocatedCount": 160,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19656,6 +19656,25 @@
       "remainingQualification": [
         "Transform local central second moments with each occurrence matrix and sum them at the assembly centroid.",
         "Check all nine tensor entries against box moments and the parallel-axis theorem for a reflected, scaled and rotated occurrence after STEP round-trip.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0840",
+      "name": "Суммарная площадь поверхностей STEP-сборки при неравномерном масштабе",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::material_surface_area_mm2",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-840-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-840-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Reuse definition area for similarities and integrate each distinct general linear placement without its translation.",
+        "Check analytic sums for rigid, uniformly scaled and reflected nonuniformly scaled boxes plus invalid integration budget.",
         "WASM and application integration are separate."
       ]
     }

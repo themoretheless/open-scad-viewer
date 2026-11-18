@@ -1006,6 +1006,50 @@ impl StepSharedAssembly {
         Ok(inertia)
     }
 
+    /// Estimate the sum of occurrence boundary areas in mm². Area is reused
+    /// per definition for similarities, and per linear map otherwise.
+    pub fn material_surface_area_mm2(
+        &self,
+        relative_tolerance: f64,
+        max_evaluations_per_definition: usize,
+    ) -> Result<f64> {
+        let mut areas = BTreeMap::new();
+        let mut total: f64 = 0.;
+        for occurrence in &self.occurrences {
+            let mut transform = occurrence.transform;
+            for row in &mut transform[..3] {
+                row[3] = 0.;
+            }
+            let uniform_scale = super::orthogonal_placement_scales(transform)
+                .filter(|[x, y, z]| x == y && y == z).map(|scales| scales[0]);
+            let linear = uniform_scale.is_none().then(|| {
+                [0, 1, 2].map(|row| [0, 1, 2].map(|col| transform[row][col].to_bits()))
+            });
+            let model = &self.definitions[occurrence.definition];
+            let area = match areas.entry((occurrence.definition, linear)) {
+                std::collections::btree_map::Entry::Occupied(entry) => *entry.get(),
+                std::collections::btree_map::Entry::Vacant(entry) => {
+                    let transformed;
+                    let source = if uniform_scale.is_some() {
+                        model
+                    } else {
+                        transformed = brep_core::transform::affine(model, transform)?;
+                        &transformed
+                    };
+                    *entry.insert(brep_core::analysis::mass_properties(
+                        source, relative_tolerance, max_evaluations_per_definition,
+                    )?.surface_area_mm2)
+                }
+            };
+            let scale = uniform_scale.unwrap_or(1.);
+            total += area * scale * scale;
+        }
+        if !total.is_finite() || total <= 0. {
+            return Err(refuse("STEP assembly surface area is outside the finite positive range"));
+        }
+        Ok(total)
+    }
+
     fn placed_centroids(
         &self,
         properties: &[brep_core::analysis::MassProperties],

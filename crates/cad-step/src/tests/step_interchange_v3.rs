@@ -2848,6 +2848,21 @@ fn shared_step_scaled_cube_pair() -> crate::StepSharedAssembly {
 }
 
 #[test]
+fn shared_step_material_surface_area_handles_uniform_and_nonuniform_scale() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let index = assembly.add_occurrence(0, assembly.occurrences()[0].transform).unwrap();
+    let uniform = [
+        [2., 0., 0., 100.], [0., 2., 0., 0.], [0., 0., 2., 0.], [0., 0., 0., 1.],
+    ];
+    assembly.set_occurrence_orthogonal_placement(index, uniform).unwrap();
+    assert!(assembly.material_surface_area_mm2(1e-8, 0).is_err());
+    let area = assembly.material_surface_area_mm2(1e-8, 100_000).unwrap();
+    let expected = 6. * 4. + 2. * (6. * 4. + 6. * 8. + 4. * 8.) + 6. * 16.;
+    assert!((area - expected).abs() < 1e-8);
+    assert_eq!(assembly.definitions().len(), 1);
+}
+
+#[test]
 fn shared_step_material_inertia_transforms_second_moments() {
     let assembly = shared_step_scaled_cube_pair();
     assert!(assembly.material_inertia_mm5(1e-8, 0).is_err());

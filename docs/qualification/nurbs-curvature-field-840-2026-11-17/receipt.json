@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0840",
+  "testedBase": "0a9ca476744206e1b1dcb5d1160e818f4aa4b8b1",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 189,
+  "scope": [
+    "Reuse definition area for similarities and integrate each distinct general linear placement without its translation.",
+    "Check analytic sums for rigid, uniformly scaled and reflected nonuniformly scaled boxes plus invalid integration budget."
+  ],
+  "logSha256": "57dcf25e4bab85bd487975b312f62d02649cc6748c7525eb6232e0e8e9e40a2d",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "be9ad9b901c861172592613d0e58a376b0108409b2dfe5c80f8ca658178cef3b",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "62f5bc370383f244475f092ae11b0d864ff84960619ba0e2c9c85bd04fe6838a"
+  }
+}
