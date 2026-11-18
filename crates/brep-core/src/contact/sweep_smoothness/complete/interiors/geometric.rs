@@ -794,8 +794,7 @@ mod tests {
         }
     }
 
-    #[test]
-    fn exact_four_band_shell_separates_nonadjacent_periodic_faces() {
+    fn four_periodic_bands() -> crate::Model {
         use crate::{Body, Coedge, Curve, Edge, Face, FaceUse, Loop, Shell, Vertex};
         use nurbs_core::{editing::{exact_periodic_surface::open_exact_periodic_surface_axis,
             exact_surface_knot_insertion::split_tensor_surface}, surface::Axis};
@@ -846,18 +845,11 @@ mod tests {
         }, crate::TopologyIds::default());
         model.rebuild_topology_ids();
         model.validate().unwrap();
-        use crate::feature_ops::region_pattern::qualification::periodic_charts::radial_incidence;
-        let mut remaining = 10000;
-        let contacts = radial_incidence::certify_cycle_contacts(&model, &[2,0,3,1], &mut remaining, &mut 0, 100)
-            .unwrap().unwrap();
-        let mut disjoint = contacts.disjoint;
-        disjoint.sort();
-        assert_eq!(disjoint, [[0,2],[1,3]]);
-        assert_eq!(contacts.shared.len(),4);
-        for contact in contacts.shared {
-            assert_eq!(contact.edges.len(),1);
-        }
-        let policy = crate::closed_solid::AdmissionPolicy {
+        model
+    }
+
+    fn four_band_policy() -> crate::closed_solid::AdmissionPolicy {
+        crate::closed_solid::AdmissionPolicy {
             tolerance_uv: 1e-8,
             max_linear_cells: 100000,
             geometry: crate::volume_validity::Limits {
@@ -873,7 +865,24 @@ mod tests {
                 orientation_cells: 100000, orientation_domain_cells: 100000,
                 orientation_spans: 1000,
             },
-        };
+        }
+    }
+
+    #[test]
+    fn exact_four_band_shell_separates_nonadjacent_periodic_faces() {
+        let model = four_periodic_bands();
+        use crate::feature_ops::region_pattern::qualification::periodic_charts::radial_incidence;
+        let mut remaining = 10000;
+        let contacts = radial_incidence::certify_cycle_contacts(&model, &[2,0,3,1], &mut remaining, &mut 0, 100)
+            .unwrap().unwrap();
+        let mut disjoint = contacts.disjoint;
+        disjoint.sort();
+        assert_eq!(disjoint, [[0,2],[1,3]]);
+        assert_eq!(contacts.shared.len(),4);
+        for contact in contacts.shared {
+            assert_eq!(contact.edges.len(),1);
+        }
+        let policy = four_band_policy();
         let mut limited_policy = policy;
         limited_policy.geometry.boundary.contacts.pairs = 5;
         let limited = crate::closed_solid::qualify(model.clone(), limited_policy).unwrap();
@@ -898,6 +907,30 @@ mod tests {
         let directions = [[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]];
         for (point, inside) in [([4., 0.125, 0.125], true), ([0.; 3], false)] {
             assert_eq!(solid.classify_point(point, &directions, 100000, 100000).unwrap().parity, Some(inside));
+        }
+    }
+
+    #[test]
+    fn four_band_solid_preserves_material_under_an_exact_axis_shear() {
+        let source = four_periodic_bands();
+        let transform = [
+            [1., 0., 0.5, 2.],
+            [0., 1., -2., -3.],
+            [0., 0., 1., 0.],
+            [0., 0., 0., 1.],
+        ];
+        let model = crate::transform::affine(&source, transform).unwrap();
+        let admission = crate::closed_solid::qualify(model, four_band_policy()).unwrap();
+        let geometry = admission.geometry();
+        assert!(geometry.boundary.proven);
+        assert_eq!(geometry.orientations[0].outward, Some(true));
+        assert_eq!(geometry.boundary.intersections.pairs.pairs.iter()
+            .filter(|p| p.radial_disjoint).count(), 2);
+        let solid = admission.into_solid().expect("sheared torus owns material");
+        let directions = [[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]];
+        for (point, inside) in [([6.0625, -3.125, 0.125], true), ([2., -3., 0.], false)] {
+            assert_eq!(solid.classify_point(point, &directions, 100000, 100000).unwrap().parity,
+                Some(inside), "{point:?}");
         }
     }
 
