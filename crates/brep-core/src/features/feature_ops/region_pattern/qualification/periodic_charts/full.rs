@@ -6,6 +6,7 @@ pub(super) fn verify(
     model: &Model,
     face: usize,
     bounds: [[f64; 2]; 2],
+    active: &[Option<[[f64; 2]; 2]>],
     natural: [[f64; 2]; 2],
     remaining: &mut usize,
     pairs: &mut usize,
@@ -34,38 +35,50 @@ pub(super) fn verify(
     }
     let mut ranges: [Vec<[f64; 2]>; 4] = std::array::from_fn(|_| Vec::new());
     let mut shores: [BTreeMap<usize, bool>; 2] = std::array::from_fn(|_| BTreeMap::new());
-    for c in &model.loops[f.outer].coedges {
+    for (c, active) in model.loops[f.outer].coedges.iter().zip(active) {
         let p = &c.pcurve;
         let d = p.domain();
         let degree = p.degree;
         let n = p.control_points.len();
-        if !p.knots[..=degree].iter().all(|k| *k == d[0])
-            || !p.knots[n..].iter().all(|k| *k == d[1])
-        {
-            return Err(error(
-                "Full-lap rectangle needs exact clamped actual UV endpoints",
-            ));
-        }
-        let side = (0..4)
-            .find(|i| {
-                p.control_points
+        let (side, range) = if let Some([a, b]) = active {
+            let side = (0..4)
+                .find(|i| a[i / 2] == bounds[i / 2][i % 2] && a[i / 2] == b[i / 2])
+                .ok_or_else(|| error("Active full-lap UV boundary is not a rectangle side"))?;
+            let k = 1 - side / 2;
+            if a[k] == b[k] {
+                return Err(error("Active full-lap boundary side is empty"));
+            }
+            (side, [a[k].min(b[k]), a[k].max(b[k])])
+        } else {
+            if !p.knots[..=degree].iter().all(|k| *k == d[0])
+                || !p.knots[n..].iter().all(|k| *k == d[1])
+            {
+                return Err(error(
+                    "Full-lap rectangle needs exact clamped actual UV endpoints",
+                ));
+            }
+            let side = (0..4)
+                .find(|i| {
+                    p.control_points
+                        .iter()
+                        .all(|v| v[i / 2] == bounds[i / 2][i % 2])
+                })
+                .ok_or_else(|| error("Full-lap UV boundary is not an exact rectangle side"))?;
+            let k = 1 - side / 2;
+            let a = p.control_points[0][k];
+            let b = p.control_points[n - 1][k];
+            let range = [a.min(b), a.max(b)];
+            if a == b
+                || p.control_points
                     .iter()
-                    .all(|v| v[i / 2] == bounds[i / 2][i % 2])
-            })
-            .ok_or_else(|| error("Full-lap UV boundary is not an exact rectangle side"))?;
-        let k = 1 - side / 2;
-        let a = p.control_points[0][k];
-        let b = p.control_points[n - 1][k];
-        let range = [a.min(b), a.max(b)];
-        if a == b
-            || p.control_points
-                .iter()
-                .any(|v| v[k] < range[0] || v[k] > range[1])
-        {
-            return Err(error(
-                "Full-lap rectangle side has unproved original coverage",
-            ));
-        }
+                    .any(|v| v[k] < range[0] || v[k] > range[1])
+            {
+                return Err(error(
+                    "Full-lap rectangle side has unproved original coverage",
+                ));
+            }
+            (side, range)
+        };
         ranges[side].push(range);
         if side / 2 == axis && shores[side % 2].insert(c.edge, c.reversed).is_some() {
             return Err(error("A quotient shore repeats an actual seam edge"));

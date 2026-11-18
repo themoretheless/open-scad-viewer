@@ -244,6 +244,13 @@ curve, the candidate affine clock uses the endpoints of an exact active
 restriction, while the identity is checked against the original basis.
 Partial world intervals remain diagnostic windows.
 
+A periodic face can pass the embedding audit with an extended UV
+carrier on a quotient shore. The audit proves the ordered active
+segment and uses its exact endpoints for chart coverage. It checks
+that opposite shores use the same full world edges after exact lift
+and trim validation. The original quotient still needs an independent
+injectivity and regularity proof.
+
 The complete G1/G2 and classified seam audits can recover a full natural
 side from the active interval of a rational UV carrier. On a periodic
 chart, exact endpoints must be on the native sides with matching authored

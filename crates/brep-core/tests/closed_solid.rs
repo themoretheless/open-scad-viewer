@@ -6,13 +6,19 @@ mod full_periodic_cylinder;
 #[test]
 fn periodic_cylinder_qualifies_as_closed_material_through_its_owned_rims() {
     let mut model = full_periodic_cylinder::source();
-    let edge = &model.loops[0].coedges[1];
-    let trim = brep_topology::CoedgeTrim {
-        curve_parameter: model.edges[edge.edge].curve.domain(),
-        pcurve_parameter: edge.pcurve.domain(),
-        periodic_lift: [[1, 0]; 2],
+    let edge_index = model.loops[0].coedges[1].edge;
+    let world = model.edges[edge_index].curve.domain();
+    let edge = &mut model.loops[0].coedges[1];
+    edge.pcurve = nurbs_core::curve::Curve {
+        degree: 1, knots: vec![0., 0., 4., 4.],
+        control_points: vec![vec![4., -1.], vec![4., 3.]],
+        weights: vec![1.; 2], periodic: false,
     };
-    model.loops[0].coedges[1] = edge.clone().with_trim(trim).unwrap();
+    *edge = edge.clone().with_trim(brep_topology::CoedgeTrim {
+        curve_parameter: world,
+        pcurve_parameter: [1., 2.],
+        periodic_lift: [[1, 0]; 2],
+    }).unwrap();
     model.rebuild_topology_ids();
     let limited = solid::qualify(model.clone(), solid::AdmissionPolicy {
         max_linear_cells: 1,

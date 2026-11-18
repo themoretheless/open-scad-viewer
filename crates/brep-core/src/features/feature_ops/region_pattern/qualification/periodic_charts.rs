@@ -72,6 +72,28 @@ pub(crate) fn verify(
     pairs: &mut usize,
     max_pairs: usize,
 ) -> Result<bool> {
+    verify_impl(model, face, remaining, pairs, max_pairs, false)
+}
+
+/// Called after exact original lifts and active material loops have passed.
+pub(crate) fn verify_active(
+    model: &Model,
+    face: usize,
+    remaining: &mut usize,
+    pairs: &mut usize,
+    max_pairs: usize,
+) -> Result<bool> {
+    verify_impl(model, face, remaining, pairs, max_pairs, true)
+}
+
+fn verify_impl(
+    model: &Model,
+    face: usize,
+    remaining: &mut usize,
+    pairs: &mut usize,
+    max_pairs: usize,
+    active: bool,
+) -> Result<bool> {
     let f = &model.faces[face];
     let s = &f.surface;
     let natural = [
@@ -80,10 +102,39 @@ pub(crate) fn verify(
     ];
     let mut bounds = [[f64::INFINITY, f64::NEG_INFINITY]; 2];
     let mut outer_bounds = bounds;
+    let mut outer_segments = Vec::new();
     for wire in std::iter::once(f.outer).chain(f.holes.iter().copied()) {
         for c in &model.loops[wire].coedges {
-            charge(remaining, c.pcurve.control_points.len())?;
-            for p in &c.pcurve.control_points {
+            let endpoints = if active
+                && c.trim()
+                    .is_some_and(|t| t.pcurve_parameter != c.pcurve.domain())
+            {
+                let mut used = 0;
+                let endpoints = crate::shared_boundary::chart_segments::natural_segment(
+                    c, &mut used, *remaining,
+                );
+                charge(remaining, used)?;
+                Some(endpoints.ok_or_else(|| error("Active periodic UV side is unproved"))?)
+            } else {
+                None
+            };
+            if wire == f.outer {
+                outer_segments.push(endpoints);
+            }
+            charge(
+                remaining,
+                endpoints
+                    .as_ref()
+                    .map_or(c.pcurve.control_points.len(), |_| 2),
+            )?;
+            let points = endpoints.as_ref().map(|p| p.iter().map(|p| &p[..]));
+            for p in points.into_iter().flatten().chain(
+                c.pcurve
+                    .control_points
+                    .iter()
+                    .filter(|_| endpoints.is_none())
+                    .map(Vec::as_slice),
+            ) {
                 for k in 0..2 {
                     bounds[k][0] = bounds[k][0].min(p[k]);
                     bounds[k][1] = bounds[k][1].max(p[k]);
@@ -115,6 +166,7 @@ pub(crate) fn verify(
         model,
         face,
         outer_bounds,
+        &outer_segments,
         natural,
         remaining,
         pairs,
@@ -140,12 +192,18 @@ pub(crate) fn verify(
                 continue;
             }
             let proof = nurbs_core::surface_injectivity::certify_periodic_extrusion(
-                s, k, max_pairs - *pairs, *remaining,
+                s,
+                k,
+                max_pairs - *pairs,
+                *remaining,
             )?;
             charge(remaining, proof.cells)?;
             *pairs += proof.pairs;
-            if proof.proven && proof.regular_interior
-                && proof.collapsed_end.is_none_or(|end| bounds[1 - k][end] != natural[1 - k][end])
+            if proof.proven
+                && proof.regular_interior
+                && proof
+                    .collapsed_end
+                    .is_none_or(|end| bounds[1 - k][end] != natural[1 - k][end])
             {
                 return Ok(true);
             }

@@ -120,13 +120,12 @@ fn qualify_periodic_charts(
             .flat_map(|wire| &model.loops[wire].coedges)
             .all(|coedge| {
                 coedge.trim().is_none_or(|trim| {
-                    trim.pcurve_parameter == coedge.pcurve.domain()
-                        && trim.curve_parameter == model.edges[coedge.edge].curve.domain()
+                    trim.curve_parameter == model.edges[coedge.edge].curve.domain()
                 })
             });
         if full_intervals && remaining > 0 && pairs < max_cells {
             report.periodic_quotient =
-                crate::feature_ops::region_pattern::qualification::periodic_charts::verify(
+                crate::feature_ops::region_pattern::qualification::periodic_charts::verify_active(
                     model, report.face, &mut remaining, &mut pairs, max_cells,
                 ).unwrap_or(false);
         }
