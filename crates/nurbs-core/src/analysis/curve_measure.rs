@@ -1450,6 +1450,71 @@ pub fn partition_directional_speed_limit(
     Ok(DirectionalSpeedLimitPartition { cells, work_cells })
 }
 
+/// Classify direction against the closed counterclockwise sector from
+/// the first ray to the second. Supports both acute and reflex sectors.
+/// Coincident rays are ambiguous and rejected. A potentially zero
+/// orientation leaves its cell unresolved.
+pub fn partition_planar_orientation_sector(
+    direction: &Curve,
+    interval: [f64; 2],
+    rays: [[f64; 2]; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalSpeedLimitPartition> {
+    use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
+
+    direction.validate()?;
+    check(direction.control_points[0].len() == 2, "Orientation sectors require a planar direction curve")?;
+    let [start, end] = rays;
+    check(rays.iter().all(|ray| ray.iter().all(|x| x.is_finite()) && *ray != [0.; 2]),
+        "Sector rays must be finite and nonzero")?;
+    let determinant = exact_motion_operand(start[0])? * exact_motion_operand(end[1])?
+        - exact_motion_operand(start[1])? * exact_motion_operand(end[0])?;
+    let zero = exact_motion_operand(0.)?;
+    if determinant == zero {
+        let alignment = exact_motion_operand(start[0])? * exact_motion_operand(end[0])?
+            + exact_motion_operand(start[1])? * exact_motion_operand(end[1])?;
+        check(alignment < zero, "Sector boundary rays must not coincide")?;
+    }
+    let reflex = determinant < zero;
+    let normals = [[-start[1], start[0]], [end[1], -end[0]]];
+    let exact_status = fixed_cardinal_rotation(direction).map(|axis| {
+        let inside = normals.map(|normal| {
+            // Cardinal axes select exactly one normal component.
+            normal[0] * axis[0] + normal[1] * axis[1] >= 0.
+        });
+        let within = if reflex { inside[0] || inside[1] } else { inside[0] && inside[1] };
+        if within { Within } else { Exceeds }
+    });
+    let normals = normals.map(|normal| normal.map(Interval::point));
+    let (cells, work_cells) = partition_motion_cells(
+        direction, interval, parameter_tolerance, max_cells,
+        |jets, _| {
+            if let Some(status) = exact_status {
+                return Ok((status, false));
+            }
+            let axis = &jets[0];
+            if axis.iter().all(|value| value.lo <= 0. && value.hi >= 0.) {
+                return Ok((Undetermined, true));
+            }
+            let bounds = [project_jet(axis, &normals[0])?, project_jet(axis, &normals[1])?];
+            let inside = bounds.map(|value| value.lo >= 0.);
+            let outside = bounds.map(|value| value.hi < 0.);
+            let (within, exceeds) = if reflex {
+                (inside[0] || inside[1], outside[0] && outside[1])
+            } else {
+                (inside[0] && inside[1], outside[0] || outside[1])
+            };
+            let status = if within { Within } else if exceeds { Exceeds } else { Undetermined };
+            Ok((status, status == Undetermined))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(span, parameter_interval, status)| {
+        DirectionalSpeedLimitCell { parameter_interval, span, status }
+    }).collect();
+    Ok(DirectionalSpeedLimitPartition { cells, work_cells })
+}
+
 /// Classify absolute angular speed of a planar direction curve against an
 /// inclusive limit in radians per unit of the curve parameter. Each knot
 /// span is evaluated on its own side. The direction must stay nonzero to

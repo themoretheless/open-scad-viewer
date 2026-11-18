@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0784",
+  "testedBase": "b296d95e63cf226190823f270b1769903a708c22",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 410,
+  "scope": [
+    "Certify orientation membership in closed narrow, half-turn or reflex planar sectors.",
+    "Check complementary narrow and reflex sectors, an inclusive half-turn boundary and rejection of coincident rays."
+  ],
+  "logSha256": "0f4ef2a6c5bf57f8a773791086d1902ec510944418e3e81b1210ad9b6541c32b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "0c24909303069a90938a660fb1297d04d85c638b413ce8aefa8e7e865c9660ce",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "d6f14461f6cff8df4de542b3d0c5ffec4309c232fcc10251863b30a5c4ebcf42"
+  }
+}

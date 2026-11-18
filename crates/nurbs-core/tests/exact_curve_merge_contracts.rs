@@ -12436,3 +12436,37 @@ fn planar_angular_motion_deadline_retains_independent_limit_statuses() {
     let report = check_planar_angular_motion_deadline(&fixed, [2., 4.], limits, 2., 0.01, 1).unwrap();
     assert_eq!(report.status, Status::Within);
 }
+
+#[test]
+fn planar_orientation_sector_classifies_narrow_and_reflex_windows() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_planar_orientation_sector,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![1., -2.], vec![1., 2.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let narrow = [[1., -1.], [1., 1.]];
+    let run = |rays| partition_planar_orientation_sector(&direction, [0., 1.], rays, 0.01, 127);
+    for (rays, ends, middle) in [
+        (narrow, Status::Exceeds, Status::Within),
+        ([narrow[1], narrow[0]], Status::Within, Status::Exceeds),
+    ] {
+        let report = run(rays).unwrap();
+        assert_eq!(report.cells.first().unwrap().status, ends);
+        assert_eq!(report.cells.last().unwrap().status, ends);
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= 0.5 && 0.5 <= b && cell.status == middle
+        }));
+    }
+    assert!(run([[1., 1.], [2., 2.]]).is_err());
+    let boundary = Curve { control_points: vec![vec![1., 0.], vec![2., 0.]], ..direction };
+    let report = partition_planar_orientation_sector(
+        &boundary, [0., 1.], [[1., 0.], [-1., 0.]], 0.01, 1,
+    ).unwrap();
+    assert_eq!(report.cells[0].status, Status::Within);
+}

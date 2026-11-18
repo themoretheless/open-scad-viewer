@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 783,
-  "unallocatedCount": 217,
+  "specifiedCount": 784,
+  "unallocatedCount": 216,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18569,6 +18569,25 @@
       "remainingQualification": [
         "Classify uniform traversal deadlines using exact clock comparisons and independent angular derivative results.",
         "Check passing, failing and unresolved deadlines, independent derivative results and the original-duration floor.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0784",
+      "name": "Проверка допустимого сектора плоской NURBS-ориентации",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_orientation_sector",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-784-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-784-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify orientation membership in closed narrow, half-turn or reflex planar sectors.",
+        "Check complementary narrow and reflex sectors, an inclusive half-turn boundary and rejection of coincident rays.",
         "WASM and application integration are separate."
       ]
     }
