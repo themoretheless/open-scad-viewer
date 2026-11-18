@@ -3,6 +3,8 @@
 //! embedding, complete pole quotients, vertex fans, nesting or orientation.
 use crate::{Error, Model, Result};
 use std::collections::{BTreeMap, BTreeSet};
+mod affine;
+pub use affine::{AffineSphere, AffineSphereAttempt, AffineSphereBody, verify_affine_sphere};
 #[derive(Clone, Copy)]
 pub struct Limits {
     pub volume: crate::volume_validity::Limits,
