@@ -10825,3 +10825,45 @@ fn affine_synchronized_clearance_handles_different_clocks_and_internal_knots() {
     assert!(report.gap_bounds[0] <= 0.5 && report.gap_bounds[1] >= 0.5);
     assert_eq!(report.witness_parameter, 0.5);
 }
+
+#[test]
+fn affine_synchronized_partition_brackets_contact_on_different_source_windows() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_affine_synchronized_curve_clearance,
+    };
+    let mut first = Curve {
+        degree: 1,
+        knots: vec![-4., -4., 4., 4.],
+        control_points: vec![vec![0., 0.], vec![4., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let second = Curve {
+        degree: 1,
+        knots: vec![10., 10., 19., 22., 22.],
+        control_points: vec![vec![4., 0.], vec![1., 0.], vec![0., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let check = |first: &Curve, budget| {
+        partition_affine_synchronized_curve_clearance(
+            [first, &second], [[-4., 4.], [10., 22.]], [0.5, 0.5], 0.01, budget,
+        )
+    };
+    let coarse = check(&first, 1).unwrap();
+    assert_eq!(coarse.cells[0].status, Status::Undetermined);
+    let report = check(&first, 128).unwrap();
+    assert!(report.work_cells <= 128);
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    for boundary in [0.375, 0.625] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.progress_interval;
+            a <= boundary && boundary <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+        }));
+    }
+    assert!(report.cells.iter().any(|cell| cell.status == Status::Exceeds));
+    first.control_points[0].push(0.);
+    first.control_points[1].push(0.);
+    assert!(check(&first, 128).is_err());
+}

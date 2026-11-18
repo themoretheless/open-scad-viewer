@@ -2589,21 +2589,8 @@ pub fn measure_affine_synchronized_curve_clearance(
     max_cells: usize,
 ) -> Result<SynchronizedCurveClearance> {
     validate(tolerance, max_cells)?;
-    check(radii.iter().all(|r| r.is_finite() && *r >= 0.),
-        "Tool radii must be finite and nonnegative")?;
-    for (curve, window) in curves.into_iter().zip(windows) {
-        curve.validate()?;
-        validate_travel_interval(curve, window)?;
-    }
-    check(curves[0].control_points[0].len() == curves[1].control_points[0].len(),
-        "Synchronized curves must have matching dimensions")?;
-    let radius = Interval::point(radii[0]).add(Interval::point(radii[1]))?;
-    let gap = |progress| {
-        let left = affine_progress_position(curves[0], windows[0], progress)?;
-        let right = affine_progress_position(curves[1], windows[1], progress)?;
-        let (lo, hi) = box_distance(&left, &right)?;
-        Interval::new(lo, hi)?.sub(radius)
-    };
+    let radius = validate_affine_clearance(curves, windows, radii)?;
+    let gap = |progress| affine_clearance_gap(curves, windows, radius, progress);
     let measure = |(), domain: [f64; 2], witness: &mut ClearanceWitness| {
         let lower = gap(domain)?.lo;
         for parameter in domain {
@@ -2622,6 +2609,82 @@ pub fn measure_affine_synchronized_curve_clearance(
         work_cells,
         stop_reason,
     })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct AffineSynchronizedClearanceCell {
+    /// Fraction of the shared traversal time, in [0, 1].
+    pub progress_interval: [f64; 2],
+    pub gap_bounds: [f64; 2],
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct AffineSynchronizedClearancePartition {
+    pub cells: Vec<AffineSynchronizedClearanceCell>,
+    pub work_cells: usize,
+}
+
+/// Classify contact between two balls traversing independent curve windows
+/// over the same elapsed time. The tolerance bounds the normalized width
+/// of refined unresolved cells, subject to the work and precision limits.
+pub fn partition_affine_synchronized_curve_clearance(
+    curves: [&Curve; 2],
+    windows: [[f64; 2]; 2],
+    radii: [f64; 2],
+    progress_tolerance: f64,
+    max_cells: usize,
+) -> Result<AffineSynchronizedClearancePartition> {
+    validate(progress_tolerance, max_cells)?;
+    let radius = validate_affine_clearance(curves, windows, radii)?;
+    let (cells, work_cells) = partition_enclosed_cells(
+        [((), [0., 1.])], progress_tolerance, max_cells,
+        |(), progress_interval| {
+            let gap = affine_clearance_gap(curves, windows, radius, progress_interval)?;
+            let status = if gap.lo > 0. {
+                DirectionalMotionStatus::Within
+            } else if gap.hi <= 0. {
+                DirectionalMotionStatus::Exceeds
+            } else {
+                DirectionalMotionStatus::Undetermined
+            };
+            Ok((AffineSynchronizedClearanceCell {
+                progress_interval,
+                gap_bounds: [gap.lo, gap.hi],
+                status,
+            }, status == DirectionalMotionStatus::Undetermined))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(_, _, cell)| cell).collect();
+    Ok(AffineSynchronizedClearancePartition { cells, work_cells })
+}
+
+fn validate_affine_clearance(
+    curves: [&Curve; 2],
+    windows: [[f64; 2]; 2],
+    radii: [f64; 2],
+) -> Result<Interval> {
+    check(radii.iter().all(|r| r.is_finite() && *r >= 0.),
+        "Tool radii must be finite and nonnegative")?;
+    for (curve, window) in curves.into_iter().zip(windows) {
+        curve.validate()?;
+        validate_travel_interval(curve, window)?;
+    }
+    check(curves[0].control_points[0].len() == curves[1].control_points[0].len(),
+        "Synchronized curves must have matching dimensions")?;
+    Interval::point(radii[0]).add(Interval::point(radii[1]))
+}
+
+fn affine_clearance_gap(
+    curves: [&Curve; 2],
+    windows: [[f64; 2]; 2],
+    radius: Interval,
+    progress: [f64; 2],
+) -> Result<Interval> {
+    let left = affine_progress_position(curves[0], windows[0], progress)?;
+    let right = affine_progress_position(curves[1], windows[1], progress)?;
+    let (lo, hi) = box_distance(&left, &right)?;
+    Interval::new(lo, hi)?.sub(radius)
 }
 
 fn affine_progress_position(

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0737",
+  "testedBase": "407a2164349a66044dd5354167ab9ee6f5c4f160",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 362,
+  "scope": [
+    "Classify contact across independent affine parameter windows on shared elapsed progress.",
+    "Check independent source domains, a nonmatching internal knot, both analytic contact boundaries, coarse budget and dimension refusal."
+  ],
+  "logSha256": "746650a37846b16637629cdabb6cffc4dca773ebb38289902f6d47137919ff4e",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "20bc210e7e8b96676f0a2a37c3b6b71eafa867251b311ed5ad3e713c4f9ec281",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "a0dfe9e200e47542e362175c0f75406a192affe67c842ef3bb0241e4cece702b"
+  }
+}
