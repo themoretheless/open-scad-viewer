@@ -2588,6 +2588,41 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_clearance(
     parameter_tolerance: f64,
     max_vertex_plane_cells: usize,
 ) -> Result<ObstacleClearancePartition> {
+    partition_rotating_profiled_obstacles(
+        position, direction, radius_profile, obstacles, vertex_offsets,
+        parameter_tolerance, max_vertex_plane_cells, false,
+    )
+}
+
+/// Also seek a rounded contact witness by displacing a hull vertex inward
+/// along one obstacle plane normal. The displaced vertex must satisfy every
+/// half-space throughout the cell. The budget reserves two vertex/plane
+/// passes per cell to account for checking these witnesses.
+pub fn partition_planar_rotating_profiled_hull_obstacle_contact(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    partition_rotating_profiled_obstacles(
+        position, direction, radius_profile, obstacles, vertex_offsets,
+        parameter_tolerance, max_vertex_plane_cells, true,
+    )
+}
+
+fn partition_rotating_profiled_obstacles(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+    rounded_witness: bool,
+) -> Result<ObstacleClearancePartition> {
     use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
 
     validate(parameter_tolerance, max_vertex_plane_cells)?;
@@ -2601,7 +2636,7 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_clearance(
         }
         plane_count += obstacle.len();
     }
-    let pairs = plane_count * vertex_offsets.len();
+    let pairs = plane_count * vertex_offsets.len() * if rounded_witness { 2 } else { 1 };
     let max_cells = max_vertex_plane_cells / pairs;
     let (initial, profiles) = prepare_planar_rotation_profile(position, direction, radius_profile, max_cells)?;
     let vertices = prepare_workspace_hull(position, vertex_offsets, plane_count)?;
@@ -2623,24 +2658,40 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_clearance(
                 let radius = profiles[profile](domain)?;
                 let point = curve_jets::enclose(position, span, domain)?;
                 let mut candidates = vec![true; vertices.len()];
+                let mut witness_planes = vec![(0, 0.); vertices.len()];
                 for (obstacle, status) in obstacles.iter().zip(&mut clearance) {
                     candidates.fill(true);
-                    for (normal, offset, length) in obstacle {
+                    witness_planes.fill((0, 0.));
+                    let seek_rounded = rounded_witness && radius.lo > 0.;
+                    let mut residuals = Vec::new();
+                    for (plane, (normal, offset, length)) in obstacle.iter().enumerate() {
                         let margin = length.mul(radius)?.hi;
                         let inverse = inverse_rotated_normal(normal, rotation)?;
                         let center = project_jet(&point[0], normal)?.sub(*offset)?;
                         let mut separated = true;
-                        for (vertex, candidate) in vertices.iter().zip(&mut candidates) {
-                            let residual = center.add(project_jet(vertex, &inverse)?)?;
+                        for (vertex, offset) in vertices.iter().enumerate() {
+                            let residual = center.add(project_jet(offset, &inverse)?)?;
                             separated &= residual.lo > margin;
-                            *candidate &= residual.hi <= 0.;
+                            candidates[vertex] &= residual.hi <= 0.;
+                            if seek_rounded {
+                                residuals.push(residual);
+                                let violation = residual.hi / length.hi;
+                                if violation > witness_planes[vertex].1 {
+                                    witness_planes[vertex] = (plane, violation);
+                                }
+                            }
                         }
                         if separated {
                             *status = Within;
                             break;
                         }
                     }
-                    if *status != Within && candidates.contains(&true) {
+                    if *status == Within {
+                        continue;
+                    }
+                    if candidates.contains(&true) || (seek_rounded && rounded_vertex_contacts(
+                        obstacle, &residuals, &witness_planes, radius.lo,
+                    )?) {
                         *status = Exceeds;
                     }
                 }
@@ -2662,6 +2713,35 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_clearance(
         cells: cells.into_iter().map(|(_, _, cell)| cell).collect(),
         work_plane_cells: work_cells * pairs,
     })
+}
+
+fn rounded_vertex_contacts(
+    planes: &[(Vec<Interval>, Interval, Interval)],
+    residuals: &[Interval],
+    witness_planes: &[(usize, f64)],
+    radius: f64,
+) -> Result<bool> {
+    let vertex_count = witness_planes.len();
+    for (vertex, &(plane, _)) in witness_planes.iter().enumerate() {
+        let (normal, _, length) = &planes[plane];
+        // Dividing by the upper length ensures the exact displacement
+        // has length at most the lower rounding radius over the cell.
+        let scale = Interval::point(-radius).div(Interval::point(length.hi))?;
+        let displacement = [normal[0].mul(scale)?, normal[1].mul(scale)?];
+        let mut inside = true;
+        for (index, (normal, _, _)) in planes.iter().enumerate() {
+            let shifted = residuals[index * vertex_count + vertex]
+                .add(project_jet(&displacement, normal)?)?;
+            if shifted.hi > 0. {
+                inside = false;
+                break;
+            }
+        }
+        if inside {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 /// Check clearance for a translating convex hull of offsets, rounded by a

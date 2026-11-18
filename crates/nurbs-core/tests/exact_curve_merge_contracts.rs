@@ -11974,3 +11974,36 @@ fn minimum_rotating_profiled_hull_workspace_clearance_witnesses_a_radius_break()
     assert_eq!(report.witness_plane, 1);
     assert_eq!(report.witness_parameter, 0.5);
 }
+
+#[test]
+fn rotating_rounded_contact_checks_displaced_vertex_against_every_plane() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_profiled_hull_obstacle_contact,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., 0.], vec![1., 0.1]],
+        ..position.clone()
+    };
+    let face = [WorkspaceHalfSpace { normal: &[-4., 0.], offset: -9. }];
+    let corner = [
+        face[0],
+        WorkspaceHalfSpace { normal: &[0., -1.], offset: -0.6 },
+    ];
+    let partition = |budget| partition_planar_rotating_profiled_hull_obstacle_contact(
+        &position, &direction, &[(0., 0.4), (1., 0.4)],
+        &[&face, &corner], &[&[2., 0.]], 0.005, budget,
+    );
+    assert!(partition(5).is_err());
+    let report = partition(384).unwrap();
+    assert!(report.work_plane_cells <= 384);
+    assert!(report.cells.iter().all(|cell| cell.obstacles[0] == Status::Exceeds));
+    assert!(report.cells.iter().all(|cell| cell.obstacles[1] != Status::Exceeds));
+}
