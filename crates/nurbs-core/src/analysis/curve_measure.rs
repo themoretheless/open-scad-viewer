@@ -1859,6 +1859,72 @@ pub fn partition_curve_ball_convex_workspace(
     max_plane_cells: usize,
 ) -> Result<WorkspacePartition> {
     check(radius.is_finite() && radius >= 0., "Tool radius must be finite and nonnegative")?;
+    partition_curve_workspace_with_support(
+        curve, interval, planes, parameter_tolerance, max_plane_cells,
+        |normal| {
+            if radius == 0. {
+                Ok(None)
+            } else {
+                Ok(Some(norm(normal)?.mul(Interval::point(radius))?))
+            }
+        },
+    )
+}
+
+/// A fixed-orientation capsule whose segment endpoints are offsets from
+/// the curve point. A zero radius describes the segment itself.
+#[derive(Clone, Copy, Debug)]
+pub struct WorkspaceCapsule<'a> {
+    pub endpoint_offsets: [&'a [f64]; 2],
+    pub radius: f64,
+}
+
+/// Check a translating capsule against the workspace planes. At each curve
+/// point the support is the greater endpoint projection plus the ball support.
+pub fn partition_curve_capsule_convex_workspace(
+    curve: &Curve,
+    interval: [f64; 2],
+    planes: &[WorkspaceHalfSpace<'_>],
+    capsule: WorkspaceCapsule<'_>,
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspacePartition> {
+    check(capsule.radius.is_finite() && capsule.radius >= 0., "Tool radius must be finite and nonnegative")?;
+    curve.validate()?;
+    let dimension = curve.control_points[0].len();
+    let [first, second] = capsule.endpoint_offsets;
+    check(
+        [first, second].iter().all(|offset| {
+            offset.len() == dimension && offset.iter().all(|value| value.is_finite())
+        }),
+        "Capsule endpoints must be finite vectors matching the curve dimension",
+    )?;
+    let [first, second] = [first, second].map(|offset| {
+        offset.iter().copied().map(Interval::point).collect::<Vec<_>>()
+    });
+    partition_curve_workspace_with_support(
+        curve, interval, planes, parameter_tolerance, max_plane_cells,
+        |normal| {
+            let a = project_jet(&first, normal)?;
+            let b = project_jet(&second, normal)?;
+            let support = Interval::new(a.lo.max(b.lo), a.hi.max(b.hi))?;
+            if capsule.radius == 0. {
+                Ok(Some(support))
+            } else {
+                Ok(Some(support.add(norm(normal)?.mul(Interval::point(capsule.radius))?)?))
+            }
+        },
+    )
+}
+
+fn partition_curve_workspace_with_support(
+    curve: &Curve,
+    interval: [f64; 2],
+    planes: &[WorkspaceHalfSpace<'_>],
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+    support: impl Fn(&[Interval]) -> Result<Option<Interval>>,
+) -> Result<WorkspacePartition> {
     validate(parameter_tolerance, max_plane_cells)?;
     check(!planes.is_empty(), "Workspace requires at least one half-space")?;
     let max_cells = max_plane_cells / planes.len();
@@ -1868,11 +1934,7 @@ pub fn partition_curve_ball_convex_workspace(
     curve.validate()?;
     let dimension = curve.control_points[0].len();
     let planes = prepare_workspace_planes(planes, dimension)?.into_iter().map(|(normal, offset)| {
-        let margin = if radius == 0. {
-            None
-        } else {
-            Some(norm(&normal)?.mul(Interval::point(radius))?)
-        };
+        let margin = support(&normal)?;
         Ok((normal, offset, margin))
     }).collect::<Result<Vec<_>>>()?;
     let (cells, work_cells) = partition_motion_cells(

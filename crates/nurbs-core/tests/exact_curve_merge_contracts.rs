@@ -9824,3 +9824,37 @@ fn ball_workspace_partition_finds_overtravel_before_the_center_crosses() {
     assert_eq!(check(0.6, 1).unwrap().cells[0].status, Status::Undetermined);
     assert!(check(f64::NAN, 128).is_err());
 }
+
+#[test]
+fn capsule_workspace_partition_accounts_for_offset_and_radius() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceCapsule, WorkspaceHalfSpace,
+        partition_curve_capsule_convex_workspace,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![2., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let planes = [WorkspaceHalfSpace { normal: &[2., 0.], offset: 4. }];
+    let check = |offsets, radius| {
+        partition_curve_capsule_convex_workspace(
+            &curve, [0., 1.], &planes,
+            WorkspaceCapsule { endpoint_offsets: offsets, radius }, 0.01, 128,
+        )
+    };
+    let offsets = [&[0., 0.][..], &[0.5, 1.][..]];
+    for (radius, crossing) in [(0., 0.75), (0.5, 0.5)] {
+        let report = check(offsets, radius).unwrap();
+        assert_eq!(report.cells.first().unwrap().status, Status::Within);
+        assert_eq!(report.cells.last().unwrap().status, Status::Exceeds);
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= crossing && crossing <= b && b - a <= 0.01
+                && cell.status == Status::Undetermined
+        }));
+    }
+    assert!(check([&[0.], &[0., 1.]], 0.).is_err());
+}

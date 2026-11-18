@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 708,
-  "unallocatedCount": 292,
+  "specifiedCount": 709,
+  "unallocatedCount": 291,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17144,6 +17144,25 @@
       "remainingQualification": [
         "Certify containment of a swept ball using plane support radii.",
         "Check radius-induced overtravel before the center crosses a nonunit oblique plane, residual bounds, zero radius, and work exhaustion.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0709",
+      "name": "Проверка капсульного инструмента внутри выпуклой рабочей области",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_capsule_convex_workspace",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-709-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-709-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify containment of a translating fixed-orientation capsule with asymmetric endpoint offsets.",
+        "Check distinct overtravel thresholds for a segment and capsule, nonunit plane normals, asymmetric offsets, and invalid dimensions.",
         "WASM and application integration are separate."
       ]
     }

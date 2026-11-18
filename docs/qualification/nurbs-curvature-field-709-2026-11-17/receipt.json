@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0709",
+  "testedBase": "5e18dba90b51461c965ae70ccc37b3747f29121e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 332,
+  "scope": [
+    "Certify containment of a translating fixed-orientation capsule with asymmetric endpoint offsets.",
+    "Check distinct overtravel thresholds for a segment and capsule, nonunit plane normals, asymmetric offsets, and invalid dimensions."
+  ],
+  "logSha256": "432bf0359a29b53c3ccee103092cb7ddb70f3f7dca7c08b19a59bcd411b27ac8",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "07e6eca74d2f2460ceb54a22faeee23d5f58345eda05d2bc30ffdf09158144a9",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "a32b8e2afe89ff8b8b37284f3686edeec8ce062b905ca3b2deb426539354b26d"
+  }
+}
