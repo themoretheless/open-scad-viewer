@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0679",
+  "testedBase": "e266d325718b559a88b25fe408d5a35c6c0a36ce",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "curve_directional_travel_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 284,
+  "scope": [
+    "Expose ordered window reports, a shared axial travel budget and optional reverse-limit checks per window.",
+    "Check ordered windows, shared-budget exhaustion, and per-window reverse-limit classifications through the compiled ABI."
+  ],
+  "logSha256": "9abb53747e02a9a3291543c660ed2c09a0bd4773b65fa0ba1062ee42d63700ed",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "12227a320ab7ffdc0ecbf027f4a682b07ce15a23dac8fdfa8a7fddcfee44feb7",
+    "crates/geometry-bridge/src/dispatch/nurbs_2.rs": "0a22fa23b5966e647659bd18d0b72a5609359456a9b6423a49c4b4b1f41c857f",
+    "crates/geometry-bridge/tests/curve_directional_travel_contracts.rs": "8c29a2bff44d63761f609777dddee1bd74b80082728aed281ab3513434b11103",
+    "scripts/check-curve-directional-travel-wasm.mts": "e048b5b3296cab548b7fef906977b9c47926d4d610773c3c72062f85d377b7a4"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-curve-directional-travel-wasm.mts <geometry_wasm.wasm>"
+  }
+}
