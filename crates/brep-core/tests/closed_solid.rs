@@ -20,6 +20,21 @@ fn periodic_cylinder_qualifies_as_closed_material_through_its_owned_rims() {
         periodic_lift: [[1, 0]; 2],
     }).unwrap();
     model.rebuild_topology_ids();
+    let mut mismatched = model.clone();
+    let edge = &mut mismatched.loops[0].coedges[1];
+    *edge = edge.clone().with_trim(brep_topology::CoedgeTrim {
+        curve_parameter: world,
+        pcurve_parameter: [1., 1.5],
+        periodic_lift: [[1, 0]; 2],
+    }).unwrap();
+    mismatched.rebuild_topology_ids();
+    match solid::qualify(mismatched, policy()) {
+        Ok(mismatch) => {
+            assert!(!mismatch.geometry().boundary.agreement.all_equal);
+            assert!(mismatch.solid().is_none());
+        }
+        Err(error) => assert!(error.message.contains("pcurve/surface and 3D edge disagree"), "{error:?}"),
+    }
     let limited = solid::qualify(model.clone(), solid::AdmissionPolicy {
         max_linear_cells: 1,
         ..policy()
