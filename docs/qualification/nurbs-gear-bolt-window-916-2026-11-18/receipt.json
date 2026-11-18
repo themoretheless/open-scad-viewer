@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0916",
+  "testedBase": "84da0a0f023b5aa7d8c2c9fd2cbf8cfbca38e7be",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 477,
+  "scope": [
+    "Invert the three ligament inequalities. Test both active lower constraints, impossible layout, rounding at singleton feasibility, and invalid web."
+  ],
+  "logSha256": "c3b34fada53ab5354fa12ef34beefceb014a6291fbd18e5301d6f00bb1e58143",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs": "03b5e93243e70a491ab53761da64bd9f93aff376500d03cc52a2c53f74cbb7ff",
+    "crates/nurbs-core/src/construct/curves/involute.rs": "7736b71999d08b8ed97e624277760eb6cfd8a2647a8870ac8e1d88d2cdf2bdd7",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "56315ea483cb094b24974cdfbd5fddb55707e54efd24d8a89d8c41e721ccf865"
+  }
+}

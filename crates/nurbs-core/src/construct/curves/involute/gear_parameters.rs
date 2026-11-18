@@ -787,20 +787,62 @@ pub fn ring_gear_bolt_stock(
     module: f64, teeth: usize, tooth_clearance: f64, outer_radius: f64,
     bolt_circle_radius: f64, hole_diameter: f64, holes: usize,
 ) -> Result<RingGearBoltStock> {
-    check([outer_radius, bolt_circle_radius, hole_diameter].iter().all(|x| x.is_finite() && *x > 0.),
-          "Expected positive finite ring and bolt-circle dimensions")?;
-    check(holes >= 2 && holes as u128 <= (1u128 << 53),
-          "Expected at least two holes and an exactly representable hole count")?;
-    let gear = derive_gear_parameter_bounds(module, teeth, 20., tooth_clearance, 0., true)?;
-    let root = I::new(gear.root_radius[0], gear.root_radius[1])?;
+    check(bolt_circle_radius.is_finite() && bolt_circle_radius > 0., "Expected positive finite bolt radius")?;
+    let (root, diameter, half, chord_factor) = bolt_pattern_dimensions(
+        module, teeth, tooth_clearance, outer_radius, hole_diameter, holes,
+    )?;
     let radius = I::point(bolt_circle_radius);
-    let diameter = I::point(hole_diameter);
-    let half = diameter.div(I::point(2.))?;
-    let sine = trig(pi()?.div(I::point(holes as f64))?)?.0;
-    let chord = radius.mul(I::point(2.))?.mul(sine)?;
+    let chord = radius.mul(chord_factor)?;
     Ok(RingGearBoltStock {
         root_web_mm: pair(radius.sub(root)?.sub(half)?),
         outer_web_mm: pair(I::point(outer_radius).sub(radius)?.sub(half)?),
         adjacent_web_mm: pair(chord.sub(diameter)?),
+    })
+}
+
+fn bolt_pattern_dimensions(
+    module: f64, teeth: usize, tooth_clearance: f64, outer_radius: f64,
+    hole_diameter: f64, holes: usize,
+) -> Result<(I, I, I, I)> {
+    check([outer_radius, hole_diameter].iter().all(|x| x.is_finite() && *x > 0.),
+          "Expected positive finite ring and hole dimensions")?;
+    check(holes >= 2 && holes as u128 <= (1u128 << 53),
+          "Expected at least two holes and an exactly representable hole count")?;
+    let gear = derive_gear_parameter_bounds(module, teeth, 20., tooth_clearance, 0., true)?;
+    let root = I::new(gear.root_radius[0], gear.root_radius[1])?;
+    let diameter = I::point(hole_diameter);
+    let sine = trig(pi()?.div(I::point(holes as f64))?)?.0;
+    Ok((root, diameter, diameter.div(I::point(2.))?, sine.mul(I::point(2.))?))
+}
+
+#[derive(Debug, PartialEq)]
+pub enum BoltRadiusWindow {
+    /// Every radius in this closed interval satisfies all three minimum webs.
+    Feasible([f64; 2]),
+    Infeasible,
+    /// Rounding overlaps the feasibility boundary.
+    Unresolved,
+}
+
+/// Invert the root, outer-edge and adjacent-hole stock inequalities.
+pub fn ring_gear_bolt_radius_window(
+    module: f64, teeth: usize, tooth_clearance: f64, outer_radius: f64,
+    hole_diameter: f64, holes: usize, minimum_web: f64,
+) -> Result<BoltRadiusWindow> {
+    check(minimum_web.is_finite() && minimum_web >= 0., "Expected nonnegative finite web")?;
+    let (root, diameter, half, chord_factor) = bolt_pattern_dimensions(
+        module, teeth, tooth_clearance, outer_radius, hole_diameter, holes,
+    )?;
+    let web = I::point(minimum_web);
+    let radial = root.add(half)?.add(web)?;
+    let adjacent = diameter.add(web)?.div(chord_factor)?;
+    let outer = I::point(outer_radius).sub(half)?.sub(web)?;
+    let safe_lower = radial.hi.max(adjacent.hi);
+    Ok(if safe_lower <= outer.lo {
+        BoltRadiusWindow::Feasible([safe_lower, outer.lo])
+    } else if radial.lo.max(adjacent.lo) > outer.hi {
+        BoltRadiusWindow::Infeasible
+    } else {
+        BoltRadiusWindow::Unresolved
     })
 }

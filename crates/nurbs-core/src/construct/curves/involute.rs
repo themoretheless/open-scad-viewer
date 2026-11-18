@@ -226,7 +226,7 @@ pub use quintic_certificate::certify_quintic_parameter_box;
 
 pub(crate) use quintic_certificate::trig as certified_trig;
 
-pub use gear_parameters::{derive_gear_twist_bounds, external_gear_bore_stock, GearBoreStock, ring_gear_bolt_stock, RingGearBoltStock};
+pub use gear_parameters::{derive_gear_twist_bounds, external_gear_bore_stock, GearBoreStock, ring_gear_bolt_stock, RingGearBoltStock, ring_gear_bolt_radius_window, BoltRadiusWindow};
 
 pub(crate) use gear_parameters::pi as certified_pi;
 

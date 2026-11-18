@@ -440,3 +440,17 @@ fn spinner_ring_bolt_circle_distinguishes_all_three_ligaments() {
     assert!(stock(1.5,40,0.1,38.,35.,4.,1).is_err());
     assert!(stock(1.5,40,0.1,38.,35.,f64::NAN,6).is_err());
 }
+
+#[test]
+fn ring_bolt_window_handles_both_lower_limits_and_empty_layouts() {
+    use involute::{BoltRadiusWindow::*, ring_gear_bolt_radius_window as window};
+    for holes in [6, 48] {
+        let Feasible([lo, hi]) = window(1.5,40,0.1,45.,4.,holes,1.).unwrap() else { panic!("expected feasible rim") };
+        let adjacent = 5. / (2. * (std::f64::consts::PI / holes as f64).sin());
+        let lower = 34.6_f64.max(adjacent);
+        assert!(lo >= lower && lo-lower < 1e-10 && hi <= 42. && 42.-hi < 1e-10);
+    }
+    assert_eq!(window(1.5,40,0.1,38.,4.,60,1.).unwrap(), Infeasible);
+    assert_eq!(window(1.,40,0.,25.,2.,6,1.).unwrap(), Unresolved);
+    assert!(window(1.,40,0.,40.,2.,6,-1.).is_err());
+}
