@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 652,
-  "unallocatedCount": 348,
+  "specifiedCount": 653,
+  "unallocatedCount": 347,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16055,6 +16055,25 @@
       "remainingQualification": [
         "Convert a principal-axis angular certificate into a sign-invariant interval projector.",
         "Check a rotated exact projector, direction sign invariance, a nonzero angular uncertainty and invalid certificate rejection.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0653",
+      "name": "Гарантированное расстояние от точки до главной оси инерции",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::bound_distance_to_principal_axis",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-653-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-653-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose point-to-axis distance from an interval anchor and a principal-direction certificate.",
+        "Check an uncertain anchor, sign reversal, an angular perturbation attaining the analytic upper bound, and invalid certificate rejection.",
         "WASM and application integration are separate."
       ]
     }

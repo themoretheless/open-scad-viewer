@@ -1500,6 +1500,34 @@ pub fn bound_principal_axis_projector(
     Ok(projector)
 }
 
+/// Enclose the distance from a point to a certified principal axis through
+/// a reference point enclosed by the three Cartesian anchor intervals.
+pub fn bound_distance_to_principal_axis(
+    certificate: PrincipalAxisCertificate,
+    anchor_bounds: [[f64; 2]; 3],
+    point: [f64; 3],
+) -> Result<[f64; 2]> {
+    check(
+        (0. ..=1.).contains(&certificate.sin_angle_upper),
+        "Principal axis sine bound must lie in [0, 1]",
+    )?;
+    let axis = InertiaAxis::new(certificate.direction)?;
+    let anchor = centroid_intervals(anchor_bounds)?;
+    let point = centroid_intervals(point.map(|coordinate| [coordinate; 2]))?;
+    let offset = crate::numerics::interval_vec3::sub(point, anchor)?;
+    let magnitude = norm(offset)?;
+    let approximate = norm(cross(offset, axis.components)?)?.div(plane_normal_length(&axis)?)?;
+
+    // The difference of the two perpendicular projectors has operator
+    // norm sin(angle). The reverse triangle inequality bounds the change
+    // in the length of the projected offset.
+    let error = magnitude.mul(Interval::point(certificate.sin_angle_upper))?.hi;
+    let distance = approximate
+        .add(Interval::new(-error, error)?)?
+        .intersect(0., magnitude.hi)?;
+    Ok([distance.lo, distance.hi])
+}
+
 /// Find and certify a direction for a selected principal moment. Candidate
 /// construction uses midpoint data, and certification uses the full intervals.
 pub fn find_certified_principal_axis(
