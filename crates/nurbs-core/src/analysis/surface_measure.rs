@@ -1088,15 +1088,62 @@ pub fn bound_mass_weighted_centroid(
     Ok(centroid.map(|axis| [axis.lo, axis.hi]))
 }
 
+/// Enclose the signed distance of the common center of mass from an
+/// oriented plane, specified by a point and a finite nonzero normal.
+pub fn bound_mass_weighted_centroid_plane_distance(
+    pieces: &[SurfaceAssemblyMassBounds],
+    plane_point: [f64; 3],
+    plane_normal: [f64; 3],
+) -> Result<[f64; 2]> {
+    check(
+        !pieces.is_empty(),
+        "Surface mass properties require at least one piece",
+    )?;
+    let axis = InertiaAxis::new(plane_normal)?;
+    let origin = centroid_intervals(plane_point.map(|value| [value; 2]))?;
+    let mut lower = Vec::with_capacity(pieces.len());
+    let mut upper = Vec::with_capacity(pieces.len());
+    for piece in pieces {
+        positive_piece_mass(piece)?;
+        let center = centroid_intervals(piece.centroid_bounds)?;
+        let mut projection = Interval::point(0.);
+        for (i, coefficient) in axis.components.into_iter().enumerate() {
+            if coefficient != Interval::point(0.) {
+                let offset = center[i].sub(origin[i])?;
+                projection = projection.add(offset.mul(coefficient)?)?;
+            }
+        }
+        lower.push((projection.lo, piece.mass_bounds));
+        upper.push((projection.hi, piece.mass_bounds));
+    }
+    let projection = Interval::new(
+        extremal_weighted_coordinate(&mut lower, false)?,
+        extremal_weighted_coordinate(&mut upper, true)?,
+    )?;
+    let norm = Interval::new(
+        axis.norm_squared.lo.sqrt().next_down(),
+        axis.norm_squared.hi.sqrt().next_up(),
+    )?;
+    let distance = projection.div(norm)?;
+    Ok([distance.lo, distance.hi])
+}
+
+fn positive_piece_mass(piece: &SurfaceAssemblyMassBounds) -> Result<Interval> {
+    let weight = Interval::new(piece.mass_bounds[0], piece.mass_bounds[1])?;
+    check(
+        weight.lo > 0.,
+        "Each surface piece must have strictly positive mass or area",
+    )?;
+    Ok(weight)
+}
+
 fn enclose_mass_weighted_centroid(
     pieces: &[SurfaceAssemblyMassBounds],
 ) -> Result<(Interval, [Interval; 3])> {
     check(!pieces.is_empty(), "Surface mass properties require at least one piece")?;
     let mut mass = Interval::point(0.);
     for piece in pieces {
-        let weight = Interval::new(piece.mass_bounds[0], piece.mass_bounds[1])?;
-        check(weight.lo > 0., "Each surface piece must have strictly positive mass or area")?;
-        mass = add_component_masses(mass, weight)?;
+        mass = add_component_masses(mass, positive_piece_mass(piece)?)?;
         centroid_intervals(piece.centroid_bounds)?;
     }
 
@@ -1109,15 +1156,15 @@ fn enclose_mass_weighted_centroid(
             endpoints.extend(pieces.iter().map(|piece| {
                 (piece.centroid_bounds[axis][side], piece.mass_bounds)
             }));
-            endpoints.sort_by(|a, b| a.0.total_cmp(&b.0));
-            *output = extremal_weighted_coordinate(&endpoints, side == 1)?;
+            *output = extremal_weighted_coordinate(&mut endpoints, side == 1)?;
         }
         *interval = Interval::new(bounds[0], bounds[1])?;
     }
     Ok((mass, centroid))
 }
 
-fn extremal_weighted_coordinate(endpoints: &[(f64, [f64; 2])], maximize: bool) -> Result<f64> {
+fn extremal_weighted_coordinate(endpoints: &mut [(f64, [f64; 2])], maximize: bool) -> Result<f64> {
+    endpoints.sort_by(|a, b| a.0.total_cmp(&b.0));
     let minimum = endpoints[0].0;
     let maximum = endpoints[endpoints.len() - 1].0;
     if minimum == maximum {
@@ -1125,7 +1172,7 @@ fn extremal_weighted_coordinate(endpoints: &[(f64, [f64; 2])], maximize: bool) -
     }
     let origin = Interval::point(crate::distance_bounds::midpoint(minimum, maximum));
     let mut samples = Vec::with_capacity(endpoints.len());
-    for &(position, weights) in endpoints {
+    for &(position, weights) in endpoints.iter() {
         samples.push((Interval::point(position).sub(origin)?, weights));
     }
 

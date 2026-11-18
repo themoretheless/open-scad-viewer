@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 636,
-  "unallocatedCount": 364,
+  "specifiedCount": 637,
+  "unallocatedCount": 363,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15733,6 +15733,25 @@
       "remainingQualification": [
         "Bound the centroid using sorted mass endpoint assignments with shared numerator and denominator weights.",
         "Compare against exhaustive interval-corner extrema, preserve one-piece bounds, and rerun density-weighted assembly regressions.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0637",
+      "name": "Гарантированное знаковое расстояние центра масс NURBS-сборки до плоскости",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::bound_mass_weighted_centroid_plane_distance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-637-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-637-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Project piece centers before weighted extremization to preserve cancellation across Cartesian axes.",
+        "Check oblique cancellation, subnormal and maximal normal scales, interval masses and positions, and invalid normal rejection.",
         "WASM and application integration are separate."
       ]
     }

@@ -7526,3 +7526,48 @@ fn weighted_centroid_handles_one_piece_and_rejects_unproved_mass() {
     assert!(bound_mass_weighted_centroid(&[piece]).is_err());
     assert!(bound_mass_weighted_centroid(&[]).is_err());
 }
+
+#[test]
+fn weighted_center_plane_distance_retains_cancellation_across_world_axes() {
+    use nurbs_core::analysis::surface_measure::{
+        SurfaceAssemblyMassBounds, bound_mass_weighted_centroid_plane_distance,
+    };
+    let pieces = [1., 10.].map(|x| SurfaceAssemblyMassBounds {
+        mass_bounds: [1., 9.],
+        centroid_bounds: [[x; 2], [x; 2], [0.; 2]],
+        central_inertia_bounds: [[[0.; 2]; 3]; 3],
+    });
+    for scale in [f64::from_bits(1), 1., f64::MAX] {
+        let [lo, hi] = bound_mass_weighted_centroid_plane_distance(
+            &pieces, [2., 0., 0.], [scale, -scale, 0.],
+        )
+        .unwrap();
+        let reference = -2_f64.sqrt();
+        assert!(lo <= reference && reference <= hi);
+        assert!(hi - lo < 1e-12);
+    }
+}
+
+#[test]
+fn weighted_center_plane_distance_brackets_uncertain_positions_and_masses() {
+    use nurbs_core::analysis::surface_measure::{
+        SurfaceAssemblyMassBounds, bound_mass_weighted_centroid_plane_distance,
+    };
+    let pieces = [([1., 2.], [2., 3.]), ([3., 4.], [10., 12.])].map(|(mass, x)| {
+        SurfaceAssemblyMassBounds {
+            mass_bounds: mass,
+            centroid_bounds: [x, [0.; 2], [5.; 2]],
+            central_inertia_bounds: [[[0.; 2]; 3]; 3],
+        }
+    });
+    let [lo, hi] =
+        bound_mass_weighted_centroid_plane_distance(&pieces, [5., 0., 0.], [-1., 0., 0.])
+            .unwrap();
+    let expected_lo = 5. - (3. + 4. * 12.) / 5.;
+    let expected_hi = 5. - (2. * 2. + 3. * 10.) / 5.;
+    assert!(lo <= expected_lo && expected_hi <= hi);
+    assert!((lo - expected_lo).abs() < 1e-12 && (hi - expected_hi).abs() < 1e-12);
+    assert!(
+        bound_mass_weighted_centroid_plane_distance(&pieces, [0.; 3], [0.; 3]).is_err()
+    );
+}
