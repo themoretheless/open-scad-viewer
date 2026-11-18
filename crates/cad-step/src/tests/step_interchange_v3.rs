@@ -3185,6 +3185,37 @@ fn shared_step_material_volume_accounts_for_scale_and_reflection() {
 }
 
 #[test]
+fn shared_step_batch_clearance_preserves_measurement_and_pair_budget() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let mut shifted = assembly.occurrences()[0].transform;
+    shifted[0][3] = 5.;
+    assembly.set_occurrence_placement(1, shifted).unwrap();
+    shifted[0][3] = 50.;
+    assembly.add_occurrence(0, shifted).unwrap();
+    let policy = shared_step_admission_policy();
+    let limits = brep_core::solid_distance::Limits {
+        validity: policy.geometry,
+        pairs: 100,
+        contact_pairs: 1000,
+        cells: 100_000,
+        domain_cells: 1_000_000,
+    };
+    let check = |minimum, max_pairs| assembly.check_clearances(
+        minimum, 1e-5, policy.tolerance_uv, limits, max_pairs,
+    );
+    assert!(check(2., 0).unwrap().is_empty());
+    assert!(check(4., 0).is_err());
+    assert!(check(f64::NAN, 1).is_err());
+    let checks = check(4., 1).unwrap();
+    assert_eq!(checks.len(), 1);
+    assert_eq!(checks[0].0, [0, 1]);
+    let report = checks[0].1.as_ref().unwrap();
+    assert_eq!(report.status, crate::StepClearanceStatus::BelowMinimum);
+    let [lo, hi] = report.measurement.distance_interval_mm.unwrap();
+    assert!(lo <= 3. && 3. <= hi);
+}
+
+#[test]
 fn shared_step_occurrence_clearance_distinguishes_separation_from_containment() {
     let mut assembly = shared_step_scaled_cube_pair();
     let mut shifted = assembly.occurrences()[0].transform;

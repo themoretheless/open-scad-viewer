@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 852,
-  "unallocatedCount": 148,
+  "specifiedCount": 853,
+  "unallocatedCount": 147,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19911,6 +19911,27 @@
       "remainingQualification": [
         "Compare placed authored B-rep volumes and retain bounded clearance, containment and source-face witnesses.",
         "Check a 3 mm separation with face witness, zero distance for an enclosed reflected occurrence and invalid pair refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0853",
+      "name": "Пакетная проверка минимального зазора STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::check_clearances",
+      "evidence": [
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-853-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-853-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Conservatively filter by box distance and classify checked pairs only when the measured interval supports a threshold verdict.",
+        "Check a 3 mm pair below a 4 mm minimum, conservative distant exclusion, preserved measurement and refusal before expensive work above the pair limit.",
         "WASM and application integration are separate."
       ]
     }

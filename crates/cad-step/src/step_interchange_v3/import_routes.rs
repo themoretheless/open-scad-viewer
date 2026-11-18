@@ -666,6 +666,19 @@ pub struct StepRayMaterialCoverage {
     pub possible: Vec<[f64; 2]>,
 }
 
+/// Classification against a caller-supplied minimum material clearance.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StepClearanceStatus {
+    BelowMinimum,
+    MeetsMinimum,
+    Unresolved,
+}
+
+pub struct StepClearanceCheck {
+    pub status: StepClearanceStatus,
+    pub measurement: brep_core::solid_distance::Report,
+}
+
 impl StepSharedAssembly {
     pub fn definitions(&self) -> &[Model] {
         &self.definitions
@@ -936,6 +949,40 @@ impl StepSharedAssembly {
         let first = self.materialize(pair[0])?;
         let second = self.materialize(pair[1])?;
         brep_core::solid_distance::distance(&first, &second, tolerance_mm, tolerance_uv, limits)
+    }
+
+    /// Check neighboring pairs against a minimum clearance in millimetres.
+    /// Pairs absent from the report are excluded conservatively by their boxes.
+    /// An unresolved measurement or pair error is retained, not treated as a pass.
+    pub fn check_clearances(
+        &self,
+        minimum_mm: f64,
+        tolerance_mm: f64,
+        tolerance_uv: f64,
+        limits: brep_core::solid_distance::Limits,
+        max_pairs: usize,
+    ) -> Result<Vec<([usize; 2], Result<StepClearanceCheck>)>> {
+        if !tolerance_mm.is_finite() || tolerance_mm <= 0.
+            || !tolerance_uv.is_finite() || tolerance_uv <= 0.
+        {
+            return Err(refuse("STEP clearance requires positive finite tolerances"));
+        }
+        let pairs = self.proximity_candidates(minimum_mm)?;
+        if pairs.len() > max_pairs {
+            return Err(refuse("STEP assembly clearance candidate budget exceeded"));
+        }
+        Ok(pairs.into_iter().map(|pair| {
+            let checked = self.occurrence_clearance(pair, tolerance_mm, tolerance_uv, limits)
+                .map(|measurement| {
+                    let status = match measurement.distance_interval_mm {
+                        Some([lower, _]) if lower >= minimum_mm => StepClearanceStatus::MeetsMinimum,
+                        Some([_, upper]) if upper < minimum_mm => StepClearanceStatus::BelowMinimum,
+                        _ => StepClearanceStatus::Unresolved,
+                    };
+                    StepClearanceCheck { status, measurement }
+                });
+            (pair, checked)
+        }).collect())
     }
 
     /// Check overlapping occurrence boxes for common material. Each result
