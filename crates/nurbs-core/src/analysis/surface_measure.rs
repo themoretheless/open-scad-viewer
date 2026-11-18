@@ -1237,6 +1237,43 @@ pub fn bound_assembly_couple_unbalance(
     })
 }
 
+/// Enclose equivalent radial unbalance vectors at two ordered axial offsets
+/// from the reference point. Corrections would use the opposite vectors.
+pub fn bound_assembly_two_plane_unbalance(
+    pieces: &[SurfaceAssemblyMassBounds],
+    point: [f64; 3],
+    direction: [f64; 3],
+    plane_offsets: [f64; 2],
+) -> Result<[[[f64; 2]; 3]; 2]> {
+    use crate::numerics::interval_vec3::{div, scale, sub};
+
+    let [first, second] = plane_offsets;
+    check(
+        first.is_finite() && second.is_finite() && first < second,
+        "Balance planes require finite increasing axial offsets",
+    )?;
+    let axis = InertiaAxis::new(direction)?;
+    let unit_axis = div(axis.components, plane_normal_length(&axis)?)?;
+    let static_vector =
+        bound_assembly_static_unbalance(pieces, point, direction)?.vector_bounds;
+    let couple_vector =
+        bound_assembly_couple_unbalance(pieces, point, direction)?.vector_bounds;
+    // If U is static unbalance and D its axial first moment, a pair of
+    // equivalent vectors satisfies U1 + U2 = U and a*U1 + b*U2 = D.
+    let static_vector = centroid_intervals(static_vector)?;
+    let axial_moment = cross(unit_axis, centroid_intervals(couple_vector)?)?;
+    let separation = Interval::point(second).sub(Interval::point(first))?;
+    let at_first = div(
+        sub(scale(static_vector, Interval::point(second))?, axial_moment)?,
+        separation,
+    )?;
+    let at_second = div(
+        sub(axial_moment, scale(static_vector, Interval::point(first))?)?,
+        separation,
+    )?;
+    Ok([at_first, at_second].map(|vector| vector.map(|value| [value.lo, value.hi])))
+}
+
 /// Enclose the perpendicular distance from the common center of mass to an
 /// axis, then compare the entire enclosure with the allowed eccentricity.
 pub fn bound_assembly_balance_about_line(

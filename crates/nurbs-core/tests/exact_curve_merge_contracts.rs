@@ -8071,3 +8071,51 @@ fn weighted_trim_couple_unbalance_encloses_analytic_products_of_inertia() {
     let expected = exact[0].hypot(exact[1]);
     assert!(lo <= expected && expected <= hi);
 }
+
+#[test]
+fn two_plane_balance_recovers_separated_radial_unbalance_vectors() {
+    use nurbs_core::analysis::surface_measure::{
+        SurfaceAssemblyMassBounds, bound_assembly_two_plane_unbalance,
+    };
+    let pieces = [([-1., 2., -2.], 2.), ([3., -1., 4.], 3.)].map(|(center, mass)| {
+        SurfaceAssemblyMassBounds {
+            mass_bounds: [mass; 2],
+            centroid_bounds: center.map(|value| [value; 2]),
+            central_inertia_bounds: [[[0.; 2]; 3]; 3],
+        }
+    });
+    for (direction, offsets, exact) in [
+        ([0., 0., 2.], [-2., 4.], [[-2., 4., 0.], [9., -3., 0.]]),
+        ([0., 0., -2.], [-4., 2.], [[9., -3., 0.], [-2., 4., 0.]]),
+    ] {
+        let result = bound_assembly_two_plane_unbalance(&pieces, [0.; 3], direction, offsets)
+            .unwrap();
+        for (plane, expected) in result.into_iter().zip(exact) {
+            for ([lo, hi], reference) in plane.into_iter().zip(expected) {
+                assert!(lo <= reference && reference <= hi && hi - lo < 1e-12);
+            }
+        }
+    }
+}
+
+#[test]
+fn two_plane_balance_splits_midplane_mass_and_rejects_coincident_planes() {
+    use nurbs_core::analysis::surface_measure::{
+        SurfaceAssemblyMassBounds, bound_assembly_two_plane_unbalance,
+    };
+    let piece = SurfaceAssemblyMassBounds {
+        mass_bounds: [1., 2.],
+        centroid_bounds: [[2.; 2], [0.; 2], [1.; 2]],
+        central_inertia_bounds: [[[0.; 2]; 3]; 3],
+    };
+    let direction = [0., 0., 1.];
+    let bounds =
+        bound_assembly_two_plane_unbalance(&[piece], [0., 0., 1.], direction, [-1., 1.]).unwrap();
+    for plane in bounds {
+        assert!(plane[0][0] <= 1. && plane[0][0] > 1. - 1e-12);
+        assert!(plane[0][1] >= 2. && plane[0][1] < 2. + 1e-12);
+    }
+    assert!(
+        bound_assembly_two_plane_unbalance(&[piece], [0.; 3], direction, [1.; 2]).is_err()
+    );
+}

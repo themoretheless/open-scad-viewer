@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 662,
-  "unallocatedCount": 338,
+  "specifiedCount": 663,
+  "unallocatedCount": 337,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16256,6 +16256,25 @@
         "Return opt-in couple unbalance about the requested axis and axial reference point.",
         "Check weighted analytic vector and magnitude, reversal and axial reference translation, validation and incomplete coverage through the compiled ABI.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0663",
+      "name": "Гарантированное разложение дисбаланса NURBS-сборки по двум плоскостям",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::bound_assembly_two_plane_unbalance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-663-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-663-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose two equivalent radial vectors preserving static and axial first moments.",
+        "Check signed radial vector recovery, reversed axis and plane order, split midplane interval mass, and rejection of coincident correction planes.",
+        "WASM and application integration are separate."
       ]
     }
   ],

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0663",
+  "testedBase": "a7b32da85881d2240455434e937559408754ac8e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 262,
+  "scope": [
+    "Enclose two equivalent radial vectors preserving static and axial first moments.",
+    "Check signed radial vector recovery, reversed axis and plane order, split midplane interval mass, and rejection of coincident correction planes."
+  ],
+  "logSha256": "d07e9e0ddcf396398f5b94cdfa0ff6989020c824f6da21e22ebe00716115e5ae",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "c059d77e4643f852ac1971a3b69552011a75deac32f1079530ab30c1075e8842",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "819182ef0c9386e22f940adb8e07500e4c5df4602278d130127c8c79467da73c"
+  }
+}
