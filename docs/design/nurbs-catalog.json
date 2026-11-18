@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 767,
-  "unallocatedCount": 233,
+  "specifiedCount": 768,
+  "unallocatedCount": 232,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18265,6 +18265,25 @@
       "remainingQualification": [
         "Certify obstacle separation under a piecewise linear rounding radius and synchronized planar rational motion.",
         "Check an interior radius peak, independent orientation knots, shared work budget and duplicate profile parameter rejection.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0768",
+      "name": "Проверка вращающегося инструмента с переменным скруглением в рабочей области",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_workspace",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-768-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-768-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose workspace plane residuals for planar rotation and a piecewise linear rounding radius.",
+        "Check workspace overtravel at the combined radius and orientation peak, nonunit residual scale and shared grid budget.",
         "WASM and application integration are separate."
       ]
     }

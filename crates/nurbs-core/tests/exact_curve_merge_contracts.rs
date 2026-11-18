@@ -11909,3 +11909,35 @@ fn rotating_profiled_hull_obstacle_clearance_splits_at_radius_peaks() {
     }));
     assert!(partition(&[(0., 0.), (0., 1.)], 255).is_err());
 }
+
+#[test]
+fn rotating_profiled_hull_workspace_certifies_overtravel_at_a_radius_peak() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_profiled_hull_workspace,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![0., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        ..position.clone()
+    };
+    let planes = [WorkspaceHalfSpace { normal: &[2., 0.], offset: 4.5 }];
+    let profile = [(0., 0.), (0.5, 1.), (1., 0.)];
+    let partition = |budget| partition_planar_rotating_profiled_hull_workspace(
+        &position, &direction, &profile, &planes, &[&[2., 0.]], 0.005, budget,
+    );
+    assert!(partition(1).is_err());
+    let report = partition(255).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().any(|cell| {
+        let [lo, hi] = cell.plane_residuals[0];
+        cell.parameter_interval[0] == 0.5 && cell.status == Status::Exceeds && lo <= 1.5 && hi >= 1.5
+    }));
+}

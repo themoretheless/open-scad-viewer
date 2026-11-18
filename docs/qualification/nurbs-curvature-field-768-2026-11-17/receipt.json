@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0768",
+  "testedBase": "85a268b1b3687eb139126f3b4b454c2cb9278ed6",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 394,
+  "scope": [
+    "Enclose workspace plane residuals for planar rotation and a piecewise linear rounding radius.",
+    "Check workspace overtravel at the combined radius and orientation peak, nonunit residual scale and shared grid budget."
+  ],
+  "logSha256": "959944ff68335634b5bf70a9058a91f8579c3874d0865345e2fb332af8de5543",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "0671ba278fd5df9a883edda9667b3e8daed57c1e17d970f72fbddb9959a6baf7",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "f2d437d0e067aa908221f3514b896f98699f44e244c5bc2da481d1b8ad8c3e7f"
+  }
+}

@@ -2121,6 +2121,86 @@ pub fn partition_planar_rotating_hull_workspace(
     })
 }
 
+/// Classify workspace containment for a rotating planar convex hull
+/// expanded by a disk with piecewise-linear radius. The radius profile
+/// defines the checked parameter window.
+pub fn partition_planar_rotating_profiled_hull_workspace(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    planes: &[WorkspaceHalfSpace<'_>],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspacePartition> {
+    validate(parameter_tolerance, max_plane_cells)?;
+    check(!planes.is_empty() && !vertex_offsets.is_empty(), "Workspace requires planes and hull vertices")?;
+    let max_cells = (max_plane_cells / planes.len())
+        .min(1_000_000 / vertex_offsets.len() / planes.len());
+    let (initial, profiles) = prepare_planar_rotation_profile(position, direction, radius_profile, max_cells)?;
+    let offsets = prepare_workspace_hull(position, vertex_offsets, planes.len())?;
+    let planes = prepare_workspace_planes(planes, 2)?.into_iter().map(|(normal, offset)| {
+        let length = norm(&normal)?;
+        Ok((normal, offset, length))
+    }).collect::<Result<Vec<_>>>()?;
+    let (cells, work_cells) = partition_enclosed_cells(
+        initial, parameter_tolerance, max_cells,
+        |[span, direction_span, profile], domain| {
+            let point = curve_jets::enclose(position, span, domain)?;
+            let axis = curve_jets::enclose(direction, direction_span, domain)?;
+            let (rotation, regular) = planar_rotation(&axis[0])?;
+            let radius = profiles[profile](domain)?;
+            let plane_residuals = planes.iter().map(|(normal, offset, length)| {
+                let support = rotating_hull_support(&offsets, normal, rotation)?;
+                let residual = project_jet(&point[0], normal)?.sub(*offset)?
+                    .add(support)?.add(length.mul(radius)?)?;
+                Ok([residual.lo, residual.hi])
+            }).collect::<Result<Vec<_>>>()?;
+            let status = if regular {
+                workspace_residual_status(&plane_residuals)
+            } else {
+                DirectionalMotionStatus::Undetermined
+            };
+            Ok((WorkspaceCell {
+                parameter_interval: domain, span, plane_residuals, status,
+            }, status == DirectionalMotionStatus::Undetermined))
+        },
+    )?;
+    Ok(WorkspacePartition {
+        cells: cells.into_iter().map(|(_, _, cell)| cell).collect(),
+        work_plane_cells: work_cells * planes.len(),
+    })
+}
+
+fn prepare_planar_rotation_profile(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    max_cells: usize,
+) -> Result<(Vec<([usize; 3], [f64; 2])>, Vec<impl Fn([f64; 2]) -> Result<Interval>>)> {
+    let (_, profiles) = prepare_radius_profile(position, radius_profile, max_cells)?;
+    let interval = [radius_profile[0].0, radius_profile[radius_profile.len() - 1].0];
+    let (_, synchronized) = synchronized_clearance_cells([position, direction], interval, [0.; 2])?;
+    check(position.control_points[0].len() == 2, "Rotating hull clearance requires planar curves")?;
+    let mut initial = Vec::new();
+    let mut profile = 0;
+    for ([span, direction_span], [mut start, end]) in synchronized {
+        while start < end {
+            if initial.len() == max_cells {
+                return Err(resource("Clearance budget must cover the combined motion and radius spans"));
+            }
+            let profile_end = radius_profile[profile + 1].0;
+            let cell_end = end.min(profile_end);
+            initial.push(([span, direction_span, profile], [start, cell_end]));
+            start = cell_end;
+            if start == profile_end {
+                profile += 1;
+            }
+        }
+    }
+    Ok((initial, profiles))
+}
+
 fn planar_rotation(axis: &[Interval]) -> Result<([Interval; 2], bool)> {
     let length = norm(axis)?;
     if length.lo <= 0. {
@@ -2504,10 +2584,7 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_clearance(
     }
     let pairs = plane_count * vertex_offsets.len();
     let max_cells = max_vertex_plane_cells / pairs;
-    let (_, profiles) = prepare_radius_profile(position, radius_profile, max_cells)?;
-    let interval = [radius_profile[0].0, radius_profile[radius_profile.len() - 1].0];
-    let (_, synchronized) = synchronized_clearance_cells([position, direction], interval, [0.; 2])?;
-    check(position.control_points[0].len() == 2, "Rotating hull clearance requires planar curves")?;
+    let (initial, profiles) = prepare_planar_rotation_profile(position, direction, radius_profile, max_cells)?;
     let vertices = prepare_workspace_hull(position, vertex_offsets, plane_count)?;
     let has_rounding = radius_profile.iter().any(|&(_, radius)| radius > 0.);
     let obstacles = obstacles.iter().map(|planes| {
@@ -2517,22 +2594,6 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_clearance(
         }).collect::<Result<Vec<_>>>()
     }).collect::<Result<Vec<_>>>()?;
 
-    let mut initial = Vec::new();
-    let mut profile = 0;
-    for ([span, direction_span], [mut start, end]) in synchronized {
-        while start < end {
-            if initial.len() == max_cells {
-                return Err(resource("Clearance budget must cover the combined motion and radius spans"));
-            }
-            let profile_end = radius_profile[profile + 1].0;
-            let cell_end = end.min(profile_end);
-            initial.push(([span, direction_span, profile], [start, cell_end]));
-            start = cell_end;
-            if start == profile_end {
-                profile += 1;
-            }
-        }
-    }
     let (cells, work_cells) = partition_enclosed_cells(
         initial, parameter_tolerance, max_cells,
         |[span, direction_span, profile], domain| {
