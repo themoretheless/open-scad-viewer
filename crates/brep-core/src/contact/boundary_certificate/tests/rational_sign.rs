@@ -672,10 +672,11 @@ fn check_reversed_multispan_exterior(reference: &crate::Model, shared: usize) {
     let (contact, used) = certify(&refined, [0, 4], 3000);
     assert_eq!(contact.unwrap().edges, [shared]);
     assert!(certify(&refined, [0, 4], used - 1).0.is_none());
-    check_trimmed_exterior(reference, shared, edge);
+    check_trimmed_chart_segments(reference, shared, &[edge]);
+    check_trimmed_chart_segments(reference, shared, &[edge, shared]);
 }
 
-fn check_trimmed_exterior(reference: &crate::Model, shared: usize, edge: usize) {
+fn check_trimmed_chart_segments(reference: &crate::Model, shared: usize, edges: &[usize]) {
     let mut model = reference.clone();
     // The active interval [1, 2] is asymmetric inside [0, 4].
     let extend = |c: &crate::Curve| {
@@ -691,13 +692,13 @@ fn check_trimmed_exterior(reference: &crate::Model, shared: usize, edge: usize) 
             periodic: false,
         }
     };
-    let curve_parameter = model.edges[edge].curve.domain();
     let faces = model.faces.clone();
     for face in faces {
         for c in &mut model.0.loops[face.outer].coedges {
-            if c.edge != edge {
+            if !edges.contains(&c.edge) {
                 continue;
             }
+            let curve_parameter = model.0.edges[c.edge].curve.domain();
             c.pcurve = extend(&c.pcurve);
             *c = c.clone().with_trim(brep_topology::CoedgeTrim {
                 curve_parameter,
@@ -713,6 +714,14 @@ fn check_trimmed_exterior(reference: &crate::Model, shared: usize, edge: usize) 
     let (contact, used) = certify(&model, [0, 4], 4000);
     assert_eq!(contact.unwrap().edges, [shared]);
     assert!(certify(&model, [0, 4], used - 1).0.is_none());
+    if edges.contains(&shared) {
+        let outer = model.faces[0].outer;
+        let c = model.0.loops[outer].coedges.iter_mut().find(|c| c.edge == shared).unwrap();
+        let mut trim = c.trim().unwrap();
+        trim.curve_parameter[1] = (trim.curve_parameter[0] + trim.curve_parameter[1]) / 2.;
+        *c = c.clone().with_trim(trim).unwrap();
+        assert!(certify(&model, [0, 4], 4000).0.is_none());
+    }
 
 }
 

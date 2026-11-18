@@ -86,6 +86,15 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
     if wires.iter().any(|w| !(4..=128).contains(&w.len())) {
         return None;
     }
+    // Trim diagnostics may select a proper world subinterval. The
+    // partition uses complete topology edges on both sides of the seam.
+    for c in wires.into_iter().flatten() {
+        if c.trim()
+            .is_some_and(|trim| trim.curve_parameter != model.edges[c.edge].curve.domain())
+        {
+            return None;
+        }
+    }
     let (starts, edges) = shared_chain(wires, cells, limit)?;
     for patch in patches {
         interior_holes(model, &patch.surface, &patch.holes, cells, limit)?;
@@ -203,11 +212,7 @@ fn shared_chain(
     for offset in 0..count {
         let left = &wires[0][(a + offset) % wires[0].len()];
         let right = &wires[1][(b + count - 1 - offset) % wires[1].len()];
-        if left.edge != right.edge
-            || left.reversed == right.reversed
-            || left.trim().is_some()
-            || right.trim().is_some()
-            || edges.contains(&left.edge)
+        if left.edge != right.edge || left.reversed == right.reversed || edges.contains(&left.edge)
         {
             return None;
         }
@@ -347,13 +352,6 @@ fn projected_exterior(
             charge(cells, limit, 1)?;
             let c = &wire[(start + offset) % wire.len()];
             let source = &model.edges[c.edge].curve;
-            // A partial world interval is a diagnostic window and does
-            // not establish the full topology edge used by this proof.
-            if c.trim()
-                .is_some_and(|t| t.curve_parameter != source.domain())
-            {
-                return None;
-            }
             exterior.push(projected_member(
                 source, c.reversed, projection, cells, limit,
             )?);
