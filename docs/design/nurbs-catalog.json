@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 993,
-  "unallocatedCount": 7,
+  "specifiedCount": 994,
+  "unallocatedCount": 6,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22548,6 +22548,25 @@
       ],
       "remainingQualification": [
         "Point weights with negligible intrinsic inertia in world coordinates. Exact and rounded correction masses checked against OCCT aggregate mass properties and residual corrections."
+      ]
+    },
+    {
+      "id": "NURBS-0994",
+      "name": "Объединение масс и центральных тензоров NURBS-подсборок с учётом собственной инерции деталей",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::analysis::AssemblyMass::combined_with",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/analysis/mechanics.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-assembly-composite-inertia-994-2026-11-19/verify.py",
+        "docs/qualification/nurbs-assembly-composite-inertia-994-2026-11-19/occt.log",
+        "docs/qualification/nurbs-assembly-composite-inertia-994-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-assembly-composite-inertia-994-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Positive finite masses with central tensors in a common world frame. Independent OCCT bearing moment and complete assembly tensor checked for offset finite-size bodies."
       ]
     }
   ],

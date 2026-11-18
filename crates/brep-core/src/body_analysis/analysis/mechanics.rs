@@ -167,6 +167,24 @@ impl AssemblyMass {
         })
     }
 
+    /// Combine two extended bodies or subassemblies in the same world frame.
+    /// Both inertia tensors are central and expressed along the world axes.
+    pub fn combined_with(&self, other: &Self) -> Result<Self> {
+        if other.mass <= 0. {
+            return Err(indeterminate("Expected positive mass for the added body"));
+        }
+        let mut combined = self.with_point_mass(other.centroid, other.mass)?;
+        for (row, addition) in combined.inertia.iter_mut().zip(other.inertia) {
+            for (value, term) in row.iter_mut().zip(addition) {
+                *value += term;
+                if !value.is_finite() {
+                    return Err(indeterminate("Non-finite composite inertia"));
+                }
+            }
+        }
+        Ok(combined)
+    }
+
     /// Mass moment in kg mm² for a world-space axis when mass is in kg
     /// and positions are in mm. Axis direction need not be normalized.
     pub fn moment_about_axis(&self, point: [f64; 3], direction: [f64; 3]) -> Result<f64> {

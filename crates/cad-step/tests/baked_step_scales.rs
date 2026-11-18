@@ -477,6 +477,45 @@ fn branch_motion_moves_two_linked_parts_and_preserves_external_sibling() {
         mass.two_plane_balance_corrections([0.; 3], [1., 0., 0.], [1., 1.])
             .is_err()
     );
+    let counterweight = cad_step::step_branch_mass_properties(
+        &result,
+        &["Drive", "Bracket"],
+        1e-8,
+        100_000,
+        |_, _| Ok(0.003),
+    )
+    .unwrap();
+    let complete =
+        cad_step::step_branch_mass_properties(&result, &["Drive"], 1e-8, 100_000, |path, part| {
+            Ok(if path.len() == 2 {
+                0.003
+            } else if part.transform[1][3] == 5. {
+                0.001
+            } else {
+                0.002
+            })
+        })
+        .unwrap();
+    for fitted in [
+        mass.combined_with(&counterweight).unwrap(),
+        counterweight.combined_with(&mass).unwrap(),
+    ] {
+        assert!((fitted.mass - complete.mass).abs() < 1e-12);
+        for i in 0..3 {
+            assert!((fitted.centroid[i] - complete.centroid[i]).abs() < 1e-9);
+            for j in 0..3 {
+                assert!((fitted.inertia[i][j] - complete.inertia[i][j]).abs() < 1e-9);
+            }
+        }
+        assert!(
+            (fitted
+                .moment_about_axis([5., 4., 0.], [0., 0., 1.])
+                .unwrap()
+                - 41.808)
+                .abs()
+                < 1e-9
+        );
+    }
     let bearing = mass.moment_about_axis([5., 4., 0.], [0., 0., -2.]).unwrap();
     assert!((bearing - 4.128).abs() < 1e-9);
     // Rotated box sides in world coordinates are 4, 2, 6 mm. The two
