@@ -100,8 +100,15 @@ describe('exact solids from source', () => {
     const definitions = step.match(/=MANIFOLD_SOLID_BREP\(/g)?.length ?? 0
     const occurrences = step.match(/=NEXT_ASSEMBLY_USAGE_OCCURRENCE\(/g)?.length ?? 0
     expect(occurrences).toBe(20)
-    expect(definitions).toBeGreaterThanOrEqual(3)
-    expect(definitions).toBeLessThanOrEqual(occurrences)
+    expect(definitions).toBe(3)
+    const prototype = bodies[2]
+    for (const planet of bodies.slice(3)) {
+      expect(planet.instance?.sourceId).toBe(prototype.id)
+      const matrix = planet.instance!.matrix
+      const point = prototype.brep!.vertices[0].point
+      const placed = matrix.slice(0, 3).map(row => row[3] + point.reduce((sum, x, i) => sum + x * row[i], 0))
+      placed.forEach((x, i) => expect(x).toBeCloseTo(planet.brep!.vertices[0].point[i], 9))
+    }
     console.info('Rush spinner STEP', { definitions, occurrences, bytes: Buffer.byteLength(step) })
   }, 600000)
 
