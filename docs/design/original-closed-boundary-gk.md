@@ -240,3 +240,7 @@ containment on all smaller hulls. The exact domain audit verifies each
 hole's lift, winding and nesting. Strict containment keeps each hole
 away from the shared natural boundary. Control point checks and exact
 subdivision share the contact proof's budget.
+For a Bézier segment, subdivision can work directly on the exact
+homogeneous Bernstein coefficients of the four boundary inequalities.
+This proves strict positivity on each piece even when its Cartesian
+control points cannot be stored exactly in binary64.
