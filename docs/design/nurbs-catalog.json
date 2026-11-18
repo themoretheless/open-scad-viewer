@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 879,
-  "unallocatedCount": 121,
+  "specifiedCount": 880,
+  "unallocatedCount": 120,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20393,6 +20393,24 @@
       ],
       "remainingQualification": [
         "External standard spur involutes only. The measurement circle must be certified within the active flank."
+      ]
+    },
+    {
+      "id": "NURBS-0880",
+      "name": "Окружной боковой зазор пары на рабочих делительных окружностях",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::mounted_spur_backlash_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-880-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-880-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "External spur pairs only. Both working pitch radii must lie on their active involutes. Off-pitch interference is separate."
       ]
     }
   ],

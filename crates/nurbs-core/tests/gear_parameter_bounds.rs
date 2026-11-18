@@ -254,3 +254,22 @@ fn caliper_uncertainty_encloses_pitch_circle_tooth_thinning() {
         assert!(infer(2., 20, 20., 0.5, 20., invalid).is_err());
     }
 }
+
+#[test]
+fn mounting_backlash_matches_reference_and_working_circle_equations() {
+    use involute::mounted_spur_backlash_bounds as gap;
+    let a = 20_f64.to_radians();
+    for d in [29.8, 30., 30.3] {
+        let w = (30. * a.cos() / d).acos();
+        for allowances in [[0., 0.], [0.125, 0.25]] {
+            let expected = d / 30. * (allowances[0] + allowances[1])
+                + 2. * d * ((w.tan() - w) - (a.tan() - a));
+            let bound = gap(1., [20, 40], 20., allowances, d).unwrap();
+            contains(bound, expected);
+            assert!(bound[1] - bound[0] < 1e-9);
+        }
+    }
+    assert!(gap(1., [20, 40], 20., [0.; 2], 29.8).unwrap()[1] < 0.);
+    assert!(gap(1., [20, 40], 20., [0.; 2], 40.).is_err());
+    assert!(gap(1., [usize::MAX, 40], 20., [0.; 2], 30.).is_err());
+}

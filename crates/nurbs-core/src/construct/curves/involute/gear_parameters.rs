@@ -394,7 +394,7 @@ pub fn spur_tooth_chord_bounds(
 ) -> Result<ToothChordBounds> {
     let gear =
         derive_gear_parameter_bounds(module, teeth, pressure_degrees, clearance, backlash, false)?;
-    let angle = flank_half_angle(&gear, radius)?;
+    let angle = flank_half_angle(&gear, I::new(radius, radius)?)?;
     let r = I::point(radius);
     let (sin, cos) = trig(angle)?;
     let tip = I::new(gear.tip_radius[0], gear.tip_radius[1])?;
@@ -404,14 +404,11 @@ pub fn spur_tooth_chord_bounds(
     })
 }
 
-fn flank_half_angle(gear: &GearParameterBounds, radius: f64) -> Result<I> {
+fn flank_half_angle(gear: &GearParameterBounds, r: I) -> Result<I> {
     check(
-        radius.is_finite()
-            && radius >= gear.root_radius[1].max(gear.base_radius[1])
-            && radius <= gear.tip_radius[0],
+        r.lo >= gear.root_radius[1].max(gear.base_radius[1]) && r.hi <= gear.tip_radius[0],
         "Measurement circle must lie on the active involute",
     )?;
-    let r = I::point(radius);
     let base = I::new(gear.base_radius[0], gear.base_radius[1])?;
     let ratio = r.div(base)?;
     let roll = sqrt_positive(ratio.mul(ratio)?.sub(I::point(1.))?)?;
@@ -434,7 +431,7 @@ pub fn spur_tooth_thinning_bounds(
     measured_chord: [f64; 2],
 ) -> Result<[f64; 2]> {
     let gear = derive_gear_parameter_bounds(module, teeth, pressure_degrees, clearance, 0., false)?;
-    let nominal = flank_half_angle(&gear, radius)?;
+    let nominal = flank_half_angle(&gear, I::new(radius, radius)?)?;
     let chord = I::new(measured_chord[0], measured_chord[1])?;
     check(
         chord.lo > 0. && chord.hi < 2. * radius,
@@ -456,4 +453,43 @@ pub fn spur_tooth_thinning_bounds(
         allowance.lo.max(0.),
         allowance.hi.min(module / 2.),
     )?))
+}
+
+/// Signed transverse circular backlash of a nominal external spur pair at its
+/// working pitch point. Each thinning is specified on its reference pitch
+/// circle. Negative values indicate angular overlap at the pitch point.
+/// Root clearance is a quarter module; off-pitch interference is separate.
+pub fn mounted_spur_backlash_bounds(
+    module: f64,
+    teeth: [usize; 2],
+    pressure_degrees: f64,
+    thinning: [f64; 2],
+    centre_distance: f64,
+) -> Result<[f64; 2]> {
+    check(
+        centre_distance.is_finite() && centre_distance > 0.,
+        "Expected positive finite centre distance",
+    )?;
+    let mut widths = I::point(0.);
+    let count = I::point(teeth[0] as f64).add(I::point(teeth[1] as f64))?;
+    for i in 0..2 {
+        let gear = derive_gear_parameter_bounds(
+            module,
+            teeth[i],
+            pressure_degrees,
+            module / 4.,
+            thinning[i],
+            false,
+        )?;
+        let radius = I::point(centre_distance)
+            .mul(I::point(teeth[i] as f64))?
+            .div(count)?;
+        let half_angle = flank_half_angle(&gear, radius)?;
+        widths = widths.add(radius.mul(half_angle)?.mul(I::point(2.))?)?;
+    }
+    let pitch = pi()?
+        .mul(I::point(2.))?
+        .mul(I::point(centre_distance))?
+        .div(count)?;
+    Ok(pair(pitch.sub(widths)?))
 }
