@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 643,
-  "unallocatedCount": 357,
+  "specifiedCount": 644,
+  "unallocatedCount": 356,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15876,6 +15876,27 @@
       "remainingQualification": [
         "Expose ordered enclosures for the eigenvalues of the density-weighted central tensor and report whether the requested tolerance was met.",
         "Check analytic ordered moments of a weighted nested island, tolerance status and incomplete integration through the compiled ABI.",
+        "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0644",
+      "name": "Радиус инерции разноплотной NURBS-сборки вокруг заданной оси через WASM",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
+      "evidence": [
+        "crates/geometry-bridge/src/brep/nurbs.rs",
+        "crates/geometry-bridge/src/dispatch/brep.rs",
+        "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
+        "scripts/check-exact-periodic-trim-sheet-abi.mts",
+        "docs/qualification/nurbs-curvature-field-644-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-644-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Return an opt-in radius of gyration interval using the weighted mass and fixed-axis moment.",
+        "Check the radius against a weighted analytic reference and verify selected fields, required axis and missing coverage through the compiled ABI.",
         "Editor and production delivery qualification remain."
       ]
     }

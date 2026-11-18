@@ -976,3 +976,26 @@ fn patch_set_density_encloses_weighted_principal_moments() {
     request["momentToleranceKgMm2"] = json!(0.);
     assert_eq!(run(&request)["ok"], false);
 }
+
+#[test]
+fn patch_set_density_returns_radius_of_gyration_from_weighted_mass_and_moment() {
+    let mut request = patch_set_density_request(20_000);
+    request["includeAxisRadiusOfGyration"] = json!(true);
+    assert_eq!(run(&request)["ok"], false);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 5.], "direction": [0., 0., 1.]});
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    let mass: f64 = 2.875;
+    let moment = 2. * 83. / 768. + 6. * 49. / 12288. - 2. * 0.34375 + mass;
+    let radius = (moment / mass).sqrt();
+    let interval = &report["axisRadiusOfGyrationBoundsMm"];
+    assert!(interval[0].as_f64().unwrap() <= radius && radius <= interval[1].as_f64().unwrap());
+    request["maxSurfaceCells"] = json!(2);
+    let incomplete = run(&request);
+    assert_eq!(incomplete["ok"], true, "{incomplete}");
+    assert_eq!(
+        incomplete["value"].get("axisRadiusOfGyrationBoundsMm"),
+        Some(&Value::Null)
+    );
+}

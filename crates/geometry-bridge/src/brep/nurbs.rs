@@ -1291,14 +1291,7 @@ pub fn exact_periodic_trim_patch_set_mass_request(
         .transpose()?;
     let reference_point = optional_inertia_reference_point(request)?;
     let inertia_axis = optional_inertia_axis(request)?;
-    let include_axis_radius = request
-        .get("includeAxisRadiusOfGyration")
-        .map(|_| field::<bool>(request, "includeAxisRadiusOfGyration"))
-        .transpose()?
-        .unwrap_or(false);
-    if include_axis_radius && inertia_axis.is_none() {
-        return Err(input("Radius of gyration requires an inertia axis"));
-    }
+    let include_axis_radius = include_axis_radius(request, inertia_axis.is_some())?;
     validate_trimmed_patch_set_limits(tolerance, tolerance_uv, max_surface, max_trim)?;
     let contours = contours.iter().map(Vec::as_slice).collect::<Vec<_>>();
     let build = build_exact_periodic_surface_trim_patches(&source, &contours, max_work)?;
@@ -1376,6 +1369,18 @@ fn optional_inertia_reference_point(request: &value_codec::Value) -> Result<Opti
         .transpose()
 }
 
+fn include_axis_radius(request: &value_codec::Value, has_axis: bool) -> Result<bool> {
+    let include = request
+        .get("includeAxisRadiusOfGyration")
+        .map(|_| crate::field::<bool>(request, "includeAxisRadiusOfGyration"))
+        .transpose()?
+        .unwrap_or(false);
+    if include && !has_axis {
+        return Err(input("Radius of gyration requires an inertia axis"));
+    }
+    Ok(include)
+}
+
 fn optional_inertia_axis(request: &value_codec::Value) -> Result<Option<([f64; 3], [f64; 3])>> {
     use crate::field;
     request
@@ -1441,7 +1446,9 @@ pub fn exact_periodic_trim_patch_set_density_request(
 ) -> Result<value_codec::Value> {
     use crate::field;
     use nurbs_core::{
-        analysis::surface_measure::periodic_trim_patch_set_mass_with_density,
+        analysis::surface_measure::{
+            bound_radius_of_gyration, periodic_trim_patch_set_mass_with_density,
+        },
         editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
     };
     use std::collections::BTreeMap;
@@ -1467,6 +1474,7 @@ pub fn exact_periodic_trim_patch_set_density_request(
         })
         .transpose()?;
     let inertia_axis = optional_inertia_axis(request)?;
+    let include_axis_radius = include_axis_radius(request, inertia_axis.is_some())?;
     let center_plane = request
         .get("centerOfMassPlane")
         .map(|plane| -> Result<_> {
@@ -1519,6 +1527,9 @@ pub fn exact_periodic_trim_patch_set_density_request(
         response["principalMomentBoundsKgMm2"] = Value::Null;
         response["withinMomentTolerance"] = json!(false);
     }
+    if include_axis_radius {
+        response["axisRadiusOfGyrationBoundsMm"] = Value::Null;
+    }
     let Some(patches) = build.patches else {
         return Ok(response);
     };
@@ -1549,7 +1560,16 @@ pub fn exact_periodic_trim_patch_set_density_request(
             json!(report.center_of_mass_plane_distance(point, normal)?);
     }
     if let Some((point, direction)) = inertia_axis {
-        response["axisMomentBoundsKgMm2"] = json!(report.bound_inertia_about_line(point, direction)?);
+        let moment = report.bound_inertia_about_line(point, direction)?;
+        response["axisMomentBoundsKgMm2"] = json!(moment);
+        if include_axis_radius
+            && let Some(moment) = moment
+            && let Some(mass) = report.total_mass_bounds
+            && mass[0] > 0.
+        {
+            response["axisRadiusOfGyrationBoundsMm"] =
+                json!(bound_radius_of_gyration(moment, mass)?);
+        }
     }
     if let Some(point) = reference_point {
         response["referenceInertiaBoundsKgMm2"] = json!(report.bound_inertia_about_point(point)?);

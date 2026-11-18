@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0644",
+  "testedBase": "56c9320fc2ad71c691c1c6286b1db7bd38389ded",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 284,
+  "scope": [
+    "Return an opt-in radius of gyration interval using the weighted mass and fixed-axis moment.",
+    "Check the radius against a weighted analytic reference and verify selected fields, required axis and missing coverage through the compiled ABI."
+  ],
+  "logSha256": "fdac07ee5a0c18d8ac014ba9755210bb6982ce71e55c3745e910d12ad78e080f",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "4653ca858fff12070b4d1b60db844e24046584b00d5ad7c542e14fd8f25ec974",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "ea4d15e24f3ffccacccf24c2283bf210d1e5a78d251de836bfa887269b1ab2ff",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "68d32ed23b637df02079422ba14fe7c8bbf81f56460b10d93c0d99fb948f6f96"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

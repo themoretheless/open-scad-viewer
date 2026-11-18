@@ -431,3 +431,12 @@ const limitedSpectrum = call(request.maxWork, densityOp, { ...weightedSpectrumOp
 assert.equal(limitedSpectrum.principalMomentBoundsKgMm2, null)
 assert.equal(limitedSpectrum.withinMomentTolerance, false)
 console.log('WASM ABI enclosed the principal moments of the density-weighted assembly.')
+
+assert.equal(weightedAxis.axisRadiusOfGyrationBoundsMm, undefined)
+const weightedRadiusOptions = { ...weightedAxisOptions, includeAxisRadiusOfGyration: true }
+const weightedRadius = call(request.maxWork, densityOp, weightedRadiusOptions).axisRadiusOfGyrationBoundsMm
+const expectedWeightedRadius = Math.sqrt(expectedWeightedAxisMoment / 2.875)
+assert.ok(weightedRadius && weightedRadius[0] <= expectedWeightedRadius && expectedWeightedRadius <= weightedRadius[1])
+const limitedWeightedRadius = call(request.maxWork, densityOp, { ...weightedRadiusOptions, maxSurfaceCells: 2 })
+assert.equal(limitedWeightedRadius.axisRadiusOfGyrationBoundsMm, null)
+console.log('WASM ABI enclosed the radius of gyration of the density-weighted assembly.')
