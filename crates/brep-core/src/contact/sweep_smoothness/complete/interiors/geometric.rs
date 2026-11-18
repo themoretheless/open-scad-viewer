@@ -506,6 +506,18 @@ mod tests {
         assert!(selected.complete && selected.within_tolerance);
         let limited = inspect_edges_with_exact(&trimmed, &[1], tolerances, 1, selected.exact_work - 1).unwrap();
         assert!(!limited.within_tolerance);
+
+        use super::super::super::classified::{self, Class};
+        let mixed = classified::inspect(
+            &trimmed, &[Class::C0, Class::G2],
+            classified::Limits {
+                incidence_steps: 100, exact_work: 16_000_000,
+                agreement_work: 1_000_000, regularity_cells: 100_000,
+            },
+        ).unwrap();
+        assert!(mixed.certified, "{}", mixed.reason);
+        assert_eq!(mixed.c0_edges, [0]);
+        assert_eq!(mixed.smooth_edges, [1]);
     }
 
     #[test]
