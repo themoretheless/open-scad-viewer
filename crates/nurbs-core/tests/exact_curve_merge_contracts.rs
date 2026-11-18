@@ -10524,3 +10524,37 @@ fn toolpath_violation_duration_uses_time_window_and_preserves_overlap() {
     assert!(lo <= 6. && 6. <= hi && hi - lo < 0.02);
     assert!(check(TimedMotionSegment { duration: 0., ..segment }, 512).is_err());
 }
+
+#[test]
+fn toolpath_chain_violation_duration_uses_each_clock_and_one_work_budget() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, TimedMotionSegment, ToolpathObstacle, measure_toolpath_chain_violation_duration,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 2.],
+        control_points: vec![vec![0., 0.], vec![2., 0.], vec![4., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let segments = [
+        TimedMotionSegment { curve: &curve, interval: [0., 2.], duration: 8. },
+        TimedMotionSegment { curve: &curve, interval: [1., 2.], duration: 3. },
+    ];
+    let obstacles = [ToolpathObstacle::Box(BoxObstacle {
+        minimum: &[1., -1.], maximum: &[3., 1.],
+    })];
+    let check = |budget| {
+        measure_toolpath_chain_violation_duration(&segments, &obstacles, 0., 0., 0.001, budget)
+    };
+    assert!(check(2).is_err());
+    assert_eq!(check(3).unwrap().total.bounds, [0., 11.]);
+    let report = check(256).unwrap();
+    for (segment, exact) in report.segments.iter().zip([4., 1.5]) {
+        assert!(segment.bounds[0] <= exact && segment.bounds[1] >= exact);
+    }
+    let [lo, hi] = report.total.bounds;
+    assert!(lo <= 5.5 && 5.5 <= hi && hi - lo < 0.03);
+    assert_eq!(report.total.by_obstacle, [report.total.bounds]);
+    assert!(report.total.work_obstacle_cells <= 256);
+}

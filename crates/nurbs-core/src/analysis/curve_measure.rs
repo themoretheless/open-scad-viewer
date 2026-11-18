@@ -3041,6 +3041,78 @@ pub fn measure_toolpath_clearance_violation_duration(
     })
 }
 
+#[derive(Clone, Debug)]
+pub struct ToolpathChainViolationDuration {
+    pub total: ToolpathViolationDuration,
+    /// Reports in traversal order, each using its own segment clock.
+    pub segments: Vec<ToolpathViolationDuration>,
+}
+
+/// Bound violation time across a sequence of timed curve windows. The
+/// obstacle-cell budget reserves coverage for every span of every segment.
+/// Segment durations describe movement only.
+pub fn measure_toolpath_chain_violation_duration(
+    segments: &[TimedMotionSegment<'_>],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    margin: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<ToolpathChainViolationDuration> {
+    use num_rational::BigRational;
+
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    check(!segments.is_empty() && !obstacles.is_empty(), "Violation duration requires segments and obstacles")?;
+    if segments.len() > max_obstacle_cells / obstacles.len() {
+        return Err(resource("Clearance budget must cover every segment and obstacle"));
+    }
+    let mut minima = Vec::with_capacity(segments.len());
+    let mut reserve = 0;
+    for segment in segments {
+        segment.curve.validate()?;
+        validate_travel_interval(segment.curve, segment.interval)?;
+        check(segment.duration.is_finite() && segment.duration > 0., "Motion segment duration must be finite and positive")?;
+        let spans = active_spans(segment.curve, segment.interval).count();
+        if spans > (max_obstacle_cells - reserve) / obstacles.len() {
+            return Err(resource("Clearance budget must cover every segment span"));
+        }
+        let minimum = spans * obstacles.len();
+        reserve += minimum;
+        minima.push(minimum);
+    }
+    let zero = [BigRational::default(), BigRational::default()];
+    let mut total = zero.clone();
+    let mut per_obstacle = vec![zero; obstacles.len()];
+    let mut reports = Vec::with_capacity(segments.len());
+    let mut remaining = max_obstacle_cells;
+    for (index, (&segment, minimum)) in segments.iter().zip(minima).enumerate() {
+        let budget = minimum + (remaining - reserve) / (segments.len() - index);
+        let report = measure_toolpath_clearance_violation_duration(
+            segment, obstacles, tool_radius, margin, parameter_tolerance, budget,
+        )?;
+        for (sum, bounds) in std::iter::once(&mut total).chain(&mut per_obstacle)
+            .zip(std::iter::once(report.bounds).chain(report.by_obstacle.iter().copied()))
+        {
+            sum[0] += exact_motion_operand(bounds[0])?;
+            sum[1] += exact_motion_operand(bounds[1])?;
+        }
+        reserve -= minimum;
+        remaining -= report.work_obstacle_cells;
+        reports.push(report);
+    }
+    let bounds = |[lo, hi]: [BigRational; 2]| -> Result<[f64; 2]> {
+        Ok([round_motion_duration(&lo, false)?, round_motion_duration(&hi, true)?])
+    };
+    Ok(ToolpathChainViolationDuration {
+        total: ToolpathViolationDuration {
+            bounds: bounds(total)?,
+            by_obstacle: per_obstacle.into_iter().map(bounds).collect::<Result<Vec<_>>>()?,
+            work_obstacle_cells: max_obstacle_cells - remaining,
+        },
+        segments: reports,
+    })
+}
+
 fn prepare_toolpath_obstacles<'a>(
     curve: &Curve,
     obstacles: &[ToolpathObstacle<'a>],

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0728",
+  "testedBase": "3af3b3ccefc23e3d3678edef2afadd816bdfb287",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 353,
+  "scope": [
+    "Enclose violation duration across independently timed segments under one obstacle-cell budget.",
+    "Check independent segment clocks, clipped multispan coverage, exact coarse duration, and shared budget reservation."
+  ],
+  "logSha256": "ea5e64e91e80fb732ff0b02cabeda032ab6e1524121d8934adfa0ab5cb15f6ac",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "14675c7599a8af219826ff105f4a340448246399d4349ab79e3bdb67ea9bb66e",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "62eea29c85703ec03a2956aba8c6e3e5c432f75bf220948bfaafab806e12c664"
+  }
+}
