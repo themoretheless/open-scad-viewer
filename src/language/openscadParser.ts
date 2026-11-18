@@ -1,5 +1,5 @@
 import { isRushFrontend } from './rushFrontendDetect'
-import { brepGearFaceCount } from '../kernel/geometry/brep'
+import { brepGearFaceCount, gearDisplaySegments } from '../kernel/geometry/brep'
 import { evaluateRushGraphGeometry, requireRushGraphChecks } from './rushGraphChecks'
 /**
  * Strict, intentionally documented OpenSCAD subset backed by the official geometry kernel.
@@ -361,12 +361,11 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
       const isHigh = ctx.exportQuality === 'high'
       const maxDetail = isUltra ? 20 : isHigh ? 15 : 12
       const divisor = isUltra ? 3 : isHigh ? 4 : 5
-      const faceBudget = isUltra ? 90000 : isHigh ? 64000 : 36000
-      let detail = Math.max(
+      const requestedDetail = Math.max(
         1,
         Math.min(maxDetail, Math.round(segments(node, ctx, 64, 16, (spec.module * spec.teeth) / 2) / divisor)),
       )
-      while (detail > 1 && faces * detail * detail > faceBudget) detail--
+      const detail = gearDisplaySegments(faces, requestedDetail)
       return [
         trackedSolid(
           kernelCall(ctx, node.p, () => ctx.kernel.gear(spec, detail)),
