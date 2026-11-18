@@ -39,9 +39,9 @@ pub(crate) fn certify(s: &Surface, work: &mut usize, limit: usize) -> Option<[us
                 multiplicity = 1;
             } else {
                 multiplicity += 1;
-                // Across internal knots the original homogeneous spline,
-                // and hence its positive-weight quotient, must be C1.
-                if multiplicity >= d {
+                // The projected map must be continuous across every knot.
+                // The determinant proof includes both closed one-sided cells.
+                if multiplicity > d {
                     return None;
                 }
             }
@@ -207,11 +207,24 @@ pub(crate) fn certify(s: &Surface, work: &mut usize, limit: usize) -> Option<[us
         }
     }
 
-    // Off the boundary, degree is the winding number of the Jordan curve.
-    // All preimages have the same orientation and each counts once. There
-    // are zero preimages outside and at most one inside. An interior point
-    // cannot map onto the curve: local openness would then give an exterior
-    // preimage. The boundary itself is already injective.
+    // For values off the projected knot lines and boundary, every
+    // preimage lies in an open cell and contributes the same sign to the
+    // degree. The Jordan boundary gives absolute degree one inside and zero
+    // outside. The projected grid has empty interior.
+    //
+    // At an interior grid point, each incident cell's rational polynomial
+    // extends across its sides with positive weight and nonzero Jacobian
+    // near the point. The inverse function theorem on each extension
+    // isolates the point in its fiber. Take a small ball about the point
+    // whose boundary avoids that value. Arbitrarily nearby values off the
+    // projected grid have a preimage from an incident open cell inside
+    // the ball. Each such preimage contributes the same sign, so the
+    // local degree is nonzero and constant near the original value.
+    //
+    // Thus two interior preimages would give two contributions for nearby
+    // values off the grid. An interior preimage on the Jordan boundary
+    // would give a contribution for a nearby exterior value. Both contradict
+    // the global degree. The Jordan boundary already gives injectivity there.
     Some(axes)
 }
 
@@ -251,16 +264,38 @@ mod tests {
         for point in exact_insert_source.control_points.iter_mut().flatten() {
             point[2] *= 5.;
         }
-        let inserted = crate::surface_edit::insert(
-            &exact_insert_source, crate::surface::Axis::V, 0.5, 1,
-        ).unwrap();
+        let inserted =
+            crate::surface_edit::insert(&exact_insert_source, crate::surface::Axis::V, 0.5, 1)
+                .unwrap();
         let mut multispan_work = 0;
         assert_eq!(certify(&inserted, &mut multispan_work, 1000), Some([0, 2]));
         assert!(certify(&inserted, &mut 0, multispan_work - 1).is_none());
-        let only_c0 = crate::surface_edit::insert(
-            &exact_insert_source, crate::surface::Axis::V, 0.5, 4,
-        ).unwrap();
-        assert!(certify(&only_c0, &mut 0, 1000).is_none());
+        let mut only_c0 =
+            crate::surface_edit::insert(&exact_insert_source, crate::surface::Axis::V, 0.5, 4)
+                .unwrap();
+        // Move the full-multiplicity knot without changing the control net.
+        // The shape is unchanged and the two one-sided speeds now differ.
+        for knot in &mut only_c0.knots_v[5..9] {
+            *knot = 0.25;
+        }
+        only_c0.validate().unwrap();
+        let mut c0_work = 0;
+        assert_eq!(certify(&only_c0, &mut c0_work, 1000), Some([0, 2]));
+        assert!(certify(&only_c0, &mut 0, c0_work - 1).is_none());
+
+        let mut discontinuous = only_c0;
+        discontinuous.knots_v.insert(5, 0.25);
+        for (points, weights) in discontinuous
+            .control_points
+            .iter_mut()
+            .zip(&mut discontinuous.weights)
+        {
+            let mut shifted = points[4].clone();
+            shifted[2] += 0.125;
+            points.insert(5, shifted);
+            weights.insert(5, weights[4]);
+        }
+        assert!(certify(&discontinuous, &mut 0, 1000).is_none());
 
         // The midpoint of the bottom arc now lies above the top edge,
         // forcing two boundary crossings by continuity.

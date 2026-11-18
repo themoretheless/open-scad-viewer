@@ -370,25 +370,31 @@ fn check_coupled_wall_certificates(
 
 #[test]
 fn rectangular_rational_wall_outside_the_rails_class_keeps_joint_certificates() {
-    check_polygonal_rational_wall_certificates(false, false, false);
+    check_polygonal_rational_wall_certificates(false, false, 0);
 }
 
 #[test]
 fn oblique_quadrilateral_rational_walls_keep_joint_certificates() {
-    check_polygonal_rational_wall_certificates(true, false, false);
+    check_polygonal_rational_wall_certificates(true, false, 0);
 }
 
 #[test]
 fn curved_nonconvex_wall_projection_keeps_joint_certificates() {
-    check_polygonal_rational_wall_certificates(false, true, false);
+    check_polygonal_rational_wall_certificates(false, true, 0);
 }
 
 #[test]
 fn multispan_curved_nonconvex_wall_projection_keeps_joint_certificates() {
-    check_polygonal_rational_wall_certificates(false, true, true);
+    check_polygonal_rational_wall_certificates(false, true, 1);
 }
 
-fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, multispan: bool) {
+#[test]
+fn full_multiplicity_nonconvex_wall_projection_keeps_joint_certificates() {
+    check_polygonal_rational_wall_certificates(false, true, 4);
+}
+
+fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, insertions: usize) {
+    let multispan = insertions > 0;
     let corners = [[0., 0.], [4., 0.], [4., 4.], [0., 4.]];
     let sections = [0., 4., 8.].map(|z| {
         vec![(0..4)
@@ -471,17 +477,20 @@ fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, 
         ]).unwrap();
     }
     if multispan {
-        // The inserted knot mixes weights 1 and 4. Scaling Z by five
-        // makes the new Cartesian coordinates exactly dyadic.
+        // Clear the odd factors of the new homogeneous weights so every
+        // inserted Cartesian coordinate stays exactly representable.
+        let axial_scale = if insertions == 1 { 5. } else { 5. * 7. * 17. };
         reference = crate::transform::affine(&reference, [
             [1., 0., 0., 0.], [0., 1., 0., 0.],
-            [0., 0., 5., 0.], [0., 0., 0., 1.],
+            [0., 0., axial_scale, 0.], [0., 0., 0., 1.],
         ]).unwrap();
         let surface = &mut reference.0.faces[4].surface;
-        *surface = nurbs_core::surface_edit::insert(
-            surface, nurbs_core::surface::Axis::V, 0.5, 1,
+        let inserted = nurbs_core::editing::exact_surface_knot_insertion::insert(
+            surface, nurbs_core::surface::Axis::V, 0.5, insertions, 1_000_000,
         ).unwrap();
-        assert_eq!(surface.knots_v.iter().filter(|&&k| k == 0.5).count(), 1);
+        assert_eq!(inserted.inserted, insertions, "{:?}", inserted.refusal);
+        *surface = inserted.surface;
+        assert_eq!(surface.knots_v.iter().filter(|&&k| k == 0.5).count(), insertions);
     }
     reference.validate().unwrap();
     let wall = &reference.faces[if curved_seam { 4 } else { 0 }].surface;

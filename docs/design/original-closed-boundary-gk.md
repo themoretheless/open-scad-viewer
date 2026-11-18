@@ -187,3 +187,12 @@ knot lines using the same work allowance. Each pair of closed edge pieces
 then proves position and geometric jets. A physical crease, missing pieces,
 failed exact insertion or insufficient work withholds the whole-edge
 certificate at the requested order.
+
+The projected Jordan-boundary test for chart injectivity also covers
+continuous joins at full-degree knot multiplicity. It proves a strict
+Jacobian sign on every closed knot cell. At an interior knot line or
+crossing, the one-sided maps isolate the preimage and give it a nonzero
+local degree. A simple projected boundary limits the global degree to one
+inside and zero outside. The chart test establishes injectivity. The
+original shell still checks regularity, contact ownership and smoothness
+with their own certificates.
