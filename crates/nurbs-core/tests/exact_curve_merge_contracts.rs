@@ -11074,3 +11074,39 @@ fn scheduled_tools_partition_retains_pair_identity_and_contact_windows() {
         }
     }
 }
+
+#[test]
+fn first_scheduled_tool_contact_compares_times_across_pair_groups() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, FirstScheduledToolContact, ScheduledClearanceCell,
+        ScheduledToolPairCell, ScheduledToolsClearancePartition,
+    };
+    let cell = |tools, start, end, status| ScheduledToolPairCell {
+        tools,
+        clearance: ScheduledClearanceCell {
+            time_endpoint_bounds: [start, end],
+            gap_bounds: match status {
+                Status::Within => [1., 2.],
+                Status::Exceeds => [-2., -1.],
+                Status::Undetermined => [-1., 1.],
+            },
+            status,
+        },
+    };
+    let mut report = ScheduledToolsClearancePartition {
+        cells: vec![
+            cell([0, 1], [3.; 2], [4.; 2], Status::Exceeds),
+            cell([0, 2], [0.9, 1.], [1.1; 2], Status::Undetermined),
+            cell([1, 2], [1.9, 2.], [2.5; 2], Status::Exceeds),
+        ],
+        work_cells: 3,
+    };
+    assert_eq!(report.first_contact(), FirstScheduledToolContact::Confirmed {
+        time_bounds: [0.9, 2.],
+        witness_tools: [1, 2],
+    });
+    report.cells.retain(|cell| cell.clearance.status != Status::Exceeds);
+    assert_eq!(report.first_contact(), FirstScheduledToolContact::Possible { earliest_time: 0.9 });
+    report.cells[0].clearance.status = Status::Within;
+    assert_eq!(report.first_contact(), FirstScheduledToolContact::Clear);
+}

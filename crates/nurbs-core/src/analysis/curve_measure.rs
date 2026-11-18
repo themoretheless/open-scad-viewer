@@ -2857,6 +2857,45 @@ pub struct ScheduledToolsClearancePartition {
     pub work_cells: usize,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum FirstScheduledToolContact {
+    Clear,
+    Possible { earliest_time: f64 },
+    Confirmed {
+        time_bounds: [f64; 2],
+        /// Pair whose contact supplies the upper time bound.
+        witness_tools: [usize; 2],
+    },
+}
+
+impl ScheduledToolsClearancePartition {
+    /// Bracket the first contact across the represented pair timelines.
+    /// A possible earlier contact on any pair contributes to the lower bound.
+    pub fn first_contact(&self) -> FirstScheduledToolContact {
+        let mut earliest: Option<f64> = None;
+        let mut witness: Option<(f64, [usize; 2])> = None;
+        for cell in &self.cells {
+            let [lo, hi] = cell.clearance.time_endpoint_bounds[0];
+            if cell.clearance.status != DirectionalMotionStatus::Within {
+                earliest = Some(earliest.map_or(lo, |previous| previous.min(lo)));
+            }
+            if cell.clearance.status == DirectionalMotionStatus::Exceeds
+                && witness.is_none_or(|(time, tools)| (hi, cell.tools) < (time, tools))
+            {
+                witness = Some((hi, cell.tools));
+            }
+        }
+        match (earliest, witness) {
+            (Some(lower), Some((upper, witness_tools))) => FirstScheduledToolContact::Confirmed {
+                time_bounds: [lower, upper],
+                witness_tools,
+            },
+            (Some(earliest_time), None) => FirstScheduledToolContact::Possible { earliest_time },
+            (None, _) => FirstScheduledToolContact::Clear,
+        }
+    }
+}
+
 /// Classify clearance for every unordered tool pair with one budget.
 /// A pair's timeline runs from its first start to its last finish.
 /// Outside that window the pair retains its corresponding endpoint poses.

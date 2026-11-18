@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0744",
+  "testedBase": "8a2af474f4a5959ecc925800af5d6b046816dc7a",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 369,
+  "scope": [
+    "Bracket first contact across pair timelines, retaining earlier uncertainty.",
+    "Check pair order versus time order, earlier unresolved contact, time enclosure endpoints, and clear and possible outcomes."
+  ],
+  "logSha256": "fbc6c987887e66b9d6293818f0226da46d7d362a0bf8402aca0fdeebf1cf9653",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "5c247cc0c564fcf348d76201cce22f83c51bcc2df49c213b03dd55019b313e2e",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "40042f82ecc03a100ed741767667568fcc2ad5dd5cb07d05f4cd8703d2a96edd"
+  }
+}
