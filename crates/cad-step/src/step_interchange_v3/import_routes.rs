@@ -2249,13 +2249,19 @@ impl NamedStepAssembly {
         }
         let indices: Vec<_> = self.assembly.occurrences().iter().enumerate()
             .filter(|(_, part)| selected.contains(&part.definition)).map(|(index, _)| index).collect();
-        let subset = self.assembly.extract_occurrences(&indices)?;
-        let mut names = vec![""; subset.definitions().len()];
+        let subset = self.named_subset(&indices, assembly_name)?;
+        let labels: Vec<_> = subset.definition_names.iter().map(String::as_str).collect();
+        crate::export_named_step_assembly(&subset.assembly, &subset.name, &labels)
+    }
+
+    fn named_subset(&self, indices: &[usize], name: &str) -> Result<Self> {
+        let subset = self.assembly.extract_occurrences(indices)?;
+        let mut labels = vec![String::new(); subset.definitions().len()];
         for (&source, part) in indices.iter().zip(subset.occurrences()) {
             let original = self.assembly.occurrences()[source].definition;
-            names[part.definition] = &self.definition_names[original];
+            labels[part.definition] = self.definition_names[original].clone();
         }
-        crate::export_named_step_assembly(&subset, assembly_name, &names)
+        Ok(Self { assembly: subset, name: name.to_owned(), definition_names: labels })
     }
 
     /// Rank parts by the number of surface control points saved by sharing a
@@ -2364,6 +2370,22 @@ pub fn import_step_product_paths(text: &str) -> Result<(NamedStepAssembly, Vec<V
     let (assembly, labels) = read_shared_products(text, true, Some(&mut paths))?;
     let (name, definition_names) = labels.ok_or_else(|| refuse("Missing assembly product names"))?;
     Ok((NamedStepAssembly { assembly, name, definition_names }, paths))
+}
+
+/// Export all leaves below a product-name prefix as a flat shared assembly.
+/// Matching sibling labels select all matching branches. Placements remain in
+/// the source assembly coordinates and explicit occurrence RGB values survive.
+pub fn export_step_product_subassembly(text: &str, prefix: &[&str]) -> Result<String> {
+    let name = prefix.last().ok_or_else(|| refuse("Expected a nonempty STEP product path"))?;
+    let (scene, paths) = import_step_product_paths(text)?;
+    let indices: Vec<_> = paths.iter().enumerate()
+        .filter(|(_, path)| path.len() >= prefix.len() && path.iter().zip(prefix).all(|(a,b)| a == *b))
+        .map(|(index, _)| index).collect();
+    let subset = scene.named_subset(&indices, name)?;
+    let colours = import_step_occurrence_colours(text)?;
+    let styles: Vec<_> = indices.iter().map(|&i| colours[i].map(|rgb|
+        crate::StepOccurrenceColour { name: "", rgb })).collect();
+    crate::export_named_styled_step_assembly(&subset, &[], &vec![None; indices.len()], &styles)
 }
 
 fn read_shared_products(text: &str, named: bool, paths: Option<&mut Vec<Vec<String>>>) -> Result<(StepSharedAssembly, Option<(String, Vec<String>)>)> {

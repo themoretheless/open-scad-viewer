@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 982,
-  "unallocatedCount": 18,
+  "specifiedCount": 983,
+  "unallocatedCount": 17,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22326,6 +22326,27 @@
       ],
       "remainingQualification": [
         "One named root and named representations along each selected occurrence path. Direct and nested placements of one definition checked with reversed STEP record order and compared with OCCT XDE."
+      ]
+    },
+    {
+      "id": "NURBS-0983",
+      "name": "Экспорт ветви именованной STEP-сборки с сохранением размещений и цветов экземпляров",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::export_step_product_subassembly",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-step-product-subassembly-983-2026-11-19/verify.py",
+        "docs/qualification/nurbs-step-product-subassembly-983-2026-11-19/occt.log",
+        "docs/qualification/nurbs-step-product-subassembly-983-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-step-product-subassembly-983-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Product-name prefix selects all matching leaves in world coordinates. Flat result preserves shared geometry, definition labels and explicit solid occurrence colours."
       ]
     }
   ],

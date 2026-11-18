@@ -235,6 +235,17 @@ fn named_coloured_parts_share_a_scaled_definition_across_group_and_root() {
         };
         assert_eq!(path, expected);
     }
+    let subset = cad_step::export_step_product_subassembly(&reordered, &["Drive", "Feed"]).unwrap();
+    let (feed, feed_paths) = cad_step::import_step_product_paths(&subset).unwrap();
+    assert_eq!(feed.name, "Feed");
+    assert_eq!(feed_paths, [vec!["Feed", "Roller"]]);
+    assert_eq!(cad_step::import_step_occurrence_colours(&subset).unwrap(), [Some(rgb[0])]);
+    assert_eq!(feed.assembly.occurrences()[0].transform[0][3], 0.);
+    assert!(cad_step::export_step_product_subassembly(&text, &["Drive", "Missing"]).is_err());
+    assert!(cad_step::export_step_product_subassembly(&text, &[]).is_err());
+    if let Some(path) = std::env::var_os("CAD_SUBASSEMBLY_FIXTURE") {
+        std::fs::write(path, &subset).unwrap();
+    }
     let reopened = cad_step::import_step_shared_assembly(&text).unwrap();
     assert_eq!(reopened.definitions().len(), 1);
     assert_eq!(reopened.occurrences().len(), 2);
