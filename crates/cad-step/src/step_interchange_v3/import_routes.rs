@@ -1312,6 +1312,39 @@ impl StepSharedAssembly {
         }
     }
 
+    /// Check only cross-group contacts. Pair indices follow the left/right selection order.
+    /// Return common material for positive overlaps and diagnostics for unresolved pairs.
+    pub fn interferences_between(&self, left: &[usize], right: &[usize], max_pairs: usize)
+        -> Result<Vec<([usize; 2], Result<Model>)>> {
+        let mut side = vec![0; self.occurrences.len()];
+        for (members, label) in [(left, 1), (right, 2)] {
+            if members.is_empty() || members.len() > side.len() {
+                return Err(refuse("STEP interference groups require nonempty occurrence selections"));
+            }
+            for &index in members {
+                let slot = side.get_mut(index).ok_or_else(|| refuse("STEP interference group index out of range"))?;
+                if *slot != 0 { return Err(refuse("STEP interference selections must be distinct and disjoint")); }
+                *slot = label;
+            }
+        }
+        let pairs: Vec<_> = self.proximity_candidates(0.)?.into_iter().filter_map(|[a, b]| {
+            match (side[a], side[b]) {
+                (1, 2) => Some([a, b]),
+                (2, 1) => Some([b, a]),
+                _ => None,
+            }
+        }).collect();
+        if pairs.len() > max_pairs { return Err(refuse("STEP cross-group candidate budget exceeded")); }
+        let mut regions = Vec::new();
+        for [a, b] in pairs {
+            let result = self.intersect_occurrences(a, b);
+            if !matches!(&result, Ok(model) if model.bodies.is_empty()) {
+                regions.push(([a, b], result));
+            }
+        }
+        Ok(regions)
+    }
+
     fn interference_candidates(&self, max_pairs: usize) -> Result<Vec<[usize; 2]>> {
         let pairs = self.proximity_candidates(0.)?;
         if pairs.len() > max_pairs {

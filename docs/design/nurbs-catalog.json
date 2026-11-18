@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 867,
-  "unallocatedCount": 133,
+  "specifiedCount": 868,
+  "unallocatedCount": 132,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20180,6 +20180,23 @@
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-interference-groups-867-2026-11-18/receipt.json",
         "docs/qualification/nurbs-interference-groups-867-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
+      ]
+    },
+    {
+      "id": "NURBS-0868",
+      "name": "Проверка взаимных проникновений между двумя узлами сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::interferences_between",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-cross-group-clash-868-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-cross-group-clash-868-2026-11-18/native.log.gz"
       ],
       "remainingQualification": [
         "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."

@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0868",
+  "testedBase": "ee3cfd6ff1eb256d3e0873f053836786ecb6b038",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 215,
+  "scope": [
+    "Find common material between disjoint occurrence selections, keeping left/right identities and individual diagnostics.",
+    "Two internally overlapping groups yield one cross-group intersection of 2 cubic millimetres under a single candidate budget. Check distant selections, empty, duplicate, shared and invalid indices."
+  ],
+  "logSha256": "51c14247bd3816a866e7a116edd1e05ccbd7d4ec5eba3251edf8c78403bc3d3b",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "ae6d9239d02545efc4c0c69143b7e0c18802f3ad999ce0d900131db51ace1e7f",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "fd3d9833bb6f2678b591bab32ff30ef41d1bc50d4da68a675a180adbfb7cb4fb"
+  }
+}

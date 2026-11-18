@@ -4126,3 +4126,24 @@ fn interference_groups_connect_chains_but_exclude_touch_and_isolated_parts() {
     assert!(scene.interference_groups(3).is_err());
     assert!(scene.extract_occurrences(&[0, 6]).unwrap().interference_groups(0).unwrap().is_empty());
 }
+
+#[test]
+fn cross_group_interference_limits_work_to_selected_interfaces() {
+    let block = brep_core::cuboid([0.; 3], [2.; 3]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![block],
+        [0., 1., 2.5, 10., 11.].into_iter().map(placed).collect()).unwrap();
+    let mut regions = scene.interferences_between(&[2, 4, 3], &[0, 1], 1).unwrap();
+    assert_eq!(regions.len(), 1);
+    let (indices, common) = regions.pop().unwrap();
+    assert_eq!(indices, [2, 1]);
+    let volume = brep_core::analysis::mass_properties(&common.unwrap(), 1e-8, 100_000).unwrap().signed_volume_mm3;
+    assert!((volume - 2.).abs() < 1e-8);
+    assert!(scene.interferences_between(&[2], &[1], 0).is_err());
+    assert!(scene.interferences_between(&[0], &[3], 0).unwrap().is_empty());
+    for invalid in [&[0, 0][..], &[1], &[5], &[]] {
+        assert!(scene.interferences_between(invalid, &[1], 9).is_err());
+    }
+}
