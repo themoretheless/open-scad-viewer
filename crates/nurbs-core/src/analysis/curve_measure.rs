@@ -2418,6 +2418,30 @@ pub fn closest_spatial_contour_pair(
 fn measure_validated_contour_pairs(
     first: &[&Curve], second: &[&Curve], tolerance: f64, max_cells: usize, distinct_members: bool,
 ) -> Result<ContourPairDistanceReport> {
+    let mut report = PlanarContourPairDistanceReport {
+        bounds: [f64::INFINITY; 2],
+        witness_contours: [0; 2],
+        witness_parameters: [0.; 2],
+        work_cells: 0,
+        converged: false,
+    };
+    visit_contour_pairs(first, second, tolerance, max_cells, distinct_members, |[i,j], distance| {
+            report.work_cells += distance.cells;
+            report.bounds[0] = report.bounds[0].min(distance.distance_interval_mm[0]);
+            if distance.distance_interval_mm[1] < report.bounds[1] {
+                report.bounds[1] = distance.distance_interval_mm[1];
+                report.witness_contours = [i, j];
+                report.witness_parameters = distance.parameters;
+            }
+    })?;
+    report.converged = (report.bounds[1] - report.bounds[0]).next_up() <= tolerance;
+    Ok(report)
+}
+
+fn visit_contour_pairs(
+    first: &[&Curve], second: &[&Curve], tolerance: f64, max_cells: usize, distinct_members: bool,
+    mut visit: impl FnMut([usize;2], crate::curve_distance::CurveDistance),
+) -> Result<()> {
     let counts = [first, second].map(|set| {
         set.iter().map(|curve| active_spans(curve, curve.domain()).count()).collect::<Vec<_>>()
     });
@@ -2431,30 +2455,49 @@ fn measure_validated_contour_pairs(
             pairs += 1;
         }
     }
-    let mut report = PlanarContourPairDistanceReport {
-        bounds: [f64::INFINITY; 2],
-        witness_contours: [0; 2],
-        witness_parameters: [0.; 2],
-        work_cells: 0,
-        converged: false,
-    };
     for (i, a) in first.iter().enumerate() {
         for (j, b) in second.iter().enumerate().skip(start(i)) {
             let reserved = counts[0][i] * counts[1][j];
             let distance = crate::curve_distance::distance(a, b, tolerance, reserved + extra / pairs)?;
             pairs -= 1;
             extra -= distance.cells.saturating_sub(reserved);
-            report.work_cells += distance.cells;
-            report.bounds[0] = report.bounds[0].min(distance.distance_interval_mm[0]);
-            if distance.distance_interval_mm[1] < report.bounds[1] {
-                report.bounds[1] = distance.distance_interval_mm[1];
-                report.witness_contours = [i, j];
-                report.witness_parameters = distance.parameters;
-            }
+            visit([i,j],distance);
         }
     }
-    report.converged = (report.bounds[1] - report.bounds[0]).next_up() <= tolerance;
-    Ok(report)
+    Ok(())
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ClearanceDecision { MeetsMinimum, BelowMinimum, Unresolved }
+
+#[derive(Debug, Clone)]
+pub struct ContourClearanceCheck {
+    pub contours: [usize;2],
+    pub bounds: [f64;2],
+    pub witness_parameters: [f64;2],
+    pub cells: usize,
+    pub decision: ClearanceDecision,
+}
+
+/// Check every distinct pair, in index order, against an inclusive minimum.
+/// An interval straddling the threshold is explicitly unresolved.
+pub fn inspect_spatial_contour_clearances(
+    contours: &[&Curve], minimum: f64, tolerance: f64, max_cells: usize,
+) -> Result<Vec<ContourClearanceCheck>> {
+    validate(tolerance,max_cells)?;
+    check(minimum.is_finite() && minimum >= 0., "Expected finite nonnegative minimum clearance")?;
+    check(contours.len() >= 2, "Clearance inspection requires at least two contours")?;
+    validate_spatial_distance_set(contours,max_cells)?;
+    let mut checks = Vec::new();
+    visit_contour_pairs(contours,contours,tolerance,max_cells,true,|indices,distance| {
+        let [lo,hi] = distance.distance_interval_mm;
+        let decision = if lo >= minimum { ClearanceDecision::MeetsMinimum }
+            else if hi < minimum { ClearanceDecision::BelowMinimum }
+            else { ClearanceDecision::Unresolved };
+        checks.push(ContourClearanceCheck { contours: indices, bounds:[lo,hi],
+            witness_parameters:distance.parameters,cells:distance.cells,decision });
+    })?;
+    Ok(checks)
 }
 
 #[derive(Clone, Debug)]

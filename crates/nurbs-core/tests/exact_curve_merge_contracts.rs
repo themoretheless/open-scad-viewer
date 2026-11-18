@@ -13539,3 +13539,19 @@ fn closest_spatial_pair_skips_diagonal_and_keeps_coincident_members() {
     assert!(duplicate.bounds[0]<=0. && duplicate.bounds[1]<1e-7);
     assert!(closest(&[&a],1e-7,100).is_err());
 }
+
+#[test]
+fn clearance_inspection_retains_violations_safe_and_unresolved_pairs() {
+    use nurbs_core::analysis::curve_measure::{inspect_spatial_contour_clearances as inspect, ClearanceDecision::*};
+    let triangle = |z| Curve {degree:1,knots:vec![0.,0.,1.,2.,3.,3.],
+        control_points:vec![vec![0.,0.,z],vec![1.,0.,z],vec![0.,1.,z],vec![0.,0.,z]],
+        weights:vec![1.;4],periodic:false};
+    let (a,b,c)=(triangle(0.),triangle(1.),triangle(3.));
+    let set=[&a,&b,&c];
+    let r=inspect(&set,2.,1e-7,27).unwrap();
+    assert_eq!(r.iter().map(|p|(p.contours,p.decision)).collect::<Vec<_>>(),
+        [([0,1],BelowMinimum),([0,2],MeetsMinimum),([1,2],Unresolved)]);
+    assert_eq!(r.iter().map(|p|p.cells).sum::<usize>(),27);
+    assert!(inspect(&set,2.,1e-7,26).is_err());
+    assert!(inspect(&set,f64::NAN,1e-7,27).is_err());
+}
