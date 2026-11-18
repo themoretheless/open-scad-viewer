@@ -774,6 +774,28 @@ impl StepSharedAssembly {
     /// Apply one assembly-space rigid motion to selected occurrences, atomically.
     /// Preserve existing scales and reflections and keep local definitions shared.
     pub fn move_occurrences(&mut self, selection: &[usize], motion: [[f64; 4]; 4]) -> Result<()> {
+        let moved = self.transformed_selection(selection, motion)?;
+        for (&index, occurrence) in selection.iter().zip(moved) {
+            self.occurrences[index] = occurrence;
+        }
+        Ok(())
+    }
+
+    /// Place an additional linked copy of each selected occurrence in selection order.
+    /// Return the contiguous indices of the new occurrences.
+    pub fn copy_occurrences(&mut self, selection: &[usize], motion: [[f64; 4]; 4])
+        -> Result<std::ops::Range<usize>> {
+        let start = self.occurrences.len();
+        if selection.len() > super::MAX_OCCURRENCES - start {
+            return Err(refuse("STEP group copy exceeds the occurrence limit"));
+        }
+        let copies = self.transformed_selection(selection, motion)?;
+        self.occurrences.extend(copies);
+        Ok(start..self.occurrences.len())
+    }
+
+    fn transformed_selection(&self, selection: &[usize], motion: [[f64; 4]; 4])
+        -> Result<Vec<StepAssemblyOccurrence>> {
         if selection.is_empty() || selection.len() > self.occurrences.len()
             || !super::is_proper_rigid_placement(motion) {
             return Err(refuse("STEP group move requires a nonempty selection and a finite rigid motion"));
@@ -789,12 +811,9 @@ impl StepSharedAssembly {
             if super::orthogonal_placement_scales(transform).is_none() {
                 return Err(refuse("STEP group move produced an invalid placement"));
             }
-            updates.push((index, transform));
+            updates.push(StepAssemblyOccurrence { definition: occurrence.definition, transform });
         }
-        for (index, transform) in updates {
-            self.occurrences[index].transform = transform;
-        }
-        Ok(())
+        Ok(updates)
     }
 
     /// Replace an occurrence's local-to-assembly rigid placement in millimetres.

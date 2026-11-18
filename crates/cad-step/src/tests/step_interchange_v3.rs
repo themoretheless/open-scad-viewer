@@ -4220,3 +4220,21 @@ fn group_move_round_trips_scaled_shared_placements_and_rejects_partial_changes()
         assert_eq!(transform[1], [scale, 0., 0., y]);
     }
 }
+
+#[test]
+fn copied_subassembly_keeps_original_definition_links_and_selection_order() {
+    let solid = brep_core::cuboid([0.; 3], [1.; 3]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let mut scene = crate::StepSharedAssembly::from_placed_solids(vec![solid], vec![placed(2.), placed(5.)]).unwrap();
+    let motion = placed(10.).transform;
+    assert!(scene.copy_occurrences(&[1, 1], motion).is_err());
+    assert!(scene.copy_occurrences(&[0, 2], motion).is_err());
+    assert!(scene.copy_occurrences(&[0; 255], motion).is_err());
+    assert_eq!(scene.copy_occurrences(&[1, 0], motion).unwrap(), 2..4);
+    let back = crate::import_step_shared_assembly(&crate::export_step_shared_assembly(&scene).unwrap()).unwrap();
+    assert_eq!(back.definitions().len(), 1);
+    let positions: Vec<_> = back.occurrences().iter().map(|o| o.transform[0][3]).collect();
+    assert_eq!(positions, [2., 5., 15., 12.]);
+}
