@@ -1,0 +1,43 @@
+{
+  "id": "NURBS-0922",
+  "testedBase": "8046b73848cdfb1f0dc3306023dd0fe34a3984a2",
+  "gearCommand": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "gear_profile",
+    "--",
+    "--nocapture"
+  ],
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 485,
+  "scope": [
+    "Compare forward and bidirectional residual sizes for the native 40-tooth internal ring, and verify bitwise reconstruction in original wire order."
+  ],
+  "logSha256": "048e0ed2cbedb793a0a20c921e16f6526b0edf4a7d408bd96d2dc1715953496c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs": "27cda4229f736cc74c95f24c942d36dc80c27864bb5c37222600e2406ab88351",
+    "crates/nurbs-core/src/construct/curves/involute.rs": "2dcd0c05fed7322a0c9696d88eeb384a72c5c40808ba0f1885e3879ee0502535",
+    "crates/brep-core/tests/gear_profile.rs": "a1828df9bc66f5e8e52ba421829c6d58f3afce3f1adc17d56793849cac1307ac"
+  }
+}

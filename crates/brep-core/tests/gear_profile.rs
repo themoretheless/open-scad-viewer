@@ -94,3 +94,26 @@ fn spinner_sun_profile_roundtrips_through_lossless_sector_pattern() {
     assert!(pattern.sector(spec.teeth).is_err());
     assert!(LosslessSectorPattern::encode(outline,0).is_err());
 }
+
+#[test]
+fn internal_spinner_ring_packs_reverse_sectors_without_reordering_wire() {
+    use nurbs_core::involute::LosslessSectorPattern;
+    let spec = GearSpec { module: 1.5, teeth: 40, clearance: 0.1, internal: true,
+        helix_angle_deg: 35., herringbone: true, ..GearSpec::default() };
+    let (wires,_) = profile_with_report(&spec).unwrap();
+    let ring = &wires[1];
+    let width = ring.len()/spec.teeth;
+    let forward = LosslessSectorPattern::encode(ring,width).unwrap();
+    let packed = LosslessSectorPattern::encode_bidirectional(ring,width).unwrap();
+    for (i, original) in ring.chunks_exact(width).enumerate() {
+        for (a,b) in original.iter().zip(packed.sector(i).unwrap()) {
+            let bits = |c: &nurbs_core::curve::Curve| c.control_points.iter().flatten().chain(&c.weights)
+                .chain(&c.knots).map(|v| v.to_bits()).collect::<Vec<_>>();
+            assert_eq!(bits(a),bits(&b));
+            assert_eq!((a.degree,a.periodic),(b.degree,b.periodic));
+        }
+    }
+    eprintln!("ring {} segments: forward {} adaptive {} residual bytes", ring.len(),forward.residual_bytes(),packed.residual_bytes());
+    assert!(packed.residual_bytes() < forward.residual_bytes());
+    assert!(LosslessSectorPattern::encode_bidirectional(ring,0).is_err());
+}

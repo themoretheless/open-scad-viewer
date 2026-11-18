@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 921,
-  "unallocatedCount": 79,
+  "specifiedCount": 922,
+  "unallocatedCount": 78,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21132,6 +21132,24 @@
         "crates/brep-core/tests/gear_profile.rs",
         "docs/qualification/nurbs-gear-lossless-sector-921-2026-11-18/receipt.json",
         "docs/qualification/nurbs-gear-lossless-sector-921-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Ordered segments with shared knot layouts. In-memory profile encoding; payload comparison excludes container overhead and is not STEP size."
+      ]
+    },
+    {
+      "id": "NURBS-0922",
+      "name": "Адаптивное двунаправленное сжатие круговых секторов внутреннего венца",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::LosslessSectorPattern::encode_bidirectional",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/brep-core/tests/gear_profile.rs",
+        "docs/qualification/nurbs-gear-bidirectional-sector-922-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-gear-bidirectional-sector-922-2026-11-18/native.log.gz"
       ],
       "remainingQualification": [
         "Ordered segments with shared knot layouts. In-memory profile encoding; payload comparison excludes container overhead and is not STEP size."
