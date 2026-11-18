@@ -2,7 +2,7 @@
 use super::*;
 use num_traits::Signed;
 
-/// Prove strict box containment for an original clamped nonperiodic curve.
+/// Prove strict box containment for an original nonperiodic curve.
 /// Spans and subdivisions stay homogeneous and share the caller's work limit.
 pub fn strict_box_containment(
     curve: &Curve,
@@ -23,48 +23,45 @@ fn prove(curve: &Curve, bounds: [[f64; 2]; 2], depth: u8, work: &mut Work) -> PR
     let p = curve.degree;
     let n = curve.control_points.len();
     let [start, end] = curve.domain();
-    if curve.periodic
-        || p == 0
-        || curve.control_points[0].len() != 2
-        || curve.knots[..=p].iter().any(|&k| k != start)
-        || curve.knots[n..].iter().any(|&k| k != end)
-    {
+    if curve.periodic || p == 0 || curve.control_points[0].len() != 2 {
         return Err(Refusal::InvalidOutput);
     }
 
-    let [lower, upper] = bounds;
-    let lo = [work.lift(lower[0])?, work.lift(lower[1])?];
-    let hi = [work.lift(upper[0])?, work.lift(upper[1])?];
-    let mut net = Vec::with_capacity(n);
-    for (point, &weight) in curve.control_points.iter().zip(&curve.weights) {
-        let w = work.lift(weight)?;
-        let x = work.lift(point[0])?;
-        let y = work.lift(point[1])?;
-        let mut row = Vec::with_capacity(5);
-        for (a, b) in [(&x, &lo[0]), (&hi[0], &x), (&y, &lo[1]), (&hi[1], &y)] {
-            let margin = work.op(a, b, |a, b| a - b)?;
-            row.push(work.op(&margin, &w, |a, b| a * b)?);
-        }
-        row.push(w);
-        net.push(row);
-    }
-
-    let mut knots = curve.knots.clone();
-    for block in curve.knots[p + 1..n].chunk_by(|a, b| a == b) {
+    let clamped =
+        curve.knots[..=p].iter().all(|&k| k == start) && curve.knots[n..].iter().all(|&k| k == end);
+    let (mut net, mut knots) = if clamped {
+        homogeneous(curve, start, 0, work)?
+    } else {
+        // Extract the active interval without converting its endpoint
+        // coefficients to a stored Cartesian curve.
+        work.charge(((n + 2 * p) * 2 * p) as u64)?;
+        super::super::exact_curve_merge::clamp_curve_net(curve, [start, end], work)?
+    };
+    let internal = knots[p + 1..net.len()].to_vec();
+    for block in internal.chunk_by(|a, b| a == b) {
         let count = p.checked_sub(block.len()).ok_or(Refusal::InvalidOutput)?;
         if count > 0 {
             work.charge(((net.len() + count) * count) as u64)?;
             refine_homogeneous(&mut net, &mut knots, p, block[0], count, work)?;
         }
     }
+    let [lower, upper] = bounds;
+    let lo = [work.lift(lower[0])?, work.lift(lower[1])?];
+    let hi = [work.lift(upper[0])?, work.lift(upper[1])?];
     for span in p..net.len() {
         work.charge(1)?;
         if knots[span] < knots[span + 1] {
-            work.charge(((p + 1) * 4) as u64)?;
-            let margins = net[span - p..=span]
-                .iter()
-                .map(|row| std::array::from_fn(|axis| row[axis].clone()))
-                .collect();
+            let mut margins = Vec::with_capacity(p + 1);
+            for row in &net[span - p..=span] {
+                let mut bounds = std::array::from_fn(|_| Q::zero());
+                for axis in 0..2 {
+                    let lower = work.op(&lo[axis], &row[2], |a, w| a * w)?;
+                    let upper = work.op(&hi[axis], &row[2], |a, w| a * w)?;
+                    bounds[2 * axis] = work.op(&row[axis], &lower, |a, b| a - b)?;
+                    bounds[2 * axis + 1] = work.op(&upper, &row[axis], |a, b| a - b)?;
+                }
+                margins.push(bounds);
+            }
             positive_margins(margins, depth, work)?;
         }
     }

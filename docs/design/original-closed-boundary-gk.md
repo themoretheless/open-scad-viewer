@@ -240,7 +240,8 @@ containment on all smaller hulls. The exact domain audit verifies each
 hole's lift, winding and nesting. Strict containment keeps each hole
 away from the shared natural boundary. Control point checks and exact
 subdivision share the contact proof's budget.
-For a clamped B-spline trim, knot refinement and subdivision work directly
-on the exact homogeneous coefficients of the four boundary inequalities.
-This proves strict positivity on every complete original span even when a
-join or a split point has Cartesian coordinates outside binary64.
+For a nonperiodic B-spline trim, endpoint extraction, knot refinement and
+subdivision work in exact homogeneous coordinates on the active interval.
+The four boundary inequalities must be strictly positive throughout every
+original span, including endpoints whose Cartesian coordinates fall
+outside binary64.

@@ -169,25 +169,11 @@ fn interior_curve(
     if depth == 0 || remaining == 0 || curve.periodic {
         return None;
     }
-    let [start, end] = curve.domain();
-    let degree = curve.degree;
-    if curve.knots[..=degree].iter().all(|&k| k == start)
-        && curve.knots[curve.control_points.len()..]
-            .iter()
-            .all(|&k| k == end)
-    {
-        let (proved, used) =
-            exact_knot_insertion::strict_box_containment(curve, [lower, upper], depth, remaining)
-                .ok()?;
-        charge(cells, limit, used as usize)?;
-        return proved.then_some(());
-    }
-    let report = exact_knot_insertion::split(curve, start * 0.5 + end * 0.5, remaining).ok()?;
-    charge(cells, limit, report.work_used as usize)?;
-    for piece in report.pieces? {
-        interior_curve(&piece, [lower, upper], depth - 1, cells, limit)?;
-    }
-    Some(())
+    let (proved, used) =
+        exact_knot_insertion::strict_box_containment(curve, [lower, upper], depth, remaining)
+            .ok()?;
+    charge(cells, limit, used as usize)?;
+    proved.then_some(())
 }
 
 fn shared_chain(
@@ -448,6 +434,32 @@ fn edge_certificate(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn exact_active_interval_proves_strict_hole_containment_for_unclamped_trims() {
+        let mut curve = Curve {
+            degree: 2,
+            knots: vec![-1., -0.5, 0., 0.5, 1., 1.5, 2.],
+            control_points: vec![
+                vec![-0.0625, 0.25],
+                vec![0.25, 0.375],
+                vec![0.5, 0.5],
+                vec![0.75, 0.625],
+            ],
+            weights: vec![2., 1., 1., 1.],
+            periodic: false,
+        };
+        let bounds = [[0., 0.], [1., 1.]];
+        let mut used = 0;
+        assert!(interior_curve(&curve, bounds, 12, &mut used, 1000).is_some());
+        assert!(interior_curve(&curve, bounds, 12, &mut 0, used - 1).is_none());
+        curve.control_points.reverse();
+        curve.weights.reverse();
+        assert!(interior_curve(&curve, bounds, 12, &mut 0, 1000).is_some());
+        // The weighted average at the active end is now exactly zero.
+        curve.control_points[3][0] = -0.125;
+        assert!(interior_curve(&curve, bounds, 12, &mut 0, 1000).is_none());
+    }
 
     #[test]
     fn exact_span_extraction_proves_strict_hole_containment_at_a_nonbinary_join() {
