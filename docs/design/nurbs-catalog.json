@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 862,
-  "unallocatedCount": 138,
+  "specifiedCount": 863,
+  "unallocatedCount": 137,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20095,6 +20095,23 @@
         "crates/cad-step/src/tests/step_interchange_v3.rs",
         "docs/qualification/nurbs-coordinate-layers-862-2026-11-18/receipt.json",
         "docs/qualification/nurbs-coordinate-layers-862-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."
+      ]
+    },
+    {
+      "id": "NURBS-0863",
+      "name": "Выделение материала деталей внутри контрольного объёма сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::material_in_box",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-inspection-box-863-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-inspection-box-863-2026-11-18/native.log.gz"
       ],
       "remainingQualification": [
         "WASM and editor exposure remain open. Unsupported Boolean surfaces propagate the kernel diagnostic."

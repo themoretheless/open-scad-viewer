@@ -985,6 +985,34 @@ impl StepSharedAssembly {
         brep_core::boolean(&first, &second, "intersection")
     }
 
+    /// Clip placed material to a finite inspection box in assembly coordinates.
+    /// Preserve occurrence indices and report unresolved candidates individually.
+    pub fn material_in_box(&self, min: [f64; 3], max: [f64; 3], max_candidates: usize)
+        -> Result<Vec<(usize, Result<Model>)>> {
+        if (0..3).any(|i| !min[i].is_finite() || !max[i].is_finite() || min[i] >= max[i]) {
+            return Err(refuse("STEP inspection box requires finite ordered limits"));
+        }
+        let bounds = self.occurrence_bounds()?;
+        let candidates: Vec<_> = bounds.into_iter().enumerate().filter(|(_, [lo, hi])| {
+            (0..3).all(|i| lo[i] < max[i] && min[i] < hi[i])
+        }).collect();
+        if candidates.len() > max_candidates {
+            return Err(refuse("STEP inspection box candidate budget exceeded"));
+        }
+        let clip = brep_core::cuboid(min, max)?;
+        let mut hits = Vec::new();
+        for (index, [lo, hi]) in candidates {
+            let inside = (0..3).all(|i| min[i] <= lo[i] && hi[i] <= max[i]);
+            let result = self.materialize(index).and_then(|model| {
+                if inside { Ok(model) } else { brep_core::boolean(&model, &clip, "intersection") }
+            });
+            if !matches!(&result, Ok(model) if model.bodies.is_empty()) {
+                hits.push((index, result));
+            }
+        }
+        Ok(hits)
+    }
+
     /// Split at a world X, Y or Z coordinate. Return the low and high material respectively.
     pub fn split_at_coordinate(&self, index: usize, axis: usize, coordinate: f64) -> Result<[Model; 2]> {
         if axis >= 3 || !coordinate.is_finite() {

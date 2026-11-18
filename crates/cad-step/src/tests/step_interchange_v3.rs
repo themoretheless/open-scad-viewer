@@ -4032,3 +4032,27 @@ fn nonuniform_layers_keep_empty_intervals_and_account_for_placed_stock() {
         assert!(scene.coordinate_layers(0, 2, cuts).is_err());
     }
 }
+
+#[test]
+fn inspection_box_reports_clipped_material_with_occurrence_identity() {
+    let stock = brep_core::cuboid([0.; 3], [2.; 3]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![stock],
+        vec![placed(-9.), placed(0.), placed(3.), placed(4.)]).unwrap();
+    let min = [-1.; 3];
+    let max = [4., 3., 3.];
+    let hits = scene.material_in_box(min, max, 3).unwrap();
+    assert_eq!(hits.len(), 2);
+    for ((index, result), (expected_index, volume)) in hits.into_iter().zip([(1, 8.), (2, 4.)]) {
+        assert_eq!(index, expected_index);
+        let material = result.unwrap();
+        assert_eq!(material.validate().unwrap().boundary_edge_count, 0);
+        let mass = brep_core::analysis::mass_properties(&material, 1e-8, 100_000).unwrap();
+        assert!((mass.signed_volume_mm3 - volume).abs() < 1e-8);
+    }
+    assert!(scene.material_in_box(min, max, 1).is_err());
+    assert!(scene.material_in_box(max, min, 9).is_err());
+    assert!(scene.material_in_box([20.; 3], [21.; 3], 0).unwrap().is_empty());
+}
