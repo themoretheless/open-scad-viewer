@@ -930,6 +930,44 @@ pub fn directional_peak_speed(
     tolerance: f64,
     max_cells: usize,
 ) -> Result<DirectionalPeakSpeedReport> {
+    Ok(measure_directional_peak_speed(curve, interval, direction, tolerance, max_cells, None)?.peak)
+}
+
+#[derive(Clone, Debug)]
+pub struct DirectionalPeakLocations {
+    pub peak: DirectionalPeakSpeedReport,
+    /// Sorted, merged source intervals covering every possible maximizer.
+    /// Width depends on peak separation, speed tolerance and cell budget.
+    pub parameter_intervals: Vec<[f64; 2]>,
+}
+
+/// Enclose all locations that can attain the peak absolute axial speed.
+/// A knot is included when either one-sided derivative can attain the peak.
+pub fn locate_directional_peak_speed(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    tolerance: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalPeakLocations> {
+    check(
+        parameter_tolerance.is_finite() && parameter_tolerance > 0.,
+        "Peak parameter tolerance must be positive and finite",
+    )?;
+    measure_directional_peak_speed(
+        curve, interval, direction, tolerance, max_cells, Some(parameter_tolerance),
+    )
+}
+
+fn measure_directional_peak_speed(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+    parameter_tolerance: Option<f64>,
+) -> Result<DirectionalPeakLocations> {
     curve.validate()?;
     validate(tolerance, max_cells)?;
     validate_travel_interval(curve, interval)?;
@@ -987,5 +1025,50 @@ pub fn directional_peak_speed(
             cells += 1;
         }
     };
-    Ok(DirectionalPeakSpeedReport { bounds: [lower, upper], cells, stop_reason })
+    let mut parameter_intervals: Vec<[f64; 2]> = Vec::new();
+    if let Some(parameter_tolerance) = parameter_tolerance {
+        let mut search = pending
+            .into_iter()
+            .map(|((upper_bits, _), (span, domain))| (f64::from_bits(upper_bits), span, domain))
+            .collect::<Vec<_>>();
+        let mut candidates = Vec::new();
+        while let Some((bound, span, domain @ [a, b])) = search.pop() {
+            if bound < lower {
+                continue;
+            }
+            let middle = crate::distance_bounds::midpoint(a, b);
+            if (b - a).next_up() <= parameter_tolerance
+                || cells + 2 > max_cells
+                || !(a < middle && middle < b)
+            {
+                candidates.push((bound, domain));
+                continue;
+            }
+            for part in [[a, middle], [middle, b]] {
+                let (witness, child_upper) = measure(span, part)?;
+                lower = lower.max(witness);
+                search.push((child_upper.min(bound), span, part));
+                cells += 1;
+            }
+        }
+        let mut candidates = candidates
+            .into_iter()
+            .filter_map(|(bound, domain)| (bound >= lower).then_some(domain))
+            .collect::<Vec<_>>();
+        candidates.sort_by(|a, b| a[0].total_cmp(&b[0]));
+        for [start, end] in candidates {
+            match parameter_intervals.last_mut() {
+                Some([_, last_end]) if start <= *last_end => *last_end = last_end.max(end),
+                _ => parameter_intervals.push([start, end]),
+            }
+        }
+    }
+    Ok(DirectionalPeakLocations {
+        peak: DirectionalPeakSpeedReport {
+            bounds: [lower, upper.max(lower)],
+            cells,
+            stop_reason,
+        },
+        parameter_intervals,
+    })
 }

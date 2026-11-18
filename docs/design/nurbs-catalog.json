@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 680,
-  "unallocatedCount": 320,
+  "specifiedCount": 681,
+  "unallocatedCount": 319,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16612,6 +16612,25 @@
       "remainingQualification": [
         "Enclose the supremum of absolute projected source-parameter velocity on a selected window.",
         "Check an interior peak under a nonunit source clock, one-sided knot speeds, clipped windows, and coarse whole-span enclosures.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0681",
+      "name": "Локализация всех возможных пиков осевой скорости NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::locate_directional_peak_speed",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-681-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-681-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Return the union of original parameter intervals that can still contain a global axial speed maximum.",
+        "Check interior localization, a coarse enclosure with one cell, preservation of disconnected tied spans and sorted source intervals.",
         "WASM and application integration are separate."
       ]
     }

@@ -8479,3 +8479,36 @@ fn directional_peak_speed_retains_both_one_sided_knot_derivatives() {
     }
     assert!(directional_peak_speed(&curve, [3., 5.], &[1., 0.], 1e-8, 1).is_err());
 }
+
+#[test]
+fn directional_peak_locations_narrow_around_an_interior_speed_maximum() {
+    use nurbs_core::analysis::curve_measure::locate_directional_peak_speed;
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![0., 0.], vec![1., 0.], vec![1., 0.]],
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let result = locate_directional_peak_speed(&curve, [2., 6.], &[1., 0.], 1e-5, 0.02, 2048).unwrap();
+    assert_eq!(result.parameter_intervals.len(), 1, "{result:?}");
+    let [lo, hi] = result.parameter_intervals[0];
+    assert!(lo <= 4. && 4. <= hi && hi - lo < 0.1, "{result:?}");
+    let coarse = locate_directional_peak_speed(&curve, [2., 6.], &[1., 0.], 1e-5, 0.02, 1).unwrap();
+    assert_eq!(coarse.parameter_intervals, vec![[2., 6.]]);
+}
+
+#[test]
+fn directional_peak_locations_preserve_disjoint_tied_spans() {
+    use nurbs_core::analysis::curve_measure::locate_directional_peak_speed;
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 3.],
+        control_points: vec![vec![0., 0.], vec![3., 0.], vec![4., 0.], vec![1., 0.]],
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let result = locate_directional_peak_speed(&curve, [0., 3.], &[1., 0.], 1e-8, 0.02, 3).unwrap();
+    assert_eq!(result.parameter_intervals, vec![[0., 1.], [2., 3.]]);
+    assert!(result.peak.bounds[0] <= 3. && 3. <= result.peak.bounds[1]);
+}
