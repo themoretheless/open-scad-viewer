@@ -115,6 +115,12 @@ fn spinner_bore_difference_preserves_teeth_and_closes_the_new_wall() {
     assert_eq!(bore.faces.len(), wall.len() + 2);
     assert!(bore.faces.iter().all(|face| face.holes.is_empty()));
     assert!(wall.iter().all(|&i| bore.faces.iter().any(|face| face.surface == sun.faces[i].surface)));
+    let exclusive = boolean(&sun, &cutter, "xor").unwrap();
+    assert_eq!(exclusive.bodies.len(), 2);
+    assert_eq!(exclusive.shells.len(), 2);
+    assert_eq!(exclusive.faces.len(), result.faces.len() + bore.faces.len());
+    assert_eq!(exclusive.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(boolean(&cutter, &sun, "xor").unwrap().0, exclusive.0);
     let short = cylinder(22., 9.).unwrap();
     assert!(boolean(&sun, &short, "difference").is_err());
     let mut altered = cutter.clone();

@@ -239,3 +239,11 @@ pub(crate) fn try_boolean(stock: &Model, tool: &Model, region: Region) -> Option
     }
     cylindrical_region(stock, caps, radius, stock_height, region).ok()
 }
+
+/// The outside stock and the bore core are separated by the positive radial
+/// gap proved for the old wall and the replacement cylinder.
+pub(crate) fn try_xor(stock: &Model, cylinder: &Model) -> Option<Model> {
+    let core = try_boolean(stock, cylinder, Region::Bore)?;
+    let outside = try_boolean(stock, cylinder, Region::Outside)?;
+    crate::boolean_support::concatenate_bodies(&outside, &core).ok()
+}

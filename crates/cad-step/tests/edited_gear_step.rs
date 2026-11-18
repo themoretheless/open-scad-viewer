@@ -369,5 +369,11 @@ fn exchanged_spinner_cylindrical_replacement_is_a_closed_single_body() {
         assert_eq!(reopened.bodies.len(), 1);
         assert_eq!(reopened.validate().unwrap().boundary_edge_count, 0);
         std::fs::write(dir.join("bore.step"), bore_step).unwrap();
+        let exclusive = brep_core::boolean(&source, &cutter, "xor").unwrap();
+        let (step, ..) = cad_step::export_step_v9(&exclusive).unwrap();
+        let (reopened, ..) = cad_step::import_step_v9(&step).unwrap();
+        assert_eq!(reopened.bodies.len(), 2);
+        assert_eq!(reopened.validate().unwrap().boundary_edge_count, 0);
+        std::fs::write(dir.join("exclusive.step"), step).unwrap();
     }
 }

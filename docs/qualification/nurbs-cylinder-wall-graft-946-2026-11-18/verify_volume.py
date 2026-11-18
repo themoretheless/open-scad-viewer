@@ -66,3 +66,22 @@ if (directory / "bore.step").exists():
     residual = result + volume(read(directory / "sleeve.step")) - volume(cylinder)
     assert abs(residual) < 0.01
     print(json.dumps(dict(bore=result, reference=reference, balance=residual)))
+
+if (directory / "exclusive.step").exists():
+    from OCP.TopAbs import TopAbs_SOLID
+    from OCP.TopExp import TopExp_Explorer
+    exclusive = read(directory / "exclusive.step")
+    assert BRepCheck_Analyzer(exclusive).IsValid()
+    solids = TopExp_Explorer(exclusive, TopAbs_SOLID)
+    masses = []
+    while solids.More():
+        masses.append(volume(solids.Current()))
+        solids.Next()
+    masses.sort()
+    assert len(masses) == 2
+    cylinder = BRepPrimAPI_MakeCylinder(22., cutter_height).Shape()
+    core = BRepAlgoAPI_Cut(cylinder, before)
+    assert core.IsDone()
+    reference = sorted((volume(core.Shape()), volume(cut.Shape())))
+    assert all(abs(a - b) < 0.01 for a, b in zip(masses, reference))
+    print(json.dumps(dict(exclusive=masses, reference=reference)))
