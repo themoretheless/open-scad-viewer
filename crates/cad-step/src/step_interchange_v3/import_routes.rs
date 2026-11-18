@@ -715,6 +715,28 @@ impl StepSharedAssembly {
         Ok(self.push_occurrence(definition, transform))
     }
 
+    /// Append a shared assembly under a rigid placement, flattening its hierarchy
+    /// while retaining the definition sharing within the appended assembly.
+    pub fn append_assembly(&mut self, source: Self, placement: [[f64; 4]; 4]) -> Result<()> {
+        if self.occurrences.len() + source.occurrences.len() > super::MAX_OCCURRENCES {
+            return Err(refuse("STEP assembly exceeds the limit of 256 occurrences"));
+        }
+        if !super::is_proper_rigid_placement(placement) {
+            return Err(refuse("STEP assembly placement must be a finite proper rigid transform"));
+        }
+        let offset = self.definitions.len();
+        let occurrences = source.occurrences.into_iter().map(|occurrence| {
+            let transform = mul(placement, occurrence.transform);
+            if !super::is_proper_rigid_placement(transform) {
+                return Err(refuse("STEP appended occurrences must have finite proper rigid placements"));
+            }
+            Ok(StepAssemblyOccurrence { definition: offset + occurrence.definition, transform })
+        }).collect::<Result<Vec<_>>>()?;
+        self.definitions.extend(source.definitions);
+        self.occurrences.extend(occurrences);
+        Ok(())
+    }
+
     fn check_new_placement(&self, transform: [[f64; 4]; 4]) -> Result<()> {
         if self.occurrences.len() >= super::MAX_OCCURRENCES {
             return Err(refuse("STEP assembly exceeds the limit of 256 occurrences"));

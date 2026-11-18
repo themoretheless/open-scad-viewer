@@ -2802,6 +2802,49 @@ fn planet_gear_step_assembly_retains_one_prototype() {
 }
 
 #[test]
+fn shared_step_append_assembly_composes_placements_once_per_occurrence() {
+    let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
+    let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
+    let step = crate::export_planet_gear_occurrences_step(&planets).unwrap();
+    let mut target = crate::import_step_shared_assembly(&step).unwrap();
+    let source = crate::import_step_shared_assembly(&step).unwrap();
+    let old = source.occurrences().to_vec();
+    let placement = [
+        [0., -1., 0., 25.],
+        [1., 0., 0., -8.],
+        [0., 0., 1., 40.],
+        [0., 0., 0., 1.],
+    ];
+    let invalid_source = crate::import_step_shared_assembly(&step).unwrap();
+    assert!(target.append_assembly(invalid_source, [[0.; 4]; 4]).is_err());
+    assert_eq!((target.definitions().len(), target.occurrences().len()), (1, 2));
+    target.append_assembly(source, placement).unwrap();
+
+    let edited = crate::export_step_shared_assembly(&target).unwrap();
+    let back = crate::import_step_shared_assembly(&edited).unwrap();
+    assert_eq!((back.definitions().len(), back.occurrences().len()), (2, 4));
+    for (index, original) in old.into_iter().enumerate() {
+        let original_peer = back.occurrences()[index];
+        let appended = back.occurrences()[index + 2];
+        assert_eq!(original_peer.definition, 0);
+        assert_eq!(appended.definition, 1);
+        let mut expected = original.transform;
+        expected[0] = original.transform[1].map(|value| -value);
+        expected[1] = original.transform[0];
+        for row in 0..3 {
+            expected[row][3] += placement[row][3];
+        }
+        for (actual, expected) in appended.transform.iter().flatten().zip(expected.iter().flatten()) {
+            assert!((actual - expected).abs() < 1e-10);
+        }
+        for (actual, expected) in original_peer.transform.iter().flatten().zip(original.transform.iter().flatten()) {
+            assert!((actual - expected).abs() < 1e-10);
+        }
+        assert_eq!(back.materialize(index + 2).unwrap().validate().unwrap().boundary_edge_count, 0);
+    }
+}
+
+#[test]
 fn shared_step_insert_solid_preserves_existing_shared_gear() {
     let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
     let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();

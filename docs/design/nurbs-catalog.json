@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 824,
-  "unallocatedCount": 176,
+  "specifiedCount": 825,
+  "unallocatedCount": 175,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19360,6 +19360,26 @@
       "remainingQualification": [
         "Insert a closed solid as a new definition and add its first rigid placement atomically.",
         "Check empty solid and invalid placement refusal, keep peer gears shared and reimport the inserted six-face closed solid at its requested height.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0825",
+      "name": "Объединение STEP-сборок с композицией размещений без развёртывания геометрии",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::append_assembly",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-825-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-825-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Append a shared assembly under a rigid transform while preserving definition sharing within each input.",
+        "Check invalid parent transform, independent composition formulas, two definitions for four occurrences, unchanged target placements and closed placed solids after STEP round-trip.",
         "WASM and application integration are separate."
       ]
     }

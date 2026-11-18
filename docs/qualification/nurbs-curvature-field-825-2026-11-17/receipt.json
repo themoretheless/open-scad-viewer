@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0825",
+  "testedBase": "64080417854982608fcd05b4cbc76d77506ee091",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 174,
+  "scope": [
+    "Append a shared assembly under a rigid transform while preserving definition sharing within each input.",
+    "Check invalid parent transform, independent composition formulas, two definitions for four occurrences, unchanged target placements and closed placed solids after STEP round-trip."
+  ],
+  "logSha256": "032533e41fc38e3b92fb762723ae218a338abe89da92f54510265c5fb44a7757",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "39bf28e52b956c8a8c0be3fcd810d5dd170d497045c1dacd43ad2fa7e8026c09",
+    "crates/cad-step/src/step_v3_export.rs": "0a2f23d34fb0cdf83de7d1b410acd9d27c6a0a4a259ebfe7ff5004d8cf0a4385",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "ea9ffbb5c6ddc5686ae80ab48d42473e62130097266772027d9597548bed638a"
+  }
+}
