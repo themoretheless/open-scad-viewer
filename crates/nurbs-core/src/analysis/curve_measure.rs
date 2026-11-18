@@ -1627,23 +1627,13 @@ pub fn partition_directional_position_range(
     parameter_tolerance: f64,
     max_cells: usize,
 ) -> Result<DirectionalPositionPartition> {
-    check(
-        allowed.iter().all(|value| value.is_finite()) && allowed[0] <= allowed[1],
-        "Position range must have finite ordered endpoints",
-    )?;
+    validate_position_range(allowed)?;
     curve.validate()?;
     let unit = travel_direction(curve, direction)?;
     let (cells, work_cells) = partition_motion_cells(
         curve, interval, parameter_tolerance, max_cells,
         |jets, _| {
-            let position = project_jet(&jets[0], &unit)?;
-            let status = if position.lo >= allowed[0] && position.hi <= allowed[1] {
-                DirectionalMotionStatus::Within
-            } else if position.hi < allowed[0] || position.lo > allowed[1] {
-                DirectionalMotionStatus::Exceeds
-            } else {
-                DirectionalMotionStatus::Undetermined
-            };
+            let (position, status) = classify_position(&jets[0], &unit, allowed)?;
             Ok(((position, status), status == DirectionalMotionStatus::Undetermined))
         },
     )?;
@@ -1656,6 +1646,93 @@ pub fn partition_directional_position_range(
         }
     }).collect();
     Ok(DirectionalPositionPartition { cells, work_cells })
+}
+
+/// An inclusive range along a normalized direction through the origin.
+#[derive(Clone, Copy, Debug)]
+pub struct PositionAxis<'a> {
+    pub direction: &'a [f64],
+    pub allowed: [f64; 2],
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct AxisPositionBounds {
+    pub bounds: [f64; 2],
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct MultiAxisPositionCell {
+    pub parameter_interval: [f64; 2],
+    pub span: usize,
+    /// Axis results in input order.
+    pub axes: Vec<AxisPositionBounds>,
+}
+
+#[derive(Clone, Debug)]
+pub struct MultiAxisPositionPartition {
+    pub cells: Vec<MultiAxisPositionCell>,
+    pub work_axis_cells: usize,
+}
+
+/// Check all signed position ranges on one shared subdivision. Each axis
+/// evaluation contributes one unit to the work budget.
+pub fn partition_multi_axis_position_ranges(
+    curve: &Curve,
+    interval: [f64; 2],
+    axes: &[PositionAxis<'_>],
+    parameter_tolerance: f64,
+    max_axis_cells: usize,
+) -> Result<MultiAxisPositionPartition> {
+    validate(parameter_tolerance, max_axis_cells)?;
+    check(!axes.is_empty(), "Position partition requires at least one axis")?;
+    let max_cells = max_axis_cells / axes.len();
+    if max_cells == 0 {
+        return Err(resource("Position partition budget must cover every axis"));
+    }
+    curve.validate()?;
+    let axes = axes.iter().map(|axis| {
+        validate_position_range(axis.allowed)?;
+        Ok((travel_direction(curve, axis.direction)?, axis.allowed))
+    }).collect::<Result<Vec<_>>>()?;
+    let (cells, work_cells) = partition_motion_cells(
+        curve, interval, parameter_tolerance, max_cells,
+        |jets, _| {
+            let results = axes.iter().map(|(unit, allowed)| {
+                let (position, status) = classify_position(&jets[0], unit, *allowed)?;
+                Ok(AxisPositionBounds { bounds: [position.lo, position.hi], status })
+            }).collect::<Result<Vec<_>>>()?;
+            let refine = results.iter().any(|axis| axis.status == DirectionalMotionStatus::Undetermined);
+            Ok((results, refine))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(span, parameter_interval, axes)| {
+        MultiAxisPositionCell { parameter_interval, span, axes }
+    }).collect();
+    Ok(MultiAxisPositionPartition { cells, work_axis_cells: work_cells * axes.len() })
+}
+
+fn validate_position_range(allowed: [f64; 2]) -> Result<()> {
+    check(
+        allowed.iter().all(|value| value.is_finite()) && allowed[0] <= allowed[1],
+        "Position range must have finite ordered endpoints",
+    )
+}
+
+fn classify_position(
+    point: &[Interval],
+    unit: &[Interval],
+    allowed: [f64; 2],
+) -> Result<(Interval, DirectionalMotionStatus)> {
+    let position = project_jet(point, unit)?;
+    let status = if position.lo >= allowed[0] && position.hi <= allowed[1] {
+        DirectionalMotionStatus::Within
+    } else if position.hi < allowed[0] || position.lo > allowed[1] {
+        DirectionalMotionStatus::Exceeds
+    } else {
+        DirectionalMotionStatus::Undetermined
+    };
+    Ok((position, status))
 }
 
 fn partition_motion_cells<T>(

@@ -9604,3 +9604,39 @@ fn directional_position_partition_handles_signed_oblique_projection() {
         &curve, [0., 1.], &[-3., -4.], [0.5, -3.], 0.01, 128,
     ).is_err());
 }
+
+#[test]
+fn multi_axis_position_partition_aligns_distinct_limit_crossings() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, PositionAxis, partition_multi_axis_position_ranges,
+    };
+    let curve = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![2., 0.5], vec![0., 1.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let axes = [
+        PositionAxis { direction: &[1., 0.], allowed: [-1., 0.75] },
+        PositionAxis { direction: &[0., -1.], allowed: [-0.6, 1.] },
+    ];
+    assert!(partition_multi_axis_position_ranges(&curve, [0., 1.], &axes, 0.01, 1).is_err());
+    let report =
+        partition_multi_axis_position_ranges(&curve, [0., 1.], &axes, 0.01, 256).unwrap();
+    assert!(report.work_axis_cells <= 256);
+    for (axis, crossing) in [(0, 0.25), (1, 0.6), (0, 0.75)] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= crossing && crossing <= b && b - a <= 0.01
+                && cell.axes[axis].status == Status::Undetermined
+        }));
+    }
+    assert!(report.cells.iter().any(|cell| {
+        cell.axes[0].status == Status::Exceeds && cell.axes[1].status == Status::Within
+    }));
+    assert_eq!(report.cells.last().unwrap().axes[1].status, Status::Exceeds);
+    for adjacent in report.cells.windows(2) {
+        assert_eq!(adjacent[0].parameter_interval[1], adjacent[1].parameter_interval[0]);
+    }
+}
