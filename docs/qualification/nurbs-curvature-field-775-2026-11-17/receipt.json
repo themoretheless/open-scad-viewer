@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0775",
+  "testedBase": "9fa3007b1d3addb9b25104a05b9028014941ab04",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 401,
+  "scope": [
+    "Clip hull chords to candidate contact parameters and certify each witness with interval arithmetic.",
+    "Check off-center chord contact, an infeasible opposing strip and reserved chord work."
+  ],
+  "logSha256": "576ab82d8225a9520c2f360008dd7996182ac1811e4f45830e97ca624fd7fb73",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "7e47300118c36c6483b18bec2b7fc2a7446273d9a40469d564d0ffa3df1c80c4",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "2dfd8aa1b08dcf160bc4c23a361c383297282fd8827a187c565026cd5c7507bc"
+  }
+}

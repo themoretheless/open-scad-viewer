@@ -12164,3 +12164,41 @@ fn rotating_hull_chord_contact_detects_a_strip_between_tool_vertices() {
     assert_eq!(report.cells.len(), 1);
     assert_eq!(report.cells[0].status, Status::Exceeds);
 }
+
+#[test]
+fn rotating_clipped_chord_contact_finds_an_off_center_obstacle_strip() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_profiled_hull_obstacle_chord_contact,
+        partition_planar_rotating_profiled_hull_obstacle_clipped_chord_contact,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![0., 0.1]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., 0.], vec![1., 0.05]],
+        ..position.clone()
+    };
+    let strip = [
+        WorkspaceHalfSpace { normal: &[2., 0.], offset: 2.2 },
+        WorkspaceHalfSpace { normal: &[-1., 0.], offset: -0.9 },
+    ];
+    let impossible = [strip[0], WorkspaceHalfSpace { normal: &[-1., 0.], offset: -1.2 }];
+    let hull = [&[-2., 0.][..], &[2., 0.][..]];
+    let profile = [(0., 0.), (1., 0.)];
+    let midpoints = partition_planar_rotating_profiled_hull_obstacle_chord_contact(
+        &position, &direction, &profile, &[&strip], &hull, 0.01, 30,
+    ).unwrap();
+    assert_eq!(midpoints.cells[0].status, Status::Undetermined);
+    let measure = |budget| partition_planar_rotating_profiled_hull_obstacle_clipped_chord_contact(
+        &position, &direction, &profile, &[&strip, &impossible], &hull, 0.01, budget,
+    );
+    assert!(measure(47).is_err());
+    let report = measure(48).unwrap();
+    assert_eq!(report.work_plane_cells, 48);
+    assert_eq!(report.cells[0].obstacles, [Status::Exceeds, Status::Undetermined]);
+}

@@ -2590,7 +2590,7 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_clearance(
 ) -> Result<ObstacleClearancePartition> {
     partition_rotating_profiled_obstacles(
         position, direction, radius_profile, obstacles, vertex_offsets,
-        parameter_tolerance, max_vertex_plane_cells, 0, false,
+        parameter_tolerance, max_vertex_plane_cells, 0, ChordWitness::None,
     )
 }
 
@@ -2609,7 +2609,7 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_contact(
 ) -> Result<ObstacleClearancePartition> {
     partition_rotating_profiled_obstacles(
         position, direction, radius_profile, obstacles, vertex_offsets,
-        parameter_tolerance, max_vertex_plane_cells, 1, false,
+        parameter_tolerance, max_vertex_plane_cells, 1, ChordWitness::None,
     )
 }
 
@@ -2627,7 +2627,7 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_corner_contact(
 ) -> Result<ObstacleClearancePartition> {
     partition_rotating_profiled_obstacles(
         position, direction, radius_profile, obstacles, vertex_offsets,
-        parameter_tolerance, max_vertex_plane_cells, 2, false,
+        parameter_tolerance, max_vertex_plane_cells, 2, ChordWitness::None,
     )
 }
 
@@ -2646,7 +2646,7 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_asymmetric_contact(
 ) -> Result<ObstacleClearancePartition> {
     partition_rotating_profiled_obstacles(
         position, direction, radius_profile, obstacles, vertex_offsets,
-        parameter_tolerance, max_vertex_plane_cells, 3, false,
+        parameter_tolerance, max_vertex_plane_cells, 3, ChordWitness::None,
     )
 }
 
@@ -2664,7 +2664,7 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_skew_contact(
 ) -> Result<ObstacleClearancePartition> {
     partition_rotating_profiled_obstacles(
         position, direction, radius_profile, obstacles, vertex_offsets,
-        parameter_tolerance, max_vertex_plane_cells, 4, false,
+        parameter_tolerance, max_vertex_plane_cells, 4, ChordWitness::None,
     )
 }
 
@@ -2682,8 +2682,33 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_chord_contact(
 ) -> Result<ObstacleClearancePartition> {
     partition_rotating_profiled_obstacles(
         position, direction, radius_profile, obstacles, vertex_offsets,
-        parameter_tolerance, max_vertex_plane_cells, 4, true,
+        parameter_tolerance, max_vertex_plane_cells, 4, ChordWitness::Midpoint,
     )
+}
+
+/// Clip each hull chord against conservative obstacle plane bounds to find
+/// a fixed point that lies inside the obstacle throughout the cell.
+/// This supplements rounded vertex checks with unrounded chord witnesses.
+pub fn partition_planar_rotating_profiled_hull_obstacle_clipped_chord_contact(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    partition_rotating_profiled_obstacles(
+        position, direction, radius_profile, obstacles, vertex_offsets,
+        parameter_tolerance, max_vertex_plane_cells, 4, ChordWitness::Clipped,
+    )
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ChordWitness {
+    None,
+    Midpoint,
+    Clipped,
 }
 
 fn partition_rotating_profiled_obstacles(
@@ -2695,7 +2720,7 @@ fn partition_rotating_profiled_obstacles(
     parameter_tolerance: f64,
     max_vertex_plane_cells: usize,
     witness_passes: usize,
-    include_chord_midpoints: bool,
+    chords: ChordWitness,
 ) -> Result<ObstacleClearancePartition> {
     use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
 
@@ -2711,23 +2736,30 @@ fn partition_rotating_profiled_obstacles(
         plane_count += obstacle.len();
     }
     let vertex_count = vertex_offsets.len();
-    let midpoint_count = if include_chord_midpoints {
+    let chord_count = if chords != ChordWitness::None {
         vertex_count.checked_mul(vertex_count - 1)
             .ok_or_else(|| resource("Tool chord count exceeds the work budget"))? / 2
     } else {
         0
     };
-    let witness_count = vertex_count + midpoint_count;
-    if witness_count > max_vertex_plane_cells / plane_count / (1 + witness_passes) {
+    let chord_passes = match chords {
+        ChordWitness::None => 0,
+        ChordWitness::Midpoint => 1 + witness_passes,
+        ChordWitness::Clipped => 2,
+    };
+    let witness_work = chord_count.checked_mul(chord_passes)
+        .and_then(|work| work.checked_add(vertex_count * (1 + witness_passes)))
+        .ok_or_else(|| resource("Tool chord work exceeds the work budget"))?;
+    if witness_work > max_vertex_plane_cells / plane_count {
         return Err(resource("Clearance budget must cover every witness and plane"));
     }
-    let pairs = plane_count * witness_count * (1 + witness_passes);
+    let pairs = plane_count * witness_work;
     let max_cells = max_vertex_plane_cells / pairs;
     let (initial, profiles) = prepare_planar_rotation_profile(position, direction, radius_profile, max_cells)?;
     let mut vertices = prepare_workspace_hull(position, vertex_offsets, plane_count)?;
-    if include_chord_midpoints {
+    if chords == ChordWitness::Midpoint {
         let half = Interval::point(0.5);
-        vertices.reserve(midpoint_count);
+        vertices.reserve(chord_count);
         for end in 1..vertex_count {
             for start in 0..end {
                 let a = &vertices[start];
@@ -2773,8 +2805,10 @@ fn partition_rotating_profiled_obstacles(
                             let residual = center.add(project_jet(offset, &inverse)?)?;
                             separated &= residual.lo > margin;
                             candidates[vertex] &= residual.hi <= 0.;
-                            if seek_rounded {
+                            if seek_rounded || chords == ChordWitness::Clipped {
                                 residuals.push(residual);
+                            }
+                            if seek_rounded {
                                 let violation = residual.hi / length.hi;
                                 let [first, second] = &mut witness_planes[vertex];
                                 if violation > first.1 {
@@ -2793,7 +2827,9 @@ fn partition_rotating_profiled_obstacles(
                     if *status == Within {
                         continue;
                     }
-                    if candidates.contains(&true) || (seek_rounded && rounded_vertex_contacts(
+                    if candidates.contains(&true)
+                        || (chords == ChordWitness::Clipped && clipped_chord_contacts(&residuals, vertex_count)?)
+                        || (seek_rounded && rounded_vertex_contacts(
                         obstacle, &residuals, &witness_planes, radius.lo, witness_passes,
                     )?) {
                         *status = Exceeds;
@@ -2817,6 +2853,47 @@ fn partition_rotating_profiled_obstacles(
         cells: cells.into_iter().map(|(_, _, cell)| cell).collect(),
         work_plane_cells: work_cells * pairs,
     })
+}
+
+fn clipped_chord_contacts(residuals: &[Interval], vertex_count: usize) -> Result<bool> {
+    for end in 1..vertex_count {
+        'chords: for start in 0..end {
+            let mut lower: f64 = 0.;
+            let mut upper: f64 = 1.;
+            for plane in residuals.chunks_exact(vertex_count) {
+                let (a, b) = (plane[start].hi, plane[end].hi);
+                if a > 0. && b > 0. {
+                    continue 'chords;
+                }
+                if a > 0. || b > 0. {
+                    let scale = a.abs().max(b.abs());
+                    let left = a.abs() / scale;
+                    let right = b.abs() / scale;
+                    let crossing = left / (left + right);
+                    if a > 0. {
+                        lower = lower.max(crossing);
+                    } else {
+                        upper = upper.min(crossing);
+                    }
+                }
+                if lower > upper {
+                    continue 'chords;
+                }
+            }
+            // Clipping only proposes a candidate. Verify the interpolation
+            // with interval arithmetic before treating it as a witness.
+            let t = Interval::point(crate::distance_bounds::midpoint(lower, upper));
+            let complement = Interval::point(1.).sub(t)?;
+            for plane in residuals.chunks_exact(vertex_count) {
+                let bound = plane[start].mul(complement)?.add(plane[end].mul(t)?)?;
+                if bound.hi > 0. {
+                    continue 'chords;
+                }
+            }
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn rounded_vertex_contacts(
