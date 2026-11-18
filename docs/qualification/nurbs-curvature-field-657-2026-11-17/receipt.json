@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0657",
+  "testedBase": "3657bd1d036019b57025b353a264cd7549be27d7",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 256,
+  "scope": [
+    "Project components before density-weighted extremization and classify eccentricity against a fixed tolerance.",
+    "Check projected cancellation under uncertain masses and all tolerance outcomes, a weighted nested-island analytic reference and incomplete coverage."
+  ],
+  "logSha256": "b0690c7786463c9082135f648dced2b67ab3d1ce9ccf37219bdce09dfb7e3577",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "718f68871a975c68c6408c2c83ce7579e849126d9ee19743d75e6b1f2f1d761c",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "80e7d807b15b5ebdf93a500548397d83654770e9d7dcd6f2f8c56ddb62d4fb6c"
+  }
+}

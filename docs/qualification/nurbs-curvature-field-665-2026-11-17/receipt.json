@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0665",
+  "testedBase": "f7378de670db6fec669c33656a817a2f1e67389f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 264,
+  "scope": [
+    "Classify interval unbalance against separate limits in two correction planes and report the assembly status.",
+    "Check the three combined outcomes, bounds on vector magnitude, and invalid tolerance and interval rejection."
+  ],
+  "logSha256": "af8c4e9bc67672e45930b9ee4982736a5d0f4a682c142d8309f922c413931ab9",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "ab432db11daa311408077253664071a685008b4686e4f60ca1baa5fd007aa993",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "fb996b563cae9133c10599529ee6d84ca75a19955c63dc18bee5e95f4cfa06ff"
+  }
+}

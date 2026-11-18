@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0674",
+  "testedBase": "df8c6e41f87cec62ddd028126163bfa91071f98c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 274,
+  "scope": [
+    "Decompose certified projected travel into positive and negative axial motion using signed span displacements.",
+    "Check asymmetric retracing, direction reversal and zero reverse travel on a monotone line."
+  ],
+  "logSha256": "24fbc6cda4eacabe6e446106d5fad948d6ea2995e22e90182c5400ade3781259",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "c1cd92a8a1ae332e14e15a48075c7cda59784a707f7b14990959ddea27fd1797",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "d4f15a07b1b41d6f7941b6e49a3cdb62ca956ac2206f3b5954ec16fc78cfed21"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "id": "NURBS-0664",
+  "testedBase": "35c0d1f9406255810b3a88a9b04351a938d5c578",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 316,
+  "scope": [
+    "Expose equivalent radial vectors at two user-supplied axial offsets through the density request.",
+    "Check analytic density-weighted plane vectors and offset order, coincident-plane validation and incomplete coverage through the compiled ABI."
+  ],
+  "logSha256": "b72030643ab12849292f8d8e287361517cb6fcd2f613fe54dbd0df0a61ae3718",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "631e6bdd6eed7bd32bfe83e3dd353791fa42b479a959d9e1c205a39c40d4d986",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "eedaa235e6a5063b80d85439f71674471ce961ad5b9dd261ad83bfca7276ac97",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "356b0f50a1e631711b69bd3e82acb677161195fa9809683670cb520533475665",
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "a7f924586b3fd4b9456bf8b60bc463bc6cf2c755be4e7518daa54835be522351"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0671",
+  "testedBase": "511e6d0f84a5bcc87f9c54c1363456851d5609a4",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 270,
+  "scope": [
+    "Enclose minimum mounting radii under per-plane mass limits and classify feasibility at the supplied radii.",
+    "Check analytic radius intervals, feasible and infeasible radius choices, undecided capacity and invalid inputs."
+  ],
+  "logSha256": "538f4c90b07b1e6659bbb62b73e12f54810184b3d503283242115f8f36c037d6",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "4e3622cfb066919a8fb0643dba0b9ddc187b8b0ee479327d98e08557ab008665",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "5bf3d9b9c6feb650bbd30e74a3159f53ca11dcecdefb7b482169cd5704886ec8"
+  }
+}

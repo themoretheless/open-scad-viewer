@@ -661,3 +661,151 @@ pub(super) fn length_under_plane_metric(
     };
     Ok(measure_with_cells(curve,curve.domain(),tolerance,max_cells,mapped)?.0)
 }
+
+/// Enclose total travel along a fixed direction, including every reversal.
+/// The direction is normalized, so bounds and tolerance use model units.
+pub fn directional_travel(
+    curve: &Curve,
+    direction: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<LengthReport> {
+    curve.validate()?;
+    validate(tolerance, max_cells)?;
+    let unit = travel_direction(curve, direction)?;
+    measure_directional_travel(curve, curve.domain(), &unit, tolerance, max_cells)
+}
+
+#[derive(Clone, Debug)]
+pub struct DirectionalTravelReport {
+    pub total: LengthReport,
+    pub forward_bounds: [f64; 2],
+    pub reverse_bounds: [f64; 2],
+    /// Integral of signed axial velocity over the active spans.
+    pub signed_travel_bounds: [f64; 2],
+}
+
+/// Separate positive and negative travel along the supplied direction.
+/// Each knot span is measured on its own, so jumps do not add travel.
+pub fn directional_travel_by_sign(
+    curve: &Curve,
+    direction: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalTravelReport> {
+    curve.validate()?;
+    measure_signed_directional_travel(curve, curve.domain(), direction, tolerance, max_cells)
+}
+
+/// Enclose the positive and negative axial travel on a finite, increasing
+/// interval of the original knot domain.
+pub fn directional_travel_on_interval(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalTravelReport> {
+    curve.validate()?;
+    let [start, end] = curve.domain();
+    let [lo, hi] = interval;
+    check(
+        start <= lo && lo < hi && hi <= end,
+        "Directional travel interval must lie inside the curve domain",
+    )?;
+    measure_signed_directional_travel(curve, interval, direction, tolerance, max_cells)
+}
+
+fn measure_signed_directional_travel(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalTravelReport> {
+    validate(tolerance, max_cells)?;
+    let unit = travel_direction(curve, direction)?;
+    let total = measure_directional_travel(curve, interval, &unit, tolerance, max_cells)?;
+    let mut signed = Interval::point(0.);
+    for span in curve.degree..curve.control_points.len() {
+        let domain = [
+            curve.knots[span].max(interval[0]),
+            curve.knots[span + 1].min(interval[1]),
+        ];
+        if domain[0] >= domain[1] {
+            continue;
+        }
+        let left = curve_jets::endpoint(curve, span, domain, false)?;
+        let right = curve_jets::endpoint(curve, span, domain, true)?;
+        let delta = right[0]
+            .iter()
+            .zip(&left[0])
+            .map(|(end, start)| end.sub(*start))
+            .collect::<Result<Vec<_>>>()?;
+        signed = signed.add(project_jet(&delta, &unit)?)?;
+    }
+    let absolute = Interval::new(total.bounds[0], total.bounds[1])?;
+    let split = |sum: Interval| -> Result<[f64; 2]> {
+        let travel = sum.mul(Interval::point(0.5))?.intersect(0., absolute.hi)?;
+        Ok([travel.lo, travel.hi])
+    };
+    Ok(DirectionalTravelReport {
+        forward_bounds: split(absolute.add(signed)?)?,
+        reverse_bounds: split(absolute.sub(signed)?)?,
+        signed_travel_bounds: [signed.lo, signed.hi],
+        total,
+    })
+}
+
+fn travel_direction(curve: &Curve, direction: &[f64]) -> Result<Vec<Interval>> {
+    check(
+        direction.len() == curve.control_points[0].len()
+            && direction.iter().all(|value| value.is_finite()),
+        "Directional travel requires a finite vector matching the curve dimension",
+    )?;
+    let scale = direction.iter().map(|value| value.abs()).fold(0., f64::max);
+    check(scale > 0., "Directional travel requires a nonzero vector")?;
+    let coefficients = direction
+        .iter()
+        .map(|&value| {
+            let ratio = value / scale;
+            if value == 0. || value.abs() == scale {
+                Ok(Interval::point(ratio))
+            } else {
+                Interval::new(ratio.next_down(), ratio.next_up())
+            }
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let length = norm(&coefficients)?;
+    coefficients
+        .into_iter()
+        .map(|coefficient| coefficient.div(length))
+        .collect()
+}
+
+fn project_jet(jet: &[Interval], unit: &[Interval]) -> Result<Interval> {
+    jet.iter()
+        .zip(unit)
+        .filter(|(_, coefficient)| coefficient.lo != 0. || coefficient.hi != 0.)
+        .try_fold(Interval::point(0.), |sum, (&value, &coefficient)| {
+            sum.add(value.mul(coefficient)?)
+        })
+}
+
+fn measure_directional_travel(
+    curve: &Curve,
+    interval: [f64; 2],
+    unit: &[Interval],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<LengthReport> {
+    let project = |jets: Vec<Vec<Interval>>| -> Result<Vec<Vec<Interval>>> {
+        jets.into_iter()
+            .map(|jet| Ok(vec![project_jet(&jet, unit)?]))
+            .collect()
+    };
+    let mapped = |curve: &Curve, span, domain, serial| {
+        mapped_cell(curve, span, domain, serial, project)
+    };
+    Ok(measure_with_cells(curve, interval, tolerance, max_cells, mapped)?.0)
+}

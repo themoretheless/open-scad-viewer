@@ -7934,3 +7934,424 @@ fn principal_axis_angle_sine_respects_certified_angular_uncertainty() {
     assert_eq!(hi, 1.);
     assert!(bound_principal_axis_angle_sine(axis, [0.; 3]).is_err());
 }
+
+#[test]
+fn assembly_balance_projects_before_combining_uncertain_masses() {
+    use nurbs_core::analysis::surface_measure::{
+        BalanceTolerance, SurfaceAssemblyMassBounds, bound_assembly_balance_about_line,
+    };
+    let pieces = [1., 100.].map(|x| SurfaceAssemblyMassBounds {
+        mass_bounds: [1., 10.],
+        centroid_bounds: [[x; 2], [x; 2], [3.; 2]],
+        central_inertia_bounds: [[[0.; 2]; 3]; 3],
+    });
+    for (tolerance, expected) in [
+        (3.01, BalanceTolerance::Within),
+        (2.99, BalanceTolerance::Outside),
+        (3., BalanceTolerance::Undetermined),
+    ] {
+        let ([lo, hi], status) =
+            bound_assembly_balance_about_line(&pieces, [0.; 3], [2., 2., 0.], tolerance)
+                .unwrap();
+        assert!(lo <= 3. && 3. <= hi && hi - lo < 1e-11);
+        assert_eq!(status, expected);
+    }
+    assert!(bound_assembly_balance_about_line(&pieces, [0.; 3], [0.; 3], 1.).is_err());
+}
+
+#[test]
+fn weighted_trim_balance_detects_offset_axis_and_incomplete_measurement() {
+    use nurbs_core::analysis::surface_measure::{
+        BalanceTolerance, periodic_trim_patch_set_mass_with_density,
+    };
+    let patches = periodic_trim_patches_with_nested_island();
+    let densities = [[2.; 2], [6.; 2]];
+    let report = periodic_trim_patch_set_mass_with_density(
+        &patches, &densities, 0.005, 1e-10, 20_000, 1_000_000,
+    )
+    .unwrap();
+    let point = [1., 0., 0.];
+    let direction = [0., 0., 1.];
+    let ([lo, hi], status) = report
+        .bound_balance_about_line(point, direction, 0.5)
+        .unwrap()
+        .unwrap();
+    let exact = (1. - 0.34375_f64 / 2.875).hypot(0.375 / 2.875);
+    assert!(lo <= exact && exact <= hi);
+    assert_eq!(status, BalanceTolerance::Outside);
+    let incomplete =
+        periodic_trim_patch_set_mass_with_density(&patches, &densities, 0.005, 1e-10, 2, 1_000_000)
+            .unwrap();
+    assert_eq!(incomplete.bound_balance_about_line(point, direction, 0.5).unwrap(), None);
+}
+
+#[test]
+fn static_unbalance_sums_signed_component_vectors_before_taking_magnitude() {
+    use nurbs_core::analysis::surface_measure::{
+        SurfaceAssemblyMassBounds, bound_assembly_static_unbalance,
+    };
+    let mut pieces = [(2., -3.), (3., 2.)].map(|(mass, x)| SurfaceAssemblyMassBounds {
+        mass_bounds: [mass; 2],
+        centroid_bounds: [[x; 2], [0.; 2], [4.; 2]],
+        central_inertia_bounds: [[[0.; 2]; 3]; 3],
+    });
+    let balanced = bound_assembly_static_unbalance(&pieces, [0.; 3], [0., 0., 1.]).unwrap();
+    assert_eq!(balanced.magnitude_bounds[0], 0.);
+    assert!(balanced.magnitude_bounds[1] < 1e-12);
+
+    pieces[1].mass_bounds = [4., 5.];
+    let unbalanced =
+        bound_assembly_static_unbalance(&pieces, [0., 0., 10.], [0., 0., -2.]).unwrap();
+    let [lo, hi] = unbalanced.magnitude_bounds;
+    assert!(lo <= 2. && 4. <= hi && hi - lo < 2. + 1e-12);
+    let [lo, hi] = unbalanced.vector_bounds[0];
+    assert!(lo <= 2. && 4. <= hi);
+}
+
+#[test]
+fn weighted_trim_static_unbalance_encloses_analytic_offset_vector() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_mass_with_density;
+    let patches = periodic_trim_patches_with_nested_island();
+    let report = periodic_trim_patch_set_mass_with_density(
+        &patches, &[[2.; 2], [6.; 2]], 0.005, 1e-10, 20_000, 1_000_000,
+    )
+    .unwrap();
+    let result = report
+        .bound_static_unbalance([1., 0., 0.], [0., 0., 1.])
+        .unwrap()
+        .unwrap();
+    let exact = [0.34375_f64 - 2.875, 0.375, 0.];
+    for ([lo, hi], expected) in result.vector_bounds.into_iter().zip(exact) {
+        assert!(lo <= expected && expected <= hi);
+    }
+    let [lo, hi] = result.magnitude_bounds;
+    assert!(lo <= exact[0].hypot(exact[1]) && exact[0].hypot(exact[1]) <= hi);
+}
+
+#[test]
+fn couple_unbalance_detects_axial_mass_separation_in_a_statically_balanced_assembly() {
+    use nurbs_core::analysis::surface_measure::{
+        SurfaceAssemblyMassBounds, bound_assembly_couple_unbalance, bound_assembly_static_unbalance,
+    };
+    let pieces = [-1., 1.].map(|coordinate| SurfaceAssemblyMassBounds {
+        mass_bounds: [1.; 2],
+        centroid_bounds: [[coordinate; 2], [0.; 2], [coordinate; 2]],
+        central_inertia_bounds: [[[0.; 2]; 3]; 3],
+    });
+    let static_unbalance =
+        bound_assembly_static_unbalance(&pieces, [0.; 3], [0., 0., 1.]).unwrap();
+    assert!(static_unbalance.magnitude_bounds[1] < 1e-12);
+
+    for (point, direction) in [([0.; 3], [0., 0., 1.]), ([0., 0., 4.], [0., 0., -2.])] {
+        let couple = bound_assembly_couple_unbalance(&pieces, point, direction).unwrap();
+        for ([lo, hi], expected) in couple.vector_bounds.into_iter().zip([0., -2., 0.]) {
+            assert!(lo <= expected && expected <= hi);
+            assert!(hi - lo < 1e-12);
+        }
+        let [lo, hi] = couple.magnitude_bounds;
+        assert!(lo <= 2. && 2. <= hi && lo > 1.99);
+    }
+}
+
+#[test]
+fn weighted_trim_couple_unbalance_encloses_analytic_products_of_inertia() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_mass_with_density;
+    let patches = periodic_trim_patches_with_nested_island();
+    let report = periodic_trim_patch_set_mass_with_density(
+        &patches, &[[2.; 2], [6.; 2]], 0.005, 1e-10, 20_000, 1_000_000,
+    )
+    .unwrap();
+    let result = report.bound_couple_unbalance([0.; 3], [0., 0., 1.]).unwrap().unwrap();
+    // The retained ranges are symmetric around world z = 1.
+    let exact = [0.375_f64, -0.34375, 0.];
+    for ([lo, hi], expected) in result.vector_bounds.into_iter().zip(exact) {
+        assert!(lo <= expected && expected <= hi);
+    }
+    let [lo, hi] = result.magnitude_bounds;
+    let expected = exact[0].hypot(exact[1]);
+    assert!(lo <= expected && expected <= hi);
+}
+
+#[test]
+fn two_plane_balance_recovers_separated_radial_unbalance_vectors() {
+    use nurbs_core::analysis::surface_measure::{
+        SurfaceAssemblyMassBounds, bound_assembly_two_plane_unbalance,
+    };
+    let pieces = [([-1., 2., -2.], 2.), ([3., -1., 4.], 3.)].map(|(center, mass)| {
+        SurfaceAssemblyMassBounds {
+            mass_bounds: [mass; 2],
+            centroid_bounds: center.map(|value| [value; 2]),
+            central_inertia_bounds: [[[0.; 2]; 3]; 3],
+        }
+    });
+    for (direction, offsets, exact) in [
+        ([0., 0., 2.], [-2., 4.], [[-2., 4., 0.], [9., -3., 0.]]),
+        ([0., 0., -2.], [-4., 2.], [[9., -3., 0.], [-2., 4., 0.]]),
+    ] {
+        let result = bound_assembly_two_plane_unbalance(&pieces, [0.; 3], direction, offsets)
+            .unwrap();
+        for (plane, expected) in result.into_iter().zip(exact) {
+            for ([lo, hi], reference) in plane.into_iter().zip(expected) {
+                assert!(lo <= reference && reference <= hi && hi - lo < 1e-12);
+            }
+        }
+    }
+}
+
+#[test]
+fn two_plane_balance_splits_midplane_mass_and_rejects_coincident_planes() {
+    use nurbs_core::analysis::surface_measure::{
+        SurfaceAssemblyMassBounds, bound_assembly_two_plane_unbalance,
+    };
+    let piece = SurfaceAssemblyMassBounds {
+        mass_bounds: [1., 2.],
+        centroid_bounds: [[2.; 2], [0.; 2], [1.; 2]],
+        central_inertia_bounds: [[[0.; 2]; 3]; 3],
+    };
+    let direction = [0., 0., 1.];
+    let bounds =
+        bound_assembly_two_plane_unbalance(&[piece], [0., 0., 1.], direction, [-1., 1.]).unwrap();
+    for plane in bounds {
+        assert!(plane[0][0] <= 1. && plane[0][0] > 1. - 1e-12);
+        assert!(plane[0][1] >= 2. && plane[0][1] < 2. + 1e-12);
+    }
+    assert!(
+        bound_assembly_two_plane_unbalance(&[piece], [0.; 3], direction, [1.; 2]).is_err()
+    );
+}
+
+#[test]
+fn two_plane_tolerance_classifies_each_magnitude_and_the_assembly() {
+    use nurbs_core::analysis::surface_measure::{BalanceTolerance::*, classify_two_plane_unbalance};
+    let vectors = [[[3.; 2], [4.; 2], [0.; 2]], [[-2., 2.], [1.; 2], [0.; 2]]];
+    for (limits, planes, combined) in [
+        ([6., 3.], [Within, Within], Within),
+        ([4., 1.5], [Outside, Undetermined], Outside),
+        ([6., 1.5], [Within, Undetermined], Undetermined),
+    ] {
+        let report = classify_two_plane_unbalance(vectors, limits).unwrap();
+        assert_eq!(report.plane_status, planes);
+        assert_eq!(report.overall_status, combined);
+        let [first, second] = report.magnitude_bounds;
+        assert!(first[0] <= 5. && 5. <= first[1]);
+        assert!(second[0] <= 1. && 5_f64.sqrt() <= second[1]);
+    }
+}
+
+#[test]
+fn two_plane_tolerance_rejects_malformed_inputs() {
+    use nurbs_core::analysis::surface_measure::classify_two_plane_unbalance;
+    let mut vectors = [[[0.; 2]; 3]; 2];
+    assert!(classify_two_plane_unbalance(vectors, [-1., 2.]).is_err());
+    assert!(classify_two_plane_unbalance(vectors, [1., f64::INFINITY]).is_err());
+    vectors[1][0] = [3., 2.];
+    assert!(classify_two_plane_unbalance(vectors, [1.; 2]).is_err());
+}
+
+#[test]
+fn two_plane_counterweights_enclose_mass_and_opposing_radial_positions() {
+    use nurbs_core::analysis::surface_measure::bound_two_plane_counterweights;
+    let vectors = [[[3.; 2], [4.; 2], [0.; 2]], [[0.; 2], [-6.; 2], [0.; 2]]];
+    let result = bound_two_plane_counterweights(vectors, [10., 2.]).unwrap();
+    for (plane, (mass, offset)) in result.into_iter().zip([(0.5, [-6., -8., 0.]), (3., [0., 2., 0.])]) {
+        assert!(plane.mass_bounds[0] <= mass && mass <= plane.mass_bounds[1]);
+        for ([lo, hi], exact) in plane.radial_offset_bounds.unwrap().into_iter().zip(offset) {
+            assert!(lo <= exact && exact <= hi && hi - lo < 1e-12);
+        }
+    }
+}
+
+#[test]
+fn two_plane_counterweights_withhold_indeterminate_positions() {
+    use nurbs_core::analysis::surface_measure::bound_two_plane_counterweights;
+    let vectors = [[[-1., 1.], [0.; 2], [0.; 2]], [[2., 4.], [0.; 2], [0.; 2]]];
+    let [first, second] = bound_two_plane_counterweights(vectors, [2., 4.]).unwrap();
+    assert_eq!(first.mass_bounds[0], 0.);
+    assert!(first.mass_bounds[1] >= 0.5);
+    assert!(first.radial_offset_bounds.is_none());
+    assert!(second.radial_offset_bounds.is_some());
+    assert!(bound_two_plane_counterweights(vectors, [1., 0.]).is_err());
+}
+
+#[test]
+fn two_plane_residual_accounts_for_installed_mass_and_position_uncertainty() {
+    use nurbs_core::analysis::surface_measure::{
+        BalanceTolerance, InstalledCounterweightBounds, bound_two_plane_residual_unbalance,
+    };
+    let vectors = [[[4.; 2], [0.; 2], [0.; 2]], [[0.; 2], [-6.; 2], [0.; 2]]];
+    let weights = [
+        InstalledCounterweightBounds {
+            mass_bounds: [1.9, 2.1],
+            radial_offset_bounds: [[-2.1, -1.9], [0.; 2], [0.; 2]],
+        },
+        InstalledCounterweightBounds {
+            mass_bounds: [2.; 2],
+            radial_offset_bounds: [[0.; 2], [3.; 2], [0.; 2]],
+        },
+    ];
+    let (residual, report) = bound_two_plane_residual_unbalance(vectors, weights, [0.5; 2]).unwrap();
+    assert_eq!(report.overall_status, BalanceTolerance::Within);
+    assert!(residual[0][0][0] <= -0.41 && 0.39 <= residual[0][0][1]);
+    assert!(report.magnitude_bounds[1][1] < 1e-12);
+    let (_, report) = bound_two_plane_residual_unbalance(vectors, weights, [0.2, 0.5]).unwrap();
+    assert_eq!(report.overall_status, BalanceTolerance::Undetermined);
+}
+
+#[test]
+fn two_plane_residual_preserves_unmodified_planes_and_rejects_negative_mass() {
+    use nurbs_core::analysis::surface_measure::{
+        BalanceTolerance, InstalledCounterweightBounds, bound_two_plane_residual_unbalance,
+    };
+    let vectors = [[[4.; 2], [0.; 2], [0.; 2]], [[0.; 2], [-6.; 2], [0.; 2]]];
+    let mut weights = [InstalledCounterweightBounds {
+        mass_bounds: [0.; 2],
+        radial_offset_bounds: [[-1., 1.]; 3],
+    }; 2];
+    let (residual, report) = bound_two_plane_residual_unbalance(vectors, weights, [1.; 2]).unwrap();
+    assert_eq!(residual, vectors);
+    assert_eq!(report.overall_status, BalanceTolerance::Outside);
+    weights[0].mass_bounds = [-1., 1.];
+    assert!(bound_two_plane_residual_unbalance(vectors, weights, [1.; 2]).is_err());
+}
+
+#[test]
+fn two_plane_capacity_encloses_minimum_radii_under_mass_limits() {
+    use nurbs_core::analysis::surface_measure::{
+        BalanceTolerance::*, bound_two_plane_counterweight_capacity,
+    };
+    let vectors = [[[3.; 2], [4.; 2], [0.; 2]], [[2., 6.], [0.; 2], [0.; 2]]];
+    for (radii, statuses, overall) in [
+        ([3., 7.], [Within, Within], Within),
+        ([2., 4.], [Outside, Undetermined], Outside),
+        ([3., 4.], [Within, Undetermined], Undetermined),
+    ] {
+        let report = bound_two_plane_counterweight_capacity(vectors, radii, [2., 1.]).unwrap();
+        assert_eq!(report.plane_status, statuses);
+        assert_eq!(report.overall_status, overall);
+        for ([lo, hi], [min, max]) in report
+            .minimum_radius_bounds
+            .into_iter()
+            .zip([[2.5, 2.5], [2., 6.]])
+        {
+            assert!(lo <= min && max <= hi);
+            assert!((lo - min).abs() < 1e-12 && (hi - max).abs() < 1e-12);
+        }
+    }
+}
+
+#[test]
+fn two_plane_capacity_rejects_invalid_limits_and_mounting_radii() {
+    use nurbs_core::analysis::surface_measure::bound_two_plane_counterweight_capacity;
+    let vectors = [[[0.; 2]; 3]; 2];
+    assert!(bound_two_plane_counterweight_capacity(vectors, [1.; 2], [0., 1.]).is_err());
+    assert!(bound_two_plane_counterweight_capacity(vectors, [1., f64::INFINITY], [1.; 2]).is_err());
+    assert!(bound_two_plane_counterweight_capacity(vectors, [1.; 2], [1., f64::NAN]).is_err());
+}
+
+#[test]
+fn directional_curve_travel_counts_reversals_with_coincident_endpoints() {
+    use nurbs_core::analysis::curve_measure::directional_travel;
+    let curve = nurbs_core::paths::bezier(
+        vec![vec![0., 0.], vec![2., 2.], vec![0., 0.]],
+        None,
+    )
+    .unwrap();
+    for scale in [f64::from_bits(1), -1., f64::MAX] {
+        let report = directional_travel(&curve, &[scale, scale], 1e-7, 4096).unwrap();
+        let expected = 2. * 2_f64.sqrt();
+        assert!(report.within_tolerance, "{report:?}");
+        assert!(report.bounds[0] <= expected && expected <= report.bounds[1]);
+    }
+    let coarse = directional_travel(&curve, &[1., 1.], 1e-7, 1).unwrap();
+    assert!(!coarse.within_tolerance);
+    assert!(coarse.bounds[0] <= 2. * 2_f64.sqrt() && coarse.bounds[1] >= 2. * 2_f64.sqrt());
+}
+
+#[test]
+fn directional_curve_travel_encloses_rotated_rational_circle() {
+    use nurbs_core::analysis::curve_measure::directional_travel;
+    let curve = nurbs_core::primitives::circle([1., 2., 3.], [0., 0., 1.], 2.).unwrap();
+    let report = directional_travel(&curve, &[1., 2., 2.], 1e-6, 8192).unwrap();
+    let expected = 8. * 5_f64.sqrt() / 3.;
+    assert!(report.within_tolerance, "{report:?}");
+    assert!(report.bounds[0] <= expected && expected <= report.bounds[1]);
+    assert!(directional_travel(&curve, &[0.; 3], 1e-6, 8192).is_err());
+}
+
+#[test]
+fn signed_directional_travel_separates_forward_and_reverse_motion() {
+    use nurbs_core::analysis::curve_measure::directional_travel_by_sign;
+    let curve = nurbs_core::paths::bezier(
+        vec![vec![0., 0.], vec![4., 0.], vec![2., 0.]],
+        None,
+    )
+    .unwrap();
+    let report = directional_travel_by_sign(&curve, &[1., 0.], 1e-7, 4096).unwrap();
+    assert!(report.total.within_tolerance);
+    for (bounds, expected) in [
+        (report.forward_bounds, 8. / 3.),
+        (report.reverse_bounds, 2. / 3.),
+        (report.signed_travel_bounds, 2.),
+    ] {
+        assert!(bounds[0] <= expected && expected <= bounds[1]);
+        assert!(bounds[1] - bounds[0] < 1e-6);
+    }
+    let reversed = directional_travel_by_sign(&curve, &[-1., 0.], 1e-7, 4096).unwrap();
+    assert!(reversed.forward_bounds[0] <= 2. / 3. && 2. / 3. <= reversed.forward_bounds[1]);
+    assert!(reversed.reverse_bounds[0] <= 8. / 3. && 8. / 3. <= reversed.reverse_bounds[1]);
+}
+
+#[test]
+fn signed_directional_travel_gives_zero_reverse_travel_on_monotone_line() {
+    use nurbs_core::analysis::curve_measure::directional_travel_by_sign;
+    let curve = nurbs_core::paths::bezier(vec![vec![2., 2.], vec![5., 6.]], None).unwrap();
+    let report = directional_travel_by_sign(&curve, &[0., 2.], 1e-8, 32).unwrap();
+    assert!(report.total.within_tolerance);
+    assert!(report.forward_bounds[0] <= 4. && 4. <= report.forward_bounds[1]);
+    assert_eq!(report.reverse_bounds[0], 0.);
+    assert!(report.reverse_bounds[1] < 1e-12);
+}
+
+#[test]
+fn directional_travel_window_clips_both_sides_of_a_knot_reversal() {
+    use nurbs_core::analysis::curve_measure::directional_travel_on_interval;
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 8., 8.],
+        control_points: vec![vec![0., 0.], vec![4., 0.], vec![-4., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let report = directional_travel_on_interval(&curve, [3., 7.], &[1., 0.], 1e-8, 64).unwrap();
+    assert!(report.total.within_tolerance);
+    for (bounds, exact) in [
+        (report.total.bounds, 8.),
+        (report.forward_bounds, 2.),
+        (report.reverse_bounds, 6.),
+        (report.signed_travel_bounds, -4.),
+    ] {
+        assert!(bounds[0] <= exact && exact <= bounds[1]);
+        assert!(bounds[1] - bounds[0] < 1e-10);
+    }
+    assert!(directional_travel_on_interval(&curve, [3., 7.], &[1., 0.], 1e-8, 1).is_err());
+}
+
+#[test]
+fn directional_travel_window_contains_an_interior_rational_segment() {
+    use nurbs_core::analysis::curve_measure::directional_travel_on_interval;
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![6., 0.]],
+        weights: vec![1., 2.],
+        periodic: false,
+    };
+    let report = directional_travel_on_interval(&curve, [3., 4.], &[1., 0.], 1e-8, 1024).unwrap();
+    let exact = 4. - 2.4;
+    assert!(report.total.within_tolerance);
+    assert!(report.forward_bounds[0] <= exact && exact <= report.forward_bounds[1]);
+    assert!(report.reverse_bounds[1] < 1e-8);
+    for invalid in [[1., 4.], [3., 3.], [5., 4.], [f64::NAN, 4.]] {
+        assert!(directional_travel_on_interval(&curve, invalid, &[1., 0.], 1e-8, 32).is_err());
+    }
+}

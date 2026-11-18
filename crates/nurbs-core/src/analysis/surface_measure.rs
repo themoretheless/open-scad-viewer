@@ -1159,6 +1159,332 @@ pub fn bound_mass_weighted_centroid(
     Ok(centroid.map(|axis| [axis.lo, axis.hi]))
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BalanceTolerance {
+    Within,
+    Outside,
+    Undetermined,
+}
+
+/// Static unbalance in mass times length units.
+#[derive(Clone, Copy, Debug)]
+pub struct StaticUnbalanceBounds {
+    pub vector_bounds: [[f64; 2]; 3],
+    pub magnitude_bounds: [f64; 2],
+}
+
+/// Enclose the mass-weighted perpendicular displacement from a rotation axis.
+/// Signed contributions are summed before taking the magnitude.
+pub fn bound_assembly_static_unbalance(
+    pieces: &[SurfaceAssemblyMassBounds],
+    point: [f64; 3],
+    direction: [f64; 3],
+) -> Result<StaticUnbalanceBounds> {
+    check(
+        !pieces.is_empty(),
+        "Surface mass properties require at least one piece",
+    )?;
+    let axis = InertiaAxis::new(direction)?;
+    let origin = centroid_intervals(point.map(|coordinate| [coordinate; 2]))?;
+    let mut moment = [Interval::point(0.); 3];
+    for piece in pieces {
+        let mass = positive_piece_mass(piece)?;
+        let center = centroid_intervals(piece.centroid_bounds)?;
+        let offset = crate::numerics::interval_vec3::sub(center, origin)?;
+        let contribution = cross(offset, axis.components)?;
+        for (sum, component) in moment.iter_mut().zip(contribution) {
+            *sum = sum.add(component.mul(mass)?)?;
+        }
+    }
+    let vector = crate::numerics::interval_vec3::div(
+        cross(axis.components, moment)?,
+        axis.norm_squared,
+    )?;
+    let magnitude = norm(moment)?.div(plane_normal_length(&axis)?)?;
+    Ok(StaticUnbalanceBounds {
+        vector_bounds: vector.map(|entry| [entry.lo, entry.hi]),
+        magnitude_bounds: [magnitude.lo.max(0.), magnitude.hi],
+    })
+}
+
+/// Couple unbalance in mass times squared length units.
+#[derive(Clone, Copy, Debug)]
+pub struct CoupleUnbalanceBounds {
+    /// Components of the cross product of the unit axis and its inertia image.
+    pub vector_bounds: [[f64; 2]; 3],
+    pub magnitude_bounds: [f64; 2],
+}
+
+/// Enclose couple unbalance about an axis at a fixed axial reference point.
+pub fn bound_assembly_couple_unbalance(
+    pieces: &[SurfaceAssemblyMassBounds],
+    point: [f64; 3],
+    direction: [f64; 3],
+) -> Result<CoupleUnbalanceBounds> {
+    use crate::numerics::interval_vec3::{div, dot_tight};
+
+    let axis = InertiaAxis::new(direction)?;
+    let tensor = symmetric_tensor_intervals(bound_assembly_inertia_about_point(pieces, point)?)?;
+    let mut image = [Interval::point(0.); 3];
+    for (value, row) in image.iter_mut().zip(tensor) {
+        *value = dot_tight(row, axis.components)?;
+    }
+    let vector = div(cross(axis.components, image)?, axis.norm_squared)?;
+    let magnitude = norm(vector)?;
+    Ok(CoupleUnbalanceBounds {
+        vector_bounds: vector.map(|value| [value.lo, value.hi]),
+        magnitude_bounds: [magnitude.lo, magnitude.hi],
+    })
+}
+
+/// Enclose equivalent radial unbalance vectors at two ordered axial offsets
+/// from the reference point. Corrections would use the opposite vectors.
+pub fn bound_assembly_two_plane_unbalance(
+    pieces: &[SurfaceAssemblyMassBounds],
+    point: [f64; 3],
+    direction: [f64; 3],
+    plane_offsets: [f64; 2],
+) -> Result<[[[f64; 2]; 3]; 2]> {
+    use crate::numerics::interval_vec3::{div, scale, sub};
+
+    let [first, second] = plane_offsets;
+    check(
+        first.is_finite() && second.is_finite() && first < second,
+        "Balance planes require finite increasing axial offsets",
+    )?;
+    let axis = InertiaAxis::new(direction)?;
+    let unit_axis = div(axis.components, plane_normal_length(&axis)?)?;
+    let static_vector =
+        bound_assembly_static_unbalance(pieces, point, direction)?.vector_bounds;
+    let couple_vector =
+        bound_assembly_couple_unbalance(pieces, point, direction)?.vector_bounds;
+    // If U is static unbalance and D its axial first moment, a pair of
+    // equivalent vectors satisfies U1 + U2 = U and a*U1 + b*U2 = D.
+    let static_vector = centroid_intervals(static_vector)?;
+    let axial_moment = cross(unit_axis, centroid_intervals(couple_vector)?)?;
+    let separation = Interval::point(second).sub(Interval::point(first))?;
+    let at_first = div(
+        sub(scale(static_vector, Interval::point(second))?, axial_moment)?,
+        separation,
+    )?;
+    let at_second = div(
+        sub(axial_moment, scale(static_vector, Interval::point(first))?)?,
+        separation,
+    )?;
+    Ok([at_first, at_second].map(|vector| vector.map(|value| [value.lo, value.hi])))
+}
+
+/// Certified unbalance magnitude and tolerance status in each correction plane.
+#[derive(Clone, Copy, Debug)]
+pub struct TwoPlaneBalanceReport {
+    pub magnitude_bounds: [[f64; 2]; 2],
+    pub plane_status: [BalanceTolerance; 2],
+    pub overall_status: BalanceTolerance,
+}
+
+/// Compare equivalent radial unbalance vectors with separate magnitude
+/// tolerances for the two correction planes.
+pub fn classify_two_plane_unbalance(
+    vectors: [[[f64; 2]; 3]; 2],
+    tolerances: [f64; 2],
+) -> Result<TwoPlaneBalanceReport> {
+    check(
+        tolerances.iter().all(|value| value.is_finite() && *value >= 0.),
+        "Balance tolerances must be finite and nonnegative",
+    )?;
+    let mut magnitude_bounds = [[0.; 2]; 2];
+    let mut plane_status = [BalanceTolerance::Undetermined; 2];
+    for (index, vector) in vectors.into_iter().enumerate() {
+        let magnitude = norm(centroid_intervals(vector)?)?;
+        magnitude_bounds[index] = [magnitude.lo, magnitude.hi];
+        plane_status[index] = classify_balance_tolerance(magnitude_bounds[index], tolerances[index]);
+    }
+    let overall_status = combine_plane_balance_status(plane_status);
+    Ok(TwoPlaneBalanceReport {
+        magnitude_bounds,
+        plane_status,
+        overall_status,
+    })
+}
+
+/// Counterweight mass and radial placement at a specified mounting radius.
+#[derive(Clone, Copy, Debug)]
+pub struct PlaneCounterweightBounds {
+    pub mass_bounds: [f64; 2],
+    /// Offset from the rotation axis, in the same frame as the unbalance.
+    /// Absent when the unbalance enclosure includes zero.
+    pub radial_offset_bounds: Option<[[f64; 2]; 3]>,
+}
+
+/// Enclose one opposing counterweight in each of two correction planes.
+pub fn bound_two_plane_counterweights(
+    vectors: [[[f64; 2]; 3]; 2],
+    radii: [f64; 2],
+) -> Result<[PlaneCounterweightBounds; 2]> {
+    let mut result = [PlaneCounterweightBounds {
+        mass_bounds: [0.; 2],
+        radial_offset_bounds: None,
+    }; 2];
+    for ((vector, radius), output) in vectors.into_iter().zip(radii).zip(&mut result) {
+        check(
+            radius.is_finite() && radius > 0.,
+            "Counterweight radius must be strictly positive and finite",
+        )?;
+        let vector = centroid_intervals(vector)?;
+        let magnitude = norm(vector)?;
+        let mass = magnitude.div(Interval::point(radius))?;
+        output.mass_bounds = [mass.lo.max(0.), mass.hi];
+        if magnitude.lo > 0. {
+            let mut offset = [[0.; 2]; 3];
+            for (bounds, component) in offset.iter_mut().zip(vector) {
+                let opposite = Interval::new(-component.hi, -component.lo)?;
+                let coordinate = opposite
+                    .div(magnitude)?
+                    .intersect(-1., 1.)?
+                    .mul(Interval::point(radius))?
+                    .intersect(-radius, radius)?;
+                *bounds = [coordinate.lo, coordinate.hi];
+            }
+            output.radial_offset_bounds = Some(offset);
+        }
+    }
+    Ok(result)
+}
+
+/// Enclosure of an installed counterweight in a correction plane.
+#[derive(Clone, Copy, Debug)]
+pub struct InstalledCounterweightBounds {
+    pub mass_bounds: [f64; 2],
+    /// Position relative to the axis, in the same frame as the unbalance.
+    /// The true offset must lie in the correction plane.
+    pub radial_offset_bounds: [[f64; 2]; 3],
+}
+
+/// Enclose and classify residual unbalance after adding installed weights.
+pub fn bound_two_plane_residual_unbalance(
+    unbalance: [[[f64; 2]; 3]; 2],
+    counterweights: [InstalledCounterweightBounds; 2],
+    tolerances: [f64; 2],
+) -> Result<([[[f64; 2]; 3]; 2], TwoPlaneBalanceReport)> {
+    let mut residual = unbalance;
+    for (plane, counterweight) in residual.iter_mut().zip(counterweights) {
+        let [lo, hi] = counterweight.mass_bounds;
+        let mass = Interval::new(lo, hi)?;
+        check(lo >= 0., "Installed counterweight masses must be nonnegative")?;
+        let radial = centroid_intervals(counterweight.radial_offset_bounds)?;
+        for (bounds, offset) in plane.iter_mut().zip(radial) {
+            let [lo, hi] = *bounds;
+            let before = Interval::new(lo, hi)?;
+            if mass.hi != 0. && offset != Interval::point(0.) {
+                let after = before.add(mass.mul(offset)?)?;
+                *bounds = [after.lo, after.hi];
+            }
+        }
+    }
+    let report = classify_two_plane_unbalance(residual, tolerances)?;
+    Ok((residual, report))
+}
+
+/// Required mounting radius and mass capacity status for each correction plane.
+#[derive(Clone, Copy, Debug)]
+pub struct TwoPlaneCounterweightCapacity {
+    pub minimum_radius_bounds: [[f64; 2]; 2],
+    pub plane_status: [BalanceTolerance; 2],
+    pub overall_status: BalanceTolerance,
+}
+
+/// Compare the mounting radii with the minimum radii needed to cancel each
+/// plane's unbalance without exceeding its positive counterweight mass limit.
+pub fn bound_two_plane_counterweight_capacity(
+    vectors: [[[f64; 2]; 3]; 2],
+    mounting_radii: [f64; 2],
+    mass_limits: [f64; 2],
+) -> Result<TwoPlaneCounterweightCapacity> {
+    check(
+        mounting_radii
+            .into_iter()
+            .chain(mass_limits)
+            .all(|value| value.is_finite() && value > 0.),
+        "Counterweight capacity requires finite positive radii and mass limits",
+    )?;
+    let mut minimum_radius_bounds = [[0.; 2]; 2];
+    let mut plane_status = [BalanceTolerance::Undetermined; 2];
+    for (index, vector) in vectors.into_iter().enumerate() {
+        let magnitude = norm(centroid_intervals(vector)?)?;
+        let radius = magnitude.div(Interval::point(mass_limits[index]))?;
+        let bounds = [radius.lo.max(0.), radius.hi];
+        minimum_radius_bounds[index] = bounds;
+        plane_status[index] = classify_balance_tolerance(bounds, mounting_radii[index]);
+    }
+    Ok(TwoPlaneCounterweightCapacity {
+        minimum_radius_bounds,
+        plane_status,
+        overall_status: combine_plane_balance_status(plane_status),
+    })
+}
+
+fn combine_plane_balance_status(plane_status: [BalanceTolerance; 2]) -> BalanceTolerance {
+    if plane_status.contains(&BalanceTolerance::Outside) {
+        BalanceTolerance::Outside
+    } else if plane_status == [BalanceTolerance::Within; 2] {
+        BalanceTolerance::Within
+    } else {
+        BalanceTolerance::Undetermined
+    }
+}
+
+fn classify_balance_tolerance([lo, hi]: [f64; 2], tolerance: f64) -> BalanceTolerance {
+    if hi <= tolerance {
+        BalanceTolerance::Within
+    } else if lo > tolerance {
+        BalanceTolerance::Outside
+    } else {
+        BalanceTolerance::Undetermined
+    }
+}
+
+/// Enclose the perpendicular distance from the common center of mass to an
+/// axis, then compare the entire enclosure with the allowed eccentricity.
+pub fn bound_assembly_balance_about_line(
+    pieces: &[SurfaceAssemblyMassBounds],
+    point: [f64; 3],
+    direction: [f64; 3],
+    tolerance: f64,
+) -> Result<([f64; 2], BalanceTolerance)> {
+    check(
+        !pieces.is_empty() && tolerance.is_finite() && tolerance >= 0.,
+        "Balance requires surface pieces and a finite nonnegative tolerance",
+    )?;
+    let axis = InertiaAxis::new(direction)?;
+    let origin = centroid_intervals(point.map(|coordinate| [coordinate; 2]))?;
+    let mut projected = Vec::with_capacity(pieces.len());
+    for piece in pieces {
+        positive_piece_mass(piece)?;
+        let center = centroid_intervals(piece.centroid_bounds)?;
+        let offset = crate::numerics::interval_vec3::sub(center, origin)?;
+        projected.push((cross(offset, axis.components)?, piece.mass_bounds));
+    }
+
+    // Project each piece before averaging so common motion along the axis
+    // does not inflate the enclosure of the perpendicular displacement.
+    let mut endpoints = Vec::with_capacity(projected.len());
+    let mut perpendicular = [Interval::point(0.); 3];
+    for (component, interval) in perpendicular.iter_mut().enumerate() {
+        endpoints.extend(projected.iter().map(|(vector, mass)| (vector[component].lo, *mass)));
+        let lo = extremal_weighted_coordinate(&mut endpoints, false)?;
+        endpoints.clear();
+        endpoints.extend(projected.iter().map(|(vector, mass)| (vector[component].hi, *mass)));
+        let hi = extremal_weighted_coordinate(&mut endpoints, true)?;
+        endpoints.clear();
+        *interval = Interval::new(lo, hi)?;
+    }
+    let distance = norm(perpendicular)?.div(plane_normal_length(&axis)?)?;
+    let lo = distance.lo.max(0.);
+    let hi = distance.hi;
+    let bounds = [lo, hi];
+    Ok((bounds, classify_balance_tolerance(bounds, tolerance)))
+}
+
 /// Enclose the signed distance of the common center of mass from an
 /// oriented plane, specified by a point and a finite nonzero normal.
 pub fn bound_mass_weighted_centroid_plane_distance(
@@ -1967,6 +2293,63 @@ impl TrimmedPatchSetDensityReport {
             *axis = find_principal_axis_from_bounds(tensor, moments, index)?;
         }
         Ok(Some(axes))
+    }
+
+    /// Enclose the density-weighted static unbalance about a rotation axis.
+    pub fn bound_static_unbalance(
+        &self,
+        point: [f64; 3],
+        direction: [f64; 3],
+    ) -> Result<Option<StaticUnbalanceBounds>> {
+        self.mass_properties
+            .map(|_| bound_assembly_static_unbalance(&self.weighted_components, point, direction))
+            .transpose()
+    }
+
+    /// Enclose couple unbalance about the supplied axial reference point.
+    pub fn bound_couple_unbalance(
+        &self,
+        point: [f64; 3],
+        direction: [f64; 3],
+    ) -> Result<Option<CoupleUnbalanceBounds>> {
+        self.mass_properties
+            .map(|_| bound_assembly_couple_unbalance(&self.weighted_components, point, direction))
+            .transpose()
+    }
+
+    /// Enclose equivalent unbalance vectors in the two requested planes.
+    pub fn bound_two_plane_unbalance(
+        &self,
+        point: [f64; 3],
+        direction: [f64; 3],
+        offsets: [f64; 2],
+    ) -> Result<Option<[[[f64; 2]; 3]; 2]>> {
+        self.mass_properties
+            .map(|_| {
+                bound_assembly_two_plane_unbalance(
+                    &self.weighted_components, point, direction, offsets,
+                )
+            })
+            .transpose()
+    }
+
+    /// Check a fixed rotation axis against the density-weighted center of mass.
+    pub fn bound_balance_about_line(
+        &self,
+        point: [f64; 3],
+        direction: [f64; 3],
+        tolerance: f64,
+    ) -> Result<Option<([f64; 2], BalanceTolerance)>> {
+        self.mass_properties
+            .map(|_| {
+                bound_assembly_balance_about_line(
+                    &self.weighted_components,
+                    point,
+                    direction,
+                    tolerance,
+                )
+            })
+            .transpose()
     }
 
     /// Enclose the density-weighted first moment about an oriented plane.

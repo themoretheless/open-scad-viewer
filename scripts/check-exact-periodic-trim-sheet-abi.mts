@@ -44,11 +44,38 @@ interface Report {
   centerOfMassBoundsMm?: [number, number][] | null
   referenceInertiaBoundsKgMm2?: [number, number][][] | null
   centralInertiaBoundsKgMm2?: [number, number][][] | null
+  twoPlaneCounterweightCapacity?: {
+    status: string
+    planes: { offsetMm: number; minimumRadiusBoundsMm: [number, number]; status: string }[]
+  } | null
+  twoPlaneCounterweights?: {
+    offsetMm: number
+    radiusMm: number
+    massBoundsKg: [number, number]
+    radialOffsetBoundsMm: [number, number][] | null
+  }[] | null
+  twoPlaneResidualBalance?: {
+    status: string
+    planes: { offsetMm: number; vectorBoundsKgMm: [number, number][]; status: string }[]
+  } | null
+  twoPlaneBalance?: {
+    status: string
+    planes: { offsetMm: number; magnitudeBoundsKgMm: [number, number]; status: string }[]
+  } | null
+  twoPlaneUnbalance?: { offsetMm: number; vectorBoundsKgMm: [number, number][] }[] | null
+  coupleUnbalance?: { vectorBoundsKgMm2: [number, number][]; magnitudeBoundsKgMm2: [number, number] } | null
+  staticUnbalance?: { vectorBoundsKgMm: [number, number][]; magnitudeBoundsKgMm: [number, number] } | null
+  axisBalance?: { eccentricityBoundsMm: [number, number]; status: string } | null
   axisMomentBoundsKgMm2?: [number, number] | null
   axisMomentBoundsMm4?: [number, number] | null
   principalMomentBoundsMm4?: [number, number][] | null
   principalAxes?:
-    | ({ direction: [number, number, number]; sinAngleUpper: number; distanceBoundsMm?: [number, number] } | null)[]
+    | ({
+        direction: [number, number, number]
+        sinAngleUpper: number
+        distanceBoundsMm?: [number, number]
+        angleSineBounds?: [number, number]
+      } | null)[]
     | null
   principalMomentBoundsKgMm2?: [number, number][] | null
   boundsMm2?: [number, number] | [number, number][] | null
@@ -601,3 +628,135 @@ const axisDistance = probedAxes?.[0]?.distanceBoundsMm
 assert.ok(axisDistance && axisDistance[0] <= 0.84375 && 0.84375 <= axisDistance[1])
 assert.deepEqual(probedAxes?.slice(1), [null, null])
 console.log('WASM ABI enclosed the probe distance to a certified principal axis.')
+
+assert.equal(certifiedAxes[0].angleSineBounds, undefined)
+const alignmentAxes = call(request.maxWork, densityOp, {
+  ...axisCertificateOptions, principalAxisProbeDirection: [1, 0, 1],
+}).principalAxes
+const axisAlignment = alignmentAxes?.[0]?.angleSineBounds
+assert.ok(axisAlignment && axisAlignment[0] <= Math.SQRT1_2 && Math.SQRT1_2 <= axisAlignment[1])
+assert.deepEqual(alignmentAxes?.slice(1), [null, null])
+console.log('WASM ABI enclosed the probe angle sine to a certified principal axis.')
+
+assert.equal(weightedAxis.axisBalance, undefined)
+const balanceOptions = { ...weightedAxisOptions, axisBalanceToleranceMm: 0.5 }
+const balance = call(request.maxWork, densityOp, balanceOptions).axisBalance
+const expectedEccentricity = Math.hypot(1 - expectedCenterX, expectedCenterY)
+assert.ok(balance && balance.eccentricityBoundsMm[0] <= expectedEccentricity
+  && expectedEccentricity <= balance.eccentricityBoundsMm[1])
+assert.equal(balance.status, 'outside')
+assert.equal(call(request.maxWork, densityOp, { ...balanceOptions, maxSurfaceCells: 2 }).axisBalance, null)
+console.log('WASM ABI classified certified eccentricity against the balance tolerance.')
+
+assert.equal(weightedAxis.staticUnbalance, undefined)
+const unbalanceOptions = { ...balanceOptions, includeStaticUnbalance: true }
+const unbalanceResult = call(request.maxWork, densityOp, unbalanceOptions)
+const unbalance = unbalanceResult.staticUnbalance
+const expectedUnbalance = [0.34375 - 2.875, 0.375, 0]
+assert.ok(unbalance)
+for (const [index, exact] of expectedUnbalance.entries()) {
+  const [lo, hi] = unbalance.vectorBoundsKgMm[index]
+  assert.ok(lo <= exact && exact <= hi)
+}
+const [unbalanceLo, unbalanceHi] = unbalance.magnitudeBoundsKgMm
+assert.ok(unbalanceLo <= Math.hypot(...expectedUnbalance) && Math.hypot(...expectedUnbalance) <= unbalanceHi)
+assert.deepEqual(unbalanceResult.axisBalance, balance)
+assert.equal(call(request.maxWork, densityOp, { ...unbalanceOptions, maxSurfaceCells: 2 }).staticUnbalance, null)
+console.log('WASM ABI enclosed the static unbalance vector and magnitude.')
+
+assert.equal(unbalanceResult.coupleUnbalance, undefined)
+const coupleOptions = {
+  ...densityOptions,
+  inertiaAxis: { pointMm: [0, 0, 0], direction: [0, 0, -2] },
+  includeCoupleUnbalance: true,
+}
+const couple = call(request.maxWork, densityOp, coupleOptions).coupleUnbalance
+const expectedCouple = [0.375, -0.34375, 0]
+assert.ok(couple)
+for (const [index, exact] of expectedCouple.entries()) {
+  const [lo, hi] = couple.vectorBoundsKgMm2[index]
+  assert.ok(lo <= exact && exact <= hi)
+}
+const [coupleLo, coupleHi] = couple.magnitudeBoundsKgMm2
+assert.ok(coupleLo <= Math.hypot(...expectedCouple) && Math.hypot(...expectedCouple) <= coupleHi)
+assert.equal(call(request.maxWork, densityOp, { ...coupleOptions, maxSurfaceCells: 2 }).coupleUnbalance, null)
+console.log('WASM ABI enclosed the couple unbalance vector and magnitude.')
+
+const twoPlaneOptions = {
+  ...densityOptions,
+  inertiaAxis: { pointMm: [1, 0, 0], direction: [0, 0, 1] },
+  balancePlaneOffsetsMm: [0, 2],
+}
+const twoPlane = call(request.maxWork, densityOp, twoPlaneOptions).twoPlaneUnbalance
+assert.ok(twoPlane)
+assert.deepEqual(twoPlane.map(plane => plane.offsetMm), [0, 2])
+for (const plane of twoPlane) {
+  for (const [i, exact] of [-1.265625, 0.1875, 0].entries()) {
+    const [lo, hi] = plane.vectorBoundsKgMm[i]
+    assert.ok(lo <= exact && exact <= hi)
+  }
+}
+assert.equal(call(request.maxWork, densityOp, { ...twoPlaneOptions, maxSurfaceCells: 2 }).twoPlaneUnbalance, null)
+console.log('WASM ABI returned equivalent unbalance in both correction planes.')
+
+const planeLimits = { ...twoPlaneOptions, balancePlaneTolerancesKgMm: [5, 0.1] }
+const planeBalanceResult = call(request.maxWork, densityOp, planeLimits)
+assert.deepEqual(planeBalanceResult.twoPlaneUnbalance, twoPlane)
+const planeBalance = planeBalanceResult.twoPlaneBalance
+assert.ok(planeBalance)
+assert.equal(planeBalance.status, 'outside')
+assert.deepEqual(planeBalance.planes.map(plane => [plane.offsetMm, plane.status]), [[0, 'within'], [2, 'outside']])
+assert.equal(call(request.maxWork, densityOp, { ...planeLimits, maxSurfaceCells: 2 }).twoPlaneBalance, null)
+console.log('WASM ABI classified independent correction-plane tolerances.')
+
+const counterweightOptions = { ...twoPlaneOptions, counterweightRadiiMm: [2, 4] }
+const counterweights = call(request.maxWork, densityOp, counterweightOptions).twoPlaneCounterweights
+assert.ok(counterweights)
+assert.deepEqual(counterweights.map(plane => [plane.offsetMm, plane.radiusMm]), [[0, 2], [2, 4]])
+const expectedPlaneMagnitude = Math.hypot(1.265625, 0.1875)
+for (const plane of counterweights) {
+  const mass = expectedPlaneMagnitude / plane.radiusMm
+  assert.ok(plane.massBoundsKg[0] <= mass && mass <= plane.massBoundsKg[1])
+  const radial = plane.radialOffsetBoundsMm
+  assert.ok(radial)
+  for (const [i, component] of [1.265625, -0.1875, 0].entries()) {
+    const exact = component * plane.radiusMm / expectedPlaneMagnitude
+    assert.ok(radial[i][0] <= exact && exact <= radial[i][1])
+  }
+}
+assert.equal(call(request.maxWork, densityOp, { ...counterweightOptions, maxSurfaceCells: 2 }).twoPlaneCounterweights, null)
+console.log('WASM ABI enclosed counterweights at both designated radii.')
+
+const installedWeight = {
+  massBoundsKg: [1, 1],
+  radialOffsetBoundsMm: [[1.265625, 1.265625], [-0.1875, -0.1875], [0, 0]],
+}
+const residualOptions = {
+  ...twoPlaneOptions, balancePlaneTolerancesKgMm: [5, 5],
+  installedCounterweights: [installedWeight, installedWeight],
+}
+const residualBalance = call(request.maxWork, densityOp, residualOptions).twoPlaneResidualBalance
+assert.ok(residualBalance)
+assert.equal(residualBalance.status, 'within')
+assert.deepEqual(residualBalance.planes.map(plane => plane.offsetMm), [0, 2])
+for (const plane of residualBalance.planes) {
+  assert.equal(plane.status, 'within')
+  assert.ok(plane.vectorBoundsKgMm.every(([lo, hi]) => lo <= 0 && 0 <= hi))
+}
+assert.equal(call(request.maxWork, densityOp, { ...residualOptions, maxSurfaceCells: 2 }).twoPlaneResidualBalance, null)
+console.log('WASM ABI enclosed residual unbalance after installed counterweights.')
+
+const capacityOptions = { ...counterweightOptions, counterweightMassLimitsKg: [5, 0.01] }
+const capacityResult = call(request.maxWork, densityOp, capacityOptions)
+assert.deepEqual(capacityResult.twoPlaneCounterweights, counterweights)
+const capacity = capacityResult.twoPlaneCounterweightCapacity
+assert.ok(capacity)
+assert.equal(capacity.status, 'outside')
+assert.deepEqual(capacity.planes.map(plane => [plane.offsetMm, plane.status]), [[0, 'within'], [2, 'outside']])
+for (const [index, weightLimit] of [5, 0.01].entries()) {
+  const [lo, hi] = capacity.planes[index].minimumRadiusBoundsMm
+  const radius = expectedPlaneMagnitude / weightLimit
+  assert.ok(lo <= radius && radius <= hi)
+}
+assert.equal(call(request.maxWork, densityOp, { ...capacityOptions, maxSurfaceCells: 2 }).twoPlaneCounterweightCapacity, null)
+console.log('WASM ABI classified mounting radius capacity under counterweight mass limits.')

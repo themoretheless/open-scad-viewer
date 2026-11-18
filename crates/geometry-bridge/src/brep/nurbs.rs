@@ -1447,7 +1447,10 @@ pub fn exact_periodic_trim_patch_set_density_request(
     use crate::field;
     use nurbs_core::{
         analysis::surface_measure::{
-            bound_distance_to_principal_axis, bound_radius_of_gyration,
+            bound_distance_to_principal_axis, bound_principal_axis_angle_sine,
+            bound_radius_of_gyration, bound_two_plane_counterweight_capacity,
+            bound_two_plane_counterweights, bound_two_plane_residual_unbalance,
+            classify_two_plane_unbalance, InstalledCounterweightBounds,
             periodic_trim_patch_set_mass_with_density,
         },
         editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
@@ -1494,7 +1497,130 @@ pub fn exact_periodic_trim_patch_set_density_request(
             Ok(point)
         })
         .transpose()?;
+    let axis_probe_direction = request
+        .get("principalAxisProbeDirection")
+        .map(|_| -> Result<[f64; 3]> {
+            let direction: [f64; 3] = field(request, "principalAxisProbeDirection")?;
+            if !include_principal_axes
+                || direction == [0.; 3]
+                || !direction.iter().all(|value| value.is_finite())
+            {
+                return Err(input(
+                    "Principal axis alignment requires a finite nonzero direction and requested axes",
+                ));
+            }
+            Ok(direction)
+        })
+        .transpose()?;
     let inertia_axis = optional_inertia_axis(request)?;
+    let include_static_unbalance = request
+        .get("includeStaticUnbalance")
+        .map(|_| field::<bool>(request, "includeStaticUnbalance"))
+        .transpose()?
+        .unwrap_or(false);
+    if include_static_unbalance && inertia_axis.is_none() {
+        return Err(input("Static unbalance requires an inertia axis"));
+    }
+    let include_couple_unbalance = request
+        .get("includeCoupleUnbalance")
+        .map(|_| field::<bool>(request, "includeCoupleUnbalance"))
+        .transpose()?
+        .unwrap_or(false);
+    if include_couple_unbalance && inertia_axis.is_none() {
+        return Err(input("Couple unbalance requires an inertia axis"));
+    }
+    let balance_planes = request
+        .get("balancePlaneOffsetsMm")
+        .map(|_| -> Result<[f64; 2]> {
+            let [first, second]: [f64; 2] = field(request, "balancePlaneOffsetsMm")?;
+            if inertia_axis.is_none() || !first.is_finite() || !second.is_finite() || first >= second
+            {
+                return Err(input(
+                    "Balance planes require an inertia axis and finite increasing offsets",
+                ));
+            }
+            Ok([first, second])
+        })
+        .transpose()?;
+    let counterweight_radii = request
+        .get("counterweightRadiiMm")
+        .map(|_| -> Result<[f64; 2]> {
+            let radii: [f64; 2] = field(request, "counterweightRadiiMm")?;
+            if balance_planes.is_none() || radii.iter().any(|r| !r.is_finite() || *r <= 0.) {
+                return Err(input(
+                    "Counterweights require balance planes and positive finite radii",
+                ));
+            }
+            Ok(radii)
+        })
+        .transpose()?;
+    let counterweight_mass_limits = request
+        .get("counterweightMassLimitsKg")
+        .map(|_| -> Result<[f64; 2]> {
+            let limits: [f64; 2] = field(request, "counterweightMassLimitsKg")?;
+            if counterweight_radii.is_none()
+                || limits.iter().any(|limit| !limit.is_finite() || *limit <= 0.)
+            {
+                return Err(input(
+                    "Counterweight capacity requires mounting radii and positive finite mass limits",
+                ));
+            }
+            Ok(limits)
+        })
+        .transpose()?;
+    let plane_tolerances = request
+        .get("balancePlaneTolerancesKgMm")
+        .map(|_| -> Result<[f64; 2]> {
+            let tolerances: [f64; 2] = field(request, "balancePlaneTolerancesKgMm")?;
+            if balance_planes.is_none()
+                || tolerances.iter().any(|value| !value.is_finite() || *value < 0.)
+            {
+                return Err(input(
+                    "Plane balance requires offsets and finite nonnegative tolerances",
+                ));
+            }
+            Ok(tolerances)
+        })
+        .transpose()?;
+    let installed_counterweights = request
+        .get("installedCounterweights")
+        .map(|entries| -> Result<_> {
+            let Some(tolerances) = plane_tolerances else {
+                return Err(input("Installed counterweights require plane tolerances"));
+            };
+            let Some([first, second]) = entries.as_array().map(Vec::as_slice) else {
+                return Err(input("Expected one installed counterweight per plane"));
+            };
+            let parse = |entry: &Value| -> Result<InstalledCounterweightBounds> {
+                let mass_bounds: [f64; 2] = field(entry, "massBoundsKg")?;
+                let radial_offset_bounds: [[f64; 2]; 3] = field(entry, "radialOffsetBoundsMm")?;
+                if mass_bounds[0] < 0.
+                    || !std::iter::once(mass_bounds)
+                        .chain(radial_offset_bounds)
+                        .all(|[lo, hi]| lo.is_finite() && hi.is_finite() && lo <= hi)
+                {
+                    return Err(input("Invalid installed counterweight mass or offset bounds"));
+                }
+                Ok(InstalledCounterweightBounds {
+                    mass_bounds,
+                    radial_offset_bounds,
+                })
+            };
+            Ok(([parse(first)?, parse(second)?], tolerances))
+        })
+        .transpose()?;
+    let axis_balance_tolerance = request
+        .get("axisBalanceToleranceMm")
+        .map(|_| -> Result<f64> {
+            let tolerance: f64 = field(request, "axisBalanceToleranceMm")?;
+            if !tolerance.is_finite() || tolerance < 0. || inertia_axis.is_none() {
+                return Err(input(
+                    "Axis balance requires an inertia axis and a finite nonnegative tolerance",
+                ));
+            }
+            Ok(tolerance)
+        })
+        .transpose()?;
     let include_axis_radius = include_axis_radius(request, inertia_axis.is_some())?;
     let center_plane = request
         .get("centerOfMassPlane")
@@ -1555,6 +1681,30 @@ pub fn exact_periodic_trim_patch_set_density_request(
     if include_principal_axes {
         response["principalAxes"] = Value::Null;
     }
+    if axis_balance_tolerance.is_some() {
+        response["axisBalance"] = Value::Null;
+    }
+    if include_static_unbalance {
+        response["staticUnbalance"] = Value::Null;
+    }
+    if include_couple_unbalance {
+        response["coupleUnbalance"] = Value::Null;
+    }
+    if balance_planes.is_some() {
+        response["twoPlaneUnbalance"] = Value::Null;
+    }
+    if plane_tolerances.is_some() {
+        response["twoPlaneBalance"] = Value::Null;
+    }
+    if counterweight_radii.is_some() {
+        response["twoPlaneCounterweights"] = Value::Null;
+    }
+    if installed_counterweights.is_some() {
+        response["twoPlaneResidualBalance"] = Value::Null;
+    }
+    if counterweight_mass_limits.is_some() {
+        response["twoPlaneCounterweightCapacity"] = Value::Null;
+    }
     let Some(patches) = build.patches else {
         return Ok(response);
     };
@@ -1587,6 +1737,82 @@ pub fn exact_periodic_trim_patch_set_density_request(
             json!(report.first_mass_moment_about_plane(point, normal)?);
     }
     if let Some((point, direction)) = inertia_axis {
+        if let Some(offsets) = balance_planes
+            && let Some(vectors) = report.bound_two_plane_unbalance(point, direction, offsets)?
+        {
+            response["twoPlaneUnbalance"] = json!([0, 1].map(|index| {
+                json!({"offsetMm": offsets[index], "vectorBoundsKgMm": vectors[index]})
+            }));
+            if let Some(radii) = counterweight_radii {
+                let counterweights = bound_two_plane_counterweights(vectors, radii)?;
+                response["twoPlaneCounterweights"] = json!([0, 1].map(|index| {
+                    json!({
+                        "offsetMm": offsets[index],
+                        "radiusMm": radii[index],
+                        "massBoundsKg": counterweights[index].mass_bounds,
+                        "radialOffsetBoundsMm": counterweights[index].radial_offset_bounds,
+                    })
+                }));
+                if let Some(limits) = counterweight_mass_limits {
+                    let capacity = bound_two_plane_counterweight_capacity(vectors, radii, limits)?;
+                    response["twoPlaneCounterweightCapacity"] = json!({
+                        "status": balance_status_name(capacity.overall_status),
+                        "planes": [0, 1].map(|index| json!({
+                            "offsetMm": offsets[index],
+                            "minimumRadiusBoundsMm": capacity.minimum_radius_bounds[index],
+                            "status": balance_status_name(capacity.plane_status[index]),
+                        })),
+                    });
+                }
+            }
+            if let Some((counterweights, tolerances)) = installed_counterweights {
+                let (residual, balance) =
+                    bound_two_plane_residual_unbalance(vectors, counterweights, tolerances)?;
+                response["twoPlaneResidualBalance"] = json!({
+                    "status": balance_status_name(balance.overall_status),
+                    "planes": [0, 1].map(|index| json!({
+                        "offsetMm": offsets[index],
+                        "vectorBoundsKgMm": residual[index],
+                        "magnitudeBoundsKgMm": balance.magnitude_bounds[index],
+                        "status": balance_status_name(balance.plane_status[index]),
+                    })),
+                });
+            }
+            if let Some(tolerances) = plane_tolerances {
+                let balance = classify_two_plane_unbalance(vectors, tolerances)?;
+                response["twoPlaneBalance"] = json!({
+                    "status": balance_status_name(balance.overall_status),
+                    "planes": [0, 1].map(|index| json!({
+                        "offsetMm": offsets[index],
+                        "magnitudeBoundsKgMm": balance.magnitude_bounds[index],
+                        "status": balance_status_name(balance.plane_status[index]),
+                    })),
+                });
+            }
+        }
+        if include_couple_unbalance
+            && let Some(unbalance) = report.bound_couple_unbalance(point, direction)?
+        {
+            response["coupleUnbalance"] = json!({
+                "vectorBoundsKgMm2": unbalance.vector_bounds,
+                "magnitudeBoundsKgMm2": unbalance.magnitude_bounds,
+            });
+        }
+        if include_static_unbalance
+            && let Some(unbalance) = report.bound_static_unbalance(point, direction)?
+        {
+            response["staticUnbalance"] = json!({
+                "vectorBoundsKgMm": unbalance.vector_bounds,
+                "magnitudeBoundsKgMm": unbalance.magnitude_bounds,
+            });
+        }
+        if let Some(tolerance) = axis_balance_tolerance
+            && let Some((bounds, status)) =
+                report.bound_balance_about_line(point, direction, tolerance)?
+        {
+            let status = balance_status_name(status);
+            response["axisBalance"] = json!({"eccentricityBoundsMm": bounds, "status": status});
+        }
         let moment = report.bound_inertia_about_line(point, direction)?;
         response["axisMomentBoundsKgMm2"] = json!(moment);
         if include_axis_radius
@@ -1616,6 +1842,10 @@ pub fn exact_periodic_trim_patch_set_density_request(
                             "direction": axis.direction,
                             "sinAngleUpper": axis.sin_angle_upper,
                         });
+                        if let Some(direction) = axis_probe_direction {
+                            value["angleSineBounds"] =
+                                json!(bound_principal_axis_angle_sine(axis, direction)?);
+                        }
                         if let Some(point) = axis_probe {
                             value["distanceBoundsMm"] = json!(bound_distance_to_principal_axis(
                                 axis,
@@ -1650,4 +1880,15 @@ pub fn exact_periodic_trim_patch_set_density_request(
     }
     write_trimmed_patch_set_area(&mut response, &patches, report.measure);
     Ok(response)
+}
+
+fn balance_status_name(
+    status: nurbs_core::analysis::surface_measure::BalanceTolerance,
+) -> &'static str {
+    use nurbs_core::analysis::surface_measure::BalanceTolerance;
+    match status {
+        BalanceTolerance::Within => "within",
+        BalanceTolerance::Outside => "outside",
+        BalanceTolerance::Undetermined => "undetermined",
+    }
 }

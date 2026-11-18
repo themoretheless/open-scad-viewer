@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0672",
+  "testedBase": "ac6328b065067c38849746a3077ec3186fe3c068",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 328,
+  "scope": [
+    "Expose minimum mounting radii and plane feasibility against positive mass limits.",
+    "Check analytic minimum radius, mixed plane capacity, interoperability with counterweight placement, incomplete integration, and input validation."
+  ],
+  "logSha256": "69bffa1e6157e79544585e6d84ccb0fdc4d3ff57e403e64562ff8541302c7252",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "f7eecba25c1dc30eeefb5b240da154f548855014c6175e66a7721ad7377a4731",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "36e163202dd2d8d549694d96638c5afa5eb06eb8ec3a2c16607eb31252f0a41d",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "0011a8b886f5a198282ab135e83fdb3c57b6d77fe587ea8d4e893e9352d5a6d5"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

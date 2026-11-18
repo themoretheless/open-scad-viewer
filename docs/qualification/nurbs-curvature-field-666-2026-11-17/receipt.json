@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0666",
+  "testedBase": "607f6031bc973d806d24f19c9fb9c8de7916d8fc",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 319,
+  "scope": [
+    "Expose independent plane magnitude bounds and statuses with an overall tolerance classification.",
+    "Check analytic magnitude, mixed plane statuses and aggregate failure, preservation of vector-only requests and incomplete coverage through the compiled ABI."
+  ],
+  "logSha256": "6c1443db29ba1b484863fa7058ea7e8d284884c8a84f82222f9a0656d6799960",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "d12d809706d15369671b204cdd7c04d4041bc484fae3597dfd7445cae8d2ca4a",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "1cc543096c06753031c04893cf4301c6ae5874d77781f85b0e76c54f5cc95217",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "61f551c5298f975175fd646508444e00f3ebd71d20aa30974ca804535882086e"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

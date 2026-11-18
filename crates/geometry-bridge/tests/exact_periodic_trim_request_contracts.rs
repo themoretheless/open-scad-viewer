@@ -1081,3 +1081,254 @@ fn patch_set_density_encloses_point_distance_to_certified_axis() {
     request["principalAxisProbePointMm"] = json!([1., 0.]);
     assert_eq!(run(&request)["ok"], false);
 }
+
+#[test]
+fn patch_set_density_encloses_direction_angle_to_principal_axis() {
+    let mut request = separated_density_request();
+    request["momentToleranceKgMm2"] = json!(1e-8);
+    request["principalAxisProbeDirection"] = json!([1., 0., 1.]);
+    assert_eq!(run(&request)["ok"], false);
+    request["includePrincipalAxes"] = json!(true);
+    let forward = run(&request);
+    assert_eq!(forward["ok"], true, "{forward}");
+    let axes = &forward["value"]["principalAxes"];
+    let angle = &axes[0]["angleSineBounds"];
+    let (lo, hi) = (angle[0].as_f64().unwrap(), angle[1].as_f64().unwrap());
+    assert!(0. <= lo && lo <= 0.5_f64.sqrt() && 0.5_f64.sqrt() <= hi && hi <= 1.);
+    assert!(axes[1].is_null() && axes[2].is_null());
+    request["principalAxisProbeDirection"] = json!([-2., 0., -2.]);
+    assert_eq!(run(&request), forward);
+    request["principalAxisProbeDirection"] = json!([0., 0., 0.]);
+    assert_eq!(run(&request)["ok"], false);
+}
+
+#[test]
+fn patch_set_density_classifies_eccentricity_of_requested_balance_axis() {
+    let mut request = patch_set_density_request(20_000);
+    request["axisBalanceToleranceMm"] = json!(0.5);
+    assert_eq!(run(&request)["ok"], false);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 5.], "direction": [0., 0., 1.]});
+    let expected = (1. - 0.34375_f64 / 2.875).hypot(0.375 / 2.875);
+    for (tolerance, status) in [(0.5, "outside"), (2., "within")] {
+        request["axisBalanceToleranceMm"] = json!(tolerance);
+        let response = run(&request);
+        assert_eq!(response["ok"], true, "{response}");
+        let balance = &response["value"]["axisBalance"];
+        let bounds = &balance["eccentricityBoundsMm"];
+        assert!(
+            bounds[0].as_f64().unwrap() <= expected && expected <= bounds[1].as_f64().unwrap()
+        );
+        assert_eq!(balance["status"], status);
+    }
+    request["maxSurfaceCells"] = json!(2);
+    let limited = run(&request);
+    assert_eq!(limited["ok"], true, "{limited}");
+    assert_eq!(limited["value"].get("axisBalance"), Some(&Value::Null));
+    request["axisBalanceToleranceMm"] = json!(-1.);
+    assert_eq!(run(&request)["ok"], false);
+}
+
+#[test]
+fn patch_set_density_returns_static_unbalance_about_requested_axis() {
+    let mut request = patch_set_density_request(20_000);
+    request["includeStaticUnbalance"] = json!(true);
+    assert_eq!(run(&request)["ok"], false);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 5.], "direction": [0., 0., -2.]});
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let unbalance = &response["value"]["staticUnbalance"];
+    let exact = [0.34375_f64 - 2.875, 0.375, 0.];
+    let vector = unbalance["vectorBoundsKgMm"].as_array().unwrap();
+    assert_eq!(vector.len(), 3);
+    for (interval, expected) in vector.iter().zip(exact) {
+        assert!(
+            interval[0].as_f64().unwrap() <= expected && expected <= interval[1].as_f64().unwrap()
+        );
+    }
+    let magnitude = &unbalance["magnitudeBoundsKgMm"];
+    let expected = exact[0].hypot(exact[1]);
+    assert!(magnitude[0].as_f64().unwrap() <= expected && expected <= magnitude[1].as_f64().unwrap());
+    request["maxSurfaceCells"] = json!(2);
+    assert_eq!(run(&request)["value"].get("staticUnbalance"), Some(&Value::Null));
+}
+
+#[test]
+fn patch_set_density_returns_couple_unbalance_about_the_axis_reference_point() {
+    let mut request = patch_set_density_request(20_000);
+    request["includeCoupleUnbalance"] = json!(true);
+    assert_eq!(run(&request)["ok"], false);
+    request["inertiaAxis"] = json!({"pointMm": [0., 0., 0.], "direction": [0., 0., 1.]});
+    for (z, scale) in [(0., 1.), (2., -2.)] {
+        request["inertiaAxis"]["pointMm"] = json!([0., 0., z]);
+        request["inertiaAxis"]["direction"] = json!([0., 0., scale]);
+        let response = run(&request);
+        assert_eq!(response["ok"], true, "{response}");
+        let couple = &response["value"]["coupleUnbalance"];
+        let vector = couple["vectorBoundsKgMm2"].as_array().unwrap();
+        assert_eq!(vector.len(), 3);
+        let exact = [0.375_f64 * (1. - z), -0.34375 * (1. - z), 0.];
+        for (interval, expected) in vector.iter().zip(exact) {
+            assert!(
+                interval[0].as_f64().unwrap() <= expected
+                    && expected <= interval[1].as_f64().unwrap()
+            );
+        }
+        let magnitude = &couple["magnitudeBoundsKgMm2"];
+        let expected = exact[0].hypot(exact[1]);
+        assert!(
+            magnitude[0].as_f64().unwrap() <= expected
+                && expected <= magnitude[1].as_f64().unwrap()
+        );
+    }
+    request["maxSurfaceCells"] = json!(2);
+    assert_eq!(run(&request)["value"].get("coupleUnbalance"), Some(&Value::Null));
+}
+
+#[test]
+fn patch_set_density_returns_equivalent_unbalance_in_requested_planes() {
+    let mut request = patch_set_density_request(20_000);
+    request["balancePlaneOffsetsMm"] = json!([0., 2.]);
+    assert_eq!(run(&request)["ok"], false);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 0.], "direction": [0., 0., 1.]});
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let planes = response["value"]["twoPlaneUnbalance"].as_array().unwrap();
+    assert_eq!(planes.len(), 2);
+    for (plane, offset) in planes.iter().zip([0., 2.]) {
+        assert_eq!(plane["offsetMm"].as_f64(), Some(offset));
+        let vector = plane["vectorBoundsKgMm"].as_array().unwrap();
+        assert_eq!(vector.len(), 3);
+        for (interval, expected) in vector.iter().zip([-1.265625, 0.1875, 0.]) {
+            assert!(
+                interval[0].as_f64().unwrap() <= expected
+                    && expected <= interval[1].as_f64().unwrap()
+            );
+        }
+    }
+    request["maxSurfaceCells"] = json!(2);
+    assert_eq!(run(&request)["value"].get("twoPlaneUnbalance"), Some(&Value::Null));
+    request["balancePlaneOffsetsMm"] = json!([1., 1.]);
+    assert_eq!(run(&request)["ok"], false);
+}
+
+#[test]
+fn patch_set_density_classifies_separate_correction_plane_tolerances() {
+    let mut request = patch_set_density_request(20_000);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 0.], "direction": [0., 0., 1.]});
+    request["balancePlaneTolerancesKgMm"] = json!([5., 0.1]);
+    assert_eq!(run(&request)["ok"], false);
+    request["balancePlaneOffsetsMm"] = json!([0., 2.]);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let balance = &response["value"]["twoPlaneBalance"];
+    assert_eq!(balance["status"], "outside");
+    let exact = (-1.265625_f64).hypot(0.1875);
+    for (plane, (offset, status)) in balance["planes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .zip([(0., "within"), (2., "outside")])
+    {
+        assert_eq!(plane["offsetMm"].as_f64(), Some(offset));
+        assert_eq!(plane["status"], status);
+        let bounds = &plane["magnitudeBoundsKgMm"];
+        assert!(bounds[0].as_f64().unwrap() <= exact && exact <= bounds[1].as_f64().unwrap());
+    }
+    request["maxSurfaceCells"] = json!(2);
+    assert_eq!(run(&request)["value"].get("twoPlaneBalance"), Some(&Value::Null));
+    request["balancePlaneTolerancesKgMm"] = json!([-1., 2.]);
+    assert_eq!(run(&request)["ok"], false);
+}
+
+#[test]
+fn patch_set_density_encloses_counterweight_mass_and_radial_position() {
+    let mut request = patch_set_density_request(20_000);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 0.], "direction": [0., 0., 1.]});
+    request["counterweightRadiiMm"] = json!([2., 4.]);
+    assert_eq!(run(&request)["ok"], false);
+    request["balancePlaneOffsetsMm"] = json!([0., 2.]);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let planes = response["value"]["twoPlaneCounterweights"].as_array().unwrap();
+    assert_eq!(planes.len(), 2);
+    let magnitude = 1.265625_f64.hypot(0.1875);
+    for (plane, radius) in planes.iter().zip([2., 4.]) {
+        assert_eq!(plane["radiusMm"].as_f64(), Some(radius));
+        let mass = &plane["massBoundsKg"];
+        let exact = magnitude / radius;
+        assert!(mass[0].as_f64().unwrap() <= exact && exact <= mass[1].as_f64().unwrap());
+        let radial = &plane["radialOffsetBoundsMm"];
+        assert!(radial[0][0].as_f64().unwrap() > 0.);
+        let expected = -0.1875 * radius / magnitude;
+        assert!(
+            radial[1][0].as_f64().unwrap() <= expected && expected <= radial[1][1].as_f64().unwrap()
+        );
+    }
+    request["maxSurfaceCells"] = json!(2);
+    assert_eq!(run(&request)["value"].get("twoPlaneCounterweights"), Some(&Value::Null));
+    request["counterweightRadiiMm"] = json!([2., 0.]);
+    assert_eq!(run(&request)["ok"], false);
+}
+
+#[test]
+fn patch_set_density_encloses_residual_after_installed_counterweights() {
+    let mut request = patch_set_density_request(20_000);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 0.], "direction": [0., 0., 1.]});
+    request["balancePlaneOffsetsMm"] = json!([0., 2.]);
+    let weight = json!({
+        "massBoundsKg": [1., 1.],
+        "radialOffsetBoundsMm": [[1.265625, 1.265625], [-0.1875, -0.1875], [0., 0.]]
+    });
+    request["installedCounterweights"] = json!([weight.clone(), weight]);
+    assert_eq!(run(&request)["ok"], false);
+    request["balancePlaneTolerancesKgMm"] = json!([5., 5.]);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let balance = &response["value"]["twoPlaneResidualBalance"];
+    assert_eq!(balance["status"], "within");
+    let planes = balance["planes"].as_array().unwrap();
+    assert_eq!(planes.len(), 2);
+    for (plane, offset) in planes.iter().zip([0., 2.]) {
+        assert_eq!(plane["offsetMm"].as_f64(), Some(offset));
+        assert_eq!(plane["status"], "within");
+        for interval in plane["vectorBoundsKgMm"].as_array().unwrap() {
+            assert!(interval[0].as_f64().unwrap() <= 0. && 0. <= interval[1].as_f64().unwrap());
+        }
+    }
+    request["maxSurfaceCells"] = json!(2);
+    assert_eq!(run(&request)["value"].get("twoPlaneResidualBalance"), Some(&Value::Null));
+    request["installedCounterweights"][0]["massBoundsKg"] = json!([-1., 1.]);
+    assert_eq!(run(&request)["ok"], false);
+}
+
+#[test]
+fn patch_set_density_checks_counterweight_mass_capacity_by_plane() {
+    let mut request = patch_set_density_request(20_000);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 0.], "direction": [0., 0., 1.]});
+    request["balancePlaneOffsetsMm"] = json!([0., 2.]);
+    request["counterweightMassLimitsKg"] = json!([5., 0.01]);
+    assert_eq!(run(&request)["ok"], false);
+    request["counterweightRadiiMm"] = json!([2., 4.]);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let capacity = &response["value"]["twoPlaneCounterweightCapacity"];
+    assert_eq!(capacity["status"], "outside");
+    let planes = capacity["planes"].as_array().unwrap();
+    assert_eq!(planes.len(), 2);
+    for (plane, (offset, mass_limit, status)) in
+        planes.iter().zip([(0., 5., "within"), (2., 0.01, "outside")])
+    {
+        assert_eq!(plane["offsetMm"].as_f64(), Some(offset));
+        assert_eq!(plane["status"], status);
+        let exact = 1.265625_f64.hypot(0.1875) / mass_limit;
+        let bounds = &plane["minimumRadiusBoundsMm"];
+        assert!(bounds[0].as_f64().unwrap() <= exact && exact <= bounds[1].as_f64().unwrap());
+    }
+    request["maxSurfaceCells"] = json!(2);
+    assert_eq!(
+        run(&request)["value"].get("twoPlaneCounterweightCapacity"),
+        Some(&Value::Null)
+    );
+    request["counterweightMassLimitsKg"] = json!([5., 0.]);
+    assert_eq!(run(&request)["ok"], false);
+}

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0661",
+  "testedBase": "bdf221f11701a86b3ad883f043285181dd3bd1b7",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 260,
+  "scope": [
+    "Enclose the vector and magnitude of couple unbalance from an inertia tensor about a fixed axial reference point.",
+    "Check axial separation despite static balance, invariance under axis reversal and reference translation when statically balanced, and analytic products of inertia for trimmed geometry."
+  ],
+  "logSha256": "ecd622f2b9adfd61afc1137a72d4274021e7e3956ddb99769afd9f4619444566",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "e3cb03546a2fcc92718b844c370049d63fbe812708d5781255b30def19c239e3",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "276e21b8eb2750583e175f1b43dd17bcbcab81db0b63d1fafcb29bced3c58ee6"
+  }
+}
