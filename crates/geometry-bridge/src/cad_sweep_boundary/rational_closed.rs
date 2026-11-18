@@ -119,7 +119,8 @@ pub(super) fn run(v: Value, audit: bool) -> Result<Value> {
             "edgeCorrespondenceCertified":p.edge_correspondence.as_ref().is_some_and(|p|p.all_equal && p.all_joins_exact),"agreementWork":p.edge_correspondence.as_ref().map_or(0,|p|p.work),
             "allFacesRegular":p.regularity.all_faces_regular,"regularityCells":p.regularity.cells,
                 "faceInteriorCertified":p.face_interiors.certified,"faceInteriorCells":p.face_interiors.cells,
-                "faceInteriorExactWork":p.face_interiors.exact_work,"unresolvedInteriorFace":p.face_interiors.unresolved_face,"fullBoundaryG1Certified":p.g1_certified,"fullBoundaryG2Certified":p.g2_certified})),
+                "faceInteriorExactWork":p.face_interiors.exact_work,"unresolvedInteriorFace":p.face_interiors.unresolved_face,
+                "geometricInteriorSeams":p.face_interiors.geometric_seams,"fullBoundaryG1Certified":p.g1_certified,"fullBoundaryG2Certified":p.g2_certified})),
         "c0":if r.source.seam_continuity=="C0" {Some(json!({"allFacesRegular":r.audits.c0_regularity.as_ref().is_some_and(|p|p.all_faces_regular),"edgeCorrespondenceCertified":r.audits.c0_agreement.as_ref().is_some_and(|p|p.all_equal && p.all_joins_exact)}))}else{None},
         "reason":r.reason
     }))

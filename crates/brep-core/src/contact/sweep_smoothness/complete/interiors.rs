@@ -2,11 +2,15 @@
 use crate::{Model, Result, Surface};
 use nurbs_core::analysis::surface_continuity;
 
+mod geometric;
+
 pub struct InteriorReport {
     pub certified: bool,
     pub exact_work: u64,
     pub cells: usize,
     pub unresolved_face: Option<usize>,
+    /// Exact geometric joins proved after partitioning the original chart.
+    pub geometric_seams: usize,
 }
 
 fn axis_basis_order(knots: &[f64], degree: usize, controls: usize, order: usize) -> bool {
@@ -45,6 +49,7 @@ pub(super) fn inspect(
         exact_work: 0,
         cells: 0,
         unresolved_face: None,
+        geometric_seams: 0,
     };
     for (face, record) in model.faces.iter().enumerate() {
         let surface = &record.surface;
@@ -59,7 +64,19 @@ pub(super) fn inspect(
         )?;
         report.exact_work += proof.exact_work;
         report.cells += proof.cells;
-        if proof.certificate.is_none() {
+        if proof.certificate.is_some() {
+            continue;
+        }
+        let geometric = geometric::inspect(
+            surface,
+            order,
+            cells - report.cells,
+            exact_work - report.exact_work,
+        )?;
+        report.cells += geometric.cells;
+        report.exact_work += geometric.work;
+        report.geometric_seams += geometric.seams;
+        if !geometric.certified {
             report.unresolved_face = Some(face);
             return Ok(report);
         }

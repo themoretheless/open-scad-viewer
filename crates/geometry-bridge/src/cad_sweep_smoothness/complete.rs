@@ -22,6 +22,7 @@ pub fn diagnose_complete(v: Value) -> Result<Value> {
         "allFacesRegular":r.regularity.all_faces_regular,"regularityCells":r.regularity.cells,
                 "faceInteriorCertified":r.face_interiors.certified,"faceInteriorCells":r.face_interiors.cells,
                 "faceInteriorExactWork":r.face_interiors.exact_work,"unresolvedInteriorFace":r.face_interiors.unresolved_face,
+                "geometricInteriorSeams":r.face_interiors.geometric_seams,
         "fullBoundaryG1Certified":r.g1_certified,"fullBoundaryG2Certified":r.g2_certified,
         "proof":collection(&r.proof,order),"idealSourceSmoothnessCertified":false,"solidCertified":false}),
     )

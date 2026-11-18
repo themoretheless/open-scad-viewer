@@ -139,7 +139,8 @@ pub(super) fn construct(
                 "agreementWork":s.edge_correspondence.as_ref().map_or(0,|p|p.work),"allFacesRegular":s.regularity.all_faces_regular,
                 "regularityCells":s.regularity.cells,
                 "faceInteriorCertified":s.face_interiors.certified,"faceInteriorCells":s.face_interiors.cells,
-                "faceInteriorExactWork":s.face_interiors.exact_work,"unresolvedInteriorFace":s.face_interiors.unresolved_face,"fullBoundaryG1Certified":s.g1_certified,"fullBoundaryG2Certified":s.g2_certified,
+                "faceInteriorExactWork":s.face_interiors.exact_work,"unresolvedInteriorFace":s.face_interiors.unresolved_face,
+                "geometricInteriorSeams":s.face_interiors.geometric_seams,"fullBoundaryG1Certified":s.g1_certified,"fullBoundaryG2Certified":s.g2_certified,
                 "seams":s.proof.seams.iter().enumerate().map(|(i,p)|json!({"edge":s.edge_ids.get(i),"certified":p.certified,
                     "exactIdentity":p.exact_identity,"regularityCertified":p.regularity_certified,"exactWork":p.work,"reason":p.reason})).collect::<Vec<_>>()}))
         }),

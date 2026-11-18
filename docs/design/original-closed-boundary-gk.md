@@ -116,7 +116,11 @@ authored UV traversal.
 
 The complete closed-sweep audit also checks each face's internal knot lines.
 For nonperiodic charts, the spline basis can establish the requested interior
-order from knot multiplicity. Other charts require exact one-sided raw
-parameter jets. This check shares the regularity cell and exact seam budgets.
-A rank-regular span cover alone gives no continuity credit across its knots.
-The Rust report records the unresolved face and the interior work used.
+order from knot multiplicity. Exact raw parameter jets can establish
+continuity when the basis does not guarantee it. The geometric route tiles
+the original clamped tensor chart at every remaining deficient knot line.
+The shared controls retain the original gauge, and the native exact strip
+proof checks each interface with positive reparameterization and regularity.
+Crossing U/V cuts contribute all adjacent tile interfaces. The audit uses the
+remaining regularity cells and exact work, and reports the unresolved face
+and number of geometric interfaces proved.
