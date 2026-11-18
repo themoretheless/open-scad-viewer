@@ -12950,3 +12950,32 @@ fn planar_contour_placement_classifies_whole_loops_in_material_and_holes() {
     assert!(report.placements[0].is_none());
     assert_eq!(report.fill_work_cells, 0);
 }
+
+#[test]
+fn planar_contour_nesting_reports_directional_windings_for_all_pairs() {
+    use nurbs_core::analysis::curve_measure::analyze_planar_contour_nesting;
+    let square = |x: f64, r: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![x-r, -r], vec![x+r, -r], vec![x+r, r],
+            vec![x-r, r], vec![x-r, -r]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let mut outer = square(0., 3.);
+    outer.control_points.reverse();
+    let inner = square(0., 1.);
+    let outside = square(5., 0.5);
+    let contours = [&outer, &inner, &outside];
+    assert!(analyze_planar_contour_nesting(&contours, 0.02, 1e-4, 2048, 47).is_err());
+    let report = analyze_planar_contour_nesting(&contours, 0.02, 1e-4, 2048, 512).unwrap();
+    assert_eq!(report.pairs.iter().map(|pair| (pair.contours, pair.windings)).collect::<Vec<_>>(), [
+        ([0, 1], [Some(0), Some(-1)]),
+        ([0, 2], [Some(0), Some(0)]),
+        ([1, 2], [Some(0), Some(0)]),
+    ]);
+    assert!(report.distance_work_cells <= 512 && report.winding_work_cells <= 2048);
+    let coincident = analyze_planar_contour_nesting(&[&inner, &inner], 0.02, 1e-4, 512, 128).unwrap();
+    assert_eq!(coincident.pairs[0].windings, [None; 2]);
+    assert_eq!(coincident.winding_work_cells, 0);
+}

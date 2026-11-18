@@ -2423,6 +2423,86 @@ pub fn classify_planar_contour_placement(
     Ok(PlanarContourPlacementReport { boundary_distance, placements, fill_work_cells })
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarContourNestingPair {
+    pub contours: [usize; 2],
+    pub distance_bounds: [f64; 2],
+    /// Winding of the second contour around the first, then of the first
+    /// around the second. Missing values are unresolved.
+    pub windings: [Option<i64>; 2],
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarContourNestingReport {
+    pub pairs: Vec<PlanarContourNestingPair>,
+    pub distance_work_cells: usize,
+    pub winding_work_cells: usize,
+}
+
+/// Report pairwise nesting of closed planar contours, retaining signed
+/// winding even for self-intersecting inputs. Each pair is classified only
+/// after proving separation. The two budgets cover all distance and
+/// winding queries, respectively.
+pub fn analyze_planar_contour_nesting(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+) -> Result<PlanarContourNestingReport> {
+    validate(parameter_tolerance, max_winding_cells)?;
+    validate(distance_tolerance, max_distance_cells)?;
+    validate_distance_contours(contours, max_distance_cells)?;
+    let count = contours.len();
+    let spans: Vec<_> = contours.iter().map(|curve| active_spans(curve, curve.domain()).count()).collect();
+    let mut reserved_distance = 0;
+    let mut earlier = 0_usize;
+    for &current in &spans {
+        let work = earlier.checked_mul(current)
+            .filter(|&work| work <= max_distance_cells - reserved_distance)
+            .ok_or_else(|| resource("Nesting distance budget must cover every span pair"))?;
+        reserved_distance += work;
+        earlier += current;
+    }
+    let reserved_winding = earlier.checked_mul(count - 1)
+        .filter(|&work| work <= max_winding_cells)
+        .ok_or_else(|| resource("Nesting winding budget must cover every contour query"))?;
+    let mut distance_extra = max_distance_cells - reserved_distance;
+    let mut winding_extra = max_winding_cells - reserved_winding;
+    let mut remaining_pairs = count * (count - 1) / 2;
+    let mut report = PlanarContourNestingReport {
+        pairs: Vec::with_capacity(remaining_pairs), distance_work_cells: 0, winding_work_cells: 0,
+    };
+    for j in 1..count {
+        for i in 0..j {
+            let work = spans[i] * spans[j];
+            let distance = crate::curve_distance::distance(
+                contours[i], contours[j], distance_tolerance, work + distance_extra / remaining_pairs,
+            )?;
+            distance_extra -= distance.cells.saturating_sub(work);
+            report.distance_work_cells += distance.cells;
+            let mut windings = [None; 2];
+            if distance.distance_interval_mm[0] > 0. {
+                for (slot, (tested, reference)) in windings.iter_mut().zip([(i, j), (j, i)]) {
+                    let point = &contours[tested].control_points[0];
+                    let winding = measure_planar_curve_winding_about_point(
+                        contours[reference], [point[0], point[1]], parameter_tolerance,
+                        spans[reference] + winding_extra / (2 * remaining_pairs),
+                    )?;
+                    *slot = winding.winding;
+                    winding_extra -= winding.travel.work_cells.saturating_sub(spans[reference]);
+                    report.winding_work_cells += winding.travel.work_cells;
+                }
+            }
+            report.pairs.push(PlanarContourNestingPair {
+                contours: [i, j], distance_bounds: distance.distance_interval_mm, windings,
+            });
+            remaining_pairs -= 1;
+        }
+    }
+    Ok(report)
+}
+
 fn validate_distance_contours(contours: &[&Curve], max_cells: usize) -> Result<()> {
     check(!contours.is_empty(), "Contour distance requires at least one contour")?;
     check(contours.len() <= max_cells, "Distance budget must cover every contour")?;
