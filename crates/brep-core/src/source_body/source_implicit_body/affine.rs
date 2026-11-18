@@ -1,6 +1,6 @@
 use super::{Attempt, Error, Limits, Model, Report, Result, verify_sphere};
 use num_rational::BigRational;
-use num_traits::{Signed, ToPrimitive};
+use num_traits::{Signed, ToPrimitive, Zero};
 
 /// The exact source solid is the image of the radius-`radius` ball under
 /// `x ↦ center + linear * x`. Matrix entries are stored by row.
@@ -72,6 +72,8 @@ fn exact_float(value: &BigRational) -> Option<f64> {
 /// affine diffeomorphism. The face trims, knots, weights and topology are
 /// identical in both coordinate systems. Each Cartesian vertex or control
 /// point consumes one unit of `max_points`. Matrix work has constant size.
+/// For a reflected source frame, reflect the first normalized coordinate.
+/// This sphere symmetry makes the proof map orientation-preserving.
 /// Only exactly representable inverse control points enter the sphere proof.
 pub fn verify_affine_sphere(
     model: &Model,
@@ -110,14 +112,20 @@ pub fn verify_affine_sphere(
         mapped_points,
         normalized: None,
     };
-    if !determinant.is_positive() {
-        return Ok(refused(
-            "original-affine-sphere-positive-determinant-unproved",
-            0,
-        ));
+    if determinant.is_zero() {
+        return Ok(refused("original-affine-sphere-singular-map", 0));
     }
-    let inverse: [[BigRational; 3]; 3] =
-        std::array::from_fn(|i| std::array::from_fn(|j| &cofactors[j][i] / &determinant));
+    let reflected = determinant.is_negative();
+    let inverse: [[BigRational; 3]; 3] = std::array::from_fn(|i| {
+        std::array::from_fn(|j| {
+            let coefficient = &cofactors[j][i] / &determinant;
+            if reflected && i == 0 {
+                -coefficient
+            } else {
+                coefficient
+            }
+        })
+    });
     let mut normalized = model.clone();
     let points = normalized
         .0

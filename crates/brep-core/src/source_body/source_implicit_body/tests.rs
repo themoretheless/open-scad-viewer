@@ -327,6 +327,28 @@ fn original_affine_sphere_owns_sheared_pole_charts_and_exact_seams() {
         }
     ));
 
+    let mut reflected = source;
+    for row in &mut reflected.linear {
+        row[0] = -row[0];
+    }
+    let AffineSphereAttempt::Certified(body) =
+        verify_affine_sphere(&model, reflected, 1e-8, 1000, limits()).unwrap()
+    else {
+        panic!("a reflected frame describes the same outward shell");
+    };
+    assert_eq!(body.source(), reflected);
+    assert_eq!(body.model(), &model);
+    assert!(body.normalized_proof().source_g2);
+
+    let mut inside_out = model.clone();
+    for face in &mut inside_out.shells[0].faces {
+        face.reversed ^= true;
+    }
+    assert!(!matches!(
+        verify_affine_sphere(&inside_out, reflected, 1e-8, 1000, limits()),
+        Ok(AffineSphereAttempt::Certified(_))
+    ));
+
     let mut altered = model;
     altered.faces[0].surface.control_points[1][1][0] += 0.125;
     assert!(matches!(
@@ -336,7 +358,7 @@ fn original_affine_sphere_owns_sheared_pole_charts_and_exact_seams() {
 }
 
 #[test]
-fn original_affine_sphere_refuses_unrepresentable_inverse_and_invalid_orientation() {
+fn original_affine_sphere_refuses_unrepresentable_inverse_and_singular_map() {
     let model = crate::analytic::sphere_exact(2.).unwrap();
     let mut source = AffineSphere {
         center: [0.; 3],
@@ -350,14 +372,12 @@ fn original_affine_sphere_refuses_unrepresentable_inverse_and_invalid_orientatio
             ..
         }
     ));
-    for scale in [0., -1.] {
-        source.linear[0][0] = scale;
-        assert!(matches!(
-            verify_affine_sphere(&model, source, 1e-8, 1000, limits()).unwrap(),
-            AffineSphereAttempt::Refused {
-                reason: "original-affine-sphere-positive-determinant-unproved",
-                ..
-            }
-        ));
-    }
+    source.linear[0][0] = 0.;
+    assert!(matches!(
+        verify_affine_sphere(&model, source, 1e-8, 1000, limits()).unwrap(),
+        AffineSphereAttempt::Refused {
+            reason: "original-affine-sphere-singular-map",
+            ..
+        }
+    ));
 }
