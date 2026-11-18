@@ -166,7 +166,7 @@ fn placed_rational_surface_keeps_weights_charts_and_edge_incidence() {
     for p in local.control_points.iter_mut().flatten() {
         *p = vec![p[2] - 2., p[0] - 4., p[1] + 7.];
     }
-    let changed = replace_parameters(&base, de, surface_values(&local));
+    let changed = replace_parameters(&base, de, surface_values(&local).unwrap());
     let (changed, tr) = matrix(&changed, [0., 1., 0., 4., 0., 0., 1., -7., 1., 0., 0., 2.]);
     let (chain, rotation) = matrix(&changed, [0., 1., 0., 0., 0., 0., 1., 0., 1., 0., 0., 0.]);
     let (chain, shift) = matrix(&chain, [1., 0., 0., 4., 0., 1., 0., -7., 0., 0., 1., 2.]);
@@ -274,7 +274,7 @@ fn standard_curve_flags_preserve_open_polynomials_and_rational_periodicity() {
         text = next;
         let (entities, _, _) = parse(&text).unwrap();
         assert_eq!(curve126(&entities, de, 3, 1.).unwrap(), curve);
-        let previous = text.replace("IGES2.2", "IGES2.1");
+        let previous = text.replace("IGES2.3", "IGES2.1");
         let mut legacy = entities[&de].values.clone();
         legacy[5] = usize::from(curve.periodic).to_string();
         legacy[6] = "0".into();
@@ -283,6 +283,60 @@ fn standard_curve_flags_preserve_open_polynomials_and_rational_periodicity() {
         assert_eq!(curve126(&entities, de, 3, 1.).unwrap(), curve);
     }
     if let Some(path) = std::env::var_os("CAD_IGES_CURVE_FLAGS_FIXTURE") {
+        std::fs::write(path, text).unwrap();
+    }
+}
+
+#[test]
+fn ruled_surface_keeps_its_periodic_axis_in_standard_and_legacy_iges() {
+    let mut text = base_text();
+    for periodic_u in [true, false] {
+        let (nu, nv) = if periodic_u { (4, 2) } else { (2, 4) };
+        let knots = |periodic| if periodic { vec![-1., 0., 1., 2., 3., 4.] } else { vec![0., 0., 1., 1.] };
+        let mut points = Vec::new();
+        let mut weights = Vec::new();
+        for i in 0..nu {
+            let mut row = Vec::new();
+            let mut w = Vec::new();
+            for j in 0..nv {
+                let (around, height) = if periodic_u { (i, j) } else { (j, i) };
+                let [x, y] = [[0.,0.], [3.,0.], [0.,2.], [0.,0.]][around];
+                row.push(vec![x, y, height as f64]);
+                w.push(if periodic_u && around == 1 { 0.5 } else { 1. });
+            }
+            points.push(row);
+            weights.push(w);
+        }
+        let surface = Surface {
+            degree_u: 1, degree_v: 1, knots_u: knots(periodic_u), knots_v: knots(!periodic_u),
+            periodic_u, periodic_v: !periodic_u, control_points: points, weights,
+        };
+        let mut clamped = surface.clone();
+        let clamped_knots = vec![0., 0., 1., 2., 3., 3.];
+        if periodic_u {
+            clamped.periodic_u = false;
+            clamped.knots_u = clamped_knots;
+        } else {
+            clamped.periodic_v = false;
+            clamped.knots_v = clamped_knots;
+        }
+        let flags = surface_values(&clamped).unwrap();
+        assert_eq!(flags[5..7], if periodic_u { ["1", "0"] } else { ["0", "1"] });
+        assert_eq!(flags[8..10], ["0", "0"]);
+        let values = surface_values(&surface).unwrap();
+        let expected = if periodic_u { ["1","0","0","1","0"] } else { ["0","1","1","0","1"] };
+        assert_eq!(values[5..10], expected);
+        let (next, de) = append_entity(&text, 128, 0, "00000000", |_| values.clone());
+        text = next;
+        let (entities, _, _) = parse(&text).unwrap();
+        assert_eq!(surface128(&entities, de, 1.).unwrap(), surface);
+        let mut legacy = values;
+        legacy[5..10].clone_from_slice(&["0", "0", expected[3], expected[4], "0"].map(str::to_owned));
+        let old = replace_parameters(&text.replace("IGES2.3", "IGES2.2"), de, legacy);
+        let (entities, _, _) = parse(&old).unwrap();
+        assert_eq!(surface128(&entities, de, 1.).unwrap(), surface);
+    }
+    if let Some(path) = std::env::var_os("CAD_IGES_SURFACE_FLAGS_FIXTURE") {
         std::fs::write(path, text).unwrap();
     }
 }

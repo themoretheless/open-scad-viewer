@@ -8,7 +8,7 @@
 use brep_core::analytic_features::FeatureCertificate;
 use brep_core::{Body, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopoId, TopoKind, TopologyIds};
 use brep_topology::Vertex;
-use nurbs_core::{curve::Curve, surface::Surface, Error, Result};
+use nurbs_core::{curve::Curve, surface::{Axis, Surface}, Error, Result};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub const IGES_INTERCHANGE_V2_CAPABILITY: &str = "iges-interchange/2";
@@ -195,6 +195,7 @@ struct Entity {
     canonical: String,
     legacy_surface_order: bool,
     legacy_curve_flags: bool,
+    legacy_surface_flags: bool,
 }
 
 fn parse_directory_status(de: usize, text: &str) -> Result<DirectoryStatus> {
@@ -420,7 +421,10 @@ fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, IgesLengthUnit, f64)> {
         .iter()
         .map(|(_, l)| field(l, 0, 72))
         .collect::<String>();
-    let (pd, rd, unit, resolution, legacy_sender) = parse_global(&global)?;
+    let (pd, rd, unit, resolution, sender_version) = parse_global(&global)?;
+    let writer_version = sender_version.as_deref().filter(|_| {
+        sections[&'S'][0].1[..72].trim_end() == "OpenSCAD Viewer direct finite B-rep"
+    });
     let directory = &sections[&'D'];
     if !directory.len().is_multiple_of(2) {
         return Err(refuse("IGES directory section must contain record pairs"));
@@ -492,10 +496,9 @@ fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, IgesLengthUnit, f64)> {
         entities.insert(
             de,
             Entity {
-                legacy_surface_order: sections[&'S'][0].1[..72].trim_end() == "OpenSCAD Viewer direct finite B-rep"
-                    && legacy_sender.as_deref() == Some("IGES2"),
-                legacy_curve_flags: sections[&'S'][0].1[..72].trim_end() == "OpenSCAD Viewer direct finite B-rep"
-                    && matches!(legacy_sender.as_deref(), Some("IGES2" | "IGES2.1")),
+                legacy_surface_order: writer_version == Some("IGES2"),
+                legacy_curve_flags: matches!(writer_version, Some("IGES2" | "IGES2.1")),
+                legacy_surface_flags: matches!(writer_version, Some("IGES2" | "IGES2.1" | "IGES2.2")),
                 directory: dir,
                 values,
                 canonical,
@@ -1201,8 +1204,8 @@ fn surface128(entities: &BTreeMap<usize, Entity>, de: usize, scale: f64) -> Resu
         knots_v,
         control_points,
         weights,
-        periodic_u: u(v, 7, "surface U periodic flag")? != 0,
-        periodic_v: u(v, 8, "surface V periodic flag")? != 0,
+        periodic_u: u(v, if surface_entity.legacy_surface_flags { 7 } else { 8 }, "surface U periodic flag")? != 0,
+        periodic_v: u(v, if surface_entity.legacy_surface_flags { 8 } else { 9 }, "surface V periodic flag")? != 0,
     };
     s.validate()?;
     Ok(s)
@@ -2438,20 +2441,23 @@ fn curve_values(c: &Curve, dim: usize) -> Result<Vec<String>> {
     ]);
     Ok(v)
 }
-fn surface_values(s: &Surface) -> Vec<String> {
+fn surface_values(s: &Surface) -> Result<Vec<String>> {
     let nu = s.control_points.len();
     let nv = s.control_points[0].len();
+    let closed_u = s.periodic_u || s.iso(Axis::U, s.knots_u[s.degree_u])? == s.iso(Axis::U, s.knots_u[nu])?;
+    let closed_v = s.periodic_v || s.iso(Axis::V, s.knots_v[s.degree_v])? == s.iso(Axis::V, s.knots_v[nv])?;
+    let polynomial = s.weights.iter().flatten().all(|w| *w == s.weights[0][0]);
     let mut v = vec![
         "128".into(),
         (nu - 1).to_string(),
         (nv - 1).to_string(),
         s.degree_u.to_string(),
         s.degree_v.to_string(),
-        "0".into(),
-        "0".into(),
+        (closed_u as usize).to_string(),
+        (closed_v as usize).to_string(),
+        (polynomial as usize).to_string(),
         (s.periodic_u as usize).to_string(),
         (s.periodic_v as usize).to_string(),
-        "0".into(),
     ];
     v.extend(s.knots_u.iter().map(|x| number(*x)));
     v.extend(s.knots_v.iter().map(|x| number(*x)));
@@ -2472,7 +2478,7 @@ fn surface_values(s: &Surface) -> Vec<String> {
         s.knots_v[s.knots_v.len() - s.degree_v - 1],
     ];
     v.extend([number(u[0]), number(u[1]), number(q[0]), number(q[1])]);
-    v
+    Ok(v)
 }
 fn canonical(values: &[String]) -> String {
     values
@@ -2554,7 +2560,7 @@ fn render(mut w: Writer) -> Result<String> {
         hollerith("open-scad-viewer"),
         hollerith("OpenSCAD Viewer"),
         hollerith("open-scad-viewer"),
-        hollerith("IGES2.2"),
+        hollerith("IGES2.3"),
         hollerith("20260917.000000"),
         number(1e-7),
         hollerith(""),
@@ -2613,8 +2619,8 @@ pub fn export_iges_v2(model: &Model) -> Result<(String, FeatureCertificate, Iges
     let surfaces = model
         .faces
         .iter()
-        .map(|face| w.emit(128, surface_values(&face.surface)))
-        .collect::<Vec<_>>();
+        .map(|face| Ok(w.emit(128, surface_values(&face.surface)?)))
+        .collect::<Result<Vec<_>>>()?;
     let curves = model
         .edges
         .iter()
