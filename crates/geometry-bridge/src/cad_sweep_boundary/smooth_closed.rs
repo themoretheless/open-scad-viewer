@@ -137,7 +137,9 @@ pub(super) fn construct(
                 "edgeIds":s.edge_ids,"unresolvedEdges":s.unresolved_edges,"exactWork":s.exact_work,"parameterWork":s.parameter_work,
                 "edgeCorrespondenceCertified":s.edge_correspondence.as_ref().is_some_and(|p|p.all_equal&&p.all_joins_exact),
                 "agreementWork":s.edge_correspondence.as_ref().map_or(0,|p|p.work),"allFacesRegular":s.regularity.all_faces_regular,
-                "regularityCells":s.regularity.cells,"fullBoundaryG1Certified":s.g1_certified,"fullBoundaryG2Certified":s.g2_certified,
+                "regularityCells":s.regularity.cells,
+                "faceInteriorCertified":s.face_interiors.certified,"faceInteriorCells":s.face_interiors.cells,
+                "faceInteriorExactWork":s.face_interiors.exact_work,"unresolvedInteriorFace":s.face_interiors.unresolved_face,"fullBoundaryG1Certified":s.g1_certified,"fullBoundaryG2Certified":s.g2_certified,
                 "seams":s.proof.seams.iter().enumerate().map(|(i,p)|json!({"edge":s.edge_ids.get(i),"certified":p.certified,
                     "exactIdentity":p.exact_identity,"regularityCertified":p.regularity_certified,"exactWork":p.work,"reason":p.reason})).collect::<Vec<_>>()}))
         }),

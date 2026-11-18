@@ -6,6 +6,7 @@ pub struct Limits {
     pub order: usize,
     pub exact_work: u64,
     pub agreement_work: u64,
+    /// Shared cells for face rank and exact interior knot joins.
     pub regularity_cells: usize,
 }
 pub struct Report {
@@ -16,11 +17,14 @@ pub struct Report {
     pub vertex_links_complete: bool,
     pub regularity: crate::boundary_embedding::regularity::Report,
     pub proof: ProjectiveSeamCollectionReport,
+    pub face_interiors: InteriorReport,
     pub g1_certified: bool,
     pub g2_certified: bool,
     pub exact_work: u64,
     pub parameter_work: u64,
 }
+mod interiors;
+pub use interiors::InteriorReport;
 mod reversal;
 use reversal::reverse_along;
 // Every oriented face corner connects two (edge,end) nodes in the link
@@ -137,9 +141,17 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
         &seams,
         limits.exact_work - parameter_work,
     )?;
-    let g1_certified = complete && regularity.all_faces_regular && proof.certified;
+    let seam_work = parameter_work + proof.exact_work;
+    let face_interiors = interiors::inspect(
+        model,
+        limits.order,
+        limits.regularity_cells - regularity.cells,
+        limits.exact_work - seam_work,
+    )?;
+    let g1_certified =
+        complete && regularity.all_faces_regular && proof.certified && face_interiors.certified;
     let g2_certified = g1_certified && limits.order == 2;
-    let work = parameter_work + proof.exact_work;
+    let work = seam_work + face_interiors.exact_work;
     Ok(Report {
         extraction_complete: complete,
         edge_ids,
@@ -148,6 +160,7 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
         vertex_links_complete,
         regularity,
         proof,
+        face_interiors,
         g1_certified,
         g2_certified,
         exact_work: work,

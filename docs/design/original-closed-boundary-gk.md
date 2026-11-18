@@ -113,3 +113,10 @@ reflection and charges these operations to its incidence allowance. A partial
 world interval remains a diagnostic window under the model contract and
 receives no whole-shell certificate. Endpoint lift metadata must match its
 authored UV traversal.
+
+The complete closed-sweep audit also checks each face's internal knot lines.
+For nonperiodic charts, the spline basis can establish the requested interior
+order from knot multiplicity. Other charts require exact one-sided raw
+parameter jets. This check shares the regularity cell and exact seam budgets.
+A rank-regular span cover alone gives no continuity credit across its knots.
+The Rust report records the unresolved face and the interior work used.
