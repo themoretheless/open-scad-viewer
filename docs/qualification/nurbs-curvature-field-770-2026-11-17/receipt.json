@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0770",
+  "testedBase": "3b10c105f92dab5e5b79966fe8b570fbcce7209c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 396,
+  "scope": [
+    "Certify rounded contact using a bounded inward vertex displacement checked against every obstacle plane.",
+    "Check rounded-only contact, nonunit normal displacement, rejection against another obstacle plane and the reserved two-pass budget."
+  ],
+  "logSha256": "f5ebf955b1d29c910a9a391cf86673d91cbd3dbba35822c65804e2cef073d8e4",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "95974f784f39b15cbe1ac1c01f5eaff3c0dca23b51a3af629a7e35ec4fad112a",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "0c86e7a2ec7cfd7b69523fbceea1edf40be3641155157fdf80d105d500cce34e"
+  }
+}

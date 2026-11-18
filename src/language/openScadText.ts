@@ -1,8 +1,9 @@
 import type { CallNode } from './openscadCompiler'
 import { OpenSCADParseError } from './openscadErrors'
-import { textError } from './openScadText/prepareOpenScadTextAssets'
-export { prepareOpenScadTextAssets, calculateOpenScadTextSegments } from './openScadText/prepareOpenScadTextAssets'
-export { renderOpenScadText } from './openScadText/renderOpenScadText'
+
+// Shared contract: constants, errors, types and small helpers. Asset preparation and evaluation code
+// lives in the modules under ./openScadText/ and is reached through openScadProjectRuntime, so
+// this module must not re-export it; a re-export pulls it back into the geometry build engine chunk.
 
 export const OPENSCAD_TEXT_MAX_FONTS = 32
 export const OPENSCAD_TEXT_MAX_FACES_PER_COLLECTION = 32
@@ -249,6 +250,15 @@ export interface ParsedFontQuery {
 
 export interface RawContour {
   readonly points: readonly (readonly [number, number])[]
+}
+
+export function textError(
+  code: OpenScadTextErrorCode,
+  message: string,
+  details: OpenScadTextErrorDetails = {},
+  cause?: unknown,
+): never {
+  throw new OpenScadTextError(code, message, details, cause === undefined ? {} : { cause })
 }
 
 export const preparedRuntimes = new WeakMap<PreparedOpenScadTextAssets, HarfBuzzApi>()

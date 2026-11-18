@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0802",
+  "testedBase": "fb843ba8c85e10d9550ef47ed879be66b1384f30",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 428,
+  "scope": [
+    "Certify bidirectional nesting windings per separated contour pair under shared budgets.",
+    "Check signed nested and disjoint pairs, coincident uncertainty and the shared span-pair budget."
+  ],
+  "logSha256": "e204e4f99383059277c3332cf7e1e52799f26a14942905b780d4c27cf5a8a5d8",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "4f28b679cebac95cfbdbee70bef43c0d26e0b2388bb33cecb11e9df9945e9bdf",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "acd6c3f73ca735d6c6aae8e00f1a4f2a3ef9f0b8dc1c169d51d1674a42197dc7"
+  }
+}

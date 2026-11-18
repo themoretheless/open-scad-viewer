@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0795",
+  "testedBase": "446f87e0505518551d42f195e4b9142df43e9562",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 421,
+  "scope": [
+    "Enclose the signed nearest contour distance over a separated query box using its certified fill and radius.",
+    "Check signed distance ranges for interior and exterior boxes, singleton identity and boundary crossing rejection."
+  ],
+  "logSha256": "23132647afe6581d04773c2288a667825bca5aa4f8896029066b6fb8517c335c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "31599b06477d1fb58f3eb34871298d4a454c579986200b7f696fa6a9515ab614",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "1fca49919dba9b8bb46ef22b4edb00b427999cf716818c35ca4dc69557d8580b"
+  }
+}

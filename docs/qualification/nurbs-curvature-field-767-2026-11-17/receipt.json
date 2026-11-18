@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0767",
+  "testedBase": "9342d781ddae781bf406ec175aa4d14c9c88a01b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 393,
+  "scope": [
+    "Certify obstacle separation under a piecewise linear rounding radius and synchronized planar rational motion.",
+    "Check an interior radius peak, independent orientation knots, shared work budget and duplicate profile parameter rejection."
+  ],
+  "logSha256": "af54026af76ea4fd450e5c145883c6a969ee466241fdc0ae65778bc0552c8b93",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "80fe5f08135c4a865cc9355a481f25bfaba254861af08473d766fbd03a0ca27c",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "4e3c82d7565cdaa62b9b7fb2e1557244d5a8d05246142b146ebe74f5007d0fff"
+  }
+}

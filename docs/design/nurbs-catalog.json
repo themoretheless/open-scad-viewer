@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 760,
-  "unallocatedCount": 240,
+  "specifiedCount": 809,
+  "unallocatedCount": 191,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18132,6 +18132,937 @@
       "remainingQualification": [
         "Refine minimum signed workspace clearance in model units and identify a witnessing plane.",
         "Check normalized clearance against nonunit planes, the limiting plane and radius break witness, and a certified coarse enclosure.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0761",
+      "name": "Проверка выпуклого инструмента с переменным скруглением в рабочей области",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::partition_profiled_rounded_hull_workspace",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-761-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-761-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify workspace containment for a fixed vertex hull rounded by a profiled radius.",
+        "Check overtravel requiring both hull support and changing radius, plane residual bounds and empty hull refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0762",
+      "name": "Минимальный запас выпуклого инструмента с переменным скруглением",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::measure_minimum_profiled_rounded_hull_workspace_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-762-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-762-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine normalized workspace clearance for a fixed vertex hull with a profiled rounding radius.",
+        "Check the combined hull and radius minimum, normalized clearance, limiting plane witness, and coarse tolerance behavior.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0763",
+      "name": "Проверка вращающегося плоского инструмента в рабочей области",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_hull_workspace",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-763-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-763-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify half-space containment for a vertex hull moving along a planar rational position and orientation curve.",
+        "Check varying rational orientation, independent knot grids, endpoint residual bounds and a zero-direction refusal to classify.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0764",
+      "name": "Минимальный запас вращающегося плоского инструмента до границ рабочей области",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_planar_rotating_hull_workspace_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-764-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-764-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound the worst signed plane clearance for a rotating planar vertex hull after certifying orientation regularity.",
+        "Check an interior rotation witness, normalized plane clearance, coarse enclosure, work budget and zero orientation rejection.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0765",
+      "name": "Проверка вращающегося плоского инструмента на контакт с выпуклыми препятствиями",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_hull_obstacle_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-765-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-765-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify separating obstacle planes or a persistent tool vertex inside an obstacle while the hull rotates.",
+        "Check ordered obstacle contact and separation, a regular clear interval, zero orientation uncertainty and a vertex/plane budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0766",
+      "name": "Проверка вращающегося плоского инструмента со скруглением около препятствий",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_rounded_hull_obstacle_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-766-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-766-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify separating planes for a rotating planar hull expanded by a fixed disk and retain unresolved rounding contacts.",
+        "Check radius-dependent uncertainty, nonunit plane scaling, zero-radius clearance and invalid radius rejection.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0767",
+      "name": "Проверка вращающегося плоского инструмента с переменным радиусом скругления",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-767-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-767-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify obstacle separation under a piecewise linear rounding radius and synchronized planar rational motion.",
+        "Check an interior radius peak, independent orientation knots, shared work budget and duplicate profile parameter rejection.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0768",
+      "name": "Проверка вращающегося инструмента с переменным скруглением в рабочей области",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_workspace",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-768-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-768-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose workspace plane residuals for planar rotation and a piecewise linear rounding radius.",
+        "Check workspace overtravel at the combined radius and orientation peak, nonunit residual scale and shared grid budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0769",
+      "name": "Минимальный зазор вращающегося инструмента с переменным скруглением",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_planar_rotating_profiled_hull_workspace_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-769-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-769-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound the minimum normalized plane clearance for a rotating hull with piecewise linear rounding.",
+        "Check a clipped radius profile with an interior minimum witness, nonunit plane scaling and the initial work budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0770",
+      "name": "Подтверждение контакта скруглённого вращающегося инструмента с гранью",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_contact",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-770-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-770-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify rounded contact using a bounded inward vertex displacement checked against every obstacle plane.",
+        "Check rounded-only contact, nonunit normal displacement, rejection against another obstacle plane and the reserved two-pass budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0771",
+      "name": "Подтверждение диагонального контакта скруглённого инструмента с углом",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_corner_contact",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-771-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-771-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify rounded hull contact along a two-plane inward direction while checking every obstacle half-space.",
+        "Check diagonal rounded contact, independent plane scales, extra half-space rejection and the reserved three-pass budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0772",
+      "name": "Подтверждение несимметричного контакта скруглённого инструмента с углом",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_asymmetric_contact",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-772-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-772-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify asymmetric rounded contact using violation-weighted inward directions and every obstacle half-space.",
+        "Check asymmetric rounded contact beyond a bisector, nonunit plane scale and the reserved four-pass budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0773",
+      "name": "Подтверждение контакта скруглённого инструмента с косым углом",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_skew_contact",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-773-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-773-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify rounded contact with coupled oblique half-spaces using a two-plane solve and whole-cell verification.",
+        "Check an oblique corner requiring the two-plane solve, extra half-space refusal and the reserved five-pass budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0774",
+      "name": "Подтверждение контакта между вершинами вращающегося выпуклого инструмента",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_chord_contact",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-774-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-774-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify convex hull contact through interval-enclosed chord midpoints on the rotating tool.",
+        "Check a strip crossing a rotating hull between its vertices and reserve budget for the chord midpoint.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0775",
+      "name": "Подтверждение контакта произвольной точки хорды вращающегося инструмента",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_clipped_chord_contact",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-775-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-775-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clip hull chords to candidate contact parameters and certify each witness with interval arithmetic.",
+        "Check off-center chord contact, an infeasible opposing strip and reserved chord work.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0776",
+      "name": "Точное подтверждение касания вращающегося инструмента по хорде",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_exact_chord_contact",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-776-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-776-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Use exact rational chord clipping to preserve nonbinary singleton contact parameters.",
+        "Check a nonbinary singleton chord contact and reject a one-ULP gap between opposing half-spaces.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0777",
+      "name": "Проверка ограничения угловой скорости плоской NURBS-ориентации",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_angular_speed_limit",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-777-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-777-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify planar angular speed limits in the source clock while preserving uncertainty at zero orientation.",
+        "Check an interior angular speed peak in a rescaled clock, a zero orientation and a constant signed axis at zero limit.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0778",
+      "name": "Проверка ограничения углового ускорения плоской NURBS-ориентации",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_angular_acceleration_limit",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-778-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-778-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify absolute planar angular acceleration in the source parameter clock.",
+        "Check a scaled-clock interior angular acceleration peak, a clipped window and a fixed negative axis at zero limit.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0779",
+      "name": "Проверка ограничения углового рывка плоской NURBS-ориентации",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_angular_jerk_limit",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-779-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-779-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify angular jerk limits from planar rational direction jets in the original parameter clock.",
+        "Check a scaled-clock interior angular jerk peak and the unresolved single-cell budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0780",
+      "name": "Совместная проверка угловой скорости, ускорения и рывка",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_angular_motion_limits",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-780-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-780-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify all three planar angular motion limits on a shared adaptive partition.",
+        "Check shared subdivision, independent angular status at the interior peak and coarse mixed results.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0781",
+      "name": "Границы равномерного замедления по угловым ограничениям",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::planar_angular_motion_slowdown_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-781-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-781-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the minimum uniform time dilation meeting planar angular derivative limits.",
+        "Check analytic factor two and withheld feasibility at a zero orientation.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0782",
+      "name": "Границы длительности равномерного прохода по угловым ограничениям",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::planar_angular_motion_duration_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-782-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-782-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Convert angular slowdown bounds to certified duration bounds with outward rounding.",
+        "Check duration at two window widths, factor two, and unbounded duration at a singular direction.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0783",
+      "name": "Проверка времени прохода с угловыми ограничениями",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::check_planar_angular_motion_deadline",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-783-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-783-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify uniform traversal deadlines using exact clock comparisons and independent angular derivative results.",
+        "Check passing, failing and unresolved deadlines, independent derivative results and the original-duration floor.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0784",
+      "name": "Проверка допустимого сектора плоской NURBS-ориентации",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_orientation_sector",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-784-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-784-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify orientation membership in closed narrow, half-turn or reflex planar sectors.",
+        "Check complementary narrow and reflex sectors, an inclusive half-turn boundary and rejection of coincident rays.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0785",
+      "name": "Проверка относительной плоской ориентации в заданном секторе",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_relative_planar_orientation_sector",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-785-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-785-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify an angular sector in a synchronized rotating NURBS reference frame.",
+        "Check relative rotation, independent rational reference knots and uncertainty at a zero reference direction.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0786",
+      "name": "Проверка пределов относительного углового движения двух NURBS-кривых",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_relative_planar_angular_motion_limits",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-786-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-786-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify relative planar angular derivatives on the union of both knot grids.",
+        "Check opposing rotations, combined derivative peaks, a reference knot and a singular reference.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0787",
+      "name": "Измерение результирующего и суммарного углового хода NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_angular_travel",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-787-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-787-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose signed angular change and total angular variation across planar NURBS spans.",
+        "Check retracing with zero net rotation and nonzero total angular travel, plus singular direction refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0788",
+      "name": "Измерение углового хода в движущейся плоской NURBS-системе отсчёта",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_relative_planar_angular_travel",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-788-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-788-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose relative net rotation and total angular travel across two synchronized knot grids.",
+        "Check opposing rotations with analytic relative travel, independent knots and exact self-reference cancellation.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0789",
+      "name": "Подтверждение числа оборотов замкнутой плоской NURBS-ориентации",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_orientation_winding",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-789-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-789-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify winding by exact endpoint ray agreement, knot continuity and an enclosed signed angular integral.",
+        "Check clockwise and counterclockwise winding, unequal positive endpoint magnitudes and rejection of an open direction.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0790",
+      "name": "Число обходов замкнутой плоской NURBS-кривой вокруг точки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_curve_winding_about_point",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-790-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-790-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify the winding of a closed rational planar contour about an arbitrary query point.",
+        "Check translated rational loop winding for interior, exterior, boundary and invalid query points.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0791",
+      "name": "Классификация заполнения по нескольким замкнутым NURBS-контурам",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::classify_planar_curve_fill",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-791-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-791-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify a point by nonzero or even-odd rational contour winding under a shared work budget.",
+        "Check nested opposite and equal contour orientation, both fill rules and the shared initial knot budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0792",
+      "name": "Подтверждение общего числа обходов NURBS-контура для прямоугольной области",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_curve_winding_over_box",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-792-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-792-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify one winding number over an entire query box by continuous contour separation.",
+        "Check interior and exterior boxes, contour crossing, endpoint contact and invalid bounds.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0793",
+      "name": "Знаковое расстояние до набора замкнутых плоских NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_curve_fill_signed_distance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-793-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-793-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose nearest contour distance and determine its sign from the selected fill rule.",
+        "Check both signed distances for nested contours, the nearest contour witness and mandatory initial distance coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0794",
+      "name": "Сертификация заполнения прямоугольной области по нескольким NURBS-контурам",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::classify_planar_curve_fill_over_box",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-794-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-794-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify the same fill rule outcome throughout a box separated from every supplied contour.",
+        "Check query boxes in material, a hole and the exterior, and refuse crossing and touching boxes.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0795",
+      "name": "Границы знакового расстояния до NURBS-контуров по прямоугольной области",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_curve_fill_signed_distance_over_box",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-795-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-795-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the signed nearest contour distance over a separated query box using its certified fill and radius.",
+        "Check signed distance ranges for interior and exterior boxes, singleton identity and boundary crossing rejection.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0796",
+      "name": "Минимальное расстояние от прямоугольника до набора замкнутых NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_contour_set_box_distance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-796-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-796-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify nearest contour distance to a solid query box, including intersection witnesses.",
+        "Check nearest loop, unsigned box distance, an exact zero intersection witness and shared initial coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0797",
+      "name": "Минимальный зазор от диска до набора плоских NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_contour_set_disk_distance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-797-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-797-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose minimum unsigned distance between a closed disk and a set of planar rational contours.",
+        "Check disk clearance, nearest loop, interior overlap, invalid radius and shared knot coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0798",
+      "name": "Минимальный зазор от капсулы до набора плоских NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_contour_set_capsule_distance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-798-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-798-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound capsule-to-contour distance globally, including degenerate segments and overlap.",
+        "Check nearest contour, segment projection, overlap, collapsed capsule and invalid radius.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0799",
+      "name": "Минимальный зазор от повёрнутого прямоугольника до плоских NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_contour_set_oriented_box_distance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-799-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-799-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound contour distance to a rotated rectangle with exact orthogonality validation.",
+        "Check a rotated corner distance, interior contact, axis rescaling and nonorthogonal frame rejection.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0800",
+      "name": "Минимальный зазор между двумя наборами замкнутых плоских NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_contour_sets_distance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-800-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-800-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose global distance between two contour sets with paired source witnesses under a shared budget.",
+        "Check the globally closest contour pair, source witnesses and mandatory coverage of all span pairs.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0801",
+      "name": "Классификация вложенности целых плоских NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::classify_planar_contour_placement",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-801-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-801-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify whole-contour fill placement after proving separation from every reference boundary.",
+        "Check entire loops in material, a hole and the exterior, and withhold placement when boundaries coincide.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0802",
+      "name": "Попарная таблица вложенности замкнутых плоских NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::analyze_planar_contour_nesting",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-802-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-802-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify bidirectional nesting windings per separated contour pair under shared budgets.",
+        "Check signed nested and disjoint pairs, coincident uncertainty and the shared span-pair budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0803",
+      "name": "Иерархия простых замкнутых плоских NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::certify_planar_contour_hierarchy",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-803-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-803-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Build a nesting forest from exact span segmentation, simplicity proofs and pairwise separation.",
+        "Check immediate parents in arbitrary input order, hole depth, simplicity budget, self-crossing and coincident refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0804",
+      "name": "Проверка ориентации внешних контуров, отверстий и островов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::certify_planar_contour_fill_orientations",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-804-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-804-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify boundary orientations and identify reversals that make nonzero fill agree with nesting parity.",
+        "Check reversed roots, holes, islands and the shared orientation work budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0805",
+      "name": "Точная переориентация NURBS-контуров для правила ненулевого обхода",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::orient_planar_contours_for_nonzero_fill",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-805-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-805-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Normalize nested contour orientation by exact affine reversal of source knots and weights.",
+        "Check reversed pole weights and asymmetric knots, parameter agreement, hole fill and bounded exact reversal refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0806",
+      "name": "Площадь заполнения иерархии замкнутых плоских NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_contour_fill_area",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-806-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-806-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose even-odd filled area and the signed source areas of a certified contour hierarchy.",
+        "Check area subtraction for a hole, addition of a nested island and signed source areas under arbitrary input orientation.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0807",
+      "name": "Центроид заполнения иерархии замкнутых плоских NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_contour_fill_centroid",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-807-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-807-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the centroid using certified contour nesting, area and first boundary moments.",
+        "Check certified centroid displacement due to an off-center hole, translated coordinates and bounded work.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0808",
+      "name": "Центральные моменты площади иерархии плоских NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_contour_fill_central_moments",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-808-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-808-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose central second moments and the mixed moment of an even-odd filled contour hierarchy.",
+        "Check a translated region with an off-axis hole, nonzero central product and analytical centroid.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0809",
+      "name": "Главные моменты площади заполненной области плоских NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_contour_fill_principal_moments",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-809-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-809-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose both principal planar second moments and their gap, including repeated moments.",
+        "Check analytically distinct and repeated principal moments and the certified moment gap.",
         "WASM and application integration are separate."
       ]
     }

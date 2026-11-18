@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0778",
+  "testedBase": "a410216a121e8acb63c8ea930a521ccccd313af0",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 404,
+  "scope": [
+    "Certify absolute planar angular acceleration in the source parameter clock.",
+    "Check a scaled-clock interior angular acceleration peak, a clipped window and a fixed negative axis at zero limit."
+  ],
+  "logSha256": "681cd515469b3cae074ffc1808084de5df3aa16e09140b2a302082135dd6eb01",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "4f8275e801e014df4a16cfc88b1fbaca60bcbdb6747c4486763dee5110bf6938",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "c22f1094e948ea3c281c9bf1ae0695ecc1d7012768c304dae40056f9c6355b04"
+  }
+}

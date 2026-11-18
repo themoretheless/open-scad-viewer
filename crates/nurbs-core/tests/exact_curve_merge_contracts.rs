@@ -11627,3 +11627,1547 @@ fn minimum_profiled_workspace_clearance_normalizes_the_limiting_plane() {
     let [lo, hi] = report.gap_bounds;
     assert!(lo <= -0.5 && -0.5 <= hi && hi - lo <= 1e-5);
 }
+
+#[test]
+fn profiled_rounded_hull_workspace_combines_vertex_support_and_radius() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace, partition_profiled_radius_convex_workspace,
+        partition_profiled_rounded_hull_workspace,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![4., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let profile = [(0., 0.), (0.5, 3.), (1., 0.)];
+    let planes = [WorkspaceHalfSpace { normal: &[2., 0.], offset: 11. }];
+    let offsets = [&[0., 0.][..], &[1., 2.][..], &[-1., 0.][..]];
+    let ball = partition_profiled_radius_convex_workspace(&curve, &profile, &planes, 0.01, 128).unwrap();
+    assert!(ball.cells.iter().all(|cell| cell.status == Status::Within));
+    let report = partition_profiled_rounded_hull_workspace(
+        &curve, &profile, &planes, &offsets, 0.01, 128,
+    ).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().any(|cell| {
+        let [lo, hi] = cell.plane_residuals[0];
+        cell.parameter_interval[0] == 0.5 && cell.status == Status::Exceeds && lo <= 1. && hi >= 1.
+    }));
+    assert!(partition_profiled_rounded_hull_workspace(
+        &curve, &profile, &planes, &[], 0.01, 128,
+    ).is_err());
+}
+
+#[test]
+fn minimum_profiled_hull_workspace_clearance_reports_limiting_plane_and_parameter() {
+    use nurbs_core::analysis::curve_measure::{
+        StopReason, WorkspaceHalfSpace, measure_minimum_profiled_rounded_hull_workspace_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![4., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let profile = [(0., 0.), (0.5, 3.), (1., 0.)];
+    let planes = [
+        WorkspaceHalfSpace { normal: &[0., 3.], offset: 30. },
+        WorkspaceHalfSpace { normal: &[2., 0.], offset: 11. },
+    ];
+    let offsets = [&[0., 0.][..], &[1., 2.][..], &[-1., 0.][..]];
+    let check = |budget| measure_minimum_profiled_rounded_hull_workspace_clearance(
+        &curve, &profile, &planes, &offsets, 1e-5, budget,
+    );
+    assert!(check(3).is_err());
+    let coarse = check(4).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= -0.5 && coarse.gap_bounds[1] >= -0.5);
+    let report = check(4096).unwrap();
+    let [lo, hi] = report.gap_bounds;
+    assert!(lo <= -0.5 && -0.5 <= hi && hi - lo < 1e-5);
+    assert_eq!(report.stop_reason, StopReason::Tolerance);
+    assert_eq!(report.witness_plane, 1);
+    assert_eq!(report.witness_parameter, 0.5);
+}
+
+#[test]
+fn rotating_hull_workspace_tracks_rotation_and_orientation_knots() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace, partition_planar_rotating_hull_workspace,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![0., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        knots: vec![0., 0., 0.5, 1., 1.],
+        control_points: vec![vec![1., 0.], vec![1., 1.], vec![0., 1.]],
+        weights: vec![1., 2., 1.],
+        ..position.clone()
+    };
+    let planes = [WorkspaceHalfSpace { normal: &[1., 0.], offset: 1.5 }];
+    let hull = [&[2., 0.][..], &[0., 0.][..]];
+    let report = partition_planar_rotating_hull_workspace(
+        &position, &direction, [0., 1.], &planes, &hull, 0.005, 255,
+    ).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Exceeds);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    for cell in report.cells {
+        assert!(!(cell.parameter_interval[0] < 0.5 && cell.parameter_interval[1] > 0.5));
+        let [lo, hi] = cell.plane_residuals[0];
+        for t in cell.parameter_interval {
+            let (x, y): (f64, f64) = if t <= 0.5 {
+                (1. + 2. * t, 4. * t)
+            } else {
+                (4. * (1. - t), 3. - 2. * t)
+            };
+            let residual = 2. * x / x.hypot(y) - 1.5;
+            assert!(lo <= residual && residual <= hi);
+        }
+    }
+}
+
+#[test]
+fn rotating_hull_workspace_retains_undefined_orientation() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace, partition_planar_rotating_hull_workspace,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![1., 0.], vec![-1., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let planes = [WorkspaceHalfSpace { normal: &[1., 0.], offset: 10. }];
+    let report = partition_planar_rotating_hull_workspace(
+        &direction, &direction, [0., 1.], &planes, &[&[2., 0.]], 0.01, 100,
+    ).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().filter(|cell| {
+        cell.parameter_interval[0] <= 0.5 && cell.parameter_interval[1] >= 0.5
+    }).all(|cell| cell.status == Status::Undetermined));
+}
+
+#[test]
+fn minimum_rotating_hull_clearance_refines_an_interior_rotation_witness() {
+    use nurbs_core::analysis::curve_measure::{
+        StopReason, WorkspaceHalfSpace, measure_minimum_planar_rotating_hull_workspace_clearance,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![0., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        ..position.clone()
+    };
+    let planes = [
+        WorkspaceHalfSpace { normal: &[0., 3.], offset: 30. },
+        WorkspaceHalfSpace { normal: &[2., 0.], offset: 3. },
+    ];
+    let hull = [&[0., 0.][..], &[2., 0.][..]];
+    let measure = |orientation, budget| measure_minimum_planar_rotating_hull_workspace_clearance(
+        &position, orientation, [0., 1.], &planes, &hull, 1e-6, budget,
+    );
+    let coarse = measure(&direction, 4).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= -0.5 && coarse.gap_bounds[1] >= -0.5);
+    let refined = measure(&direction, 256).unwrap();
+    assert_eq!(refined.stop_reason, StopReason::Tolerance);
+    assert!(refined.gap_bounds[0] <= -0.5 && refined.gap_bounds[1] >= -0.5);
+    assert!(refined.gap_bounds[1] - refined.gap_bounds[0] <= 1e-6);
+    assert_eq!(refined.witness_plane, 1);
+    assert_eq!(refined.witness_parameter, 0.5);
+    assert!(measure(&direction, 3).is_err());
+
+    let singular = Curve {
+        control_points: vec![vec![1., 0.], vec![-1., 0.]],
+        ..direction.clone()
+    };
+    assert!(measure(&singular, 256).is_err());
+}
+
+#[test]
+fn rotating_hull_obstacle_clearance_tracks_vertex_contact_and_separation() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace, partition_planar_rotating_hull_obstacle_clearance,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., 0.], vec![0., 1.]],
+        weights: vec![1., 2.],
+        ..position.clone()
+    };
+    let right = [WorkspaceHalfSpace { normal: &[-1., 0.], offset: -1.6 }];
+    let above = [WorkspaceHalfSpace { normal: &[0., -2.], offset: -3.2 }];
+    let obstacles = [&right[..], &above[..]];
+    let hull = [&[0., 0.][..], &[2., 0.][..]];
+    let partition = |orientation, budget| partition_planar_rotating_hull_obstacle_clearance(
+        &position, orientation, [0., 1.], &obstacles, &hull, 0.005, budget,
+    );
+    assert!(partition(&direction, 3).is_err());
+    let report = partition(&direction, 512).unwrap();
+    assert!(report.work_plane_cells <= 512);
+    assert_eq!(report.cells.first().unwrap().obstacles, [Status::Exceeds, Status::Within]);
+    assert_eq!(report.cells.last().unwrap().obstacles, [Status::Within, Status::Exceeds]);
+    assert!(report.cells.iter().any(|cell| cell.status == Status::Within));
+    let singular = Curve {
+        control_points: vec![vec![1., 0.], vec![-1., 0.]],
+        weights: vec![1.; 2],
+        ..position.clone()
+    };
+    let report = partition(&singular, 128).unwrap();
+    for cell in report.cells.iter().filter(|cell| {
+        cell.parameter_interval[0] <= 0.5 && cell.parameter_interval[1] >= 0.5
+    }) {
+        assert_eq!(cell.obstacles, [Status::Undetermined; 2]);
+    }
+}
+
+#[test]
+fn rotating_rounded_hull_reserves_the_radius_against_nonunit_obstacle_planes() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_rounded_hull_obstacle_clearance,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., 0.], vec![0., 1.]],
+        ..position.clone()
+    };
+    let right = [WorkspaceHalfSpace { normal: &[-4., 0.], offset: -9. }];
+    let partition = |radius| partition_planar_rotating_rounded_hull_obstacle_clearance(
+        &position, &direction, [0., 1.], &[&right], &[&[2., 0.]], radius, 0.01, 255,
+    );
+    let sharp = partition(0.).unwrap();
+    assert!(sharp.cells.iter().all(|cell| cell.status == Status::Within));
+    let rounded = partition(0.3).unwrap();
+    assert_eq!(rounded.cells.first().unwrap().status, Status::Undetermined);
+    assert_eq!(rounded.cells.last().unwrap().status, Status::Within);
+    assert!(rounded.cells.iter().all(|cell| cell.status != Status::Exceeds));
+    assert!(partition(-0.1).is_err());
+    assert!(partition(f64::NAN).is_err());
+}
+
+#[test]
+fn rotating_profiled_hull_obstacle_clearance_splits_at_radius_peaks() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_profiled_hull_obstacle_clearance,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        knots: vec![0., 0., 0.75, 1., 1.],
+        control_points: vec![vec![1., 0.], vec![1., 1.], vec![0., 1.]],
+        weights: vec![1.; 3],
+        ..position.clone()
+    };
+    let obstacle = [WorkspaceHalfSpace { normal: &[-2., 0.], offset: -4.5 }];
+    let partition = |profile, budget| partition_planar_rotating_profiled_hull_obstacle_clearance(
+        &position, &direction, profile, &[&obstacle], &[&[2., 0.]], 0.005, budget,
+    );
+    let profile = [(0., 0.), (0.5, 1.), (1., 0.)];
+    assert!(partition(&profile, 2).is_err());
+    let report = partition(&profile, 255).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().any(|cell| {
+        cell.parameter_interval[0] == 0.5 && cell.status == Status::Undetermined
+    }));
+    assert!(report.cells.iter().all(|cell| {
+        let [a, b] = cell.parameter_interval;
+        [0.5, 0.75].into_iter().all(|knot| !(a < knot && knot < b))
+    }));
+    assert!(partition(&[(0., 0.), (0., 1.)], 255).is_err());
+}
+
+#[test]
+fn rotating_profiled_hull_workspace_certifies_overtravel_at_a_radius_peak() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_profiled_hull_workspace,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![0., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        ..position.clone()
+    };
+    let planes = [WorkspaceHalfSpace { normal: &[2., 0.], offset: 4.5 }];
+    let profile = [(0., 0.), (0.5, 1.), (1., 0.)];
+    let partition = |budget| partition_planar_rotating_profiled_hull_workspace(
+        &position, &direction, &profile, &planes, &[&[2., 0.]], 0.005, budget,
+    );
+    assert!(partition(1).is_err());
+    let report = partition(255).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().any(|cell| {
+        let [lo, hi] = cell.plane_residuals[0];
+        cell.parameter_interval[0] == 0.5 && cell.status == Status::Exceeds && lo <= 1.5 && hi >= 1.5
+    }));
+}
+
+#[test]
+fn minimum_rotating_profiled_hull_workspace_clearance_witnesses_a_radius_break() {
+    use nurbs_core::analysis::curve_measure::{
+        StopReason, WorkspaceHalfSpace, measure_minimum_planar_rotating_profiled_hull_workspace_clearance,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![0., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        ..position.clone()
+    };
+    let planes = [
+        WorkspaceHalfSpace { normal: &[0., 3.], offset: 30. },
+        WorkspaceHalfSpace { normal: &[2., 0.], offset: 4.5 },
+    ];
+    let profile = [(0.25, 0.), (0.5, 1.), (0.75, 0.)];
+    let measure = |budget| measure_minimum_planar_rotating_profiled_hull_workspace_clearance(
+        &position, &direction, &profile, &planes, &[&[2., 0.]], 1e-6, budget,
+    );
+    assert!(measure(7).is_err());
+    let report = measure(8).unwrap();
+    assert_eq!(report.stop_reason, StopReason::Tolerance);
+    assert!(report.gap_bounds[0] <= -0.75 && report.gap_bounds[1] >= -0.75);
+    assert!(report.gap_bounds[1] - report.gap_bounds[0] <= 1e-6);
+    assert_eq!(report.witness_plane, 1);
+    assert_eq!(report.witness_parameter, 0.5);
+}
+
+#[test]
+fn rotating_rounded_contact_checks_displaced_vertex_against_every_plane() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_profiled_hull_obstacle_contact,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., 0.], vec![1., 0.1]],
+        ..position.clone()
+    };
+    let face = [WorkspaceHalfSpace { normal: &[-4., 0.], offset: -9. }];
+    let corner = [
+        face[0],
+        WorkspaceHalfSpace { normal: &[0., -1.], offset: -0.6 },
+    ];
+    let partition = |budget| partition_planar_rotating_profiled_hull_obstacle_contact(
+        &position, &direction, &[(0., 0.4), (1., 0.4)],
+        &[&face, &corner], &[&[2., 0.]], 0.005, budget,
+    );
+    assert!(partition(5).is_err());
+    let report = partition(384).unwrap();
+    assert!(report.work_plane_cells <= 384);
+    assert!(report.cells.iter().all(|cell| cell.obstacles[0] == Status::Exceeds));
+    assert!(report.cells.iter().all(|cell| cell.obstacles[1] != Status::Exceeds));
+}
+
+#[test]
+fn rotating_rounded_corner_contact_checks_diagonal_reach_and_extra_planes() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_profiled_hull_obstacle_contact,
+        partition_planar_rotating_profiled_hull_obstacle_corner_contact,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., 0.], vec![1., 0.02]],
+        ..position.clone()
+    };
+    let corner = [
+        WorkspaceHalfSpace { normal: &[-4., 0.], offset: -5. },
+        WorkspaceHalfSpace { normal: &[0., -2.], offset: -0.5 },
+    ];
+    let empty = [corner[0], corner[1], WorkspaceHalfSpace { normal: &[1., 1.], offset: 1.4 }];
+    let obstacles = [&corner[..], &empty[..]];
+    let hull = [&[1., 0.][..]];
+    let profile = [(0., 0.4), (1., 0.4)];
+    let face_only = partition_planar_rotating_profiled_hull_obstacle_contact(
+        &position, &direction, &profile, &obstacles, &hull, 0.01, 240,
+    ).unwrap();
+    assert!(face_only.cells.iter().all(|cell| cell.obstacles[0] == Status::Undetermined));
+    assert!(partition_planar_rotating_profiled_hull_obstacle_corner_contact(
+        &position, &direction, &profile, &obstacles, &hull, 0.01, 14,
+    ).is_err());
+    let diagonal = partition_planar_rotating_profiled_hull_obstacle_corner_contact(
+        &position, &direction, &profile, &obstacles, &hull, 0.01, 240,
+    ).unwrap();
+    assert!(diagonal.cells.iter().all(|cell| {
+        cell.obstacles[0] == Status::Exceeds && cell.obstacles[1] != Status::Exceeds
+    }));
+    assert!(diagonal.work_plane_cells <= 240);
+}
+
+#[test]
+fn rotating_rounded_asymmetric_contact_weights_unequal_plane_deficits() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_profiled_hull_obstacle_asymmetric_contact,
+        partition_planar_rotating_profiled_hull_obstacle_corner_contact,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., 0.], vec![1., 0.001]],
+        ..position.clone()
+    };
+    let corner = [
+        WorkspaceHalfSpace { normal: &[-8., 0.], offset: -10.72 },
+        WorkspaceHalfSpace { normal: &[0., -2.], offset: -0.2 },
+    ];
+    let profile = [(0., 0.37), (1., 0.37)];
+    let diagonal = partition_planar_rotating_profiled_hull_obstacle_corner_contact(
+        &position, &direction, &profile, &[&corner], &[&[1., 0.]], 0.01, 500,
+    ).unwrap();
+    assert!(diagonal.cells.iter().all(|cell| cell.status == Status::Undetermined));
+
+    let measure = |budget| partition_planar_rotating_profiled_hull_obstacle_asymmetric_contact(
+        &position, &direction, &profile, &[&corner], &[&[1., 0.]], 0.01, budget,
+    );
+    assert!(measure(7).is_err());
+    let report = measure(8).unwrap();
+    assert_eq!(report.work_plane_cells, 8);
+    assert_eq!(report.cells.len(), 1);
+    assert_eq!(report.cells[0].status, Status::Exceeds);
+}
+
+#[test]
+fn rotating_rounded_skew_contact_solves_coupled_plane_deficits() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_profiled_hull_obstacle_asymmetric_contact,
+        partition_planar_rotating_profiled_hull_obstacle_skew_contact,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., 0.], vec![1., 0.001]],
+        ..position.clone()
+    };
+    let corner = [
+        WorkspaceHalfSpace { normal: &[-1., 0.], offset: -1.2 },
+        WorkspaceHalfSpace { normal: &[0.8, -0.6], offset: 0.75 },
+    ];
+    let profile = [(0., 0.42), (1., 0.42)];
+    let weighted = partition_planar_rotating_profiled_hull_obstacle_asymmetric_contact(
+        &position, &direction, &profile, &[&corner], &[&[1., 0.]], 0.01, 500,
+    ).unwrap();
+    assert!(weighted.cells.iter().all(|cell| cell.status == Status::Undetermined));
+    let measure = |planes, budget| partition_planar_rotating_profiled_hull_obstacle_skew_contact(
+        &position, &direction, &profile, &[planes], &[&[1., 0.]], 0.01, budget,
+    );
+    assert!(measure(&corner, 9).is_err());
+    let report = measure(&corner, 10).unwrap();
+    assert_eq!(report.work_plane_cells, 10);
+    assert_eq!(report.cells.len(), 1);
+    assert_eq!(report.cells[0].status, Status::Exceeds);
+    let impossible = [corner[0], corner[1], WorkspaceHalfSpace { normal: &[0., 1.], offset: 0.3 }];
+    assert_ne!(measure(&impossible, 15).unwrap().cells[0].status, Status::Exceeds);
+}
+
+#[test]
+fn rotating_hull_chord_contact_detects_a_strip_between_tool_vertices() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_profiled_hull_obstacle_chord_contact,
+        partition_planar_rotating_profiled_hull_obstacle_skew_contact,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![0., 0.1]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., 0.], vec![1., 0.1]],
+        ..position.clone()
+    };
+    let strip = [
+        WorkspaceHalfSpace { normal: &[1., 0.], offset: 0.1 },
+        WorkspaceHalfSpace { normal: &[-1., 0.], offset: 0.1 },
+    ];
+    let hull = [&[-2., 0.][..], &[2., 0.][..]];
+    let profile = [(0., 0.), (1., 0.)];
+    let vertices = partition_planar_rotating_profiled_hull_obstacle_skew_contact(
+        &position, &direction, &profile, &[&strip], &hull, 0.01, 20,
+    ).unwrap();
+    assert_eq!(vertices.cells[0].status, Status::Undetermined);
+    let measure = |budget| partition_planar_rotating_profiled_hull_obstacle_chord_contact(
+        &position, &direction, &profile, &[&strip], &hull, 0.01, budget,
+    );
+    assert!(measure(29).is_err());
+    let report = measure(30).unwrap();
+    assert_eq!(report.work_plane_cells, 30);
+    assert_eq!(report.cells.len(), 1);
+    assert_eq!(report.cells[0].status, Status::Exceeds);
+}
+
+#[test]
+fn rotating_clipped_chord_contact_finds_an_off_center_obstacle_strip() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_profiled_hull_obstacle_chord_contact,
+        partition_planar_rotating_profiled_hull_obstacle_clipped_chord_contact,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![0., 0.1]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., 0.], vec![1., 0.05]],
+        ..position.clone()
+    };
+    let strip = [
+        WorkspaceHalfSpace { normal: &[2., 0.], offset: 2.2 },
+        WorkspaceHalfSpace { normal: &[-1., 0.], offset: -0.9 },
+    ];
+    let impossible = [strip[0], WorkspaceHalfSpace { normal: &[-1., 0.], offset: -1.2 }];
+    let hull = [&[-2., 0.][..], &[2., 0.][..]];
+    let profile = [(0., 0.), (1., 0.)];
+    let midpoints = partition_planar_rotating_profiled_hull_obstacle_chord_contact(
+        &position, &direction, &profile, &[&strip], &hull, 0.01, 30,
+    ).unwrap();
+    assert_eq!(midpoints.cells[0].status, Status::Undetermined);
+    let measure = |budget| partition_planar_rotating_profiled_hull_obstacle_clipped_chord_contact(
+        &position, &direction, &profile, &[&strip, &impossible], &hull, 0.01, budget,
+    );
+    assert!(measure(47).is_err());
+    let report = measure(48).unwrap();
+    assert_eq!(report.work_plane_cells, 48);
+    assert_eq!(report.cells[0].obstacles, [Status::Exceeds, Status::Undetermined]);
+}
+
+#[test]
+fn rotating_exact_chord_contact_accepts_a_nonbinary_singleton() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_profiled_hull_obstacle_clipped_chord_contact,
+        partition_planar_rotating_profiled_hull_obstacle_exact_chord_contact,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![0., 0.1]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., 0.]; 2],
+        ..position.clone()
+    };
+    let plane = [
+        WorkspaceHalfSpace { normal: &[1., 0.], offset: 1. },
+        WorkspaceHalfSpace { normal: &[-1., 0.], offset: -1. },
+    ];
+    let impossible = [plane[0], WorkspaceHalfSpace { normal: &[-1., 0.], offset: -1.0000000000000002 }];
+    let hull = [&[0., 0.][..], &[3., 0.][..]];
+    let profile = [(0., 0.), (1., 0.)];
+    let binary = partition_planar_rotating_profiled_hull_obstacle_clipped_chord_contact(
+        &position, &direction, &profile, &[&plane], &hull, 0.01, 24,
+    ).unwrap();
+    assert_eq!(binary.cells[0].status, Status::Undetermined);
+    let report = partition_planar_rotating_profiled_hull_obstacle_exact_chord_contact(
+        &position, &direction, &profile, &[&plane, &impossible], &hull, 0.01, 48,
+    ).unwrap();
+    assert_eq!(report.cells[0].obstacles, [Status::Exceeds, Status::Undetermined]);
+}
+
+#[test]
+fn planar_angular_speed_limit_detects_interior_peak_and_zero_direction() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_planar_angular_speed_limit,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 4.],
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let report = partition_planar_angular_speed_limit(&direction, [2., 4.], 0.75, 0.01, 255)
+        .unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 3. && 3. <= b && cell.status == Status::Exceeds
+    }));
+    let singular = Curve {
+        control_points: vec![vec![1., 0.], vec![-1., 0.]],
+        ..direction.clone()
+    };
+    let report = partition_planar_angular_speed_limit(&singular, [2., 4.], 0.75, 0.01, 255)
+        .unwrap();
+    assert!(report.cells.iter().filter(|cell| {
+        cell.parameter_interval[0] <= 3. && cell.parameter_interval[1] >= 3.
+    }).all(|cell| cell.status == Status::Undetermined));
+    let fixed = Curve { control_points: vec![vec![0., -1.], vec![0., -3.]], ..direction };
+    let report = partition_planar_angular_speed_limit(&fixed, [2., 4.], 0., 0.01, 1).unwrap();
+    assert_eq!(report.cells[0].status, Status::Within);
+}
+
+#[test]
+fn planar_angular_acceleration_limit_detects_peak_in_a_scaled_clock() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_planar_angular_acceleration_limit,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 4.],
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let report = partition_planar_angular_acceleration_limit(&direction, [2., 3.], 0.55, 0.005, 255)
+        .unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    let peak = 3. - 1. / 3_f64.sqrt();
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= peak && peak <= b && cell.status == Status::Exceeds
+    }));
+    let constant = Curve { control_points: vec![vec![-1., 0.], vec![-3., 0.]], ..direction };
+    let report = partition_planar_angular_acceleration_limit(&constant, [2., 4.], 0., 0.01, 1).unwrap();
+    assert_eq!(report.cells[0].status, Status::Within);
+}
+
+#[test]
+fn planar_angular_jerk_limit_detects_interior_peak_in_original_parameter() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_planar_angular_jerk_limit,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 4.],
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let report = partition_planar_angular_jerk_limit(&direction, [2., 4.], 1.5, 0.005, 511).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 3. && 3. <= b && cell.status == Status::Exceeds
+    }));
+    let coarse = partition_planar_angular_jerk_limit(&direction, [2., 4.], 1.5, 0.005, 1).unwrap();
+    assert_eq!(coarse.cells[0].status, Status::Undetermined);
+}
+
+#[test]
+fn planar_angular_motion_limits_share_cells_and_report_independent_results() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, partition_planar_angular_motion_limits,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 4.],
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let limits = DirectionalMotionLimits { speed: 0.75, acceleration: 0.55, jerk: 1.5 };
+    let report = partition_planar_angular_motion_limits(&direction, [2., 4.], limits, 0.005, 511)
+        .unwrap();
+    assert_eq!(report.cells.first().unwrap().statuses, [Status::Within; 3]);
+    assert_eq!(report.cells.last().unwrap().statuses, [Status::Within; 3]);
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 3. && 3. <= b && cell.statuses == [Status::Exceeds, Status::Within, Status::Exceeds]
+    }));
+    assert!(report.cells.iter().any(|cell| cell.statuses[1] == Status::Exceeds));
+    assert!(report.work_cells <= 511);
+    let limits = DirectionalMotionLimits { acceleration: 100., ..limits };
+    let coarse = partition_planar_angular_motion_limits(&direction, [2., 4.], limits, 0.005, 1)
+        .unwrap();
+    assert_eq!(coarse.cells[0].statuses, [Status::Undetermined, Status::Within, Status::Undetermined]);
+}
+
+#[test]
+fn planar_angular_motion_slowdown_bounds_enclose_required_time_dilation() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, planar_angular_motion_slowdown_bounds,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 4.],
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let limits = DirectionalMotionLimits { speed: 0.5, acceleration: 1., jerk: 1. };
+    let [lo, hi] = planar_angular_motion_slowdown_bounds(
+        &direction, [2., 4.], limits, 0.015625, 255,
+    ).unwrap();
+    assert!(lo <= 2. && 2. <= hi && hi - lo < 0.002);
+    let singular = Curve {
+        control_points: vec![vec![1., 0.], vec![-1., 0.]],
+        ..direction
+    };
+    let bounds = planar_angular_motion_slowdown_bounds(
+        &singular, [2., 4.], limits, 0.015625, 255,
+    ).unwrap();
+    assert_eq!(bounds[1], f64::INFINITY);
+}
+
+#[test]
+fn planar_angular_motion_duration_bounds_use_source_window_width() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, planar_angular_motion_duration_bounds,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 4.],
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let limits = DirectionalMotionLimits { speed: 0.5, acceleration: 1., jerk: 1. };
+    let report = planar_angular_motion_duration_bounds(&direction, [2.5, 3.5], limits, 0.01, 255)
+        .unwrap();
+    assert_eq!(report.slowdown_bounds, report.duration_bounds);
+    let report = planar_angular_motion_duration_bounds(&direction, [2., 4.], limits, 0.015625, 255)
+        .unwrap();
+    let [lo, hi] = report.duration_bounds;
+    assert!(lo <= 4. && 4. <= hi && hi - lo < 0.004);
+    let singular = Curve {
+        control_points: vec![vec![1., 0.], vec![-1., 0.]],
+        ..direction
+    };
+    let report = planar_angular_motion_duration_bounds(&singular, [2., 4.], limits, 0.02, 255)
+        .unwrap();
+    assert_eq!(report.duration_bounds, [2., f64::INFINITY]);
+}
+
+#[test]
+fn planar_angular_motion_deadline_retains_independent_limit_statuses() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, check_planar_angular_motion_deadline,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 4.],
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let limits = DirectionalMotionLimits { speed: 0.5, acceleration: 1., jerk: 1. };
+    let check = |deadline, budget| check_planar_angular_motion_deadline(
+        &direction, [2., 4.], limits, deadline, 0.015625, budget,
+    );
+    let short = check(3.9, 255).unwrap();
+    assert_eq!(short.status, Status::Exceeds);
+    assert_eq!(short.limit_statuses, [Status::Exceeds, Status::Within, Status::Within]);
+    assert_eq!(check(4.1, 255).unwrap().status, Status::Within);
+    assert_eq!(check(4., 1).unwrap().status, Status::Undetermined);
+    assert!(check(f64::INFINITY, 255).is_err());
+
+    let fixed = Curve { control_points: vec![vec![1., 0.]; 2], ..direction };
+    let report = check_planar_angular_motion_deadline(&fixed, [2., 4.], limits, 1.9, 0.01, 1).unwrap();
+    assert_eq!(report.status, Status::Exceeds);
+    assert_eq!(report.limit_statuses, [Status::Within; 3]);
+    let report = check_planar_angular_motion_deadline(&fixed, [2., 4.], limits, 2., 0.01, 1).unwrap();
+    assert_eq!(report.status, Status::Within);
+}
+
+#[test]
+fn planar_orientation_sector_classifies_narrow_and_reflex_windows() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_planar_orientation_sector,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![1., -2.], vec![1., 2.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let narrow = [[1., -1.], [1., 1.]];
+    let run = |rays| partition_planar_orientation_sector(&direction, [0., 1.], rays, 0.01, 127);
+    for (rays, ends, middle) in [
+        (narrow, Status::Exceeds, Status::Within),
+        ([narrow[1], narrow[0]], Status::Within, Status::Exceeds),
+    ] {
+        let report = run(rays).unwrap();
+        assert_eq!(report.cells.first().unwrap().status, ends);
+        assert_eq!(report.cells.last().unwrap().status, ends);
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= 0.5 && 0.5 <= b && cell.status == middle
+        }));
+    }
+    assert!(run([[1., 1.], [2., 2.]]).is_err());
+    let boundary = Curve { control_points: vec![vec![1., 0.], vec![2., 0.]], ..direction };
+    let report = partition_planar_orientation_sector(
+        &boundary, [0., 1.], [[1., 0.], [-1., 0.]], 0.01, 1,
+    ).unwrap();
+    assert_eq!(report.cells[0].status, Status::Within);
+}
+
+#[test]
+fn relative_planar_orientation_sector_tracks_the_reference_knot_grid() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_relative_planar_orientation_sector,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![1., 0.]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let reference = Curve {
+        knots: vec![0., 0., 0.5, 1., 1.],
+        control_points: vec![vec![1., -1.], vec![1., 0.], vec![1., 1.]],
+        weights: vec![1., 2., 1.],
+        ..direction.clone()
+    };
+    let rays = [[1., -0.5], [1., 0.5]];
+    let report = partition_relative_planar_orientation_sector(
+        &direction, &reference, [0., 1.], rays, 0.01, 127,
+    ).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Exceeds);
+    assert_eq!(report.cells.last().unwrap().status, Status::Exceeds);
+    assert!(report.cells.iter().any(|cell| cell.status == Status::Within && cell.spans == [1, 2]));
+    assert!(report.cells.iter().all(|cell| {
+        let [a, b] = cell.parameter_interval;
+        !(a < 0.5 && 0.5 < b)
+    }));
+    let singular = Curve { control_points: vec![vec![1., 0.], vec![-1., 0.]], ..direction.clone() };
+    let report = partition_relative_planar_orientation_sector(
+        &direction, &singular, [0., 1.], rays, 0.01, 127,
+    ).unwrap();
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 0.5 && 0.5 <= b && cell.status == Status::Undetermined
+    }));
+}
+
+#[test]
+fn relative_planar_angular_motion_limits_find_combined_rotation_peaks() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status,
+        partition_relative_planar_angular_motion_limits,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 4.],
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let reference = Curve {
+        knots: vec![2., 2., 3., 4., 4.],
+        control_points: vec![vec![1., 1.], vec![1., 0.], vec![1., -1.]],
+        weights: vec![1.; 3],
+        ..direction.clone()
+    };
+    let limits = DirectionalMotionLimits { speed: 1.5, acceleration: 10., jerk: 3. };
+    let measure = |frame, budget| partition_relative_planar_angular_motion_limits(
+        &direction, frame, [2., 4.], limits, 0.005, budget,
+    );
+    assert!(measure(&reference, 1).is_err());
+    let report = measure(&reference, 511).unwrap();
+    assert_eq!(report.cells.first().unwrap().statuses, [Status::Within; 3]);
+    assert_eq!(report.cells.last().unwrap().statuses, [Status::Within; 3]);
+    assert!(report.cells.iter().any(|cell| {
+        cell.parameter_interval[0] == 3. && cell.spans == [1, 2]
+            && cell.statuses == [Status::Exceeds, Status::Within, Status::Exceeds]
+    }));
+    let singular = Curve {
+        control_points: vec![vec![1., 0.], vec![-1., 0.]],
+        ..direction.clone()
+    };
+    let report = measure(&singular, 511).unwrap();
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 3. && 3. <= b && cell.statuses == [Status::Undetermined; 3]
+    }));
+}
+
+#[test]
+fn planar_angular_travel_distinguishes_retracing_from_net_rotation() {
+    use nurbs_core::analysis::curve_measure::measure_planar_angular_travel;
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 3., 4., 4.],
+        control_points: vec![vec![1., 0.], vec![1., 1.], vec![1., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let report = measure_planar_angular_travel(&direction, [2., 4.], 0.01, 511).unwrap();
+    assert!(report.net_bounds[0] <= 0. && 0. <= report.net_bounds[1]);
+    assert!(report.net_bounds[1] - report.net_bounds[0] < 0.02);
+    let [lo, hi] = report.total_bounds;
+    assert!(lo <= std::f64::consts::FRAC_PI_2 && std::f64::consts::FRAC_PI_2 <= hi);
+    assert!(lo > 1.55 && hi < 1.59);
+    assert!(report.work_cells <= 511);
+    let singular = Curve {
+        control_points: vec![vec![1., 0.], vec![-1., 0.], vec![1., 0.]],
+        ..direction
+    };
+    assert!(measure_planar_angular_travel(&singular, [2., 4.], 0.01, 511).is_err());
+}
+
+#[test]
+fn relative_planar_angular_travel_encloses_opposing_rotation() {
+    use nurbs_core::analysis::curve_measure::measure_relative_planar_angular_travel;
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 4.],
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let reference = Curve {
+        knots: vec![2., 2., 3., 4., 4.],
+        control_points: vec![vec![1., 1.], vec![1., 0.], vec![1., -1.]],
+        weights: vec![1.; 3],
+        ..direction.clone()
+    };
+    let measure = |frame, budget| measure_relative_planar_angular_travel(
+        &direction, frame, [2., 4.], 0.01, budget,
+    );
+    assert!(measure(&reference, 1).is_err());
+    let report = measure(&reference, 511).unwrap();
+    for [lo, hi] in [report.net_bounds, report.total_bounds] {
+        assert!(lo <= std::f64::consts::PI && std::f64::consts::PI <= hi);
+        assert!(hi - lo < 0.025);
+    }
+    let zero = measure(&direction, 1).unwrap();
+    assert_eq!(zero.net_bounds, [0.; 2]);
+    assert_eq!(zero.total_bounds, [0.; 2]);
+}
+
+#[test]
+fn planar_orientation_winding_certifies_both_directions_and_refuses_open_rays() {
+    use nurbs_core::analysis::curve_measure::measure_planar_orientation_winding;
+    let mut direction = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![1., 0.], vec![0., 1.], vec![-1., 0.], vec![0., -1.], vec![2., 0.]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let ccw = measure_planar_orientation_winding(&direction, 0.025, 1020).unwrap();
+    assert_eq!(ccw.winding, Some(1));
+    assert!(ccw.travel.net_bounds[0] <= std::f64::consts::TAU);
+    assert!(std::f64::consts::TAU <= ccw.travel.net_bounds[1]);
+    direction.control_points.reverse();
+    let cw = measure_planar_orientation_winding(&direction, 0.025, 1020).unwrap();
+    assert_eq!(cw.winding, Some(-1));
+    direction.control_points[4] = vec![0., 1.];
+    assert!(measure_planar_orientation_winding(&direction, 0.025, 1020).is_err());
+}
+
+#[test]
+fn planar_curve_winding_about_point_distinguishes_inside_outside_and_boundary() {
+    use nurbs_core::analysis::curve_measure::measure_planar_curve_winding_about_point;
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![
+            vec![11., -7.], vec![10., -6.], vec![9., -7.], vec![10., -8.], vec![11., -7.],
+        ],
+        weights: vec![1., 2., 1., 2., 1.],
+        periodic: false,
+    };
+    let winding = |point| measure_planar_curve_winding_about_point(&curve, point, 0.025, 1020);
+    assert_eq!(winding([10., -7.]).unwrap().winding, Some(1));
+    assert_eq!(winding([12., -7.]).unwrap().winding, Some(0));
+    assert!(winding([11., -7.]).is_err());
+    assert!(winding([f64::NAN, 0.]).is_err());
+}
+
+#[test]
+fn planar_curve_fill_respects_holes_orientation_and_fill_rule() {
+    use nurbs_core::{analysis::curve_measure::classify_planar_curve_fill, chord_winding::FillRule};
+    let diamond = |scale| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![scale, 0.], vec![0., scale], vec![-scale, 0.],
+            vec![0., -scale], vec![scale, 0.]],
+        weights: vec![1., 2., 1., 2., 1.],
+        periodic: false,
+    };
+    let outer = diamond(3_f64);
+    let inner = diamond(1_f64);
+    let mut reversed = inner.clone();
+    reversed.control_points.reverse();
+    let classify = |hole, rule, budget| classify_planar_curve_fill(
+        &[&outer, hole], [0., 0.], rule, 0.02, budget,
+    );
+    let nonzero = classify(&inner, FillRule::NonZero, 1024).unwrap();
+    assert_eq!((nonzero.winding, nonzero.filled), (Some(2), Some(true)));
+    let even_odd = classify(&inner, FillRule::EvenOdd, 1024).unwrap();
+    assert_eq!((even_odd.winding, even_odd.filled), (Some(2), Some(false)));
+    let hole = classify(&reversed, FillRule::NonZero, 1024).unwrap();
+    assert_eq!((hole.winding, hole.filled), (Some(0), Some(false)));
+    assert!(hole.work_cells <= 1024);
+    assert!(classify(&inner, FillRule::NonZero, 7).is_err());
+}
+
+#[test]
+fn planar_curve_winding_over_box_requires_separation_for_every_query() {
+    use nurbs_core::analysis::curve_measure::measure_planar_curve_winding_over_box;
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![3., 0.], vec![0., 3.], vec![-3., 0.], vec![0., -3.], vec![3., 0.]],
+        weights: vec![1., 2., 1., 2., 1.],
+        periodic: false,
+    };
+    let measure = |bounds| measure_planar_curve_winding_over_box(&curve, bounds, 0.02, 1020);
+    assert_eq!(measure([[-0.5, -0.5], [0.5, 0.5]]).unwrap().winding, Some(1));
+    assert_eq!(measure([[4., -1.], [5., 1.]]).unwrap().winding, Some(0));
+    assert!(measure([[2., 0.], [4., 0.5]]).is_err());
+    assert!(measure([[0., 0.], [3., 0.]]).is_err());
+    assert!(measure([[1., 0.], [0., 1.]]).is_err());
+}
+
+#[test]
+fn planar_curve_fill_signed_distance_uses_nearest_contour_and_fill_rule() {
+    use nurbs_core::{
+        analysis::curve_measure::{StopReason, measure_planar_curve_fill_signed_distance},
+        chord_winding::FillRule,
+    };
+    let square = |size: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-size, -size], vec![size, -size], vec![size, size],
+            vec![-size, size], vec![-size, -size]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let outer = square(3.);
+    let inner = square(1.);
+    let measure = |rule, budget| measure_planar_curve_fill_signed_distance(
+        &[&outer, &inner], [0., 0.], rule, 0.02, 1e-4, 1024, budget,
+    );
+    assert!(measure(FillRule::NonZero, 7).is_err());
+    for (rule, expected) in [(FillRule::NonZero, -1.), (FillRule::EvenOdd, 1.)] {
+        let report = measure(rule, 256).unwrap();
+        let [lo, hi] = report.signed_bounds;
+        assert!(lo <= expected && expected <= hi && hi - lo <= 1e-4);
+        assert_eq!(report.witness_contour, 1);
+        assert_eq!(report.distance_stop_reason, StopReason::Tolerance);
+    }
+}
+
+#[test]
+fn planar_curve_fill_over_box_distinguishes_material_hole_and_crossing() {
+    use nurbs_core::{
+        analysis::curve_measure::classify_planar_curve_fill_over_box, chord_winding::FillRule,
+    };
+    let square = |size: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-size, -size], vec![size, -size], vec![size, size],
+            vec![-size, size], vec![-size, -size]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let outer = square(3.);
+    let mut hole = square(1.);
+    hole.control_points.reverse();
+    let classify = |bounds| classify_planar_curve_fill_over_box(
+        &[&outer, &hole], bounds, FillRule::NonZero, 0.02, 1024,
+    );
+    for (bounds, winding, filled) in [
+        ([[-0.5, -0.5], [0.5, 0.5]], 0, false),
+        ([[1.5, -0.5], [2., 0.5]], 1, true),
+        ([[3.25, -0.5], [3.75, 0.5]], 0, false),
+    ] {
+        let report = classify(bounds).unwrap();
+        assert_eq!((report.winding, report.filled), (Some(winding), Some(filled)));
+        assert!(report.work_cells <= 1024);
+    }
+    assert!(classify([[0.5, -0.5], [1.5, 0.5]]).is_err());
+    assert!(classify([[1., -0.5], [1.5, 0.5]]).is_err());
+}
+
+#[test]
+fn planar_curve_fill_signed_distance_over_box_encloses_all_query_distances() {
+    use nurbs_core::{
+        analysis::curve_measure::measure_planar_curve_fill_signed_distance_over_box, chord_winding::FillRule,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-1., -1.], vec![1., -1.], vec![1., 1.],
+            vec![-1., 1.], vec![-1., -1.]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let measure = |bounds| measure_planar_curve_fill_signed_distance_over_box(
+        &[&curve], bounds, FillRule::NonZero, 0.02, 1e-4, 512, 128,
+    );
+    let inside = measure([[-0.25, -0.25], [0.25, 0.25]]).unwrap();
+    let [lo, hi] = inside.signed_bounds;
+    assert!(lo <= -1. && -0.75 <= hi && hi < 0.);
+    assert_eq!(inside.center.fill.filled, Some(true));
+    let outside = measure([[2., -0.25], [2.5, 0.25]]).unwrap();
+    let [lo, hi] = outside.signed_bounds;
+    assert!(0. < lo && lo <= 1. && 1.5 <= hi);
+    let point = measure([[0., 0.]; 2]).unwrap();
+    assert_eq!(point.signed_bounds, point.center.signed_bounds);
+    assert!(measure([[0.9, 0.], [1.1, 0.5]]).is_err());
+}
+
+#[test]
+fn planar_contour_set_box_distance_finds_nearest_loop_and_intersection() {
+    use nurbs_core::analysis::curve_measure::measure_planar_contour_set_box_distance;
+    let square = |size: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-size, -size], vec![size, -size], vec![size, size],
+            vec![-size, size], vec![-size, -size]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let outer = square(3.);
+    let inner = square(1.);
+    let measure = |bounds, budget| measure_planar_contour_set_box_distance(
+        &[&outer, &inner], bounds, 1e-5, budget,
+    );
+    let bounds = [[-0.25, -0.25], [0.25, 0.25]];
+    assert!(measure(bounds, 7).is_err());
+    let report = measure(bounds, 128).unwrap();
+    assert_eq!(report.witness_contour, 1);
+    let [lo, hi] = report.bounds;
+    assert!(lo <= 0.75 && 0.75 <= hi && hi - lo <= 1e-5);
+    let contact = measure([[0.9, -0.25], [1.1, 0.25]], 128).unwrap();
+    assert_eq!(contact.bounds, [0.; 2]);
+    assert_eq!(contact.witness_contour, 1);
+}
+
+#[test]
+fn planar_contour_set_disk_distance_reports_nearest_loop_and_disk_overlap() {
+    use nurbs_core::analysis::curve_measure::measure_planar_contour_set_disk_distance;
+    let square = |size: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-size, -size], vec![size, -size], vec![size, size],
+            vec![-size, size], vec![-size, -size]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let outer = square(3.);
+    let inner = square(1.);
+    let measure = |radius, budget| measure_planar_contour_set_disk_distance(
+        &[&outer, &inner], [1.5, 0.], radius, 1e-5, budget,
+    );
+    assert!(measure(0.25, 7).is_err());
+    let report = measure(0.25, 128).unwrap();
+    assert_eq!(report.witness_contour, 1);
+    let [lo, hi] = report.bounds;
+    assert!(lo <= 0.25 && 0.25 <= hi && hi - lo <= 1e-5);
+    let overlap = measure(0.75, 128).unwrap();
+    assert_eq!(overlap.bounds, [0.; 2]);
+    assert_eq!(overlap.witness_contour, 1);
+    assert!(measure(-1., 128).is_err());
+}
+
+#[test]
+fn planar_contour_set_capsule_distance_checks_segment_projection_and_overlap() {
+    use nurbs_core::analysis::curve_measure::{
+        CapsuleObstacle, measure_planar_contour_set_capsule_distance,
+        measure_planar_contour_set_disk_distance,
+    };
+    let square = |size: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-size, -size], vec![size, -size], vec![size, size],
+            vec![-size, size], vec![-size, -size]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let outer = square(3.);
+    let inner = square(1.);
+    let contours = [&outer, &inner];
+    let measure = |endpoints, radius| measure_planar_contour_set_capsule_distance(
+        &contours, CapsuleObstacle { endpoints, radius }, 1e-5, 256,
+    );
+    let report = measure([&[1.5, -0.5], &[1.5, 0.5]], 0.25).unwrap();
+    let [lo, hi] = report.bounds;
+    assert!(lo <= 0.25 && 0.25 <= hi && hi - lo <= 1e-5);
+    assert_eq!(report.witness_contour, 1);
+    let overlap = measure([&[0.5, 0.], &[1.5, 0.]], 0.1).unwrap();
+    assert_eq!(overlap.bounds, [0.; 2]);
+    let point = [1.5, 0.];
+    let collapsed = measure([&point, &point], 0.25).unwrap();
+    let disk = measure_planar_contour_set_disk_distance(&contours, point, 0.25, 1e-5, 256).unwrap();
+    assert!(collapsed.bounds[0] <= disk.bounds[1] && disk.bounds[0] <= collapsed.bounds[1]);
+    assert!(measure([&[0., 0.], &[1., 1.]], -0.1).is_err());
+}
+
+#[test]
+fn planar_contour_set_oriented_box_distance_tracks_rotated_corners() {
+    use nurbs_core::analysis::curve_measure::{
+        OrientedBoxObstacle, measure_planar_contour_set_oriented_box_distance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-1., -1.], vec![1., -1.], vec![1., 1.],
+            vec![-1., 1.], vec![-1., -1.]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let diagonal = [&[2., 2.][..], &[-3., 3.][..]];
+    let measure = |center, axes| measure_planar_contour_set_oriented_box_distance(
+        &[&curve], OrientedBoxObstacle { center, axes, half_extents: &[0.25, 0.5] }, 0.001, 4096,
+    );
+    let report = measure(&[0., 0.], &diagonal).unwrap();
+    let expected = 1. - 0.75 / 2_f64.sqrt();
+    let [lo, hi] = report.bounds;
+    assert!(lo <= expected && expected <= hi && hi - lo <= 0.001);
+    let contact = measure(&[1., 0.], &diagonal).unwrap();
+    assert_eq!(contact.bounds, [0.; 2]);
+    assert!(measure(&[0., 0.], &[&[1., 1.], &[0., 1.]]).is_err());
+}
+
+#[test]
+fn planar_contour_sets_distance_finds_global_witness_under_shared_budget() {
+    use nurbs_core::analysis::curve_measure::measure_planar_contour_sets_distance;
+    let square = |x: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![x - 1., -1.], vec![x + 1., -1.], vec![x + 1., 1.],
+            vec![x - 1., 1.], vec![x - 1., -1.]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let [a, b, c, d] = [square(-10.), square(0.), square(10.), square(2.5)];
+    let measure = |budget| measure_planar_contour_sets_distance(&[&a, &b], &[&c, &d], 1e-5, budget);
+    assert!(measure(63).is_err());
+    let report = measure(256).unwrap();
+    let [lo, hi] = report.bounds;
+    assert!(lo <= 0.5 && 0.5 <= hi && report.converged);
+    assert_eq!(report.witness_contours, [1, 1]);
+    assert!(report.work_cells <= 256);
+    let points = [b.evaluate(report.witness_parameters[0]).unwrap().point,
+        d.evaluate(report.witness_parameters[1]).unwrap().point];
+    assert!(((points[0][0] - points[1][0]).hypot(points[0][1] - points[1][1]) - 0.5).abs() < 1e-5);
+}
+
+#[test]
+fn planar_contour_placement_classifies_whole_loops_in_material_and_holes() {
+    use nurbs_core::{
+        analysis::curve_measure::classify_planar_contour_placement, chord_winding::FillRule,
+    };
+    let square = |x: f64, size: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![x - size, -size], vec![x + size, -size],
+            vec![x + size, size], vec![x - size, size], vec![x - size, -size]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let outer = square(0., 3.);
+    let mut hole = square(0., 1.);
+    hole.control_points.reverse();
+    let [material, in_hole, outside] = [square(2., 0.25), square(0., 0.25), square(5., 0.25)];
+    let measure = |tested: &[&Curve]| classify_planar_contour_placement(
+        tested, &[&outer, &hole], FillRule::NonZero, 0.02, 1e-4, 3072, 1024,
+    );
+    let report = measure(&[&material, &in_hole, &outside]).unwrap();
+    assert!(report.boundary_distance.bounds[0] > 0.);
+    let placements: Vec<_> = report.placements.iter().map(|item| item.unwrap().filled).collect();
+    assert_eq!(placements, [Some(true), Some(false), Some(false)]);
+    assert!(report.fill_work_cells <= 3072);
+
+    let touching = square(0., 3.);
+    let report = measure(&[&touching]).unwrap();
+    assert_eq!(report.boundary_distance.bounds[0], 0.);
+    assert!(report.placements[0].is_none());
+    assert_eq!(report.fill_work_cells, 0);
+}
+
+#[test]
+fn planar_contour_nesting_reports_directional_windings_for_all_pairs() {
+    use nurbs_core::analysis::curve_measure::analyze_planar_contour_nesting;
+    let square = |x: f64, r: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![x-r, -r], vec![x+r, -r], vec![x+r, r],
+            vec![x-r, r], vec![x-r, -r]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let mut outer = square(0., 3.);
+    outer.control_points.reverse();
+    let inner = square(0., 1.);
+    let outside = square(5., 0.5);
+    let contours = [&outer, &inner, &outside];
+    assert!(analyze_planar_contour_nesting(&contours, 0.02, 1e-4, 2048, 47).is_err());
+    let report = analyze_planar_contour_nesting(&contours, 0.02, 1e-4, 2048, 512).unwrap();
+    assert_eq!(report.pairs.iter().map(|pair| (pair.contours, pair.windings)).collect::<Vec<_>>(), [
+        ([0, 1], [Some(0), Some(-1)]),
+        ([0, 2], [Some(0), Some(0)]),
+        ([1, 2], [Some(0), Some(0)]),
+    ]);
+    assert!(report.distance_work_cells <= 512 && report.winding_work_cells <= 2048);
+    let coincident = analyze_planar_contour_nesting(&[&inner, &inner], 0.02, 1e-4, 512, 128).unwrap();
+    assert_eq!(coincident.pairs[0].windings, [None; 2]);
+    assert_eq!(coincident.winding_work_cells, 0);
+}
+
+#[test]
+fn planar_contour_hierarchy_finds_immediate_parents_and_requires_simplicity() {
+    use nurbs_core::analysis::curve_measure::certify_planar_contour_hierarchy;
+    let square = |r: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-r, -r], vec![r, -r], vec![r, r],
+            vec![-r, r], vec![-r, -r]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let [outer, middle, inner] = [square(4.), square(2.), square(0.5)];
+    let measure = |contours: &[&Curve], budget| certify_planar_contour_hierarchy(
+        contours, 0.02, 1e-4, budget, 4096, 512,
+    );
+    let report = measure(&[&inner, &outer, &middle], 128).unwrap();
+    assert_eq!(report.parents, [Some(2), None, Some(1)]);
+    assert_eq!(report.depths, [2, 0, 1]);
+    assert!(report.simplicity_pairs <= 128 && report.simplicity_cells <= 128);
+    assert!(measure(&[&outer, &inner], 11).is_err());
+    let mut crossing = square(1.);
+    crossing.control_points.swap(1, 2);
+    assert!(measure(&[&crossing], 128).is_err());
+    assert!(measure(&[&inner, &inner], 128).is_err());
+}
+
+#[test]
+fn planar_contour_fill_orientations_identify_reversals_for_roots_and_holes() {
+    use nurbs_core::analysis::curve_measure::{
+        PlanarContourOrientation as Orientation, certify_planar_contour_fill_orientations,
+    };
+    let square = |r: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-r, -r], vec![r, -r], vec![r, r],
+            vec![-r, r], vec![-r, -r]],
+        weights: vec![1., 2., 1., 2., 1.],
+        periodic: false,
+    };
+    let [mut outer, hole, island] = [square(4.), square(2.), square(0.5)];
+    outer.control_points.reverse();
+    let check = |budget| certify_planar_contour_fill_orientations(
+        &[&hole, &island, &outer], 0.02, 1e-4, 128, 4096, 512, budget,
+    );
+    assert!(check(11).is_err());
+    let report = check(1024).unwrap();
+    assert_eq!(report.hierarchy.depths, [1, 2, 0]);
+    assert_eq!(report.orientations, [Orientation::Counterclockwise,
+        Orientation::Counterclockwise, Orientation::Clockwise]);
+    assert_eq!(report.reverse, [true, false, true]);
+    assert!(report.orientation_work_cells <= 1024);
+}
+
+#[test]
+fn orient_planar_contours_for_nonzero_fill_preserves_exact_reversed_geometry() {
+    use nurbs_core::{
+        analysis::curve_measure::{classify_planar_curve_fill, orient_planar_contours_for_nonzero_fill},
+        chord_winding::FillRule,
+    };
+    let square = |r: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 0.5, 2., 3., 4., 4.],
+        control_points: vec![vec![-r, -r], vec![r, -r], vec![r, r],
+            vec![-r, r], vec![-r, -r]],
+        weights: vec![1., 2., 3., 2., 1.],
+        periodic: false,
+    };
+    let [outer, hole] = [square(3.), square(1.)];
+    let orient = |contours: &[&Curve], budget| orient_planar_contours_for_nonzero_fill(
+        contours, 0.02, 1e-4, 128, 4096, 512, 1024, budget,
+    );
+    assert!(orient(&[&outer, &hole], 1).is_err());
+    let report = orient(&[&outer, &hole], 10_000).unwrap();
+    assert_eq!(report.orientation.reverse, [false, true]);
+    assert_eq!(report.contours[0].control_points, outer.control_points);
+    assert_eq!(report.contours[1].knots, [0., 0., 1., 2., 3.5, 4., 4.]);
+    assert_eq!(report.contours[1].weights, hole.weights.iter().copied().rev().collect::<Vec<_>>());
+    for u in [0.125, 0.75, 2.25, 3.75] {
+        let original = hole.evaluate(4. - u).unwrap().point;
+        let reversed = report.contours[1].evaluate(u).unwrap().point;
+        assert!(original.iter().zip(reversed).all(|(a, b)| (a - b).abs() < 1e-12));
+    }
+    let contours = [&report.contours[0], &report.contours[1]];
+    assert_eq!(classify_planar_curve_fill(&contours, [0., 0.], FillRule::NonZero, 0.02, 1024)
+        .unwrap().filled, Some(false));
+    let mut unrepresentable = hole;
+    unrepresentable.knots[2] = 0.1;
+    assert!(orient(&[&outer, &unrepresentable], 10_000).is_err());
+}
+
+#[test]
+fn planar_contour_fill_area_subtracts_holes_and_adds_nested_islands() {
+    use nurbs_core::analysis::curve_measure::measure_planar_contour_fill_area;
+    let square = |r: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-r, -r], vec![r, -r], vec![r, r],
+            vec![-r, r], vec![-r, -r]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let [mut outer, hole, island] = [square(4.), square(2.), square(0.5)];
+    outer.control_points.reverse();
+    let report = measure_planar_contour_fill_area(
+        &[&hole, &island, &outer], 0.02, 1e-4, 128, 4096, 512, 1024,
+    ).unwrap();
+    let [lo, hi] = report.area_bounds;
+    assert!(lo <= 49. && 49. <= hi && hi - lo < 1e-6);
+    for (bounds, expected) in report.signed_contour_area_bounds.into_iter().zip([16., 1., -64.]) {
+        assert!(bounds[0] <= expected && expected <= bounds[1]);
+        assert!(bounds[1] - bounds[0] < 1e-6);
+    }
+}
+
+#[test]
+fn planar_contour_fill_centroid_accounts_for_an_off_center_hole() {
+    use nurbs_core::analysis::curve_measure::measure_planar_contour_fill_centroid;
+    let square = |x: f64, y: f64, r: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![x-r, y-r], vec![x+r, y-r], vec![x+r, y+r],
+            vec![x-r, y+r], vec![x-r, y-r]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let outer = square(10., -7., 3.);
+    let hole = square(11., -7., 1.);
+    let report = measure_planar_contour_fill_centroid(
+        &[&hole, &outer], 0.02, 1e-4, 128, 2048, 512, 512,
+    ).unwrap();
+    for ([lo, hi], expected) in [report.area_bounds, report.centroid_bounds[0], report.centroid_bounds[1]]
+        .into_iter().zip([32., 9.875, -7.])
+    {
+        assert!(lo <= expected && expected <= hi && hi - lo < 1e-6);
+    }
+    assert!(report.orientation.orientation_work_cells <= 512);
+}
+
+#[test]
+fn planar_contour_fill_central_moments_include_off_axis_hole() {
+    use nurbs_core::analysis::curve_measure::measure_planar_contour_fill_central_moments;
+    let square = |x: f64, y: f64, r: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![x-r, y-r], vec![x+r, y-r], vec![x+r, y+r],
+            vec![x-r, y+r], vec![x-r, y-r]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let outer = square(10., -7., 3.);
+    let hole = square(11., -6.5, 1.);
+    let report = measure_planar_contour_fill_central_moments(
+        &[&hole, &outer], 0.005, 1e-4, 128, 4096, 512, 4096,
+    ).unwrap();
+    let expected = [108. - 4. / 3. - 4.5, -2.25, 108. - 4. / 3. - 1.125];
+    for ([lo, hi], value) in report.central_moment_bounds.into_iter().zip(expected) {
+        assert!(lo <= value && value <= hi && hi - lo < 1.35);
+    }
+    for ([lo, hi], value) in report.centroid_bounds.into_iter().zip([9.875, -7.0625]) {
+        assert!(lo <= value && value <= hi && hi - lo < 1e-6);
+    }
+}
+
+#[test]
+fn planar_contour_fill_principal_moments_enclose_distinct_and_repeated_values() {
+    use nurbs_core::analysis::curve_measure::measure_planar_contour_fill_principal_moments;
+    let rectangle = |x: f64, y: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-x, -y], vec![x, -y], vec![x, y], vec![-x, y], vec![-x, -y]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let measure = |curve| measure_planar_contour_fill_principal_moments(
+        &[curve], 0.005, 1e-4, 128, 1024, 512, 4096,
+    );
+    let wide = rectangle(2., 1.);
+    let report = measure(&wide).unwrap();
+    for ([lo, hi], value) in report.principal_moment_bounds.into_iter().zip([8. / 3., 32. / 3.]) {
+        assert!(lo <= value && value <= hi && hi - lo < 0.1);
+    }
+    let [lo, hi] = report.moment_gap_bounds;
+    assert!(lo > 0. && lo <= 8. && 8. <= hi);
+
+    let square = rectangle(1., 1.);
+    let report = measure(&square).unwrap();
+    assert_eq!(report.moment_gap_bounds[0], 0.);
+    for [lo, hi] in report.principal_moment_bounds {
+        assert!(lo <= 4. / 3. && 4. / 3. <= hi && hi - lo < 0.1);
+    }
+}

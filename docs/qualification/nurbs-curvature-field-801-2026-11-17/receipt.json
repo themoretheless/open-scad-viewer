@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0801",
+  "testedBase": "75d743cd8451e78a47cc76cd5d6a10a1ada30e88",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 427,
+  "scope": [
+    "Certify whole-contour fill placement after proving separation from every reference boundary.",
+    "Check entire loops in material, a hole and the exterior, and withhold placement when boundaries coincide."
+  ],
+  "logSha256": "7bbd1196cd3f9f4e7b21d5f4e7ef0ecf15ab26de2b682713d7163e1b3d451384",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "7d5d462ca42e1562fd30813ad212c05f5f011a918d8dbc3854458ef32f8ca303",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "5ba559e2fd9487911f452375eaf0a98ad40926f70b3019fc404c2cf5368e24ce"
+  }
+}

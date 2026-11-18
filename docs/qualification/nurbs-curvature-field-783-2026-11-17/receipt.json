@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0783",
+  "testedBase": "b10f6303729678172df98dc90673630402bbfe82",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 409,
+  "scope": [
+    "Classify uniform traversal deadlines using exact clock comparisons and independent angular derivative results.",
+    "Check passing, failing and unresolved deadlines, independent derivative results and the original-duration floor."
+  ],
+  "logSha256": "b36a5175f4fdd246685e65d6d78f44d580cde4313e04b940a02d930df6b8dfcf",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "1bd84843bfac34e75e0a63c9e14d9e6d811046895e3ff36d0e6fee0cfb89a26c",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "640d2b0f5e20b82a76c3291b467a45f844f441d84d7d1f315a901ce14bcbbdc1"
+  }
+}

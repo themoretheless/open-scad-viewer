@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0787",
+  "testedBase": "1e78d03cac9c59108776370bb74e0f616ea9a1b6",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 413,
+  "scope": [
+    "Enclose signed angular change and total angular variation across planar NURBS spans.",
+    "Check retracing with zero net rotation and nonzero total angular travel, plus singular direction refusal."
+  ],
+  "logSha256": "30f34f2b445cf3a9eed939838d83ac3182f7c7596529f345e28961909cbe4408",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "67f072d0d388a0d6f6223b831472ffdd79202591a6cebaddaaaf5d344b524334",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "2760107d8a95c2053bda480846789dcc8923ad0a066498f4e64e1bac7db62393"
+  }
+}

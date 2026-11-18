@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0790",
+  "testedBase": "1728428684a03d6c995293a699461346ad2414e0",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 416,
+  "scope": [
+    "Certify the winding of a closed rational planar contour about an arbitrary query point.",
+    "Check translated rational loop winding for interior, exterior, boundary and invalid query points."
+  ],
+  "logSha256": "14e47055e1efd014186c20b41136ca6ba4e9b0f4fa2d2d8f56e676915584d68d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "aff1b469b37c9b50628bddb2c45ac76ba8c1d171beb10be4fabf63c17b2725b1",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "0d7f1f5b038f38c5990adeda44664752f8c3edef0e0d2c75bb352eb81120e667"
+  }
+}

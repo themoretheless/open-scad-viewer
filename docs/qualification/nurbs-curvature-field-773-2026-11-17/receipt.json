@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0773",
+  "testedBase": "afd211b1fb28a2c9d6f9cd58a9a7c59d0696441d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 399,
+  "scope": [
+    "Certify rounded contact with coupled oblique half-spaces using a two-plane solve and whole-cell verification.",
+    "Check an oblique corner requiring the two-plane solve, extra half-space refusal and the reserved five-pass budget."
+  ],
+  "logSha256": "a299ea027916bba015220b7e8475cdd10672f244bebcc4aac1dcb54b5669633f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "9742bb9007f31d2adc875b47308a5f43be8a6bb6f5e0b87c6ae2c7ef78ac95d5",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "53df76a70b4bf99372a7e3d51a8c6c543d67f8d047329f529ac4dc53364855c2"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0785",
+  "testedBase": "8d48470db1b354fe9eb7341d479ad5b212229ad7",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 411,
+  "scope": [
+    "Certify an angular sector in a synchronized rotating NURBS reference frame.",
+    "Check relative rotation, independent rational reference knots and uncertainty at a zero reference direction."
+  ],
+  "logSha256": "08f5ac9baa92cd53273c4259588463a9d79925acf19236df0cb4a4d5ec43016c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "23aa016aa0d1666fb9cff3241680726ec20aa00e085c7be95b6d1aa1ae394454",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "0819cf787906822b6c87872133243ae8d05af6937c23552b4fcadc54ebff8f52"
+  }
+}

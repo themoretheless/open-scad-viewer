@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0774",
+  "testedBase": "e6e9a0045040f1d181322bdffa8d44cb9d95b438",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 400,
+  "scope": [
+    "Certify convex hull contact through interval-enclosed chord midpoints on the rotating tool.",
+    "Check a strip crossing a rotating hull between its vertices and reserve budget for the chord midpoint."
+  ],
+  "logSha256": "2b3de59b1c0c72399d40cfed8bbb2d95d06520f86f6cb73a25906482b9b3c674",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "817660269474c9174abca89d57eabdef41b61663ef713fb919404e367f8b351c",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "fccae2f0301557abe84abe6edd87d628fe9c0e22fe25140acefc108e94c3f4a0"
+  }
+}

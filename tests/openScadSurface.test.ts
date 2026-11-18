@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { OpenScadProject } from '../src/language/openScadProject'
+import { OPENSCAD_SURFACE_MAX_TRIANGLES, OpenScadSurfaceDataError } from '../src/language/openScadSurface'
 import {
-  OPENSCAD_SURFACE_MAX_TRIANGLES,
-  OpenScadSurfaceDataError,
   decodeOpenScadSurfacePng,
   loadOpenScadSurfaceHeightMap,
-  parseOpenScadSurfaceDat,
   prepareOpenScadSurfaceAssets,
   triangulateOpenScadSurface,
-} from '../src/language/openScadSurface'
+} from '../src/language/openScadSurface/decodeOpenScadSurfacePng'
+import { parseOpenScadSurfaceDat } from '../src/language/openScadSurface/parseOpenScadSurfaceDat'
 
 const RGBA_PNG_2X2 =
   'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGUlEQVR4nGNgAIL///8LMjQ0NCg6ODgYAgAyLgWhbk/ABgAAAABJRU5ErkJggg=='

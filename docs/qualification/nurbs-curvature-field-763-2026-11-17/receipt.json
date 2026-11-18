@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0763",
+  "testedBase": "51988599707943ba86344ca860d8dcdc269097e9",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 388,
+  "scope": [
+    "Classify half-space containment for a vertex hull moving along a planar rational position and orientation curve.",
+    "Check varying rational orientation, independent knot grids, endpoint residual bounds and a zero-direction refusal to classify."
+  ],
+  "logSha256": "92a0fbbdaee2bdd9b40b26181fda80c36d30eb984e6116af7bd398ad6cdf6fef",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "e57cef26ca7d3dead261208871e424c57df1fa1e57b53c9211a508ac788b7a59",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "c24102aa221fe99fe53b18d76dff64595a5a3546e70610237e0a9d0fe52f56d7"
+  }
+}

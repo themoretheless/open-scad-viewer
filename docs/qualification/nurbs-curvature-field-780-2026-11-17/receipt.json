@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0780",
+  "testedBase": "23348206df9ca6072fe708069e098e0b1d5b8e04",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 406,
+  "scope": [
+    "Classify all three planar angular motion limits on a shared adaptive partition.",
+    "Check shared subdivision, independent angular status at the interior peak and coarse mixed results."
+  ],
+  "logSha256": "9158ed8920b37cd2ffc1abd3dabc50a337c585e4d6685accceef2acbd3ec9a40",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "bb705440f17217c69729ed05370eda4a73cba74ae51c4d434342661d7166599f",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "4ea54d49abe7a9d809cf965deac9601d59307cb62f43d8c1c163127e31767151"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0799",
+  "testedBase": "eec8b8de28b1055e540f73e4758d2b23fa63d3a2",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 425,
+  "scope": [
+    "Bound contour distance to a rotated rectangle with exact orthogonality validation.",
+    "Check a rotated corner distance, interior contact, axis rescaling and nonorthogonal frame rejection."
+  ],
+  "logSha256": "cb458642eed0088935cb716c3f1884fcf085f9e9ec995d7582ea72ce9af42d8b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "7ca990f2d4ca2cb6a27634b0fb16fae0ce55d5e940f640533f911e7f07641c14",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "af779a66480fa99b3da3eb4f1c47fe43c53532cd19ba747bff8d3ed6d49202da"
+  }
+}

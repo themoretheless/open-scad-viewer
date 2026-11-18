@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0788",
+  "testedBase": "e15f477db195d19cdc65854061def39ff9bf5dcf",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 414,
+  "scope": [
+    "Enclose relative net rotation and total angular travel across two synchronized knot grids.",
+    "Check opposing rotations with analytic relative travel, independent knots and exact self-reference cancellation."
+  ],
+  "logSha256": "325b25251ecb6f34d335d9059e3b87ca5025c067e31c703d5a44622d6cb62c00",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "5e7a591bae95e246f9e719aab12262133e1b0e7c2240a4b982fbb115784b5a31",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "8b6806f0a7e325bb61d0d565c71b07d75d388e5c377cbf52d38973b259865835"
+  }
+}

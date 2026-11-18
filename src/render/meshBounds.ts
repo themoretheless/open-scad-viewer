@@ -1,6 +1,6 @@
 import type { Aabb3, Mat4 } from '../kernel/geometry/math3d'
 import { sameTypedArray } from './drawSorting'
-import { runGpuMeshSlicer, type SlicerResult } from './gpuSlicer'
+import type { SlicerResult } from './gpuSlicer'
 import type { Bounds, GMesh } from './types'
 
 type Vec3 = [number, number, number]
@@ -139,6 +139,8 @@ export async function sliceVisibleMeshes(
   meshes: readonly GMesh[],
   options: SceneSliceOptions,
 ): Promise<Array<{ meshIndex: number; slice: SlicerResult }>> {
+  // The slicer and its compute runner load on the first slice request, not with the renderer.
+  const { runGpuMeshSlicer } = await import('./gpuSlicer')
   const results: Array<{ meshIndex: number; slice: SlicerResult }> = []
   for (let i = 0; i < meshes.length; i++) {
     const m = meshes[i]!

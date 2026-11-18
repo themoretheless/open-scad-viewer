@@ -758,3 +758,64 @@ pub fn cone_torus_boolean(cone_model: &Model, torus_model: &Model, operation: &s
         },
     )
 }
+
+/// Tilted or off-axis torus x torus Boolean.
+pub fn torus_torus_boolean(
+    first_model: &Model,
+    second_model: &Model,
+    operation: &str,
+) -> Result<Model> {
+    use crate::torus_torus::{TorusTorusComponent, intersect_torus_torus};
+    let (Some(first), Some(second)) = (
+        recognize_torus(first_model)?,
+        recognize_torus(second_model)?,
+    ) else {
+        return Err(refuse("Torus-torus Boolean needs two canonical ring tori"));
+    };
+    let report = intersect_torus_torus(first_model, second_model, Options::default())?;
+    if !report.unresolved.is_empty() {
+        return Err(refuse(
+            "Torus-torus Boolean: the intersection is not resolved",
+        ));
+    }
+    let mut loops = Vec::new();
+    let mut tolerance = 1e-6_f64;
+    for component in &report.components {
+        let TorusTorusComponent::Traced {
+            pieces,
+            distance_bound,
+            complete,
+            ..
+        } = component
+        else {
+            return Err(refuse(
+                "Torus-torus Boolean: coaxial pairs belong to brep_core::boolean",
+            ));
+        };
+        if !complete {
+            return Err(refuse(
+                "Torus-torus Boolean: the component set is not certified complete",
+            ));
+        }
+        tolerance = tolerance.max(2. * distance_bound);
+        loops.push(pieces.clone());
+    }
+    if loops.is_empty() {
+        return Err(refuse("Torus-torus Boolean: the tori do not intersect"));
+    }
+    let inside = |o: usize, p: [f64; 3]| -> Result<bool> {
+        inside_torus(if o == 0 { &second } else { &first }, p)
+    };
+    pair_boolean(
+        first_model,
+        second_model,
+        operation,
+        super::traced_lift::Other::Torus(&first),
+        super::traced_lift::Other::Torus(&second),
+        TracedLoops {
+            loops: &loops,
+            tolerance,
+            inside: &inside,
+        },
+    )
+}

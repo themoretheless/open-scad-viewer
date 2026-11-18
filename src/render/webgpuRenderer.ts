@@ -79,7 +79,8 @@ import { GpuBufferArena } from './gpuZeroCopyPipeline'
 export { GpuBufferArena, createZeroCopyMeshBuffers } from './gpuZeroCopyPipeline'
 import { type SlicerResult } from './gpuSlicer'
 import { sliceVisibleMeshes, type SceneSliceOptions } from './meshBounds'
-export { runGpuMeshSlicer, computeSliceArea, type SlicerResult } from './gpuSlicer'
+// Type only: a value re-export would keep the slicer in the renderer chunk.
+export type { SlicerResult } from './gpuSlicer'
 export { GeometryWorkerPool, detectHardwareConcurrency } from '../kernel/geometryWorkerPool'
 import {
   CLICK_MOVE_THRESHOLD,

@@ -1142,18 +1142,23 @@ fn slowdown_from_motion_report(
     report: &DirectionalMotionReport,
     limits: DirectionalMotionLimits,
 ) -> Result<[f64; 2]> {
+    slowdown_from_peak_bounds(
+        [report.speed.bounds, report.acceleration.bounds, report.jerk.bounds],
+        limits,
+    )
+}
+
+fn slowdown_from_peak_bounds(
+    bounds: [[f64; 2]; 3],
+    limits: DirectionalMotionLimits,
+) -> Result<[f64; 2]> {
     use num_rational::BigRational;
 
     let exact = |value| {
         BigRational::from_float(value)
             .ok_or_else(|| crate::numeric_err("Nonfinite motion bound"))
     };
-    let constraints = [
-        (report.speed.bounds, limits.speed),
-        (report.acceleration.bounds, limits.acceleration),
-        (report.jerk.bounds, limits.jerk),
-    ]
-    .into_iter()
+    let constraints = bounds.into_iter().zip([limits.speed, limits.acceleration, limits.jerk])
     .map(|([lo, hi], limit)| Ok(([exact(lo)?, exact(hi)?], exact(limit)?)))
     .collect::<Result<Vec<_>>>()?;
 
@@ -1282,6 +1287,11 @@ pub fn multi_axis_motion_duration_bounds(
 ) -> Result<MultiAxisMotionDurationReport> {
     let slowdown =
         multi_axis_motion_slowdown_bounds(curve, time_window, axes, tolerances, max_cells)?;
+    let duration_bounds = uniform_motion_duration_bounds(time_window, slowdown.bounds)?;
+    Ok(MultiAxisMotionDurationReport { slowdown, duration_bounds })
+}
+
+fn uniform_motion_duration_bounds(time_window: [f64; 2], slowdown: [f64; 2]) -> Result<[f64; 2]> {
     let width = exact_motion_operand(time_window[1])? - exact_motion_operand(time_window[0])?;
     let duration_endpoint = |factor: f64, upper: bool| -> Result<f64> {
         if factor == f64::INFINITY {
@@ -1289,11 +1299,10 @@ pub fn multi_axis_motion_duration_bounds(
         }
         round_motion_duration(&(&width * exact_motion_operand(factor)?), upper)
     };
-    let duration_bounds = [
-        duration_endpoint(slowdown.bounds[0], false)?,
-        duration_endpoint(slowdown.bounds[1], true)?,
-    ];
-    Ok(MultiAxisMotionDurationReport { slowdown, duration_bounds })
+    Ok([
+        duration_endpoint(slowdown[0], false)?,
+        duration_endpoint(slowdown[1], true)?,
+    ])
 }
 
 fn round_motion_duration(duration: &num_rational::BigRational, upper: bool) -> Result<f64> {
@@ -1439,6 +1448,1642 @@ pub fn partition_directional_speed_limit(
         })
         .collect();
     Ok(DirectionalSpeedLimitPartition { cells, work_cells })
+}
+
+/// Classify direction against the closed counterclockwise sector from
+/// the first ray to the second. Supports both acute and reflex sectors.
+/// Coincident rays are ambiguous and rejected. A potentially zero
+/// orientation leaves its cell unresolved.
+pub fn partition_planar_orientation_sector(
+    direction: &Curve,
+    interval: [f64; 2],
+    rays: [[f64; 2]; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalSpeedLimitPartition> {
+    use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
+
+    direction.validate()?;
+    check(direction.control_points[0].len() == 2, "Orientation sectors require a planar direction curve")?;
+    let (normals, reflex) = prepare_orientation_sector(rays)?;
+    let exact_status = fixed_cardinal_rotation(direction).map(|axis| {
+        let inside = normals.map(|normal| {
+            // Cardinal axes select exactly one normal component.
+            normal[0] * axis[0] + normal[1] * axis[1] >= 0.
+        });
+        let within = if reflex { inside[0] || inside[1] } else { inside[0] && inside[1] };
+        if within { Within } else { Exceeds }
+    });
+    let normals = normals.map(|normal| normal.map(Interval::point));
+    let (cells, work_cells) = partition_motion_cells(
+        direction, interval, parameter_tolerance, max_cells,
+        |jets, _| {
+            if let Some(status) = exact_status {
+                return Ok((status, false));
+            }
+            let status = classify_orientation_sector(&jets[0], &normals, reflex)?;
+            Ok((status, status == Undetermined))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(span, parameter_interval, status)| {
+        DirectionalSpeedLimitCell { parameter_interval, span, status }
+    }).collect();
+    Ok(DirectionalSpeedLimitPartition { cells, work_cells })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct RelativePlanarOrientationCell {
+    pub parameter_interval: [f64; 2],
+    /// The original spans of the direction and reference, respectively.
+    pub spans: [usize; 2],
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct RelativePlanarOrientationPartition {
+    pub cells: Vec<RelativePlanarOrientationCell>,
+    pub work_cells: usize,
+}
+
+/// Classify the direction in the rotating reference frame. Both curves
+/// use the same parameter clock. The sector is measured counterclockwise
+/// from its first ray to its second in the reference frame.
+pub fn partition_relative_planar_orientation_sector(
+    direction: &Curve,
+    reference: &Curve,
+    interval: [f64; 2],
+    rays: [[f64; 2]; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<RelativePlanarOrientationPartition> {
+    validate(parameter_tolerance, max_cells)?;
+    let (_, initial) = synchronized_clearance_cells([direction, reference], interval, [0.; 2])?;
+    check(direction.control_points[0].len() == 2, "Orientation sectors require planar direction curves")?;
+    let (normals, reflex) = prepare_orientation_sector(rays)?;
+    let normals = normals.map(|normal| normal.map(Interval::point));
+    let (cells, work_cells) = partition_enclosed_cells(
+        initial, parameter_tolerance, max_cells,
+        |[span, reference_span], domain| {
+            let axis = curve_jets::enclose(direction, span, domain)?;
+            let frame = curve_jets::enclose(reference, reference_span, domain)?;
+            let axis = &axis[0];
+            let frame = &frame[0];
+            // The dot and cross components represent the relative angle,
+            // with a positive common scale when both directions are nonzero.
+            let relative = [
+                project_jet(axis, frame)?,
+                frame[0].mul(axis[1])?.sub(frame[1].mul(axis[0])?)?,
+            ];
+            let status = classify_orientation_sector(&relative, &normals, reflex)?;
+            Ok((status, status == DirectionalMotionStatus::Undetermined))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(spans, parameter_interval, status)| {
+        RelativePlanarOrientationCell { parameter_interval, spans, status }
+    }).collect();
+    Ok(RelativePlanarOrientationPartition { cells, work_cells })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct RelativePlanarAngularMotionCell {
+    pub parameter_interval: [f64; 2],
+    /// The original spans of the direction and reference, respectively.
+    pub spans: [usize; 2],
+    /// Classifications of absolute relative speed, acceleration and jerk.
+    pub statuses: [DirectionalMotionStatus; 3],
+}
+
+#[derive(Clone, Debug)]
+pub struct RelativePlanarAngularMotionPartition {
+    pub cells: Vec<RelativePlanarAngularMotionCell>,
+    pub work_cells: usize,
+}
+
+/// Classify angular derivative limits in a rotating planar reference
+/// frame. Both curves use the same source parameter. Knot spans use
+/// one-sided derivatives and possible zero directions remain unresolved.
+pub fn partition_relative_planar_angular_motion_limits(
+    direction: &Curve,
+    reference: &Curve,
+    interval: [f64; 2],
+    limits: DirectionalMotionLimits,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<RelativePlanarAngularMotionPartition> {
+    use DirectionalMotionStatus::Undetermined;
+
+    validate(parameter_tolerance, max_cells)?;
+    let limits = [limits.speed, limits.acceleration, limits.jerk];
+    validate_motion_partition_limits(limits)?;
+    let (_, initial) = synchronized_clearance_cells([direction, reference], interval, [0.; 2])?;
+    check(direction.control_points[0].len() == 2, "Angular derivatives require planar direction curves")?;
+    let fixed = [direction, reference].map(|curve| fixed_cardinal_rotation(curve).is_some());
+    let (cells, work_cells) = partition_enclosed_cells(
+        initial, parameter_tolerance, max_cells,
+        |[span, reference_span], domain| {
+            let width = Interval::point(domain[1]).sub(Interval::point(domain[0]))?;
+            let angular = |curve, span, fixed| {
+                if fixed {
+                    return Ok(Some([Interval::point(0.); 3]));
+                }
+                let jets = curve_jets::enclose(curve, span, domain)?;
+                planar_angular_jets(&jets, width, 3)
+            };
+            let (Some(moving), Some(frame)) = (
+                angular(direction, span, fixed[0])?,
+                angular(reference, reference_span, fixed[1])?,
+            ) else {
+                return Ok(([Undetermined; 3], true));
+            };
+            if fixed == [true; 2] {
+                return Ok(([DirectionalMotionStatus::Within; 3], false));
+            }
+            let mut statuses = [Undetermined; 3];
+            for i in 0..3 {
+                statuses[i] = classify_absolute_motion(moving[i].sub(frame[i])?, limits[i]);
+            }
+            Ok((statuses, statuses.contains(&Undetermined)))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(spans, parameter_interval, statuses)| {
+        RelativePlanarAngularMotionCell { parameter_interval, spans, statuses }
+    }).collect();
+    Ok(RelativePlanarAngularMotionPartition { cells, work_cells })
+}
+
+fn prepare_orientation_sector(rays: [[f64; 2]; 2]) -> Result<([[f64; 2]; 2], bool)> {
+    let [start, end] = rays;
+    check(rays.iter().all(|ray| ray.iter().all(|x| x.is_finite()) && *ray != [0.; 2]),
+        "Sector rays must be finite and nonzero")?;
+    let determinant = exact_motion_operand(start[0])? * exact_motion_operand(end[1])?
+        - exact_motion_operand(start[1])? * exact_motion_operand(end[0])?;
+    let zero = exact_motion_operand(0.)?;
+    if determinant == zero {
+        let alignment = exact_motion_operand(start[0])? * exact_motion_operand(end[0])?
+            + exact_motion_operand(start[1])? * exact_motion_operand(end[1])?;
+        check(alignment < zero, "Sector boundary rays must not coincide")?;
+    }
+    let reflex = determinant < zero;
+    let normals = [[-start[1], start[0]], [end[1], -end[0]]];
+    Ok((normals, reflex))
+}
+
+fn classify_orientation_sector(
+    axis: &[Interval],
+    normals: &[[Interval; 2]; 2],
+    reflex: bool,
+) -> Result<DirectionalMotionStatus> {
+    use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
+    if axis.iter().all(|value| value.lo <= 0. && value.hi >= 0.) {
+        return Ok(Undetermined);
+    }
+    let bounds = [project_jet(axis, &normals[0])?, project_jet(axis, &normals[1])?];
+    let inside = bounds.map(|value| value.lo >= 0.);
+    let outside = bounds.map(|value| value.hi < 0.);
+    let (within, exceeds) = if reflex {
+        (inside[0] || inside[1], outside[0] && outside[1])
+    } else {
+        (inside[0] && inside[1], outside[0] || outside[1])
+    };
+    let status = if within { Within } else if exceeds { Exceeds } else { Undetermined };
+    Ok(status)
+}
+
+/// Classify absolute angular speed of a planar direction curve against an
+/// inclusive limit in radians per unit of the curve parameter. Each knot
+/// span is evaluated on its own side. The direction must stay nonzero to
+/// certify a cell, and jumps between spans are outside this derivative test.
+pub fn partition_planar_angular_speed_limit(
+    direction: &Curve,
+    interval: [f64; 2],
+    limit: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalSpeedLimitPartition> {
+    partition_planar_angular_limit(
+        direction, interval, limit, parameter_tolerance, max_cells, 1,
+    )
+}
+
+/// Classify absolute angular acceleration in radians per squared unit of
+/// the curve parameter. Each span uses its one-sided derivatives, and a
+/// cell containing a potentially zero direction is unresolved.
+pub fn partition_planar_angular_acceleration_limit(
+    direction: &Curve,
+    interval: [f64; 2],
+    limit: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalSpeedLimitPartition> {
+    partition_planar_angular_limit(
+        direction, interval, limit, parameter_tolerance, max_cells, 2,
+    )
+}
+
+/// Classify absolute angular jerk in radians per cubed unit of the curve
+/// parameter. Knot spans are checked independently and possible zero
+/// directions leave their cells unresolved.
+pub fn partition_planar_angular_jerk_limit(
+    direction: &Curve,
+    interval: [f64; 2],
+    limit: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalSpeedLimitPartition> {
+    partition_planar_angular_limit(
+        direction, interval, limit, parameter_tolerance, max_cells, 3,
+    )
+}
+
+fn partition_planar_angular_limit(
+    direction: &Curve,
+    interval: [f64; 2],
+    limit: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+    order: usize,
+) -> Result<DirectionalSpeedLimitPartition> {
+    let (cells, work_cells) = partition_planar_angular_derivatives(
+        direction, interval, [limit], [order], parameter_tolerance, max_cells,
+    )?;
+    let cells = cells.into_iter().map(|cell| DirectionalSpeedLimitCell {
+        parameter_interval: cell.parameter_interval,
+        span: cell.span,
+        status: cell.statuses[0],
+    }).collect();
+    Ok(DirectionalSpeedLimitPartition { cells, work_cells })
+}
+
+/// Classify absolute angular speed, acceleration and jerk on one shared
+/// subdivision, in units of the original parameter. Subdivision continues
+/// while any limit is unresolved. One-sided derivatives apply at knots.
+pub fn partition_planar_angular_motion_limits(
+    direction: &Curve,
+    interval: [f64; 2],
+    limits: DirectionalMotionLimits,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalMotionLimitPartition> {
+    let (cells, work_cells) = partition_planar_angular_derivatives(
+        direction, interval, [limits.speed, limits.acceleration, limits.jerk],
+        [1, 2, 3], parameter_tolerance, max_cells,
+    )?;
+    Ok(DirectionalMotionLimitPartition { cells, work_cells })
+}
+
+fn partition_planar_angular_derivatives<const N: usize>(
+    direction: &Curve,
+    interval: [f64; 2],
+    limits: [f64; N],
+    orders: [usize; N],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<(Vec<DirectionalMotionLimitCell<N>>, usize)> {
+    use DirectionalMotionStatus::{Undetermined, Within};
+
+    validate_motion_partition_limits(limits)?;
+    direction.validate()?;
+    check(direction.control_points[0].len() == 2, "Angular derivatives require a planar direction curve")?;
+    let fixed = fixed_cardinal_rotation(direction).is_some();
+    let order = orders.into_iter().max().unwrap_or(1);
+    let (cells, work_cells) = partition_motion_cells(
+        direction, interval, parameter_tolerance, max_cells,
+        |jets, width| {
+            if fixed {
+                return Ok(([Within; N], false));
+            }
+            let Some(values) = planar_angular_jets(jets, width, order)? else {
+                return Ok(([Undetermined; N], true));
+            };
+            let mut statuses = [Undetermined; N];
+            for ((status, order), limit) in statuses.iter_mut().zip(orders).zip(limits) {
+                let value = values[order - 1];
+                *status = classify_absolute_motion(value, limit);
+            }
+            Ok((statuses, statuses.contains(&Undetermined)))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(span, parameter_interval, statuses)| {
+        DirectionalMotionLimitCell { parameter_interval, span, statuses }
+    }).collect();
+    Ok((cells, work_cells))
+}
+
+/// Enclose the minimum uniform parameter dilation satisfying all three
+/// angular limits. A finite upper bound certifies feasibility, while an
+/// infinite upper bound can indicate unresolved orientation or an
+/// unattainable limit. Jumps between knot spans are outside this check.
+pub fn planar_angular_motion_slowdown_bounds(
+    direction: &Curve,
+    interval: [f64; 2],
+    limits: DirectionalMotionLimits,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<[f64; 2]> {
+    validate_motion_partition_limits([limits.speed, limits.acceleration, limits.jerk])?;
+    let (peaks, unresolved) = planar_angular_peak_bounds(
+        direction, interval, parameter_tolerance, max_cells,
+    )?;
+    let mut bounds = slowdown_from_peak_bounds(peaks, limits)?;
+    if unresolved {
+        bounds[1] = f64::INFINITY;
+    }
+    Ok(bounds)
+}
+
+fn planar_angular_peak_bounds(
+    direction: &Curve,
+    interval: [f64; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<([[f64; 2]; 3], bool)> {
+    direction.validate()?;
+    check(direction.control_points[0].len() == 2, "Angular derivatives require a planar direction curve")?;
+    let fixed = fixed_cardinal_rotation(direction).is_some();
+    let (cells, _) = partition_motion_cells(
+        direction, interval, parameter_tolerance, max_cells,
+        |jets, width| {
+            if fixed {
+                return Ok((Some([Interval::point(0.); 3]), false));
+            }
+            Ok((planar_angular_jets(jets, width, 3)?, true))
+        },
+    )?;
+    let mut peaks = [[0_f64; 2]; 3];
+    let mut unresolved = false;
+    for (_, _, values) in cells {
+        if let Some(values) = values {
+            for (peak, value) in peaks.iter_mut().zip(values) {
+                peak[0] = peak[0].max(value.lo.max(-value.hi));
+                peak[1] = peak[1].max(value.lo.abs().max(value.hi.abs()));
+            }
+        } else {
+            unresolved = true;
+        }
+    }
+    Ok((peaks, unresolved))
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarAngularMotionDeadlineReport {
+    pub status: DirectionalMotionStatus,
+    /// Speed, acceleration and jerk in that order. The no-speedup rule
+    /// affects the overall status.
+    pub limit_statuses: [DirectionalMotionStatus; 3],
+}
+
+/// Check an inclusive deadline for a uniform traversal with slowdown only.
+/// Compare the angular derivative bounds against the proposed clock exactly.
+pub fn check_planar_angular_motion_deadline(
+    direction: &Curve,
+    time_window: [f64; 2],
+    limits: DirectionalMotionLimits,
+    deadline: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarAngularMotionDeadlineReport> {
+    use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
+
+    check(deadline.is_finite() && deadline > 0., "Deadline must be positive and finite")?;
+    let limits = [limits.speed, limits.acceleration, limits.jerk];
+    validate_motion_partition_limits(limits)?;
+    let (peaks, unresolved) = planar_angular_peak_bounds(
+        direction, time_window, parameter_tolerance, max_cells,
+    )?;
+    let factor = motion_clock_factor(time_window, deadline)?;
+    let mut limit_statuses = [Undetermined; 3];
+    let mut power = factor.clone();
+    for (index, ([lo, hi], limit)) in peaks.into_iter().zip(limits).enumerate() {
+        let allowed = &power * exact_motion_operand(limit)?;
+        limit_statuses[index] = if exact_motion_operand(lo)? > allowed {
+            Exceeds
+        } else if !unresolved && exact_motion_operand(hi)? <= allowed {
+            Within
+        } else {
+            Undetermined
+        };
+        power *= &factor;
+    }
+    let status = if factor < exact_motion_operand(1.)? || limit_statuses.contains(&Exceeds) {
+        Exceeds
+    } else if limit_statuses.contains(&Undetermined) {
+        Undetermined
+    } else {
+        Within
+    };
+    Ok(PlanarAngularMotionDeadlineReport { status, limit_statuses })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarAngularMotionDurationReport {
+    /// Minimum uniform dilation, constrained to at least one.
+    pub slowdown_bounds: [f64; 2],
+    /// Minimum duration in source time units. A finite upper bound is
+    /// sufficient to satisfy the angular limits for a uniform traversal.
+    pub duration_bounds: [f64; 2],
+}
+
+/// Enclose the uniform traversal duration under planar angular limits.
+/// The input parameter must use elapsed time for physical time units.
+pub fn planar_angular_motion_duration_bounds(
+    direction: &Curve,
+    time_window: [f64; 2],
+    limits: DirectionalMotionLimits,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarAngularMotionDurationReport> {
+    let slowdown_bounds = planar_angular_motion_slowdown_bounds(
+        direction, time_window, limits, parameter_tolerance, max_cells,
+    )?;
+    let duration_bounds = uniform_motion_duration_bounds(time_window, slowdown_bounds)?;
+    Ok(PlanarAngularMotionDurationReport { slowdown_bounds, duration_bounds })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarAngularTravelReport {
+    /// Signed integral of angular speed in radians over the span interiors.
+    pub net_bounds: [f64; 2],
+    /// Integral of absolute angular speed in radians.
+    pub total_bounds: [f64; 2],
+    pub work_cells: usize,
+}
+
+/// Bound signed and total angular travel without wrapping angles at a
+/// branch cut. The integration covers each original knot span separately
+/// and excludes orientation jumps. Every retained cell must certify a
+/// nonzero direction.
+pub fn measure_planar_angular_travel(
+    direction: &Curve,
+    interval: [f64; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarAngularTravelReport> {
+    measure_planar_angular_travel_from(direction, interval, None, parameter_tolerance, max_cells)
+}
+
+fn measure_planar_angular_travel_from(
+    direction: &Curve,
+    interval: [f64; 2],
+    origin: Option<[Interval; 2]>,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarAngularTravelReport> {
+    direction.validate()?;
+    check(direction.control_points[0].len() == 2, "Angular travel requires a planar direction curve")?;
+    let fixed = origin.is_none() && fixed_cardinal_rotation(direction).is_some();
+    let region = origin.filter(|bounds| bounds.iter().any(|bound| bound.lo < bound.hi));
+    let center = origin.map(|bounds| bounds.map(|bound| {
+        let middle = crate::distance_bounds::midpoint(bound.lo, bound.hi);
+        Interval::point(middle.clamp(bound.lo, bound.hi))
+    }));
+    let (cells, work_cells) = partition_motion_cells(
+        direction, interval, parameter_tolerance, max_cells,
+        |jets, _| {
+            if fixed {
+                return Ok((Some(Interval::point(0.)), false));
+            }
+            // The jet derivative is already in the local clock on [0, 1].
+            // Its range also encloses its integral over the unit interval.
+            if let Some(region) = region {
+                let separated = jets[0].iter().zip(region).any(|(coordinate, bound)| {
+                    coordinate.hi < bound.lo || coordinate.lo > bound.hi
+                });
+                if !separated {
+                    return Ok((None, true));
+                }
+            }
+            let shifted;
+            let jets = if let Some(origin) = center {
+                let mut translated = jets.to_vec();
+                for (coordinate, offset) in translated[0].iter_mut().zip(origin) {
+                    *coordinate = coordinate.sub(offset)?;
+                }
+                shifted = translated;
+                &shifted
+            } else {
+                jets
+            };
+            let local = planar_angular_jets(jets, Interval::point(1.), 1)?;
+            Ok((local.map(|values| values[0]), true))
+        },
+    )?;
+    if fixed {
+        return Ok(PlanarAngularTravelReport {
+            net_bounds: [0.; 2], total_bounds: [0.; 2], work_cells,
+        });
+    }
+    accumulate_angular_travel(cells.into_iter().map(|(_, _, speed)| speed), work_cells)
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarOrientationWindingReport {
+    /// Positive winding is counterclockwise. None means more than one
+    /// integer is compatible with the current angular enclosure.
+    pub winding: Option<i64>,
+    pub travel: PlanarAngularTravelReport,
+}
+
+/// Certify winding over the complete domain of a clamped planar direction
+/// curve. The endpoint rays must agree exactly and interior knots must
+/// guarantee positional continuity. Direction magnitude may vary.
+pub fn measure_planar_orientation_winding(
+    direction: &Curve,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarOrientationWindingReport> {
+    let domain = validate_winding_curve(direction)?;
+    let last = direction.control_points.len();
+    let first = &direction.control_points[0];
+    let end = &direction.control_points[last - 1];
+    let [ax, ay, bx, by] = [
+        exact_motion_operand(first[0])?, exact_motion_operand(first[1])?,
+        exact_motion_operand(end[0])?, exact_motion_operand(end[1])?,
+    ];
+    let zero = exact_motion_operand(0.)?;
+    check(
+        &ax * &by == &ay * &bx && ax * bx + ay * by > zero,
+        "Orientation winding requires identical nonzero endpoint rays",
+    )?;
+    let travel = measure_planar_angular_travel(direction, domain, parameter_tolerance, max_cells)?;
+    winding_from_angular_travel(travel)
+}
+
+/// Measure the signed winding of a closed planar contour around a point.
+/// The curve must be clamped and continuous, with equal endpoints.
+/// A point on or too close to the curve for separation to be certified
+/// prevents a winding report.
+pub fn measure_planar_curve_winding_about_point(
+    curve: &Curve,
+    point: [f64; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarOrientationWindingReport> {
+    check(point.iter().all(|value| value.is_finite()), "Winding point must be finite")?;
+    let domain = validate_winding_curve(curve)?;
+    check(curve.control_points.first() == curve.control_points.last(), "Winding contour must be closed")?;
+    let origin = Some(point.map(Interval::point));
+    let travel = measure_planar_angular_travel_from(
+        curve, domain, origin, parameter_tolerance, max_cells,
+    )?;
+    winding_from_angular_travel(travel)
+}
+
+/// Certify a common winding for all points in a closed axis-aligned box.
+/// Bounds are given as lower and upper corners. Every curve cell must be
+/// separated from the box. The travel bounds in the report are for the
+/// box center, whose winding agrees with that of every point in the box.
+pub fn measure_planar_curve_winding_over_box(
+    curve: &Curve,
+    bounds: [[f64; 2]; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarOrientationWindingReport> {
+    let [[x_min, y_min], [x_max, y_max]] = bounds;
+    let region = [Interval::new(x_min, x_max)?, Interval::new(y_min, y_max)?];
+    let domain = validate_winding_curve(curve)?;
+    check(curve.control_points.first() == curve.control_points.last(), "Winding contour must be closed")?;
+    let travel = measure_planar_angular_travel_from(
+        curve, domain, Some(region), parameter_tolerance, max_cells,
+    )?;
+    winding_from_angular_travel(travel)
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarCurveFillReport {
+    /// Sum of the oriented winding numbers. Uncertain contours leave the
+    /// sum and the fill decision unresolved.
+    pub winding: Option<i32>,
+    pub filled: Option<bool>,
+    pub work_cells: usize,
+}
+
+/// Classify a query point against a set of closed planar NURBS contours.
+/// Reserve the initial knot cells of every contour before sharing the
+/// remaining refinement budget. All contours must be separated from the
+/// query point for a result.
+pub fn classify_planar_curve_fill(
+    contours: &[&Curve],
+    point: [f64; 2],
+    rule: crate::chord_winding::FillRule,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarCurveFillReport> {
+    check(point.iter().all(|value| value.is_finite()), "Winding point must be finite")?;
+    classify_planar_curve_fill_for_region(
+        contours, point.map(Interval::point), rule, parameter_tolerance, max_cells,
+    )
+}
+
+/// Certify the same fill classification for every point in a closed
+/// axis-aligned box given by its lower and upper corners. A contour
+/// intersecting or touching the box prevents certification.
+pub fn classify_planar_curve_fill_over_box(
+    contours: &[&Curve],
+    bounds: [[f64; 2]; 2],
+    rule: crate::chord_winding::FillRule,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarCurveFillReport> {
+    let [[x_min, y_min], [x_max, y_max]] = bounds;
+    let region = [Interval::new(x_min, x_max)?, Interval::new(y_min, y_max)?];
+    classify_planar_curve_fill_for_region(contours, region, rule, parameter_tolerance, max_cells)
+}
+
+fn classify_planar_curve_fill_for_region(
+    contours: &[&Curve],
+    region: [Interval; 2],
+    rule: crate::chord_winding::FillRule,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarCurveFillReport> {
+    validate(parameter_tolerance, max_cells)?;
+    check(!contours.is_empty(), "Curve fill requires at least one contour")?;
+    check(contours.len() <= max_cells, "Curve fill budget must cover every contour")?;
+    let mut initial_work = 0;
+    let mut span_counts = Vec::with_capacity(contours.len());
+    for &curve in contours {
+        let domain = validate_winding_curve(curve)?;
+        check(curve.control_points.first() == curve.control_points.last(), "Winding contour must be closed")?;
+        let spans = active_spans(curve, domain).count();
+        if spans > max_cells - initial_work {
+            return Err(resource("Curve fill budget must cover every original knot span"));
+        }
+        initial_work += spans;
+        span_counts.push(spans);
+    }
+
+    let mut extra = max_cells - initial_work;
+    let mut work_cells = 0;
+    let mut winding = Some(0_i32);
+    for (index, (&curve, spans)) in contours.iter().zip(span_counts).enumerate() {
+        let share = extra / (contours.len() - index);
+        let travel = measure_planar_angular_travel_from(
+            curve, curve.domain(), Some(region), parameter_tolerance, spans + share,
+        )?;
+        work_cells += travel.work_cells;
+        extra -= travel.work_cells.saturating_sub(spans);
+        let report = winding_from_angular_travel(travel)?;
+        winding = match (winding, report.winding) {
+            (Some(sum), Some(turns)) => {
+                let turns = i32::try_from(turns).map_err(|_| resource("Contour winding exceeds integer range"))?;
+                Some(sum.checked_add(turns).ok_or_else(|| resource("Total winding exceeds integer range"))?)
+            }
+            _ => None,
+        };
+    }
+    Ok(PlanarCurveFillReport {
+        winding,
+        filled: winding.map(|turns| crate::chord_winding::filled(turns, rule)),
+        work_cells,
+    })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarCurveSignedDistanceReport {
+    /// Negative inside the filled region, positive outside. The magnitude
+    /// measures distance to the nearest supplied contour.
+    pub signed_bounds: [f64; 2],
+    pub fill: PlanarCurveFillReport,
+    pub witness_contour: usize,
+    pub witness_parameter: f64,
+    pub distance_cells: usize,
+    pub distance_stop_reason: StopReason,
+}
+
+/// Measure distance to the nearest closed NURBS contour and sign it using
+/// the selected fill rule. Contours that cancel in the fill still count
+/// toward distance. Each stage has its own explicit cell budget.
+pub fn measure_planar_curve_fill_signed_distance(
+    contours: &[&Curve],
+    point: [f64; 2],
+    rule: crate::chord_winding::FillRule,
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_fill_cells: usize,
+    max_distance_cells: usize,
+) -> Result<PlanarCurveSignedDistanceReport> {
+    validate(distance_tolerance, max_distance_cells)?;
+    let fill = classify_planar_curve_fill(contours, point, rule, parameter_tolerance, max_fill_cells)?;
+    measure_signed_contour_distance(contours, point, fill, distance_tolerance, max_distance_cells)
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarCurveBoxSignedDistanceReport {
+    /// Bounds covering the signed nearest contour distance at every point
+    /// in the query box.
+    pub signed_bounds: [f64; 2],
+    pub center: PlanarCurveSignedDistanceReport,
+}
+
+/// Bound the signed nearest contour distance throughout a separated
+/// axis-aligned box. The fill is certified over the entire box. The
+/// center distance is expanded by a bound on the box's radius.
+pub fn measure_planar_curve_fill_signed_distance_over_box(
+    contours: &[&Curve],
+    bounds: [[f64; 2]; 2],
+    rule: crate::chord_winding::FillRule,
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_fill_cells: usize,
+    max_distance_cells: usize,
+) -> Result<PlanarCurveBoxSignedDistanceReport> {
+    validate(distance_tolerance, max_distance_cells)?;
+    let fill = classify_planar_curve_fill_over_box(contours, bounds, rule, parameter_tolerance, max_fill_cells)?;
+    let region = [Interval::new(bounds[0][0], bounds[1][0])?, Interval::new(bounds[0][1], bounds[1][1])?];
+    let point = region.map(|axis| {
+        crate::distance_bounds::midpoint(axis.lo, axis.hi).clamp(axis.lo, axis.hi)
+    });
+    let center = measure_signed_contour_distance(contours, point, fill, distance_tolerance, max_distance_cells)?;
+    let [lo, hi] = center.signed_bounds;
+    let signed_bounds = if bounds[0] == bounds[1] {
+        [lo, hi]
+    } else {
+        let (_, radius) = box_distance(&region, &point.map(Interval::point))?;
+        let expanded = Interval::new(lo, hi)?.add(Interval::new(-radius, radius)?)?;
+        match fill.filled {
+            Some(true) => [expanded.lo, expanded.hi.min(0.)],
+            Some(false) => [expanded.lo.max(0.), expanded.hi],
+            None => [expanded.lo, expanded.hi],
+        }
+    };
+    Ok(PlanarCurveBoxSignedDistanceReport { signed_bounds, center })
+}
+
+fn measure_signed_contour_distance(
+    contours: &[&Curve],
+    point: [f64; 2],
+    fill: PlanarCurveFillReport,
+    distance_tolerance: f64,
+    max_distance_cells: usize,
+) -> Result<PlanarCurveSignedDistanceReport> {
+    let point = point.map(Interval::point);
+    let nearest = measure_contour_set_distance(contours, distance_tolerance, max_distance_cells, |cell| {
+        let (lo, hi) = box_distance(cell, &point)?;
+        Interval::new(lo, hi)
+    })?;
+    let [lower, upper] = nearest.bounds;
+    let signed_bounds = match fill.filled {
+        Some(true) => [-upper, -lower],
+        Some(false) => [lower, upper],
+        None => [-upper, upper],
+    };
+    Ok(PlanarCurveSignedDistanceReport {
+        signed_bounds, fill, witness_contour: nearest.witness_contour,
+        witness_parameter: nearest.witness_parameter,
+        distance_cells: nearest.work_cells, distance_stop_reason: nearest.stop_reason,
+    })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarContourDistanceReport {
+    pub bounds: [f64; 2],
+    pub witness_contour: usize,
+    pub witness_parameter: f64,
+    pub work_cells: usize,
+    pub stop_reason: StopReason,
+}
+
+/// Measure the minimum unsigned distance from a closed axis-aligned box
+/// to a set of closed planar NURBS contours. A zero upper bound certifies
+/// intersection with the box. The work budget is shared across contours.
+pub fn measure_planar_contour_set_box_distance(
+    contours: &[&Curve],
+    bounds: [[f64; 2]; 2],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarContourDistanceReport> {
+    validate(tolerance, max_cells)?;
+    let [minimum, maximum] = bounds;
+    for (lo, hi) in minimum.into_iter().zip(maximum) {
+        Interval::new(lo, hi)?;
+    }
+    validate_distance_contours(contours, max_cells)?;
+    measure_contour_set_distance(contours, tolerance, max_cells, |cell| {
+        solid_box_gap(cell, &minimum, &maximum, 0.)
+    })
+}
+
+/// Bound the minimum unsigned distance between a closed disk and a set
+/// of closed planar NURBS contours. A zero upper bound certifies that a
+/// contour meets the disk, including its interior.
+pub fn measure_planar_contour_set_disk_distance(
+    contours: &[&Curve],
+    center: [f64; 2],
+    radius: f64,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarContourDistanceReport> {
+    validate(tolerance, max_cells)?;
+    check(center.iter().all(|value| value.is_finite()), "Disk center must be finite")?;
+    check(radius.is_finite() && radius >= 0., "Disk radius must be finite and nonnegative")?;
+    validate_distance_contours(contours, max_cells)?;
+    let center = center.map(Interval::point);
+    let radius = Interval::point(radius);
+    measure_contour_set_distance(contours, tolerance, max_cells, |cell| {
+        let (lo, hi) = box_distance(cell, &center)?;
+        let gap = Interval::new(lo, hi)?.sub(radius)?;
+        Interval::new(gap.lo.max(0.), gap.hi.max(0.))
+    })
+}
+
+/// Bound the minimum unsigned distance between a closed capsule and a
+/// set of planar NURBS contours. A capsule consists of a segment and
+/// its fixed-radius disk expansion. A zero upper bound certifies contact.
+pub fn measure_planar_contour_set_capsule_distance(
+    contours: &[&Curve],
+    capsule: CapsuleObstacle<'_>,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarContourDistanceReport> {
+    validate(tolerance, max_cells)?;
+    validate_distance_contours(contours, max_cells)?;
+    let prepared = prepare_capsules(contours[0], &[capsule], 0.)?;
+    measure_contour_set_distance(contours, tolerance, max_cells, |cell| {
+        let gap = prepared[0].gap(cell)?;
+        Interval::new(gap.lo.max(0.), gap.hi.max(0.))
+    })
+}
+
+/// Measure the minimum unsigned distance between an oriented rectangle
+/// and a set of closed planar contours. The axes must be orthogonal, but
+/// do not need unit length. A zero upper bound certifies contact.
+pub fn measure_planar_contour_set_oriented_box_distance(
+    contours: &[&Curve],
+    rectangle: OrientedBoxObstacle<'_>,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarContourDistanceReport> {
+    validate(tolerance, max_cells)?;
+    validate_distance_contours(contours, max_cells)?;
+    let prepared = prepare_oriented_boxes(contours[0], &[rectangle])?;
+    measure_contour_set_distance(contours, tolerance, max_cells, |cell| {
+        prepared[0].gap(cell, 0.)
+    })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarContourPairDistanceReport {
+    pub bounds: [f64; 2],
+    /// Contour index and source parameter in each input set.
+    pub witness_contours: [usize; 2],
+    pub witness_parameters: [f64; 2],
+    pub work_cells: usize,
+    pub converged: bool,
+}
+
+/// Bound the minimum distance between two sets of closed planar NURBS
+/// contours. Every original knot-span pair receives a cell before
+/// refinement work is distributed across the contour pairs.
+pub fn measure_planar_contour_sets_distance(
+    first: &[&Curve],
+    second: &[&Curve],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarContourPairDistanceReport> {
+    validate(tolerance, max_cells)?;
+    validate_distance_contours(first, max_cells)?;
+    validate_distance_contours(second, max_cells)?;
+    let counts = [first, second].map(|set| {
+        set.iter().map(|curve| active_spans(curve, curve.domain()).count()).collect::<Vec<_>>()
+    });
+    let total = |spans: &[usize]| spans.iter().try_fold(0_usize, |sum, &count| sum.checked_add(count));
+    let initial = total(&counts[0]).zip(total(&counts[1]))
+        .and_then(|(a, b)| a.checked_mul(b))
+        .filter(|&work| work <= max_cells)
+        .ok_or_else(|| resource("Contour distance budget must cover every original span pair"))?;
+    let mut extra = max_cells - initial;
+    let mut pairs = first.len() * second.len();
+    let mut report = PlanarContourPairDistanceReport {
+        bounds: [f64::INFINITY; 2],
+        witness_contours: [0; 2],
+        witness_parameters: [0.; 2],
+        work_cells: 0,
+        converged: false,
+    };
+    for (i, a) in first.iter().enumerate() {
+        for (j, b) in second.iter().enumerate() {
+            let reserved = counts[0][i] * counts[1][j];
+            let distance = crate::curve_distance::distance(a, b, tolerance, reserved + extra / pairs)?;
+            pairs -= 1;
+            extra -= distance.cells.saturating_sub(reserved);
+            report.work_cells += distance.cells;
+            report.bounds[0] = report.bounds[0].min(distance.distance_interval_mm[0]);
+            if distance.distance_interval_mm[1] < report.bounds[1] {
+                report.bounds[1] = distance.distance_interval_mm[1];
+                report.witness_contours = [i, j];
+                report.witness_parameters = distance.parameters;
+            }
+        }
+    }
+    report.converged = (report.bounds[1] - report.bounds[0]).next_up() <= tolerance;
+    Ok(report)
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarContourPlacementReport {
+    pub boundary_distance: PlanarContourPairDistanceReport,
+    /// Classification for each tested contour. A missing entry means
+    /// separation between the contour sets could not be proved.
+    pub placements: Vec<Option<PlanarCurveFillReport>>,
+    pub fill_work_cells: usize,
+}
+
+/// Classify entire tested contours against a filled planar contour set.
+/// Positive separation makes the fill constant along each connected
+/// tested contour, so its clamped endpoint determines the placement.
+pub fn classify_planar_contour_placement(
+    tested: &[&Curve],
+    region: &[&Curve],
+    rule: crate::chord_winding::FillRule,
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_fill_cells: usize,
+    max_distance_cells: usize,
+) -> Result<PlanarContourPlacementReport> {
+    validate(parameter_tolerance, max_fill_cells)?;
+    let boundary_distance = measure_planar_contour_sets_distance(
+        tested, region, distance_tolerance, max_distance_cells,
+    )?;
+    let mut placements = vec![None; tested.len()];
+    let mut fill_work_cells = 0;
+    if boundary_distance.bounds[0] > 0. {
+        for (index, (curve, placement)) in tested.iter().zip(&mut placements).enumerate() {
+            let first = &curve.control_points[0];
+            let budget = (max_fill_cells - fill_work_cells) / (tested.len() - index);
+            if budget == 0 {
+                return Err(resource("Placement budget must cover every contour query"));
+            }
+            let fill = classify_planar_curve_fill(
+                region, [first[0], first[1]], rule, parameter_tolerance, budget,
+            )?;
+            fill_work_cells += fill.work_cells;
+            *placement = Some(fill);
+        }
+    }
+    Ok(PlanarContourPlacementReport { boundary_distance, placements, fill_work_cells })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarContourNestingPair {
+    pub contours: [usize; 2],
+    pub distance_bounds: [f64; 2],
+    /// Winding of the second contour around the first, then of the first
+    /// around the second. Missing values are unresolved.
+    pub windings: [Option<i64>; 2],
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarContourNestingReport {
+    pub pairs: Vec<PlanarContourNestingPair>,
+    pub distance_work_cells: usize,
+    pub winding_work_cells: usize,
+}
+
+/// Report pairwise nesting of closed planar contours, retaining signed
+/// winding even for self-intersecting inputs. Each pair is classified only
+/// after proving separation. The two budgets cover all distance and
+/// winding queries, respectively.
+pub fn analyze_planar_contour_nesting(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+) -> Result<PlanarContourNestingReport> {
+    validate(parameter_tolerance, max_winding_cells)?;
+    validate(distance_tolerance, max_distance_cells)?;
+    validate_distance_contours(contours, max_distance_cells)?;
+    let count = contours.len();
+    let spans: Vec<_> = contours.iter().map(|curve| active_spans(curve, curve.domain()).count()).collect();
+    let mut reserved_distance = 0;
+    let mut earlier = 0_usize;
+    for &current in &spans {
+        let work = earlier.checked_mul(current)
+            .filter(|&work| work <= max_distance_cells - reserved_distance)
+            .ok_or_else(|| resource("Nesting distance budget must cover every span pair"))?;
+        reserved_distance += work;
+        earlier += current;
+    }
+    let reserved_winding = earlier.checked_mul(count - 1)
+        .filter(|&work| work <= max_winding_cells)
+        .ok_or_else(|| resource("Nesting winding budget must cover every contour query"))?;
+    let mut distance_extra = max_distance_cells - reserved_distance;
+    let mut winding_extra = max_winding_cells - reserved_winding;
+    let mut remaining_pairs = count * (count - 1) / 2;
+    let mut report = PlanarContourNestingReport {
+        pairs: Vec::with_capacity(remaining_pairs), distance_work_cells: 0, winding_work_cells: 0,
+    };
+    for j in 1..count {
+        for i in 0..j {
+            let work = spans[i] * spans[j];
+            let distance = crate::curve_distance::distance(
+                contours[i], contours[j], distance_tolerance, work + distance_extra / remaining_pairs,
+            )?;
+            distance_extra -= distance.cells.saturating_sub(work);
+            report.distance_work_cells += distance.cells;
+            let mut windings = [None; 2];
+            if distance.distance_interval_mm[0] > 0. {
+                for (slot, (tested, reference)) in windings.iter_mut().zip([(i, j), (j, i)]) {
+                    let point = &contours[tested].control_points[0];
+                    let winding = measure_planar_curve_winding_about_point(
+                        contours[reference], [point[0], point[1]], parameter_tolerance,
+                        spans[reference] + winding_extra / (2 * remaining_pairs),
+                    )?;
+                    *slot = winding.winding;
+                    winding_extra -= winding.travel.work_cells.saturating_sub(spans[reference]);
+                    report.winding_work_cells += winding.travel.work_cells;
+                }
+            }
+            report.pairs.push(PlanarContourNestingPair {
+                contours: [i, j], distance_bounds: distance.distance_interval_mm, windings,
+            });
+            remaining_pairs -= 1;
+        }
+    }
+    Ok(report)
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarContourHierarchyReport {
+    /// Immediate containing contour in input order. Outermost contours
+    /// have no parent.
+    pub parents: Vec<Option<usize>>,
+    /// Number of containing contours. Odd depths bound holes under the
+    /// even-odd fill rule.
+    pub depths: Vec<usize>,
+    pub nesting: PlanarContourNestingReport,
+    pub simplicity_pairs: usize,
+    pub simplicity_cells: usize,
+}
+
+/// Build a nesting forest for pairwise separated simple planar contours.
+/// Exact span segmentation and the trim simplicity proof are required
+/// before winding results can establish parent relationships.
+pub fn certify_planar_contour_hierarchy(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+) -> Result<PlanarContourHierarchyReport> {
+    validate(distance_tolerance, max_simplicity_work)?;
+    validate_distance_contours(contours, max_simplicity_work)?;
+    let budget = max_simplicity_work / contours.len();
+    let mut simplicity_pairs = 0;
+    let mut simplicity_cells = 0;
+    for curve in contours {
+        let spans = active_spans(curve, curve.domain()).count();
+        check((2..=256).contains(&spans), "Hierarchy simplicity requires 2..256 exact span pieces")?;
+        if spans * (spans - 1) / 2 > budget {
+            return Err(resource("Hierarchy budget must cover every simplicity span pair"));
+        }
+        let pieces = crate::exact_curve_segments::inspect(curve)
+            .ok_or_else(|| resource("Contour has no certified exact span representation"))?;
+        let proof = crate::trim_simplicity::inspect(&pieces, distance_tolerance, budget, budget)?;
+        check(proof.proven_simple, "Contour simplicity is unproven")?;
+        simplicity_pairs += proof.pairs.len();
+        simplicity_cells += proof.cells;
+    }
+    let nesting = analyze_planar_contour_nesting(
+        contours, parameter_tolerance, distance_tolerance, max_winding_cells, max_distance_cells,
+    )?;
+    let mut containers = vec![Vec::new(); contours.len()];
+    for pair in &nesting.pairs {
+        let [a, b] = pair.contours;
+        match pair.windings {
+            [Some(0), Some(0)] => {}
+            [Some(1 | -1), Some(0)] => containers[a].push(b),
+            [Some(0), Some(1 | -1)] => containers[b].push(a),
+            _ => return Err(resource("Hierarchy requires separated contours with certified nesting")),
+        }
+    }
+    let depths: Vec<_> = containers.iter().map(Vec::len).collect();
+    let parents = containers.into_iter().map(|items| {
+        items.into_iter().max_by_key(|&index| depths[index])
+    }).collect();
+    Ok(PlanarContourHierarchyReport { parents, depths, nesting, simplicity_pairs, simplicity_cells })
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PlanarContourOrientation {
+    Clockwise,
+    Counterclockwise,
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarContourOrientationReport {
+    pub hierarchy: PlanarContourHierarchyReport,
+    pub orientations: Vec<PlanarContourOrientation>,
+    /// Reverse these contours to orient even depths counterclockwise and
+    /// odd depths clockwise, so nonzero fill reproduces even-odd fill.
+    pub reverse: Vec<bool>,
+    pub orientation_work_cells: usize,
+}
+
+/// Determine the current and desired orientation of every boundary in a
+/// certified simple-contour hierarchy. The area integral retains the
+/// original NURBS definition and must certify a nonzero sign.
+pub fn certify_planar_contour_fill_orientations(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_orientation_cells: usize,
+) -> Result<PlanarContourOrientationReport> {
+    let (report, _) = contour_fill_orientation_and_moments::<1>(
+        contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
+        max_winding_cells, max_distance_cells, max_orientation_cells,
+    )?;
+    Ok(report)
+}
+
+fn contour_fill_orientation_and_moments<const N: usize>(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_orientation_cells: usize,
+) -> Result<(PlanarContourOrientationReport, Vec<[Interval; N]>)> {
+    validate(parameter_tolerance, max_orientation_cells)?;
+    let hierarchy = certify_planar_contour_hierarchy(
+        contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
+        max_winding_cells, max_distance_cells,
+    )?;
+    let mut orientations = Vec::with_capacity(contours.len());
+    let mut signed_moments = Vec::with_capacity(contours.len());
+    let mut orientation_work_cells = 0;
+    for (index, curve) in contours.iter().enumerate() {
+        let budget = (max_orientation_cells - orientation_work_cells) / (contours.len() - index);
+        let origin = if N > 1 { &contours[0].control_points[0] }
+            else { &curve.control_points[0] };
+        let (cells, work) = partition_motion_cells(
+            curve, curve.domain(), parameter_tolerance, budget,
+            |jets, _| {
+                // The local jet already includes the cell width.
+                let x = jets[0][0].sub(Interval::point(origin[0]))?;
+                let y = jets[0][1].sub(Interval::point(origin[1]))?;
+                let [dx, dy] = [jets[1][0], jets[1][1]];
+                let mut values = [Interval::point(0.); N];
+                values[0] = x.mul(dy)?.sub(y.mul(dx)?)?;
+                if N >= 3 {
+                    let x_squared = x.mul(x)?;
+                    let y_squared = y.mul(y)?;
+                    values[1] = x_squared.mul(dy)?;
+                    values[2] = Interval::point(-1.).mul(y_squared.mul(dx)?)?;
+                    if N >= 6 {
+                        values[3] = x_squared.mul(x)?.mul(dy)?;
+                        values[4] = x_squared.mul(y)?.mul(dy)?;
+                        values[5] = Interval::point(-1.).mul(y_squared.mul(y)?.mul(dx)?)?;
+                    }
+                }
+                Ok((values, true))
+            },
+        )?;
+        let mut integrals = [Interval::point(0.); N];
+        for (_, _, cell) in cells {
+            for (sum, value) in integrals.iter_mut().zip(cell) {
+                *sum = sum.add(value)?;
+            }
+        }
+        let doubled_area = integrals[0];
+        let orientation = if doubled_area.lo > 0. {
+            PlanarContourOrientation::Counterclockwise
+        } else if doubled_area.hi < 0. {
+            PlanarContourOrientation::Clockwise
+        } else {
+            return Err(resource("Contour orientation is unresolved under the area work budget"));
+        };
+        orientations.push(orientation);
+        for (index, value) in integrals.iter_mut().enumerate() {
+            let divisor = if index == 3 || index == 5 { 3. } else { 2. };
+            *value = value.div(Interval::point(divisor))?;
+        }
+        signed_moments.push(integrals);
+        orientation_work_cells += work;
+    }
+    let reverse = orientations.iter().zip(&hierarchy.depths).map(|(orientation, depth)| {
+        let counterclockwise = *orientation == PlanarContourOrientation::Counterclockwise;
+        counterclockwise != (depth % 2 == 0)
+    }).collect();
+    let report = PlanarContourOrientationReport { hierarchy, orientations, reverse, orientation_work_cells };
+    Ok((report, signed_moments))
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarContourFillAreaReport {
+    pub area_bounds: [f64; 2],
+    /// Signed area of each original contour in input order.
+    pub signed_contour_area_bounds: Vec<[f64; 2]>,
+    pub orientation: PlanarContourOrientationReport,
+}
+
+/// Bound the area filled by a certified contour hierarchy using even-odd
+/// parity. Odd depths subtract enclosed area and even depths add it,
+/// regardless of the direction of the input contours.
+pub fn measure_planar_contour_fill_area(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_area_cells: usize,
+) -> Result<PlanarContourFillAreaReport> {
+    let (orientation, areas) = contour_fill_orientation_and_moments::<1>(
+        contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
+        max_winding_cells, max_distance_cells, max_area_cells,
+    )?;
+    let mut total = Interval::point(0.);
+    for ([area], &reverse) in areas.iter().zip(&orientation.reverse) {
+        let contribution = if reverse { Interval::new(-area.hi, -area.lo)? } else { *area };
+        total = total.add(contribution)?;
+    }
+    let signed_contour_area_bounds = areas.into_iter().map(|[area]| [area.lo, area.hi]).collect();
+    Ok(PlanarContourFillAreaReport {
+        area_bounds: [total.lo.max(0.), total.hi],
+        signed_contour_area_bounds,
+        orientation,
+    })
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarContourFillCentroidReport {
+    pub area_bounds: [f64; 2],
+    /// Bounds for the X and Y coordinates in the source coordinate system.
+    pub centroid_bounds: [[f64; 2]; 2],
+    pub orientation: PlanarContourOrientationReport,
+}
+
+/// Enclose the centroid of an even-odd filled planar contour hierarchy.
+/// Area and first moments use the same interval subdivision. A strictly
+/// positive filled area is required before dividing by it.
+pub fn measure_planar_contour_fill_centroid(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_moment_cells: usize,
+) -> Result<PlanarContourFillCentroidReport> {
+    let (orientation, moments) = contour_fill_orientation_and_moments::<3>(
+        contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
+        max_winding_cells, max_distance_cells, max_moment_cells,
+    )?;
+    let [area, x, y] = sum_oriented_contour_integrals(moments, &orientation.reverse)?;
+    check(area.lo > 0., "Filled area must be certified positive for centroid measurement")?;
+    let origin = &contours[0].control_points[0];
+    let x = x.div(area)?.add(Interval::point(origin[0]))?;
+    let y = y.div(area)?.add(Interval::point(origin[1]))?;
+    Ok(PlanarContourFillCentroidReport {
+        area_bounds: [area.lo, area.hi],
+        centroid_bounds: [[x.lo, x.hi], [y.lo, y.hi]],
+        orientation,
+    })
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarContourFillCentralMomentsReport {
+    pub area_bounds: [f64; 2],
+    pub centroid_bounds: [[f64; 2]; 2],
+    /// Integrals of (x-cx)^2, (x-cx)(y-cy) and (y-cy)^2, respectively.
+    pub central_moment_bounds: [[f64; 2]; 3],
+    pub orientation: PlanarContourOrientationReport,
+}
+
+/// Enclose the central second moments of an even-odd filled contour
+/// hierarchy. Moments are for unit areal density and retain model units.
+pub fn measure_planar_contour_fill_central_moments(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_moment_cells: usize,
+) -> Result<PlanarContourFillCentralMomentsReport> {
+    let (orientation, moments) = contour_fill_orientation_and_moments::<6>(
+        contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
+        max_winding_cells, max_distance_cells, max_moment_cells,
+    )?;
+    let [area, x, y, xx, xy, yy] = sum_oriented_contour_integrals(moments, &orientation.reverse)?;
+    check(area.lo > 0., "Filled area must be certified positive for central moments")?;
+    let local_x = x.div(area)?;
+    let local_y = y.div(area)?;
+    let xx = xx.sub(x.mul(local_x)?)?;
+    let xy = xy.sub(x.mul(local_y)?)?;
+    let yy = yy.sub(y.mul(local_y)?)?;
+    let origin = &contours[0].control_points[0];
+    let cx = local_x.add(Interval::point(origin[0]))?;
+    let cy = local_y.add(Interval::point(origin[1]))?;
+    Ok(PlanarContourFillCentralMomentsReport {
+        area_bounds: [area.lo, area.hi],
+        centroid_bounds: [[cx.lo, cx.hi], [cy.lo, cy.hi]],
+        central_moment_bounds: [[xx.lo.max(0.), xx.hi], [xy.lo, xy.hi], [yy.lo.max(0.), yy.hi]],
+        orientation,
+    })
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarContourFillPrincipalMomentsReport {
+    /// Ascending principal second moments about the centroid.
+    pub principal_moment_bounds: [[f64; 2]; 2],
+    /// Bounds for the difference of the larger and smaller moments.
+    pub moment_gap_bounds: [f64; 2],
+    pub central: PlanarContourFillCentralMomentsReport,
+}
+
+/// Enclose the two principal second moments of an even-odd filled region
+/// and their separation. The interval calculation supports repeated
+/// moments, where the principal axes are not unique.
+pub fn measure_planar_contour_fill_principal_moments(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_moment_cells: usize,
+) -> Result<PlanarContourFillPrincipalMomentsReport> {
+    let central = measure_planar_contour_fill_central_moments(
+        contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
+        max_winding_cells, max_distance_cells, max_moment_cells,
+    )?;
+    let [[xx_lo, xx_hi], [xy_lo, xy_hi], [yy_lo, yy_hi]] = central.central_moment_bounds;
+    let xx = Interval::new(xx_lo, xx_hi)?;
+    let xy = Interval::new(xy_lo, xy_hi)?;
+    let yy = Interval::new(yy_lo, yy_hi)?;
+    let half = Interval::point(0.5);
+    let mean = xx.mul(half)?.add(yy.mul(half)?)?;
+    let difference = xx.mul(half)?.sub(yy.mul(half)?)?;
+    let offset = norm(&[difference, xy])?;
+    let small = mean.sub(offset)?;
+    let large = mean.add(offset)?;
+    let gap = offset.mul(Interval::point(2.))?;
+    Ok(PlanarContourFillPrincipalMomentsReport {
+        principal_moment_bounds: [[small.lo.max(0.), small.hi], [large.lo.max(0.), large.hi]],
+        moment_gap_bounds: [gap.lo.max(0.), gap.hi],
+        central,
+    })
+}
+
+fn sum_oriented_contour_integrals<const N: usize>(
+    moments: Vec<[Interval; N]>,
+    reversals: &[bool],
+) -> Result<[Interval; N]> {
+    let mut total = [Interval::point(0.); N];
+    for (values, &reverse) in moments.into_iter().zip(reversals) {
+        for (sum, value) in total.iter_mut().zip(values) {
+            let oriented = if reverse { Interval::new(-value.hi, -value.lo)? } else { value };
+            *sum = sum.add(oriented)?;
+        }
+    }
+    Ok(total)
+}
+
+#[derive(Clone, Debug)]
+pub struct OrientedPlanarContours {
+    pub contours: Vec<Curve>,
+    pub orientation: PlanarContourOrientationReport,
+    pub reversal_work: u64,
+}
+
+/// Orient simple planar boundaries for nonzero fill, preserving their
+/// exact geometry and original active parameter intervals. A required
+/// reversal that cannot store all reflected knots exactly fails the edit.
+pub fn orient_planar_contours_for_nonzero_fill(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_orientation_cells: usize,
+    max_reversal_work: u64,
+) -> Result<OrientedPlanarContours> {
+    check((1..=cad_predicates::MAX_WORK).contains(&max_reversal_work),
+        "Contour reversal requires bounded positive exact work")?;
+    let orientation = certify_planar_contour_fill_orientations(
+        contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
+        max_winding_cells, max_distance_cells, max_orientation_cells,
+    )?;
+    let mut reversal_work = 0;
+    let mut oriented = Vec::with_capacity(contours.len());
+    for (&curve, &reverse) in contours.iter().zip(&orientation.reverse) {
+        if !reverse {
+            oriented.push(curve.clone());
+            continue;
+        }
+        let remaining = max_reversal_work - reversal_work;
+        if remaining == 0 {
+            return Err(resource("Contour reversal work budget exhausted"));
+        }
+        let [start, end] = curve.domain();
+        let report = crate::editing::exact_projective::affine_curve_clock(curve, [end, start], remaining)?;
+        reversal_work += report.work_used;
+        let reversed = report.geometry.ok_or_else(|| {
+            resource("Contour reversal could not preserve the exact affine clock within the work budget")
+        })?;
+        oriented.push(reversed);
+    }
+    Ok(OrientedPlanarContours { contours: oriented, orientation, reversal_work })
+}
+
+fn validate_distance_contours(contours: &[&Curve], max_cells: usize) -> Result<()> {
+    check(!contours.is_empty(), "Contour distance requires at least one contour")?;
+    check(contours.len() <= max_cells, "Distance budget must cover every contour")?;
+    for curve in contours {
+        validate_winding_curve(curve)?;
+        check(curve.control_points.first() == curve.control_points.last(), "Distance contour must be closed")?;
+    }
+    Ok(())
+}
+
+fn measure_contour_set_distance(
+    contours: &[&Curve],
+    tolerance: f64,
+    max_cells: usize,
+    gap: impl Fn(&[Interval]) -> Result<Interval>,
+) -> Result<PlanarContourDistanceReport> {
+    let initial = contours.iter().enumerate().flat_map(|(index, curve)| {
+        active_spans(curve, curve.domain()).map(move |span| {
+            ((index, span), [curve.knots[span], curve.knots[span + 1]])
+        })
+    });
+    let measure = |(index, span): (usize, usize), domain: [f64; 2], witness: &mut ClearanceWitness| {
+        let curve = contours[index];
+        let cell = curve_jets::enclose(curve, span, domain)?;
+        let lower = gap(&cell[0])?.lo;
+        for (end, parameter) in [(false, domain[0]), (true, domain[1])] {
+            let endpoint = curve_jets::endpoint(curve, span, domain, end)?;
+            let upper = gap(&endpoint[0])?.hi;
+            if upper < witness.0 {
+                *witness = (upper, parameter, index);
+            }
+        }
+        Ok(lower)
+    };
+    let (lower, witness, work_cells, stop_reason) = refine_minimum_clearance(
+        initial, contours[0].domain()[0], tolerance, max_cells, measure,
+    )?;
+    Ok(PlanarContourDistanceReport {
+        bounds: [lower, witness.0], witness_contour: witness.2,
+        witness_parameter: witness.1, work_cells, stop_reason,
+    })
+}
+
+fn validate_winding_curve(direction: &Curve) -> Result<[f64; 2]> {
+    direction.validate()?;
+    check(direction.control_points[0].len() == 2, "Orientation winding requires a planar direction curve")?;
+    let domain = direction.domain();
+    let degree = direction.degree;
+    let last = direction.control_points.len();
+    check(
+        direction.knots[..=degree].iter().all(|&knot| knot == domain[0])
+            && direction.knots[degree + 1] > domain[0]
+            && direction.knots[last - 1] < domain[1]
+            && direction.knots[last..].iter().all(|&knot| knot == domain[1]),
+        "Orientation winding requires clamped endpoints",
+    )?;
+    let mut run = 0;
+    let mut previous = domain[0];
+    for &knot in &direction.knots[degree + 1..last] {
+        run = if knot == previous { run + 1 } else { 1 };
+        check(run <= degree, "Interior direction knots must guarantee continuity")?;
+        previous = knot;
+    }
+    Ok(domain)
+}
+
+fn winding_from_angular_travel(travel: PlanarAngularTravelReport) -> Result<PlanarOrientationWindingReport> {
+    let tau = std::f64::consts::TAU;
+    let turns = Interval::new(travel.net_bounds[0], travel.net_bounds[1])?
+        .div(Interval::new(tau.next_down(), tau.next_up())?)?;
+    let first = turns.lo.ceil();
+    let last = turns.hi.floor();
+    check(first <= last, "Closed orientation winding enclosure contains no integer")?;
+    let winding = (first == last && first.abs() < i64::MAX as f64).then_some(first as i64);
+    Ok(PlanarOrientationWindingReport { winding, travel })
+}
+
+/// Bound relative angular travel for two directions on the same clock.
+/// Both original knot grids participate in integration. Discontinuous
+/// jumps are excluded, and a possible zero direction prevents a report.
+pub fn measure_relative_planar_angular_travel(
+    direction: &Curve,
+    reference: &Curve,
+    interval: [f64; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarAngularTravelReport> {
+    validate(parameter_tolerance, max_cells)?;
+    let curves = [direction, reference];
+    let (_, initial) = synchronized_clearance_cells(curves, interval, [0.; 2])?;
+    check(direction.control_points[0].len() == 2, "Angular travel requires planar direction curves")?;
+    let fixed = curves.map(|curve| fixed_cardinal_rotation(curve).is_some());
+    let same = std::ptr::eq(direction, reference);
+    let (cells, work_cells) = partition_enclosed_cells(
+        initial, parameter_tolerance, max_cells,
+        |spans, domain| {
+            let local_speed = |index: usize| -> Result<Option<Interval>> {
+                if fixed[index] {
+                    return Ok(Some(Interval::point(0.)));
+                }
+                let jets = curve_jets::enclose(curves[index], spans[index], domain)?;
+                Ok(planar_angular_jets(&jets, Interval::point(1.), 1)?.map(|jets| jets[0]))
+            };
+            let Some(moving) = local_speed(0)? else {
+                return Ok((None, true));
+            };
+            if same || fixed == [true; 2] {
+                return Ok((Some(Interval::point(0.)), false));
+            }
+            let Some(frame) = local_speed(1)? else {
+                return Ok((None, true));
+            };
+            Ok((Some(moving.sub(frame)?), true))
+        },
+    )?;
+    accumulate_angular_travel(cells.into_iter().map(|(_, _, speed)| speed), work_cells)
+}
+
+fn accumulate_angular_travel(
+    speeds: impl IntoIterator<Item = Option<Interval>>,
+    work_cells: usize,
+) -> Result<PlanarAngularTravelReport> {
+    let mut net = Interval::point(0.);
+    let mut total = Interval::point(0.);
+    for speed in speeds {
+        let speed = speed.ok_or_else(|| resource("Angular travel requires a certified nonzero direction in every cell"))?;
+        if speed.lo == 0. && speed.hi == 0. {
+            continue;
+        }
+        net = net.add(speed)?;
+        total = total.add(Interval::new(
+            speed.lo.max(-speed.hi).max(0.),
+            speed.lo.abs().max(speed.hi.abs()),
+        )?)?;
+    }
+    Ok(PlanarAngularTravelReport {
+        net_bounds: [net.lo, net.hi],
+        total_bounds: [total.lo.max(0.), total.hi],
+        work_cells,
+    })
+}
+
+fn classify_absolute_motion(value: Interval, limit: f64) -> DirectionalMotionStatus {
+    let upper = value.lo.abs().max(value.hi.abs());
+    let lower = value.lo.max(-value.hi).max(0.);
+    if upper <= limit {
+        DirectionalMotionStatus::Within
+    } else if lower > limit {
+        DirectionalMotionStatus::Exceeds
+    } else {
+        DirectionalMotionStatus::Undetermined
+    }
+}
+
+fn planar_angular_jets(
+    jets: &[Vec<Interval>],
+    width: Interval,
+    order: usize,
+) -> Result<Option<[Interval; 3]>> {
+    let length = norm(&jets[0])?;
+    let squared = length.mul(length)?;
+    if squared.lo <= 0. || width.lo <= 0. {
+        return Ok(None);
+    }
+    let cross = |a: usize, b: usize| {
+        jets[a][0].mul(jets[b][1])?.sub(jets[a][1].mul(jets[b][0])?)
+    };
+    let twice = Interval::point(2.);
+    let speed = cross(0, 1)?.div(squared)?;
+    let mut values = [speed, Interval::point(0.), Interval::point(0.)];
+    if order >= 2 {
+        let squared_derivative = project_jet(&jets[0], &jets[1])?.mul(twice)?;
+        let acceleration = cross(0, 2)?.sub(speed.mul(squared_derivative)?)?.div(squared)?;
+        values[1] = acceleration;
+        if order == 3 {
+            let squared_second = project_jet(&jets[1], &jets[1])?
+                .add(project_jet(&jets[0], &jets[2])?)?.mul(twice)?;
+            // Differentiate |v|² times angular speed twice.
+            values[2] = cross(1, 2)?.add(cross(0, 3)?)?
+                .sub(acceleration.mul(squared_derivative)?.mul(twice)?)?
+                .sub(speed.mul(squared_second)?)?.div(squared)?;
+        }
+    }
+    // The jets use a cell-local clock.
+    for (index, value) in values.iter_mut().take(order).enumerate() {
+        for _ in 0..=index {
+            *value = value.div(width)?;
+        }
+    }
+    Ok(Some(values))
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -1910,12 +3555,31 @@ pub fn partition_curve_rounded_hull_workspace(
     max_plane_cells: usize,
 ) -> Result<WorkspacePartition> {
     check(radius.is_finite() && radius >= 0., "Tool radius must be finite and nonnegative")?;
-    check(!vertex_offsets.is_empty(), "Tool hull requires at least one vertex")?;
     check(!planes.is_empty(), "Workspace requires at least one half-space")?;
-    if vertex_offsets.len() > 1_000_000 / planes.len() {
+    curve.validate()?;
+    let offsets = prepare_workspace_hull(curve, vertex_offsets, planes.len())?;
+    partition_curve_workspace_with_support(
+        curve, interval, planes, parameter_tolerance, max_plane_cells,
+        |normal| {
+            let support = hull_plane_support(&offsets, normal)?;
+            if radius == 0. {
+                Ok(Some(support))
+            } else {
+                Ok(Some(support.add(norm(normal)?.mul(Interval::point(radius))?)?))
+            }
+        },
+    )
+}
+
+fn prepare_workspace_hull(
+    curve: &Curve,
+    vertex_offsets: &[&[f64]],
+    plane_count: usize,
+) -> Result<Vec<Vec<Interval>>> {
+    check(!vertex_offsets.is_empty(), "Tool hull requires at least one vertex")?;
+    if vertex_offsets.len() > 1_000_000 / plane_count {
         return Err(resource("Tool hull support preprocessing exceeds one million vertex/plane pairs"));
     }
-    curve.validate()?;
     let dimension = curve.control_points[0].len();
     let mut offsets = Vec::with_capacity(vertex_offsets.len());
     for &offset in vertex_offsets {
@@ -1925,24 +3589,18 @@ pub fn partition_curve_rounded_hull_workspace(
         )?;
         offsets.push(offset.iter().copied().map(Interval::point).collect::<Vec<_>>());
     }
-    partition_curve_workspace_with_support(
-        curve, interval, planes, parameter_tolerance, max_plane_cells,
-        |normal| {
-            let mut lo = f64::NEG_INFINITY;
-            let mut hi = f64::NEG_INFINITY;
-            for offset in &offsets {
-                let projected = project_jet(offset, normal)?;
-                lo = lo.max(projected.lo);
-                hi = hi.max(projected.hi);
-            }
-            let support = Interval::new(lo, hi)?;
-            if radius == 0. {
-                Ok(Some(support))
-            } else {
-                Ok(Some(support.add(norm(normal)?.mul(Interval::point(radius))?)?))
-            }
-        },
-    )
+    Ok(offsets)
+}
+
+fn hull_plane_support(offsets: &[Vec<Interval>], normal: &[Interval]) -> Result<Interval> {
+    let mut lo = f64::NEG_INFINITY;
+    let mut hi = f64::NEG_INFINITY;
+    for offset in offsets {
+        let projected = project_jet(offset, normal)?;
+        lo = lo.max(projected.lo);
+        hi = hi.max(projected.hi);
+    }
+    Interval::new(lo, hi)
 }
 
 fn partition_curve_workspace_with_support(
@@ -1994,6 +3652,38 @@ pub fn partition_profiled_radius_convex_workspace(
     parameter_tolerance: f64,
     max_plane_cells: usize,
 ) -> Result<WorkspacePartition> {
+    partition_profiled_workspace_with_support(
+        curve, radius_profile, planes, parameter_tolerance, max_plane_cells, |_| Ok(None),
+    )
+}
+
+/// Check a translating vertex hull rounded by a piecewise-linear radius.
+/// The hull's vertex offsets retain their orientation along the curve.
+pub fn partition_profiled_rounded_hull_workspace(
+    curve: &Curve,
+    radius_profile: &[(f64, f64)],
+    planes: &[WorkspaceHalfSpace<'_>],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspacePartition> {
+    check(!planes.is_empty(), "Workspace requires at least one half-space")?;
+    curve.validate()?;
+    let offsets = prepare_workspace_hull(curve, vertex_offsets, planes.len())?;
+    partition_profiled_workspace_with_support(
+        curve, radius_profile, planes, parameter_tolerance, max_plane_cells,
+        |normal| hull_plane_support(&offsets, normal).map(Some),
+    )
+}
+
+fn partition_profiled_workspace_with_support(
+    curve: &Curve,
+    radius_profile: &[(f64, f64)],
+    planes: &[WorkspaceHalfSpace<'_>],
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+    support: impl Fn(&[Interval]) -> Result<Option<Interval>>,
+) -> Result<WorkspacePartition> {
     validate(parameter_tolerance, max_plane_cells)?;
     check(!planes.is_empty(), "Workspace requires at least one half-space")?;
     let max_cells = max_plane_cells / planes.len();
@@ -2001,15 +3691,19 @@ pub fn partition_profiled_radius_convex_workspace(
     let dimension = curve.control_points[0].len();
     let planes = prepare_workspace_planes(planes, dimension)?.into_iter().map(|(normal, offset)| {
         let length = norm(&normal)?;
-        Ok((normal, offset, length))
+        let hull = support(&normal)?;
+        Ok((normal, offset, length, hull))
     }).collect::<Result<Vec<_>>>()?;
     let (cells, work_cells) = partition_enclosed_cells(
         initial, parameter_tolerance, max_cells,
         |[span, profile], domain| {
             let radius = profiles[profile](domain)?;
             let jets = curve_jets::enclose(curve, span, domain)?;
-            let plane_residuals = planes.iter().map(|(normal, offset, length)| {
-                let residual = project_jet(&jets[0], normal)?.sub(*offset)?.add(length.mul(radius)?)?;
+            let plane_residuals = planes.iter().map(|(normal, offset, length, hull)| {
+                let mut residual = project_jet(&jets[0], normal)?.sub(*offset)?.add(length.mul(radius)?)?;
+                if let Some(hull) = hull {
+                    residual = residual.add(*hull)?;
+                }
                 Ok([residual.lo, residual.hi])
             }).collect::<Result<Vec<_>>>()?;
             let status = workspace_residual_status(&plane_residuals);
@@ -2024,6 +3718,164 @@ pub fn partition_profiled_radius_convex_workspace(
     })
 }
 
+/// Partition planar workspace containment for a translating and rotating
+/// convex hull. The orientation curve gives the local positive X direction
+/// at the same parameter as the position curve. Cells where that direction
+/// may vanish remain undetermined.
+pub fn partition_planar_rotating_hull_workspace(
+    position: &Curve,
+    direction: &Curve,
+    interval: [f64; 2],
+    planes: &[WorkspaceHalfSpace<'_>],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspacePartition> {
+    validate(parameter_tolerance, max_plane_cells)?;
+    check(!planes.is_empty(), "Workspace requires at least one half-space")?;
+    let (_, initial) = synchronized_clearance_cells([position, direction], interval, [0.; 2])?;
+    check(position.control_points[0].len() == 2, "Rotating hull workspace requires planar curves")?;
+    let offsets = prepare_workspace_hull(position, vertex_offsets, planes.len())?;
+    let planes = prepare_workspace_planes(planes, 2)?;
+    let max_cells = (max_plane_cells / planes.len())
+        .min(1_000_000 / offsets.len() / planes.len());
+    let (cells, work_cells) = partition_enclosed_cells(
+        initial, parameter_tolerance, max_cells,
+        |[span, direction_span], domain| {
+            let position_jets = curve_jets::enclose(position, span, domain)?;
+            let direction_jets = curve_jets::enclose(direction, direction_span, domain)?;
+            let (rotation, regular) = planar_rotation(&direction_jets[0])?;
+            let plane_residuals = planes.iter().map(|(normal, offset)| {
+                let support = rotating_hull_support(&offsets, normal, rotation)?;
+                let residual = project_jet(&position_jets[0], normal)?.sub(*offset)?.add(support)?;
+                Ok([residual.lo, residual.hi])
+            }).collect::<Result<Vec<_>>>()?;
+            let status = if regular {
+                workspace_residual_status(&plane_residuals)
+            } else {
+                DirectionalMotionStatus::Undetermined
+            };
+            Ok((WorkspaceCell {
+                parameter_interval: domain, span, plane_residuals, status,
+            }, status == DirectionalMotionStatus::Undetermined))
+        },
+    )?;
+    Ok(WorkspacePartition {
+        cells: cells.into_iter().map(|(_, _, cell)| cell).collect(),
+        work_plane_cells: work_cells * planes.len(),
+    })
+}
+
+/// Classify workspace containment for a rotating planar convex hull
+/// expanded by a disk with piecewise-linear radius. The radius profile
+/// defines the checked parameter window.
+pub fn partition_planar_rotating_profiled_hull_workspace(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    planes: &[WorkspaceHalfSpace<'_>],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspacePartition> {
+    validate(parameter_tolerance, max_plane_cells)?;
+    check(!planes.is_empty() && !vertex_offsets.is_empty(), "Workspace requires planes and hull vertices")?;
+    let max_cells = (max_plane_cells / planes.len())
+        .min(1_000_000 / vertex_offsets.len() / planes.len());
+    let (initial, profiles) = prepare_planar_rotation_profile(position, direction, radius_profile, max_cells)?;
+    let offsets = prepare_workspace_hull(position, vertex_offsets, planes.len())?;
+    let planes = prepare_workspace_planes(planes, 2)?.into_iter().map(|(normal, offset)| {
+        let length = norm(&normal)?;
+        Ok((normal, offset, length))
+    }).collect::<Result<Vec<_>>>()?;
+    let (cells, work_cells) = partition_enclosed_cells(
+        initial, parameter_tolerance, max_cells,
+        |[span, direction_span, profile], domain| {
+            let point = curve_jets::enclose(position, span, domain)?;
+            let axis = curve_jets::enclose(direction, direction_span, domain)?;
+            let (rotation, regular) = planar_rotation(&axis[0])?;
+            let radius = profiles[profile](domain)?;
+            let plane_residuals = planes.iter().map(|(normal, offset, length)| {
+                let support = rotating_hull_support(&offsets, normal, rotation)?;
+                let residual = project_jet(&point[0], normal)?.sub(*offset)?
+                    .add(support)?.add(length.mul(radius)?)?;
+                Ok([residual.lo, residual.hi])
+            }).collect::<Result<Vec<_>>>()?;
+            let status = if regular {
+                workspace_residual_status(&plane_residuals)
+            } else {
+                DirectionalMotionStatus::Undetermined
+            };
+            Ok((WorkspaceCell {
+                parameter_interval: domain, span, plane_residuals, status,
+            }, status == DirectionalMotionStatus::Undetermined))
+        },
+    )?;
+    Ok(WorkspacePartition {
+        cells: cells.into_iter().map(|(_, _, cell)| cell).collect(),
+        work_plane_cells: work_cells * planes.len(),
+    })
+}
+
+fn prepare_planar_rotation_profile(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    max_cells: usize,
+) -> Result<(Vec<([usize; 3], [f64; 2])>, Vec<impl Fn([f64; 2]) -> Result<Interval>>)> {
+    let (_, profiles) = prepare_radius_profile(position, radius_profile, max_cells)?;
+    let interval = [radius_profile[0].0, radius_profile[radius_profile.len() - 1].0];
+    let (_, synchronized) = synchronized_clearance_cells([position, direction], interval, [0.; 2])?;
+    check(position.control_points[0].len() == 2, "Rotating hull clearance requires planar curves")?;
+    let mut initial = Vec::new();
+    let mut profile = 0;
+    for ([span, direction_span], [mut start, end]) in synchronized {
+        while start < end {
+            if initial.len() == max_cells {
+                return Err(resource("Clearance budget must cover the combined motion and radius spans"));
+            }
+            let profile_end = radius_profile[profile + 1].0;
+            let cell_end = end.min(profile_end);
+            initial.push(([span, direction_span, profile], [start, cell_end]));
+            start = cell_end;
+            if start == profile_end {
+                profile += 1;
+            }
+        }
+    }
+    Ok((initial, profiles))
+}
+
+fn planar_rotation(axis: &[Interval]) -> Result<([Interval; 2], bool)> {
+    let length = norm(axis)?;
+    if length.lo <= 0. {
+        return Ok(([Interval::new(-1., 1.)?; 2], false));
+    }
+    let normalize = |component: Interval| {
+        let bound = component.div(length)?;
+        Interval::new(bound.lo.max(-1.), bound.hi.min(1.))
+    };
+    Ok(([normalize(axis[0])?, normalize(axis[1])?], true))
+}
+
+fn rotating_hull_support(
+    offsets: &[Vec<Interval>],
+    normal: &[Interval],
+    rotation: [Interval; 2],
+) -> Result<Interval> {
+    hull_plane_support(offsets, &inverse_rotated_normal(normal, rotation)?)
+}
+
+fn inverse_rotated_normal(
+    normal: &[Interval],
+    [cosine, sine]: [Interval; 2],
+) -> Result<[Interval; 2]> {
+    Ok([
+        normal[0].mul(cosine)?.add(normal[1].mul(sine)?)?,
+        normal[1].mul(cosine)?.sub(normal[0].mul(sine)?)?,
+    ])
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct WorkspaceMinimumClearance {
     /// Signed clearance to the most restrictive plane, in model units.
@@ -2035,6 +3887,97 @@ pub struct WorkspaceMinimumClearance {
     pub stop_reason: StopReason,
 }
 
+/// Bound the minimum signed planar workspace clearance in model units.
+/// An orientation that cannot be certified nonzero within the work budget
+/// produces an error. Plane normals need not have unit length.
+pub fn measure_minimum_planar_rotating_hull_workspace_clearance(
+    position: &Curve,
+    direction: &Curve,
+    interval: [f64; 2],
+    planes: &[WorkspaceHalfSpace<'_>],
+    vertex_offsets: &[&[f64]],
+    tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspaceMinimumClearance> {
+    measure_minimum_planar_rotating_profiled_hull_workspace_clearance(
+        position, direction, &[(interval[0], 0.), (interval[1], 0.)],
+        planes, vertex_offsets, tolerance, max_plane_cells,
+    )
+}
+
+/// Bound the minimum signed workspace clearance for a rotating planar hull
+/// rounded by a piecewise-linear radius. The profile defines the checked
+/// window. The orientation must be certified nonzero throughout it.
+pub fn measure_minimum_planar_rotating_profiled_hull_workspace_clearance(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    planes: &[WorkspaceHalfSpace<'_>],
+    vertex_offsets: &[&[f64]],
+    tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspaceMinimumClearance> {
+    validate(tolerance, max_plane_cells)?;
+    check(!planes.is_empty() && !vertex_offsets.is_empty(), "Workspace requires planes and hull vertices")?;
+    let max_cells = (max_plane_cells / planes.len())
+        .min(1_000_000 / vertex_offsets.len() / planes.len());
+    let (initial, profiles) = prepare_planar_rotation_profile(position, direction, radius_profile, max_cells)?;
+    let offsets = prepare_workspace_hull(position, vertex_offsets, planes.len())?;
+    let planes = prepare_workspace_planes(planes, 2)?.into_iter().map(|(normal, offset)| {
+        let length = norm(&normal)?;
+        Ok((normal, offset, length))
+    }).collect::<Result<Vec<_>>>()?;
+
+    let (regular_cells, orientation_work) = partition_enclosed_cells(
+        initial, 0., max_cells,
+        |[_, span, _], domain| {
+            let jets = curve_jets::enclose(direction, span, domain)?;
+            let regular = norm(&jets[0])?.lo > 0.;
+            Ok((regular, !regular))
+        },
+    )?;
+    check(regular_cells.iter().all(|(_, _, regular)| *regular),
+        "Rotating hull clearance requires a certified nonzero orientation")?;
+    let initial = regular_cells.into_iter().map(|(spans, domain, _)| (spans, domain));
+
+    let measure = |[span, direction_span, profile]: [usize; 3], domain: [f64; 2], witness: &mut ClearanceWitness| {
+        let position_cell = curve_jets::enclose(position, span, domain)?;
+        let direction_cell = curve_jets::enclose(direction, direction_span, domain)?;
+        let (rotation, _) = planar_rotation(&direction_cell[0])?;
+        let radius = profiles[profile](domain)?;
+        let mut lower = f64::INFINITY;
+        for (normal, offset, length) in &planes {
+            let support = rotating_hull_support(&offsets, normal, rotation)?;
+            let gap = offset.sub(project_jet(&position_cell[0], normal)?)?.sub(support)?.div(*length)?.sub(radius)?;
+            lower = lower.min(gap.lo);
+        }
+        for (end, parameter) in [(false, domain[0]), (true, domain[1])] {
+            let point = curve_jets::endpoint(position, span, domain, end)?;
+            let axis = curve_jets::endpoint(direction, direction_span, domain, end)?;
+            let (rotation, _) = planar_rotation(&axis[0])?;
+            let radius = profiles[profile]([parameter; 2])?;
+            for (index, (normal, offset, length)) in planes.iter().enumerate() {
+                let support = rotating_hull_support(&offsets, normal, rotation)?;
+                let gap = offset.sub(project_jet(&point[0], normal)?)?.sub(support)?.div(*length)?.sub(radius)?;
+                if gap.hi < witness.0 {
+                    *witness = (gap.hi, parameter, index);
+                }
+            }
+        }
+        Ok(lower)
+    };
+    let (lower, witness, cells, stop_reason) = refine_minimum_clearance(
+        initial, radius_profile[0].0, tolerance, max_cells - orientation_work, measure,
+    )?;
+    Ok(WorkspaceMinimumClearance {
+        gap_bounds: [lower, witness.0],
+        witness_parameter: witness.1,
+        witness_plane: witness.2,
+        work_plane_cells: (orientation_work + cells) * planes.len(),
+        stop_reason,
+    })
+}
+
 /// Refine the smallest signed plane clearance along a ball toolpath with a
 /// piecewise-linear radius. Plane normals need not be normalized.
 pub fn measure_minimum_profiled_radius_workspace_clearance(
@@ -2044,6 +3987,38 @@ pub fn measure_minimum_profiled_radius_workspace_clearance(
     tolerance: f64,
     max_plane_cells: usize,
 ) -> Result<WorkspaceMinimumClearance> {
+    measure_minimum_profiled_workspace_with_support(
+        curve, radius_profile, planes, tolerance, max_plane_cells, |_| Ok(None),
+    )
+}
+
+/// Refine the minimum workspace clearance for a translating convex vertex
+/// hull rounded by a variable radius, in the original model units.
+pub fn measure_minimum_profiled_rounded_hull_workspace_clearance(
+    curve: &Curve,
+    radius_profile: &[(f64, f64)],
+    planes: &[WorkspaceHalfSpace<'_>],
+    vertex_offsets: &[&[f64]],
+    tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspaceMinimumClearance> {
+    check(!planes.is_empty(), "Workspace requires at least one half-space")?;
+    curve.validate()?;
+    let offsets = prepare_workspace_hull(curve, vertex_offsets, planes.len())?;
+    measure_minimum_profiled_workspace_with_support(
+        curve, radius_profile, planes, tolerance, max_plane_cells,
+        |normal| hull_plane_support(&offsets, normal).map(Some),
+    )
+}
+
+fn measure_minimum_profiled_workspace_with_support(
+    curve: &Curve,
+    radius_profile: &[(f64, f64)],
+    planes: &[WorkspaceHalfSpace<'_>],
+    tolerance: f64,
+    max_plane_cells: usize,
+    support: impl Fn(&[Interval]) -> Result<Option<Interval>>,
+) -> Result<WorkspaceMinimumClearance> {
     validate(tolerance, max_plane_cells)?;
     check(!planes.is_empty(), "Workspace requires at least one half-space")?;
     let max_cells = max_plane_cells / planes.len();
@@ -2051,13 +4026,18 @@ pub fn measure_minimum_profiled_radius_workspace_clearance(
     let dimension = curve.control_points[0].len();
     let planes = prepare_workspace_planes(planes, dimension)?.into_iter().map(|(normal, offset)| {
         let length = norm(&normal)?;
-        Ok((normal, offset, length))
+        let hull = support(&normal)?;
+        Ok((normal, offset, length, hull))
     }).collect::<Result<Vec<_>>>()?;
     let minimum = measure_minimum_radial_cells(
         curve, initial, radius_profile[0].0, tolerance, max_cells, planes.len(),
         |point, index, profile, domain| {
-            let (normal, offset, length) = &planes[index];
-            offset.sub(project_jet(point, normal)?)?.div(*length)?.sub(profiles[profile](domain)?)
+            let (normal, offset, length, hull) = &planes[index];
+            let mut residual = offset.sub(project_jet(point, normal)?)?;
+            if let Some(hull) = hull {
+                residual = residual.sub(*hull)?;
+            }
+            residual.div(*length)?.sub(profiles[profile](domain)?)
         },
     )?;
     Ok(WorkspaceMinimumClearance {
@@ -2200,6 +4180,552 @@ pub fn partition_curve_ball_obstacle_clearance(
         ObstacleClearanceCell { parameter_interval, span, obstacles, status }
     }).collect();
     Ok(ObstacleClearancePartition { cells, work_plane_cells: work_cells * plane_count })
+}
+
+/// Partition clearance from closed convex obstacles for a rotating planar
+/// vertex hull. A plane separating all tool vertices proves clearance, while
+/// one tool vertex inside all planes proves contact. Other cases, including
+/// possible zero orientation, remain undetermined.
+pub fn partition_planar_rotating_hull_obstacle_clearance(
+    position: &Curve,
+    direction: &Curve,
+    interval: [f64; 2],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    partition_planar_rotating_rounded_hull_obstacle_clearance(
+        position, direction, interval, obstacles, vertex_offsets, 0.,
+        parameter_tolerance, max_vertex_plane_cells,
+    )
+}
+
+/// Check a rotating planar convex hull expanded by a disk of constant
+/// radius. A plane must separate the whole rounded tool to prove clearance.
+/// A vertex of the unrounded hull inside the obstacle still proves contact.
+/// Contacts that only involve the rounding can remain undetermined.
+pub fn partition_planar_rotating_rounded_hull_obstacle_clearance(
+    position: &Curve,
+    direction: &Curve,
+    interval: [f64; 2],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    radius: f64,
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    partition_planar_rotating_profiled_hull_obstacle_clearance(
+        position, direction, &[(interval[0], radius), (interval[1], radius)],
+        obstacles, vertex_offsets, parameter_tolerance, max_vertex_plane_cells,
+    )
+}
+
+/// Check a rotating planar hull with a piecewise-linear rounding radius.
+/// Profile parameters define the checked window and must increase strictly.
+/// A shared grid splits at both curves' knots and the radius breakpoints.
+pub fn partition_planar_rotating_profiled_hull_obstacle_clearance(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    partition_rotating_profiled_obstacles(
+        position, direction, radius_profile, obstacles, vertex_offsets,
+        parameter_tolerance, max_vertex_plane_cells, 0, ChordWitness::None,
+    )
+}
+
+/// Also seek a rounded contact witness by displacing a hull vertex inward
+/// along one obstacle plane normal. The displaced vertex must satisfy every
+/// half-space throughout the cell. The budget reserves two vertex/plane
+/// passes per cell to account for checking these witnesses.
+pub fn partition_planar_rotating_profiled_hull_obstacle_contact(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    partition_rotating_profiled_obstacles(
+        position, direction, radius_profile, obstacles, vertex_offsets,
+        parameter_tolerance, max_vertex_plane_cells, 1, ChordWitness::None,
+    )
+}
+
+/// Also seek rounded contact along the bisector of the two most violated
+/// obstacle planes. Each candidate is verified against every half-space
+/// across the cell. The budget reserves three vertex/plane passes per cell.
+pub fn partition_planar_rotating_profiled_hull_obstacle_corner_contact(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    partition_rotating_profiled_obstacles(
+        position, direction, radius_profile, obstacles, vertex_offsets,
+        parameter_tolerance, max_vertex_plane_cells, 2, ChordWitness::None,
+    )
+}
+
+/// Also seek an asymmetric rounded contact by weighting inward normals
+/// by the relative plane violations. Each displacement must stay within
+/// the rounding disk and satisfy every half-space across the cell. The
+/// work budget reserves four vertex/plane passes per cell.
+pub fn partition_planar_rotating_profiled_hull_obstacle_asymmetric_contact(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    partition_rotating_profiled_obstacles(
+        position, direction, radius_profile, obstacles, vertex_offsets,
+        parameter_tolerance, max_vertex_plane_cells, 3, ChordWitness::None,
+    )
+}
+
+/// Also seek a rounded contact direction by solving the two most violated
+/// plane constraints together. All obstacle half-spaces are verified over
+/// the cell. The work budget reserves five vertex/plane passes per cell.
+pub fn partition_planar_rotating_profiled_hull_obstacle_skew_contact(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    partition_rotating_profiled_obstacles(
+        position, direction, radius_profile, obstacles, vertex_offsets,
+        parameter_tolerance, max_vertex_plane_cells, 4, ChordWitness::None,
+    )
+}
+
+/// Test convex-hull chord midpoints as additional contact witnesses, using
+/// the same rounding and whole-cell half-space checks as vertex witnesses.
+/// Every unordered vertex pair contributes one midpoint to the work budget.
+pub fn partition_planar_rotating_profiled_hull_obstacle_chord_contact(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    partition_rotating_profiled_obstacles(
+        position, direction, radius_profile, obstacles, vertex_offsets,
+        parameter_tolerance, max_vertex_plane_cells, 4, ChordWitness::Midpoint,
+    )
+}
+
+/// Clip each hull chord against conservative obstacle plane bounds to find
+/// a fixed point that lies inside the obstacle throughout the cell.
+/// This supplements rounded vertex checks with unrounded chord witnesses.
+pub fn partition_planar_rotating_profiled_hull_obstacle_clipped_chord_contact(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    partition_rotating_profiled_obstacles(
+        position, direction, radius_profile, obstacles, vertex_offsets,
+        parameter_tolerance, max_vertex_plane_cells, 4, ChordWitness::Clipped,
+    )
+}
+
+/// Clip the conservative chord bounds using exact rational arithmetic.
+/// A feasible chord parameter may be a singleton or need more than binary64
+/// precision. Rounded vertex witnesses are also checked.
+pub fn partition_planar_rotating_profiled_hull_obstacle_exact_chord_contact(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    partition_rotating_profiled_obstacles(
+        position, direction, radius_profile, obstacles, vertex_offsets,
+        parameter_tolerance, max_vertex_plane_cells, 4, ChordWitness::Exact,
+    )
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ChordWitness {
+    None,
+    Midpoint,
+    Clipped,
+    Exact,
+}
+
+fn partition_rotating_profiled_obstacles(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+    witness_passes: usize,
+    chords: ChordWitness,
+) -> Result<ObstacleClearancePartition> {
+    use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
+
+    validate(parameter_tolerance, max_vertex_plane_cells)?;
+    check(!obstacles.is_empty() && !vertex_offsets.is_empty(), "Clearance requires obstacles and hull vertices")?;
+    let plane_budget = max_vertex_plane_cells / vertex_offsets.len();
+    let mut plane_count = 0;
+    for obstacle in obstacles {
+        check(!obstacle.is_empty(), "Each obstacle requires at least one plane")?;
+        if obstacle.len() > plane_budget - plane_count {
+            return Err(resource("Clearance budget must cover every vertex and plane"));
+        }
+        plane_count += obstacle.len();
+    }
+    let vertex_count = vertex_offsets.len();
+    let chord_count = if chords != ChordWitness::None {
+        vertex_count.checked_mul(vertex_count - 1)
+            .ok_or_else(|| resource("Tool chord count exceeds the work budget"))? / 2
+    } else {
+        0
+    };
+    let chord_passes = match chords {
+        ChordWitness::None => 0,
+        ChordWitness::Midpoint => 1 + witness_passes,
+        ChordWitness::Clipped | ChordWitness::Exact => 2,
+    };
+    let witness_work = chord_count.checked_mul(chord_passes)
+        .and_then(|work| work.checked_add(vertex_count * (1 + witness_passes)))
+        .ok_or_else(|| resource("Tool chord work exceeds the work budget"))?;
+    if witness_work > max_vertex_plane_cells / plane_count {
+        return Err(resource("Clearance budget must cover every witness and plane"));
+    }
+    let pairs = plane_count * witness_work;
+    let max_cells = max_vertex_plane_cells / pairs;
+    let (initial, profiles) = prepare_planar_rotation_profile(position, direction, radius_profile, max_cells)?;
+    let mut vertices = prepare_workspace_hull(position, vertex_offsets, plane_count)?;
+    if chords == ChordWitness::Midpoint {
+        let half = Interval::point(0.5);
+        vertices.reserve(chord_count);
+        for end in 1..vertex_count {
+            for start in 0..end {
+                let a = &vertices[start];
+                let b = &vertices[end];
+                let midpoint = vec![
+                    a[0].mul(half)?.add(b[0].mul(half)?)?,
+                    a[1].mul(half)?.add(b[1].mul(half)?)?,
+                ];
+                vertices.push(midpoint);
+            }
+        }
+    }
+    let has_rounding = radius_profile.iter().any(|&(_, radius)| radius > 0.);
+    let obstacles = obstacles.iter().map(|planes| {
+        prepare_workspace_planes(planes, 2)?.into_iter().map(|(normal, offset)| {
+            let length = if has_rounding { norm(&normal)? } else { Interval::point(0.) };
+            Ok((normal, offset, length))
+        }).collect::<Result<Vec<_>>>()
+    }).collect::<Result<Vec<_>>>()?;
+
+    let exact_rotation = if chords == ChordWitness::Exact {
+        fixed_cardinal_rotation(direction)
+    } else {
+        None
+    };
+    let constant_position = [0, 1].map(|axis| {
+        let value = position.control_points[0][axis];
+        position.control_points.iter().all(|point| point[axis] == value).then_some(value)
+    });
+
+    let (cells, work_cells) = partition_enclosed_cells(
+        initial, parameter_tolerance, max_cells,
+        |[span, direction_span, profile], domain| {
+            let axis = curve_jets::enclose(direction, direction_span, domain)?;
+            let (rotation, regular) = planar_rotation(&axis[0])?;
+            let mut clearance = vec![Undetermined; obstacles.len()];
+            if regular {
+                let radius = profiles[profile](domain)?;
+                let point = curve_jets::enclose(position, span, domain)?;
+                let mut candidates = vec![true; vertices.len()];
+                let mut witness_planes = vec![[(0, 0.); 2]; vertices.len()];
+                for (obstacle, status) in obstacles.iter().zip(&mut clearance) {
+                    candidates.fill(true);
+                    witness_planes.fill([(0, 0.); 2]);
+                    let seek_rounded = witness_passes > 0 && radius.lo > 0.;
+                    let mut residuals = Vec::new();
+                    for (plane, (normal, offset, length)) in obstacle.iter().enumerate() {
+                        let margin = length.mul(radius)?.hi;
+                        let inverse = inverse_rotated_normal(normal, rotation)?;
+                        let center = project_jet(&point[0], normal)?.sub(*offset)?;
+                        let mut separated = true;
+                        for (vertex, offset) in vertices.iter().enumerate() {
+                            let residual = center.add(project_jet(offset, &inverse)?)?;
+                            separated &= residual.lo > margin;
+                            candidates[vertex] &= residual.hi <= 0.;
+                            if seek_rounded || matches!(chords, ChordWitness::Clipped | ChordWitness::Exact) {
+                                residuals.push(residual);
+                            }
+                            if seek_rounded {
+                                let violation = residual.hi / length.hi;
+                                let [first, second] = &mut witness_planes[vertex];
+                                if violation > first.1 {
+                                    *second = *first;
+                                    *first = (plane, violation);
+                                } else if violation > second.1 {
+                                    *second = (plane, violation);
+                                }
+                            }
+                        }
+                        if separated {
+                            *status = Within;
+                            break;
+                        }
+                    }
+                    if *status == Within {
+                        continue;
+                    }
+                    if candidates.contains(&true)
+                        || (chords == ChordWitness::Clipped && clipped_chord_contacts(&residuals, vertex_count)?)
+                        || (chords == ChordWitness::Exact && exact_chord_contacts(
+                            &residuals, vertex_offsets, obstacle, exact_rotation, constant_position,
+                        )?)
+                        || (seek_rounded && rounded_vertex_contacts(
+                        obstacle, &residuals, &witness_planes, radius.lo, witness_passes,
+                    )?) {
+                        *status = Exceeds;
+                    }
+                }
+            }
+            let refine = clearance.contains(&Undetermined);
+            let status = if clearance.contains(&Exceeds) {
+                Exceeds
+            } else if refine {
+                Undetermined
+            } else {
+                Within
+            };
+            Ok((ObstacleClearanceCell {
+                parameter_interval: domain, span, obstacles: clearance, status,
+            }, refine))
+        },
+    )?;
+    Ok(ObstacleClearancePartition {
+        cells: cells.into_iter().map(|(_, _, cell)| cell).collect(),
+        work_plane_cells: work_cells * pairs,
+    })
+}
+
+fn clipped_chord_contacts(residuals: &[Interval], vertex_count: usize) -> Result<bool> {
+    for end in 1..vertex_count {
+        'chords: for start in 0..end {
+            let mut lower: f64 = 0.;
+            let mut upper: f64 = 1.;
+            for plane in residuals.chunks_exact(vertex_count) {
+                let (a, b) = (plane[start].hi, plane[end].hi);
+                if a > 0. && b > 0. {
+                    continue 'chords;
+                }
+                if a > 0. || b > 0. {
+                    let scale = a.abs().max(b.abs());
+                    let left = a.abs() / scale;
+                    let right = b.abs() / scale;
+                    let crossing = left / (left + right);
+                    if a > 0. {
+                        lower = lower.max(crossing);
+                    } else {
+                        upper = upper.min(crossing);
+                    }
+                }
+                if lower > upper {
+                    continue 'chords;
+                }
+            }
+            // Clipping only proposes a candidate. Verify the interpolation
+            // with interval arithmetic before treating it as a witness.
+            let t = Interval::point(crate::distance_bounds::midpoint(lower, upper));
+            let complement = Interval::point(1.).sub(t)?;
+            for plane in residuals.chunks_exact(vertex_count) {
+                let bound = plane[start].mul(complement)?.add(plane[end].mul(t)?)?;
+                if bound.hi > 0. {
+                    continue 'chords;
+                }
+            }
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn fixed_cardinal_rotation(direction: &Curve) -> Option<[f64; 2]> {
+    for axis in [0, 1] {
+        let sign = direction.control_points[0][axis].signum();
+        if direction.control_points.iter().all(|point| {
+            point[1 - axis] == 0. && point[axis] * sign > 0.
+        }) {
+            let mut rotation = [0.; 2];
+            rotation[axis] = sign;
+            return Some(rotation);
+        }
+    }
+    None
+}
+
+fn exact_chord_contacts(
+    residuals: &[Interval],
+    vertices: &[&[f64]],
+    planes: &[(Vec<Interval>, Interval, Interval)],
+    rotation: Option<[f64; 2]>,
+    position: [Option<f64>; 2],
+) -> Result<bool> {
+    let zero = exact_motion_operand(0.)?;
+    let one = exact_motion_operand(1.)?;
+    let vertex_count = vertices.len();
+    let mut bounds = Vec::with_capacity(residuals.len());
+    for (plane, (normal, offset, _)) in residuals.chunks_exact(vertex_count).zip(planes) {
+        let [nx, ny] = [normal[0].lo, normal[1].lo];
+        let exact = rotation.filter(|_| {
+            (nx == 0. || position[0].is_some()) && (ny == 0. || position[1].is_some())
+        });
+        if let Some([cosine, sine]) = exact {
+            // Positive weights preserve a constant coordinate throughout
+            // the curve. A cardinal rotation only swaps or negates axes.
+            let center = exact_motion_operand(nx)? * exact_motion_operand(position[0].unwrap_or(0.))?
+                + exact_motion_operand(ny)? * exact_motion_operand(position[1].unwrap_or(0.))?
+                - exact_motion_operand(offset.lo)?;
+            let local_x = exact_motion_operand(nx * cosine + ny * sine)?;
+            let local_y = exact_motion_operand(ny * cosine - nx * sine)?;
+            for point in vertices {
+                bounds.push(&center + &local_x * exact_motion_operand(point[0])?
+                    + &local_y * exact_motion_operand(point[1])?);
+            }
+        } else {
+            for residual in plane {
+                bounds.push(exact_motion_operand(residual.hi)?);
+            }
+        }
+    }
+    for end in 1..vertex_count {
+        'chords: for start in 0..end {
+            let mut lower = zero.clone();
+            let mut upper = one.clone();
+            for plane in bounds.chunks_exact(vertex_count) {
+                let (a, b) = (&plane[start], &plane[end]);
+                if a > &zero && b > &zero {
+                    continue 'chords;
+                }
+                if a > &zero || b > &zero {
+                    let crossing = a / (a - b);
+                    if a > &zero {
+                        lower = lower.max(crossing);
+                    } else {
+                        upper = upper.min(crossing);
+                    }
+                    if lower > upper {
+                        continue 'chords;
+                    }
+                }
+            }
+            // The exact affine interpolation of the endpoint upper bounds
+            // bounds the same fixed tool-local chord point across the cell.
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn rounded_vertex_contacts(
+    planes: &[(Vec<Interval>, Interval, Interval)],
+    residuals: &[Interval],
+    witness_planes: &[[(usize, f64); 2]],
+    radius: f64,
+    witness_passes: usize,
+) -> Result<bool> {
+    let vertex_count = witness_planes.len();
+    for (vertex, &[(first, first_violation), (second, second_violation)]) in witness_planes.iter().enumerate() {
+        let inside_after_displacement = |axis: [Interval; 2], length_upper: f64| -> Result<bool> {
+            if length_upper == 0. {
+                return Ok(false);
+            }
+            // Dividing by the upper length keeps the displacement within
+            // the lower rounding radius for the entire cell.
+            let scale = Interval::point(-radius).div(Interval::point(length_upper))?;
+            let displacement = [axis[0].mul(scale)?, axis[1].mul(scale)?];
+            for (index, (normal, _, _)) in planes.iter().enumerate() {
+                let shifted = residuals[index * vertex_count + vertex]
+                    .add(project_jet(&displacement, normal)?)?;
+                if shifted.hi > 0. {
+                    return Ok(false);
+                }
+            }
+            Ok(true)
+        };
+        let (normal, _, length) = &planes[first];
+        if inside_after_displacement([normal[0], normal[1]], length.hi)? {
+            return Ok(true);
+        }
+        if witness_passes >= 2 && second_violation > 0. {
+            let (other, _, other_length) = &planes[second];
+            let unit = [
+                normal[0].div(Interval::point(length.hi))?,
+                normal[1].div(Interval::point(length.hi))?,
+            ];
+            let other_unit = [
+                other[0].div(Interval::point(other_length.hi))?,
+                other[1].div(Interval::point(other_length.hi))?,
+            ];
+            let bisector = [unit[0].add(other_unit[0])?, unit[1].add(other_unit[1])?];
+            let length = norm(&bisector)?;
+            if length.lo > 0. && inside_after_displacement(bisector, length.hi)? {
+                return Ok(true);
+            }
+            if witness_passes >= 3 && first_violation.is_finite() {
+                let weight = Interval::point(second_violation / first_violation);
+                let axis = [
+                    unit[0].add(other_unit[0].mul(weight)?)?,
+                    unit[1].add(other_unit[1].mul(weight)?)?,
+                ];
+                let length = norm(&axis)?;
+                if length.lo > 0. && inside_after_displacement(axis, length.hi)? {
+                    return Ok(true);
+                }
+            }
+            if witness_passes >= 4 && first_violation.is_finite() {
+                let determinant = unit[0].mul(other_unit[1])?.sub(unit[1].mul(other_unit[0])?)?;
+                if determinant.lo > 0. || determinant.hi < 0. {
+                    let sign = Interval::point(if determinant.lo > 0. { 1. } else { -1. });
+                    let weight = Interval::point(second_violation / first_violation);
+                    // Only the direction of the solution is needed. Cancel
+                    // the determinant magnitude before normalizing it.
+                    let axis = [
+                        other_unit[1].sub(unit[1].mul(weight)?)?.mul(sign)?,
+                        unit[0].mul(weight)?.sub(other_unit[0])?.mul(sign)?,
+                    ];
+                    let length = norm(&axis)?;
+                    if length.lo > 0. && inside_after_displacement(axis, length.hi)? {
+                        return Ok(true);
+                    }
+                }
+            }
+        }
+    }
+    Ok(false)
 }
 
 /// Check clearance for a translating convex hull of offsets, rounded by a

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0762",
+  "testedBase": "42c1f863de1a2a7d8acbab48ab4c5c5688fa14c1",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 387,
+  "scope": [
+    "Refine normalized workspace clearance for a fixed vertex hull with a profiled rounding radius.",
+    "Check the combined hull and radius minimum, normalized clearance, limiting plane witness, and coarse tolerance behavior."
+  ],
+  "logSha256": "ad4afefc366401fdfd64596582e0804dcf524f41ebadfb1072a02147045ec4c1",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "d053e160d9ea88e6e182e38c8c3258e07c54a2b3d4b7a140d72f3f31217794a2",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "ba93173d39be5e65b077e79531621d08d9b6fcc18d29da3cab19d91f3c776cab"
+  }
+}

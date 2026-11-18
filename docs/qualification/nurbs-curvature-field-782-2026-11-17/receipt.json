@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0782",
+  "testedBase": "31ddf5fa0d042ac1103658a57c844371f2075fdb",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 408,
+  "scope": [
+    "Convert angular slowdown bounds to certified duration bounds with outward rounding.",
+    "Check duration at two window widths, factor two, and unbounded duration at a singular direction."
+  ],
+  "logSha256": "3836d3f0c96b56a641fd7425e972eee94b5acf570e773c936fa647f470170a5b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "2b1396895b94f3fd8455cc74e5d26715a6bb00059232c64d617eb60d70e00d49",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "dd9c820a5d8d9950085e48dd1346b79de1b7bd8a84765cbe1a7f50f4800a1c35"
+  }
+}

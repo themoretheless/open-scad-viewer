@@ -44,7 +44,10 @@ fn circle_of(
         first_uv,
         second_uv,
         max_sample_residual,
-    } = component;
+    } = component
+    else {
+        panic!("expected a circle: {component:?}");
+    };
     (
         curve,
         *center,
@@ -473,7 +476,7 @@ fn near_coaxial_bands_stay_unresolved_not_forced() {
 }
 
 #[test]
-fn clearly_off_axis_or_tilted_pairs_are_unsupported_regions() {
+fn clearly_off_axis_or_tilted_pairs_are_traced_and_certified_complete() {
     let first = brep_core::analytic::torus(3., 1.).unwrap();
     let base = translated(
         &brep_core::analytic::torus(3., 5.2_f64.sqrt()).unwrap(),
@@ -493,18 +496,49 @@ fn clearly_off_axis_or_tilted_pairs_are_unsupported_regions() {
     .unwrap();
     for second in [&off, &tilted] {
         let report = intersect_torus_torus(&first, second, Options::default()).unwrap();
-        assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved.len(), 1);
-        assert_eq!(
-            report.unresolved[0].reason,
-            UnresolvedReason::UnsupportedSurface
-        );
-        assert_eq!(
-            report.unresolved[0].parameter_box,
-            vec![0., 1., 0., 1., 0., 1., 0., 1.]
-        );
+        assert!(report.unresolved.is_empty(), "{:?}", report.unresolved);
+        assert!(!report.components.is_empty());
+        for component in &report.components {
+            let TorusTorusComponent::Traced {
+                pieces,
+                distance_bound,
+                complete,
+                first_uv,
+                second_uv,
+                lift_deviation,
+                ..
+            } = component
+            else {
+                panic!("expected a traced loop: {component:?}");
+            };
+            assert!(*complete);
+            assert!(!pieces.is_empty() && !first_uv.is_empty() && !second_uv.is_empty());
+            assert!(*distance_bound <= crate::TRACE_TOLERANCE);
+            assert!(*lift_deviation <= crate::LIFT_TOLERANCE);
+        }
     }
+}
+
+#[test]
+fn linked_tori_without_contact_resolve_empty() {
+    // A ring through the hole of the other, half a millimetre clear of it
+    // everywhere: no component, and the empty answer is certified.
+    let first = brep_core::analytic::torus(3., 1.).unwrap();
+    let link = brep_core::transform::affine(
+        &brep_core::analytic::torus(2., 0.5).unwrap(),
+        [
+            [1., 0., 0., 3.],
+            [0., 0., -1., 0.],
+            [0., 1., 0., 0.],
+            [0., 0., 0., 1.],
+        ],
+    )
+    .unwrap();
+    let report = intersect_torus_torus(&first, &link, Options::default()).unwrap();
+    assert!(
+        report.components.is_empty() && report.unresolved.is_empty(),
+        "{report:?}"
+    );
 }
 
 #[test]
@@ -608,8 +642,7 @@ fn rotated_translated_placement_keeps_the_exact_circles() {
             .components
             .iter()
             .find(|c| {
-                let TorusTorusComponent::Circle { radius, .. } = c;
-                (radius - expected_rho).abs() <= 1e-12
+                matches!(c, TorusTorusComponent::Circle { radius, .. } if (radius - expected_rho).abs() <= 1e-12)
             })
             .unwrap_or_else(|| panic!("no circle of radius {expected_rho}"));
         let (curve, center, _radius, normal, first_uv, second_uv, sampled) =

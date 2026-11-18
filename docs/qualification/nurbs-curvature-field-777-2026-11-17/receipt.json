@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0777",
+  "testedBase": "65886190d7288593bf076cc1f576b61d6f7c292d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 403,
+  "scope": [
+    "Certify planar angular speed limits in the source clock while preserving uncertainty at zero orientation.",
+    "Check an interior angular speed peak in a rescaled clock, a zero orientation and a constant signed axis at zero limit."
+  ],
+  "logSha256": "ab0636519e557d4df1b9438c29ec60f651fe9d9917afc3fd4de1f99cc2b0ec2d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "f2e1836871129c1536c16477da95016b36ec96608c45a2c2dcfc892274c38cad",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "230dfb65d48e49ef94182db95c32385eeaef6da79bdb8d8755dc39edf0944b97"
+  }
+}

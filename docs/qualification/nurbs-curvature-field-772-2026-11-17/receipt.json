@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0772",
+  "testedBase": "c52e4d4cb27f3e04b0ead47e8c6dbecd74976417",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 398,
+  "scope": [
+    "Certify asymmetric rounded contact using violation-weighted inward directions and every obstacle half-space.",
+    "Check asymmetric rounded contact beyond a bisector, nonunit plane scale and the reserved four-pass budget."
+  ],
+  "logSha256": "76c38f44866f5cc33e4ec6eb5846dd4b2ff3b5d3d4bb8610332a3b0cd900c3bb",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "d9f9bf8d3023a2c6c05409a7409ef1f1d719caec7434d349b978edd46f6a44b4",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "511001648bcc4d9eb1f1d49bc87c6f85af1ff3ff6fddd70f75ea9dd365f8e778"
+  }
+}

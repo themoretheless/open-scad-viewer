@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0805",
+  "testedBase": "2fc542bf3e3c9a0cca30094acf909a7efc65697e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 431,
+  "scope": [
+    "Normalize nested contour orientation by exact affine reversal of source knots and weights.",
+    "Check reversed pole weights and asymmetric knots, parameter agreement, hole fill and bounded exact reversal refusal."
+  ],
+  "logSha256": "b658a37138c80ae7976f7cc212279fe78dd3f15bf862c83ef35ed5c1a4da04bd",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "9eeb402030ff1050d20feef5900ffd3403b3497357abbf1a4588c6531327d001",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "27402942b082986d16f648eeaf6b04281214b6d6ad84efeed5a48f6917f00499"
+  }
+}

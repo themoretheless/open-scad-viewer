@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0809",
+  "testedBase": "021561d863182d3b131640893769d5d996ae145a",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 435,
+  "scope": [
+    "Enclose both principal planar second moments and their gap, including repeated moments.",
+    "Check analytically distinct and repeated principal moments and the certified moment gap."
+  ],
+  "logSha256": "c2ea0d29de15fe5db1b7dcb3bf40f5970b38720d8654ffc4155ad2323dcd4425",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "68af9973cfcd4c3244e4f538dbe664cd2247678abaa2508c0a429fed99e0dd13",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "4f4c4094c1413526004bf15409b48084d70e275fad299575d8d677a850ce5ad3"
+  }
+}

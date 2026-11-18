@@ -12789,7 +12789,7 @@ it('P10 GLB export: the palette command downloads a valid binary glTF of visible
     showNotice: () => {},
     translate: key => key,
   })
-  actions.exportGlb()
+  await actions.exportGlb()
   expect(blobs).toHaveLength(1)
   expect(blobs[0]!.name).toBe('part.glb')
   expect(blobs[0]!.blob.type).toBe('model/gltf-binary')

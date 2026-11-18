@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0804",
+  "testedBase": "d5ee7f1d0c9a79f8e463f1c7f025f0597ecfe36f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 430,
+  "scope": [
+    "Certify boundary orientations and identify reversals that make nonzero fill agree with nesting parity.",
+    "Check reversed roots, holes, islands and the shared orientation work budget."
+  ],
+  "logSha256": "20342b80675bb757d28d76aaf61f13cdcd4740f5ce12046dd4a92dc8e07bbc41",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "ded6f2704e83026392613f1a96d45c95a4bade2b14789e3cc513e373b2c19e05",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "87c8ae674ea492bf6043b6bde5d7b3f54323a9c30f0806a4fa9eb32ce7bfb835"
+  }
+}

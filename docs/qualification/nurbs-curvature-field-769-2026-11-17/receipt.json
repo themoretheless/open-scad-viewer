@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0769",
+  "testedBase": "089d0e3abffac30b6c369e686a9f37a1962bd11f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 395,
+  "scope": [
+    "Bound the minimum normalized plane clearance for a rotating hull with piecewise linear rounding.",
+    "Check a clipped radius profile with an interior minimum witness, nonunit plane scaling and the initial work budget."
+  ],
+  "logSha256": "1d7f386ca64b8a71a4ce7ebef47ca14364caf141c166cccbda1d8dddc9f304b4",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "ac380fe7ec6521ceb04f749f54e1d213bf4cea30fff768d7f9671eb6ba5df64a",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "98c84f311bd1c677faa84fc54422c12811446354ebb4a7bbcabf275b7a5bc106"
+  }
+}

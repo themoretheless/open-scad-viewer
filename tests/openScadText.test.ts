@@ -7,12 +7,14 @@ import {
   OPENSCAD_2021_TEXT_EM_SCALE,
   OPENSCAD_TEXT_MAX_CODE_POINTS,
   OpenScadTextError,
-  calculateOpenScadTextSegments,
-  prepareOpenScadTextAssets,
-  renderOpenScadText,
   type OpenScadTextContour,
   type OpenScadTextParameters,
 } from '../src/language/openScadText'
+import {
+  calculateOpenScadTextSegments,
+  prepareOpenScadTextAssets,
+} from '../src/language/openScadText/prepareOpenScadTextAssets'
+import { renderOpenScadText } from '../src/language/openScadText/renderOpenScadText'
 
 const BASIC = new Uint8Array(readFileSync(new URL('./fixtures/Basic-Regular.ttf', import.meta.url)))
 const BASIC_LICENSE = readFileSync(new URL('./fixtures/Basic-OFL.txt', import.meta.url))

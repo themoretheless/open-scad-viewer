@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0791",
+  "testedBase": "4645387f474083740f4325455c08954e0f19320c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 417,
+  "scope": [
+    "Classify a point by nonzero or even-odd rational contour winding under a shared work budget.",
+    "Check nested opposite and equal contour orientation, both fill rules and the shared initial knot budget."
+  ],
+  "logSha256": "7537123674e3fed6a2c6c6cbc2bca0fb15df8431f96aa6425738f8ea664e942a",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "712b08c871dbd22743b424549c2997a657454c3141be7564eed3be20b496a5a6",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "b186f345eaa757f1a67d18c54310b3e47b1fde51f0516544fae51355e55bc971"
+  }
+}

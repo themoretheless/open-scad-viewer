@@ -40,10 +40,7 @@ import {
   stableOverlayContext,
 } from './openScadStableExpressionEval'
 import { type OpenScadProject } from './openScadProject'
-import { compileOpenScadProject } from './openScadProjectCompiler'
 import { prepareOpenScadImportAssets } from '../exchange/openScadImport'
-import { prepareOpenScadSurfaceAssets } from './openScadSurface'
-import { prepareOpenScadTextAssets } from './openScadText'
 import { defaultGeometryKernel } from '../kernel/cadGeometryKernel'
 import { createOpenScadStableRuntimeVariables } from './openScadStableRuntime'
 import { nextColor, resetPalette, type RGBA } from './openscadColors'
@@ -947,6 +944,7 @@ async function parseInternal(
       languageProfile: options.languageProfile,
     }),
   project?: OpenScadProject,
+  projectRuntime?: typeof import('./openScadProjectRuntime'),
 ): Promise<ParseResult> {
   const now = options.now ?? (() => performance.now())
   const startedAt = now()
@@ -979,12 +977,12 @@ async function parseInternal(
   }
   const forcedImportAssets = project === undefined ? [] : stableCompatibilityForcedAssets(project, ast)
   const [importAssets, surfaceAssets, textAssets] =
-    project === undefined
+    project === undefined || projectRuntime === undefined
       ? [undefined, undefined, undefined]
       : await Promise.all([
           prepareOpenScadImportAssets(project, { forcedAssets: forcedImportAssets }),
-          prepareOpenScadSurfaceAssets(project),
-          prepareOpenScadTextAssets(project),
+          projectRuntime.prepareOpenScadSurfaceAssets(project),
+          projectRuntime.prepareOpenScadTextAssets(project),
         ])
   const parsedAt = now()
   const kernelSession = await defaultGeometryKernel.openEvalSession()
@@ -1017,6 +1015,7 @@ async function parseInternal(
     importAssets,
     surfaceAssets,
     textAssets,
+    projectRuntime,
     languageProfile,
     env,
     functions,
@@ -1215,13 +1214,17 @@ export function parseOpenScadProject(
   project: OpenScadProject,
   options: ParseOpenScadProjectOptions = {},
 ): Promise<ParseResult> {
-  const run = () =>
-    parseInternal(
+  const run = async () => {
+    // Project-only stages live in their own chunk; single-source builds never load it.
+    const projectRuntime = await import('./openScadProjectRuntime')
+    return parseInternal(
       project.readEntrypoint().source,
       { ...options, languageProfile: 'openscad/stable-2021.01' },
-      () => compileOpenScadProject(project, { libraryPaths: options.libraryPaths ?? [] }),
+      () => projectRuntime.compileOpenScadProject(project, { libraryPaths: options.libraryPaths ?? [] }),
       project,
+      projectRuntime,
     )
+  }
   const result = parseQueue.then(run, run)
   parseQueue = result.then(
     () => undefined,

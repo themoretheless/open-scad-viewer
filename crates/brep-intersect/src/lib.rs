@@ -44,9 +44,9 @@ pub use plane_torus::{PlaneTorusComponent, TorusPatchCurve, intersect_plane_toru
 pub use sphere_cone::{SphereConeComponent, intersect_sphere_cone};
 pub use sphere_cylinder::{CylinderPatchCurve, SphereCylinderComponent, intersect_sphere_cylinder};
 pub use sphere_torus::{
-    LIFT_TOLERANCE, SphereTorusComponent, TRACE_TOLERANCE, intersect_sphere_torus,
-    cone_torus_boolean, cylinder_drill_boolean, cylinder_torus_boolean, sphere_cone_boolean, sphere_cylinder_boolean,
-    sphere_torus_boolean,
+    LIFT_TOLERANCE, SphereTorusComponent, TRACE_TOLERANCE, cone_torus_boolean,
+    cylinder_drill_boolean, cylinder_torus_boolean, intersect_sphere_torus, sphere_cone_boolean,
+    sphere_cylinder_boolean, sphere_torus_boolean, torus_torus_boolean,
 };
 pub use torus_torus::{TorusTorusComponent, intersect_torus_torus};
 pub use brep_core::intersections::{SpherePatchCircle, SphereSphereComponent, intersect_sphere_sphere};

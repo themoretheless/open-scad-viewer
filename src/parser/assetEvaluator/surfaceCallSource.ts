@@ -13,7 +13,6 @@ import { OpenScadImportPositionedError, type OpenScadImportErrorCode } from '../
 import {
   OpenScadTextError,
   OpenScadTextPositionedError,
-  renderOpenScadText,
   type OpenScadTextErrorCode,
   type OpenScadTextParameters,
 } from '../../language/openScadText'
@@ -126,7 +125,7 @@ export function textNumberParameter(
 }
 
 export function makeText(node: CallNode, ctx: EvalContext): Shape[] {
-  if (ctx.project === undefined || ctx.textAssets === undefined) {
+  if (ctx.project === undefined || ctx.textAssets === undefined || ctx.projectRuntime === undefined) {
     return textCallError(
       node,
       ctx,
@@ -174,7 +173,7 @@ export function makeText(node: CallNode, ctx: EvalContext): Shape[] {
   }
 
   try {
-    const layout = renderOpenScadText(ctx.project, ctx.textAssets, parameters, authored.sourcePath)
+    const layout = ctx.projectRuntime.renderOpenScadText(ctx.project, ctx.textAssets, parameters, authored.sourcePath)
     const sections: CadKernelHandle[] = []
     for (const glyph of layout.glyphs) {
       if (glyph.contours.length === 0) continue

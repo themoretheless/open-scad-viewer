@@ -15,6 +15,17 @@ impl value_codec::Serialize for TorusTorusComponent {
             } => value_codec::json!({"kind":"circle","curve":curve,"center":center,"radius":radius,
                 "normal":normal,"firstUv":first_uv,"secondUv":second_uv,
                 "maxSampleResidual":max_sample_residual}),
+            Self::Traced {
+                pieces,
+                distance_bound,
+                spans,
+                complete,
+                first_uv,
+                second_uv,
+                lift_deviation,
+            } => value_codec::json!({"kind":"traced","pieces":pieces,
+                "distanceBound":distance_bound,"spans":spans,"complete":complete,
+                "firstUv":first_uv,"secondUv":second_uv,"liftDeviation":lift_deviation}),
         }
     }
 }

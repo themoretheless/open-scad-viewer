@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0765",
+  "testedBase": "c604f00dc2c688290686c92d13826de8b8638046",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 391,
+  "scope": [
+    "Certify separating obstacle planes or a persistent tool vertex inside an obstacle while the hull rotates.",
+    "Check ordered obstacle contact and separation, a regular clear interval, zero orientation uncertainty and a vertex/plane budget."
+  ],
+  "logSha256": "c8d5c77171f4d620c9b9b33bb4714e0262782e9c6aacd13398ffe54dd8a277d1",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "b8747614e6d72169636a476d7540e63c646f890c8fed85f8f6d7780b451e8ba2",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "2fc26815a10194966361f80dca48d203f33ca2ddf711c04815e1fbf43bba5e24"
+  }
+}

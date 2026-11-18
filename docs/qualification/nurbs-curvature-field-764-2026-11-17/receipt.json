@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0764",
+  "testedBase": "0715d3a1a98d7df6046e65eb2e179449fd4715a3",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 390,
+  "scope": [
+    "Bound the worst signed plane clearance for a rotating planar vertex hull after certifying orientation regularity.",
+    "Check an interior rotation witness, normalized plane clearance, coarse enclosure, work budget and zero orientation rejection."
+  ],
+  "logSha256": "14d839546e5fd383d4e33758fc6046c5f2bb9934473c244b9b0f1c0e4b3b36f8",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "0136f64fc943400881be6fe87c246eeed676b428ddc9a3a1265c517c612062b8",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "27e130b2c2ea024a53ed27f9e3450bdbdcc29cd39373005e751a5ed4881f4590"
+  }
+}

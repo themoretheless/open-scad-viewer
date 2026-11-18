@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0794",
+  "testedBase": "40055bde284420b36c04d2d59f2bb4f1d283465e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 420,
+  "scope": [
+    "Certify the same fill rule outcome throughout a box separated from every supplied contour.",
+    "Check query boxes in material, a hole and the exterior, and refuse crossing and touching boxes."
+  ],
+  "logSha256": "73594f9252214fbb37c0c255c4310e85039ff9b38ecbfcecc986011fbbf5de48",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "5e218cbd7fa8d73b59223a65a66ec7d1aefc2d142da0d4dc80edccaa75757855",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "726bb9f11d33785c9076e5dc6b5ca6e92d1735dd6a7e8d8c86188ccb382b08e6"
+  }
+}
