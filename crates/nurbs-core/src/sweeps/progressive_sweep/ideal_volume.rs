@@ -206,11 +206,13 @@ impl MultiSweep<'_> {
             out.reason = Some("ideal-volume-initial-frame-unproved");
             return Ok(out);
         }
-        let basis = [
-            decode(initial.transverse.unwrap())?,
-            decode(initial.binormal.unwrap())?,
-            decode(initial.longitudinal.unwrap())?,
-        ];
+        let (Some(transverse), Some(binormal), Some(longitudinal)) =
+            (initial.transverse, initial.binormal, initial.longitudinal)
+        else {
+            out.reason = Some("ideal-volume-initial-frame-unproved");
+            return Ok(out);
+        };
+        let basis = [decode(transverse)?, decode(binormal)?, decode(longitudinal)?];
         let start = crate::sweeps::progressive_miter::vector_certificate::certify_values_traversal(
             s.path,
             [0., 0.],
