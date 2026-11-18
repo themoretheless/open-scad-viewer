@@ -6,8 +6,10 @@ use num_rational::BigRational as Q;
 use num_traits::{One, Signed, ToPrimitive, Zero};
 
 pub struct RadialTensor {
-    /// Coordinates in the two world axes other than `height_axis`.
+    /// Center at world height zero in the two other coordinate axes.
     pub center: [f64; 2],
+    /// Exact change in the center per unit of world height.
+    pub center_drift: [f64; 2],
     pub height_axis: usize,
     /// Center-relative planar coordinates at unit meridian scale.
     pub angular: Curve,
@@ -20,9 +22,10 @@ fn exact(value: Q) -> Option<f64> {
     (Q::from_float(f).as_ref() == Some(&value)).then_some(f)
 }
 
-/// The original map is `(center + scale(v) * angular(u), height(v))`,
+/// The original map is `(center + drift * height(v) + scale(v) * angular(u), height(v))`,
 /// with the coordinates placed in the selected world axes. Each original
-/// tensor weight is the product of the two recovered curve weights.
+/// tensor weight is the product of the two recovered curve weights. The
+/// common drift is an invertible affine shear of the radial carrier.
 pub fn factor_radial_tensor(
     surface: &Surface,
     periodic_axis: usize,
@@ -71,19 +74,25 @@ fn factor(s: &Surface, axis: usize, height: usize, n: usize, m: usize) -> Option
     if scale.iter().any(|r| *r <= Q::zero()) {
         return None;
     }
-    let varied = scale.iter().position(|r| !r.is_one())?;
-    let center = plane.map(|k| {
-        (pole(0, varied, k) - &scale[varied] * pole(0, 0, k)) / (Q::one() - &scale[varied])
-    });
+    let heights = (0..m).map(|j| pole(0, j, height)).collect::<Vec<_>>();
+    let rows = (0..m)
+        .map(|j| plane.map(|k| pole(0, j, k)))
+        .collect::<Vec<_>>();
+    let (center, drift) = affine_center(&rows, &scale, &heights)?;
+    let centers = heights
+        .iter()
+        .map(|z| std::array::from_fn::<_, 2, _>(|k| &center[k] + &drift[k] * z))
+        .collect::<Vec<_>>();
+    let base_center = &centers[0];
     let w00 = weight(0, 0);
     for (j, scale) in scale.iter().enumerate() {
         for i in 0..n {
             if pole(i, j, height) != pole(0, j, height)
                 || weight(i, j) * &w00 != weight(i, 0) * weight(0, j)
-                || plane
-                    .iter()
-                    .zip(&center)
-                    .any(|(&k, c)| pole(i, j, k) - c != scale * (pole(i, 0, k) - c))
+                || plane.iter().enumerate().any(|(axis, &k)| {
+                    pole(i, j, k) - &centers[j][axis]
+                        != scale * (pole(i, 0, k) - &base_center[axis])
+                })
             {
                 return None;
             }
@@ -108,7 +117,7 @@ fn factor(s: &Surface, axis: usize, height: usize, n: usize, m: usize) -> Option
             .map(|i| {
                 plane
                     .iter()
-                    .zip(&center)
+                    .zip(base_center)
                     .map(|(&k, c)| exact((pole(i, 0, k) - c) / gauge))
                     .collect()
             })
@@ -116,7 +125,7 @@ fn factor(s: &Surface, axis: usize, height: usize, n: usize, m: usize) -> Option
         let meridian = scale
             .iter()
             .enumerate()
-            .map(|(j, r)| Some(vec![exact(r * gauge)?, exact(pole(0, j, height))?]))
+            .map(|(j, r)| Some(vec![exact(r * gauge)?, exact(heights[j].clone())?]))
             .collect::<Option<Vec<_>>>()?;
         Some((angular, meridian))
     };
@@ -126,7 +135,7 @@ fn factor(s: &Surface, axis: usize, height: usize, n: usize, m: usize) -> Option
     let anchor = (0..n).find_map(|i| {
         plane
             .iter()
-            .zip(&center)
+            .zip(base_center)
             .map(|(&k, c)| (pole(i, 0, k) - c).abs())
             .find(|v| !v.is_zero())
     })?;
@@ -145,10 +154,39 @@ fn factor(s: &Surface, axis: usize, height: usize, n: usize, m: usize) -> Option
     );
     Some(RadialTensor {
         center: [exact(center[0].clone())?, exact(center[1].clone())?],
+        center_drift: [exact(drift[0].clone())?, exact(drift[1].clone())?],
         height_axis: height,
         angular,
         meridian,
     })
+}
+
+/// At row j, the anchor offset `P_j - r_j P_0` equals
+/// `(1-r_j) * center_at_base + (z_j-z_0) * drift`.
+fn affine_center(rows: &[[Q; 2]], scale: &[Q], heights: &[Q]) -> Option<([Q; 2], [Q; 2])> {
+    let a = scale.iter().map(|r| Q::one() - r).collect::<Vec<_>>();
+    let z = heights.iter().map(|h| h - &heights[0]).collect::<Vec<_>>();
+    let i = a.iter().position(|v| !v.is_zero())?;
+    let offset = |row: usize, axis: usize| &rows[row][axis] - &scale[row] * &rows[0][axis];
+    let second = (0..rows.len()).find_map(|j| {
+        let det = &a[i] * &z[j] - &a[j] * &z[i];
+        (!det.is_zero()).then_some((j, det))
+    });
+    let (base, drift): ([Q; 2], [Q; 2]) = if let Some((j, det)) = second {
+        (
+            std::array::from_fn(|k| (offset(i, k) * &z[j] - offset(j, k) * &z[i]) / &det),
+            std::array::from_fn(|k| (&a[i] * offset(j, k) - &a[j] * offset(i, k)) / &det),
+        )
+    } else {
+        (
+            std::array::from_fn(|k| offset(i, k) / &a[i]),
+            [Q::zero(), Q::zero()],
+        )
+    };
+    Some((
+        std::array::from_fn(|k| &base[k] - &drift[k] * &heights[0]),
+        drift,
+    ))
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -302,7 +340,9 @@ pub fn certify_radial_band_cycle(
     }
     let left = &factors[0];
     if factors[1..].iter().any(|other| {
-        left.center != other.center || !same_angular_curve(&left.angular, &other.angular)
+        left.center != other.center
+            || left.center_drift != other.center_drift
+            || !same_angular_curve(&left.angular, &other.angular)
     }) {
         return Ok(out);
     }
@@ -448,6 +488,30 @@ mod tests {
         );
         assert!(
             !certify_radial_band_cycle(&[a, b, c, d], &[0; 4], 2, 10000, 1)
+                .unwrap()
+                .proven
+        );
+        let mut sheared = bands.map(|mut band| {
+            for pole in band.control_points.iter_mut().flatten() {
+                pole[0] += 2. + 0.5 * pole[2];
+                pole[1] += -3. - 2. * pole[2];
+            }
+            band
+        });
+        for band in &sheared {
+            let factors = factor_radial_tensor(band, 0, 2, 30).unwrap().unwrap();
+            assert_eq!(factors.center, [2., -3.]);
+            assert_eq!(factors.center_drift, [0.5, -2.]);
+        }
+        let refs = sheared.each_ref();
+        assert!(
+            certify_radial_band_cycle(&refs, &[0; 4], 2, 10000, 100)
+                .unwrap()
+                .proven
+        );
+        sheared[1].control_points[2][1][0] = sheared[1].control_points[2][1][0].next_up();
+        assert!(
+            !certify_radial_band_cycle(&sheared.each_ref(), &[0; 4], 2, 10000, 100)
                 .unwrap()
                 .proven
         );
