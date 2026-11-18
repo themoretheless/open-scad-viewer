@@ -8277,3 +8277,37 @@ fn directional_curve_travel_encloses_rotated_rational_circle() {
     assert!(report.bounds[0] <= expected && expected <= report.bounds[1]);
     assert!(directional_travel(&curve, &[0.; 3], 1e-6, 8192).is_err());
 }
+
+#[test]
+fn signed_directional_travel_separates_forward_and_reverse_motion() {
+    use nurbs_core::analysis::curve_measure::directional_travel_by_sign;
+    let curve = nurbs_core::paths::bezier(
+        vec![vec![0., 0.], vec![4., 0.], vec![2., 0.]],
+        None,
+    )
+    .unwrap();
+    let report = directional_travel_by_sign(&curve, &[1., 0.], 1e-7, 4096).unwrap();
+    assert!(report.total.within_tolerance);
+    for (bounds, expected) in [
+        (report.forward_bounds, 8. / 3.),
+        (report.reverse_bounds, 2. / 3.),
+        (report.signed_travel_bounds, 2.),
+    ] {
+        assert!(bounds[0] <= expected && expected <= bounds[1]);
+        assert!(bounds[1] - bounds[0] < 1e-6);
+    }
+    let reversed = directional_travel_by_sign(&curve, &[-1., 0.], 1e-7, 4096).unwrap();
+    assert!(reversed.forward_bounds[0] <= 2. / 3. && 2. / 3. <= reversed.forward_bounds[1]);
+    assert!(reversed.reverse_bounds[0] <= 8. / 3. && 8. / 3. <= reversed.reverse_bounds[1]);
+}
+
+#[test]
+fn signed_directional_travel_gives_zero_reverse_travel_on_monotone_line() {
+    use nurbs_core::analysis::curve_measure::directional_travel_by_sign;
+    let curve = nurbs_core::paths::bezier(vec![vec![2., 2.], vec![5., 6.]], None).unwrap();
+    let report = directional_travel_by_sign(&curve, &[0., 2.], 1e-8, 32).unwrap();
+    assert!(report.total.within_tolerance);
+    assert!(report.forward_bounds[0] <= 4. && 4. <= report.forward_bounds[1]);
+    assert_eq!(report.reverse_bounds[0], 0.);
+    assert!(report.reverse_bounds[1] < 1e-12);
+}
