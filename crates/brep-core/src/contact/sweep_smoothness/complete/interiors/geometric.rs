@@ -628,6 +628,21 @@ mod tests {
             .unwrap().surface.unwrap();
         let [lower, upper] = split_tensor_surface(&opened, Axis::V, 2., 1_000_000)
             .unwrap().parts.unwrap();
+        for band in [&lower, &upper] {
+            let count = band.control_points.len() * band.control_points[0].len();
+            let factors = nurbs_core::surface_injectivity::factor_radial_tensor(band, 0, 2, count)
+                .unwrap().unwrap();
+            assert_eq!(factors.center, [0.; 2]);
+            assert_eq!(factors.height_axis, 2);
+            assert!(factors.angular.periodic && !factors.meridian.periodic);
+            assert!(nurbs_core::surface_injectivity::factor_radial_tensor(band, 0, 2, count - 1)
+                .unwrap().is_none());
+            let mut perturbation = band.clone();
+            let x = &mut perturbation.control_points[2][1][0];
+            *x = x.next_up();
+            assert!(nurbs_core::surface_injectivity::factor_radial_tensor(&perturbation, 0, 2, count)
+                .unwrap().is_none());
+        }
         let make_rim = |s: &Surface| Curve {
             degree: s.degree_u, knots: s.knots_u.clone(),
             control_points: s.control_points.iter().map(|r| r[0].clone()).collect(),
