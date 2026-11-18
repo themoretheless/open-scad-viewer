@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 884,
-  "unallocatedCount": 116,
+  "specifiedCount": 885,
+  "unallocatedCount": 115,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20483,6 +20483,24 @@
       ],
       "remainingQualification": [
         "External and internal spur pairs. Requires a proven tangent and positive active overlap throughout. Off-pitch interference is separate."
+      ]
+    },
+    {
+      "id": "NURBS-0885",
+      "name": "Зазор между окружностями вершин сателлитов с допусками установки осей",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::planet_tip_gap_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-885-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-885-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "External planet tip envelopes only. Overlapping envelopes need a tooth-phase check."
       ]
     }
   ],

@@ -662,3 +662,47 @@ pub fn mounting_window_for_contact_ratio(
     let last = distance(upper.lo)?.lo;
     Ok(pair(I::new(first, last)?))
 }
+
+/// Signed separation between the tip-circle envelopes of two external planets.
+/// Each pin has its own orbit-radius tolerance, measured from the carrier axis.
+/// Supply the smaller included angle in degrees. A positive lower bound proves
+/// separation for any tooth phase; overlapping envelopes need a profile check.
+pub fn planet_tip_gap_bounds(
+    module: f64,
+    teeth: [usize; 2],
+    orbit_radii: [[f64; 2]; 2],
+    separation_degrees: [f64; 2],
+) -> Result<[f64; 2]> {
+    let orbit = |bounds: [f64; 2]| -> Result<I> {
+        let r = I::new(bounds[0], bounds[1])?;
+        check(r.lo > 0., "Expected positive carrier orbit radii")?;
+        Ok(r)
+    };
+    let a = orbit(orbit_radii[0])?;
+    let b = orbit(orbit_radii[1])?;
+    let angle = I::new(separation_degrees[0], separation_degrees[1])?;
+    check(
+        angle.lo >= 0. && angle.hi <= 180.,
+        "Included angle must be between zero and 180 degrees",
+    )?;
+    let half_sine =
+        |deg| -> Result<I> { Ok(trig(pi()?.mul(I::point(deg))?.div(I::point(360.))?)?.0) };
+    let sine = I::new(
+        half_sine(angle.lo)?.lo.max(0.),
+        half_sine(angle.hi)?.hi.min(1.),
+    )?;
+    // Chord squared = (a-b)^2 + 4ab sin^2(theta/2), stable even near coincident pins.
+    let delta = a.sub(b)?;
+    let min_abs = delta.lo.max(-delta.hi).max(0.);
+    let abs = I::new(min_abs, delta.lo.abs().max(delta.hi.abs()))?;
+    let chord = sqrt_positive(
+        abs.mul(abs)?
+            .add(a.mul(b)?.mul(I::point(4.))?.mul(sine)?.mul(sine)?)?,
+    )?;
+    let mut gap = chord;
+    for count in teeth {
+        let gear = derive_gear_parameter_bounds(module, count, 20., module / 4., 0., false)?;
+        gap = gap.sub(I::new(gear.tip_radius[0], gear.tip_radius[1])?)?;
+    }
+    Ok(pair(gap))
+}

@@ -377,3 +377,24 @@ fn inverse_contact_window_brackets_both_limiting_tangent_spans() {
     assert!(window(1., [8, 8], 20., SpurMesh::External, 2.).is_err());
     assert!(window(1., [80, 20], 20., SpurMesh::Internal, 1.).is_err());
 }
+
+#[test]
+fn independent_carrier_pin_tolerances_enclose_planet_envelopes() {
+    use involute::planet_tip_gap_bounds as gap;
+    let b = gap(1., [20, 16], [[30., 31.], [29., 30.5]], [39., 41.]).unwrap();
+    for a in [30., 30.5, 31.] {
+        for r in [29., 30., 30.5] {
+            for deg in [39_f64, 40., 41.] {
+                let t = deg.to_radians();
+                contains(b, (a - r * t.cos()).hypot(r * t.sin()) - 20.);
+            }
+        }
+    }
+    for (deg, expected) in [(0., -18.), (180., 40.)] {
+        let exact = gap(1., [20, 16], [[31.; 2], [29.; 2]], [deg; 2]).unwrap();
+        contains(exact, expected);
+        assert!(exact[1] - exact[0] < 1e-9);
+    }
+    assert!(gap(1., [20, 16], [[0.; 2], [30.; 2]], [40.; 2]).is_err());
+    assert!(gap(1., [20, 16], [[30.; 2]; 2], [40., 181.]).is_err());
+}
