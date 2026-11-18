@@ -542,3 +542,20 @@ fn discovers_shortest_rotational_sector_and_rejects_nonrepeating_outline() {
     assert!(CircularSectorPattern::discover(&outline[..1],0.).unwrap().is_none());
     assert!(CircularSectorPattern::discover(&outline,f64::NAN).is_err());
 }
+
+#[test]
+fn compressed_sector_edit_preserves_regular_tangency_and_permits_corners() {
+    use nurbs_core::{curve::Curve,involute::LosslessSectorPattern};
+    let line = |a:[f64;2],b:[f64;2]| Curve::from_polyline(vec![a.to_vec(),b.to_vec()]).unwrap();
+    let middle = Curve { degree:2, knots:vec![0.,0.,0.,1.,1.,1.], periodic:false,
+        control_points:vec![vec![1.,0.],vec![2.,0.],vec![2.,2.]], weights:vec![1.,0.5,1.] };
+    let mut sector = vec![line([0.,0.],[1.,0.]),middle,line([2.,2.],[0.,0.])];
+    let mut packed = LosslessSectorPattern::encode(&sector,3).unwrap();
+    sector[1].control_points[1][0] = 3.;
+    packed.replace_sector_preserving_g1(0,&sector).unwrap();
+    for pole in [[2.,1e-16],[0.,0.],[1.,0.]] {
+        sector[1].control_points[1] = pole.to_vec();
+        assert!(packed.replace_sector_preserving_g1(0,&sector).is_err());
+        assert_eq!(packed.sector(0).unwrap()[1].control_points[1],vec![3.,0.]);
+    }
+}

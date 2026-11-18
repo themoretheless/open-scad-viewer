@@ -1,0 +1,43 @@
+{
+  "id": "NURBS-0925",
+  "testedBase": "456b9e946242875117a2b215c598c0f8a74f8f4d",
+  "gearCommand": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "gear_profile",
+    "--",
+    "--nocapture"
+  ],
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 488,
+  "scope": [
+    "Verify weighted spline tangent magnitude change and existing corners; refuse tiny transverse displacement, reversal and stationary tangent atomically."
+  ],
+  "logSha256": "b3a62481291b3c8b0dad3188323d1926dd100b6c1719d7efee0f47a6b26fc0ed",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs": "3227d8de8c40e20a6cec2f9ea8a0a6a06c9aabcab3eda202d157f29b0be545c0",
+    "crates/nurbs-core/src/construct/curves/involute.rs": "2dcd0c05fed7322a0c9696d88eeb384a72c5c40808ba0f1885e3879ee0502535",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "53da4c240dcf1e912dcf643d7b02df32bbc5339807119054c468ddc50a3f66a3"
+  }
+}

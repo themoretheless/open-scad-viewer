@@ -216,27 +216,47 @@ impl LosslessSectorPattern {
     /// including both neighboring sectors or the self seam of a one-sector wire.
     /// This local positional check does not establish tangency or wire simplicity.
     pub fn replace_sector_with_closed_joins(&mut self, index: usize, curves: &[Curve]) -> Result<()> {
+        self.replace_joined_sector(index, curves, false)
+    }
+
+    /// Preserve every affected regular, exactly G1 join of the original profile.
+    /// Positive rational weights make each clamped endpoint tangent a positive
+    /// multiple of its oriented endpoint control chord.
+    pub fn replace_sector_preserving_g1(&mut self, index: usize, curves: &[Curve]) -> Result<()> {
+        self.replace_joined_sector(index, curves, true)
+    }
+
+    fn replace_joined_sector(&mut self, index: usize, curves: &[Curve], preserve_g1: bool) -> Result<()> {
         let count = self.pattern.sector_count;
         check(index < count && curves.len() == self.pattern.pieces.len(), "Expected a complete sector")?;
         for curve in curves { curve.validate()?; }
-        let join = |a: &Curve, b: &Curve| -> Result<()> {
+        let original = if preserve_g1 { self.sector(index)? } else { Vec::new() };
+        let join = |a: &Curve, b: &Curve, old: Option<(&Curve, &Curve)>| -> Result<()> {
             let last = a.control_points.len();
             let end = a.knots[last];
             let start = b.knots[b.degree];
             check(!a.periodic && !b.periodic && a.knots[last-1] < end &&
                 a.knots[last..].iter().all(|&k| k == end) && b.knots[b.degree+1] > start &&
                 b.knots[..=b.degree].iter().all(|&k| k == start), "Join requires clamped endpoints")?;
-            check(a.control_points.last() == b.control_points.first(), "Replacement opens a profile join")
+            check(a.control_points.last() == b.control_points.first(), "Replacement opens a profile join")?;
+            if let Some((left, right)) = old {
+                if left.control_points.last() == right.control_points.first() && regular_tangent_join(left,right) {
+                    check(regular_tangent_join(a,b), "Replacement breaks a regular G1 profile join")?;
+                }
+            }
+            Ok(())
         };
-        for pair in curves.windows(2) { join(&pair[0], &pair[1])?; }
+        for (i,pair) in curves.windows(2).enumerate() {
+            join(&pair[0], &pair[1], preserve_g1.then(|| (&original[i], &original[i+1])))?;
+        }
         let last = curves.len() - 1;
         if count == 1 {
-            join(&curves[last], &curves[0])?;
+            join(&curves[last], &curves[0], preserve_g1.then(|| (&original[last], &original[0])))?;
         } else {
             let previous = self.sector((index + count - 1) % count)?;
             let next = self.sector((index + 1) % count)?;
-            join(&previous[last], &curves[0])?;
-            join(&curves[last], &next[0])?;
+            join(&previous[last], &curves[0], preserve_g1.then(|| (&previous[last], &original[0])))?;
+            join(&curves[last], &next[0], preserve_g1.then(|| (&original[last], &next[0])))?;
         }
         self.replace_sector(index, curves)
     }
@@ -282,4 +302,20 @@ impl LosslessSectorPattern {
         }
         Ok(sector)
     }
+}
+
+fn regular_tangent_join(left: &Curve, right: &Curve) -> bool {
+    use num_rational::BigRational;
+    use num_traits::{Signed, Zero};
+    let difference = |a: &[f64], b: &[f64]| a.iter().zip(b).map(|(&x,&y)|
+        BigRational::from_float(x).expect("validated coordinate") -
+        BigRational::from_float(y).expect("validated coordinate")
+    ).collect::<Vec<_>>();
+    let poles = &left.control_points;
+    if poles.len() < 2 || right.control_points.len() < 2 { return false; }
+    let a = difference(&poles[poles.len()-1], &poles[poles.len()-2]);
+    let b = difference(&right.control_points[1], &right.control_points[0]);
+    let Some(k) = a.iter().position(|v| !v.is_zero()) else { return false; };
+    a.len() == b.len() && (&a[k] * &b[k]).is_positive() &&
+        a.iter().zip(&b).all(|(x,y)| x * &b[k] == y * &a[k])
 }
