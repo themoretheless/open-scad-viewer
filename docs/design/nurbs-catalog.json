@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 760,
-  "unallocatedCount": 240,
+  "specifiedCount": 761,
+  "unallocatedCount": 239,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18132,6 +18132,25 @@
       "remainingQualification": [
         "Refine minimum signed workspace clearance in model units and identify a witnessing plane.",
         "Check normalized clearance against nonunit planes, the limiting plane and radius break witness, and a certified coarse enclosure.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0761",
+      "name": "Проверка выпуклого инструмента с переменным скруглением в рабочей области",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::partition_profiled_rounded_hull_workspace",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-761-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-761-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify workspace containment for a fixed vertex hull rounded by a profiled radius.",
+        "Check overtravel requiring both hull support and changing radius, plane residual bounds and empty hull refusal.",
         "WASM and application integration are separate."
       ]
     }

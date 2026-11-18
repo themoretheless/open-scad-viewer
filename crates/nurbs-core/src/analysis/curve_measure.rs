@@ -1910,12 +1910,31 @@ pub fn partition_curve_rounded_hull_workspace(
     max_plane_cells: usize,
 ) -> Result<WorkspacePartition> {
     check(radius.is_finite() && radius >= 0., "Tool radius must be finite and nonnegative")?;
-    check(!vertex_offsets.is_empty(), "Tool hull requires at least one vertex")?;
     check(!planes.is_empty(), "Workspace requires at least one half-space")?;
-    if vertex_offsets.len() > 1_000_000 / planes.len() {
+    curve.validate()?;
+    let offsets = prepare_workspace_hull(curve, vertex_offsets, planes.len())?;
+    partition_curve_workspace_with_support(
+        curve, interval, planes, parameter_tolerance, max_plane_cells,
+        |normal| {
+            let support = hull_plane_support(&offsets, normal)?;
+            if radius == 0. {
+                Ok(Some(support))
+            } else {
+                Ok(Some(support.add(norm(normal)?.mul(Interval::point(radius))?)?))
+            }
+        },
+    )
+}
+
+fn prepare_workspace_hull(
+    curve: &Curve,
+    vertex_offsets: &[&[f64]],
+    plane_count: usize,
+) -> Result<Vec<Vec<Interval>>> {
+    check(!vertex_offsets.is_empty(), "Tool hull requires at least one vertex")?;
+    if vertex_offsets.len() > 1_000_000 / plane_count {
         return Err(resource("Tool hull support preprocessing exceeds one million vertex/plane pairs"));
     }
-    curve.validate()?;
     let dimension = curve.control_points[0].len();
     let mut offsets = Vec::with_capacity(vertex_offsets.len());
     for &offset in vertex_offsets {
@@ -1925,24 +1944,18 @@ pub fn partition_curve_rounded_hull_workspace(
         )?;
         offsets.push(offset.iter().copied().map(Interval::point).collect::<Vec<_>>());
     }
-    partition_curve_workspace_with_support(
-        curve, interval, planes, parameter_tolerance, max_plane_cells,
-        |normal| {
-            let mut lo = f64::NEG_INFINITY;
-            let mut hi = f64::NEG_INFINITY;
-            for offset in &offsets {
-                let projected = project_jet(offset, normal)?;
-                lo = lo.max(projected.lo);
-                hi = hi.max(projected.hi);
-            }
-            let support = Interval::new(lo, hi)?;
-            if radius == 0. {
-                Ok(Some(support))
-            } else {
-                Ok(Some(support.add(norm(normal)?.mul(Interval::point(radius))?)?))
-            }
-        },
-    )
+    Ok(offsets)
+}
+
+fn hull_plane_support(offsets: &[Vec<Interval>], normal: &[Interval]) -> Result<Interval> {
+    let mut lo = f64::NEG_INFINITY;
+    let mut hi = f64::NEG_INFINITY;
+    for offset in offsets {
+        let projected = project_jet(offset, normal)?;
+        lo = lo.max(projected.lo);
+        hi = hi.max(projected.hi);
+    }
+    Interval::new(lo, hi)
 }
 
 fn partition_curve_workspace_with_support(
@@ -1994,6 +2007,38 @@ pub fn partition_profiled_radius_convex_workspace(
     parameter_tolerance: f64,
     max_plane_cells: usize,
 ) -> Result<WorkspacePartition> {
+    partition_profiled_workspace_with_support(
+        curve, radius_profile, planes, parameter_tolerance, max_plane_cells, |_| Ok(None),
+    )
+}
+
+/// Check a translating vertex hull rounded by a piecewise-linear radius.
+/// The hull's vertex offsets retain their orientation along the curve.
+pub fn partition_profiled_rounded_hull_workspace(
+    curve: &Curve,
+    radius_profile: &[(f64, f64)],
+    planes: &[WorkspaceHalfSpace<'_>],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspacePartition> {
+    check(!planes.is_empty(), "Workspace requires at least one half-space")?;
+    curve.validate()?;
+    let offsets = prepare_workspace_hull(curve, vertex_offsets, planes.len())?;
+    partition_profiled_workspace_with_support(
+        curve, radius_profile, planes, parameter_tolerance, max_plane_cells,
+        |normal| hull_plane_support(&offsets, normal).map(Some),
+    )
+}
+
+fn partition_profiled_workspace_with_support(
+    curve: &Curve,
+    radius_profile: &[(f64, f64)],
+    planes: &[WorkspaceHalfSpace<'_>],
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+    support: impl Fn(&[Interval]) -> Result<Option<Interval>>,
+) -> Result<WorkspacePartition> {
     validate(parameter_tolerance, max_plane_cells)?;
     check(!planes.is_empty(), "Workspace requires at least one half-space")?;
     let max_cells = max_plane_cells / planes.len();
@@ -2001,15 +2046,19 @@ pub fn partition_profiled_radius_convex_workspace(
     let dimension = curve.control_points[0].len();
     let planes = prepare_workspace_planes(planes, dimension)?.into_iter().map(|(normal, offset)| {
         let length = norm(&normal)?;
-        Ok((normal, offset, length))
+        let hull = support(&normal)?;
+        Ok((normal, offset, length, hull))
     }).collect::<Result<Vec<_>>>()?;
     let (cells, work_cells) = partition_enclosed_cells(
         initial, parameter_tolerance, max_cells,
         |[span, profile], domain| {
             let radius = profiles[profile](domain)?;
             let jets = curve_jets::enclose(curve, span, domain)?;
-            let plane_residuals = planes.iter().map(|(normal, offset, length)| {
-                let residual = project_jet(&jets[0], normal)?.sub(*offset)?.add(length.mul(radius)?)?;
+            let plane_residuals = planes.iter().map(|(normal, offset, length, hull)| {
+                let mut residual = project_jet(&jets[0], normal)?.sub(*offset)?.add(length.mul(radius)?)?;
+                if let Some(hull) = hull {
+                    residual = residual.add(*hull)?;
+                }
                 Ok([residual.lo, residual.hi])
             }).collect::<Result<Vec<_>>>()?;
             let status = workspace_residual_status(&plane_residuals);

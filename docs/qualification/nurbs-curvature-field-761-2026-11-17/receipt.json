@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0761",
+  "testedBase": "8aa8d468d69757e31effd621e082f2e6dedc2a2c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 386,
+  "scope": [
+    "Classify workspace containment for a fixed vertex hull rounded by a profiled radius.",
+    "Check overtravel requiring both hull support and changing radius, plane residual bounds and empty hull refusal."
+  ],
+  "logSha256": "44c2b9fe277a756b876899e1041b0414ef0685d67e9b15defe069ae91ee845c5",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "cc56b439903c8b6b55a66ed81f3aa8a2ad57713b35f130b16f9db6e18a3ce9a0",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "e2d932a9f1254782d49ed144c7a03264c6e4bdcc42356ad1e85a7e612c541bad"
+  }
+}

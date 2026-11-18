@@ -11627,3 +11627,35 @@ fn minimum_profiled_workspace_clearance_normalizes_the_limiting_plane() {
     let [lo, hi] = report.gap_bounds;
     assert!(lo <= -0.5 && -0.5 <= hi && hi - lo <= 1e-5);
 }
+
+#[test]
+fn profiled_rounded_hull_workspace_combines_vertex_support_and_radius() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace, partition_profiled_radius_convex_workspace,
+        partition_profiled_rounded_hull_workspace,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![4., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let profile = [(0., 0.), (0.5, 3.), (1., 0.)];
+    let planes = [WorkspaceHalfSpace { normal: &[2., 0.], offset: 11. }];
+    let offsets = [&[0., 0.][..], &[1., 2.][..], &[-1., 0.][..]];
+    let ball = partition_profiled_radius_convex_workspace(&curve, &profile, &planes, 0.01, 128).unwrap();
+    assert!(ball.cells.iter().all(|cell| cell.status == Status::Within));
+    let report = partition_profiled_rounded_hull_workspace(
+        &curve, &profile, &planes, &offsets, 0.01, 128,
+    ).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().any(|cell| {
+        let [lo, hi] = cell.plane_residuals[0];
+        cell.parameter_interval[0] == 0.5 && cell.status == Status::Exceeds && lo <= 1. && hi >= 1.
+    }));
+    assert!(partition_profiled_rounded_hull_workspace(
+        &curve, &profile, &planes, &[], 0.01, 128,
+    ).is_err());
+}
