@@ -394,6 +394,35 @@ fn branch_motion_moves_two_linked_parts_and_preserves_external_sibling() {
         }
     }
     assert!(mass.static_unbalance([0.; 3], [0.; 3]).is_err());
+    let sites = [
+        [[-12., 0., 0.], [0., -6., 0.]],
+        [[0., -12., 0.], [-6., 0., 0.]],
+    ];
+    let loads = mass
+        .balance_at_fixed_sites([5., 4., 0.], [0., 0., 1.], [0., 12.], sites)
+        .unwrap();
+    for (pair, expected) in loads.iter().zip([[0.027, 0.072], [0.012, 0.018]]) {
+        for (actual, wanted) in pair.iter().zip(expected) {
+            assert!((actual - wanted).abs() < 1e-10);
+        }
+    }
+    let oblique = [[[-6., -3., 0.], [0., -8., 0.]]; 2];
+    let split = mass
+        .balance_at_fixed_sites([5., 4., 0.], [0., 0., 1.], [0., 12.], oblique)
+        .unwrap();
+    for (pair, expected) in split.iter().zip([[0.054, 0.03375], [0.018, 0.01125]]) {
+        for (actual, wanted) in pair.iter().zip(expected) {
+            assert!((actual - wanted).abs() < 1e-10);
+        }
+    }
+    for invalid in [[12., 0., 0.], [0., -2., 0.], [0., 0., 1.]] {
+        let mut bad = sites;
+        bad[0][0] = invalid;
+        assert!(
+            mass.balance_at_fixed_sites([5., 4., 0.], [0., 0., 1.], [0., 12.], bad)
+                .is_err()
+        );
+    }
     let corrections = mass
         .two_plane_balance_corrections([5., 4., 0.], [0., 0., 1.], [0., 12.])
         .unwrap();

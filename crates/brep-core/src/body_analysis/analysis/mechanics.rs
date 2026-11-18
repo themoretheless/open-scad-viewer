@@ -168,6 +168,48 @@ impl AssemblyMass {
         }
         Ok([first, second])
     }
+
+    /// Added masses in kg for two fixed sites on each correction plane.
+    /// Each site is a radial offset in mm from the axis in world coordinates.
+    /// Rejects unresolved, non-transverse or negative-mass solutions.
+    pub fn balance_at_fixed_sites(
+        &self,
+        point: [f64; 3],
+        direction: [f64; 3],
+        planes: [f64; 2],
+        sites: [[[f64; 3]; 2]; 2],
+    ) -> Result<[[f64; 2]; 2]> {
+        let axis = unit_axis(point, direction)?;
+        let corrections = self.two_plane_balance_corrections(point, direction, planes)?;
+        let mut masses = [[0.; 2]; 2];
+        for ((sites, correction), result) in sites.into_iter().zip(corrections).zip(&mut masses) {
+            let radii = sites.map(|r| r[0].hypot(r[1]).hypot(r[2]));
+            if radii.iter().any(|v| !v.is_finite() || *v == 0.) {
+                return Err(indeterminate("Invalid balance site radius"));
+            }
+            let [a, b] = std::array::from_fn(|i| sites[i].map(|v| v / radii[i]));
+            let angular_tol = 64. * f64::EPSILON;
+            let determinant = dot(axis, cross(a, b));
+            if dot(axis, a).abs() > angular_tol
+                || dot(axis, b).abs() > angular_tol
+                || determinant.abs() <= angular_tol
+            {
+                return Err(indeterminate(
+                    "Balance sites require two independent transverse directions",
+                ));
+            }
+            *result = [
+                dot(axis, cross(correction, b)) / determinant / radii[0],
+                dot(axis, cross(a, correction)) / determinant / radii[1],
+            ];
+            if result.iter().any(|v| !v.is_finite() || *v < 0.) {
+                return Err(indeterminate(
+                    "Balance sites cannot supply the requested correction with positive masses",
+                ));
+            }
+        }
+        Ok(masses)
+    }
 }
 
 fn unit_axis(point: [f64; 3], axis: [f64; 3]) -> Result<[f64; 3]> {
