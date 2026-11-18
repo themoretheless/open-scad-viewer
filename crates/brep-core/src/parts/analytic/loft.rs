@@ -322,16 +322,23 @@ fn correspond_sections(sections: &[Vec<P>]) -> Vec<Vec<P>> {
     }
     out
 }
-/// Matching vertices define a straight ruling between each adjacent section.
-/// Subdivided Bernstein support bounds admit convex intermediate profiles.
-/// This bounded numerical admission is sufficient, not a certified or complete
-/// test of all valid correspondences. Surface joins across stations are C0.
+/// Automatically match convex section vertices by winding and nearest cyclic shift.
 pub fn ruled_loft(sections: &[Vec<P>]) -> Result<Model> {
     let comparable = sections.len() >= 2
         && !sections[0].is_empty()
         && sections.iter().all(|s| s.len() == sections[0].len());
-    let corresponded = if comparable { correspond_sections(sections) } else { sections.to_vec() };
-    let sections = corresponded.as_slice();
+    if comparable {
+        ruled_loft_indexed(&correspond_sections(sections))
+    } else {
+        ruled_loft_indexed(sections)
+    }
+}
+
+/// Join the authored vertex pairs with straight rulings. Subdivided Bernstein
+/// support bounds admit convex intermediate profiles. This bounded numerical
+/// admission is sufficient and may refuse some valid correspondences.
+/// Surface joins across stations are C0.
+pub fn ruled_loft_indexed(sections: &[Vec<P>]) -> Result<Model> {
     crate::operations::admit_loft_sections(sections)?;
     let count = sections[0].len();
     if (sections.len() - 1) * count + 2 > 256 {
@@ -516,7 +523,7 @@ mod tests {
                 .iter()
                 .map(|p| [c * p[0] - s * p[1], s * p[0] + c * p[1], 3.])
                 .collect();
-            ruled_loft(&[base.clone(), top])
+            ruled_loft_indexed(&[base.clone(), top])
                 .unwrap()
                 .validate()
                 .unwrap();
@@ -548,6 +555,8 @@ mod tests {
         let shifted: Vec<P> = base.iter().map(|p| [-p[0], -p[1], 3.]).collect();
         let aligned = correspond_sections(&[base.clone(), shifted.clone()]);
         assert_eq!(aligned[1], base.iter().map(|p| [p[0], p[1], 3.]).collect::<Vec<_>>());
+        let error = ruled_loft_indexed(&[base.clone(), shifted.clone()]).unwrap_err();
+        assert!(error.message.contains("intermediate"));
         assert_eq!(ruled_loft(&[base, shifted]).unwrap().validate().unwrap().boundary_edge_count, 0);
     }
 }

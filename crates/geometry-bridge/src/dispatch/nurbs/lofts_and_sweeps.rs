@@ -61,7 +61,7 @@ pub(super) fn handle(op: &str, v: Value) -> Result<Value> {
             &field::<Vec<Vec<Vec<Curve>>>>(&v, "sections")?,
         )?),
         "brep_nurbs_progressive_profile_body" => handle_progressive_profile_body(&v),
-        "brep_nurbs_ruled_loft" => encode(brep_core::ruled_loft(
+        "brep_nurbs_ruled_loft" => encode(brep_core::analytic::ruled_loft_indexed(
             &field::<Vec<Vec<[f64; 3]>>>(&v, "sections")?,
         )?),
         _ => unreachable!("lofts_and_sweeps admits only its OPS"),
