@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0686",
+  "testedBase": "a54012283888e7449f94fe6a01a49d07f1bf9d90",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 294,
+  "scope": [
+    "Compare peak absolute speed, acceleration and jerk with inclusive limits in the original parameter clock.",
+    "Check original-clock units, violations of each independent limit, a coarse unresolved speed bound, recovery with refinement, and invalid limits."
+  ],
+  "logSha256": "bc93d10ec6490cdb350ac9c9c65fb4e7563668793a7b946d9c16fe1fafeecfea",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "5d9116c9459e8c46b54386d15378e3d7e8c68e1a6ff080972557baaacdd5a4d0",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "87140173d3ee446cfa063561438b30bb9c4ca7bb028c93f9a7079dc21c130239"
+  }
+}

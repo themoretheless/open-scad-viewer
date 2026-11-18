@@ -8673,3 +8673,61 @@ fn locate_directional_peak_jerk_keeps_rational_window_boundary() {
         locate_directional_peak_jerk(&curve, [3., 4.], &[1., 0.], 1e-5, f64::NAN, 256).is_err()
     );
 }
+
+#[test]
+fn axial_motion_limits_check_each_derivative_in_the_original_clock() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus, check_directional_motion_limits,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 8.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let check = |speed, acceleration, jerk| {
+        check_directional_motion_limits(
+            &curve, [2., 4.], &[-2., 0.],
+            DirectionalMotionLimits { speed, acceleration, jerk }, [1e-6; 3], 32,
+        )
+    };
+    let report = check(13., 13., 7.).unwrap();
+    assert_eq!(report.status, DirectionalMotionStatus::Within);
+    for ([lo, hi], exact) in [report.speed.bounds, report.acceleration.bounds, report.jerk.bounds]
+        .into_iter()
+        .zip([12., 12., 6.])
+    {
+        assert!(lo <= exact && exact <= hi);
+    }
+    for (s, a, j) in [(11., 13., 7.), (13., 11., 7.), (13., 13., 5.)] {
+        assert_eq!(check(s, a, j).unwrap().status, DirectionalMotionStatus::Exceeds);
+    }
+    assert!(check(13., 13., f64::NAN).is_err());
+}
+
+#[test]
+fn axial_motion_limits_preserve_undetermined_status_at_coarse_budget() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus, check_directional_motion_limits,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+        control_points: [0., 0., 1., 1.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let check = |cells| {
+        check_directional_motion_limits(
+            &curve, [2., 6.], &[1., 0.],
+            DirectionalMotionLimits { speed: 0.5, acceleration: 1., jerk: 1. },
+            [1e-5; 3], cells,
+        )
+        .unwrap()
+    };
+    let coarse = check(1);
+    assert_eq!(coarse.status, DirectionalMotionStatus::Undetermined);
+    assert_eq!([coarse.speed.cells, coarse.acceleration.cells, coarse.jerk.cells], [1; 3]);
+    assert_eq!(check(128).status, DirectionalMotionStatus::Within);
+}

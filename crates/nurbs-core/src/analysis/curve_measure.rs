@@ -1059,6 +1059,66 @@ pub fn locate_directional_peak_jerk(
     })
 }
 
+/// Inclusive bounds on absolute derivatives in the original parameter clock.
+#[derive(Clone, Copy, Debug)]
+pub struct DirectionalMotionLimits {
+    pub speed: f64,
+    pub acceleration: f64,
+    pub jerk: f64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DirectionalMotionStatus {
+    Within,
+    Exceeds,
+    Undetermined,
+}
+
+#[derive(Clone, Debug)]
+pub struct DirectionalMotionReport {
+    pub speed: DirectionalPeakSpeedReport,
+    pub acceleration: DirectionalPeakAccelerationReport,
+    pub jerk: DirectionalPeakJerkReport,
+    pub status: DirectionalMotionStatus,
+}
+
+/// Check all three inclusive limits, using a separate tolerance and cell
+/// budget per derivative. Tolerances use the units of the corresponding limit.
+pub fn check_directional_motion_limits(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    limits: DirectionalMotionLimits,
+    tolerances: [f64; 3],
+    max_cells_per_derivative: usize,
+) -> Result<DirectionalMotionReport> {
+    let limits = [limits.speed, limits.acceleration, limits.jerk];
+    check(
+        limits.iter().all(|limit| limit.is_finite() && *limit >= 0.),
+        "Motion limits must be finite and nonnegative",
+    )?;
+    for tolerance in tolerances {
+        validate(tolerance, max_cells_per_derivative)?;
+    }
+    let [speed_tol, acceleration_tol, jerk_tol] = tolerances;
+    let speed =
+        directional_peak_speed(curve, interval, direction, speed_tol, max_cells_per_derivative)?;
+    let acceleration = directional_peak_acceleration(
+        curve, interval, direction, acceleration_tol, max_cells_per_derivative,
+    )?;
+    let jerk =
+        directional_peak_jerk(curve, interval, direction, jerk_tol, max_cells_per_derivative)?;
+    let bounds = [speed.bounds, acceleration.bounds, jerk.bounds];
+    let status = if bounds.iter().zip(limits).any(|([lo, _], limit)| *lo > limit) {
+        DirectionalMotionStatus::Exceeds
+    } else if bounds.iter().zip(limits).all(|([_, hi], limit)| *hi <= limit) {
+        DirectionalMotionStatus::Within
+    } else {
+        DirectionalMotionStatus::Undetermined
+    };
+    Ok(DirectionalMotionReport { speed, acceleration, jerk, status })
+}
+
 fn measure_directional_derivative_peak(
     curve: &Curve,
     interval: [f64; 2],

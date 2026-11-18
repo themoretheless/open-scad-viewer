@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 685,
-  "unallocatedCount": 315,
+  "specifiedCount": 686,
+  "unallocatedCount": 314,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16707,6 +16707,25 @@
       "remainingQualification": [
         "Enclose every possible source parameter that attains the peak absolute axial jerk.",
         "Check the interior extremum of a quintic, the clipped endpoint of a rational span, coarse budget coverage, and invalid parameter tolerance.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0686",
+      "name": "Сертифицированная проверка осевых ограничений движения NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::check_directional_motion_limits",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-686-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-686-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Compare peak absolute speed, acceleration and jerk with inclusive limits in the original parameter clock.",
+        "Check original-clock units, violations of each independent limit, a coarse unresolved speed bound, recovery with refinement, and invalid limits.",
         "WASM and application integration are separate."
       ]
     }
