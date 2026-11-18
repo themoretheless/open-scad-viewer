@@ -71,7 +71,7 @@ pub(super) fn verify(
         || c.control_points.len() > 4096
         || s.degree_u > 32
         || s.degree_v > 32
-        || c.periodic
+        || (c.periodic && (cr != c.domain() || !(s.periodic_u || s.periodic_v)))
         || p.periodic
         || !(1..=5).contains(&p.degree)
         || count > 4096
@@ -126,6 +126,45 @@ pub(super) fn verify(
             return Ok(None);
         }
         affine_work += proof.work_used;
+    }
+    if c.periodic {
+        // The affine-clock proof above binds these exact active endpoints
+        // to the original UV carrier. Use the periodic trace owner on the
+        // complete world clock rather than extracting a nonperiodic strip.
+        let q = |v: f64| Q::from_float(v).unwrap();
+        let [lo, hi] = pd.map(q);
+        let active = |t: f64| {
+            let f = (q(t) - &lo) / (&hi - &lo);
+            a.iter()
+                .zip(z)
+                .map(|(&a, &z)| exact_float(q(a) + &f * (q(z) - q(a))))
+                .collect::<Option<Vec<_>>>()
+        };
+        let (Some(start), Some(end)) = (active(pr[0]), active(pr[1])) else {
+            return Ok(None);
+        };
+        let side = Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 1.],
+            control_points: vec![start, end],
+            weights: vec![1.; 2],
+            periodic: false,
+        };
+        let used = affine_work;
+        return super::bspline_trace::verify_active(
+            c,
+            &side,
+            s,
+            reversed,
+            max_work - used,
+            Some((p, pr)),
+        )
+        .map(|decision| {
+            decision.map(|mut proof| {
+                proof.work_used += used;
+                proof
+            })
+        });
     }
     let counts = [s.control_points.len(), s.control_points[0].len()];
     let degrees = [s.degree_u, s.degree_v];

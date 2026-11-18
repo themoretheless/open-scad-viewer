@@ -400,6 +400,40 @@ mod tests {
         assert!(!short.g2_certified && short.periodic_edge_ids.is_empty());
         assert_eq!(short.unresolved_edges, [0, 1]);
 
+        let mut trimmed = model.clone();
+        let range = trimmed.edges[1].curve.domain();
+        let coedge = &mut trimmed.loops[0].coedges[1];
+        *coedge = crate::Coedge::new(1, false, crate::Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 4., 4., 4.],
+            control_points: vec![vec![4., -4.], vec![4., 0.], vec![4., 12.]],
+            weights: vec![1., 2., 3.],
+            periodic: false,
+        }).with_trim(brep_topology::CoedgeTrim {
+            curve_parameter: range,
+            pcurve_parameter: [1., 2.],
+            periodic_lift: [[1, 0], [1, 1]],
+        }).unwrap();
+        trimmed.validate().unwrap();
+        let active = super::super::super::inspect(&trimmed, limits).unwrap();
+        assert!(active.g2_certified && active.parameter_work > 0,
+            "unresolved={:?} agreement={:?}", active.unresolved_edges,
+            active.edge_correspondence.as_ref().map(|r| (r.all_equal, r.all_joins_exact)));
+        assert_eq!(active.periodic_edge_ids, [0, 1]);
+        let short = super::super::super::inspect(&trimmed, super::super::super::Limits {
+            exact_work: active.exact_work - 1, ..limits
+        }).unwrap();
+        assert!(!short.g2_certified);
+        use super::super::super::classified;
+        let classified = classified::inspect(
+            &trimmed, &[classified::Class::G1, classified::Class::G2],
+            classified::Limits {
+                incidence_steps: 100, agreement_work: limits.agreement_work,
+                regularity_cells: limits.regularity_cells, exact_work: limits.exact_work,
+            },
+        ).unwrap();
+        assert!(classified.certified, "{}", classified.reason);
+
         let coedge = &mut model.loops[0].coedges[0];
         *coedge = coedge
             .clone()

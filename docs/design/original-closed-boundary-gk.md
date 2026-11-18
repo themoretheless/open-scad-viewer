@@ -245,10 +245,13 @@ restriction, while the identity is checked against the original basis.
 Partial world intervals remain diagnostic windows.
 
 The complete G1/G2 and classified seam audits can recover a full natural
-side from the active interval of a rational UV carrier on a nonperiodic
-chart. The ordered UV traversal proves side coverage, while exact
-world-edge agreement binds that traversal to the authored seam. Side
-recovery and any chart reversal share the seam work allowance.
+side from the active interval of a rational UV carrier. On a periodic
+chart, exact endpoints must be on the native sides with matching authored
+sheet indices. A complete periodic world edge uses the original periodic
+trace proof after exact recovery of the active affine UV clock. Ordered UV
+traversal proves side coverage, and exact world-edge agreement binds it
+to the authored seam. Side recovery and chart reversal share the seam
+work allowance.
 
 The common boundary can be an authored chain of edges. The audit checks
 that both faces cover the complete natural rectangle, with exact

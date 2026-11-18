@@ -21,7 +21,7 @@ pub(super) fn full_side(
             return (Some(side), 0);
         }
     }
-    if surface.periodic_u || surface.periodic_v || budget == 0 {
+    if budget == 0 {
         return (None, 0);
     }
     let mut work = 0;
@@ -34,6 +34,18 @@ pub(super) fn full_side(
         use super::super::{Axis, boundary_from_endpoints};
         let label = boundary_from_endpoints(surface, &a, &b, Axis::Profile)
             .or_else(|| boundary_from_endpoints(surface, &a, &b, Axis::Station))?;
+        if let Some(trim) = trim {
+            let high = [
+                surface.knots_u[surface.control_points.len()],
+                surface.knots_v[surface.control_points[0].len()],
+            ];
+            let periodic = [surface.periodic_u, surface.periodic_v];
+            let lift =
+                [a, b].map(|p| std::array::from_fn(|i| i32::from(periodic[i] && p[i] == high[i])));
+            if trim.periodic_lift != lift {
+                return None;
+            }
+        }
         let free = usize::from(label.starts_with('u'));
         Some((label, (a[free] < b[free]) != coedge.reversed))
     });

@@ -352,7 +352,12 @@ fn natural_wire(
     let corners = [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
     let segments = wire
         .iter()
-        .map(|c| natural_segment(c, cells, limit))
+        .map(|c| {
+            if c.trim().is_some_and(|t| t.periodic_lift != [[0; 2]; 2]) {
+                return None;
+            }
+            natural_segment(c, cells, limit)
+        })
         .collect::<Option<Vec<_>>>()?;
     let first = segments.iter().position(|p| p[0] == corners[0])?;
     let mut side = 0;

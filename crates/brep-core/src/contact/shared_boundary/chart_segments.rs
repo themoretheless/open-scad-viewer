@@ -65,9 +65,6 @@ pub(crate) fn natural_segment(
     let Some(trim) = c.trim() else {
         return Some([a, b]);
     };
-    if trim.periodic_lift != [[0; 2]; 2] {
-        return None;
-    }
     charge(cells, limit, degree * degree)?;
     let [a, b] = trim.pcurve_parameter;
     Some([exact_side_point(p, a)?, exact_side_point(p, b)?])
