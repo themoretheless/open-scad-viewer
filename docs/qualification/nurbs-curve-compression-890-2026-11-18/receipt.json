@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0890",
+  "testedBase": "5b65132f65a9e854dbf600ee7e549ceaac9693d1",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_degree_reduction_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 456,
+  "scope": [
+    "Anchor first orientation, reflect reversed rational segment knots exactly and reject ambiguity or unrepresentable reflection."
+  ],
+  "logSha256": "6e530667eb9a0f75bf9a1b018c9038e7297b15b71080b731754c36d9235aa5ab",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "4f475d115fb1b6b361e026d7d2320d54861d10541cb3f933381e4d6733e98b91",
+    "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs": "2288c8504eacb909dc0b724a13afa48c2cabf8415c72ca55551e41ba76a17f48",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "f35d374628f67bb0d9927a3369d0986f9717531f5770cdc2351002036a628787"
+  }
+}

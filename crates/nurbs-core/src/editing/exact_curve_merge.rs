@@ -1656,3 +1656,53 @@ pub fn compress_mixed_degree_chain(sources: &[Curve], max_work: u64) -> Result<G
     if !compressed.completed { return Ok(exhausted(used)); }
     Ok(GaugeMergeReport { curve: Some(compressed.curve), work_used: used, refusal: None })
 }
+
+/// Keep the first segment's orientation and the supplied segment order.
+/// Orient each subsequent open segment by its unique matching endpoint,
+/// reflecting its absolute knot interval exactly when necessary. Refuses
+/// ambiguous joins and reflected knots that cannot be stored in binary64.
+pub fn orient_and_compress_chain(sources: &[Curve], max_work: u64) -> Result<GaugeMergeReport> {
+    use super::{rational_edit::Work, rational_factor::Refusal as Exact};
+    crate::check((2..=256).contains(&sources.len()), "Expected 2..=256 curve segments")?;
+    crate::check((1..=cad_predicates::MAX_WORK).contains(&max_work), "Invalid orientation work limit")?;
+    for curve in sources { curve.validate()?; }
+    let mut work = Work { used: 0, limit: max_work };
+    let mut oriented = vec![sources[0].clone()];
+    for next in &sources[1..] {
+        let end = oriented.last().unwrap().control_points.last();
+        let forward = next.control_points.first() == end;
+        let backward = next.control_points.last() == end;
+        crate::check(!(forward && backward), "Both endpoints match; segment orientation is ambiguous")?;
+        if !forward && !backward {
+            return Ok(GaugeMergeReport { curve: None, work_used: work.used, refusal: Some(GaugeMergeRefusal::Join(Refusal::SeamMismatch)) });
+        }
+        let mut curve = next.clone();
+        if backward {
+            let mut reflect = || -> std::result::Result<(), Exact> {
+                let [a,b] = curve.domain();
+                let left = work.lift(a)?;
+                let right = work.lift(b)?;
+                let sum = work.op(&left,&right,|x,y| x+y)?;
+                for knot in &mut curve.knots {
+                    let old = work.lift(*knot)?;
+                    let new = work.op(&sum,&old,|x,y| x-y)?;
+                    *knot = work.float(&new)?;
+                }
+                Ok(())
+            };
+            if let Err(reason) = reflect() {
+                return Ok(GaugeMergeReport { curve: None, work_used: work.used, refusal: Some(GaugeMergeRefusal::Exact(reason)) });
+            }
+            curve.knots.reverse();
+            curve.weights.reverse();
+            curve.control_points.reverse();
+        }
+        oriented.push(curve);
+    }
+    if work.used == max_work {
+        return Ok(GaugeMergeReport {curve: None, work_used: work.used, refusal: Some(GaugeMergeRefusal::Exact(Exact::ResourceLimit))});
+    }
+    let mut report = compress_mixed_degree_chain(&oriented, max_work-work.used)?;
+    report.work_used += work.used;
+    Ok(report)
+}

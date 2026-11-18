@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 889,
-  "unallocatedCount": 111,
+  "specifiedCount": 890,
+  "unallocatedCount": 110,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20570,6 +20570,24 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curve-compression-889-2026-11-18/receipt.json",
         "docs/qualification/nurbs-curve-compression-889-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped nonperiodic curves only. A completed search does not prove global minimality."
+      ]
+    },
+    {
+      "id": "NURBS-0890",
+      "name": "Ориентация и точное объединение разнонаправленных сегментов профиля",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::orient_and_compress_chain",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curve-compression-890-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-curve-compression-890-2026-11-18/native.log.gz"
       ],
       "remainingQualification": [
         "Clamped nonperiodic curves only. A completed search does not prove global minimality."

@@ -13334,3 +13334,23 @@ fn mixed_degree_profile_compression_eliminates_both_artificial_seams() {
     profile[2].control_points[0][1] = 1_f64.next_up();
     assert!(compress_mixed_degree_chain(&profile,1_000_000).unwrap().curve.is_none());
 }
+
+#[test]
+fn ordered_profile_orients_reversed_knots_without_rounding_the_clock() {
+    use nurbs_core::editing::exact_curve_merge::orient_and_compress_chain as join;
+    let left = Curve { degree:1, knots:vec![0.,0.,1.,1.], control_points:vec![vec![0.,0.],vec![1.,0.]], weights:vec![1.;2], periodic:false };
+    let mut right = Curve { degree:1, knots:vec![1.,1.,2.,4.,4.], control_points:vec![vec![5.,1.],vec![3.,2.],vec![1.,0.]], weights:vec![2.,3.,2.], periodic:false };
+    let original = [left.clone(),right.clone()];
+    let full = join(&original,1_000_000).unwrap();
+    let output = full.curve.unwrap();
+    for t in [1.,2.,3.,3.5,4.] {
+        let a = output.evaluate(t).unwrap().point;
+        let b = right.evaluate(5.-t).unwrap().point;
+        for i in 0..2 { assert!((a[i]-b[i]).abs()<1e-12); }
+    }
+    assert!(join(&original,1).unwrap().curve.is_none());
+    right.knots[2] = 1_f64.next_up();
+    assert!(join(&[left.clone(),right.clone()],1_000_000).unwrap().curve.is_none());
+    right.control_points[0] = vec![1.,0.];
+    assert!(join(&[left,right],1_000_000).is_err());
+}
