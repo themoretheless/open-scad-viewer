@@ -7871,3 +7871,38 @@ fn principal_axis_projector_accounts_for_certificate_uncertainty() {
     axis.sin_angle_upper = f64::NAN;
     assert!(bound_principal_axis_projector(axis).is_err());
 }
+
+#[test]
+fn certified_principal_axis_distance_handles_uncertain_anchor_and_axis_sign() {
+    use nurbs_core::analysis::surface_measure::{
+        PrincipalAxisCertificate, bound_distance_to_principal_axis,
+    };
+    let mut axis = PrincipalAxisCertificate {
+        direction: [0., 0., 3.],
+        sin_angle_upper: 0.,
+    };
+    let anchor = [[1., 2.], [0.; 2], [-10., 10.]];
+    let point = [5., 4., 0.];
+    let bounds = bound_distance_to_principal_axis(axis, anchor, point).unwrap();
+    assert!(bounds[0] <= 5. && 32_f64.sqrt() <= bounds[1]);
+    assert!((bounds[0] - 5.).abs() < 1e-12);
+    assert!((bounds[1] - 32_f64.sqrt()).abs() < 1e-12);
+    axis.direction[2] = -3.;
+    assert_eq!(bounds, bound_distance_to_principal_axis(axis, anchor, point).unwrap());
+}
+
+#[test]
+fn certified_principal_axis_distance_accounts_for_angular_error() {
+    use nurbs_core::analysis::surface_measure::{
+        PrincipalAxisCertificate, bound_distance_to_principal_axis,
+    };
+    let mut axis = PrincipalAxisCertificate {
+        direction: [1., 0., 0.],
+        sin_angle_upper: 0.5,
+    };
+    let bounds = bound_distance_to_principal_axis(axis, [[0.; 2]; 3], [8., 0., 0.]).unwrap();
+    assert_eq!(bounds[0], 0.);
+    assert!(4. <= bounds[1] && bounds[1] < 4. + 1e-12);
+    axis.sin_angle_upper = -0.5;
+    assert!(bound_distance_to_principal_axis(axis, [[0.; 2]; 3], [8., 0., 0.]).is_err());
+}

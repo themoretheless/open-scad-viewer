@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0653",
+  "testedBase": "a1b75106b9b50a47c574f178bc70e6bece64d32f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 252,
+  "scope": [
+    "Enclose point-to-axis distance from an interval anchor and a principal-direction certificate.",
+    "Check an uncertain anchor, sign reversal, an angular perturbation attaining the analytic upper bound, and invalid certificate rejection."
+  ],
+  "logSha256": "835290c9d7a9e47627b94752009610d73ee5f0057f122568c273b33d1e2a4917",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "c68203bb02f695258c15469d2eac0670fd3c0e8ab8e52e387f78124ebd93f9f5",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "40da541c303079a0872eb1dc8af8e2e96cb331824d54d685a7212892dd964f24"
+  }
+}
