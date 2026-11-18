@@ -38,8 +38,8 @@ fn exact_coefficients(curve: &Curve, plane: Plane) -> Option<Vec<Expansion>> {
 fn halve(c: &[Expansion]) -> Option<(Vec<Expansion>, Vec<Expansion>)> {
     let n = c.len();
     let mut row = c.to_vec();
-    let mut left = vec![row[0].clone()];
-    let mut right = vec![row[n - 1].clone()];
+    let mut left = vec![row.first()?.clone()];
+    let mut right = vec![row.last()?.clone()];
     for len in (1..n).rev() {
         for i in 0..len {
             row[i] = scale(&add(&row[i], &row[i + 1]), 0.5);
@@ -57,8 +57,7 @@ fn halve(c: &[Expansion]) -> Option<(Vec<Expansion>, Vec<Expansion>)> {
 /// coefficients (positive degree/width factors dropped).
 fn differences(c: &[Expansion]) -> Vec<Vec<Expansion>> {
     let mut all = vec![c.to_vec()];
-    while all.last().unwrap().len() > 1 {
-        let last = all.last().unwrap();
+    while let Some(last) = all.last().filter(|row| row.len() > 1) {
         all.push(last.windows(2).map(|w| add(&w[1], &neg(&w[0]))).collect());
     }
     all
@@ -151,16 +150,25 @@ pub(crate) fn classify_span(
         if r == 1 {
             // Exactly one simple interior root: bisect on exact signs.
             let (mut a, mut b, mut cc, mut sa) = (lo, hi, c, s_lo);
+            let mut refinement_depth = depth;
             loop {
                 let mid = a + (b - a) * 0.5;
                 if (map(b) - map(a)) <= options.parameter_tolerance || mid == a || mid == b {
                     push(&mut roots, mid, [a, b], 1);
                     break;
                 }
+                if *boxes >= options.max_boxes || refinement_depth >= options.max_depth {
+                    return SpanClass::Refused([map(a), map(b)]);
+                }
+                *boxes += 1;
+                refinement_depth += 1;
                 let Some((left, right)) = halve(&cc) else {
                     return SpanClass::Refused([map(a), map(b)]);
                 };
-                let sm = sign(left.last().unwrap());
+                let Some(midpoint) = left.last() else {
+                    return SpanClass::Refused([map(a), map(b)]);
+                };
+                let sm = sign(midpoint);
                 if sm == 0 {
                     push(&mut roots, mid, [mid, mid], 1);
                     break;
@@ -276,8 +284,9 @@ pub(crate) fn certify_tangencies(
             _ => true,
         })
         .collect();
-    let mut keep = keep.into_iter();
-    components.retain(|_| keep.next().unwrap());
+    let components = components.into_iter().zip(keep)
+        .filter_map(|(component, keep)| keep.then_some(component))
+        .collect();
     let mut report = Report {
         components,
         boxes_visited: boxes,

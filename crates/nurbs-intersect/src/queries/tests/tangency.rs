@@ -144,3 +144,16 @@ fn transverse_roots_keep_multiplicity_one() {
     assert_eq!(points(&report).len(), 3);
     assert!(points(&report).iter().all(|p| p.contact.multiplicity() == 1));
 }
+
+#[test]
+fn simple_root_refinement_respects_shared_box_and_depth_limits() {
+    use crate::queries::curve_plane_tangency::{classify_span, SpanClass};
+    let curve = bezier(&[-1., 2.]);
+    for (max_boxes, max_depth) in [(2, 64), (64, 1)] {
+        let mut boxes = 0;
+        let options = Options { max_boxes, max_depth, ..Options::default() };
+        let result = classify_span(&curve, plane(0.), [0., 1.], options, &mut boxes);
+        assert!(matches!(result, SpanClass::Refused([0., 0.5])));
+        assert_eq!(boxes, 2);
+    }
+}
