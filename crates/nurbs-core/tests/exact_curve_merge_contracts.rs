@@ -12376,3 +12376,32 @@ fn planar_angular_motion_slowdown_bounds_enclose_required_time_dilation() {
     ).unwrap();
     assert_eq!(bounds[1], f64::INFINITY);
 }
+
+#[test]
+fn planar_angular_motion_duration_bounds_use_source_window_width() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, planar_angular_motion_duration_bounds,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 4.],
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let limits = DirectionalMotionLimits { speed: 0.5, acceleration: 1., jerk: 1. };
+    let report = planar_angular_motion_duration_bounds(&direction, [2.5, 3.5], limits, 0.01, 255)
+        .unwrap();
+    assert_eq!(report.slowdown_bounds, report.duration_bounds);
+    let report = planar_angular_motion_duration_bounds(&direction, [2., 4.], limits, 0.015625, 255)
+        .unwrap();
+    let [lo, hi] = report.duration_bounds;
+    assert!(lo <= 4. && 4. <= hi && hi - lo < 0.004);
+    let singular = Curve {
+        control_points: vec![vec![1., 0.], vec![-1., 0.]],
+        ..direction
+    };
+    let report = planar_angular_motion_duration_bounds(&singular, [2., 4.], limits, 0.02, 255)
+        .unwrap();
+    assert_eq!(report.duration_bounds, [2., f64::INFINITY]);
+}

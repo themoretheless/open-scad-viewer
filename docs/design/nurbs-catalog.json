@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 781,
-  "unallocatedCount": 219,
+  "specifiedCount": 782,
+  "unallocatedCount": 218,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18531,6 +18531,25 @@
       "remainingQualification": [
         "Enclose the minimum uniform time dilation meeting planar angular derivative limits.",
         "Check analytic factor two and withheld feasibility at a zero orientation.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0782",
+      "name": "Границы длительности равномерного прохода по угловым ограничениям",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::planar_angular_motion_duration_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-782-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-782-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Convert angular slowdown bounds to certified duration bounds with outward rounding.",
+        "Check duration at two window widths, factor two, and unbounded duration at a singular direction.",
         "WASM and application integration are separate."
       ]
     }

@@ -1287,6 +1287,11 @@ pub fn multi_axis_motion_duration_bounds(
 ) -> Result<MultiAxisMotionDurationReport> {
     let slowdown =
         multi_axis_motion_slowdown_bounds(curve, time_window, axes, tolerances, max_cells)?;
+    let duration_bounds = uniform_motion_duration_bounds(time_window, slowdown.bounds)?;
+    Ok(MultiAxisMotionDurationReport { slowdown, duration_bounds })
+}
+
+fn uniform_motion_duration_bounds(time_window: [f64; 2], slowdown: [f64; 2]) -> Result<[f64; 2]> {
     let width = exact_motion_operand(time_window[1])? - exact_motion_operand(time_window[0])?;
     let duration_endpoint = |factor: f64, upper: bool| -> Result<f64> {
         if factor == f64::INFINITY {
@@ -1294,11 +1299,10 @@ pub fn multi_axis_motion_duration_bounds(
         }
         round_motion_duration(&(&width * exact_motion_operand(factor)?), upper)
     };
-    let duration_bounds = [
-        duration_endpoint(slowdown.bounds[0], false)?,
-        duration_endpoint(slowdown.bounds[1], true)?,
-    ];
-    Ok(MultiAxisMotionDurationReport { slowdown, duration_bounds })
+    Ok([
+        duration_endpoint(slowdown[0], false)?,
+        duration_endpoint(slowdown[1], true)?,
+    ])
 }
 
 fn round_motion_duration(duration: &num_rational::BigRational, upper: bool) -> Result<f64> {
@@ -1615,6 +1619,31 @@ pub fn planar_angular_motion_slowdown_bounds(
         bounds[1] = f64::INFINITY;
     }
     Ok(bounds)
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarAngularMotionDurationReport {
+    /// Minimum uniform dilation, constrained to at least one.
+    pub slowdown_bounds: [f64; 2],
+    /// Minimum duration in source time units. A finite upper bound is
+    /// sufficient to satisfy the angular limits for a uniform traversal.
+    pub duration_bounds: [f64; 2],
+}
+
+/// Enclose the uniform traversal duration under planar angular limits.
+/// The input parameter must use elapsed time for physical time units.
+pub fn planar_angular_motion_duration_bounds(
+    direction: &Curve,
+    time_window: [f64; 2],
+    limits: DirectionalMotionLimits,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarAngularMotionDurationReport> {
+    let slowdown_bounds = planar_angular_motion_slowdown_bounds(
+        direction, time_window, limits, parameter_tolerance, max_cells,
+    )?;
+    let duration_bounds = uniform_motion_duration_bounds(time_window, slowdown_bounds)?;
+    Ok(PlanarAngularMotionDurationReport { slowdown_bounds, duration_bounds })
 }
 
 fn planar_angular_jets(
