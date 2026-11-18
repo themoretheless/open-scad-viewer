@@ -707,7 +707,7 @@ fn export_step_direct_impl(
                         w.emit(format!("DIRECTION('',({}))", floats(&direction)))
                     })
                 });
-                let styled_axis = if assembly.colours.is_some() {
+                let placement_axis = if assembly.colours.is_some() || (rigid && assembly.names.is_some()) {
                     if !rigid {
                         return Err(refuse("Styled STEP assemblies require rigid placements"));
                     }
@@ -715,7 +715,7 @@ fn export_step_direct_impl(
                 } else {
                     None
                 };
-                let operator = if let Some(axis) = styled_axis {
+                let operator = if let Some(axis) = placement_axis {
                     w.emit(format!("ITEM_DEFINED_TRANSFORMATION('','',#{frame},#{axis})"))
                 } else if rigid {
                     w.emit(format!(
@@ -736,7 +736,7 @@ fn export_step_direct_impl(
                 ));
                 let shape = w.emit(format!("PRODUCT_DEFINITION_SHAPE('','',#{occurrence})"));
                 w.emit(format!("CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#{relationship},#{shape})"));
-                if let (Some(axis), Some(style)) = (styled_axis, assembly.colours.and_then(|styles| styles[index].as_ref())) {
+                if let (Some(axis), Some(style)) = (placement_axis, assembly.colours.and_then(|styles| styles[index].as_ref())) {
                     let placement_rep = w.emit(format!("SHAPE_REPRESENTATION('',(#{axis}),#{context})"));
                     w.emit(format!("SHAPE_DEFINITION_REPRESENTATION(#{shape},#{placement_rep})"));
                     let rgb = w.emit(format!("COLOUR_RGB({},{})", quote(style.name), floats(&style.rgb)));

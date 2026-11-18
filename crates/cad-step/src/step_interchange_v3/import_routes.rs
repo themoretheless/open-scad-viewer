@@ -770,6 +770,19 @@ impl StepSharedAssembly {
         &self.occurrences
     }
 
+    /// Compress selected face carriers once in the local definition. All its
+    /// placements retain their transforms and refer to the same edited solid.
+    /// Returns false on proof-budget exhaustion and leaves the assembly intact.
+    pub fn compress_definition_faces(&mut self, definition: usize, faces: &[usize], max_work: u64) -> Result<bool> {
+        let model = self.definitions.get_mut(definition)
+            .ok_or_else(|| refuse("STEP assembly definition index out of range"))?;
+        let Some(compressed) = model.compress_face_surfaces(faces, max_work)? else {
+            return Ok(false);
+        };
+        *model = compressed;
+        Ok(true)
+    }
+
     /// Replace geometry for every occurrence of this definition.
     pub fn replace_definition(&mut self, index: usize, model: Model) -> Result<()> {
         let definition = self.definitions.get_mut(index)
