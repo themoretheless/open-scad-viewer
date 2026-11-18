@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 853,
-  "unallocatedCount": 147,
+  "specifiedCount": 854,
+  "unallocatedCount": 146,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19932,6 +19932,27 @@
       "remainingQualification": [
         "Conservatively filter by box distance and classify checked pairs only when the measured interval supports a threshold verdict.",
         "Check a 3 mm pair below a 4 mm minimum, conservative distant exclusion, preserved measurement and refusal before expensive work above the pair limit.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0854",
+      "name": "Границы наименьшего зазора во всей STEP-сборке",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::minimum_clearance",
+      "evidence": [
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-854-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-854-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Process pairs in conservative lower-bound order and prune only beyond the best established upper bound.",
+        "Check a 1 mm global minimum from only one measured pair, lower bound without narrow-phase budget and no result for a single occurrence.",
         "WASM and application integration are separate."
       ]
     }

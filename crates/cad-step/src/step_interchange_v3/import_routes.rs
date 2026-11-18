@@ -679,6 +679,18 @@ pub struct StepClearanceCheck {
     pub measurement: brep_core::solid_distance::Report,
 }
 
+/// Conservative bounds on the smallest distance between distinct occurrences.
+#[derive(Debug)]
+pub struct StepMinimumClearance {
+    pub lower_bound_mm: f64,
+    pub upper_bound_mm: Option<f64>,
+    /// Pair furnishing the upper bound, which may not be the unique closest pair.
+    pub upper_bound_pair: Option<[usize; 2]>,
+    pub checked_pairs: usize,
+    pub converged: bool,
+    pub pair_errors: Vec<([usize; 2], Error)>,
+}
+
 impl StepSharedAssembly {
     pub fn definitions(&self) -> &[Model] {
         &self.definitions
@@ -914,14 +926,7 @@ impl StepSharedAssembly {
         let mut pairs = Vec::new();
         for (index, a) in bounds.iter().enumerate() {
             for (other, b) in bounds.iter().enumerate().skip(index + 1) {
-                let mut lower_squared: f64 = 0.;
-                for axis in 0..3 {
-                    let gap = (b[0][axis] - a[1][axis]).max(a[0][axis] - b[1][axis])
-                        .next_down().max(0.);
-                    lower_squared = (lower_squared + (gap * gap).next_down().max(0.))
-                        .next_down().max(0.);
-                }
-                if lower_squared <= limit {
+                if box_distance_squared_lower(a, b) <= limit {
                     pairs.push([index, other]);
                 }
             }
@@ -949,6 +954,72 @@ impl StepSharedAssembly {
         let first = self.materialize(pair[0])?;
         let second = self.materialize(pair[1])?;
         brep_core::solid_distance::distance(&first, &second, tolerance_mm, tolerance_uv, limits)
+    }
+
+    /// Bound the smallest material clearance without evaluating pairs whose
+    /// box separation is already larger than the best measured upper bound.
+    /// None indicates an assembly with fewer than two occurrences.
+    pub fn minimum_clearance(
+        &self,
+        tolerance_mm: f64,
+        tolerance_uv: f64,
+        limits: brep_core::solid_distance::Limits,
+        max_pairs: usize,
+    ) -> Result<Option<StepMinimumClearance>> {
+        if !tolerance_mm.is_finite() || tolerance_mm <= 0.
+            || !tolerance_uv.is_finite() || tolerance_uv <= 0.
+        {
+            return Err(refuse("STEP clearance requires positive finite tolerances"));
+        }
+        let bounds = self.occurrence_bounds()?;
+        let mut pairs = Vec::new();
+        for (first, a) in bounds.iter().enumerate() {
+            for (second, b) in bounds.iter().enumerate().skip(first + 1) {
+                let lower = box_distance_squared_lower(a, b).sqrt().next_down().max(0.);
+                pairs.push(([first, second], lower));
+            }
+        }
+        if pairs.is_empty() {
+            return Ok(None);
+        }
+        pairs.sort_by(|a, b| a.1.total_cmp(&b.1));
+        let mut result = StepMinimumClearance {
+            lower_bound_mm: f64::INFINITY,
+            upper_bound_mm: None,
+            upper_bound_pair: None,
+            checked_pairs: 0,
+            converged: false,
+            pair_errors: Vec::new(),
+        };
+        for (pair, box_lower) in pairs {
+            if result.upper_bound_mm.is_some_and(|upper| box_lower > upper) {
+                break;
+            }
+            if result.checked_pairs == max_pairs {
+                result.lower_bound_mm = result.lower_bound_mm.min(box_lower);
+                break;
+            }
+            result.checked_pairs += 1;
+            let mut pair_lower = box_lower;
+            match self.occurrence_clearance(pair, tolerance_mm, tolerance_uv, limits) {
+                Ok(report) => {
+                    if let Some([lower, upper]) = report.distance_interval_mm {
+                        pair_lower = pair_lower.max(lower);
+                        if upper.is_finite() && result.upper_bound_mm.is_none_or(|best| upper < best) {
+                            result.upper_bound_mm = Some(upper);
+                            result.upper_bound_pair = Some(pair);
+                        }
+                    }
+                }
+                Err(error) => result.pair_errors.push((pair, error)),
+            }
+            result.lower_bound_mm = result.lower_bound_mm.min(pair_lower);
+        }
+        result.converged = result.upper_bound_mm.is_some_and(|upper| {
+            upper == result.lower_bound_mm
+                || (upper - result.lower_bound_mm).next_up() <= tolerance_mm
+        });
+        Ok(Some(result))
     }
 
     /// Check neighboring pairs against a minimum clearance in millimetres.
@@ -1385,6 +1456,16 @@ impl StepSharedAssembly {
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
         brep_core::transform::affine(&self.definitions[occurrence.definition], occurrence.transform)
     }
+}
+
+fn box_distance_squared_lower(a: &[[f64; 3]; 2], b: &[[f64; 3]; 2]) -> f64 {
+    let mut squared = 0.;
+    for axis in 0..3 {
+        let gap = (b[0][axis] - a[1][axis]).max(a[0][axis] - b[1][axis])
+            .next_down().max(0.);
+        squared = (squared + (gap * gap).next_down().max(0.)).next_down().max(0.);
+    }
+    squared
 }
 
 fn ray_spans_at_least(spans: Vec<[f64; 2]>, count: usize) -> Vec<[f64; 2]> {

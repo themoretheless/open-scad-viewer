@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0854",
+  "testedBase": "767225c41b3260c372c44706616084803b64d78d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 201,
+  "scope": [
+    "Process pairs in conservative lower-bound order and prune only beyond the best established upper bound.",
+    "Check a 1 mm global minimum from only one measured pair, lower bound without narrow-phase budget and no result for a single occurrence."
+  ],
+  "logSha256": "ff8fd4322289292419c3714df20a817ed4cc55bd95df8a7d50501b205c55a429",
+  "sourceSha256": {
+    "crates/cad-step/src/lib.rs": "a0efa932ced089373d805b9d1a0914c1ccf341aa169c3bb80811d76216893045",
+    "crates/cad-step/src/step_interchange_v3.rs": "442ae70f0ecc85f32c3dfb4a0a4785608406b15909f18fe69b2c4c148f8e6cd8",
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "1272346958b19ae7252a523cd454177edb0c9a06851949756b51d2a6d6133cae",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "59b679cf3345d335eac943426dd769a66958e97d6d512e7cc1eb28c6e6e85ebd"
+  }
+}

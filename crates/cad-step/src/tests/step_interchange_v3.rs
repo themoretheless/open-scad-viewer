@@ -3185,6 +3185,36 @@ fn shared_step_material_volume_accounts_for_scale_and_reflection() {
 }
 
 #[test]
+fn shared_step_minimum_clearance_orders_pairs_and_bounds_unchecked_work() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let mut shifted = assembly.occurrences()[0].transform;
+    shifted[0][3] = 20.;
+    assembly.set_occurrence_placement(1, shifted).unwrap();
+    shifted[0][3] = 23.;
+    assembly.add_occurrence(0, shifted).unwrap();
+    let policy = shared_step_admission_policy();
+    let limits = brep_core::solid_distance::Limits {
+        validity: policy.geometry,
+        pairs: 100,
+        contact_pairs: 1000,
+        cells: 100_000,
+        domain_cells: 1_000_000,
+    };
+    let empty = assembly.extract_occurrences(&[0]).unwrap();
+    assert!(empty.minimum_clearance(1e-5, policy.tolerance_uv, limits, 0).unwrap().is_none());
+    let unchecked = assembly.minimum_clearance(1e-5, policy.tolerance_uv, limits, 0).unwrap().unwrap();
+    assert_eq!(unchecked.checked_pairs, 0);
+    assert!(unchecked.upper_bound_mm.is_none() && !unchecked.converged);
+    assert!(unchecked.lower_bound_mm <= 1. && 1. - unchecked.lower_bound_mm < 1e-10);
+
+    let checked = assembly.minimum_clearance(1e-5, policy.tolerance_uv, limits, 1).unwrap().unwrap();
+    assert_eq!(checked.checked_pairs, 1);
+    assert_eq!(checked.upper_bound_pair, Some([1, 2]));
+    assert!(checked.lower_bound_mm <= 1. && checked.upper_bound_mm.unwrap() >= 1.);
+    assert!(checked.converged && checked.pair_errors.is_empty());
+}
+
+#[test]
 fn shared_step_batch_clearance_preserves_measurement_and_pair_budget() {
     let mut assembly = shared_step_scaled_cube_pair();
     let mut shifted = assembly.occurrences()[0].transform;
