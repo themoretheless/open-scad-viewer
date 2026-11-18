@@ -13,6 +13,7 @@ pub mod closed_graph;
 pub(crate) mod opposite_rows;
 mod monotone_coordinate;
 pub(crate) mod jordan_partition;
+pub(crate) mod chart_segments;
 
 mod certificate;
 mod separates_surfaces;

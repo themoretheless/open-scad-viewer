@@ -82,12 +82,14 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
         "Invalid complete boundary smoothness budget",
     )?;
     let mut uses = vec![Vec::new(); model.edges.len()];
+    let mut parameter_work = 0;
     for (face, f) in model.faces.iter().enumerate() {
         for wire in std::iter::once(f.outer).chain(f.holes.iter().copied()) {
             for c in &model.loops[wire].coedges {
-                let side = periodic_uses::full_use(model, c)
-                    .then(|| coedge_side(&f.surface, &c.pcurve, c.reversed))
-                    .flatten();
+                let (side, used) = periodic_uses::full_side(
+                    model, &f.surface, c, limits.exact_work - parameter_work,
+                );
+                parameter_work += used;
                 uses[c.edge].push((face, side.map(|s| s.0), side.map(|s| s.1), c.reversed));
             }
         }
@@ -97,7 +99,6 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
     let mut edge_ids = Vec::new();
     let mut unresolved_edges = Vec::new();
     let mut periodic_candidates = Vec::new();
-    let mut parameter_work = 0;
     for (edge, owned) in uses.iter().enumerate() {
         let [(a, Some(ab), Some(ad), ar), (b, Some(bb), Some(bd), br)] = owned.as_slice() else {
             unresolved_edges.push(edge);
@@ -322,6 +323,48 @@ mod tests {
         )
         .unwrap();
         assert!(!short.g2_certified);
+        let mut trimmed = model.clone();
+        let outer = trimmed.faces[0].outer;
+        let edge = trimmed.loops[outer].coedges[0].edge;
+        let world = trimmed.edges[edge].curve.domain();
+        let c = &mut trimmed.0.loops[outer].coedges[0];
+        let a = &c.pcurve.control_points[0];
+        let b = &c.pcurve.control_points[1];
+        c.pcurve = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 4., 4., 4.],
+            control_points: [-1., 0., 3.].map(|t| {
+                a.iter().zip(b).map(|(a, b)| a + t * (b - a)).collect()
+            }).to_vec(),
+            weights: vec![1., 2., 3.],
+            periodic: false,
+        };
+        *c = c.clone().with_trim(brep_topology::CoedgeTrim {
+            curve_parameter: world,
+            pcurve_parameter: [1., 2.],
+            periodic_lift: [[0; 2]; 2],
+        }).unwrap();
+        trimmed.validate().unwrap();
+        let limits = Limits {
+            order: 2,
+            exact_work: 2_000_000,
+            agreement_work: 1_000_000,
+            regularity_cells: 100_000,
+        };
+        let active = inspect(&trimmed, limits).unwrap();
+        assert!(active.g2_certified && active.parameter_work > g2.parameter_work);
+        assert!(!inspect(&trimmed, Limits { exact_work: active.exact_work - 1, ..limits })
+            .unwrap().g2_certified);
+        let classified = classified::inspect(
+            &trimmed, &vec![classified::Class::G2; trimmed.edges.len()],
+            classified::Limits {
+                incidence_steps: 10_000,
+                exact_work: 2_000_000,
+                agreement_work: 1_000_000,
+                regularity_cells: 100_000,
+            },
+        ).unwrap();
+        assert!(classified.certified, "{}", classified.reason);
         let mut bad = model.clone();
         bad.edges[0].curve.control_points[1][0] += 0.125;
         if let Ok(bad) = inspect(

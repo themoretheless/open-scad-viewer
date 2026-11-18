@@ -82,9 +82,15 @@ impl Inspection<'_> {
                     if !step(&mut self.out, self.limits.incidence_steps) {
                         return Ok(None);
                     }
-                    let side = periodic_uses::full_use(model, c)
-                        .then(|| coedge_side(&f.surface, &c.pcurve, c.reversed))
-                        .flatten();
+                    let side = if self.classes.get(c.edge) == Some(&Class::C0) {
+                        None
+                    } else {
+                        let (side, used) = periodic_uses::full_side(
+                            model, &f.surface, c, self.limits.exact_work - self.out.exact_work,
+                        );
+                        self.out.exact_work += used;
+                        side
+                    };
                     let owned = uses
                         .get_mut(c.edge)
                         .ok_or_else(|| crate::invalid("Invalid classified boundary edge"))?;

@@ -244,6 +244,12 @@ curve, the candidate affine clock uses the endpoints of an exact active
 restriction, while the identity is checked against the original basis.
 Partial world intervals remain diagnostic windows.
 
+The complete G1/G2 and classified seam audits can recover a full natural
+side from the active interval of a rational UV carrier on a nonperiodic
+chart. The ordered UV traversal proves side coverage, while exact
+world-edge agreement binds that traversal to the authored seam. Side
+recovery and any chart reversal share the seam work allowance.
+
 The common boundary can be an authored chain of edges. The audit checks
 that both faces cover the complete natural rectangle, with exact
 consecutive segments along its sides. Both traversals of the shared
