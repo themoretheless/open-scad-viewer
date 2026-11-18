@@ -2093,6 +2093,38 @@ pub fn measure_minimum_profiled_radius_workspace_clearance(
     tolerance: f64,
     max_plane_cells: usize,
 ) -> Result<WorkspaceMinimumClearance> {
+    measure_minimum_profiled_workspace_with_support(
+        curve, radius_profile, planes, tolerance, max_plane_cells, |_| Ok(None),
+    )
+}
+
+/// Refine the minimum workspace clearance for a translating convex vertex
+/// hull rounded by a variable radius, in the original model units.
+pub fn measure_minimum_profiled_rounded_hull_workspace_clearance(
+    curve: &Curve,
+    radius_profile: &[(f64, f64)],
+    planes: &[WorkspaceHalfSpace<'_>],
+    vertex_offsets: &[&[f64]],
+    tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspaceMinimumClearance> {
+    check(!planes.is_empty(), "Workspace requires at least one half-space")?;
+    curve.validate()?;
+    let offsets = prepare_workspace_hull(curve, vertex_offsets, planes.len())?;
+    measure_minimum_profiled_workspace_with_support(
+        curve, radius_profile, planes, tolerance, max_plane_cells,
+        |normal| hull_plane_support(&offsets, normal).map(Some),
+    )
+}
+
+fn measure_minimum_profiled_workspace_with_support(
+    curve: &Curve,
+    radius_profile: &[(f64, f64)],
+    planes: &[WorkspaceHalfSpace<'_>],
+    tolerance: f64,
+    max_plane_cells: usize,
+    support: impl Fn(&[Interval]) -> Result<Option<Interval>>,
+) -> Result<WorkspaceMinimumClearance> {
     validate(tolerance, max_plane_cells)?;
     check(!planes.is_empty(), "Workspace requires at least one half-space")?;
     let max_cells = max_plane_cells / planes.len();
@@ -2100,13 +2132,18 @@ pub fn measure_minimum_profiled_radius_workspace_clearance(
     let dimension = curve.control_points[0].len();
     let planes = prepare_workspace_planes(planes, dimension)?.into_iter().map(|(normal, offset)| {
         let length = norm(&normal)?;
-        Ok((normal, offset, length))
+        let hull = support(&normal)?;
+        Ok((normal, offset, length, hull))
     }).collect::<Result<Vec<_>>>()?;
     let minimum = measure_minimum_radial_cells(
         curve, initial, radius_profile[0].0, tolerance, max_cells, planes.len(),
         |point, index, profile, domain| {
-            let (normal, offset, length) = &planes[index];
-            offset.sub(project_jet(point, normal)?)?.div(*length)?.sub(profiles[profile](domain)?)
+            let (normal, offset, length, hull) = &planes[index];
+            let mut residual = offset.sub(project_jet(point, normal)?)?;
+            if let Some(hull) = hull {
+                residual = residual.sub(*hull)?;
+            }
+            residual.div(*length)?.sub(profiles[profile](domain)?)
         },
     )?;
     Ok(WorkspaceMinimumClearance {

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 761,
-  "unallocatedCount": 239,
+  "specifiedCount": 762,
+  "unallocatedCount": 238,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18151,6 +18151,25 @@
       "remainingQualification": [
         "Classify workspace containment for a fixed vertex hull rounded by a profiled radius.",
         "Check overtravel requiring both hull support and changing radius, plane residual bounds and empty hull refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0762",
+      "name": "Минимальный запас выпуклого инструмента с переменным скруглением",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::measure_minimum_profiled_rounded_hull_workspace_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-762-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-762-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine normalized workspace clearance for a fixed vertex hull with a profiled rounding radius.",
+        "Check the combined hull and radius minimum, normalized clearance, limiting plane witness, and coarse tolerance behavior.",
         "WASM and application integration are separate."
       ]
     }
