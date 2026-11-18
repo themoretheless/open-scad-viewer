@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 790,
-  "unallocatedCount": 210,
+  "specifiedCount": 791,
+  "unallocatedCount": 209,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18702,6 +18702,25 @@
       "remainingQualification": [
         "Certify the winding of a closed rational planar contour about an arbitrary query point.",
         "Check translated rational loop winding for interior, exterior, boundary and invalid query points.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0791",
+      "name": "Классификация заполнения по нескольким замкнутым NURBS-контурам",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::classify_planar_curve_fill",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-791-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-791-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify a point by nonzero or even-odd rational contour winding under a shared work budget.",
+        "Check nested opposite and equal contour orientation, both fill rules and the shared initial knot budget.",
         "WASM and application integration are separate."
       ]
     }

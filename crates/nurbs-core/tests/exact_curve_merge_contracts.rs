@@ -12645,3 +12645,31 @@ fn planar_curve_winding_about_point_distinguishes_inside_outside_and_boundary() 
     assert!(winding([11., -7.]).is_err());
     assert!(winding([f64::NAN, 0.]).is_err());
 }
+
+#[test]
+fn planar_curve_fill_respects_holes_orientation_and_fill_rule() {
+    use nurbs_core::{analysis::curve_measure::classify_planar_curve_fill, chord_winding::FillRule};
+    let diamond = |scale| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![scale, 0.], vec![0., scale], vec![-scale, 0.],
+            vec![0., -scale], vec![scale, 0.]],
+        weights: vec![1., 2., 1., 2., 1.],
+        periodic: false,
+    };
+    let outer = diamond(3_f64);
+    let inner = diamond(1_f64);
+    let mut reversed = inner.clone();
+    reversed.control_points.reverse();
+    let classify = |hole, rule, budget| classify_planar_curve_fill(
+        &[&outer, hole], [0., 0.], rule, 0.02, budget,
+    );
+    let nonzero = classify(&inner, FillRule::NonZero, 1024).unwrap();
+    assert_eq!((nonzero.winding, nonzero.filled), (Some(2), Some(true)));
+    let even_odd = classify(&inner, FillRule::EvenOdd, 1024).unwrap();
+    assert_eq!((even_odd.winding, even_odd.filled), (Some(2), Some(false)));
+    let hole = classify(&reversed, FillRule::NonZero, 1024).unwrap();
+    assert_eq!((hole.winding, hole.filled), (Some(0), Some(false)));
+    assert!(hole.work_cells <= 1024);
+    assert!(classify(&inner, FillRule::NonZero, 7).is_err());
+}

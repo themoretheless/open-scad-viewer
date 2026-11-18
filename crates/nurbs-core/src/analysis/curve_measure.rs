@@ -2015,6 +2015,70 @@ pub fn measure_planar_curve_winding_about_point(
     winding_from_angular_travel(travel)
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarCurveFillReport {
+    /// Sum of the oriented winding numbers. Uncertain contours leave the
+    /// sum and the fill decision unresolved.
+    pub winding: Option<i32>,
+    pub filled: Option<bool>,
+    pub work_cells: usize,
+}
+
+/// Classify a query point against a set of closed planar NURBS contours.
+/// Reserve the initial knot cells of every contour before sharing the
+/// remaining refinement budget. All contours must be separated from the
+/// query point for a result.
+pub fn classify_planar_curve_fill(
+    contours: &[&Curve],
+    point: [f64; 2],
+    rule: crate::chord_winding::FillRule,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarCurveFillReport> {
+    validate(parameter_tolerance, max_cells)?;
+    check(point.iter().all(|value| value.is_finite()), "Winding point must be finite")?;
+    check(!contours.is_empty(), "Curve fill requires at least one contour")?;
+    check(contours.len() <= max_cells, "Curve fill budget must cover every contour")?;
+    let mut initial_work = 0;
+    let mut span_counts = Vec::with_capacity(contours.len());
+    for &curve in contours {
+        let domain = validate_winding_curve(curve)?;
+        check(curve.control_points.first() == curve.control_points.last(), "Winding contour must be closed")?;
+        let spans = active_spans(curve, domain).count();
+        if spans > max_cells - initial_work {
+            return Err(resource("Curve fill budget must cover every original knot span"));
+        }
+        initial_work += spans;
+        span_counts.push(spans);
+    }
+
+    let mut extra = max_cells - initial_work;
+    let mut work_cells = 0;
+    let mut winding = Some(0_i32);
+    let origin = Some(point.map(Interval::point));
+    for (index, (&curve, spans)) in contours.iter().zip(span_counts).enumerate() {
+        let share = extra / (contours.len() - index);
+        let travel = measure_planar_angular_travel_from(
+            curve, curve.domain(), origin, parameter_tolerance, spans + share,
+        )?;
+        work_cells += travel.work_cells;
+        extra -= travel.work_cells.saturating_sub(spans);
+        let report = winding_from_angular_travel(travel)?;
+        winding = match (winding, report.winding) {
+            (Some(sum), Some(turns)) => {
+                let turns = i32::try_from(turns).map_err(|_| resource("Contour winding exceeds integer range"))?;
+                Some(sum.checked_add(turns).ok_or_else(|| resource("Total winding exceeds integer range"))?)
+            }
+            _ => None,
+        };
+    }
+    Ok(PlanarCurveFillReport {
+        winding,
+        filled: winding.map(|turns| crate::chord_winding::filled(turns, rule)),
+        work_cells,
+    })
+}
+
 fn validate_winding_curve(direction: &Curve) -> Result<[f64; 2]> {
     direction.validate()?;
     check(direction.control_points[0].len() == 2, "Orientation winding requires a planar direction curve")?;
