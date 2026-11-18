@@ -171,36 +171,16 @@ fn interior_curve(
     }
     let [start, end] = curve.domain();
     let degree = curve.degree;
-    if curve.control_points.len() == degree + 1
-        && curve.knots[..=degree].iter().all(|&k| k == start)
-        && curve.knots[degree + 1..].iter().all(|&k| k == end)
+    if curve.knots[..=degree].iter().all(|&k| k == start)
+        && curve.knots[curve.control_points.len()..]
+            .iter()
+            .all(|&k| k == end)
     {
-        charge(cells, limit, 4 * (degree + 1))?;
-        let mut margins = Vec::with_capacity(degree + 1);
-        let [lo, hi] = [
-            [
-                BigRational::from_float(lower[0])?,
-                BigRational::from_float(lower[1])?,
-            ],
-            [
-                BigRational::from_float(upper[0])?,
-                BigRational::from_float(upper[1])?,
-            ],
-        ];
-        for (point, &weight) in curve.control_points.iter().zip(&curve.weights) {
-            let w = BigRational::from_float(weight)?;
-            let [x, y] = [
-                BigRational::from_float(point[0])?,
-                BigRational::from_float(point[1])?,
-            ];
-            margins.push([
-                (&x - &lo[0]) * &w,
-                (&hi[0] - x) * &w,
-                (&y - &lo[1]) * &w,
-                (&hi[1] - y) * &w,
-            ]);
-        }
-        return positive_margins(margins, depth, cells, limit);
+        let (proved, used) =
+            exact_knot_insertion::strict_box_containment(curve, [lower, upper], depth, remaining)
+                .ok()?;
+        charge(cells, limit, used as usize)?;
+        return proved.then_some(());
     }
     let report = exact_knot_insertion::split(curve, start * 0.5 + end * 0.5, remaining).ok()?;
     charge(cells, limit, report.work_used as usize)?;
@@ -208,44 +188,6 @@ fn interior_curve(
         interior_curve(&piece, [lower, upper], depth - 1, cells, limit)?;
     }
     Some(())
-}
-
-fn positive_margins(
-    mut net: Vec<[BigRational; 4]>,
-    depth: u8,
-    cells: &mut usize,
-    limit: usize,
-) -> Option<()> {
-    use num_traits::Signed;
-    charge(cells, limit, net.len())?;
-    if net.iter().flatten().all(Signed::is_positive) {
-        return Some(());
-    }
-    if depth == 0
-        || [&net[0], net.last()?]
-            .into_iter()
-            .flatten()
-            .any(|v| !v.is_positive())
-    {
-        return None;
-    }
-    let n = net.len();
-    let mut left = vec![net[0].clone()];
-    let mut right = vec![net[n - 1].clone()];
-    let half = BigRational::new(1.into(), 2.into());
-    for remaining in (1..n).rev() {
-        charge(cells, limit, 4 * remaining)?;
-        for i in 0..remaining {
-            for axis in 0..4 {
-                net[i][axis] = (&net[i][axis] + &net[i + 1][axis]) * &half;
-            }
-        }
-        left.push(net[0].clone());
-        right.push(net[remaining - 1].clone());
-    }
-    right.reverse();
-    positive_margins(left, depth - 1, cells, limit)?;
-    positive_margins(right, depth - 1, cells, limit)
 }
 
 fn shared_chain(
@@ -506,6 +448,35 @@ fn edge_certificate(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn exact_span_extraction_proves_strict_hole_containment_at_a_nonbinary_join() {
+        let mut curve = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 0.5, 1., 1., 1.],
+            control_points: vec![
+                vec![0.25, 0.25],
+                vec![-0.046875, 0.375],
+                vec![0.25, 0.5],
+                vec![0.25, 0.75],
+            ],
+            weights: vec![1., 2., 1., 1.],
+            periodic: false,
+        };
+        assert!(
+            exact_knot_insertion::split(&curve, 0.5, 100_000)
+                .unwrap()
+                .pieces
+                .is_none()
+        );
+        let bounds = [[0., 0.], [1., 1.]];
+        let mut used = 0;
+        assert!(interior_curve(&curve, bounds, 12, &mut used, 1000).is_some());
+        assert!(interior_curve(&curve, bounds, 12, &mut 0, used - 1).is_none());
+        // The first span now has an exact zero at an interior parameter.
+        curve.control_points[1][0] = -0.0625;
+        assert!(interior_curve(&curve, bounds, 12, &mut 0, 100_000).is_none());
+    }
 
     #[test]
     fn exact_subdivision_proves_strict_hole_containment_when_the_hull_overhangs() {

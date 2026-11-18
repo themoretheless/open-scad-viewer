@@ -4,6 +4,8 @@ pub use super::rational_factor::Refusal;
 use crate::{Result, check, core::curve_identity::compare_definitions, curve::Curve};
 use num_rational::BigRational as Q;
 use num_traits::{One, Zero};
+mod strict_box;
+pub use strict_box::strict_box_containment;
 #[derive(Clone, Debug)]
 pub struct Report {
     /// Literal source on every refusal; no partly refined curve is emitted.
