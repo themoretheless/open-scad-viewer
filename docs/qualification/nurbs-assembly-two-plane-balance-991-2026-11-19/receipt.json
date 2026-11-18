@@ -1,0 +1,11 @@
+{
+  "id": "NURBS-0991",
+  "testedBase": "e36e58327886191e956d5f909c6e50cbb975347e",
+  "sourceSha256": {
+    "crates/brep-core/src/body_analysis/analysis/mechanics.rs": "5025dcfe697eaef214c54426e1c7c0d3e7b0dbc1d6c9356dbd8f12d256e3368a",
+    "crates/cad-step/tests/baked_step_scales.rs": "cdaf4b0d5f66e7b4c975d3e223691b87fdd3e040044006872b66eb3dc39016e0"
+  },
+  "fixtureSha256": "96b4dc3abd24914d5d954c25b393471aae3eda9ab0aab75e2de38b317c5f3d85",
+  "command": "CAD_BRANCH_MOTION_FIXTURE=/tmp/osv991.step cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test baked_step_scales",
+  "external": "Corrected radial offset and transverse inertia: 0.0 0.0\nCorrected radial offset and transverse inertia: 0.0 3.1401849173675493e-16"
+}

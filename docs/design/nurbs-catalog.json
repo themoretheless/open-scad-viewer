@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 990,
-  "unallocatedCount": 10,
+  "specifiedCount": 991,
+  "unallocatedCount": 9,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22491,6 +22491,25 @@
       ],
       "remainingQualification": [
         "Static radial first mass moment, in kg mm. Qualified offset, tilted, reversed and centred axes; reference computed from OCCT mass properties with an independent counterweight check."
+      ]
+    },
+    {
+      "id": "NURBS-0991",
+      "name": "Расчёт двухплоскостной балансировки NURBS-сборки по тензору инерции",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::analysis::AssemblyMass::two_plane_balance_corrections",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/analysis/mechanics.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-assembly-two-plane-balance-991-2026-11-19/verify.py",
+        "docs/qualification/nurbs-assembly-two-plane-balance-991-2026-11-19/occt.log",
+        "docs/qualification/nurbs-assembly-two-plane-balance-991-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-assembly-two-plane-balance-991-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Rigid body with two distinct signed axial planes. Addition vectors in kg mm. OCCT independently adds the corresponding point masses and verifies static and couple cancellation for offset and tilted central axes."
       ]
     }
   ],

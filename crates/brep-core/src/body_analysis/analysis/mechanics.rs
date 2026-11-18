@@ -139,6 +139,35 @@ impl AssemblyMass {
         }
         Ok(unbalance)
     }
+
+    /// Added mass-radius vectors (kg mm) at the two ordered planes normal to
+    /// the axis. Plane offsets in mm are signed along the axis from point.
+    pub fn two_plane_balance_corrections(
+        &self,
+        point: [f64; 3],
+        direction: [f64; 3],
+        planes: [f64; 2],
+    ) -> Result<[[f64; 3]; 2]> {
+        let span = planes[1] - planes[0];
+        if !span.is_finite() || span <= 0. {
+            return Err(indeterminate(
+                "Expected distinct increasing finite balance plane offsets",
+            ));
+        }
+        let unit = unit_axis(point, direction)?;
+        let unbalance = self.static_unbalance(point, direction)?;
+        let axial_offset = dot(std::array::from_fn(|i| self.centroid[i] - point[i]), unit);
+        // The transverse part of I*u is minus the central axial-radial mass product.
+        let transverse = cross(unit, cross(self.inertia.map(|row| dot(row, unit)), unit));
+        let first: [f64; 3] = std::array::from_fn(|i| {
+            ((axial_offset - planes[1]).mul_add(unbalance[i], -transverse[i])) / span
+        });
+        let second = std::array::from_fn(|i| -unbalance[i] - first[i]);
+        if first.iter().chain(&second).any(|v| !v.is_finite()) {
+            return Err(indeterminate("Non-finite balance correction"));
+        }
+        Ok([first, second])
+    }
 }
 
 fn unit_axis(point: [f64; 3], axis: [f64; 3]) -> Result<[f64; 3]> {

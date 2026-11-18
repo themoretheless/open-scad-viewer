@@ -394,6 +394,31 @@ fn branch_motion_moves_two_linked_parts_and_preserves_external_sibling() {
         }
     }
     assert!(mass.static_unbalance([0.; 3], [0.; 3]).is_err());
+    let corrections = mass
+        .two_plane_balance_corrections([5., 4., 0.], [0., 0., 1.], [0., 12.])
+        .unwrap();
+    for (vector, expected) in corrections
+        .iter()
+        .zip([[-0.324, -0.432, 0.], [-0.108, -0.144, 0.]])
+    {
+        for (v, w) in vector.iter().zip(expected) {
+            assert!((v - w).abs() < 1e-10);
+        }
+    }
+    // A tilted axis through the centre has zero static moment and a nonzero couple.
+    let couple = mass
+        .two_plane_balance_corrections([8., 8., 3.], [1., 1., 0.], [-2., 2.])
+        .unwrap();
+    let a = 0.018 / 2_f64.sqrt();
+    for (row, expected) in couple.iter().zip([[-a, a, 0.], [a, -a, 0.]]) {
+        for (v, w) in row.iter().zip(expected) {
+            assert!((v - w).abs() < 1e-10);
+        }
+    }
+    assert!(
+        mass.two_plane_balance_corrections([0.; 3], [1., 0., 0.], [1., 1.])
+            .is_err()
+    );
     let bearing = mass.moment_about_axis([5., 4., 0.], [0., 0., -2.]).unwrap();
     assert!((bearing - 4.128).abs() < 1e-9);
     // Rotated box sides in world coordinates are 4, 2, 6 mm. The two
