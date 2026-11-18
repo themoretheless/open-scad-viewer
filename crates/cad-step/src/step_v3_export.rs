@@ -291,6 +291,18 @@ fn export_step_direct_impl(
         semantic.presentation.validate_for_model(model)?;
         semantic.xde.validate_for_model(model)?;
     }
+    // AP242 reverses each cavity in ORIENTED_CLOSED_SHELL. Emit the
+    // underlying shell in its own sense before canonicalizing its charts.
+    let shell_geometry = (ap242_composition && model.bodies.iter().any(|b| !b.inner_shells.is_empty())).then(|| {
+        let mut geometry = model.clone();
+        for shell in model.bodies.iter().flat_map(|body| &body.inner_shells) {
+            for face in &mut geometry.0.shells[*shell].faces {
+                face.reversed = !face.reversed;
+            }
+        }
+        geometry
+    });
+    let model = shell_geometry.as_ref().unwrap_or(model);
     // /6 exchanges the authored chart directly, including its original face
     // senses. Other routes mirror reversed faces into canonical forward charts.
     let canonical = (capability != STEP_INTERCHANGE_V6_CAPABILITY)
