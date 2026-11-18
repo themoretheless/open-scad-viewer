@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 880,
-  "unallocatedCount": 120,
+  "specifiedCount": 881,
+  "unallocatedCount": 119,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20411,6 +20411,24 @@
       ],
       "remainingQualification": [
         "External spur pairs only. Both working pitch radii must lie on their active involutes. Off-pitch interference is separate."
+      ]
+    },
+    {
+      "id": "NURBS-0881",
+      "name": "Окружной боковой зазор сателлита и внутреннего венца",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::mounted_internal_spur_backlash_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-881-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-881-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Internal spur ring pairs only. Both working pitch radii must lie on their active involutes. Off-pitch interference is separate."
       ]
     }
   ],

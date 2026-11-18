@@ -273,3 +273,23 @@ fn mounting_backlash_matches_reference_and_working_circle_equations() {
     assert!(gap(1., [20, 40], 20., [0.; 2], 40.).is_err());
     assert!(gap(1., [usize::MAX, 40], 20., [0.; 2], 30.).is_err());
 }
+
+#[test]
+fn mounted_ring_backlash_uses_ring_space_minus_pinion_tooth() {
+    use involute::mounted_internal_spur_backlash_bounds as gap;
+    let a = 20_f64.to_radians();
+    for d in [29.8, 30., 30.3] {
+        let w = (30. * a.cos() / d).acos();
+        for allowances in [[0., 0.], [0.125, 0.25]] {
+            let expected = d / 30. * (allowances[0] + allowances[1])
+                - 2. * d * ((w.tan() - w) - (a.tan() - a));
+            let bound = gap(1., [20, 80], 20., allowances, d).unwrap();
+            contains(bound, expected);
+            assert!(bound[1] - bound[0] < 1e-9);
+        }
+    }
+    assert!(gap(1., [20, 80], 20., [0.; 2], 30.3).unwrap()[1] < 0.);
+    for (teeth, d) in [([80, 20], 30.), ([20, 20], 0.), ([20, 80], 29.)] {
+        assert!(gap(1., teeth, 20., [0.; 2], d).is_err());
+    }
+}

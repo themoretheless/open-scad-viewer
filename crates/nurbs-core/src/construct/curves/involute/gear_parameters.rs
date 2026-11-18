@@ -406,7 +406,10 @@ pub fn spur_tooth_chord_bounds(
 
 fn flank_half_angle(gear: &GearParameterBounds, r: I) -> Result<I> {
     check(
-        r.lo >= gear.root_radius[1].max(gear.base_radius[1]) && r.hi <= gear.tip_radius[0],
+        r.lo >= gear.root_radius[1]
+            .min(gear.tip_radius[1])
+            .max(gear.base_radius[1])
+            && r.hi <= gear.tip_radius[0].max(gear.root_radius[0]),
         "Measurement circle must lie on the active involute",
     )?;
     let base = I::new(gear.base_radius[0], gear.base_radius[1])?;
@@ -466,12 +469,57 @@ pub fn mounted_spur_backlash_bounds(
     thinning: [f64; 2],
     centre_distance: f64,
 ) -> Result<[f64; 2]> {
+    spur_backlash(
+        module,
+        teeth,
+        pressure_degrees,
+        thinning,
+        centre_distance,
+        false,
+    )
+}
+
+/// Signed ring space width minus pinion tooth thickness at their working
+/// pitch point. The pinion is first. Positive allowances narrow the pinion
+/// tooth and widen the ring space on their respective reference circles.
+pub fn mounted_internal_spur_backlash_bounds(
+    module: f64,
+    teeth: [usize; 2],
+    pressure_degrees: f64,
+    thinning: [f64; 2],
+    centre_distance: f64,
+) -> Result<[f64; 2]> {
+    check(teeth[1] > teeth[0], "Ring must have more teeth than pinion")?;
+    spur_backlash(
+        module,
+        teeth,
+        pressure_degrees,
+        thinning,
+        centre_distance,
+        true,
+    )
+}
+
+fn spur_backlash(
+    module: f64,
+    teeth: [usize; 2],
+    pressure_degrees: f64,
+    thinning: [f64; 2],
+    centre_distance: f64,
+    internal: bool,
+) -> Result<[f64; 2]> {
     check(
         centre_distance.is_finite() && centre_distance > 0.,
         "Expected positive finite centre distance",
     )?;
-    let mut widths = I::point(0.);
-    let count = I::point(teeth[0] as f64).add(I::point(teeth[1] as f64))?;
+    let mut widths = [I::point(0.); 2];
+    let first = I::point(teeth[0] as f64);
+    let second = I::point(teeth[1] as f64);
+    let count = if internal {
+        second.sub(first)?
+    } else {
+        second.add(first)?
+    };
     for i in 0..2 {
         let gear = derive_gear_parameter_bounds(
             module,
@@ -479,17 +527,20 @@ pub fn mounted_spur_backlash_bounds(
             pressure_degrees,
             module / 4.,
             thinning[i],
-            false,
+            internal && i == 1,
         )?;
         let radius = I::point(centre_distance)
             .mul(I::point(teeth[i] as f64))?
             .div(count)?;
         let half_angle = flank_half_angle(&gear, radius)?;
-        widths = widths.add(radius.mul(half_angle)?.mul(I::point(2.))?)?;
+        widths[i] = radius.mul(half_angle)?.mul(I::point(2.))?;
+    }
+    if internal {
+        return Ok(pair(widths[1].sub(widths[0])?));
     }
     let pitch = pi()?
         .mul(I::point(2.))?
         .mul(I::point(centre_distance))?
         .div(count)?;
-    Ok(pair(pitch.sub(widths)?))
+    Ok(pair(pitch.sub(widths[0].add(widths[1])?)?))
 }
