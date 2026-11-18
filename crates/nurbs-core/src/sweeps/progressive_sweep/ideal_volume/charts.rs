@@ -163,6 +163,30 @@ pub(super) fn margin(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<f64>
     }
     Ok(lower)
 }
+pub(super) fn proves_corrected_forward_line(
+    s: &Sweep<'_>,
+    closed: bool,
+    out: &mut IdealVolumeReport,
+    max_cells: usize,
+    max_exact_work: u64,
+) -> Result<bool> {
+    if closed
+        || s.options.orientation != Orientation::CorrectedFrenet
+        || s.frame_laws.is_some()
+        || s.orientation_guide.is_some()
+    {
+        return Ok(false);
+    }
+    // On a forward line, Corrected Frenet keeps the initial perpendicular
+    // seed. Only the authored twist contributes frame jets in station units.
+    let remaining = (max_cells - out.cells)
+        .min(100000)
+        .min((max_exact_work - out.exact_work) as usize);
+    let line = super::super::source_line::certify(s.path, remaining)?;
+    out.cells += line.cells;
+    out.exact_work += line.cells as u64;
+    Ok(line.certified)
+}
 pub(super) fn original_jets(
     s: &Sweep<'_>,
     t: [f64; 2],

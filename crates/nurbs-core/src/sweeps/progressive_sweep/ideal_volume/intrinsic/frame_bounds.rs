@@ -62,20 +62,7 @@ pub(super) fn jets(
     } else {
         None
     };
-    let result = arc_frames::arc_frame(
-        c.s,
-        station,
-        phase,
-        guide,
-        arc_frames::ArcFrameSources {
-            offset: c.offset.as_ref(),
-            transport: c.transport.as_ref(),
-            shared_guide: c.shared_guide,
-            zero: &c.zero,
-            length: c.arc.as_ref().map(|m| m.length()),
-        },
-        stage - out.cells,
-    )?;
+    let result = c.frame_jets(station, phase, guide, stage - out.cells)?;
     let Some(result) = result else {
         return Ok(None);
     };

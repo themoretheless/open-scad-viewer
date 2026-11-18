@@ -119,6 +119,7 @@ fn nonplanar_cap_and_moving_tilted_frame_have_an_original_global_pair_certificat
         arc: None,
         guide_arc: None,
         shared_guide: false,
+        fixed_line_frame: false,
         poses: Some(Default::default()),
         cap_jets: None,
     };
