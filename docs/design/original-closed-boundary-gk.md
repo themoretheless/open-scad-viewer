@@ -176,3 +176,10 @@ charts. Their inward directions must point to opposite sides of the complete
 seam after accounting for each face axis, boundary end and traversal. Exact gradient and Hessian
 identities then compare the physical graph in that projection. Normal
 enclosures and graph identities consume the remaining seam work.
+
+When complete natural edges have different clamped knot partitions on
+the same active parameter interval, a geometric audit can refine both to
+the exact union of their along-edge knots. The original charts first
+prove continuity across their internal knots. Each pair of closed edge
+pieces then proves position and geometric jets. Missing pieces, failed
+exact insertion and insufficient work withhold the whole-edge certificate.

@@ -1,0 +1,35 @@
+{
+  "sourceBase": "d3e3343cfdc6c615725460d1cc38f74fa596e1fa",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Whole-edge exact G2 of nonplanar clamped charts with different authored knots on a common active interval, including tangent acceleration varying along the seam. Explicit old-strip refusal, G1-only curvature perturbation, and one-short work refusal.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_smoothness::complete",
+      "result": "test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 2035 filtered out; finished in 0.31s",
+      "file": "seam.log.gz",
+      "sha256": "742d4fd3beb1452d047bc9a9cab75218a00d03129e65a3e6374418104693e475"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_boundary_owned::closed::classified",
+      "result": "test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 2031 filtered out; finished in 22.48s",
+      "file": "closed.log.gz",
+      "sha256": "cdf149bc66f8735ccacea03cbb32c0b6c760fc5ace0957cf9314c97548163f5f"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 1999 filtered out; finished in 11.91s",
+      "file": "source.log.gz",
+      "sha256": "020e8f87a34a98618a2d6cb88ae8309f65928e0bf5d1f4a5fd159e30943b7bf5"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "7eff45aa1ade310a760317e8df943c2e9e989a714d1f48656b372ec0057e16db",
+    "count": 4918
+  }
+}

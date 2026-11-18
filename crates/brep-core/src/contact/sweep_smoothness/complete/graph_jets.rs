@@ -6,6 +6,8 @@ use nurbs_core::{
     normal_alignment,
 };
 
+mod refinement;
+
 fn border(surface: &Surface, label: &str) -> (Curve, [[f64; 2]; 2]) {
     let mut domain = [
         [
@@ -131,21 +133,24 @@ pub(super) fn qualify(
     }
     for &i in &proof.unresolved_seams {
         let result = &mut proof.seams[i];
-        if !result.affine_parameter_identity {
-            continue;
-        }
         let seam = &seams[i];
-        let (certified, used) = inspect(
-            seam.patches.map(|patch| &patches[patch]),
-            seam.boundaries.each_ref().map(String::as_str),
-            seam.order,
-            work - proof.exact_work,
-        )?;
+        let surfaces = seam.patches.map(|patch| &patches[patch]);
+        let boundaries = seam.boundaries.each_ref().map(String::as_str);
+        let budget = work - proof.exact_work;
+        let (certified, used) = if surfaces.iter().all(|s| single_bezier_tile(s)) {
+            if !result.affine_parameter_identity {
+                continue;
+            }
+            inspect(surfaces, boundaries, seam.order, budget)?
+        } else {
+            refinement::inspect(surfaces, boundaries, seam.order, budget)?
+        };
         proof.exact_work += used;
         result.work += used;
         if certified {
             result.certified = true;
             result.exact_identity = true;
+            result.affine_parameter_identity = true;
             result.regularity_certified = true;
             result.reason = "exact-regular-geometric-graph-jets";
         }
@@ -248,5 +253,72 @@ mod tests {
         )
         .unwrap();
         assert!(!certified && used == 2);
+    }
+    #[test]
+    fn different_authored_partitions_cover_every_geometric_jet_span() {
+        use nurbs_core::{editing::exact_surface_knot_insertion::insert, surface::Axis};
+        let refine = |chart: &Surface, knot| {
+            let result = insert(chart, Axis::V, knot, 1, 1_000_000).unwrap();
+            assert_eq!(result.inserted, 1, "{:?}", result.refusal);
+            result.surface
+        };
+        let mut left = cap(false);
+        for point in left.control_points.iter_mut().flatten() {
+            point[0] *= 3.;
+            point[2] *= 3.;
+        }
+        // x = 3u, y = (2 + 3u²/8)v, z = xy/8. The extra second
+        // derivative is along the common edge and varies along it.
+        let right = Surface {
+            degree_u: 3,
+            degree_v: 2,
+            knots_u: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            knots_v: vec![0., 0., 0., 1., 1., 1.],
+            control_points: (0..4)
+                .map(|i| {
+                    let x = i as f64;
+                    let y = [2., 2., 17. / 8., 19. / 8.][i];
+                    let z = x / 4. + if i == 3 { 9. / 64. } else { 0. };
+                    [0., 0.5, 1.]
+                        .into_iter()
+                        .map(|v| vec![x, y * v, z * v])
+                        .collect()
+                })
+                .collect(),
+            weights: vec![vec![1.; 3]; 4],
+            periodic_u: false,
+            periodic_v: false,
+        };
+        let curves = [refine(&left, 0.25), refine(&right, 0.75)];
+        let seam = ProjectiveSeam {
+            patches: [0, 1],
+            boundaries: ["uMax".into(), "uMin".into()],
+            order: 2,
+            normal_scale: 1.,
+        };
+        let seams = std::slice::from_ref(&seam);
+        let raw = continuity::inspect_projective_seam_collection_with_rational_scale_proposals(
+            &curves, seams, 1_000_000,
+        )
+        .unwrap();
+        assert!(!raw.certified);
+        let full = qualify(&curves, seams, 1_000_000).unwrap();
+        assert!(full.certified);
+        assert_eq!(full.certified_order, Some(2));
+        assert_eq!(full.exact_work, full.seams[0].work);
+        assert!(
+            !qualify(&curves, seams, full.exact_work - 1)
+                .unwrap()
+                .certified
+        );
+
+        // Alter only the right carrier's second transverse jet. The common
+        // edge and first jet still agree, including after exact refinement.
+        let mut changed = right;
+        changed.control_points[2][2][2] += 1. / 16.;
+        let altered = [curves[0].clone(), refine(&changed, 0.75)];
+        assert!(!qualify(&altered, seams, 1_000_000).unwrap().certified);
+        let tangent = ProjectiveSeam { order: 1, ..seam };
+        assert!(qualify(&altered, &[tangent], 1_000_000).unwrap().certified);
     }
 }
