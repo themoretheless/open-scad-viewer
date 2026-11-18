@@ -2068,8 +2068,35 @@ pub fn classify_planar_curve_fill(
     parameter_tolerance: f64,
     max_cells: usize,
 ) -> Result<PlanarCurveFillReport> {
-    validate(parameter_tolerance, max_cells)?;
     check(point.iter().all(|value| value.is_finite()), "Winding point must be finite")?;
+    classify_planar_curve_fill_for_region(
+        contours, point.map(Interval::point), rule, parameter_tolerance, max_cells,
+    )
+}
+
+/// Certify the same fill classification for every point in a closed
+/// axis-aligned box given by its lower and upper corners. A contour
+/// intersecting or touching the box prevents certification.
+pub fn classify_planar_curve_fill_over_box(
+    contours: &[&Curve],
+    bounds: [[f64; 2]; 2],
+    rule: crate::chord_winding::FillRule,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarCurveFillReport> {
+    let [[x_min, y_min], [x_max, y_max]] = bounds;
+    let region = [Interval::new(x_min, x_max)?, Interval::new(y_min, y_max)?];
+    classify_planar_curve_fill_for_region(contours, region, rule, parameter_tolerance, max_cells)
+}
+
+fn classify_planar_curve_fill_for_region(
+    contours: &[&Curve],
+    region: [Interval; 2],
+    rule: crate::chord_winding::FillRule,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarCurveFillReport> {
+    validate(parameter_tolerance, max_cells)?;
     check(!contours.is_empty(), "Curve fill requires at least one contour")?;
     check(contours.len() <= max_cells, "Curve fill budget must cover every contour")?;
     let mut initial_work = 0;
@@ -2088,11 +2115,10 @@ pub fn classify_planar_curve_fill(
     let mut extra = max_cells - initial_work;
     let mut work_cells = 0;
     let mut winding = Some(0_i32);
-    let origin = Some(point.map(Interval::point));
     for (index, (&curve, spans)) in contours.iter().zip(span_counts).enumerate() {
         let share = extra / (contours.len() - index);
         let travel = measure_planar_angular_travel_from(
-            curve, curve.domain(), origin, parameter_tolerance, spans + share,
+            curve, curve.domain(), Some(region), parameter_tolerance, spans + share,
         )?;
         work_cells += travel.work_cells;
         extra -= travel.work_cells.saturating_sub(spans);

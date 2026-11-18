@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 793,
-  "unallocatedCount": 207,
+  "specifiedCount": 794,
+  "unallocatedCount": 206,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18759,6 +18759,25 @@
       "remainingQualification": [
         "Enclose nearest contour distance and determine its sign from the selected fill rule.",
         "Check both signed distances for nested contours, the nearest contour witness and mandatory initial distance coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0794",
+      "name": "Сертификация заполнения прямоугольной области по нескольким NURBS-контурам",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::classify_planar_curve_fill_over_box",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-794-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-794-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify the same fill rule outcome throughout a box separated from every supplied contour.",
+        "Check query boxes in material, a hole and the exterior, and refuse crossing and touching boxes.",
         "WASM and application integration are separate."
       ]
     }

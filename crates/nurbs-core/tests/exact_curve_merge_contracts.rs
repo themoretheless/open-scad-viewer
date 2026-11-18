@@ -12720,3 +12720,35 @@ fn planar_curve_fill_signed_distance_uses_nearest_contour_and_fill_rule() {
         assert_eq!(report.distance_stop_reason, StopReason::Tolerance);
     }
 }
+
+#[test]
+fn planar_curve_fill_over_box_distinguishes_material_hole_and_crossing() {
+    use nurbs_core::{
+        analysis::curve_measure::classify_planar_curve_fill_over_box, chord_winding::FillRule,
+    };
+    let square = |size: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-size, -size], vec![size, -size], vec![size, size],
+            vec![-size, size], vec![-size, -size]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let outer = square(3.);
+    let mut hole = square(1.);
+    hole.control_points.reverse();
+    let classify = |bounds| classify_planar_curve_fill_over_box(
+        &[&outer, &hole], bounds, FillRule::NonZero, 0.02, 1024,
+    );
+    for (bounds, winding, filled) in [
+        ([[-0.5, -0.5], [0.5, 0.5]], 0, false),
+        ([[1.5, -0.5], [2., 0.5]], 1, true),
+        ([[3.25, -0.5], [3.75, 0.5]], 0, false),
+    ] {
+        let report = classify(bounds).unwrap();
+        assert_eq!((report.winding, report.filled), (Some(winding), Some(filled)));
+        assert!(report.work_cells <= 1024);
+    }
+    assert!(classify([[0.5, -0.5], [1.5, 0.5]]).is_err());
+    assert!(classify([[1., -0.5], [1.5, 0.5]]).is_err());
+}
