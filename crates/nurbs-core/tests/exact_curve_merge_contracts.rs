@@ -7766,3 +7766,41 @@ fn physical_upper_gap_is_capped_by_smallest_moment_under_uncertainty() {
     assert!(first[0] > 0. && first[0] <= 2. && 4. <= first[1]);
     assert!(second[0] == 0. && 2. <= second[1] && second[1] < 2. + 1e-12);
 }
+
+#[test]
+fn principal_axis_residual_certifies_a_rotated_direction() {
+    use nurbs_core::analysis::surface_measure::certify_principal_axis_direction;
+    let tensor = [[3., 1., 0.], [1., 3., 0.], [0., 0., 5.]]
+        .map(|row| row.map(|value| [value; 2]));
+    let direction = [1., 0.99, 0.];
+    let bound = certify_principal_axis_direction(tensor, 1, direction, 1e-9)
+        .unwrap()
+        .unwrap();
+    let expected = 0.01 / (2_f64 * (1. + 0.99_f64.powi(2))).sqrt();
+    assert!(expected <= bound && bound < 0.015);
+    for scale in [f64::from_bits(1), -1., f64::MAX] {
+        assert!(
+            certify_principal_axis_direction(tensor, 1, [scale, scale, 0.], 1e-9)
+                .unwrap()
+                .unwrap()
+                < 1e-8
+        );
+    }
+}
+
+#[test]
+fn principal_axis_residual_refuses_repeated_moments_and_wrong_candidates() {
+    use nurbs_core::analysis::surface_measure::certify_principal_axis_direction;
+    let tensor = [[3., 0., 0.], [0., 3., 0.], [0., 0., 5.]]
+        .map(|row| row.map(|value| [value; 2]));
+    assert_eq!(
+        certify_principal_axis_direction(tensor, 0, [1., 0., 0.], 1e-9).unwrap(),
+        None
+    );
+    assert_eq!(
+        certify_principal_axis_direction(tensor, 2, [1., 0., 0.], 1e-9).unwrap(),
+        None
+    );
+    assert!(certify_principal_axis_direction(tensor, 3, [1., 0., 0.], 1e-9).is_err());
+    assert!(certify_principal_axis_direction(tensor, 2, [0.; 3], 1e-9).is_err());
+}

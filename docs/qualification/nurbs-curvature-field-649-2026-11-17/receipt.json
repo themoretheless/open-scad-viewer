@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0649",
+  "testedBase": "e33b3b42f2d756f6af76b065c127defb2396bf24",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 246,
+  "scope": [
+    "Bound the sine of the acute angle to an isolated principal axis from a certified residual and unwanted spectral separation.",
+    "Check rotated analytic axes, sign and magnitude invariance, repeated moments, and rejection of an orthogonal candidate."
+  ],
+  "logSha256": "0482fbbaae45e5df5e67a63cc5c5d6892e67553b68f2127f136b3631f5dc8446",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "cbc3e7ce7d6b407bafca996f7572553667a4bced130134c58e3fd908c24f6d87",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "1811c4a002a1b2f904d8020724c468aaeddc068e8ba48e7a211c4e70e3e85334"
+  }
+}

@@ -1404,6 +1404,53 @@ pub fn bound_physical_principal_moment_gaps(
     Ok([[first.lo, first.hi], [second.lo, second.hi]])
 }
 
+/// Bound the sine of the acute angle between a candidate direction and
+/// the selected principal axis, indexed by ascending moment (0 through 2).
+/// Returns None when the selected moment is not isolated or the bound is trivial.
+pub fn certify_principal_axis_direction(
+    tensor: [[[f64; 2]; 3]; 3],
+    index: usize,
+    direction: [f64; 3],
+    moment_tolerance: f64,
+) -> Result<Option<f64>> {
+    check(index < 3, "Principal moment index must be in 0..3")?;
+    let axis = InertiaAxis::new(direction)?;
+    let moments = bound_physical_principal_moments(tensor, moment_tolerance)?;
+    let [lo, hi] = moments[index];
+    let shift = crate::distance_bounds::midpoint(lo, hi);
+    let mut separation = f64::INFINITY;
+    for (other, [other_lo, other_hi]) in moments.into_iter().enumerate() {
+        if other == index {
+            continue;
+        }
+        let gap = if other < index && other_hi < lo {
+            (shift - other_hi).next_down()
+        } else if other > index && hi < other_lo {
+            (other_lo - shift).next_down()
+        } else {
+            return Ok(None);
+        };
+        separation = separation.min(gap);
+    }
+    if separation <= 0. {
+        return Ok(None);
+    }
+
+    let mut matrix = symmetric_tensor_intervals(tensor)?;
+    let mut residual = [Interval::point(0.); 3];
+    for (i, row) in matrix.iter_mut().enumerate() {
+        row[i] = row[i].sub(Interval::point(shift))?;
+        residual[i] = crate::numerics::interval_vec3::dot_tight(*row, axis.components)?;
+    }
+
+    // In an eigenbasis every unwanted direction contributes its component
+    // multiplied by an eigenvalue distance of at least separation.
+    let length_lower = axis.norm_squared.lo.sqrt().next_down();
+    let relative_residual = (norm(residual)?.hi / length_lower).next_up();
+    let sin_upper = (relative_residual / separation).next_up();
+    Ok((sin_upper < 1.).then_some(sin_upper))
+}
+
 fn validate_moment_tolerance(tolerance: f64) -> Result<()> {
     check(
         tolerance.is_finite() && tolerance > 0.,
