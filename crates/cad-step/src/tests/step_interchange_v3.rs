@@ -2802,6 +2802,46 @@ fn planet_gear_step_assembly_retains_one_prototype() {
 }
 
 #[test]
+fn shared_step_bounds_enclose_reflected_solids_and_rational_faces() {
+    let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
+    let gears = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
+    let step = crate::export_planet_gear_occurrences_step(&gears).unwrap();
+    let mut assembly = crate::import_step_shared_assembly(&step).unwrap();
+    let solid = freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+    let identity = [
+        [1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ];
+    let index = assembly.insert_solid(solid, identity).unwrap();
+    let placement = [
+        [0., -3., 0., 25.], [2., 0., 0., -8.], [0., 0., -4., 40.], [0., 0., 0., 1.],
+    ];
+    assembly.set_occurrence_orthogonal_placement(index, placement).unwrap();
+    let bounds = assembly.occurrence_bounds().unwrap();
+    assert_eq!(bounds.len(), 3);
+    let expected = [[16., -8., 24.], [25., -4., 40.]];
+    for (side, expected) in bounds[index].iter().zip(expected) {
+        for (a, b) in side.iter().zip(expected) {
+            assert!((a - b).abs() < 1e-10);
+        }
+    }
+    for (index, [lower, upper]) in bounds.into_iter().enumerate() {
+        let model = assembly.materialize(index).unwrap();
+        assert!(model.vertices.iter().all(|vertex| {
+            (0..3).all(|axis| lower[axis] <= vertex.point[axis] && vertex.point[axis] <= upper[axis])
+        }));
+        for face in &model.faces {
+            let surface = &face.surface;
+            let u0 = surface.knots_u[surface.degree_u];
+            let u1 = surface.knots_u[surface.control_points.len()];
+            let v0 = surface.knots_v[surface.degree_v];
+            let v1 = surface.knots_v[surface.control_points[0].len()];
+            let sample = surface.evaluate((u0 + u1) / 2., (v0 + v1) / 2.).unwrap().point;
+            assert!((0..3).all(|axis| lower[axis] - 1e-12 <= sample[axis] && sample[axis] <= upper[axis] + 1e-12));
+        }
+    }
+}
+
+#[test]
 fn shared_step_edits_scaled_reflected_placement_without_editing_shared_geometry() {
     let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
     let gears = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();

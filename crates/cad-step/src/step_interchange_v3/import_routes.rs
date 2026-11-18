@@ -838,11 +838,57 @@ impl StepSharedAssembly {
         Ok(())
     }
 
+    /// Conservative assembly-space boxes, in occurrence order, in millimetres.
+    /// A definition's control hull is scanned once even when repeatedly placed.
+    /// Bounds may include portions of a surface outside its trimmed region.
+    pub fn occurrence_bounds(&self) -> Result<Vec<[[f64; 3]; 2]>> {
+        let local: Vec<_> = self.definitions.iter().map(definition_control_bounds).collect();
+        self.occurrences.iter().map(|occurrence| {
+            let [min, max] = local[occurrence.definition];
+            let mut placed = [[0.; 3]; 2];
+            for (axis, row) in occurrence.transform[..3].iter().enumerate() {
+                let (mut lower, mut upper) = (row[3], row[3]);
+                for (column, &coefficient) in row[..3].iter().enumerate() {
+                    if coefficient == 0. {
+                        continue;
+                    }
+                    let (lo, hi) = if coefficient > 0. {
+                        (min[column], max[column])
+                    } else {
+                        (max[column], min[column])
+                    };
+                    lower = (lower + (coefficient * lo).next_down()).next_down();
+                    upper = (upper + (coefficient * hi).next_up()).next_up();
+                }
+                if !lower.is_finite() || !upper.is_finite() || lower > upper {
+                    return Err(refuse("STEP occurrence bounds are empty or exceed finite coordinates"));
+                }
+                placed[0][axis] = lower;
+                placed[1][axis] = upper;
+            }
+            Ok(placed)
+        }).collect()
+    }
+
     pub fn materialize(&self, index: usize) -> Result<Model> {
         let occurrence = self.occurrences.get(index)
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
         brep_core::transform::affine(&self.definitions[occurrence.definition], occurrence.transform)
     }
+}
+
+fn definition_control_bounds(model: &Model) -> [[f64; 3]; 2] {
+    let mut bounds = [[f64::INFINITY; 3], [f64::NEG_INFINITY; 3]];
+    let points = model.vertices.iter().map(|vertex| vertex.point.as_slice())
+        .chain(model.edges.iter().flat_map(|edge| edge.curve.control_points.iter().map(Vec::as_slice)))
+        .chain(model.faces.iter().flat_map(|face| face.surface.control_points.iter().flatten().map(Vec::as_slice)));
+    for point in points {
+        for (axis, &coordinate) in point.iter().enumerate() {
+            bounds[0][axis] = bounds[0][axis].min(coordinate);
+            bounds[1][axis] = bounds[1][axis].max(coordinate);
+        }
+    }
+    bounds
 }
 
 /// Import an AP242 assembly without expanding all of its placements into

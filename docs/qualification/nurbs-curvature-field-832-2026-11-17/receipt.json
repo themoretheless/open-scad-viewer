@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0832",
+  "testedBase": "34fdac0a7a17974d75ae833833850119f22c2856",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 181,
+  "scope": [
+    "Scan the control hull once per definition and apply directed-rounding affine bounds to each placement.",
+    "Check analytic box extrema for a scaled reflected cuboid and containment of materialized gear vertices and rational surface witnesses."
+  ],
+  "logSha256": "506812b30eaeb7c640dd7446df80715c759358ed7b04f26693063fc419e18e15",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "39d0d3f6fcd870ceb04a0c4330826f4b21fd56715fa62ea16a5cf63fb79acc38",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "9880d00701e2545a81f18bc2549d0ec2ae8b1727ac8cb3a53f6216a5ab53b740"
+  }
+}
