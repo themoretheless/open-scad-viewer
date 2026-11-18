@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0677",
+  "testedBase": "8d859b97e81b6141e20f7eba797bbcf6df2d8408",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "curve_directional_travel_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 280,
+  "scope": [
+    "Expose signed and absolute axial travel on the original parameter interval with optional reverse-limit classification.",
+    "Check exact axial bounds and all three reverse classifications through the compiled ABI and validate selected windows."
+  ],
+  "logSha256": "2ab4c85f63d7de7129894f3b8220587eee5778f1976d5c043f7622837f29afe1",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "79ad3c61a597211646453334c6a46b1d74d235a99779495cd8bd266bc163bb52",
+    "crates/geometry-bridge/src/dispatch/nurbs_2.rs": "af06e83b9f4e0d3d91bd7fd7bfab511d4834c483dcbb980a634dac3ba89a61d5",
+    "crates/geometry-bridge/tests/curve_directional_travel_contracts.rs": "1e8da5adc2a44872dca6470346554755000808a41e050d115e0d34d118e4feef",
+    "scripts/check-curve-directional-travel-wasm.mts": "3191240424daa3790ae42221710e26727e00fdb48abb0cd2e4fe03a17879ed15"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-curve-directional-travel-wasm.mts <geometry_wasm.wasm>"
+  }
+}
