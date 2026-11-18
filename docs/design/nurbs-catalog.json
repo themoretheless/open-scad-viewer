@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 981,
-  "unallocatedCount": 19,
+  "specifiedCount": 982,
+  "unallocatedCount": 18,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22305,6 +22305,27 @@
       ],
       "remainingQualification": [
         "One group level and direct occurrences. OCCT verifies shared product identity, names, positions and individual colours of two reflected scaled cylinders."
+      ]
+    },
+    {
+      "id": "NURBS-0982",
+      "name": "Чтение пути изделия для каждого размещения общей NURBS-детали в STEP",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::import_step_product_paths",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-named-styled-step-981-2026-11-19/verify.py",
+        "docs/qualification/nurbs-step-occurrence-product-paths-982-2026-11-19/occt.log",
+        "docs/qualification/nurbs-step-occurrence-product-paths-982-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-step-occurrence-product-paths-982-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "One named root and named representations along each selected occurrence path. Direct and nested placements of one definition checked with reversed STEP record order and compared with OCCT XDE."
       ]
     }
   ],

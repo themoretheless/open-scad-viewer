@@ -217,6 +217,24 @@ fn named_coloured_parts_share_a_scaled_definition_across_group_and_root() {
     if let Some(path) = std::env::var_os("CAD_NAMED_STYLED_FIXTURE") {
         std::fs::write(path, &text).unwrap();
     }
+    let (header, data) = text.split_once("DATA;").unwrap();
+    let (rows, tail) = data.split_once("ENDSEC;").unwrap();
+    let reordered = format!(
+        "{header}DATA;\n{}\nENDSEC;{tail}",
+        rows.lines().rev().collect::<Vec<_>>().join("\n")
+    );
+    let (named, paths) = cad_step::import_step_product_paths(&reordered).unwrap();
+    assert_eq!(named.name, "Drive");
+    assert_eq!(named.definition_names, ["Roller"]);
+    assert_eq!(paths.len(), 2);
+    for (part, path) in named.assembly.occurrences().iter().zip(paths) {
+        let expected = if part.transform[0][3] == 0. {
+            vec!["Drive", "Feed", "Roller"]
+        } else {
+            vec!["Drive", "Roller"]
+        };
+        assert_eq!(path, expected);
+    }
     let reopened = cad_step::import_step_shared_assembly(&text).unwrap();
     assert_eq!(reopened.definitions().len(), 1);
     assert_eq!(reopened.occurrences().len(), 2);

@@ -2112,7 +2112,7 @@ fn definition_control_bounds(model: &Model) -> [[f64; 3]; 2] {
 /// Import an AP242 assembly without expanding all of its placements into
 /// a single B-rep. Each distinct definition is built and validated once.
 pub fn import_step_shared_assembly(text: &str) -> Result<StepSharedAssembly> {
-    Ok(read_shared_products(text, false)?.0)
+    Ok(read_shared_products(text, false, None)?.0)
 }
 
 /// Shared geometry and product labels resolved through the selected STEP graph.
@@ -2352,12 +2352,21 @@ pub fn import_step_occurrence_colours(text: &str) -> Result<Vec<Option<[f64; 3]>
 }
 
 pub fn import_named_step_assembly(text: &str) -> Result<NamedStepAssembly> {
-    let (assembly, labels) = read_shared_products(text, true)?;
+    let (assembly, labels) = read_shared_products(text, true, None)?;
     let (name, definition_names) = labels.ok_or_else(|| refuse("Missing assembly product names"))?;
     Ok(NamedStepAssembly { assembly, name, definition_names })
 }
 
-fn read_shared_products(text: &str, named: bool) -> Result<(StepSharedAssembly, Option<(String, Vec<String>)>)> {
+/// Import the shared geometry and the complete product-name path of each
+/// occurrence, in placement order. Paths include the assembly root and leaf.
+pub fn import_step_product_paths(text: &str) -> Result<(NamedStepAssembly, Vec<Vec<String>>)> {
+    let mut paths = Vec::new();
+    let (assembly, labels) = read_shared_products(text, true, Some(&mut paths))?;
+    let (name, definition_names) = labels.ok_or_else(|| refuse("Missing assembly product names"))?;
+    Ok((NamedStepAssembly { assembly, name, definition_names }, paths))
+}
+
+fn read_shared_products(text: &str, named: bool, paths: Option<&mut Vec<Vec<String>>>) -> Result<(StepSharedAssembly, Option<(String, Vec<String>)>)> {
     validate_exchange_structure(text)?;
     let entities = parse(data_payload(text)?)?;
     let route = DirectImportRoute {
@@ -2387,6 +2396,8 @@ fn read_shared_products(text: &str, named: bool) -> Result<(StepSharedAssembly, 
         }
         Some((products, root, Vec::new()))
     } else { None };
+    let representation_paths = paths.as_ref().map(|_| placements.iter()
+        .map(|item| item.path.iter().step_by(2).copied().collect::<Vec<_>>()).collect::<Vec<_>>());
     let mut definition_indices = BTreeMap::new();
     let mut definitions = Vec::new();
     let mut occurrences = Vec::with_capacity(placements.len());
@@ -2421,6 +2432,11 @@ fn read_shared_products(text: &str, named: bool) -> Result<(StepSharedAssembly, 
             if kind != "PRODUCT" || args.len() < 2 { return Err(refuse("Malformed named product")); }
             step_xde::decode_step_string(&string_value(&args[1], "product name")?)
         };
+        if let (Some(paths), Some(representations)) = (paths, representation_paths) {
+            for path in representations {
+                paths.push(path.into_iter().map(name).collect::<Result<_>>()?);
+            }
+        }
         Some((name(root)?, representations.into_iter().map(name).collect::<Result<_>>()?))
     } else { None };
     Ok((StepSharedAssembly { definitions, occurrences }, names))
