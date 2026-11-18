@@ -131,3 +131,10 @@ adds the physical last-to-first interface along each opened axis. A doubly
 periodic chart receives both families of wrap interfaces, including their
 intersection. Exact opening, tiling and geometric seam identities all draw
 from the shared exact work allowance.
+
+When two coedges of one periodic face use the opposite full sides of an
+authored period, the audit binds their shared world edge to the exact wrap
+proof. Both uses must agree with the same world traversal, including its
+orientation. The audit also requires exact positional agreement and valid
+vertex links. The report lists these edges separately from its standalone
+strip proofs.

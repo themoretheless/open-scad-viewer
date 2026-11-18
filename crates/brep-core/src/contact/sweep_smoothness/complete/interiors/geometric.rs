@@ -280,4 +280,122 @@ mod tests {
         assert_eq!(report.seams, 0);
         assert!(report.work > 0);
     }
+    fn single_face_torus(surface: Surface) -> crate::Model {
+        use crate::{Body, Coedge, Curve, Edge, Face, FaceUse, Loop, Shell, Vertex};
+        let world_u = Curve {
+            degree: surface.degree_u,
+            knots: surface.knots_u.clone(),
+            control_points: surface
+                .control_points
+                .iter()
+                .map(|row| row[1].clone())
+                .collect(),
+            weights: surface.weights.iter().map(|row| row[1]).collect(),
+            periodic: true,
+        };
+        let world_v = Curve {
+            degree: surface.degree_v,
+            knots: surface.knots_v.clone(),
+            control_points: surface.control_points[1].clone(),
+            weights: surface.weights[1].clone(),
+            periodic: true,
+        };
+        let point = [
+            surface.control_points[1][1][0],
+            surface.control_points[1][1][1],
+            surface.control_points[1][1][2],
+        ];
+        let curve_use = |edge, reversed, a, b| Coedge::new(edge, reversed, crate::line(a, b));
+        let mut model = crate::Model(
+            brep_topology::Model {
+                vertices: vec![Vertex { point }],
+                edges: [world_u, world_v]
+                    .into_iter()
+                    .map(|curve| Edge {
+                        curve,
+                        vertices: [0, 0],
+                        degenerate: false,
+                    })
+                    .collect(),
+                loops: vec![Loop {
+                    coedges: vec![
+                        curve_use(0, false, vec![0., 0.], vec![4., 0.]),
+                        curve_use(1, false, vec![4., 0.], vec![4., 4.]),
+                        curve_use(0, true, vec![4., 4.], vec![0., 4.]),
+                        curve_use(1, true, vec![0., 4.], vec![0., 0.]),
+                    ],
+                }],
+                faces: vec![Face {
+                    surface,
+                    outer: 0,
+                    holes: vec![],
+                }],
+                shells: vec![Shell {
+                    faces: vec![FaceUse {
+                        face: 0,
+                        reversed: false,
+                    }],
+                    closed: true,
+                }],
+                bodies: vec![Body {
+                    outer_shell: 0,
+                    inner_shells: vec![],
+                }],
+                tolerance_mm: 1e-8,
+            },
+            crate::TopologyIds::default(),
+        );
+        model.rebuild_topology_ids();
+        model
+    }
+
+    #[test]
+    fn complete_boundary_owns_both_topological_wrap_edges_of_one_periodic_face() {
+        let mut model = single_face_torus(periodic_chart(true));
+        let limits = super::super::super::Limits {
+            order: 2,
+            exact_work: 16_000_000,
+            agreement_work: 1_000_000,
+            regularity_cells: 100_000,
+        };
+        let report = super::super::super::inspect(&model, limits).unwrap();
+        assert!(
+            report.g2_certified,
+            "regular={} face={} position={:?} unresolved={:?} links={}",
+            report.regularity.all_faces_regular,
+            report.face_interiors.certified,
+            report
+                .edge_correspondence
+                .as_ref()
+                .map(|r| (r.all_equal, r.all_joins_exact)),
+            report.unresolved_edges,
+            report.vertex_links_complete,
+        );
+        assert_eq!(report.periodic_edge_ids, [0, 1]);
+        assert!(report.edge_ids.is_empty());
+        assert_eq!(report.face_interiors.geometric_seams, 32);
+        let short = super::super::super::inspect(
+            &model,
+            super::super::super::Limits {
+                exact_work: report.exact_work - 1,
+                ..limits
+            },
+        )
+        .unwrap();
+        assert!(!short.g2_certified && short.periodic_edge_ids.is_empty());
+        assert_eq!(short.unresolved_edges, [0, 1]);
+
+        let coedge = &mut model.loops[0].coedges[0];
+        *coedge = coedge
+            .clone()
+            .with_trim(brep_topology::CoedgeTrim {
+                curve_parameter: [1., 3.],
+                pcurve_parameter: [0.25, 0.75],
+                periodic_lift: [[0; 2]; 2],
+            })
+            .unwrap();
+        let partial = super::super::super::inspect(&model, limits).unwrap();
+        assert!(!partial.g2_certified);
+        assert!(partial.unresolved_edges.contains(&0));
+    }
 }

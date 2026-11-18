@@ -11,7 +11,10 @@ pub struct Limits {
 }
 pub struct Report {
     pub extraction_complete: bool,
+    /// Edges indexed by the standalone strip proof collection.
     pub edge_ids: Vec<usize>,
+    /// Physical same-face seam edges proved by the original periodic atlas.
+    pub periodic_edge_ids: Vec<usize>,
     pub unresolved_edges: Vec<usize>,
     pub edge_correspondence: Option<crate::boundary_agreement::ExactReport>,
     pub vertex_links_complete: bool,
@@ -24,6 +27,7 @@ pub struct Report {
     pub parameter_work: u64,
 }
 mod interiors;
+mod periodic_uses;
 pub use interiors::InteriorReport;
 mod reversal;
 use reversal::reverse_along;
@@ -80,8 +84,15 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
     for (face, f) in model.faces.iter().enumerate() {
         for wire in std::iter::once(f.outer).chain(f.holes.iter().copied()) {
             for c in &model.loops[wire].coedges {
-                let side = coedge_side(&f.surface, &c.pcurve, c.reversed);
-                uses[c.edge].push((face, side.map(|s| s.0), side.map(|s| s.1)));
+                let side = c
+                    .trim()
+                    .is_none_or(|trim| {
+                        trim.curve_parameter == model.edges[c.edge].curve.domain()
+                            && trim.pcurve_parameter == c.pcurve.domain()
+                    })
+                    .then(|| coedge_side(&f.surface, &c.pcurve, c.reversed))
+                    .flatten();
+                uses[c.edge].push((face, side.map(|s| s.0), side.map(|s| s.1), c.reversed));
             }
         }
     }
@@ -89,12 +100,21 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
     let mut seams = Vec::new();
     let mut edge_ids = Vec::new();
     let mut unresolved_edges = Vec::new();
+    let mut periodic_candidates = Vec::new();
     let mut parameter_work = 0;
     for (edge, owned) in uses.iter().enumerate() {
-        let [(a, Some(ab), Some(ad)), (b, Some(bb), Some(bd))] = owned.as_slice() else {
+        let [(a, Some(ab), Some(ad), ar), (b, Some(bb), Some(bd), br)] = owned.as_slice() else {
             unresolved_edges.push(edge);
             continue;
         };
+        if a == b && periodic_uses::opposite_sides(&model.faces[*a].surface, ab, bb) {
+            if ad == bd && ar != br {
+                periodic_candidates.push(edge);
+            } else {
+                unresolved_edges.push(edge);
+            }
+            continue;
+        }
         let left = model.faces[*a].surface.clone();
         let mut right = model.faces[*b].surface.clone();
         if ad != bd {
@@ -130,9 +150,7 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
     let vertex_links_complete = vertex_links(model);
     let regularity =
         crate::boundary_embedding::regularity::inspect(model, limits.regularity_cells)?;
-    let complete = vertex_links_complete
-        && !edge_ids.is_empty()
-        && unresolved_edges.is_empty()
+    let world_owned = vertex_links_complete
         && correspondence
             .as_ref()
             .is_some_and(|p| p.all_equal && p.all_joins_exact);
@@ -148,13 +166,25 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
         limits.regularity_cells - regularity.cells,
         limits.exact_work - seam_work,
     )?;
+    let periodic_edge_ids = if world_owned && face_interiors.certified {
+        periodic_candidates
+    } else {
+        unresolved_edges.extend(periodic_candidates);
+        unresolved_edges.sort_unstable();
+        Vec::new()
+    };
+    let complete = world_owned
+        && !(edge_ids.is_empty() && periodic_edge_ids.is_empty())
+        && unresolved_edges.is_empty();
+    let ordinary_proven = edge_ids.is_empty() || proof.certified;
     let g1_certified =
-        complete && regularity.all_faces_regular && proof.certified && face_interiors.certified;
+        complete && regularity.all_faces_regular && ordinary_proven && face_interiors.certified;
     let g2_certified = g1_certified && limits.order == 2;
     let work = seam_work + face_interiors.exact_work;
     Ok(Report {
         extraction_complete: complete,
         edge_ids,
+        periodic_edge_ids,
         unresolved_edges,
         edge_correspondence: correspondence,
         vertex_links_complete,
