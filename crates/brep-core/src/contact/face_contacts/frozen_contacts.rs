@@ -257,6 +257,7 @@ pub(super) fn frozen_inspect_impl(
                 result,
                 boundary,
                 hull_disjoint,
+                radial_disjoint: false,
                 hull_cells,
                 boundary_cells,
                 source_chart_cells,

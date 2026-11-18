@@ -241,20 +241,6 @@ fn rim_certificate(
     })
 }
 
-pub(crate) fn certify_band_contact(
-    model: &Model,
-    faces: [usize; 2],
-    remaining: &mut usize,
-    pairs: &mut usize,
-    max_pairs: usize,
-) -> Result<Option<crate::boundary_hull_contact::Certificate>> {
-    let Some(contacts) = certify_cycle_contacts(model, &faces, remaining, pairs, max_pairs)? else {
-        return Ok(None);
-    };
-    debug_assert!(contacts.disjoint.is_empty());
-    Ok(contacts.shared.into_iter().next())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

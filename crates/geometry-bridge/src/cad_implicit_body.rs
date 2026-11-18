@@ -68,7 +68,7 @@ pub fn sphere(v: Value, audit: bool) -> Result<Value> {
             "poleQuotients":p.pole_quotients.iter().enumerate().filter_map(|(i,q)|q.as_ref().map(|q|json!({"face":i,"edge":q.edge,"vertex":q.vertex,"collapsedAxis":q.collapsed_axis,"collapsedEnd":q.collapsed_end,"proven":q.proof.proven,"cells":q.proof.cells}))).collect::<Vec<_>>()})),
         "volume":r.volume.as_ref().map(|p|json!({"proven":p.proven,"boundaryEmbedded":p.boundary.proven,"exactBoundaryAgreement":p.boundary.agreement.all_equal && p.boundary.agreement.all_joins_exact,"absenceOfSelfIntersections":p.boundary.intersections.absence_proven,"allPairsClassified":p.boundary.intersections.pairs.all_pairs_classified,"trimValid":p.boundary.trim.all_valid,"allFacesInjective":p.boundary.intersections.faces.all_faces_injective,
             "faceDiagnostics":p.boundary.intersections.faces.faces.iter().filter(|f|!f.absence_proven()).map(|f|json!({"face":f.face,"reason":f.result.as_ref().map(|q|q.reason)})).collect::<Vec<_>>(),
-            "pairDiagnostics":p.boundary.intersections.pairs.pairs.iter().filter(|p|p.boundary.is_none()&&!p.hull_disjoint).map(|p|json!({"faces":p.faces,"reason":p.reason})).collect::<Vec<_>>(),"orientationCells":p.orientation_cells,"orientationDomainCells":p.orientation_domain_cells})),
+            "pairDiagnostics":p.boundary.intersections.pairs.pairs.iter().filter(|p|p.boundary.is_none()&&!p.hull_disjoint&&!p.radial_disjoint).map(|p|json!({"faces":p.faces,"reason":p.reason})).collect::<Vec<_>>(),"orientationCells":p.orientation_cells,"orientationDomainCells":p.orientation_domain_cells})),
         "reason":r.reason}),
     )
 }

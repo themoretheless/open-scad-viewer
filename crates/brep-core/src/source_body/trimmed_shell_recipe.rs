@@ -778,7 +778,7 @@ mod tests {
             r.proven
         );
         for p in &r.boundary.intersections.pairs.pairs {
-            if p.boundary.is_none() && !p.hull_disjoint {
+            if p.boundary.is_none() && !p.hull_disjoint && !p.radial_disjoint {
                 println!("curved pair {:?}: {}", p.faces, p.reason);
             }
         }

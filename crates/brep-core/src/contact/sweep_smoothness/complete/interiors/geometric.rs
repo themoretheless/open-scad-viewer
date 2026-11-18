@@ -857,6 +857,34 @@ mod tests {
         for contact in contacts.shared {
             assert_eq!(contact.edges.len(),1);
         }
+        let admission = crate::closed_solid::qualify(model, crate::closed_solid::AdmissionPolicy {
+            tolerance_uv: 1e-8,
+            max_linear_cells: 100000,
+            geometry: crate::volume_validity::Limits {
+                boundary: crate::boundary_embedding::Limits {
+                    exact_work: 1000000, trim_pairs: 1000, trim_cells: 10000,
+                    trim_domain_cells: 100000, spans: 100,
+                    contacts: crate::face_contacts::Limits {
+                        pairs: 100, cells: 10000, domain_cells: 100000,
+                        cells_per_pair: 16, domain_cells_per_pair: 1000,
+                    },
+                },
+                nesting_pairs: 100, nesting_cells: 10000, nesting_domain_cells: 100000,
+                orientation_cells: 100000, orientation_domain_cells: 100000,
+                orientation_spans: 1000,
+            },
+        }).unwrap();
+        let geometry = admission.geometry();
+        let disjoint = geometry.boundary.intersections.pairs.pairs.iter()
+            .filter(|pair| pair.radial_disjoint).map(|pair| pair.faces).collect::<Vec<_>>();
+        assert_eq!(disjoint, [[0, 2], [1, 3]]);
+        assert!(geometry.boundary.proven);
+        assert_eq!(geometry.orientations[0].outward, Some(true));
+        let solid = admission.into_solid().expect("four radial bands own an oriented closed solid");
+        let directions = [[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]];
+        for (point, inside) in [([4., 0.125, 0.125], true), ([0.; 3], false)] {
+            assert_eq!(solid.classify_point(point, &directions, 100000, 100000).unwrap().parity, Some(inside));
+        }
     }
 
     #[test]
