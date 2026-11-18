@@ -38,6 +38,7 @@ interface Report {
   centerOfMassBoundsMm?: [number, number][] | null
   referenceInertiaBoundsKgMm2?: [number, number][][] | null
   centralInertiaBoundsKgMm2?: [number, number][][] | null
+  twoPlaneUnbalance?: { offsetMm: number; vectorBoundsKgMm: [number, number][] }[] | null
   coupleUnbalance?: { vectorBoundsKgMm2: [number, number][]; magnitudeBoundsKgMm2: [number, number] } | null
   staticUnbalance?: { vectorBoundsKgMm: [number, number][]; magnitudeBoundsKgMm: [number, number] } | null
   axisBalance?: { eccentricityBoundsMm: [number, number]; status: string } | null
@@ -532,3 +533,20 @@ const [coupleLo, coupleHi] = couple.magnitudeBoundsKgMm2
 assert.ok(coupleLo <= Math.hypot(...expectedCouple) && Math.hypot(...expectedCouple) <= coupleHi)
 assert.equal(call(request.maxWork, densityOp, { ...coupleOptions, maxSurfaceCells: 2 }).coupleUnbalance, null)
 console.log('WASM ABI enclosed the couple unbalance vector and magnitude.')
+
+const twoPlaneOptions = {
+  ...densityOptions,
+  inertiaAxis: { pointMm: [1, 0, 0], direction: [0, 0, 1] },
+  balancePlaneOffsetsMm: [0, 2],
+}
+const twoPlane = call(request.maxWork, densityOp, twoPlaneOptions).twoPlaneUnbalance
+assert.ok(twoPlane)
+assert.deepEqual(twoPlane.map(plane => plane.offsetMm), [0, 2])
+for (const plane of twoPlane) {
+  for (const [i, exact] of [-1.265625, 0.1875, 0].entries()) {
+    const [lo, hi] = plane.vectorBoundsKgMm[i]
+    assert.ok(lo <= exact && exact <= hi)
+  }
+}
+assert.equal(call(request.maxWork, densityOp, { ...twoPlaneOptions, maxSurfaceCells: 2 }).twoPlaneUnbalance, null)
+console.log('WASM ABI returned equivalent unbalance in both correction planes.')

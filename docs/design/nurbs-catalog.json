@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 663,
-  "unallocatedCount": 337,
+  "specifiedCount": 664,
+  "unallocatedCount": 336,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16275,6 +16275,28 @@
         "Enclose two equivalent radial vectors preserving static and axial first moments.",
         "Check signed radial vector recovery, reversed axis and plane order, split midplane interval mass, and rejection of coincident correction planes.",
         "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0664",
+      "name": "Разложение дисбаланса NURBS-сборки по двум плоскостям через WASM",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
+      "evidence": [
+        "crates/geometry-bridge/src/brep/nurbs.rs",
+        "crates/geometry-bridge/src/dispatch/brep.rs",
+        "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
+        "scripts/check-exact-periodic-trim-sheet-abi.mts",
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "docs/qualification/nurbs-curvature-field-664-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-664-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Expose equivalent radial vectors at two user-supplied axial offsets through the density request.",
+        "Check analytic density-weighted plane vectors and offset order, coincident-plane validation and incomplete coverage through the compiled ABI.",
+        "Editor and production delivery qualification remain."
       ]
     }
   ],

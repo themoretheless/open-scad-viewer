@@ -2154,6 +2154,22 @@ impl TrimmedPatchSetDensityReport {
             .transpose()
     }
 
+    /// Enclose equivalent unbalance vectors in the two requested planes.
+    pub fn bound_two_plane_unbalance(
+        &self,
+        point: [f64; 3],
+        direction: [f64; 3],
+        offsets: [f64; 2],
+    ) -> Result<Option<[[[f64; 2]; 3]; 2]>> {
+        self.mass_properties
+            .map(|_| {
+                bound_assembly_two_plane_unbalance(
+                    &self.weighted_components, point, direction, offsets,
+                )
+            })
+            .transpose()
+    }
+
     /// Check a fixed rotation axis against the density-weighted center of mass.
     pub fn bound_balance_about_line(
         &self,

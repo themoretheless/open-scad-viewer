@@ -1183,3 +1183,30 @@ fn patch_set_density_returns_couple_unbalance_about_the_axis_reference_point() {
     request["maxSurfaceCells"] = json!(2);
     assert_eq!(run(&request)["value"].get("coupleUnbalance"), Some(&Value::Null));
 }
+
+#[test]
+fn patch_set_density_returns_equivalent_unbalance_in_requested_planes() {
+    let mut request = patch_set_density_request(20_000);
+    request["balancePlaneOffsetsMm"] = json!([0., 2.]);
+    assert_eq!(run(&request)["ok"], false);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 0.], "direction": [0., 0., 1.]});
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let planes = response["value"]["twoPlaneUnbalance"].as_array().unwrap();
+    assert_eq!(planes.len(), 2);
+    for (plane, offset) in planes.iter().zip([0., 2.]) {
+        assert_eq!(plane["offsetMm"].as_f64(), Some(offset));
+        let vector = plane["vectorBoundsKgMm"].as_array().unwrap();
+        assert_eq!(vector.len(), 3);
+        for (interval, expected) in vector.iter().zip([-1.265625, 0.1875, 0.]) {
+            assert!(
+                interval[0].as_f64().unwrap() <= expected
+                    && expected <= interval[1].as_f64().unwrap()
+            );
+        }
+    }
+    request["maxSurfaceCells"] = json!(2);
+    assert_eq!(run(&request)["value"].get("twoPlaneUnbalance"), Some(&Value::Null));
+    request["balancePlaneOffsetsMm"] = json!([1., 1.]);
+    assert_eq!(run(&request)["ok"], false);
+}

@@ -1528,6 +1528,19 @@ pub fn exact_periodic_trim_patch_set_density_request(
     if include_couple_unbalance && inertia_axis.is_none() {
         return Err(input("Couple unbalance requires an inertia axis"));
     }
+    let balance_planes = request
+        .get("balancePlaneOffsetsMm")
+        .map(|_| -> Result<[f64; 2]> {
+            let [first, second]: [f64; 2] = field(request, "balancePlaneOffsetsMm")?;
+            if inertia_axis.is_none() || !first.is_finite() || !second.is_finite() || first >= second
+            {
+                return Err(input(
+                    "Balance planes require an inertia axis and finite increasing offsets",
+                ));
+            }
+            Ok([first, second])
+        })
+        .transpose()?;
     let axis_balance_tolerance = request
         .get("axisBalanceToleranceMm")
         .map(|_| -> Result<f64> {
@@ -1609,6 +1622,9 @@ pub fn exact_periodic_trim_patch_set_density_request(
     if include_couple_unbalance {
         response["coupleUnbalance"] = Value::Null;
     }
+    if balance_planes.is_some() {
+        response["twoPlaneUnbalance"] = Value::Null;
+    }
     let Some(patches) = build.patches else {
         return Ok(response);
     };
@@ -1641,6 +1657,13 @@ pub fn exact_periodic_trim_patch_set_density_request(
             json!(report.first_mass_moment_about_plane(point, normal)?);
     }
     if let Some((point, direction)) = inertia_axis {
+        if let Some(offsets) = balance_planes
+            && let Some(vectors) = report.bound_two_plane_unbalance(point, direction, offsets)?
+        {
+            response["twoPlaneUnbalance"] = json!([0, 1].map(|index| {
+                json!({"offsetMm": offsets[index], "vectorBoundsKgMm": vectors[index]})
+            }));
+        }
         if include_couple_unbalance
             && let Some(unbalance) = report.bound_couple_unbalance(point, direction)?
         {
