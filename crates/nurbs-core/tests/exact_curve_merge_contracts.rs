@@ -11297,3 +11297,38 @@ fn simultaneous_contact_windows_include_isolated_instants_and_uncertain_extensio
     assert_eq!(three.possible, [[3.; 2], [4.; 2]]);
     assert!(report.simultaneous_contact_windows(0).is_err());
 }
+
+#[test]
+fn scheduled_peak_contact_report_returns_sorted_confirmed_pairs_and_time() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, PeakScheduledContactWitness, ScheduledClearanceCell,
+        ScheduledToolPairCell, ScheduledToolsClearancePartition,
+    };
+    let cell = |tools, time, status| ScheduledToolPairCell {
+        tools,
+        clearance: ScheduledClearanceCell {
+            time_endpoint_bounds: time,
+            gap_bounds: if status == Status::Exceeds { [-2., -1.] } else { [-1., 1.] },
+            status,
+        },
+    };
+    let mut report = ScheduledToolsClearancePartition {
+        cells: vec![
+            cell([1, 2], [[2., 2.25], [4.; 2]], Status::Exceeds),
+            cell([0, 1], [[-1.; 2], [3.; 2]], Status::Exceeds),
+            cell([0, 1], [[0.; 2], [3.; 2]], Status::Exceeds),
+            cell([0, 2], [[2.5; 2], [3.; 2]], Status::Undetermined),
+        ],
+        work_cells: 4,
+    };
+    let peak = report.peak_contact_report();
+    assert_eq!(peak.pair_count_bounds, [2, 3]);
+    assert_eq!(peak.witness, Some(PeakScheduledContactWitness {
+        time: 2.25,
+        tools: vec![[0, 1], [1, 2]],
+    }));
+    report.cells.retain(|cell| cell.clearance.status == Status::Undetermined);
+    let uncertain = report.peak_contact_report();
+    assert_eq!(uncertain.pair_count_bounds, [0, 1]);
+    assert_eq!(uncertain.witness, None);
+}

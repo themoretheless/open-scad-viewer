@@ -2887,15 +2887,44 @@ pub struct SimultaneousContactWindows {
     pub possible: Vec<[f64; 2]>,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct PeakScheduledContactWitness {
+    pub time: f64,
+    /// Distinct pairs whose simultaneous contact is confirmed at this time.
+    pub tools: Vec<[usize; 2]>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct PeakScheduledContactReport {
+    pub pair_count_bounds: [usize; 2],
+    /// First time attaining the confirmed lower bound, if it is positive.
+    pub witness: Option<PeakScheduledContactWitness>,
+}
+
 impl ScheduledToolsClearancePartition {
     /// Bound the maximum number of distinct pairs in simultaneous contact
     /// across the represented timelines. Contacts include shared endpoints.
     pub fn peak_contact_pair_count_bounds(&self) -> [usize; 2] {
-        self.contact_pair_intervals().map(|intervals| {
-            let mut peak = 0;
-            sweep_contact_pairs(intervals, |active, _| peak = peak.max(active));
-            peak
-        })
+        self.contact_pair_intervals().map(|intervals| peak_pair_count(&intervals))
+    }
+
+    /// Identify a concrete time and the contacting pairs that establish
+    /// the lower bound on peak contact multiplicity.
+    pub fn peak_contact_report(&self) -> PeakScheduledContactReport {
+        let [confirmed, possible] = self.contact_pair_intervals();
+        let pair_count_bounds = [peak_pair_count(&confirmed), peak_pair_count(&possible)];
+        let mut witness = None;
+        if pair_count_bounds[0] > 0 {
+            sweep_contact_pairs(&confirmed, |active, [start, _]| {
+                if witness.is_none() && active.len() == pair_count_bounds[0] {
+                    witness = Some(PeakScheduledContactWitness {
+                        time: start,
+                        tools: active.keys().copied().collect(),
+                    });
+                }
+            });
+        }
+        PeakScheduledContactReport { pair_count_bounds, witness }
     }
 
     /// Bound elapsed time with at least the requested number of distinct
@@ -2921,8 +2950,8 @@ impl ScheduledToolsClearancePartition {
         check(minimum_pairs > 0, "Simultaneous contact requires a positive pair count")?;
         let [confirmed, possible] = self.contact_pair_intervals().map(|intervals| {
             let mut windows: Vec<[f64; 2]> = Vec::new();
-            sweep_contact_pairs(intervals, |active, [start, end]| {
-                if active >= minimum_pairs {
+            sweep_contact_pairs(&intervals, |active, [start, end]| {
+                if active.len() >= minimum_pairs {
                     match windows.last_mut() {
                         Some([_, previous_end]) if start == *previous_end => *previous_end = end,
                         _ => windows.push([start, end]),
@@ -3051,12 +3080,18 @@ impl ScheduledToolsClearancePartition {
 
 type ToolPairInterval = ([usize; 2], [f64; 2]);
 
+fn peak_pair_count(intervals: &[ToolPairInterval]) -> usize {
+    let mut peak = 0;
+    sweep_contact_pairs(intervals, |active, _| peak = peak.max(active.len()));
+    peak
+}
+
 fn sweep_contact_pairs(
-    intervals: Vec<ToolPairInterval>,
-    mut visit: impl FnMut(usize, [f64; 2]),
+    intervals: &[ToolPairInterval],
+    mut visit: impl FnMut(&BTreeMap<[usize; 2], usize>, [f64; 2]),
 ) {
     let mut events = Vec::with_capacity(2 * intervals.len());
-    for (pair, [start, end]) in intervals {
+    for &(pair, [start, end]) in intervals {
         events.push((if start == 0. { 0. } else { start }, false, pair));
         events.push((if end == 0. { 0. } else { end }, true, pair));
     }
@@ -3065,7 +3100,7 @@ fn sweep_contact_pairs(
     let mut active = BTreeMap::<[usize; 2], usize>::new();
     let mut previous = events.first().map_or(0., |event| event.0);
     for (time, ending, pair) in events {
-        visit(active.len(), [previous, time]);
+        visit(&active, [previous, time]);
         previous = time;
         if ending {
             if let std::collections::btree_map::Entry::Occupied(mut entry) = active.entry(pair) {

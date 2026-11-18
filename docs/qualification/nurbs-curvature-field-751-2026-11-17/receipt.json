@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0751",
+  "testedBase": "da7e6f6a4980cad4aac4b9e1453a5c1eacf8927b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 376,
+  "scope": [
+    "Return a certified time and distinct contacting pairs for the peak lower bound.",
+    "Check the inward-rounded witness time, sorted distinct pairs, a larger possible peak and lack of a confirmed witness."
+  ],
+  "logSha256": "043472266ccde2268a57d2b01945c8b444fbbdb71ac297e9aca06e8619be4482",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "e040a1c2afaf92c4b895563420298c3f4509c2e5a231041898e5f12f78c0bd21",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "5fe1bf0a7ca7a45a29141f3411c3c05ff3cb2f27a59e1d7b30b36e586b3bedaa"
+  }
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 750,
-  "unallocatedCount": 250,
+  "specifiedCount": 751,
+  "unallocatedCount": 249,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17942,6 +17942,25 @@
       "remainingQualification": [
         "Locate confirmed and possible simultaneous contact windows, including isolated instants.",
         "Check merged confirmed and possible windows, distinct-pair thresholds, isolated instants, and retained duration bounds.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0751",
+      "name": "Время и пары подтверждённого пика одновременных контактов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::peak_contact_report",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-751-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-751-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Return a certified time and distinct contacting pairs for the peak lower bound.",
+        "Check the inward-rounded witness time, sorted distinct pairs, a larger possible peak and lack of a confirmed witness.",
         "WASM and application integration are separate."
       ]
     }
