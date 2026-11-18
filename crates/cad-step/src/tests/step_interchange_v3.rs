@@ -2802,6 +2802,39 @@ fn planet_gear_step_assembly_retains_one_prototype() {
 }
 
 #[test]
+fn shared_step_edit_isolates_one_planet_occurrence() {
+    let spec = brep_core::GearSpec { teeth: 4, height: 10., ..Default::default() };
+    let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 120., 240.]).unwrap();
+    let text = crate::export_planet_gear_occurrences_step(&planets).unwrap();
+    let mut assembly = crate::import_step_shared_assembly(&text).unwrap();
+    let placements: Vec<_> = assembly.occurrences().iter().map(|item| item.transform).collect();
+    let local_edit = brep_core::gear(&brep_core::GearSpec { height: 12., ..spec }).unwrap();
+    assert!(assembly.replace_occurrence_geometry(usize::MAX, local_edit.clone()).is_err());
+    assert_eq!(assembly.definitions().len(), 1);
+    for _ in 0..2 {
+        assembly.replace_occurrence_geometry(1, local_edit.clone()).unwrap();
+        assert_eq!(assembly.definitions().len(), 2);
+    }
+
+    let exported = crate::export_step_shared_assembly(&assembly).unwrap();
+    assert_eq!(exported.matches("MANIFOLD_SOLID_BREP(").count(), 2);
+    let reopened = crate::import_step_shared_assembly(&exported).unwrap();
+    let occurrences = reopened.occurrences();
+    assert_eq!(occurrences.len(), 3);
+    assert_eq!(occurrences[0].definition, occurrences[2].definition);
+    assert_ne!(occurrences[0].definition, occurrences[1].definition);
+    for (index, expected_height) in [10., 12., 10.].into_iter().enumerate() {
+        for (before, after) in placements[index].iter().flatten().zip(occurrences[index].transform.iter().flatten()) {
+            assert!((before - after).abs() < 1e-10);
+        }
+        let model = reopened.materialize(index).unwrap();
+        let top = model.vertices.iter().map(|vertex| vertex.point[2]).fold(f64::NEG_INFINITY, f64::max);
+        assert!((top - expected_height).abs() < 1e-10);
+        assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+    }
+}
+
+#[test]
 fn planetary_gear_set_step_round_trips_twenty_spur_occurrences() {
     let spec = brep_core::GearSpec {
         module: 1.5, teeth: 4, height: 10., clearance: 0.1, backlash: 0.05, ..Default::default()

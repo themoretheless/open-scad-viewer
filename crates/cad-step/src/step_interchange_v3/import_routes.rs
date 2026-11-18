@@ -664,6 +664,25 @@ impl StepSharedAssembly {
         Ok(())
     }
 
+    /// Replace one occurrence using geometry in its local coordinates.
+    /// A shared definition is split only when other occurrences still use it.
+    pub fn replace_occurrence_geometry(&mut self, index: usize, model: Model) -> Result<()> {
+        let definition = self.occurrences.get(index)
+            .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?
+            .definition;
+        let shared = self.occurrences.iter().enumerate().any(|(other, occurrence)| {
+            other != index && occurrence.definition == definition
+        });
+        if !shared {
+            return self.replace_definition(definition, model);
+        }
+        model.validate()?;
+        let new_definition = self.definitions.len();
+        self.definitions.push(model);
+        self.occurrences[index].definition = new_definition;
+        Ok(())
+    }
+
     pub fn materialize(&self, index: usize) -> Result<Model> {
         let occurrence = self.occurrences.get(index)
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;

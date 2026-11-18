@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0820",
+  "testedBase": "df8d7989c76d8616c85765ef1d61f8f7e19a3d75",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 169,
+  "scope": [
+    "Split a shared definition only for the edited occurrence and export the resulting two definitions with all original placements.",
+    "Check invalid occurrence index, repeated local edits, closed topology, shared peer definitions, unchanged placement matrices and heights 10, 12, 10 after STEP round-trip."
+  ],
+  "logSha256": "cdfc0505374d0f610f9efb47cafe76087823298e71508382a79fdc99e2da8872",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "ea55c91700c0a24b506dad2e05b5b822eaae28739200d62333947f152bea1a37",
+    "crates/cad-step/src/step_v3_export.rs": "9ff80868ca47f7bc29bdf82831a101cad46beef44f246d374d671e7d340129ee",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "7bd67388eec93c36b4fd16642b57e2319ca089deb8071dd4917618b8eeecd211"
+  }
+}

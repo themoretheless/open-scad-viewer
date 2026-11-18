@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 819,
-  "unallocatedCount": 181,
+  "specifiedCount": 820,
+  "unallocatedCount": 180,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19259,6 +19259,26 @@
       "remainingQualification": [
         "Export edited definitions as closed solids with proper rigid placements. The twenty-placement herringbone assembly retains all transforms and three shared definitions while exporting the changed planet height.",
         "Check an invalid definition index, shared occurrence references, unchanged placement matrices and closed topology after exporting the height edit.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0820",
+      "name": "Локальная замена геометрии отдельного экземпляра STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::replace_occurrence_geometry",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-820-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-820-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Split a shared definition only for the edited occurrence and export the resulting two definitions with all original placements.",
+        "Check invalid occurrence index, repeated local edits, closed topology, shared peer definitions, unchanged placement matrices and heights 10, 12, 10 after STEP round-trip.",
         "WASM and application integration are separate."
       ]
     }
