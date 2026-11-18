@@ -232,3 +232,9 @@ consecutive segments along its sides. Both traversals of the shared
 chain must be contiguous and opposite. Removing them leaves one
 projected exterior to certify. The contact certificate lists every
 edge of the chain and bounds their original world-space geometry.
+
+A hole may subtract material from either natural chart when its rational
+trim control points lie strictly inside the chart rectangle. The exact
+domain audit already verifies each hole's lift, winding and nesting.
+Strict containment keeps each hole away from the shared natural boundary.
+The contact proof charges the hole control point census to its budget.

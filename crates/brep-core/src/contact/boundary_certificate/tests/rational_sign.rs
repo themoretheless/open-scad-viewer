@@ -522,6 +522,7 @@ fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, 
         assert!(certify(&spatial, [0, 4], used - 1).0.is_none());
         check_reversed_multispan_exterior(&spatial, contact.edges[0]);
         check_partitioned_jordan_seam(&spatial, contact.edges[0]);
+        check_jordan_contact_with_interior_hole(&spatial, contact.edges[0]);
 
         // Put the original XZ image in XY, then move the interiors along
         // a common diagonal. The authored edge curves stay unchanged.
@@ -570,6 +571,44 @@ fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, 
     assert!(station.extraction_complete && station.g1_certified && station.g2_certified,
         "complete={} g1={} g2={}", station.extraction_complete, station.g1_certified, station.g2_certified);
     assert_eq!(station.edge_ids.len(), 4);
+}
+
+fn check_jordan_contact_with_interior_hole(reference: &crate::Model, shared: usize) {
+    use nurbs_core::curve_surface_agreement::{lift, verify_exact};
+    let mut model = reference.clone();
+    // The only nonunit weight is an interior pole. Setting it to one
+    // leaves the authored boundaries unchanged and gives dyadic lifts
+    // for the four interior isoparametric cuts.
+    model.0.faces[0].surface.weights[1][2] = 1.;
+    let corners = [[0.25, 0.25], [0.25, 0.5], [0.5, 0.5], [0.5, 0.25]];
+    let mut coedges = Vec::new();
+    let first_vertex = model.vertices.len();
+    for i in 0..4 {
+        let pcurve = crate::line(corners[i].to_vec(), corners[(i + 1) % 4].to_vec());
+        let surface = &model.faces[0].surface;
+        let curve = lift(&pcurve, surface, None, 1e-8, 10_000).unwrap().curve.unwrap();
+        let proof = verify_exact(&curve, &pcurve, surface, false, 1_000_000).unwrap().unwrap();
+        assert_eq!(proof.outcome, cad_predicates::BezierIdentity::Equal);
+        let pole = &curve.control_points[0];
+        model.0.vertices.push(crate::Vertex { point: [pole[0], pole[1], pole[2]] });
+        let edge = model.edges.len();
+        model.0.edges.push(crate::Edge {
+            curve,
+            vertices: [first_vertex + i, first_vertex + (i + 1) % 4],
+            degenerate: false,
+        });
+        coedges.push(crate::Coedge::new(edge, false, pcurve));
+    }
+    let hole = model.loops.len();
+    model.0.loops.push(crate::Loop { coedges });
+    model.0.faces[0].holes.push(hole);
+    model.rebuild_topology_ids();
+    let certify = crate::shared_boundary::jordan_partition::certify;
+    let (contact, used) = certify(&model, [0, 4], 3000);
+    assert_eq!(contact.unwrap().edges, [shared]);
+    assert!(certify(&model, [0, 4], used - 1).0.is_none());
+    model.0.loops[hole].coedges[0].pcurve.control_points[0][0] = 0.;
+    assert!(certify(&model, [0, 4], 3000).0.is_none());
 }
 
 fn check_partitioned_jordan_seam(reference: &crate::Model, shared: usize) {

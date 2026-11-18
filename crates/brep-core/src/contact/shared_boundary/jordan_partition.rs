@@ -77,8 +77,7 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
     let surfaces = patches.map(|f| &f.surface);
     if !surfaces.iter().any(|s| {
         s.control_points.len() > s.degree_u + 1 || s.control_points[0].len() > s.degree_v + 1
-    }) || patches.iter().any(|f| !f.holes.is_empty())
-    {
+    }) {
         return None;
     }
     let wires = patches.map(|f| model.loops[f.outer].coedges.as_slice());
@@ -89,6 +88,9 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
         return None;
     }
     let (starts, edges) = shared_chain(wires, cells, limit)?;
+    for patch in patches {
+        interior_holes(model, &patch.surface, &patch.holes, cells, limit)?;
+    }
     let mut proposals = [None; 2];
     for ((s, wire), proposal) in surfaces.into_iter().zip(wires).zip(&mut proposals) {
         natural_wire(s, wire, cells, limit)?;
@@ -123,6 +125,41 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
         }
     }
     None
+}
+
+fn interior_holes(
+    model: &Model,
+    surface: &crate::Surface,
+    holes: &[usize],
+    cells: &mut usize,
+    limit: usize,
+) -> Option<()> {
+    let lower = [
+        surface.knots_u[surface.degree_u],
+        surface.knots_v[surface.degree_v],
+    ];
+    let upper = [
+        surface.knots_u[surface.control_points.len()],
+        surface.knots_v[surface.control_points[0].len()],
+    ];
+    for &hole in holes {
+        charge(cells, limit, 1)?;
+        for use_ in &model.loops[hole].coedges {
+            let curve = &use_.pcurve;
+            charge(cells, limit, curve.control_points.len())?;
+            // Positive rational weights keep the whole trace in this
+            // strict interior box. The exact-domain audit owns the lift,
+            // simple loops, orientation and nesting.
+            if !curve
+                .control_points
+                .iter()
+                .all(|p| (0..2).all(|axis| lower[axis] < p[axis] && p[axis] < upper[axis]))
+            {
+                return None;
+            }
+        }
+    }
+    Some(())
 }
 
 fn shared_chain(
