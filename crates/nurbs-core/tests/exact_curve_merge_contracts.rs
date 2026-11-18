@@ -9927,3 +9927,41 @@ fn rounded_hull_obstacle_clearance_detects_contact_away_from_curve_origin() {
     assert_eq!(check(&clear, 0.5, 4).unwrap().cells[0].status, Status::Within);
     assert_eq!(check(&clear, 1.5, 4).unwrap().cells[0].status, Status::Undetermined);
 }
+
+#[test]
+fn spherical_clearance_certifies_collision_with_center_outside_obstacle() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, SphericalObstacle, partition_curve_spherical_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![-2., 0.75], vec![2., 0.75]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        SphericalObstacle { center: &[0., 0.], radius: 0.5 },
+        SphericalObstacle { center: &[0., 5.], radius: 1. },
+    ];
+    let check = |radius, budget| {
+        partition_curve_spherical_clearance(&curve, [0., 1.], &obstacles, radius, 0.01, budget)
+    };
+    assert!(check(0.5, 1).is_err());
+    assert_eq!(check(0., 2).unwrap().cells[0].status, Status::Within);
+    let report = check(0.5, 256).unwrap();
+    assert!(report.work_obstacle_cells <= 256);
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 0.5 && 0.5 <= b && cell.status == Status::Exceeds
+            && cell.gap_bounds[0][0] <= -0.25 && cell.gap_bounds[0][1] >= -0.25
+            && cell.gap_bounds[1][0] > 0.
+    }));
+    for parameter in [0.5 - 7_f64.sqrt() / 16., 0.5 + 7_f64.sqrt() / 16.] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= parameter && parameter <= b && b - a <= 0.01
+                && cell.status == Status::Undetermined
+        }));
+    }
+}

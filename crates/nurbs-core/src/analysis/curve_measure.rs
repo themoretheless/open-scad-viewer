@@ -2205,6 +2205,84 @@ pub fn partition_curve_rounded_hull_obstacle_clearance(
     Ok(ObstacleClearancePartition { cells, work_plane_cells: work_cells * pairs })
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct SphericalObstacle<'a> {
+    pub center: &'a [f64],
+    pub radius: f64,
+}
+
+#[derive(Clone, Debug)]
+pub struct SphericalClearanceCell {
+    pub parameter_interval: [f64; 2],
+    pub span: usize,
+    /// Signed surface gaps in obstacle order. A nonpositive gap is contact.
+    pub gap_bounds: Vec<[f64; 2]>,
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct SphericalClearancePartition {
+    pub cells: Vec<SphericalClearanceCell>,
+    pub work_obstacle_cells: usize,
+}
+
+/// Bound clearance for a ball swept along the curve against closed balls.
+/// A cell is clear if all gap lower bounds are positive, and colliding if
+/// one obstacle has a nonpositive gap upper bound throughout the cell.
+pub fn partition_curve_spherical_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[SphericalObstacle<'_>],
+    tool_radius: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalClearancePartition> {
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Spherical clearance requires at least one obstacle")?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if max_cells == 0 {
+        return Err(resource("Clearance budget must cover every sphere"));
+    }
+    curve.validate()?;
+    let dimension = curve.control_points[0].len();
+    let obstacles = obstacles.iter().map(|obstacle| {
+        check(
+            obstacle.center.len() == dimension
+                && obstacle.center.iter().all(|value| value.is_finite())
+                && obstacle.radius.is_finite()
+                && obstacle.radius >= 0.,
+            "Sphere requires a finite matching center and nonnegative finite radius",
+        )?;
+        let center = obstacle.center.iter().copied().map(Interval::point).collect::<Vec<_>>();
+        let radius = Interval::point(obstacle.radius).add(Interval::point(tool_radius))?;
+        Ok((center, radius))
+    }).collect::<Result<Vec<_>>>()?;
+    let (cells, work_cells) = partition_motion_cells(
+        curve, interval, parameter_tolerance, max_cells,
+        |jets, _| {
+            let gaps = obstacles.iter().map(|(center, radius)| {
+                let (lo, hi) = box_distance(&jets[0], center)?;
+                let gap = Interval::new(lo, hi)?.sub(*radius)?;
+                Ok([gap.lo, gap.hi])
+            }).collect::<Result<Vec<_>>>()?;
+            let status = if gaps.iter().any(|[_, hi]| *hi <= 0.) {
+                DirectionalMotionStatus::Exceeds
+            } else if gaps.iter().all(|[lo, _]| *lo > 0.) {
+                DirectionalMotionStatus::Within
+            } else {
+                DirectionalMotionStatus::Undetermined
+            };
+            let refine = gaps.iter().any(|[lo, hi]| *lo <= 0. && *hi > 0.);
+            Ok(((gaps, status), refine))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(span, parameter_interval, (gap_bounds, status))| {
+        SphericalClearanceCell { parameter_interval, span, gap_bounds, status }
+    }).collect();
+    Ok(SphericalClearancePartition { cells, work_obstacle_cells: work_cells * obstacles.len() })
+}
+
 fn partition_motion_cells<T>(
     curve: &Curve,
     interval: [f64; 2],
