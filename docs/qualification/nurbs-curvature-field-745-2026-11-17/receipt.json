@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0745",
+  "testedBase": "7ccda98bd55bb57e1de2752419f087bf92e633e8",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 370,
+  "scope": [
+    "Bracket last contact across pair timelines, retaining later uncertainty.",
+    "Check later uncertainty across pair groups, a confirmed earlier witness, and clear and possible outcomes."
+  ],
+  "logSha256": "04c99a6428435e9e623f6cca51c529b35df9ddf8ab465703cab966cbb4f0476c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "b7074e0e62a995d269175ad84c7ac2136ee5349125deac64a40bec2c43ca0022",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "7252844b06448322f124277a9f04948ff6150770d1d0af5faf0478a982b554d2"
+  }
+}

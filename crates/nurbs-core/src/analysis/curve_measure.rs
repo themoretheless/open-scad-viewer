@@ -2868,7 +2868,44 @@ pub enum FirstScheduledToolContact {
     },
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum LastScheduledToolContact {
+    Clear,
+    Possible { latest_time: f64 },
+    Confirmed {
+        time_bounds: [f64; 2],
+        /// Pair whose contact supplies the lower time bound.
+        witness_tools: [usize; 2],
+    },
+}
+
 impl ScheduledToolsClearancePartition {
+    /// Bracket the last contact across the represented pair timelines.
+    /// A possible later contact on any pair contributes to the upper bound.
+    pub fn last_contact(&self) -> LastScheduledToolContact {
+        let mut latest: Option<f64> = None;
+        let mut witness: Option<(f64, [usize; 2])> = None;
+        for cell in &self.cells {
+            let [lo, hi] = cell.clearance.time_endpoint_bounds[1];
+            if cell.clearance.status != DirectionalMotionStatus::Within {
+                latest = Some(latest.map_or(hi, |previous| previous.max(hi)));
+            }
+            if cell.clearance.status == DirectionalMotionStatus::Exceeds
+                && witness.is_none_or(|(time, tools)| lo > time || (lo == time && cell.tools < tools))
+            {
+                witness = Some((lo, cell.tools));
+            }
+        }
+        match (latest, witness) {
+            (Some(upper), Some((lower, witness_tools))) => LastScheduledToolContact::Confirmed {
+                time_bounds: [lower, upper],
+                witness_tools,
+            },
+            (Some(latest_time), None) => LastScheduledToolContact::Possible { latest_time },
+            (None, _) => LastScheduledToolContact::Clear,
+        }
+    }
+
     /// Bracket the first contact across the represented pair timelines.
     /// A possible earlier contact on any pair contributes to the lower bound.
     pub fn first_contact(&self) -> FirstScheduledToolContact {
