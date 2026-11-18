@@ -255,3 +255,6 @@ pub(crate) use gear_parameters::atan_positive as certified_atan_positive;
 
 mod circular_pattern;
 pub use circular_pattern::{CircularProfilePattern, CircularSectorPattern, LosslessSectorPattern};
+
+mod span_measurement;
+pub use span_measurement::{external_spur_span, measurable_spur_spans, tooth_thinning_from_span};

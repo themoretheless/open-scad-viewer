@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --test gear_span --test gear_parameter_bounds"
+  ],
+  "sha256": {
+    "crates/nurbs-core/src/construct/curves/involute/span_measurement.rs": "9ef1c367330d5bc3f26873ffc2a5afd17197a292b1b8d8afcf5b5faebfd96eda",
+    "crates/nurbs-core/tests/gear_span.rs": "b0340d0605cf93cb641ed5378bbdc7cab777628467800614b7162187d69f3cde"
+  }
+}
