@@ -970,6 +970,24 @@ impl StepSharedAssembly {
         brep_core::boolean(&first, &second, "intersection")
     }
 
+    /// Cut a placed stock solid with the selected occurrences, in assembly coordinates.
+    /// Duplicate cutters are applied once. The shared source assembly stays editable.
+    pub fn cut_stock(&self, stock: usize, cutters: &[usize]) -> Result<Model> {
+        if cutters.len() > super::MAX_OCCURRENCES || cutters.iter().any(|&i| i >= self.occurrences.len()) {
+            return Err(refuse("STEP stock cutting requires at most 256 valid cutter occurrences"));
+        }
+        let mut remaining = self.materialize(stock)?;
+        let mut applied = vec![false; self.occurrences.len()];
+        for &index in cutters {
+            if remaining.bodies.is_empty() { break; }
+            if !applied[index] {
+                remaining = brep_core::boolean(&remaining, &self.materialize(index)?, "difference")?;
+                applied[index] = true;
+            }
+        }
+        Ok(remaining)
+    }
+
     /// Bound the distance between the filled materials of two placed
     /// occurrences, retaining unresolved solid and containment diagnostics.
     pub fn occurrence_clearance(

@@ -3905,3 +3905,24 @@ fn authored_shared_solids_reject_missing_definitions_and_split_local_edits() {
     assert_ne!(back.occurrences()[0].definition, back.occurrences()[1].definition);
     assert_eq!(back.occurrences()[1].transform, placed.transform);
 }
+
+#[test]
+fn placed_stock_cut_uses_two_shared_cutters_and_preserves_material_volume() {
+    let stock = brep_core::cuboid([0.; 3], [10., 2., 3.]).unwrap();
+    let tool = brep_core::cuboid([0., -1., -1.], [1., 3., 4.]).unwrap();
+    let placed = |definition, x| crate::StepAssemblyOccurrence { definition, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![stock, tool],
+        vec![placed(0, 17.), placed(1, 19.), placed(1, 24.)]).unwrap();
+    let result = scene.cut_stock(0, &[1, 2, 1]).unwrap();
+    assert_eq!(result.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(result.bodies.len(), 3);
+    let volume = |model: &Model| brep_core::analysis::mass_properties(model, 1e-8, 100_000).unwrap().signed_volume_mm3;
+    assert!((volume(&result) - 48.).abs() < 1e-8);
+    assert!((volume(&scene.cut_stock(0, &[]).unwrap()) - 60.).abs() < 1e-8);
+    assert!(scene.cut_stock(0, &[0]).unwrap().bodies.is_empty());
+    assert!(scene.cut_stock(0, &[0, 3]).is_err());
+    assert!(scene.cut_stock(3, &[]).is_err());
+    assert!(scene.cut_stock(0, &[1; 257]).is_err());
+}
