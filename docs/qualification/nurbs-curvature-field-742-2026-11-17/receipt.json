@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0742",
+  "testedBase": "b41592a50a435ce760387720bc6a4c4c048dae71",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 367,
+  "scope": [
+    "Refine the global minimum among all scheduled tool pairs under one phase-cell budget.",
+    "Check three independently scheduled tools, correct pair and absolute witness, stationary-phase collision and mandatory phase coverage."
+  ],
+  "logSha256": "afe65f4b56888bb260c63ffac26761a2566984ee61ed7da49b8361817d3229b0",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "cb124ee31a6f90159c04ec86ceb764306a4be7b72f2b16b76b294804c4a6c1a0",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "19ab50c319509afbaaa3b87a252f2b6563cdc268fe20aa0bfcc3e05d8608754e"
+  }
+}

@@ -11005,3 +11005,34 @@ fn minimum_scheduled_clearance_with_holds_finds_witness_during_a_hold() {
     let [lo, hi] = fine.gap_bounds;
     assert!(lo <= -0.25 && -0.25 <= hi && hi - lo < 1e-6);
 }
+
+#[test]
+fn scheduled_tools_clearance_reports_closest_pair_under_one_budget() {
+    use nurbs_core::analysis::curve_measure::{
+        ScheduledTool, StopReason, TimedMotionSegment, measure_scheduled_tools_clearance,
+    };
+    let line = |points: [[f64; 2]; 2]| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: points.map(Vec::from).into(),
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let distant = line([[0., 10.], [2., 10.]]);
+    let first = line([[0., 0.], [2., 0.]]);
+    let second = line([[4., 0.25], [0., 0.25]]);
+    let tool = |curve, start_time, duration| ScheduledTool {
+        segment: TimedMotionSegment { curve, interval: [0., 1.], duration },
+        start_time,
+        radius: 0.25,
+    };
+    let tools = [tool(&distant, 0., 1.), tool(&first, 0., 1.), tool(&second, 2., 4.)];
+    assert!(measure_scheduled_tools_clearance(&tools, 1e-6, 6).is_err());
+    let report = measure_scheduled_tools_clearance(&tools, 1e-6, 128).unwrap();
+    assert_eq!(report.witness_tools, [1, 2]);
+    assert_eq!(report.minimum.witness_time_bounds, [4.; 2]);
+    assert_eq!(report.minimum.stop_reason, StopReason::Tolerance);
+    let [lo, hi] = report.minimum.gap_bounds;
+    assert!(lo <= -0.25 && -0.25 <= hi && hi - lo < 1e-6);
+    assert!(report.minimum.work_cells <= 128);
+}

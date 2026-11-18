@@ -2813,6 +2813,59 @@ pub fn measure_scheduled_clearance_with_holds(
 ) -> Result<ScheduledMinimumClearance> {
     validate(tolerance, max_cells)?;
     let phases = prepare_schedule_with_holds(segments, start_times, radii)?;
+    measure_scheduled_phase_minimum(&phases, tolerance, max_cells).map(|(report, _)| report)
+}
+
+/// A spherical tool with an independently scheduled curve traversal.
+#[derive(Clone, Copy, Debug)]
+pub struct ScheduledTool<'a> {
+    pub segment: TimedMotionSegment<'a>,
+    pub start_time: f64,
+    pub radius: f64,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ScheduledToolsMinimumClearance {
+    pub minimum: ScheduledMinimumClearance,
+    /// Input indices of the pair supplying the upper-bound witness.
+    pub witness_tools: [usize; 2],
+}
+
+/// Refine the smallest gap among all unordered tool pairs with one budget.
+/// Each tool stays at its corresponding endpoint outside its traversal.
+pub fn measure_scheduled_tools_clearance(
+    tools: &[ScheduledTool<'_>],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<ScheduledToolsMinimumClearance> {
+    validate(tolerance, max_cells)?;
+    check(tools.len() >= 2, "Scheduled clearance requires at least two tools")?;
+    if tools.len().saturating_mul(tools.len() - 1) / 2 > max_cells {
+        return Err(resource("Clearance budget must cover every tool pair"));
+    }
+    let mut phases = Vec::new();
+    let mut pairs = Vec::new();
+    for (second, b) in tools.iter().enumerate() {
+        for (first, a) in tools[..second].iter().enumerate() {
+            let pair_phases = prepare_schedule_with_holds(
+                [a.segment, b.segment], [a.start_time, b.start_time], [a.radius, b.radius],
+            )?;
+            if pair_phases.len() > max_cells - phases.len() {
+                return Err(resource("Clearance budget must cover every tool pair phase"));
+            }
+            pairs.extend(pair_phases.iter().map(|_| [first, second]));
+            phases.extend(pair_phases);
+        }
+    }
+    let (minimum, phase) = measure_scheduled_phase_minimum(&phases, tolerance, max_cells)?;
+    Ok(ScheduledToolsMinimumClearance { minimum, witness_tools: pairs[phase] })
+}
+
+fn measure_scheduled_phase_minimum(
+    phases: &[ScheduledOverlap<'_>],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<(ScheduledMinimumClearance, usize)> {
     let initial = (0..phases.len()).map(|index| (index, [0., 1.]));
     let measure = |index: usize, domain: [f64; 2], witness: &mut ClearanceWitness| {
         let phase = &phases[index];
@@ -2828,12 +2881,12 @@ pub fn measure_scheduled_clearance_with_holds(
     let (lower, witness, work_cells, stop_reason) =
         refine_minimum_clearance(initial, 0., tolerance, max_cells, measure)?;
     let time = phases[witness.2].time(witness.1)?;
-    Ok(ScheduledMinimumClearance {
+    Ok((ScheduledMinimumClearance {
         gap_bounds: [lower, witness.0],
         witness_time_bounds: [round_motion_duration(&time, false)?, round_motion_duration(&time, true)?],
         work_cells,
         stop_reason,
-    })
+    }, witness.2))
 }
 
 fn prepare_schedule_with_holds<'a>(
