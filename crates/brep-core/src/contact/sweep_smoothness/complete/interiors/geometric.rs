@@ -635,6 +635,13 @@ mod tests {
             assert_eq!(factors.center, [0.; 2]);
             assert_eq!(factors.height_axis, 2);
             assert!(factors.angular.periodic && !factors.meridian.periodic);
+            let angular = nurbs_core::surface_injectivity::certify_angular_ring(
+                &factors.angular, 10_000, 100,
+            ).unwrap();
+            assert!(angular.proven);
+            assert!(!nurbs_core::surface_injectivity::certify_angular_ring(
+                &factors.angular, angular.cells - 1, 100,
+            ).unwrap().proven);
             assert!(nurbs_core::surface_injectivity::factor_radial_tensor(band, 0, 2, count - 1)
                 .unwrap().is_none());
             let mut perturbation = band.clone();

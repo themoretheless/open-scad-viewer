@@ -151,3 +151,96 @@ fn factor(s: &Surface, axis: usize, height: usize, n: usize, m: usize) -> Option
         meridian,
     })
 }
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct AngularRingReport {
+    /// Exactly one visit to each positive ray and nonzero angular speed on
+    /// every original span, with exact closure at the authored seam.
+    pub proven: bool,
+    pub cells: usize,
+    pub pairs: usize,
+}
+
+/// A simple closed rational curve with a strict, common angular derivative
+/// sign winds exactly once about the origin. Homogeneous Bernstein controls
+/// prove the derivative sign over each whole original span.
+pub fn certify_angular_ring(
+    curve: &Curve,
+    max_cells: usize,
+    max_pairs: usize,
+) -> Result<AngularRingReport> {
+    curve.validate()?;
+    check(
+        max_cells <= 100000 && max_pairs <= 100000,
+        "Invalid angular ring budget",
+    )?;
+    let mut report = AngularRingReport::default();
+    if !curve.periodic || curve.degree == 0 || curve.control_points[0].len() != 2 || max_pairs == 0
+    {
+        return Ok(report);
+    }
+    let scan = curve.knots.len().saturating_mul(curve.control_points.len());
+    if scan >= max_cells {
+        return Ok(report);
+    }
+    report.cells = scan;
+    if !crate::curve_partition_agreement::verify_source_closure(curve)? {
+        return Ok(report);
+    }
+    let Some(spans) = crate::curve_partition_agreement::exact_bezier_span_partition(curve)? else {
+        return Ok(report);
+    };
+    if !(2..=256).contains(&spans.len()) {
+        return Ok(report);
+    }
+    let mut direction = None;
+    for span in &spans {
+        let work = span.control_points.len().saturating_mul(span.degree);
+        if work >= max_cells - report.cells {
+            return Ok(report);
+        }
+        report.cells += work;
+        let Some(sign) = angular_span_direction(span) else {
+            return Ok(report);
+        };
+        if direction
+            .replace(sign)
+            .is_some_and(|previous| previous != sign)
+        {
+            return Ok(report);
+        }
+    }
+    let simple =
+        crate::trim_simplicity::inspect(&spans, 1e-10, max_pairs, max_cells - report.cells)?;
+    report.cells += simple.cells;
+    report.pairs = simple.pairs.len();
+    report.proven = simple.proven_simple;
+    Ok(report)
+}
+
+fn angular_span_direction(span: &Curve) -> Option<bool> {
+    let q = |x| Q::from_float(x).unwrap();
+    let pairs = span
+        .control_points
+        .iter()
+        .zip(&span.weights)
+        .map(|(p, &w)| [q(p[0]) * q(w), q(p[1]) * q(w)])
+        .collect::<Vec<_>>();
+    let det = |a: &[Q; 2], b: &[Q; 2]| &a[0] * &b[1] - &a[1] * &b[0];
+    let start = det(&pairs[0], &pairs[1]);
+    let end = det(&pairs[pairs.len() - 2], pairs.last()?);
+    if start.is_zero() || end.is_zero() || start.is_positive() != end.is_positive() {
+        return None;
+    }
+    let positive = start.is_positive();
+    for edge in pairs.windows(2) {
+        let d = [&edge[1][0] - &edge[0][0], &edge[1][1] - &edge[0][1]];
+        if pairs.iter().any(|p| {
+            let sign = det(p, &d);
+            !sign.is_zero() && sign.is_positive() != positive
+        }) {
+            return None;
+        }
+    }
+    Some(positive)
+}
