@@ -50,6 +50,44 @@ impl QualifiedClosedSolid {
         }
         Ok(())
     }
+    /// Return the entry and exit parameter enclosures of each material
+    /// interval on a forward ray. An interior origin starts at [0, 0].
+    /// A ray with unresolved, coincident or boundary-origin contacts is refused.
+    pub fn ray_material_intervals(
+        &self,
+        origin: [f64; 3],
+        direction: [f64; 3],
+        max_cells: usize,
+        max_domain_cells: usize,
+    ) -> Result<Vec<[[f64; 2]; 2]>> {
+        let report = ray_parity::classify_ray(
+            &self.model,
+            origin,
+            direction,
+            self.policy.tolerance_uv,
+            max_cells,
+            max_domain_cells,
+        )?;
+        let starts_inside = report.parity.ok_or_else(|| {
+            Error::new("BREP_RAY_UNRESOLVED", "Material ray contains unresolved crossings")
+        })?;
+        let mut crossings = report.crossings.into_iter().map(|root| root.parameter);
+        let mut intervals = Vec::new();
+        if starts_inside {
+            let exit = crossings.next().ok_or_else(|| {
+                Error::new("BREP_RAY_UNRESOLVED", "Interior ray has no exit crossing")
+            })?;
+            intervals.push([[0., 0.], exit]);
+        }
+        while let Some(entry) = crossings.next() {
+            let exit = crossings.next().ok_or_else(|| {
+                Error::new("BREP_RAY_UNRESOLVED", "Material ray has an unmatched entry crossing")
+            })?;
+            intervals.push([entry, exit]);
+        }
+        Ok(intervals)
+    }
+
     /// The owned closed embedded material boundary establishes the precondition
     /// which a standalone parity report deliberately leaves to its caller.
     pub fn classify_point(

@@ -4,6 +4,39 @@ use brep_core::{closed_solid as solid, healing_report::{AutoRepairOperation, Hea
 mod full_periodic_cylinder;
 
 #[test]
+fn closed_material_ray_preserves_entry_and_exit_enclosures() {
+    let model = brep_core::cuboid([0.; 3], [2.; 3]).unwrap();
+    let solid = solid::qualify(model, policy()).unwrap().into_solid().unwrap();
+    let direction = [1., 0., 0.];
+    for (origin, expected) in [([-1., 0.75, 1.25], [1., 3.]), ([1., 0.75, 1.25], [0., 1.])] {
+        let intervals = solid.ray_material_intervals(origin, direction, 100_000, 200_000).unwrap();
+        assert_eq!(intervals.len(), 1);
+        for ([lo, hi], expected) in intervals[0].into_iter().zip(expected) {
+            assert!(lo <= expected && expected <= hi);
+        }
+        if expected[0] == 0. {
+            assert_eq!(intervals[0][0], [0., 0.]);
+        }
+    }
+    assert!(solid.ray_material_intervals([-1., 3., 1.], direction, 100_000, 200_000).unwrap().is_empty());
+    assert!(solid.ray_material_intervals([-1., 0., 1.], direction, 100_000, 200_000).is_err());
+    assert!(solid.ray_material_intervals([-1., 0.75, 1.25], direction, 1, 1).is_err());
+
+    let outer = brep_core::cuboid([0.; 3], [4.; 3]).unwrap();
+    let inner = brep_core::cuboid([1.; 3], [3.; 3]).unwrap();
+    let cavity = brep_core::minkowski3d::curved::certify_enclosed_difference(&outer, &inner, 0)
+        .unwrap().into_model();
+    let cavity = solid::qualify(cavity, policy()).unwrap().into_solid().unwrap();
+    let intervals = cavity.ray_material_intervals([-1., 2., 2.], direction, 100_000, 200_000).unwrap();
+    assert_eq!(intervals.len(), 2);
+    for (interval, expected) in intervals.into_iter().zip([[1., 2.], [4., 5.]]) {
+        for ([lo, hi], expected) in interval.into_iter().zip(expected) {
+            assert!(lo <= expected && expected <= hi);
+        }
+    }
+}
+
+#[test]
 fn periodic_cylinder_qualifies_as_closed_material_through_its_owned_rims() {
     let mut model = full_periodic_cylinder::source();
     let edge = &model.loops[0].coedges[1];

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 846,
-  "unallocatedCount": 154,
+  "specifiedCount": 847,
+  "unallocatedCount": 153,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19791,6 +19791,26 @@
       "remainingQualification": [
         "Order box entries and stop tracing only when the remaining entry lower bounds strictly exceed a verified crossing upper bound.",
         "Check that a budget for one occurrence suffices when others are strictly farther, but refuses an unchecked coincident candidate.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0847",
+      "name": "Интервалы материала вдоль луча для квалифицированного замкнутого B-rep",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Пересечения",
+      "nativeApi": "brep_core::closed_solid::QualifiedClosedSolid::ray_material_intervals",
+      "evidence": [
+        "crates/brep-core/src/model/closed_solid.rs",
+        "crates/brep-core/src/model/ray_parity.rs",
+        "crates/brep-core/tests/closed_solid.rs",
+        "docs/qualification/nurbs-curvature-field-847-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-847-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Group fully resolved retained-face ray roots into material intervals of a qualified closed solid.",
+        "Check outside and inside ray origins, interior cavity separation, a resolved miss, edge contacts and exhausted budgets.",
         "WASM and application integration are separate."
       ]
     }
