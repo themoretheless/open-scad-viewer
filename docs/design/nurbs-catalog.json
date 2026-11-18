@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 647,
-  "unallocatedCount": 353,
+  "specifiedCount": 648,
+  "unallocatedCount": 352,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15957,6 +15957,25 @@
       "remainingQualification": [
         "Tighten principal moments using positive semidefiniteness, ordering and inertia triangle inequalities.",
         "Check a tighter upper bound, zero and impossible physical tensors, plus the native weighted request regressions.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0648",
+      "name": "Гарантированные разности соседних главных моментов инерции NURBS-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::bound_physical_principal_moment_gaps",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-648-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-648-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose adjacent ordered moment differences and cap the upper gap by the least moment.",
+        "Check distinct and repeated roots, and the strict physical cap under uncertain tensor entries.",
         "WASM and application integration are separate."
       ]
     }

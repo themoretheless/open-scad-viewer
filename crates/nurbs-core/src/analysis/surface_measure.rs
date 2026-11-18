@@ -1383,6 +1383,27 @@ pub fn bound_physical_principal_moments(
     Ok(moments)
 }
 
+/// Bound the two consecutive principal moment gaps in ascending moment order.
+/// A strictly positive lower bound certifies separation of the two moments.
+pub fn bound_physical_principal_moment_gaps(
+    tensor: [[[f64; 2]; 3]; 3],
+    tolerance: f64,
+) -> Result<[[f64; 2]; 2]> {
+    let [[a_lo, a_hi], [b_lo, b_hi], [c_lo, c_hi]] =
+        bound_physical_principal_moments(tensor, tolerance)?;
+    // For physical inertia, the largest moment cannot exceed the sum
+    // of the two smaller ones, so the upper gap is at most the least moment.
+    let first = Interval::new(
+        (b_lo - a_hi).next_down().max(0.),
+        (b_hi - a_lo).next_up(),
+    )?;
+    let second = Interval::new(
+        (c_lo - b_hi).next_down().max(0.),
+        (c_hi - b_lo).next_up().min(a_hi),
+    )?;
+    Ok([[first.lo, first.hi], [second.lo, second.hi]])
+}
+
 fn validate_moment_tolerance(tolerance: f64) -> Result<()> {
     check(
         tolerance.is_finite() && tolerance > 0.,
@@ -1717,6 +1738,14 @@ impl TrimmedPatchSetDensityReport {
             .map(|mass| bound_physical_principal_moments(mass.central_inertia_bounds, tolerance))
             .transpose()?;
         Ok((moments, principal_moments_within_tolerance(moments, tolerance)))
+    }
+
+    /// Enclose adjacent spectral gaps of the density-weighted central tensor.
+    pub fn bound_principal_moment_gaps(&self, tolerance: f64) -> Result<Option<[[f64; 2]; 2]>> {
+        validate_moment_tolerance(tolerance)?;
+        self.mass_properties
+            .map(|mass| bound_physical_principal_moment_gaps(mass.central_inertia_bounds, tolerance))
+            .transpose()
     }
 
     /// Enclose the density-weighted first moment about an oriented plane.

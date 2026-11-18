@@ -7737,3 +7737,32 @@ fn physical_principal_moments_preserve_zero_and_reject_impossible_tensors() {
         .map(|row| row.map(|entry| [entry; 2]));
     assert!(bound_physical_principal_moments(impossible, 1e-6).is_err());
 }
+
+#[test]
+fn physical_principal_gaps_certify_separation_and_preserve_repeated_roots() {
+    use nurbs_core::analysis::surface_measure::bound_physical_principal_moment_gaps;
+    for (diagonal, expected) in [([2., 3., 5.], [1., 2.]), ([3., 3., 5.], [0., 2.])] {
+        let tensor = std::array::from_fn(|i| {
+            std::array::from_fn(|j| [if i == j { diagonal[i] } else { 0. }; 2])
+        });
+        let gaps = bound_physical_principal_moment_gaps(tensor, 1e-8).unwrap();
+        for ([lo, hi], exact) in gaps.into_iter().zip(expected) {
+            assert!(0. <= lo && lo <= exact && exact <= hi);
+            assert!(hi - lo < 2e-8);
+        }
+        assert_eq!(gaps[0][0] > 0., expected[0] > 0.);
+    }
+}
+
+#[test]
+fn physical_upper_gap_is_capped_by_smallest_moment_under_uncertainty() {
+    use nurbs_core::analysis::surface_measure::bound_physical_principal_moment_gaps;
+    let tensor = [
+        [[2.; 2], [0.; 2], [0.; 2]],
+        [[0.; 2], [3., 6.], [0.; 2]],
+        [[0.; 2], [0.; 2], [6., 8.]],
+    ];
+    let [first, second] = bound_physical_principal_moment_gaps(tensor, 100.).unwrap();
+    assert!(first[0] > 0. && first[0] <= 2. && 4. <= first[1]);
+    assert!(second[0] == 0. && 2. <= second[1] && second[1] < 2. + 1e-12);
+}
