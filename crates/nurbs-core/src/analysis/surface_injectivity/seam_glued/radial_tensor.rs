@@ -10,6 +10,9 @@ pub struct RadialTensor {
     pub center: [f64; 2],
     /// Exact change in the center per unit of world height.
     pub center_drift: [f64; 2],
+    /// World height is the dot product with this exact covector.
+    /// Its `height_axis` component is one.
+    pub height_normal: [f64; 3],
     pub height_axis: usize,
     /// Center-relative planar coordinates at unit meridian scale.
     pub angular: Curve,
@@ -23,9 +26,10 @@ fn exact(value: Q) -> Option<f64> {
 }
 
 /// The original map is `(center + drift * height(v) + scale(v) * angular(u), height(v))`,
-/// with the coordinates placed in the selected world axes. Each original
-/// tensor weight is the product of the two recovered curve weights. The
-/// common drift is an invertible affine shear of the radial carrier.
+/// in the two retained coordinates and the exact linear height coordinate.
+/// The height covector and center drift define invertible affine changes
+/// of the radial carrier. Each original tensor weight is the product of
+/// the two recovered curve weights.
 pub fn factor_radial_tensor(
     surface: &Surface,
     periodic_axis: usize,
@@ -74,7 +78,10 @@ fn factor(s: &Surface, axis: usize, height: usize, n: usize, m: usize) -> Option
     if scale.iter().any(|r| *r <= Q::zero()) {
         return None;
     }
-    let heights = (0..m).map(|j| pole(0, j, height)).collect::<Vec<_>>();
+    let difference = |i| std::array::from_fn(|k| pole(i, 0, k) - pole(0, 0, k));
+    let normal = height_normal(difference(i), (1..n).map(difference), height)?;
+    let axial = |i, j| (0..3).map(|k| &normal[k] * pole(i, j, k)).sum::<Q>();
+    let heights = (0..m).map(|j| axial(0, j)).collect::<Vec<_>>();
     let rows = (0..m)
         .map(|j| plane.map(|k| pole(0, j, k)))
         .collect::<Vec<_>>();
@@ -87,7 +94,7 @@ fn factor(s: &Surface, axis: usize, height: usize, n: usize, m: usize) -> Option
     let w00 = weight(0, 0);
     for (j, scale) in scale.iter().enumerate() {
         for i in 0..n {
-            if pole(i, j, height) != pole(0, j, height)
+            if axial(i, j) != heights[j]
                 || weight(i, j) * &w00 != weight(i, 0) * weight(0, j)
                 || plane.iter().enumerate().any(|(axis, &k)| {
                     pole(i, j, k) - &centers[j][axis]
@@ -155,10 +162,34 @@ fn factor(s: &Surface, axis: usize, height: usize, n: usize, m: usize) -> Option
     Some(RadialTensor {
         center: [exact(center[0].clone())?, exact(center[1].clone())?],
         center_drift: [exact(drift[0].clone())?, exact(drift[1].clone())?],
+        height_normal: [
+            exact(normal[0].clone())?,
+            exact(normal[1].clone())?,
+            exact(normal[2].clone())?,
+        ],
         height_axis: height,
         angular,
         meridian,
     })
+}
+
+fn height_normal(
+    anchor: [Q; 3],
+    directions: impl Iterator<Item = [Q; 3]>,
+    axis: usize,
+) -> Option<[Q; 3]> {
+    let normal = directions
+        .map(|b| {
+            std::array::from_fn::<_, 3, _>(|k| {
+                &anchor[(k + 1) % 3] * &b[(k + 2) % 3] - &anchor[(k + 2) % 3] * &b[(k + 1) % 3]
+            })
+        })
+        .find(|n| n.iter().any(|v| !v.is_zero()))?;
+    let divisor = normal[axis].clone();
+    if divisor.is_zero() {
+        return None;
+    }
+    Some(normal.map(|v| v / &divisor))
 }
 
 /// At row j, the anchor offset `P_j - r_j P_0` equals
@@ -342,6 +373,7 @@ pub fn certify_radial_band_cycle(
     if factors[1..].iter().any(|other| {
         left.center != other.center
             || left.center_drift != other.center_drift
+            || left.height_normal != other.height_normal
             || !same_angular_curve(&left.angular, &other.angular)
     }) {
         return Ok(out);
@@ -506,6 +538,22 @@ mod tests {
         let refs = sheared.each_ref();
         assert!(
             certify_radial_band_cycle(&refs, &[0; 4], 2, 10000, 100)
+                .unwrap()
+                .proven
+        );
+        let tilted = sheared.clone().map(|mut band| {
+            for pole in band.control_points.iter_mut().flatten() {
+                pole[2] += 0.25 * pole[0] + 0.5 * pole[1];
+            }
+            band
+        });
+        for band in &tilted {
+            let factors = factor_radial_tensor(band, 0, 2, 30).unwrap().unwrap();
+            assert_eq!(factors.height_normal, [-0.25, -0.5, 1.]);
+            assert_eq!(factors.center_drift, [0.5, -2.]);
+        }
+        assert!(
+            certify_radial_band_cycle(&tilted.each_ref(), &[0; 4], 2, 10000, 100)
                 .unwrap()
                 .proven
         );
