@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 869,
-  "unallocatedCount": 131,
+  "specifiedCount": 870,
+  "unallocatedCount": 130,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20217,6 +20217,23 @@
       ],
       "remainingQualification": [
         "Native API only. A distance interval straddling the threshold is unresolved."
+      ]
+    },
+    {
+      "id": "NURBS-0870",
+      "name": "Поиск наименьшего зазора между двумя узлами сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::minimum_clearance_between",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-interface-minimum-870-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-interface-minimum-870-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Native API only. A partial search may yield only a lower bound."
       ]
     }
   ],

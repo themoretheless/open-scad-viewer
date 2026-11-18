@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0870",
+  "testedBase": "edcacc0680c8e33a853d1add9005fc6c4034a84f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 217,
+  "scope": [
+    "Bound global minimum clearance restricted to cross-group pairs and preserve oriented witness pair and diagnostic state.",
+    "Closest interface has a 4 mm gap despite internal overlap. One measurement converges; zero measurements preserve a conservative lower bound and no upper witness."
+  ],
+  "logSha256": "23735fd345922043a308612f646fb1239857e0da9e15c1ee8188588378a04bbe",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "2bcffa7af2389f5a5ab2b3e23adaac3ddf3bd3084b5367a2fa37548f2e497d48",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "56ef0e67bb00fb4403a4195c14b983df48d07ff99f196a7a5716245c2ed59558"
+  }
+}

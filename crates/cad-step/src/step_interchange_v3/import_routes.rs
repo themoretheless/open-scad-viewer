@@ -1135,6 +1135,26 @@ impl StepSharedAssembly {
         limits: brep_core::solid_distance::Limits,
         max_pairs: usize,
     ) -> Result<Option<StepMinimumClearance>> {
+        self.minimum_clearance_filtered(tolerance_mm, tolerance_uv, limits, max_pairs, |a, b| Some([a, b]))
+    }
+
+    /// Bound the smallest clearance across two disjoint groups, retaining the left/right pair identity.
+    pub fn minimum_clearance_between(&self, left: &[usize], right: &[usize],
+        tolerance_mm: f64, tolerance_uv: f64, limits: brep_core::solid_distance::Limits,
+        max_pairs: usize) -> Result<StepMinimumClearance> {
+        let sides = self.selection_sides(left, right)?;
+        self.minimum_clearance_filtered(tolerance_mm, tolerance_uv, limits, max_pairs, |a, b| {
+            match (sides[a], sides[b]) {
+                (1, 2) => Some([a, b]),
+                (2, 1) => Some([b, a]),
+                _ => None,
+            }
+        })?.ok_or_else(|| refuse("STEP interface requires a cross-group pair"))
+    }
+
+    fn minimum_clearance_filtered(&self, tolerance_mm: f64, tolerance_uv: f64,
+        limits: brep_core::solid_distance::Limits, max_pairs: usize,
+        select: impl Fn(usize, usize) -> Option<[usize; 2]>) -> Result<Option<StepMinimumClearance>> {
         if !tolerance_mm.is_finite() || tolerance_mm <= 0.
             || !tolerance_uv.is_finite() || tolerance_uv <= 0.
         {
@@ -1144,8 +1164,9 @@ impl StepSharedAssembly {
         let mut pairs = Vec::new();
         for (first, a) in bounds.iter().enumerate() {
             for (second, b) in bounds.iter().enumerate().skip(first + 1) {
+                let Some(pair) = select(first, second) else { continue; };
                 let lower = box_distance_squared_lower(a, b).sqrt().next_down().max(0.);
-                pairs.push(([first, second], lower));
+                pairs.push((pair, lower));
             }
         }
         if pairs.is_empty() {
@@ -1341,8 +1362,7 @@ impl StepSharedAssembly {
         Ok(regions)
     }
 
-    fn cross_group_candidates(&self, left: &[usize], right: &[usize], distance: f64, max_pairs: usize)
-        -> Result<Vec<[usize; 2]>> {
+    fn selection_sides(&self, left: &[usize], right: &[usize]) -> Result<Vec<u8>> {
         let mut side = vec![0; self.occurrences.len()];
         for (members, label) in [(left, 1), (right, 2)] {
             if members.is_empty() || members.len() > side.len() {
@@ -1354,6 +1374,12 @@ impl StepSharedAssembly {
                 *slot = label;
             }
         }
+        Ok(side)
+    }
+
+    fn cross_group_candidates(&self, left: &[usize], right: &[usize], distance: f64, max_pairs: usize)
+        -> Result<Vec<[usize; 2]>> {
+        let side = self.selection_sides(left, right)?;
         let pairs: Vec<_> = self.proximity_candidates(distance)?.into_iter().filter_map(|[a, b]| {
             match (side[a], side[b]) {
                 (1, 2) => Some([a, b]),
