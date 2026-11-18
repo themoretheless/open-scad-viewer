@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0797",
+  "testedBase": "4eb7085e9a961f4e89f2155d2adf34bf4928fb8d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 423,
+  "scope": [
+    "Enclose minimum unsigned distance between a closed disk and a set of planar rational contours.",
+    "Check disk clearance, nearest loop, interior overlap, invalid radius and shared knot coverage."
+  ],
+  "logSha256": "227149a55e0049d6abfa98f68edb678cbc149916b3363722c10d040a27fc3e8c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "5bc9df85566f36b0d75eee693787de2226eed328f6bd0b39fcb458637c97f2f0",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "2b510d74067e34b97cfb3f601aeede966552360aa080c53d0e330bd5cccc5224"
+  }
+}

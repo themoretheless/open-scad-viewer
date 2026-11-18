@@ -12807,3 +12807,30 @@ fn planar_contour_set_box_distance_finds_nearest_loop_and_intersection() {
     assert_eq!(contact.bounds, [0.; 2]);
     assert_eq!(contact.witness_contour, 1);
 }
+
+#[test]
+fn planar_contour_set_disk_distance_reports_nearest_loop_and_disk_overlap() {
+    use nurbs_core::analysis::curve_measure::measure_planar_contour_set_disk_distance;
+    let square = |size: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-size, -size], vec![size, -size], vec![size, size],
+            vec![-size, size], vec![-size, -size]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let outer = square(3.);
+    let inner = square(1.);
+    let measure = |radius, budget| measure_planar_contour_set_disk_distance(
+        &[&outer, &inner], [1.5, 0.], radius, 1e-5, budget,
+    );
+    assert!(measure(0.25, 7).is_err());
+    let report = measure(0.25, 128).unwrap();
+    assert_eq!(report.witness_contour, 1);
+    let [lo, hi] = report.bounds;
+    assert!(lo <= 0.25 && 0.25 <= hi && hi - lo <= 1e-5);
+    let overlap = measure(0.75, 128).unwrap();
+    assert_eq!(overlap.bounds, [0.; 2]);
+    assert_eq!(overlap.witness_contour, 1);
+    assert!(measure(-1., 128).is_err());
+}

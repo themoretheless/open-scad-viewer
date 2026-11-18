@@ -2257,15 +2257,43 @@ pub fn measure_planar_contour_set_box_distance(
     for (lo, hi) in minimum.into_iter().zip(maximum) {
         Interval::new(lo, hi)?;
     }
+    validate_distance_contours(contours, max_cells)?;
+    measure_contour_set_distance(contours, tolerance, max_cells, |cell| {
+        solid_box_gap(cell, &minimum, &maximum, 0.)
+    })
+}
+
+/// Bound the minimum unsigned distance between a closed disk and a set
+/// of closed planar NURBS contours. A zero upper bound certifies that a
+/// contour meets the disk, including its interior.
+pub fn measure_planar_contour_set_disk_distance(
+    contours: &[&Curve],
+    center: [f64; 2],
+    radius: f64,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarContourDistanceReport> {
+    validate(tolerance, max_cells)?;
+    check(center.iter().all(|value| value.is_finite()), "Disk center must be finite")?;
+    check(radius.is_finite() && radius >= 0., "Disk radius must be finite and nonnegative")?;
+    validate_distance_contours(contours, max_cells)?;
+    let center = center.map(Interval::point);
+    let radius = Interval::point(radius);
+    measure_contour_set_distance(contours, tolerance, max_cells, |cell| {
+        let (lo, hi) = box_distance(cell, &center)?;
+        let gap = Interval::new(lo, hi)?.sub(radius)?;
+        Interval::new(gap.lo.max(0.), gap.hi.max(0.))
+    })
+}
+
+fn validate_distance_contours(contours: &[&Curve], max_cells: usize) -> Result<()> {
     check(!contours.is_empty(), "Contour distance requires at least one contour")?;
     check(contours.len() <= max_cells, "Distance budget must cover every contour")?;
     for curve in contours {
         validate_winding_curve(curve)?;
         check(curve.control_points.first() == curve.control_points.last(), "Distance contour must be closed")?;
     }
-    measure_contour_set_distance(contours, tolerance, max_cells, |cell| {
-        solid_box_gap(cell, &minimum, &maximum, 0.)
-    })
+    Ok(())
 }
 
 fn measure_contour_set_distance(
