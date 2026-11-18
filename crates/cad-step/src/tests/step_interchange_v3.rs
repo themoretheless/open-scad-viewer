@@ -1287,6 +1287,10 @@ fn v6_roundtrips_certified_pole_boundaries() {
         &mut void_model,
         freeform_cuboid_solid([2., 2., 2.], [4., 4., 4.]).unwrap(),
     );
+    // The inner boundary points into the cavity in material coordinates.
+    for usage in &mut void_model.0.shells[1].faces {
+        usage.reversed = !usage.reversed;
+    }
     void_model.0.bodies = vec![Body {
         outer_shell: 0,
         inner_shells: vec![1],
@@ -1294,6 +1298,9 @@ fn v6_roundtrips_certified_pole_boundaries() {
     void_model.rebuild_topology_ids();
     void_model.validate().unwrap();
     let (void_text, _, _) = export_step_v6(&void_model).unwrap();
+    let restored = import_step_v6(&void_text).unwrap().0;
+    let properties = brep_core::analysis::mass_properties(&restored, 1e-8, 400_000).unwrap();
+    assert!((properties.signed_volume_mm3 - 992.).abs() < 1e-8);
     let same_oriented = void_text
         .lines()
         .map(|line| {
