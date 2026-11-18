@@ -215,6 +215,9 @@ fn product_assembly_frames_use_their_own_units() {
         )
         .replace("ENDSEC;\nEND-ISO", &format!("{extra}ENDSEC;\nEND-ISO"));
     let (model, _, _) = import_step_v9(&moved).unwrap();
+    let (retained, _, _) = crate::import_step_v10(&moved).unwrap();
+    assert_eq!(retained.bodies.len(), 2);
+    assert_eq!(retained.vertices, model.vertices);
     let max = model
         .vertices
         .iter()

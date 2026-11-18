@@ -140,6 +140,28 @@ pub(super) fn representation_occurrences(
     Ok(out)
 }
 
+/// A retained product can contain several exact part definitions. Require every
+/// selected representation to belong to one explicit parent-to-child assembly.
+pub(super) fn single_product_assembly(entities: &BTreeMap<usize, Entity>, selected: &[usize]) -> Result<bool> {
+    let edges = collect_product_assembly(entities)?;
+    if edges.is_empty() { return Ok(false); }
+    let children: BTreeSet<_> = edges.values().map(|&(_, child)| child).collect();
+    let roots: Vec<_> = selected.iter().copied().filter(|rep| !children.contains(rep)).collect();
+    let [root] = roots.as_slice() else { return Ok(false); };
+    let mut outgoing = BTreeMap::<usize, Vec<usize>>::new();
+    for &(parent, child) in edges.values() {
+        outgoing.entry(parent).or_default().push(child);
+    }
+    let mut visited = BTreeSet::new();
+    let mut pending = vec![*root];
+    while let Some(rep) = pending.pop() {
+        if visited.insert(rep) && let Some(children) = outgoing.get(&rep) {
+            pending.extend(children);
+        }
+    }
+    Ok(selected.iter().all(|rep| visited.contains(rep)) && outgoing.keys().all(|rep| visited.contains(rep)))
+}
+
 fn collect_product_assembly(
     entities: &BTreeMap<usize, Entity>,
 ) -> Result<BTreeMap<usize, (usize, usize)>> {

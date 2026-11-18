@@ -164,6 +164,10 @@ impl DirectImportRoute<'_> {
             self.check_admitted_products(&selected)?;
             return Ok(selected);
         }
+        if assembly_occurrences::single_product_assembly(self.entities, &selected)? {
+            self.check_admitted_products(&selected)?;
+            return Ok(selected);
+        }
         self.select_exact_root(selected, auxiliary)
     }
 
@@ -408,7 +412,10 @@ impl DirectImportRoute<'_> {
     fn linked_graph(&self, graph_roots: &[usize], occurrences: &[RepresentationOccurrence]) -> Result<BTreeSet<usize>> {
         let mut linked = reachable(self.entities, graph_roots)?;
         if self.ap242_composition {
-            if self.capability != STEP_INTERCHANGE_V9_CAPABILITY {
+            // Explicit retained assemblies also own their selected container frames and units.
+            let retained_assembly = self.capability == STEP_INTERCHANGE_V10_CAPABILITY
+                && graph_roots.len() > 1 && occurrences.iter().any(|occ| occ.path.len() > 1);
+            if self.capability != STEP_INTERCHANGE_V9_CAPABILITY && !retained_assembly {
                 linked.clear();
             }
             for occurrence in occurrences {
