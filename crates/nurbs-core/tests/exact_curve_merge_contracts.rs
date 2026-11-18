@@ -8172,3 +8172,44 @@ fn two_plane_counterweights_withhold_indeterminate_positions() {
     assert!(second.radial_offset_bounds.is_some());
     assert!(bound_two_plane_counterweights(vectors, [1., 0.]).is_err());
 }
+
+#[test]
+fn two_plane_residual_accounts_for_installed_mass_and_position_uncertainty() {
+    use nurbs_core::analysis::surface_measure::{
+        BalanceTolerance, InstalledCounterweightBounds, bound_two_plane_residual_unbalance,
+    };
+    let vectors = [[[4.; 2], [0.; 2], [0.; 2]], [[0.; 2], [-6.; 2], [0.; 2]]];
+    let weights = [
+        InstalledCounterweightBounds {
+            mass_bounds: [1.9, 2.1],
+            radial_offset_bounds: [[-2.1, -1.9], [0.; 2], [0.; 2]],
+        },
+        InstalledCounterweightBounds {
+            mass_bounds: [2.; 2],
+            radial_offset_bounds: [[0.; 2], [3.; 2], [0.; 2]],
+        },
+    ];
+    let (residual, report) = bound_two_plane_residual_unbalance(vectors, weights, [0.5; 2]).unwrap();
+    assert_eq!(report.overall_status, BalanceTolerance::Within);
+    assert!(residual[0][0][0] <= -0.41 && 0.39 <= residual[0][0][1]);
+    assert!(report.magnitude_bounds[1][1] < 1e-12);
+    let (_, report) = bound_two_plane_residual_unbalance(vectors, weights, [0.2, 0.5]).unwrap();
+    assert_eq!(report.overall_status, BalanceTolerance::Undetermined);
+}
+
+#[test]
+fn two_plane_residual_preserves_unmodified_planes_and_rejects_negative_mass() {
+    use nurbs_core::analysis::surface_measure::{
+        BalanceTolerance, InstalledCounterweightBounds, bound_two_plane_residual_unbalance,
+    };
+    let vectors = [[[4.; 2], [0.; 2], [0.; 2]], [[0.; 2], [-6.; 2], [0.; 2]]];
+    let mut weights = [InstalledCounterweightBounds {
+        mass_bounds: [0.; 2],
+        radial_offset_bounds: [[-1., 1.]; 3],
+    }; 2];
+    let (residual, report) = bound_two_plane_residual_unbalance(vectors, weights, [1.; 2]).unwrap();
+    assert_eq!(residual, vectors);
+    assert_eq!(report.overall_status, BalanceTolerance::Outside);
+    weights[0].mass_bounds = [-1., 1.];
+    assert!(bound_two_plane_residual_unbalance(vectors, weights, [1.; 2]).is_err());
+}

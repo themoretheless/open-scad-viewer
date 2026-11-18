@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0669",
+  "testedBase": "6dc054793c5ee6c0eacfe31a29bfd3eaaa06a1ce",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 268,
+  "scope": [
+    "Enclose the remaining unbalance and classify plane tolerances after adding installed counterweights with uncertain masses and offsets.",
+    "Check exact cancellation, independent mass and mounting uncertainty, zero installed mass and invalid mass rejection."
+  ],
+  "logSha256": "3fcb28061d44b53976374dd80d11b079cbd4a0b9cd4196b51b68563100295ae3",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "f14d383769a7e4fe6c8a994a41e00b5216d2000b226390f02abc2a2c5dde1d18",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "2a7550881a6cc7312bb431cfef8c43821aa5cfed41983228d0e33d0295d136e9"
+  }
+}

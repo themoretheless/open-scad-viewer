@@ -1357,6 +1357,40 @@ pub fn bound_two_plane_counterweights(
     Ok(result)
 }
 
+/// Enclosure of an installed counterweight in a correction plane.
+#[derive(Clone, Copy, Debug)]
+pub struct InstalledCounterweightBounds {
+    pub mass_bounds: [f64; 2],
+    /// Position relative to the axis, in the same frame as the unbalance.
+    /// The true offset must lie in the correction plane.
+    pub radial_offset_bounds: [[f64; 2]; 3],
+}
+
+/// Enclose and classify residual unbalance after adding installed weights.
+pub fn bound_two_plane_residual_unbalance(
+    unbalance: [[[f64; 2]; 3]; 2],
+    counterweights: [InstalledCounterweightBounds; 2],
+    tolerances: [f64; 2],
+) -> Result<([[[f64; 2]; 3]; 2], TwoPlaneBalanceReport)> {
+    let mut residual = unbalance;
+    for (plane, counterweight) in residual.iter_mut().zip(counterweights) {
+        let [lo, hi] = counterweight.mass_bounds;
+        let mass = Interval::new(lo, hi)?;
+        check(lo >= 0., "Installed counterweight masses must be nonnegative")?;
+        let radial = centroid_intervals(counterweight.radial_offset_bounds)?;
+        for (bounds, offset) in plane.iter_mut().zip(radial) {
+            let [lo, hi] = *bounds;
+            let before = Interval::new(lo, hi)?;
+            if mass.hi != 0. && offset != Interval::point(0.) {
+                let after = before.add(mass.mul(offset)?)?;
+                *bounds = [after.lo, after.hi];
+            }
+        }
+    }
+    let report = classify_two_plane_unbalance(residual, tolerances)?;
+    Ok((residual, report))
+}
+
 fn classify_balance_tolerance([lo, hi]: [f64; 2], tolerance: f64) -> BalanceTolerance {
     if hi <= tolerance {
         BalanceTolerance::Within
