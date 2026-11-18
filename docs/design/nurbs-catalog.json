@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 795,
-  "unallocatedCount": 205,
+  "specifiedCount": 796,
+  "unallocatedCount": 204,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18797,6 +18797,25 @@
       "remainingQualification": [
         "Enclose the signed nearest contour distance over a separated query box using its certified fill and radius.",
         "Check signed distance ranges for interior and exterior boxes, singleton identity and boundary crossing rejection.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0796",
+      "name": "Минимальное расстояние от прямоугольника до набора замкнутых NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_contour_set_box_distance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-796-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-796-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify nearest contour distance to a solid query box, including intersection witnesses.",
+        "Check nearest loop, unsigned box distance, an exact zero intersection witness and shared initial coverage.",
         "WASM and application integration are separate."
       ]
     }

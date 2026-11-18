@@ -2217,6 +2217,63 @@ fn measure_signed_contour_distance(
     max_distance_cells: usize,
 ) -> Result<PlanarCurveSignedDistanceReport> {
     let point = point.map(Interval::point);
+    let nearest = measure_contour_set_distance(contours, distance_tolerance, max_distance_cells, |cell| {
+        let (lo, hi) = box_distance(cell, &point)?;
+        Interval::new(lo, hi)
+    })?;
+    let [lower, upper] = nearest.bounds;
+    let signed_bounds = match fill.filled {
+        Some(true) => [-upper, -lower],
+        Some(false) => [lower, upper],
+        None => [-upper, upper],
+    };
+    Ok(PlanarCurveSignedDistanceReport {
+        signed_bounds, fill, witness_contour: nearest.witness_contour,
+        witness_parameter: nearest.witness_parameter,
+        distance_cells: nearest.work_cells, distance_stop_reason: nearest.stop_reason,
+    })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarContourDistanceReport {
+    pub bounds: [f64; 2],
+    pub witness_contour: usize,
+    pub witness_parameter: f64,
+    pub work_cells: usize,
+    pub stop_reason: StopReason,
+}
+
+/// Measure the minimum unsigned distance from a closed axis-aligned box
+/// to a set of closed planar NURBS contours. A zero upper bound certifies
+/// intersection with the box. The work budget is shared across contours.
+pub fn measure_planar_contour_set_box_distance(
+    contours: &[&Curve],
+    bounds: [[f64; 2]; 2],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarContourDistanceReport> {
+    validate(tolerance, max_cells)?;
+    let [minimum, maximum] = bounds;
+    for (lo, hi) in minimum.into_iter().zip(maximum) {
+        Interval::new(lo, hi)?;
+    }
+    check(!contours.is_empty(), "Contour distance requires at least one contour")?;
+    check(contours.len() <= max_cells, "Distance budget must cover every contour")?;
+    for curve in contours {
+        validate_winding_curve(curve)?;
+        check(curve.control_points.first() == curve.control_points.last(), "Distance contour must be closed")?;
+    }
+    measure_contour_set_distance(contours, tolerance, max_cells, |cell| {
+        solid_box_gap(cell, &minimum, &maximum, 0.)
+    })
+}
+
+fn measure_contour_set_distance(
+    contours: &[&Curve],
+    tolerance: f64,
+    max_cells: usize,
+    gap: impl Fn(&[Interval]) -> Result<Interval>,
+) -> Result<PlanarContourDistanceReport> {
     let initial = contours.iter().enumerate().flat_map(|(index, curve)| {
         active_spans(curve, curve.domain()).map(move |span| {
             ((index, span), [curve.knots[span], curve.knots[span + 1]])
@@ -2225,28 +2282,22 @@ fn measure_signed_contour_distance(
     let measure = |(index, span): (usize, usize), domain: [f64; 2], witness: &mut ClearanceWitness| {
         let curve = contours[index];
         let cell = curve_jets::enclose(curve, span, domain)?;
-        let (lower, _) = box_distance(&cell[0], &point)?;
+        let lower = gap(&cell[0])?.lo;
         for (end, parameter) in [(false, domain[0]), (true, domain[1])] {
             let endpoint = curve_jets::endpoint(curve, span, domain, end)?;
-            let (_, upper) = box_distance(&endpoint[0], &point)?;
+            let upper = gap(&endpoint[0])?.hi;
             if upper < witness.0 {
                 *witness = (upper, parameter, index);
             }
         }
         Ok(lower)
     };
-    let (lower, witness, distance_cells, distance_stop_reason) = refine_minimum_clearance(
-        initial, contours[0].domain()[0], distance_tolerance, max_distance_cells, measure,
+    let (lower, witness, work_cells, stop_reason) = refine_minimum_clearance(
+        initial, contours[0].domain()[0], tolerance, max_cells, measure,
     )?;
-    let upper = witness.0;
-    let signed_bounds = match fill.filled {
-        Some(true) => [-upper, -lower],
-        Some(false) => [lower, upper],
-        None => [-upper, upper],
-    };
-    Ok(PlanarCurveSignedDistanceReport {
-        signed_bounds, fill, witness_contour: witness.2, witness_parameter: witness.1,
-        distance_cells, distance_stop_reason,
+    Ok(PlanarContourDistanceReport {
+        bounds: [lower, witness.0], witness_contour: witness.2,
+        witness_parameter: witness.1, work_cells, stop_reason,
     })
 }
 

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0796",
+  "testedBase": "25c4d99a80ac69f4a8d6f9e366967eefe4e5e9aa",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 422,
+  "scope": [
+    "Certify nearest contour distance to a solid query box, including intersection witnesses.",
+    "Check nearest loop, unsigned box distance, an exact zero intersection witness and shared initial coverage."
+  ],
+  "logSha256": "6272280bf9f7e6ac3f4e625e49ae4bfa693451b0a3d426d64c0e8757a7bf7bce",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "465034e720366d6dab39c1646c83e590ed08f6110974fe31714c40a6195d5646",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "3294c247591682fd90c5ba937efc3efe6b890dbbfacfa8fd58a38c401653783c"
+  }
+}

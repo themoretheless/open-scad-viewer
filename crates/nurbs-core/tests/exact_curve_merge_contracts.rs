@@ -12780,3 +12780,30 @@ fn planar_curve_fill_signed_distance_over_box_encloses_all_query_distances() {
     assert_eq!(point.signed_bounds, point.center.signed_bounds);
     assert!(measure([[0.9, 0.], [1.1, 0.5]]).is_err());
 }
+
+#[test]
+fn planar_contour_set_box_distance_finds_nearest_loop_and_intersection() {
+    use nurbs_core::analysis::curve_measure::measure_planar_contour_set_box_distance;
+    let square = |size: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-size, -size], vec![size, -size], vec![size, size],
+            vec![-size, size], vec![-size, -size]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let outer = square(3.);
+    let inner = square(1.);
+    let measure = |bounds, budget| measure_planar_contour_set_box_distance(
+        &[&outer, &inner], bounds, 1e-5, budget,
+    );
+    let bounds = [[-0.25, -0.25], [0.25, 0.25]];
+    assert!(measure(bounds, 7).is_err());
+    let report = measure(bounds, 128).unwrap();
+    assert_eq!(report.witness_contour, 1);
+    let [lo, hi] = report.bounds;
+    assert!(lo <= 0.75 && 0.75 <= hi && hi - lo <= 1e-5);
+    let contact = measure([[0.9, -0.25], [1.1, 0.25]], 128).unwrap();
+    assert_eq!(contact.bounds, [0.; 2]);
+    assert_eq!(contact.witness_contour, 1);
+}
