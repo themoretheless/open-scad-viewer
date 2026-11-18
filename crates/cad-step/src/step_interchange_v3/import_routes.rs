@@ -905,22 +905,29 @@ impl StepSharedAssembly {
     /// The first definition supplies the retained topology identities.
     pub fn deduplicate_definitions(&mut self) -> usize {
         let original_count = self.definitions.len();
-        let mut unique: Vec<Model> = Vec::with_capacity(original_count);
-        let mut remap = Vec::with_capacity(original_count);
-        for model in std::mem::take(&mut self.definitions) {
-            let index = unique.iter().position(|candidate| candidate.0 == model.0)
-                .unwrap_or_else(|| {
-                    let index = unique.len();
-                    unique.push(model);
-                    index
-                });
+        self.deduplicate_matching(|_, _| true);
+        original_count - self.definitions.len()
+    }
+
+    fn deduplicate_matching(&mut self, compatible: impl Fn(usize, usize) -> bool) -> Vec<usize> {
+        let mut unique: Vec<Model> = Vec::with_capacity(self.definitions.len());
+        let mut retained = Vec::new();
+        let mut remap = Vec::with_capacity(self.definitions.len());
+        for (original, model) in std::mem::take(&mut self.definitions).into_iter().enumerate() {
+            let index = unique.iter().enumerate().position(|(i, candidate)|
+                compatible(retained[i], original) && candidate.0 == model.0
+            ).unwrap_or_else(|| {
+                retained.push(original);
+                unique.push(model);
+                unique.len() - 1
+            });
             remap.push(index);
         }
         for occurrence in &mut self.occurrences {
             occurrence.definition = remap[occurrence.definition];
         }
         self.definitions = unique;
-        original_count - self.definitions.len()
+        retained
     }
 
     /// Copy selected occurrences, in the requested order, with only the
@@ -2044,6 +2051,19 @@ pub struct StepPartsListRow<'a> {
 }
 
 impl NamedStepAssembly {
+    /// Consolidate definitions with equal names and equal indexed local B-reps.
+    /// The first matching part supplies the retained topology identifiers.
+    pub fn consolidate_named_parts(&mut self) -> Result<usize> {
+        let labels = &self.definition_names;
+        if labels.len() != self.assembly.definitions().len() {
+            return Err(refuse("Expected one label per part before consolidation"));
+        }
+        let retained = self.assembly.deduplicate_matching(|a,b| labels[a] == labels[b]);
+        let removed = labels.len() - retained.len();
+        self.definition_names = retained.into_iter().map(|i| labels[i].clone()).collect();
+        Ok(removed)
+    }
+
     /// Place another named assembly under a rigid transform. The resulting
     /// flat parts list retains separate definitions even when labels coincide.
     /// The returned range maps source definition indices into the destination.

@@ -223,3 +223,27 @@ fn append_named_assembly_composes_placements_and_keeps_distinct_part_rows() {
         else { assert_eq!(width,4.); assert_eq!(locations,[[10.,22.],[10.,25.]]); }
     }
 }
+
+#[test]
+fn part_consolidation_requires_both_matching_shape_and_matching_label() {
+    use cad_step::{NamedStepAssembly, StepSharedAssembly, StepAssemblyOccurrence, import_named_step_assembly};
+    let block = |w| brep_core::cuboid([0.;3],[w,2.,3.]).unwrap();
+    let definitions = vec![block(1.),block(2.),block(1.),block(1.)];
+    let occurrences = (0..4).map(|i| StepAssemblyOccurrence { definition:i,transform:
+        [[1.,0.,0.,i as f64],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]] }).collect();
+    let mut source = NamedStepAssembly {name:"Set".into(),definition_names:["A","A","B","A"].map(String::from).to_vec(),
+        assembly:StepSharedAssembly::from_placed_solids(definitions,occurrences).unwrap()};
+    assert_eq!(source.consolidate_named_parts().unwrap(),1);
+    assert_eq!(source.consolidate_named_parts().unwrap(),0);
+    let restored = import_named_step_assembly(&source.export_selected_parts(&[0,1,2],"Set").unwrap()).unwrap();
+    assert_eq!(restored.assembly.definitions().len(),3);
+    assert_eq!(restored.assembly.occurrences().len(),4);
+    for part in restored.assembly.occurrences() {
+        let x = part.transform[0][3];
+        assert_eq!(restored.definition_names[part.definition],if x==2. {"B"} else {"A"});
+        let width = restored.assembly.definitions()[part.definition].vertices.iter().map(|v|v.point[0]).fold(0.,f64::max);
+        assert_eq!(width,if x==1. {2.} else {1.});
+    }
+    source.definition_names.clear();
+    assert!(source.consolidate_named_parts().is_err());
+}

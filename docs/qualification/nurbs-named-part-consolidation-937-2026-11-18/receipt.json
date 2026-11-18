@@ -1,0 +1,44 @@
+{
+  "id": "NURBS-0937",
+  "testedBase": "5dd5b3ddfdb8434d0caa09bb11f4944e23df0188",
+  "gearCommand": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "gear_profile",
+    "--test",
+    "gear_verified_profile"
+  ],
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--test",
+    "edited_gear_step",
+    "--",
+    "--nocapture"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 19,
+  "scope": [
+    "Consolidate same-name equal B-reps while keeping both distinct names and distinct geometries separate. Check idempotence, invalid labels, quantities and placements after STEP exchange."
+  ],
+  "logSha256": "30cf65db16e70481b52125c9ea0b9c1943c1386f3a0cdc9c8db126c09b1dcf8a",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "47eeb66fa657f7b32fd207b740cf29611acb8e7d940103131444948ae4a58233",
+    "crates/cad-step/src/step_interchange_v3.rs": "7ce4b347ee9924e877883caf3f8350ddf4bd71d2d35cd223cccf02d14118a630",
+    "crates/cad-step/src/lib.rs": "424954bc627e81bf3e7ab962a4eeb8be65ba8af45e212d2b240562fa297411fb",
+    "crates/cad-step/tests/edited_gear_step.rs": "385cdbc01ddfb332b46ea2ff6caa8bf5c26347d1e5314d08a59ffa4d90268742"
+  }
+}

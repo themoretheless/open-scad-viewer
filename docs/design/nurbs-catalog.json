@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 936,
-  "unallocatedCount": 64,
+  "specifiedCount": 937,
+  "unallocatedCount": 63,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21417,6 +21417,25 @@
       ],
       "remainingQualification": [
         "Flattened assembly with proper rigid source placements. Destination name retained. Nested product hierarchy not retained."
+      ]
+    },
+    {
+      "id": "NURBS-0937",
+      "name": "Устранение дубликатов определений STEP-деталей по имени и индексированной геометрии",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::NamedStepAssembly::consolidate_named_parts",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-named-part-consolidation-937-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-named-part-consolidation-937-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Indexed B-rep equality includes model tolerance. First matching topology identifiers retained. Geometrically equivalent reordered nets are outside scope."
       ]
     }
   ],
