@@ -71,3 +71,58 @@ fn reflected_elliptic_cylinder_retains_rational_surface_weights() {
     );
     assert_eq!(body.validate().unwrap().boundary_edge_count, 0);
 }
+
+#[test]
+fn coloured_mirrored_cylinders_share_geometry_with_distinct_occurrence_styles() {
+    use cad_step::{
+        StepOccurrenceColour, export_styled_step_assembly, import_step_occurrence_colours,
+    };
+    let placements = [0., 20.].map(|x| StepAssemblyOccurrence {
+        definition: 0,
+        transform: [
+            [2., 0., 0., x],
+            [0., 3., 0., 0.],
+            [0., 0., -4., 0.],
+            [0., 0., 0., 1.],
+        ],
+    });
+    let scene = StepSharedAssembly::from_placed_solids(
+        vec![brep_core::cylinder(2., 3.).unwrap()],
+        placements.to_vec(),
+    )
+    .unwrap();
+    let rgb = [[1., 0., 0.], [0., 0., 1.]];
+    let styles = rgb.map(|rgb| {
+        Some(StepOccurrenceColour {
+            name: "Finish",
+            rgb,
+        })
+    });
+    let text = export_styled_step_assembly(&scene, &[], &[None, None], &styles).unwrap();
+    assert_eq!(text.matches("=MANIFOLD_SOLID_BREP(").count(), 1);
+    assert_eq!(
+        import_step_occurrence_colours(&text).unwrap(),
+        rgb.map(Some)
+    );
+    let grouped = export_styled_step_assembly(
+        &scene,
+        &["Drive"],
+        &[Some(0), None],
+        &[
+            None,
+            Some(StepOccurrenceColour {
+                name: "Blue",
+                rgb: rgb[1],
+            }),
+        ],
+    )
+    .unwrap();
+    let reopened = import_step_shared_assembly(&grouped).unwrap();
+    let colours = import_step_occurrence_colours(&grouped).unwrap();
+    for (place, colour) in reopened.occurrences().iter().zip(colours) {
+        assert_eq!(colour, (place.transform[0][3] == 20.).then_some(rgb[1]));
+    }
+    if let Some(path) = std::env::var_os("CAD_STYLED_SCALE_FIXTURE") {
+        std::fs::write(path, text).unwrap();
+    }
+}

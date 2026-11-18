@@ -995,6 +995,14 @@ fn export_grouped_with_styles(
     {
         return Err(refuse("Expected printable group names and a valid optional parent for every occurrence"));
     }
+    let baked;
+    let assembly = if colours.is_some() && assembly.occurrences().iter().any(|item|
+        !crate::step_interchange_v3::is_proper_rigid_placement(item.transform)) {
+        baked = assembly.with_baked_scales()?;
+        &baked
+    } else {
+        assembly
+    };
     export_shared_products(assembly, None, Some((groups, parents)), colours)
 }
 

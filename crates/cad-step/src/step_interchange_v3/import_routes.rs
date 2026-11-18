@@ -1917,6 +1917,10 @@ impl StepSharedAssembly {
     /// scaled or reflected placements into local geometry once per distinct
     /// source definition and linear map. Keep translations on the occurrences.
     pub fn export_step_with_baked_scales(&self) -> Result<String> {
+        crate::export_step_shared_assembly(&self.with_baked_scales()?)
+    }
+
+    pub(crate) fn with_baked_scales(&self) -> Result<Self> {
         let identity = [[1.,0.,0.,0.],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]];
         let mut definitions = Vec::new();
         let mut occurrences = Vec::new();
@@ -1945,7 +1949,7 @@ impl StepSharedAssembly {
             };
             occurrences.push(StepAssemblyOccurrence { definition, transform: placement });
         }
-        crate::export_step_shared_assembly(&Self::from_placed_solids(definitions, occurrences)?)
+        Self::from_placed_solids(definitions, occurrences)
     }
 
     pub fn materialize(&self, index: usize) -> Result<Model> {
