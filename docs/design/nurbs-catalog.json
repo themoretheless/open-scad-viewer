@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 799,
-  "unallocatedCount": 201,
+  "specifiedCount": 800,
+  "unallocatedCount": 200,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18873,6 +18873,25 @@
       "remainingQualification": [
         "Bound contour distance to a rotated rectangle with exact orthogonality validation.",
         "Check a rotated corner distance, interior contact, axis rescaling and nonorthogonal frame rejection.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0800",
+      "name": "Минимальный зазор между двумя наборами замкнутых плоских NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_contour_sets_distance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-800-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-800-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose global distance between two contour sets with paired source witnesses under a shared budget.",
+        "Check the globally closest contour pair, source witnesses and mandatory coverage of all span pairs.",
         "WASM and application integration are separate."
       ]
     }

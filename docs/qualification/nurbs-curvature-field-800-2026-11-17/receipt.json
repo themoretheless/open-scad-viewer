@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0800",
+  "testedBase": "aa0a8002ee4a8c4a2f598bc4cba4d57a60de35b4",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 426,
+  "scope": [
+    "Enclose global distance between two contour sets with paired source witnesses under a shared budget.",
+    "Check the globally closest contour pair, source witnesses and mandatory coverage of all span pairs."
+  ],
+  "logSha256": "20bcf2a12d19fbc780fe7b28be9b49d82e28450b2c2c64c3329545c14bec3cc5",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "8eecad71ec0dd6177134a0d04e20c1228501cdf9c3c1291304fa3aecdf567dd3",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "f07304107e5b544c348cc12e7281f450b9da474bbba333ff15aec38740cf6983"
+  }
+}

@@ -12893,3 +12893,27 @@ fn planar_contour_set_oriented_box_distance_tracks_rotated_corners() {
     assert_eq!(contact.bounds, [0.; 2]);
     assert!(measure(&[0., 0.], &[&[1., 1.], &[0., 1.]]).is_err());
 }
+
+#[test]
+fn planar_contour_sets_distance_finds_global_witness_under_shared_budget() {
+    use nurbs_core::analysis::curve_measure::measure_planar_contour_sets_distance;
+    let square = |x: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![x - 1., -1.], vec![x + 1., -1.], vec![x + 1., 1.],
+            vec![x - 1., 1.], vec![x - 1., -1.]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let [a, b, c, d] = [square(-10.), square(0.), square(10.), square(2.5)];
+    let measure = |budget| measure_planar_contour_sets_distance(&[&a, &b], &[&c, &d], 1e-5, budget);
+    assert!(measure(63).is_err());
+    let report = measure(256).unwrap();
+    let [lo, hi] = report.bounds;
+    assert!(lo <= 0.5 && 0.5 <= hi && report.converged);
+    assert_eq!(report.witness_contours, [1, 1]);
+    assert!(report.work_cells <= 256);
+    let points = [b.evaluate(report.witness_parameters[0]).unwrap().point,
+        d.evaluate(report.witness_parameters[1]).unwrap().point];
+    assert!(((points[0][0] - points[1][0]).hypot(points[0][1] - points[1][1]) - 0.5).abs() < 1e-5);
+}
