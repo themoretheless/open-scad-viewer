@@ -8444,3 +8444,38 @@ fn batched_directional_travel_reserves_coverage_from_early_refinement() {
     assert!(reports[1].forward_bounds[0] <= 2.5 && 2.5 <= reports[1].forward_bounds[1]);
     assert!(directional_travel_on_intervals(&curve, &[[0., 1.], [0., 2.]], &[1., 0.], 1e-7, 4).is_err());
 }
+
+#[test]
+fn directional_peak_speed_encloses_interior_maximum_in_original_parameter_units() {
+    use nurbs_core::analysis::curve_measure::{StopReason, directional_peak_speed};
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![0., 0.], vec![1., 0.], vec![1., 0.]],
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let report = directional_peak_speed(&curve, [2., 6.], &[-2., 0.], 1e-5, 2048).unwrap();
+    assert_eq!(report.stop_reason, StopReason::Tolerance);
+    assert!(report.bounds[0] <= 0.375 && 0.375 <= report.bounds[1]);
+    let coarse = directional_peak_speed(&curve, [2., 6.], &[1., 0.], 1e-5, 1).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.bounds[0] <= 0.375 && 0.375 <= coarse.bounds[1]);
+}
+
+#[test]
+fn directional_peak_speed_retains_both_one_sided_knot_derivatives() {
+    use nurbs_core::analysis::curve_measure::directional_peak_speed;
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 8., 8.],
+        control_points: vec![vec![0., 0.], vec![4., 0.], vec![-12., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    for (window, expected) in [([3., 4.], 2.), ([3., 5.], 4.), ([4., 5.], 4.)] {
+        let [lo, hi] = directional_peak_speed(&curve, window, &[1., 0.], 1e-8, 32).unwrap().bounds;
+        assert!(lo <= expected && expected <= hi && hi - lo < 1e-8);
+    }
+    assert!(directional_peak_speed(&curve, [3., 5.], &[1., 0.], 1e-8, 1).is_err());
+}

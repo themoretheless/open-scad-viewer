@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0680",
+  "testedBase": "bafeeb054468567577d6e0541bd02e2993d3925e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 282,
+  "scope": [
+    "Enclose the supremum of absolute projected source-parameter velocity on a selected window.",
+    "Check an interior peak under a nonunit source clock, one-sided knot speeds, clipped windows, and coarse whole-span enclosures."
+  ],
+  "logSha256": "ec71838240bc345d21ab5752ff2088ab3736dbef6cf43585c6271a6bb86b604b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "d25b5c3c6073ad19cae45f6964a9c9ccb5df9fda7827a99ea6fe9d3652728ae5",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "351248746c8174f4c8905240e30ff6128098332fad4a9808778499c75d806738"
+  }
+}

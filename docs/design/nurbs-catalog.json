@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 679,
-  "unallocatedCount": 321,
+  "specifiedCount": 680,
+  "unallocatedCount": 320,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16593,6 +16593,25 @@
       "remainingQualification": [
         "Expose ordered window reports, a shared axial travel budget and optional reverse-limit checks per window.",
         "Check ordered windows, shared-budget exhaustion, and per-window reverse-limit classifications through the compiled ABI.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0680",
+      "name": "Гарантированная оценка пиковой осевой скорости NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::directional_peak_speed",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-680-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-680-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the supremum of absolute projected source-parameter velocity on a selected window.",
+        "Check an interior peak under a nonunit source clock, one-sided knot speeds, clipped windows, and coarse whole-span enclosures.",
         "WASM and application integration are separate."
       ]
     }

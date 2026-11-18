@@ -911,3 +911,81 @@ pub fn check_directional_backtracking(
     let status = travel.reverse_status(reverse_limit)?;
     Ok((travel, status))
 }
+
+/// Bounds on the supremum of absolute axial speed in model units per
+/// original parameter unit, including one-sided speeds at knots.
+#[derive(Clone, Debug)]
+pub struct DirectionalPeakSpeedReport {
+    pub bounds: [f64; 2],
+    pub cells: usize,
+    pub stop_reason: StopReason,
+}
+
+/// Certify peak axial speed over an original-parameter window. The tolerance
+/// limits the width of the reported enclosure.
+pub fn directional_peak_speed(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalPeakSpeedReport> {
+    curve.validate()?;
+    validate(tolerance, max_cells)?;
+    validate_travel_interval(curve, interval)?;
+    let unit = travel_direction(curve, direction)?;
+    let mut pending = BTreeMap::new();
+    let mut cells = 0;
+    let mut lower = 0.0_f64;
+    let measure = |span, domain: [f64; 2]| -> Result<(f64, f64)> {
+        let width = Interval::point(domain[1]).sub(Interval::point(domain[0]))?;
+        let jets = curve_jets::enclose(curve, span, domain)?;
+        let velocity = project_jet(&jets[1], &unit)?.div(width)?;
+        let upper = velocity.lo.abs().max(velocity.hi.abs());
+        let sample_lower = |end| -> Result<f64> {
+            let jets = curve_jets::endpoint(curve, span, domain, end)?;
+            let velocity = project_jet(&jets[1], &unit)?.div(width)?;
+            Ok(velocity.lo.max(-velocity.hi).max(0.))
+        };
+        Ok((sample_lower(false)?.max(sample_lower(true)?), upper))
+    };
+    for span in active_spans(curve, interval) {
+        if cells == max_cells {
+            return Err(resource("Initial speed spans exceed the work budget"));
+        }
+        let domain = [
+            curve.knots[span].max(interval[0]),
+            curve.knots[span + 1].min(interval[1]),
+        ];
+        let (witness, upper) = measure(span, domain)?;
+        lower = lower.max(witness);
+        // Nonnegative finite binary64 values have the same order as their bits.
+        pending.insert((upper.to_bits(), cells), (span, domain));
+        cells += 1;
+    }
+
+    let (upper, stop_reason) = loop {
+        let (&key, &(span, [a, b])) = pending
+            .last_key_value()
+            .ok_or_else(|| crate::numeric_err("Missing speed span coverage"))?;
+        let upper = f64::from_bits(key.0).max(lower);
+        if (upper - lower).next_up() <= tolerance {
+            break (upper, StopReason::Tolerance);
+        }
+        if cells + 2 > max_cells {
+            break (upper, StopReason::WorkLimit);
+        }
+        let middle = crate::distance_bounds::midpoint(a, b);
+        if !(a < middle && middle < b) {
+            break (upper, StopReason::PrecisionLimit);
+        }
+        pending.remove(&key);
+        for domain in [[a, middle], [middle, b]] {
+            let (witness, child_upper) = measure(span, domain)?;
+            lower = lower.max(witness);
+            pending.insert((child_upper.min(upper).to_bits(), cells), (span, domain));
+            cells += 1;
+        }
+    };
+    Ok(DirectionalPeakSpeedReport { bounds: [lower, upper], cells, stop_reason })
+}
