@@ -1692,6 +1692,86 @@ pub fn classify_directional_motion_knot_jumps(
     Ok(jumps)
 }
 
+/// A curve window traversed in increasing parameter order with a uniform clock.
+#[derive(Clone, Copy, Debug)]
+pub struct TimedMotionSegment<'a> {
+    pub curve: &'a Curve,
+    pub interval: [f64; 2],
+    pub duration: f64,
+}
+
+#[derive(Clone, Debug)]
+pub struct DirectionalMotionJoinReport {
+    /// Euclidean gap between the segment endpoints.
+    pub position_gap_bounds: [f64; 2],
+    /// Signed jumps in axial speed, acceleration and jerk (second minus first).
+    pub jump_bounds: [[f64; 2]; 3],
+    pub statuses: [DirectionalMotionStatus; 3],
+}
+
+/// Compare the final state of the first segment with the initial state of the
+/// second. Derivatives use each segment's supplied duration in common time units.
+/// The position gap is reported independently of the derivative limits.
+pub fn classify_directional_motion_join(
+    segments: [TimedMotionSegment<'_>; 2],
+    direction: &[f64],
+    limits: DirectionalMotionLimits,
+) -> Result<DirectionalMotionJoinReport> {
+    let limits = [limits.speed, limits.acceleration, limits.jerk];
+    validate_motion_partition_limits(limits)?;
+    for segment in segments {
+        segment.curve.validate()?;
+        validate_travel_interval(segment.curve, segment.interval)?;
+        check(
+            segment.duration.is_finite() && segment.duration > 0.,
+            "Motion segment duration must be finite and positive",
+        )?;
+        check(
+            segment.curve.control_points[0].len() == direction.len(),
+            "Motion join requires matching curve and axis dimensions",
+        )?;
+    }
+    let [first, second] = segments;
+    let unit = travel_direction(first.curve, direction)?;
+    let endpoint = |segment: TimedMotionSegment<'_>, end| -> Result<_> {
+        let mut spans = active_spans(segment.curve, segment.interval);
+        let span = if end { spans.last() } else { spans.next() }
+            .ok_or_else(|| crate::numeric_err("Missing motion endpoint span"))?;
+        let [a, b] = segment.interval;
+        let domain = [
+            a.max(segment.curve.knots[span]),
+            b.min(segment.curve.knots[span + 1]),
+        ];
+        let source_width = Interval::point(b).sub(Interval::point(a))?;
+        let cell_width = Interval::point(domain[1]).sub(Interval::point(domain[0]))?;
+        let scale = source_width.div(cell_width)?.div(Interval::point(segment.duration))?;
+        let jets = curve_jets::endpoint(segment.curve, span, domain, end)?;
+        Ok((jets, scale))
+    };
+    let (left, left_scale) = endpoint(first, true)?;
+    let (right, right_scale) = endpoint(second, false)?;
+    let (gap_lo, gap_hi) = box_distance(&left[0], &right[0])?;
+    let mut jump_bounds = [[0.; 2]; 3];
+    let mut statuses = [DirectionalMotionStatus::Within; 3];
+    for (index, limit) in limits.into_iter().enumerate() {
+        let order = index + 1;
+        let mut before = project_jet(&left[order], &unit)?;
+        let mut after = project_jet(&right[order], &unit)?;
+        for _ in 0..order {
+            before = before.mul(left_scale)?;
+            after = after.mul(right_scale)?;
+        }
+        let jump = after.sub(before)?;
+        jump_bounds[index] = [jump.lo, jump.hi];
+        statuses[index] = classify_absolute_limit(jump, limit);
+    }
+    Ok(DirectionalMotionJoinReport {
+        position_gap_bounds: [gap_lo, gap_hi],
+        jump_bounds,
+        statuses,
+    })
+}
+
 fn measure_directional_derivative_peak(
     curve: &Curve,
     interval: [f64; 2],

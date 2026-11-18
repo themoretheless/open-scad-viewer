@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 694,
-  "unallocatedCount": 306,
+  "specifiedCount": 695,
+  "unallocatedCount": 305,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16878,6 +16878,25 @@
       "remainingQualification": [
         "Enclose signed axial derivative jumps at interior knots and classify against absolute limits.",
         "Check a negative speed jump across unequal source spans, exact C2 zero jumps, cubic jerk discontinuity, window boundaries and the knot work limit.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0695",
+      "name": "Сертифицированная проверка стыка NURBS-траекторий с независимыми часами",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::classify_directional_motion_join",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-695-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-695-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the spatial gap and axial derivative jumps of two independently timed curve windows.",
+        "Check independent clocks, clipping, off-axis spatial gaps, derivative time powers and invalid duration.",
         "WASM and application integration are separate."
       ]
     }

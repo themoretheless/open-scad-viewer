@@ -9220,3 +9220,61 @@ fn motion_knot_jump_proves_c2_continuity_and_detects_cubic_jerk_jump() {
     let [lo, hi] = report[0].jump_bounds[2];
     assert!(lo <= 6. && 6. <= hi && hi - lo < 1e-8);
 }
+
+#[test]
+fn motion_join_uses_independent_clocks_and_reports_off_axis_gap() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, TimedMotionSegment,
+        classify_directional_motion_join,
+    };
+    let curve = |knots, points: [[f64; 2]; 2]| Curve {
+        degree: 1,
+        knots,
+        control_points: points.map(Vec::from).into(),
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let left = curve(vec![0., 0., 4., 4.], [[0., 0.], [8., 0.]]);
+    let right = curve(vec![10., 10., 20., 20.], [[6., 3.], [16., 3.]]);
+    let segments = [
+        TimedMotionSegment { curve: &left, interval: [1., 3.], duration: 2. },
+        TimedMotionSegment { curve: &right, interval: [10., 14.], duration: 1. },
+    ];
+    let limits = DirectionalMotionLimits { speed: 1., acceleration: 1., jerk: 1. };
+    let report = classify_directional_motion_join(segments, &[1., 0.], limits).unwrap();
+    assert_eq!(report.statuses, [Status::Exceeds, Status::Within, Status::Within]);
+    let [lo, hi] = report.jump_bounds[0];
+    assert!(lo <= 2. && 2. <= hi && hi - lo < 1e-8);
+    let [lo, hi] = report.position_gap_bounds;
+    assert!(lo <= 3. && 3. <= hi && hi - lo < 1e-8);
+    let mut invalid = segments;
+    invalid[1].duration = 0.;
+    assert!(classify_directional_motion_join(invalid, &[1., 0.], limits).is_err());
+}
+
+#[test]
+fn motion_join_uses_duration_powers_for_higher_derivatives() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, TimedMotionSegment,
+        classify_directional_motion_join,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 8.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let segments = [
+        TimedMotionSegment { curve: &curve, interval: [2., 4.], duration: 4. },
+        TimedMotionSegment { curve: &curve, interval: [2., 4.], duration: 2. },
+    ];
+    let report = classify_directional_motion_join(
+        segments, &[1., 0.], DirectionalMotionLimits { speed: 7., acceleration: 2., jerk: 5. },
+    )
+    .unwrap();
+    assert_eq!(report.statuses, [Status::Within, Status::Exceeds, Status::Exceeds]);
+    for ([lo, hi], expected) in report.jump_bounds.into_iter().zip([-6., -3., 5.25]) {
+        assert!(lo <= expected && expected <= hi && hi - lo < 1e-8);
+    }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0695",
+  "testedBase": "1b0be3a80c1d448048ab3e76645762399cba56da",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 312,
+  "scope": [
+    "Enclose the spatial gap and axial derivative jumps of two independently timed curve windows.",
+    "Check independent clocks, clipping, off-axis spatial gaps, derivative time powers and invalid duration."
+  ],
+  "logSha256": "2276daa39849b080c488b1ba8b2a525f3567160bd91a1e7c875768adb52ae9d1",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "f939bc53c3b4113556d4acdb18a89bd9007a6c0547903aa760aa190a8110c8ad",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "ac04a8a0607a8877e9f222584df1650ac293b366826094fce8364088a86a4a89"
+  }
+}
