@@ -220,3 +220,8 @@ When the faces prefer different planes, the audit tries the projections
 proposed by either face. Each trial proves both complete charts and their
 combined exterior in that plane. The trials share one budget and follow
 the same order when the caller swaps the faces.
+
+The projected exterior can include clamped edges with internal knots.
+It keeps their authored weights and knot intervals. A reversed coedge
+uses an exact affine reflection of its knot vector, charged to the
+shared budget. An unrepresentable reflection withholds the certificate.

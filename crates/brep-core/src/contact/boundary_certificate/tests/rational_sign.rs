@@ -517,8 +517,10 @@ fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, 
         spatial.validate().unwrap();
         let certify = crate::shared_boundary::jordan_partition::certify;
         let (contact, used) = certify(&spatial, [0, 4], 1000);
-        assert_eq!(contact.unwrap().edges.len(), 1);
+        let contact = contact.unwrap();
+        assert_eq!(contact.edges.len(), 1);
         assert!(certify(&spatial, [0, 4], used - 1).0.is_none());
+        check_reversed_multispan_exterior(&spatial, contact.edges[0]);
 
         // Put the original XZ image in XY, then move the interiors along
         // a common diagonal. The authored edge curves stay unchanged.
@@ -567,6 +569,26 @@ fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, 
     assert!(station.extraction_complete && station.g1_certified && station.g2_certified,
         "complete={} g1={} g2={}", station.extraction_complete, station.g1_certified, station.g2_certified);
     assert_eq!(station.edge_ids.len(), 4);
+}
+
+fn check_reversed_multispan_exterior(reference: &crate::Model, shared: usize) {
+    let mut refined = reference.clone();
+    let edge = [0, 4].into_iter()
+        .flat_map(|face| &refined.loops[refined.faces[face].outer].coedges)
+        .find(|use_| use_.reversed && use_.edge != shared && refined.edges[use_.edge].curve.degree == 1)
+        .unwrap().edge;
+    let source = &refined.edges[edge].curve;
+    let [start, end] = source.domain();
+    let inserted = nurbs_core::editing::exact_knot_insertion::insert(
+        source, (start + end) / 2., 1, 1_000_000,
+    ).unwrap();
+    assert_eq!(inserted.inserted, 1, "{:?}", inserted.refusal);
+    refined.0.edges[edge].curve = inserted.curve;
+    refined.validate().unwrap();
+    let certify = crate::shared_boundary::jordan_partition::certify;
+    let (contact, used) = certify(&refined, [0, 4], 1000);
+    assert_eq!(contact.unwrap().edges, [shared]);
+    assert!(certify(&refined, [0, 4], used - 1).0.is_none());
 }
 
 fn check_projection_from_either_face(reference: &crate::Model) {

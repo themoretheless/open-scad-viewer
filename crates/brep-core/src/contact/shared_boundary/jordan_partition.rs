@@ -7,6 +7,7 @@ use num_rational::BigRational;
 use num_traits::ToPrimitive;
 use nurbs_core::{
     curve::Curve,
+    editing::exact_projective::affine_curve_clock,
     surface_injectivity::{certify_chart, certify_jordan_projection},
 };
 
@@ -211,38 +212,13 @@ fn projected_exterior(
         for offset in 1..4 {
             charge(cells, limit, 1)?;
             let c = &wire[(start + offset) % 4];
-            let source = &model.edges[c.edge].curve;
-            let d = source.degree;
-            if source.periodic
-                || !(1..=5).contains(&d)
-                || source.control_points.len() != d + 1
-                || source.knots[..=d].iter().any(|k| *k != source.knots[d])
-                || source.knots[d + 1..]
-                    .iter()
-                    .any(|k| *k != source.knots[d + 1])
-            {
-                return None;
-            }
-            if matches!(projection, Projection::Linear(_)) {
-                charge(cells, limit, source.control_points.len())?;
-            }
-            let mut points = source
-                .control_points
-                .iter()
-                .map(|p| projection.point(p).map(|point| point.to_vec()))
-                .collect::<Option<Vec<_>>>()?;
-            let mut weights = source.weights.clone();
-            if c.reversed {
-                points.reverse();
-                weights.reverse();
-            }
-            exterior.push(Curve {
-                degree: d,
-                knots: [vec![0.; d + 1], vec![1.; d + 1]].concat(),
-                control_points: points,
-                weights,
-                periodic: false,
-            });
+            exterior.push(projected_member(
+                &model.edges[c.edge].curve,
+                c.reversed,
+                projection,
+                cells,
+                limit,
+            )?);
         }
     }
 
@@ -262,6 +238,65 @@ fn projected_exterior(
     // other's boundary by openness and density. Simplicity of the exterior and
     // the two original loops leaves only the authored seam as boundary contact.
     Some(())
+}
+
+fn projected_member(
+    source: &Curve,
+    reversed: bool,
+    projection: Projection,
+    cells: &mut usize,
+    limit: usize,
+) -> Option<Curve> {
+    let d = source.degree;
+    let count = source.control_points.len();
+    if source.periodic
+        || !(1..=5).contains(&d)
+        || source.knots[..=d].iter().any(|k| *k != source.knots[d])
+        || source.knots[count..]
+            .iter()
+            .any(|k| *k != source.knots[count])
+    {
+        return None;
+    }
+    let single_span = count == d + 1;
+    if !single_span {
+        charge(cells, limit, source.knots.len())?;
+    }
+    if !single_span || matches!(projection, Projection::Linear(_)) {
+        charge(cells, limit, count)?;
+    }
+    let control_points = source
+        .control_points
+        .iter()
+        .map(|p| projection.point(p).map(|point| point.to_vec()))
+        .collect::<Option<Vec<_>>>()?;
+    let mut curve = Curve {
+        degree: d,
+        knots: if single_span {
+            [vec![0.; d + 1], vec![1.; d + 1]].concat()
+        } else {
+            source.knots.clone()
+        },
+        control_points,
+        weights: source.weights.clone(),
+        periodic: false,
+    };
+    if reversed {
+        if single_span {
+            curve.control_points.reverse();
+            curve.weights.reverse();
+        } else {
+            let remaining = ((limit - *cells) as u64).min(cad_predicates::MAX_WORK);
+            if remaining == 0 {
+                return None;
+            }
+            let [start, end] = curve.domain();
+            let report = affine_curve_clock(&curve, [end, start], remaining).ok()?;
+            charge(cells, limit, report.work_used as usize)?;
+            curve = report.geometry?;
+        }
+    }
+    Some(curve)
 }
 
 fn edge_certificate(
