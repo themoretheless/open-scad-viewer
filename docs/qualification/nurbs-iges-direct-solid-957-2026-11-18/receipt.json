@@ -1,0 +1,17 @@
+{
+  "id": "NURBS-0957",
+  "testedBase": "a219755e6c4f514bed6fc90d99e1a7beaa7b60f1",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "e66f7f5e22c0191dfb818a5be58a15dc78ee6173831ff2a8173ce3b93a916a77",
+    "crates/cad-step/src/iges_interchange_v2/tests/mod.rs": "a7f2e543a936fa2bbb8cd091801e4c19486c4e69f52439e42499faa7f015bfea",
+    "crates/cad-step/src/iges_interchange_v2/tests/placements.rs": "fa76c0d2d24e781b8c7fe700caea26b154c959cb637dfa455d59db2b592db0c5"
+  },
+  "fixtureSha256": "3b5cd32b81d461b5e14b412aa3bfe06b2aa2b25003a97d24710c741fdc2364f5",
+  "fixtureCommand": "CAD_IGES_SOLID_FIXTURE=/tmp/osv957-cylinder.igs cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib",
+  "occt": {
+    "solids": 1,
+    "shells": 1,
+    "faces": 6,
+    "volume": 141.3716688561796
+  }
+}

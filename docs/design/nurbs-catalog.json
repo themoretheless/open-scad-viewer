@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 956,
-  "unallocatedCount": 44,
+  "specifiedCount": 957,
+  "unallocatedCount": 43,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21811,6 +21811,26 @@
       ],
       "remainingQualification": [
         "One proper rigid form-zero matrix on an IGES 128 surface. U-fast pole/weight exchange and reader compatibility for legacy OpenSCAD Viewer files. Independent check covers the placed IGES surface and the restored STEP solid."
+      ]
+    },
+    {
+      "id": "NURBS-0957",
+      "name": "Прямой экспорт замкнутого рационального тела IGES для переноса в OCCT",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::export_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
+        "docs/qualification/nurbs-iges-direct-solid-957-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-iges-direct-solid-957-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-iges-direct-solid-957-2026-11-18/verify.py",
+        "docs/qualification/nurbs-iges-direct-solid-957-2026-11-18/cylinder.igs"
+      ],
+      "remainingQualification": [
+        "Direct OCCT transfer qualified on a single closed six-face rational cylinder. Cavities, assemblies and edited solids require separate coverage."
       ]
     }
   ],

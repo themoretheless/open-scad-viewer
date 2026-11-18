@@ -13,6 +13,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 pub const IGES_INTERCHANGE_V2_CAPABILITY: &str = "iges-interchange/2";
 const MAX_BYTES: usize = 16 * 1024 * 1024;
+const MAX_ENTITY_PARAMETER_ROWS: usize = 4097;
 const MAX_RECORDS: usize = 131_072;
 const MAX_ENTITIES: usize = 65_536;
 const MAX_VALUES: usize = 1_000_000;
@@ -475,7 +476,7 @@ fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, IgesLengthUnit, f64)> {
                 break;
             }
             sequence += 1;
-            if sequence - dir.parameter > 4096 {
+            if sequence - dir.parameter >= MAX_ENTITY_PARAMETER_ROWS {
                 return Err(refuse("IGES entity parameter span exceeds 4096 records"));
             }
         }
@@ -2483,8 +2484,13 @@ fn pad_record(payload: &str, section: char, sequence: usize, width: usize) -> Re
 fn hollerith(s: &str) -> String {
     format!("{}H{s}", s.len())
 }
-// Keep every numeric field of a type-128 surface on one physical record.
-fn surface_records(values: &[String]) -> Vec<String> {
+// Numeric parameters must fit in one physical record. Hollerith metadata may
+// span records and retains every payload byte, including spaces.
+fn parameter_records(ty: usize, values: &[String]) -> Vec<String> {
+    if ty == 406 {
+        return format!("{};", values.join(",")).as_bytes().chunks(64)
+            .map(|part| String::from_utf8_lossy(part).into_owned()).collect();
+    }
     let mut rows = Vec::new();
     let mut row = String::new();
     for (i, value) in values.iter().enumerate() {
@@ -2503,19 +2509,17 @@ fn render(mut w: Writer) -> Result<String> {
     let mut p_start = Vec::new();
     for (index, e) in w.entities.iter().enumerate() {
         let de = 2 * index + 1;
-        let text = format!("{};", e.values.join(","));
         p_start.push(p_lines.len() + 1);
-        let rows;
-        let chunks: Vec<&str> = if e.ty == 128 {
-            rows = surface_records(&e.values);
-            rows.iter().map(String::as_str).collect()
-        } else {
-            text.as_bytes().chunks(64).map(std::str::from_utf8).collect::<std::result::Result<_,_>>()
-                .map_err(|_| refuse("Non-ASCII IGES parameter"))?
-        };
-        for payload in chunks {
+        if e.values.iter().any(|value| !value.is_ascii()) {
+            return Err(refuse("Non-ASCII IGES parameter"));
+        }
+        let rows = parameter_records(e.ty, &e.values);
+        if rows.len() > MAX_ENTITY_PARAMETER_ROWS {
+            return Err(refuse("IGES entity parameter span exceeds supported limit"));
+        }
+        for payload in rows {
             p_lines.push(
-                pad_record(payload, 'P', p_lines.len() + 1, 64)?[..64].to_string()
+                pad_record(&payload, 'P', p_lines.len() + 1, 64)?[..64].to_string()
                     + &format!("{de:>8}P{:>7}", p_lines.len() + 1),
             );
         }
@@ -2547,6 +2551,7 @@ fn render(mut w: Writer) -> Result<String> {
             72,
         )?);
     }
+    p_start.push(p_lines.len() + 1);
     for (index, e) in w.entities.iter_mut().enumerate() {
         let de = 2 * index + 1;
         let a = format!(
@@ -2555,7 +2560,7 @@ fn render(mut w: Writer) -> Result<String> {
         );
         let b = format!(
             "{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{:<8}{:>8}",
-            e.ty, 0, e.color, 0, e.form, 0, 0, e.label, 0
+            e.ty, 0, e.color, p_start[index + 1] - p_start[index], e.form, 0, 0, e.label, 0
         );
         lines.push(pad_record(&a, 'D', de, 72)?);
         lines.push(pad_record(&b, 'D', de + 1, 72)?);
@@ -2571,6 +2576,9 @@ fn render(mut w: Writer) -> Result<String> {
         p_lines.len()
     );
     lines.push(pad_record(&terminate, 'T', 1, 72)?);
+    if lines.len() > MAX_RECORDS {
+        return Err(refuse("IGES output exceeds record limit"));
+    }
     let text = lines.join("\n") + "\n";
     if text.len() > MAX_BYTES {
         return Err(refuse("IGES output exceeds 16 MiB"));

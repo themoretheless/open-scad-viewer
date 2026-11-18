@@ -178,3 +178,24 @@ fn legacy_writer_surface_order_remains_readable() {
         assert_eq!(actual.surface, expected.surface);
     }
 }
+
+#[test]
+fn solid_directory_counts_match_parameter_records() {
+    let text = export_iges_v2(&brep_core::cylinder(3., 5.).unwrap()).unwrap().0;
+    let directory: Vec<_> = text.lines().filter(|line| &line[72..73] == "D").collect();
+    let parameters: Vec<_> = text.lines().filter(|line| &line[72..73] == "P").collect();
+    let mut used = 0;
+    for pair in directory.chunks_exact(2) {
+        let count = pair[1][24..32].trim().parse::<usize>().unwrap();
+        assert!(count > 0);
+        assert_eq!(pair[0][8..16].trim().parse::<usize>().unwrap(), used + 1);
+        for row in &parameters[used..used + count] {
+            assert_eq!(row[64..72].trim(), pair[0][73..].trim());
+        }
+        used += count;
+    }
+    assert_eq!(used, parameters.len());
+    if let Some(path) = std::env::var_os("CAD_IGES_SOLID_FIXTURE") {
+        std::fs::write(path, text).unwrap();
+    }
+}

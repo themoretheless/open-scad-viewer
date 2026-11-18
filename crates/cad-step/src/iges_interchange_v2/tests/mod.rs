@@ -268,11 +268,10 @@ fn append_entity(
             pad_record(&b, 'D', de + 1, 72).unwrap(),
         ],
     );
-    let parameter = format!("{};", values(de).join(","));
+    let records = parameter_records(ty, &values(de));
     let mut p_count = 0;
-    for chunk in parameter.as_bytes().chunks(64) {
+    for payload in records {
         let sequence = old_p + p_count + 1;
-        let payload = std::str::from_utf8(chunk).unwrap();
         lines.push(format!("{payload:<64}{de:>8}P{sequence:>7}",));
         p_count += 1;
     }
@@ -292,17 +291,9 @@ fn replace_parameters(text: &str, de: usize, values: Vec<String>) -> String {
         })
         .map(|(index, _)| index)
         .collect::<Vec<_>>();
-    let parameter = format!("{};", values.join(","));
-    let packed;
-    let chunks = if values[0] == "128" {
-        packed = surface_records(&values);
-        packed.iter().map(|s| s.as_bytes()).collect::<Vec<_>>()
-    } else {
-        parameter.as_bytes().chunks(64).collect()
-    };
+    let chunks = parameter_records(values[0].parse().unwrap(), &values);
     assert_eq!(chunks.len(), rows.len());
-    for (row, chunk) in rows.into_iter().zip(chunks) {
-        let payload = std::str::from_utf8(chunk).unwrap();
+    for (row, payload) in rows.into_iter().zip(chunks) {
         lines[row].replace_range(..64, &format!("{payload:<64}"));
     }
     lines.join("\n") + "\n"
