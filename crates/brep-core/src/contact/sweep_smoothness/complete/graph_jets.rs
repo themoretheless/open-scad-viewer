@@ -289,36 +289,51 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         };
-        let curves = [refine(&left, 0.25), refine(&right, 0.75)];
         let seam = ProjectiveSeam {
             patches: [0, 1],
             boundaries: ["uMax".into(), "uMin".into()],
             order: 2,
             normal_scale: 1.,
         };
-        let seams = std::slice::from_ref(&seam);
-        let raw = continuity::inspect_projective_seam_collection_with_rational_scale_proposals(
-            &curves, seams, 1_000_000,
-        )
-        .unwrap();
-        assert!(!raw.certified);
-        let full = qualify(&curves, seams, 1_000_000).unwrap();
-        assert!(full.certified);
-        assert_eq!(full.certified_order, Some(2));
-        assert_eq!(full.exact_work, full.seams[0].work);
-        assert!(
-            !qualify(&curves, seams, full.exact_work - 1)
-                .unwrap()
-                .certified
-        );
+        let tangent = ProjectiveSeam {
+            order: 1,
+            boundaries: seam.boundaries.clone(),
+            ..seam
+        };
+        for (offset, width) in [(0., 1.), (-9., 8.)] {
+            let mut curves = [refine(&left, 0.25), refine(&right, 0.75)];
+            for knot in &mut curves[1].knots_v {
+                *knot = offset + *knot * width;
+            }
+            let seams = std::slice::from_ref(&seam);
+            let raw = continuity::inspect_projective_seam_collection_with_rational_scale_proposals(
+                &curves, seams, 1_000_000,
+            )
+            .unwrap();
+            assert!(!raw.certified);
+            let full = qualify(&curves, seams, 1_000_000).unwrap();
+            assert!(full.certified, "right clock [{offset}, {}]", offset + width);
+            assert_eq!(full.certified_order, Some(2));
+            assert_eq!(full.exact_work, full.seams[0].work);
+            assert!(
+                !qualify(&curves, seams, full.exact_work - 1)
+                    .unwrap()
+                    .certified
+            );
 
-        // Alter only the right carrier's second transverse jet. The common
-        // edge and first jet still agree, including after exact refinement.
-        let mut changed = right;
-        changed.control_points[2][2][2] += 1. / 16.;
-        let altered = [curves[0].clone(), refine(&changed, 0.75)];
-        assert!(!qualify(&altered, seams, 1_000_000).unwrap().certified);
-        let tangent = ProjectiveSeam { order: 1, ..seam };
-        assert!(qualify(&altered, &[tangent], 1_000_000).unwrap().certified);
+            // Alter only the right carrier's second transverse jet.
+            let mut changed = right.clone();
+            changed.control_points[2][2][2] += 1. / 16.;
+            curves[1] = refine(&changed, 0.75);
+            for knot in &mut curves[1].knots_v {
+                *knot = offset + *knot * width;
+            }
+            assert!(!qualify(&curves, seams, 1_000_000).unwrap().certified);
+            assert!(
+                qualify(&curves, std::slice::from_ref(&tangent), 1_000_000)
+                    .unwrap()
+                    .certified
+            );
+        }
     }
 }
