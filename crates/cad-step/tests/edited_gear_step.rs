@@ -155,3 +155,23 @@ fn named_parts_list_counts_coincident_instances_and_separates_same_name_parts() 
     read.definition_names.pop();
     assert!(read.parts_list().is_err());
 }
+
+#[test]
+fn selected_parts_export_keeps_names_and_all_original_placements() {
+    use cad_step::{import_named_step_assembly, NamedStepAssembly, StepAssemblyOccurrence, StepSharedAssembly};
+    let parts = (1..=3).map(|w| brep_core::cuboid([0.;3],[w as f64,2.,3.]).unwrap()).collect();
+    let placed = |definition, x| StepAssemblyOccurrence { definition,transform:
+        [[1.,0.,0.,x],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]] };
+    let source = NamedStepAssembly { assembly:StepSharedAssembly::from_placed_solids(parts,
+        vec![placed(2,20.),placed(1,10.),placed(0,5.),placed(2,25.)]).unwrap(),
+        name:"Full".into(),definition_names:vec!["Штифт".into(),"Штифт".into(),"Gear".into()] };
+    let step = source.export_selected_parts(&[0,2],"Subset").unwrap();
+    let sub = import_named_step_assembly(&step).unwrap();
+    assert_eq!(sub.name,"Subset");
+    assert_eq!(sub.definition_names.len(),2);
+    let mut observed: Vec<_> = sub.assembly.occurrences().iter().map(|o|
+        (o.transform[0][3] as i32,sub.definition_names[o.definition].as_str())).collect();
+    observed.sort();
+    assert_eq!(observed,[(5,"Штифт"),(20,"Gear"),(25,"Gear")]);
+    for invalid in [&[][..], &[0,0], &[3]] { assert!(source.export_selected_parts(invalid,"Subset").is_err()); }
+}

@@ -2044,6 +2044,28 @@ pub struct StepPartsListRow<'a> {
 }
 
 impl NamedStepAssembly {
+    /// Export all occurrences of the selected parts-list definitions in their
+    /// original assembly coordinates. Definition indices, not labels, select parts.
+    pub fn export_selected_parts(&self, definitions: &[usize], assembly_name: &str) -> Result<String> {
+        let count = self.assembly.definitions().len();
+        if self.definition_names.len() != count || definitions.is_empty() || definitions.len() > count {
+            return Err(refuse("Expected a nonempty selection of named assembly definitions"));
+        }
+        let selected: BTreeSet<_> = definitions.iter().copied().collect();
+        if selected.len() != definitions.len() || selected.iter().any(|&index| index >= count) {
+            return Err(refuse("Invalid or duplicate part definition index"));
+        }
+        let indices: Vec<_> = self.assembly.occurrences().iter().enumerate()
+            .filter(|(_, part)| selected.contains(&part.definition)).map(|(index, _)| index).collect();
+        let subset = self.assembly.extract_occurrences(&indices)?;
+        let mut names = vec![""; subset.definitions().len()];
+        for (&source, part) in indices.iter().zip(subset.occurrences()) {
+            let original = self.assembly.occurrences()[source].definition;
+            names[part.definition] = &self.definition_names[original];
+        }
+        crate::export_named_step_assembly(&subset, assembly_name, &names)
+    }
+
     /// Count placements by definition identity, including coincident placements.
     /// A scale or orientation on a placement does not create a new definition.
     pub fn parts_list(&self) -> Result<Vec<StepPartsListRow<'_>>> {

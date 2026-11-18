@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 933,
-  "unallocatedCount": 67,
+  "specifiedCount": 934,
+  "unallocatedCount": 66,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21360,6 +21360,25 @@
       ],
       "remainingQualification": [
         "Flat occurrence quantities by shared definition identity. Placement transforms do not split rows."
+      ]
+    },
+    {
+      "id": "NURBS-0934",
+      "name": "Экспорт выбранных позиций спецификации в именованную STEP-подсборку",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::NamedStepAssembly::export_selected_parts",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-assembly-parts-selection-934-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-assembly-parts-selection-934-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Selection of whole definitions from a flat named STEP assembly; all corresponding occurrences retain their world placements."
       ]
     }
   ],
