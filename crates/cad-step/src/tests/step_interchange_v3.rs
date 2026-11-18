@@ -3833,6 +3833,14 @@ fn planetary_gear_set_step_round_trips_twenty_spur_occurrences() {
     let text = crate::export_planetary_gear_set_step(&sun, &ring, &planets).unwrap();
     assert_eq!(text.matches("MANIFOLD_SOLID_BREP(").count(), 3);
     assert_eq!(text.matches("NEXT_ASSEMBLY_USAGE_OCCURRENCE(").count(), 20);
+    let directions: Vec<_> = text.lines().filter_map(|line| {
+        let (_, entity) = line.split_once('=')?;
+        entity.starts_with("DIRECTION(").then_some(entity)
+    }).collect();
+    let distinct: std::collections::BTreeSet<_> = directions.iter().collect();
+    assert_eq!(directions.len(), distinct.len());
+    assert!(directions.len() >= 3 && directions.len() < 3 * 20);
+    eprintln!("Spinner STEP shares {} distinct directions across 60 axis references", directions.len());
     let (back, _, _) = crate::import_step_v9(&text).unwrap();
     assert_eq!(back.bodies.len(), 20);
     assert_eq!(back.validate().unwrap().boundary_edge_count, 0);

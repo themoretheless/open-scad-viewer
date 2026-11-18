@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 971,
-  "unallocatedCount": 29,
+  "specifiedCount": 972,
+  "unallocatedCount": 28,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22104,6 +22104,23 @@
       ],
       "remainingQualification": [
         "Clamped rational tensor surfaces with two Cartesian coordinates globally affine in UV. A bounded homogeneous polynomial identity is checked on every nonempty knot cell; both the coordinate projection and the complete edge trace must be certified."
+      ]
+    },
+    {
+      "id": "NURBS-0972",
+      "name": "Компактные направления размещения повторяющихся деталей при экспорте STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::export_planetary_gear_set_step",
+      "evidence": [
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-step-shared-placement-directions-972-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-step-shared-placement-directions-972-2026-11-19/receipt.json"
+      ],
+      "remainingQualification": [
+        "Bit-identical normalized placement direction triples in a shared STEP assembly. Placement operators, scales and occurrence identity remain independent."
       ]
     }
   ],

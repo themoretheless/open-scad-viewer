@@ -687,6 +687,7 @@ fn export_step_direct_impl(
                     group_nodes.push((definition, rep));
                 }
             }
+            let mut directions = BTreeMap::new();
             for (index, (body, matrix)) in assembly.placements.iter().enumerate() {
                 let (representation, definition) = definitions[*body];
                 let (assembly_definition, assembly_rep) = assembly.groups
@@ -702,7 +703,9 @@ fn export_step_direct_impl(
                 let origin = w.point(&[matrix[0][3], matrix[1][3], matrix[2][3]]);
                 let [x, y, z] = [0, 1, 2].map(|column| {
                     let direction = [0, 1, 2].map(|row| matrix[row][column] / scales[column]);
-                    w.emit(format!("DIRECTION('',({}))", floats(&direction)))
+                    *directions.entry(direction.map(f64::to_bits)).or_insert_with(|| {
+                        w.emit(format!("DIRECTION('',({}))", floats(&direction)))
+                    })
                 });
                 let styled_axis = if assembly.colours.is_some() {
                     if !rigid {

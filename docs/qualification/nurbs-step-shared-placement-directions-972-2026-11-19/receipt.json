@@ -1,0 +1,11 @@
+{
+  "id": "NURBS-0972",
+  "testedBase": "7c3d188d12fbd66905be8f42703f747c07a0af52",
+  "sourceSha256": {
+    "crates/cad-step/src/step_v3_export.rs": "e53f565f9bc26b515bb8639815af009b4306befa620af8d7671c9d78edff86c7",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "2433e252e2cddacc9bb4efe1bab55311946ca4cddcbe18f9e08a6a9b1746114e"
+  },
+  "axisReferences": 60,
+  "directionEntities": 39,
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib -- --nocapture"
+}
