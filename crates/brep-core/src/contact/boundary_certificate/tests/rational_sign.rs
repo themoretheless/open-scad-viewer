@@ -647,6 +647,31 @@ fn check_reversed_multispan_exterior(reference: &crate::Model, shared: usize) {
     let (contact, used) = certify(&refined, [0, 4], 1000);
     assert_eq!(contact.unwrap().edges, [shared]);
     assert!(certify(&refined, [0, 4], used - 1).0.is_none());
+
+    // The same linear edge in an unclamped quadratic basis. The active
+    // endpoints fall halfway between the exterior and interior poles.
+    let original = &reference.edges[edge].curve;
+    let a = &original.control_points[0];
+    let b = &original.control_points[1];
+    let unclamped = crate::Curve {
+        degree: 2,
+        knots: (-2..=4).map(|i| start + f64::from(i) * (end - start) / 2.).collect(),
+        control_points: [-0.25, 0.25, 0.75, 1.25].into_iter()
+            .map(|t| (0..3).map(|axis| a[axis] + t * (b[axis] - a[axis])).collect())
+            .collect(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let clamped = nurbs_core::editing::exact_curve_merge::clamp_exact_curve(&unclamped, 100_000)
+        .unwrap().curve.unwrap();
+    assert!(nurbs_core::curve_partition_agreement::verify_exact_bspline_root_partition(
+        original, &[clamped], original.domain(), 1_000_000,
+    ).unwrap().is_some());
+    refined.0.edges[edge].curve = unclamped;
+    refined.validate().unwrap();
+    let (contact, used) = certify(&refined, [0, 4], 3000);
+    assert_eq!(contact.unwrap().edges, [shared]);
+    assert!(certify(&refined, [0, 4], used - 1).0.is_none());
 }
 
 fn check_projection_from_either_face(reference: &crate::Model) {

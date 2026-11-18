@@ -7,6 +7,7 @@ use num_rational::BigRational;
 use num_traits::ToPrimitive;
 use nurbs_core::{
     curve::Curve,
+    editing::exact_curve_merge::clamp_exact_curve,
     editing::exact_knot_insertion,
     editing::exact_projective::affine_curve_clock,
     surface_injectivity::{certify_chart, certify_jordan_projection},
@@ -352,16 +353,14 @@ fn projected_member(
 ) -> Option<Curve> {
     let d = source.degree;
     let count = source.control_points.len();
-    if source.periodic
-        || !(1..=5).contains(&d)
-        || source.knots[..=d].iter().any(|k| *k != source.knots[d])
-        || source.knots[count..]
-            .iter()
-            .any(|k| *k != source.knots[count])
-    {
+    if source.periodic || !(1..=5).contains(&d) {
         return None;
     }
-    let single_span = count == d + 1;
+    let clamped = source.knots[..=d].iter().all(|k| *k == source.knots[d])
+        && source.knots[count..]
+            .iter()
+            .all(|k| *k == source.knots[count]);
+    let single_span = clamped && count == d + 1;
     if !single_span {
         charge(cells, limit, source.knots.len())?;
     }
@@ -384,6 +383,15 @@ fn projected_member(
         weights: source.weights.clone(),
         periodic: false,
     };
+    if !clamped {
+        let remaining = ((limit - *cells) as u64).min(cad_predicates::MAX_WORK);
+        if remaining == 0 {
+            return None;
+        }
+        let report = clamp_exact_curve(&curve, remaining).ok()?;
+        charge(cells, limit, report.work_used as usize)?;
+        curve = report.curve?;
+    }
     if reversed {
         if single_span {
             curve.control_points.reverse();

@@ -225,6 +225,9 @@ The projected exterior can include clamped edges with internal knots.
 It keeps their authored weights and knot intervals. A reversed coedge
 uses an exact affine reflection of its knot vector, charged to the
 shared budget. An unrepresentable reflection withholds the certificate.
+An unclamped exterior is projected and then exactly clamped to its
+original active interval for the common loop proof. The input edge and
+its world-space parameterization stay intact.
 
 The common boundary can be an authored chain of edges. The audit checks
 that both faces cover the complete natural rectangle, with exact
