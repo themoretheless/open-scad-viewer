@@ -7134,3 +7134,49 @@ fn periodic_trim_inertia_about_fixed_point_includes_nested_island() {
         incomplete.bound_inertia_about_point([0.; 3]).unwrap().is_none()
     );
 }
+
+#[test]
+fn line_inertia_is_invariant_under_axis_reversal_and_motion_along_axis() {
+    use nurbs_core::analysis::surface_measure::bound_inertia_about_line;
+
+    let central = [[2., 1., 0.], [1., 4., 0.], [0., 0., 7.]].map(|row| row.map(|x| [x; 2]));
+    let centroid = [[2.; 2], [0.; 2], [3.; 2]];
+    for shift in [-10., 0., 100.] {
+        let result =
+            bound_inertia_about_line(central, [2.; 2], centroid, [shift, shift, 3.], [-2., -2., 0.])
+                .unwrap();
+        assert!(result[0] <= 8. && result[1] >= 8.);
+        assert!(result[1] - result[0] < 1e-10);
+    }
+    let result =
+        bound_inertia_about_line(central, [2.; 2], centroid, [0., 0., f64::MAX], [0., 0., 1.])
+            .unwrap();
+    assert!(result[0] <= 15. && result[1] >= 15.);
+    assert!(result[1] - result[0] < 1e-12);
+    assert!(bound_inertia_about_line(central, [2.; 2], centroid, [0.; 3], [0.; 3]).is_err());
+}
+
+#[test]
+fn periodic_trim_line_inertia_brackets_offset_axis_with_nested_island() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_central_inertia;
+
+    let patches = periodic_trim_patches_with_nested_island();
+    let report =
+        periodic_trim_patch_set_central_inertia(&patches, 0.005, 1e-10, 20_000, 1_000_000).unwrap();
+    let [lo, hi] = report
+        .bound_inertia_about_line([1., 0., 5.], [0., 0., 1.])
+        .unwrap()
+        .unwrap();
+    let area = 1.3125;
+    let first_x = area * 3. / 28.;
+    let at_origin = 83. / 768. + 49. / 12288.;
+    let expected = at_origin - 2. * first_x + area;
+    assert!(lo <= expected && expected <= hi);
+
+    let incomplete =
+        periodic_trim_patch_set_central_inertia(&patches, 0.005, 1e-10, 2, 1_000_000).unwrap();
+    assert_eq!(
+        incomplete.bound_inertia_about_line([1., 0., 5.], [0., 0., 1.]).unwrap(),
+        None
+    );
+}

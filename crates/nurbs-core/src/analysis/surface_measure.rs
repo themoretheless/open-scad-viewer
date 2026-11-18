@@ -772,53 +772,134 @@ pub fn bound_directional_inertia(
     bounds: [[[f64; 2]; 3]; 3],
     direction: [f64; 3],
 ) -> Result<[f64; 2]> {
-    let matrix = symmetric_tensor_intervals(bounds)?;
-    let scale = direction.into_iter().map(f64::abs).fold(0., f64::max);
-    check(
-        scale > 0. && direction.iter().all(|x| x.is_finite()),
-        "Inertia axis must have a finite nonzero direction",
-    )?;
+    directional_inertia(bounds, &InertiaAxis::new(direction)?)
+}
 
-    // A coordinate axis selects the corresponding diagonal exactly.
-    if direction.iter().filter(|&&x| x != 0.).count() == 1 {
-        let i = direction.iter().position(|&x| x != 0.).unwrap();
+fn directional_inertia(
+    bounds: [[[f64; 2]; 3]; 3],
+    axis: &InertiaAxis,
+) -> Result<[f64; 2]> {
+    let matrix = symmetric_tensor_intervals(bounds)?;
+    if let Some(i) = axis.coordinate {
         return Ok(bounds[i][i]);
     }
-
-    let mut axis = [Interval::point(0.); 3];
-    let mut squares = axis;
-    let mut norm_squared = Interval::point(0.);
-    for (i, component) in direction.into_iter().enumerate() {
-        if component == 0. {
-            continue;
-        }
-        let scaled = component / scale;
-        axis[i] = if component.abs() == scale {
-            Interval::point(scaled)
-        } else {
-            Interval::new(scaled.next_down(), scaled.next_up())?
-        };
-        let square = axis[i].mul(axis[i])?;
-        squares[i] = square.intersect(0., square.hi)?;
-        norm_squared = norm_squared.add(squares[i])?;
-    }
-
     let mut moment = Interval::point(0.);
     for (i, row) in matrix.iter().enumerate() {
-        if direction[i] == 0. {
+        if axis.components[i] == Interval::point(0.) {
             continue;
         }
-        let diagonal_weight = squares[i].div(norm_squared)?;
+        let diagonal_weight = axis.squares[i].div(axis.norm_squared)?;
         moment = moment.add(row[i].mul(diagonal_weight)?)?;
         for (j, entry) in row.iter().copied().enumerate().skip(i + 1) {
-            if direction[j] == 0. {
+            if axis.components[j] == Interval::point(0.) {
                 continue;
             }
-            let weight = axis[i].mul(axis[j])?.mul(Interval::point(2.))?;
-            moment = moment.add(entry.mul(weight.div(norm_squared)?)?)?;
+            let weight = axis.components[i]
+                .mul(axis.components[j])?
+                .mul(Interval::point(2.))?;
+            moment = moment.add(entry.mul(weight.div(axis.norm_squared)?)?)?;
         }
     }
     Ok([moment.lo, moment.hi])
+}
+
+struct InertiaAxis {
+    components: [Interval; 3],
+    squares: [Interval; 3],
+    norm_squared: Interval,
+    coordinate: Option<usize>,
+}
+
+impl InertiaAxis {
+    fn new(direction: [f64; 3]) -> Result<Self> {
+        let scale = direction.into_iter().map(f64::abs).fold(0., f64::max);
+        check(
+            scale > 0. && direction.iter().all(|x| x.is_finite()),
+            "Inertia axis must have a finite nonzero direction",
+        )?;
+
+        let mut axis = [Interval::point(0.); 3];
+        let mut squares = axis;
+        let mut norm_squared = Interval::point(0.);
+        for (i, component) in direction.into_iter().enumerate() {
+            if component == 0. {
+                continue;
+            }
+            let scaled = component / scale;
+            axis[i] = if component.abs() == scale {
+                Interval::point(scaled)
+            } else {
+                Interval::new(scaled.next_down(), scaled.next_up())?
+            };
+            let square = axis[i].mul(axis[i])?;
+            squares[i] = square.intersect(0., square.hi)?;
+            norm_squared = norm_squared.add(squares[i])?;
+        }
+
+        let coordinate = direction
+            .iter()
+            .position(|&x| x != 0.)
+            .filter(|&i| direction.iter().skip(i + 1).all(|&x| x == 0.));
+        Ok(Self {
+            components: axis,
+            squares,
+            norm_squared,
+            coordinate,
+        })
+    }
+}
+
+/// Enclose inertia around the line defined by a point and a nonzero
+/// direction. The parallel-axis correction uses squared perpendicular
+/// distance from the centroid to the line.
+pub fn bound_inertia_about_line(
+    central: [[[f64; 2]; 3]; 3],
+    mass_bounds: [f64; 2],
+    centroid_bounds: [[f64; 2]; 3],
+    point: [f64; 3],
+    direction: [f64; 3],
+) -> Result<[f64; 2]> {
+    let axis = InertiaAxis::new(direction)?;
+    let centroid = centroid_intervals(centroid_bounds)?;
+    let mass = Interval::new(mass_bounds[0], mass_bounds[1])?;
+    check(mass.lo >= 0., "Inertia mass bounds must be nonnegative")?;
+    check(
+        point.iter().all(|x| x.is_finite()),
+        "Inertia axis point must be finite",
+    )?;
+    let moment = directional_inertia(central, &axis)?;
+    if mass.hi == 0. {
+        return Ok(moment);
+    }
+
+    let mut offset = [Interval::point(0.); 3];
+    for (i, coordinate) in centroid.into_iter().enumerate() {
+        if axis.coordinate == Some(i) || (coordinate.lo == point[i] && coordinate.hi == point[i]) {
+            continue;
+        }
+        offset[i] = coordinate.sub(Interval::point(point[i]))?;
+    }
+    if offset == [Interval::point(0.); 3] {
+        return Ok(moment);
+    }
+    let perpendicular = if axis.coordinate.is_some() {
+        offset
+    } else {
+        cross(offset, axis.components)?
+    };
+    let mut distance_numerator = Interval::point(0.);
+    for coordinate in perpendicular {
+        let square = coordinate.mul(coordinate)?;
+        distance_numerator = distance_numerator.add(square.intersect(0., square.hi)?)?;
+    }
+    let distance_squared = if axis.coordinate.is_some() {
+        distance_numerator
+    } else {
+        distance_numerator.div(axis.norm_squared)?
+    };
+    let correction = distance_squared.mul(mass)?;
+    let result = Interval::new(moment[0], moment[1])?.add(correction)?;
+    Ok([result.lo.max(moment[0]), result.hi])
 }
 
 /// Translate a central inertia enclosure to a fixed reference point using
@@ -1091,6 +1172,22 @@ impl TrimmedPatchSetCentralInertiaReport {
             return Ok(None);
         };
         bound_inertia_about_point(central, area.bounds, centroid, point).map(Some)
+    }
+
+    /// Enclose the inertia of all components around a fixed line.
+    pub fn bound_inertia_about_line(
+        &self,
+        point: [f64; 3],
+        direction: [f64; 3],
+    ) -> Result<Option<[f64; 2]>> {
+        let (Some(central), Some(centroid), Some(area)) = (
+            self.central_inertia_bounds,
+            self.centroid.centroid_bounds,
+            self.centroid.measure.total.area.as_ref(),
+        ) else {
+            return Ok(None);
+        };
+        bound_inertia_about_line(central, area.bounds, centroid, point, direction).map(Some)
     }
 
     /// Enclose the sorted principal moments of the complete patch set.

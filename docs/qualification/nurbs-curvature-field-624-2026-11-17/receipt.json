@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0624",
+  "testedBase": "92e7aba1b81be22096a76f4462da8c70dc0eb9b0",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 219,
+  "scope": [
+    "Enclose the moment about an offset line using perpendicular distance bounds from the common centroid.",
+    "Verify invariance under changing the line anchor and direction scale, an analytic offset-axis moment with a nested island, and incomplete-integration refusal."
+  ],
+  "logSha256": "00cf1ad7d19c0a0373756a2e66428afde8b771efd1e9d926d422c9d41a8fce73",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "c6f84332b16ad608793cdbbc88da69fb78603ca544c8e8f554510ce70a23f5c0",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "6d40bdf01d466f7fd7b0ebbb71d847c11514eacc5b37dc3f99ee617e07179b0f"
+  }
+}
