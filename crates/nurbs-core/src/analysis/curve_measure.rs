@@ -673,7 +673,7 @@ pub fn directional_travel(
     curve.validate()?;
     validate(tolerance, max_cells)?;
     let unit = travel_direction(curve, direction)?;
-    measure_directional_travel(curve, &unit, tolerance, max_cells)
+    measure_directional_travel(curve, curve.domain(), &unit, tolerance, max_cells)
 }
 
 #[derive(Clone, Debug)]
@@ -694,13 +694,45 @@ pub fn directional_travel_by_sign(
     max_cells: usize,
 ) -> Result<DirectionalTravelReport> {
     curve.validate()?;
+    measure_signed_directional_travel(curve, curve.domain(), direction, tolerance, max_cells)
+}
+
+/// Enclose the positive and negative axial travel on a finite, increasing
+/// interval of the original knot domain.
+pub fn directional_travel_on_interval(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalTravelReport> {
+    curve.validate()?;
+    let [start, end] = curve.domain();
+    let [lo, hi] = interval;
+    check(
+        start <= lo && lo < hi && hi <= end,
+        "Directional travel interval must lie inside the curve domain",
+    )?;
+    measure_signed_directional_travel(curve, interval, direction, tolerance, max_cells)
+}
+
+fn measure_signed_directional_travel(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalTravelReport> {
     validate(tolerance, max_cells)?;
     let unit = travel_direction(curve, direction)?;
-    let total = measure_directional_travel(curve, &unit, tolerance, max_cells)?;
+    let total = measure_directional_travel(curve, interval, &unit, tolerance, max_cells)?;
     let mut signed = Interval::point(0.);
     for span in curve.degree..curve.control_points.len() {
-        let domain = [curve.knots[span], curve.knots[span + 1]];
-        if domain[0] == domain[1] {
+        let domain = [
+            curve.knots[span].max(interval[0]),
+            curve.knots[span + 1].min(interval[1]),
+        ];
+        if domain[0] >= domain[1] {
             continue;
         }
         let left = curve_jets::endpoint(curve, span, domain, false)?;
@@ -762,6 +794,7 @@ fn project_jet(jet: &[Interval], unit: &[Interval]) -> Result<Interval> {
 
 fn measure_directional_travel(
     curve: &Curve,
+    interval: [f64; 2],
     unit: &[Interval],
     tolerance: f64,
     max_cells: usize,
@@ -774,5 +807,5 @@ fn measure_directional_travel(
     let mapped = |curve: &Curve, span, domain, serial| {
         mapped_cell(curve, span, domain, serial, project)
     };
-    Ok(measure_with_cells(curve, curve.domain(), tolerance, max_cells, mapped)?.0)
+    Ok(measure_with_cells(curve, interval, tolerance, max_cells, mapped)?.0)
 }

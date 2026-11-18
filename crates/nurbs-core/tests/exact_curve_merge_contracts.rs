@@ -8311,3 +8311,47 @@ fn signed_directional_travel_gives_zero_reverse_travel_on_monotone_line() {
     assert_eq!(report.reverse_bounds[0], 0.);
     assert!(report.reverse_bounds[1] < 1e-12);
 }
+
+#[test]
+fn directional_travel_window_clips_both_sides_of_a_knot_reversal() {
+    use nurbs_core::analysis::curve_measure::directional_travel_on_interval;
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 8., 8.],
+        control_points: vec![vec![0., 0.], vec![4., 0.], vec![-4., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let report = directional_travel_on_interval(&curve, [3., 7.], &[1., 0.], 1e-8, 64).unwrap();
+    assert!(report.total.within_tolerance);
+    for (bounds, exact) in [
+        (report.total.bounds, 8.),
+        (report.forward_bounds, 2.),
+        (report.reverse_bounds, 6.),
+        (report.signed_travel_bounds, -4.),
+    ] {
+        assert!(bounds[0] <= exact && exact <= bounds[1]);
+        assert!(bounds[1] - bounds[0] < 1e-10);
+    }
+    assert!(directional_travel_on_interval(&curve, [3., 7.], &[1., 0.], 1e-8, 1).is_err());
+}
+
+#[test]
+fn directional_travel_window_contains_an_interior_rational_segment() {
+    use nurbs_core::analysis::curve_measure::directional_travel_on_interval;
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![6., 0.]],
+        weights: vec![1., 2.],
+        periodic: false,
+    };
+    let report = directional_travel_on_interval(&curve, [3., 4.], &[1., 0.], 1e-8, 1024).unwrap();
+    let exact = 4. - 2.4;
+    assert!(report.total.within_tolerance);
+    assert!(report.forward_bounds[0] <= exact && exact <= report.forward_bounds[1]);
+    assert!(report.reverse_bounds[1] < 1e-8);
+    for invalid in [[1., 4.], [3., 3.], [5., 4.], [f64::NAN, 4.]] {
+        assert!(directional_travel_on_interval(&curve, invalid, &[1., 0.], 1e-8, 32).is_err());
+    }
+}

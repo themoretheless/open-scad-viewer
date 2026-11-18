@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0675",
+  "testedBase": "5be509bfeabea3336c5c6814f20009c40d7f1e5d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 276,
+  "scope": [
+    "Measure absolute and signed axial motion in an original-parameter window, clipping every intersected knot span.",
+    "Check clipped knot reversals, a rational interior interval, shared span coverage, and invalid windows."
+  ],
+  "logSha256": "b842339dbc6e410fba9c20ee1c1bf33e83b106aec3e264a4e4558f4819ea78b9",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "413e78e2a5bbb690b696db881b6e45aed7abf15f86b692ddd37d39c1004617d4",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "5cde6b01582f3455e802e9b6b47efdecfa358f9d396f715c10b001442a898e74"
+  }
+}

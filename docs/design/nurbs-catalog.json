@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 674,
-  "unallocatedCount": 326,
+  "specifiedCount": 675,
+  "unallocatedCount": 325,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16494,6 +16494,25 @@
       "remainingQualification": [
         "Decompose certified projected travel into positive and negative axial motion using signed span displacements.",
         "Check asymmetric retracing, direction reversal and zero reverse travel on a monotone line.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0675",
+      "name": "Гарантированное измерение осевого хода на участке NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::directional_travel_on_interval",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-675-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-675-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Measure absolute and signed axial motion in an original-parameter window, clipping every intersected knot span.",
+        "Check clipped knot reversals, a rational interior interval, shared span coverage, and invalid windows.",
         "WASM and application integration are separate."
       ]
     }
