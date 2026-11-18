@@ -354,9 +354,11 @@ fn partition_components_with_traces(
                 face,
                 endpoints[component][support],
                 &path[support],
-                limits.trace.tolerance_uv,
-                remaining_cells[support],
-                remaining_exact[support],
+                CutLimits {
+                    tolerance_uv: limits.trace.tolerance_uv,
+                    max_cells: remaining_cells[support],
+                    max_exact: remaining_exact[support],
+                },
                 remaining_pairs[support],
             )?;
             remaining_cells[support] = remaining_cells[support]
