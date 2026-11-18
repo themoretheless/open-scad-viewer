@@ -1747,6 +1747,61 @@ fn classify_motion_knot_jumps(
     Ok(jumps)
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct MotionKnotTurn {
+    pub parameter: f64,
+    /// Cosine between incoming and outgoing tangents, absent when either
+    /// tangent cannot be proved nonzero.
+    pub cosine_bounds: Option<[f64; 2]>,
+    pub status: DirectionalMotionStatus,
+}
+
+/// Classify interior turns against a minimum tangent cosine in [-1, 1].
+/// A larger cosine means a smaller turn. Each tangent uses its own span.
+pub fn classify_motion_knot_turns(
+    curve: &Curve,
+    interval: [f64; 2],
+    minimum_cosine: f64,
+    max_knots: usize,
+) -> Result<Vec<MotionKnotTurn>> {
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    check((-1.0..=1.0).contains(&minimum_cosine), "Minimum turn cosine must be in [-1, 1]")?;
+    check(max_knots <= 100_000, "Motion turn budget must be at most 100000 knots")?;
+    let mut turns = Vec::new();
+    let mut spans = active_spans(curve, interval);
+    let mut left = spans.next().ok_or_else(|| crate::numeric_err("Missing motion span coverage"))?;
+    for right in spans {
+        if turns.len() == max_knots {
+            return Err(resource("Interior motion knots exceed the work budget"));
+        }
+        let parameter = curve.knots[right];
+        let before = curve_jets::endpoint(curve, left, [curve.knots[left], parameter], true)?;
+        let after = curve_jets::endpoint(curve, right, [parameter, curve.knots[right + 1]], false)?;
+        let left_norm = norm(&before[1])?;
+        let right_norm = norm(&after[1])?;
+        let cosine_bounds = if left_norm.lo <= 0. || right_norm.lo <= 0. {
+            None
+        } else if right - left < curve.degree {
+            Some([1.; 2])
+        } else {
+            let cosine = before[1].iter().zip(&after[1]).try_fold(
+                Interval::point(0.),
+                |sum, (&a, &b)| sum.add(a.div(left_norm)?.mul(b.div(right_norm)?)?),
+            )?;
+            Some([cosine.lo.max(-1.), cosine.hi.min(1.)])
+        };
+        let status = match cosine_bounds {
+            Some([lo, _]) if lo >= minimum_cosine => DirectionalMotionStatus::Within,
+            Some([_, hi]) if hi < minimum_cosine => DirectionalMotionStatus::Exceeds,
+            _ => DirectionalMotionStatus::Undetermined,
+        };
+        turns.push(MotionKnotTurn { parameter, cosine_bounds, status });
+        left = right;
+    }
+    Ok(turns)
+}
+
 /// A curve window traversed in increasing parameter order with a uniform clock.
 #[derive(Clone, Copy, Debug)]
 pub struct TimedMotionSegment<'a> {

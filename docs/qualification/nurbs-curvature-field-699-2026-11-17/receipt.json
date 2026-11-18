@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0699",
+  "testedBase": "9b9d6f13cd5239dca4f3058958c45c35e870f4fd",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 318,
+  "scope": [
+    "Enclose the tangent turn cosine at interior knots and classify against an inclusive threshold.",
+    "Check a rational right angle across unequal spans, exact C1 alignment, stationary uncertainty, and knot budget."
+  ],
+  "logSha256": "ceecdf54c45a70ef10e66f920e68995a528c4df314ad8c4ad2d8da060f49988d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "31678d58355dd57c0a3ec84ed6536dd13ceecdd58f48fc7ba00bf3943e1a07fa",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "cab9ba265404921141f692fdc6a15d939ea990b4d344dfcedc62dd6a03024fbb"
+  }
+}

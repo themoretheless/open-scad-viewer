@@ -9410,3 +9410,45 @@ fn timed_motion_knot_jumps_scale_jerk_without_losing_proved_continuity() {
     let invalid = TimedMotionSegment { duration: 0., ..segment };
     assert!(classify_timed_motion_knot_jumps(invalid, &[1., 0.], limits, 1).is_err());
 }
+
+#[test]
+fn motion_knot_turn_measures_rational_right_angle_under_unequal_clocks() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, classify_motion_knot_turns,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 3., 3.],
+        control_points: vec![vec![0., 0.], vec![1., 0.], vec![1., 3.]],
+        weights: vec![1., 4., 2.],
+        periodic: false,
+    };
+    assert!(classify_motion_knot_turns(&curve, [0.5, 2.], 0.5, 0).is_err());
+    let report = classify_motion_knot_turns(&curve, [0.5, 2.], 0.5, 1).unwrap();
+    assert_eq!(report[0].parameter, 1.);
+    assert_eq!(report[0].status, Status::Exceeds);
+    let [lo, hi] = report[0].cosine_bounds.unwrap();
+    assert!(lo <= 0. && hi >= 0. && hi - lo < 1e-8);
+    assert_eq!(classify_motion_knot_turns(&curve, [0., 3.], -0.5, 1).unwrap()[0].status, Status::Within);
+}
+
+#[test]
+fn motion_knot_turn_proves_c1_alignment_and_preserves_stationary_uncertainty() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, classify_motion_knot_turns,
+    };
+    let mut curve = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 2., 2., 2.],
+        control_points: [0., 1., 2., 3.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let report = classify_motion_knot_turns(&curve, [0., 2.], 1., 1).unwrap();
+    assert_eq!(report[0].cosine_bounds, Some([1.; 2]));
+    assert_eq!(report[0].status, Status::Within);
+    curve.control_points[2] = vec![1., 0.];
+    let report = classify_motion_knot_turns(&curve, [0., 2.], 0., 1).unwrap();
+    assert_eq!(report[0].cosine_bounds, None);
+    assert_eq!(report[0].status, Status::Undetermined);
+}
