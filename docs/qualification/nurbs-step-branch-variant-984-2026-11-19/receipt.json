@@ -1,0 +1,13 @@
+{
+  "id": "NURBS-0984",
+  "testedBase": "84eea80d43e66cf8a298bb85920b982ced82d392",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "16883ec4f7f036235bbee0b7eb16587f78651dfeeb5f5424f83e375ad8cb33eb",
+    "crates/cad-step/src/step_interchange_v3.rs": "6424fffaf9fd6e116317ffdbb92fd6fa08b04b3dbf0b54410d1ce7c5c31eda09",
+    "crates/cad-step/src/lib.rs": "e9f1119231932c38da7b1719a87fd26e24e4555cc7cad6cedf73f3c53f3e42d9",
+    "crates/cad-step/tests/baked_step_scales.rs": "72d42f371dcc6a09995b41e123d35ef4e507d9cf51aa96e0fe9cd4760c719f98"
+  },
+  "fixtureSha256": "02bb5c8ea46f23642e3f11d3640ca832cd7959611c5aa2219f2e03897a2aa593",
+  "command": "CAD_BRANCH_VARIANT_FIXTURE=/tmp/osv984.step cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test baked_step_scales",
+  "external": "Drive/Feed/Insert has volume 64 and is red; Drive/Roller has volume 288*pi and is blue"
+}

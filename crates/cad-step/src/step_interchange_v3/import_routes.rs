@@ -2112,7 +2112,7 @@ fn definition_control_bounds(model: &Model) -> [[f64; 3]; 2] {
 /// Import an AP242 assembly without expanding all of its placements into
 /// a single B-rep. Each distinct definition is built and validated once.
 pub fn import_step_shared_assembly(text: &str) -> Result<StepSharedAssembly> {
-    Ok(read_shared_products(text, false, None)?.0)
+    Ok(read_shared_products(text, false, None, None)?.0)
 }
 
 /// Shared geometry and product labels resolved through the selected STEP graph.
@@ -2358,7 +2358,7 @@ pub fn import_step_occurrence_colours(text: &str) -> Result<Vec<Option<[f64; 3]>
 }
 
 pub fn import_named_step_assembly(text: &str) -> Result<NamedStepAssembly> {
-    let (assembly, labels) = read_shared_products(text, true, None)?;
+    let (assembly, labels) = read_shared_products(text, true, None, None)?;
     let (name, definition_names) = labels.ok_or_else(|| refuse("Missing assembly product names"))?;
     Ok(NamedStepAssembly { assembly, name, definition_names })
 }
@@ -2367,7 +2367,7 @@ pub fn import_named_step_assembly(text: &str) -> Result<NamedStepAssembly> {
 /// occurrence, in placement order. Paths include the assembly root and leaf.
 pub fn import_step_product_paths(text: &str) -> Result<(NamedStepAssembly, Vec<Vec<String>>)> {
     let mut paths = Vec::new();
-    let (assembly, labels) = read_shared_products(text, true, Some(&mut paths))?;
+    let (assembly, labels) = read_shared_products(text, true, Some(&mut paths), None)?;
     let (name, definition_names) = labels.ok_or_else(|| refuse("Missing assembly product names"))?;
     Ok((NamedStepAssembly { assembly, name, definition_names }, paths))
 }
@@ -2388,7 +2388,31 @@ pub fn export_step_product_subassembly(text: &str, prefix: &[&str]) -> Result<St
     crate::export_named_styled_step_assembly(&subset, &[], &vec![None; indices.len()], &styles)
 }
 
-fn read_shared_products(text: &str, named: bool, paths: Option<&mut Vec<Vec<String>>>) -> Result<(StepSharedAssembly, Option<(String, Vec<String>)>)> {
+/// Replace matching leaf occurrences of one definition by a local-space solid
+/// and export the complete scene. Retains explicit occurrence RGB, group
+/// membership and world placements. Group frames are written at identity.
+pub fn replace_step_product_at_path(text: &str, path: &[&str], model: Model, name: &str) -> Result<String> {
+    let mut paths = Vec::new();
+    let mut branches = Vec::new();
+    let (assembly, labels) = read_shared_products(text, true, Some(&mut paths), Some(&mut branches))?;
+    let (root, definition_names) = labels.ok_or_else(|| refuse("Missing assembly product names"))?;
+    let mut scene = NamedStepAssembly { assembly, name: root, definition_names };
+    let selected: Vec<_> = paths.iter().enumerate().filter(|(_, p)| p.as_slice() == path)
+        .map(|(i, _)| i).collect();
+    scene.replace_named_variant(&selected, model, name.to_owned())?;
+    let mut group_indices = BTreeMap::new();
+    let mut groups = Vec::new();
+    let parents: Vec<_> = branches.iter().zip(&paths).map(|(branch, p)| branch.map(|id|
+        *group_indices.entry(id).or_insert_with(|| {
+            groups.push(p[1].as_str());
+            groups.len() - 1
+        }))).collect();
+    let styles: Vec<_> = import_step_occurrence_colours(text)?.into_iter().map(|rgb|
+        rgb.map(|rgb| crate::StepOccurrenceColour { name: "", rgb })).collect();
+    crate::export_named_styled_step_assembly(&scene, &groups, &parents, &styles)
+}
+
+fn read_shared_products(text: &str, named: bool, paths: Option<&mut Vec<Vec<String>>>, branches: Option<&mut Vec<Option<usize>>>) -> Result<(StepSharedAssembly, Option<(String, Vec<String>)>)> {
     validate_exchange_structure(text)?;
     let entities = parse(data_payload(text)?)?;
     let route = DirectImportRoute {
@@ -2418,6 +2442,15 @@ fn read_shared_products(text: &str, named: bool, paths: Option<&mut Vec<Vec<Stri
         }
         Some((products, root, Vec::new()))
     } else { None };
+    if let Some(branches) = branches {
+        for item in &placements {
+            branches.push(match item.path.len() {
+                3 => None,
+                5 => Some(item.path[1]),
+                _ => return Err(refuse("Branch editing supports root parts and one level of groups")),
+            });
+        }
+    }
     let representation_paths = paths.as_ref().map(|_| placements.iter()
         .map(|item| item.path.iter().step_by(2).copied().collect::<Vec<_>>()).collect::<Vec<_>>());
     let mut definition_indices = BTreeMap::new();
