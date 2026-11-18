@@ -701,27 +701,22 @@ fn export_step_direct_impl(
                         .ok_or_else(|| refuse("STEP assembly export requires nonsingular orthogonal placements"))?
                 };
                 let origin = w.point(&[matrix[0][3], matrix[1][3], matrix[2][3]]);
-                let [x, y, z] = [0, 1, 2].map(|column| {
+                let mut direction_id = |w: &mut Writer, column: usize| {
                     let direction = [0, 1, 2].map(|row| matrix[row][column] / scales[column]);
                     *directions.entry(direction.map(f64::to_bits)).or_insert_with(|| {
                         w.emit(format!("DIRECTION('',({}))", floats(&direction)))
                     })
-                });
-                let placement_axis = if assembly.colours.is_some() || (rigid && assembly.names.is_some()) {
-                    if !rigid {
-                        return Err(refuse("Styled STEP assemblies require rigid placements"));
-                    }
-                    Some(w.emit(format!("AXIS2_PLACEMENT_3D('',#{origin},#{z},#{x})")))
-                } else {
-                    None
                 };
+                let x = direction_id(&mut w, 0);
+                let z = direction_id(&mut w, 2);
+                if assembly.colours.is_some() && !rigid {
+                    return Err(refuse("Styled STEP assemblies require rigid placements"));
+                }
+                let placement_axis = rigid.then(|| w.emit(format!("AXIS2_PLACEMENT_3D('',#{origin},#{z},#{x})")));
                 let operator = if let Some(axis) = placement_axis {
                     w.emit(format!("ITEM_DEFINED_TRANSFORMATION('','',#{frame},#{axis})"))
-                } else if rigid {
-                    w.emit(format!(
-                        "CARTESIAN_TRANSFORMATION_OPERATOR_3D('',#{x},#{y},#{origin},1.,#{z})"
-                    ))
                 } else {
+                    let y = direction_id(&mut w, 1);
                     let [sx, sy, sz] = scales;
                     let (sx, sy, sz) = (floats(&[sx]), floats(&[sy]), floats(&[sz]));
                     w.emit(format!(

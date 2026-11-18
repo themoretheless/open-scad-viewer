@@ -3470,14 +3470,19 @@ fn check_shared_step_affine_placement(scale_z: f64) {
     let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
     let gears = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
     let step = crate::export_planet_gear_occurrences_step(&gears).unwrap();
-    let row = step.lines().find(|line| line.contains("=CARTESIAN_TRANSFORMATION_OPERATOR_3D(")).unwrap();
-    let (id, call) = row.split_once("=CARTESIAN_TRANSFORMATION_OPERATOR_3D(").unwrap();
-    let fields: Vec<_> = call.trim_end_matches(");").split(',').collect();
-    let [_, x, y, p, _, z] = fields[..] else { panic!("unexpected operator fields"); };
-    let affine = format!(
-        "{id}=(CARTESIAN_TRANSFORMATION_OPERATOR('',{x},{y},{p},2.)CARTESIAN_TRANSFORMATION_OPERATOR_3D({z})CARTESIAN_TRANSFORMATION_OPERATOR_3DNON_UNIFORM(3.,{scale_z:.1})GEOMETRIC_REPRESENTATION_ITEM()REPRESENTATION_ITEM(''));"
-    );
-    let assembly = crate::import_step_shared_assembly(&step.replacen(row, &affine, 1)).unwrap();
+    let rigid = crate::import_step_shared_assembly(&step).unwrap();
+    let mut placements = rigid.occurrences().to_vec();
+    for row in &mut placements[0].transform[..3] {
+        for (component, scale) in row.iter_mut().zip([2., 3., 4.]) { *component *= scale; }
+    }
+    let scaled = crate::StepSharedAssembly::from_placed_solids(rigid.definitions().to_vec(), placements).unwrap();
+    let affine = crate::export_step_shared_assembly(&scaled).unwrap();
+    let fields = affine.split_once("CARTESIAN_TRANSFORMATION_OPERATOR_3DNON_UNIFORM(")
+        .unwrap().1.split_once(')').unwrap().0;
+    let (sy, sz) = fields.split_once(',').unwrap();
+    let signed = if scale_z < 0. { format!("{sy},-{sz}") } else { fields.to_owned() };
+    let assembly = crate::import_step_shared_assembly(&affine.replace(
+        &format!("3DNON_UNIFORM({fields})"), &format!("3DNON_UNIFORM({signed})"))).unwrap();
     let exported = crate::export_step_shared_assembly(&assembly).unwrap();
     assert_eq!(exported.matches("MANIFOLD_SOLID_BREP(").count(), 1);
     assert_eq!(exported.matches("CARTESIAN_TRANSFORMATION_OPERATOR_3DNON_UNIFORM(").count(), 1);
@@ -3494,7 +3499,6 @@ fn check_shared_step_affine_placement(scale_z: f64) {
             assert!((expected - actual).abs() < 1e-10);
         }
     }
-    let rigid = crate::import_step_shared_assembly(&step).unwrap();
     let original = rigid.occurrences()[0].transform;
     let model = back.materialize(0).unwrap();
     let [x, y, z] = back.definitions()[0].vertices[0].point;
@@ -3839,8 +3843,12 @@ fn planetary_gear_set_step_round_trips_twenty_spur_occurrences() {
     }).collect();
     let distinct: std::collections::BTreeSet<_> = directions.iter().collect();
     assert_eq!(directions.len(), distinct.len());
-    assert!(directions.len() >= 3 && directions.len() < 3 * 20);
-    eprintln!("Spinner STEP shares {} distinct directions across 60 axis references", directions.len());
+    assert!(directions.len() >= 3 && directions.len() < 2 * 20);
+    eprintln!("Spinner STEP shares {} distinct directions across 40 axis references", directions.len());
+    if let Some(path) = std::env::var_os("CAD_SPINNER_RIGID_STEP") {
+        std::fs::write(path, &text).unwrap();
+    }
+    assert_eq!(text.matches("ITEM_DEFINED_TRANSFORMATION(").count(), 20);
     let (back, _, _) = crate::import_step_v9(&text).unwrap();
     assert_eq!(back.bodies.len(), 20);
     assert_eq!(back.validate().unwrap().boundary_edge_count, 0);

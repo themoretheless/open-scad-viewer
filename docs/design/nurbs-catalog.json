@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 976,
-  "unallocatedCount": 24,
+  "specifiedCount": 977,
+  "unallocatedCount": 23,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22204,6 +22204,26 @@
       ],
       "remainingQualification": [
         "Selected clamped nonperiodic carriers of one shared local definition; all occurrences inherit the same representation. Named flat assembly STEP round trip."
+      ]
+    },
+    {
+      "id": "NURBS-0977",
+      "name": "Передача орбит и ориентации спутников планетарной передачи в Open CASCADE через STEP",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::export_planetary_gear_set_step",
+      "evidence": [
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "crates/brep-core/src/parts/gear/gear_with_report.rs",
+        "docs/qualification/nurbs-spinner-rigid-step-977-2026-11-19/verify.py",
+        "docs/qualification/nurbs-spinner-rigid-step-977-2026-11-19/occt.log",
+        "docs/qualification/nurbs-spinner-rigid-step-977-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-spinner-rigid-step-977-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Rigid proper placements in a flat procedural gear assembly. OCCT verifies all 18 local-to-world planet frames. External nonuniform and reflected placement qualification is separate."
       ]
     }
   ],
