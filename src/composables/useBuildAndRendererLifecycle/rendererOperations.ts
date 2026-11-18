@@ -28,7 +28,9 @@ export function createRendererOperations(context: RendererOperationsContext) {
       return
     context.options.rendererInitializing.value = true
     context.options.rendererUnavailableMessage.value = ''
-    const nextRenderer = createViewportRenderer()
+    // Only the recording test seam resolves asynchronously; the WebGPU path stays synchronous.
+    const created = createViewportRenderer()
+    const nextRenderer = created instanceof Promise ? await created : created
     const ok = await nextRenderer.init(canvas)
     if (!context.options.isComponentActive() || !context.options.sourceViewportVisible.value) {
       nextRenderer.destroy()

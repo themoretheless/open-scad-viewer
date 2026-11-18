@@ -10,7 +10,6 @@ import dockRailUi from './ui/DockRail.ui?raw'
 import computeInspectorUi from './ui/ComputeInspector.ui?raw'
 import statusbarUi from './ui/Statusbar.ui?raw'
 import SweepEvidenceStatus from './components/SweepEvidenceStatus.svt'
-import PerformancePanel from './components/PerformancePanel.svt'
 import ParameterSuggestions from './components/ParameterSuggestions.svt'
 import GroupSourcePanel from './components/GroupSourcePanel.svt'
 import ExportDialog from './components/ExportDialog.svt'
@@ -64,6 +63,7 @@ const PhotogrammetryPanel = defineAsyncComponent(() => import('./features/Photog
 const InspectPanel = defineAsyncComponent(() => import('./components/InspectPanel.svt'))
 const SceneOutliner = defineAsyncComponent(() => import('./components/SceneOutliner.svt'))
 const KeyboardShortcuts = defineAsyncComponent(() => import('./components/KeyboardShortcuts.svt'))
+const PerformancePanel = defineAsyncComponent(() => import('./components/PerformancePanel.svt'))
 import ViewCube from './components/ViewCube.svt'
 import type { GeometryQuality } from './core/build'
 import { type MeshData } from './core/mesh'

@@ -1,5 +1,5 @@
 import { onMounted, onUnmounted } from 'svet'
-import { verifyOpenScadHandoffBundle, type OpenScadHandoffDocument } from '../core/handoffBundle'
+import type { OpenScadHandoffDocument } from '../core/handoffBundle'
 import { LOCAL_EDITOR_HEADER, LOCAL_EDITOR_PATH } from '../core/localEditorProtocol'
 
 export function useLocalEditorBridge(open: (document: OpenScadHandoffDocument) => Promise<boolean>) {
@@ -28,6 +28,8 @@ export function useLocalEditorBridge(open: (document: OpenScadHandoffDocument) =
       if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/.test(id) || lifecycle.signal.aborted) return
       let opened = false
       try {
+        // The verifier is needed only once the local bridge delivers a bundle.
+        const { verifyOpenScadHandoffBundle } = await import('../core/handoffBundle')
         const verified = verifyOpenScadHandoffBundle(bundle)
         if (verified.origin === 'mcp-catalog') opened = await open(verified.document)
       } finally {
