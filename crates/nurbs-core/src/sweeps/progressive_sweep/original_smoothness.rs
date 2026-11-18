@@ -323,7 +323,20 @@ impl Sweep<'_> {
         let mut out=ClosedPathFrameSmoothnessReport{order,closed_source_frame_smoothness_certified:false,cells:0,exact_work:0,reason:Some("closed-path-frame-mode-unproved")};
         let spatial_bishop = self.options.orientation == Orientation::RotationMinimizing
             && self.spatial_rmf_error_limits.is_some();
-        if (self.path.periodic && self.options.orientation != Orientation::Frenet && !spatial_bishop)||!path_is_closed(self.path)?||self.frame_laws.is_some()||self.orientation_guide.is_some()||!matches!(self.options.orientation,Orientation::FixedNormal|Orientation::RotationMinimizing|Orientation::CorrectedFrenet|Orientation::Frenet){return Ok(out);}
+        let periodic_frame = spatial_bishop
+            || matches!(self.options.orientation, Orientation::FixedNormal | Orientation::Frenet);
+        if (self.path.periodic && !periodic_frame)
+            || !path_is_closed(self.path)?
+            || self.frame_laws.is_some()
+            || self.orientation_guide.is_some()
+            || !matches!(
+                self.options.orientation,
+                Orientation::FixedNormal | Orientation::RotationMinimizing
+                    | Orientation::CorrectedFrenet | Orientation::Frenet
+            )
+        {
+            return Ok(out);
+        }
         if self.options.orientation==Orientation::Frenet {
             return closed_frenet::certify(self,order,max_cells,max_exact_work);
         }

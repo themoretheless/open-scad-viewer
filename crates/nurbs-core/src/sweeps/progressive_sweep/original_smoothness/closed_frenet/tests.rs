@@ -299,3 +299,38 @@ fn periodic_bishop_frame_does_not_certify_a_double_traversal() {
     assert!(body.boxes > 0 && body.cells <= 500000, "{body:?}");
     eprintln!("periodic Bishop double traversal refused: {body:?}");
 }
+
+#[test]
+fn periodic_fixed_normal_certifies_volume_and_refuses_inexact_or_singular_frames() {
+    let path = frenet_source::periodic_path();
+    let mut damaged = path.clone();
+    damaged.knots[1] = damaged.knots[1].next_up();
+    damaged.validate().unwrap();
+    let mut flat = path.clone();
+    for point in &mut flat.control_points {
+        point[2] = 0.;
+    }
+    let (profiles, cap, _) = source::material(true, true);
+    let scale = source::periodic(1., 1.03125);
+    let twist = source::periodic(0., 1. / 1024.);
+    let projection = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
+    for arc in [false, true] {
+        for (path, normal, expected) in [
+            (&path, [0., 0., 1.], true),
+            (&damaged, [0., 0., 1.], false),
+            (&flat, [1., 0., 0.], false),
+        ] {
+            let sweep = MultiSweep::new(&profiles, path, &scale, &twist, Options {
+                normal, orientation: Orientation::FixedNormal, ..options(arc)
+            }).unwrap();
+            let seam = sweep.certify_closed_path_frame_smoothness(2, 100000, 1000000).unwrap();
+            assert_eq!(seam.closed_source_frame_smoothness_certified, expected, "{seam:?}");
+            let body = sweep.certify_ideal_volume_atlas(
+                [&cap, &cap], projection, 1000000, 1000000,
+            ).unwrap();
+            assert_eq!([body.embedding_certified, body.regularity_certified, body.parameter_topology_preserved],
+                [expected; 3], "arc={arc}, expected={expected}: {body:?}");
+            eprintln!("periodic FixedNormal arc={arc} expected={expected} volume={body:?}");
+        }
+    }
+}

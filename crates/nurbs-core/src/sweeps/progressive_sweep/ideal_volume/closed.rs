@@ -21,7 +21,7 @@ pub(super) fn uses_periodic_path(s: &Sweep<'_>, closed: bool) -> bool {
         && s.path.periodic
         && (s.frame_laws.is_some()
             || s.orientation_guide.is_some()
-            || s.options.orientation == Orientation::Frenet
+            || matches!(s.options.orientation, Orientation::FixedNormal | Orientation::Frenet)
             || (s.options.orientation == Orientation::RotationMinimizing
                 && s.spatial_rmf_error_limits.is_some()))
 }
