@@ -27,7 +27,7 @@ pub fn inspect(s: &Surface, projection: [[i8; 3]; 2], max_cells: usize) -> Resul
 }
 /// Linear projection commutes with the rational basis when every projected
 /// Euclidean pole is exactly representable. Never substitute rounded poles.
-fn exact_projected_surface(s: &Surface, projection: [[i8; 3]; 2]) -> Option<Surface> {
+pub(crate) fn exact_projected_surface(s: &Surface, projection: [[i8; 3]; 2]) -> Option<Surface> {
     use crate::exact_curve_segments::{exact_add, exact_mul};
     let mut out = s.clone();
     for (source, target) in s
@@ -580,7 +580,7 @@ fn inspect_candidate_proposals(s: &Surface, max_cells: usize, weighted: bool) ->
     third.cells += second.cells;
     Ok(third)
 }
-fn midpoint_projection(s: &Surface) -> Result<Option<[[i8; 3]; 2]>> {
+pub(crate) fn midpoint_projection(s: &Surface) -> Result<Option<[[i8; 3]; 2]>> {
     // Midpoint tangents propose dual directions. Every actual acceptance still
     // requires one fixed integer map's whole-domain outward interval proof.
     let u = 0.5 * s.knots_u[s.degree_u] + 0.5 * s.knots_u[s.control_points.len()];

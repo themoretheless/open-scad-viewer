@@ -202,3 +202,9 @@ trials. If the first projection refuses, the remaining planes with a
 nonzero corner area can use the rest of the same work allowance. Each
 successful plane independently proves both the simple boundary and the
 strict Jacobian sign on the entire chart.
+
+For a chart that needs an oblique plane, the same proof can use a fixed
+integer linear map. The map must produce exactly representable poles at
+the original weights and knots. Projection work and the simple-boundary
+and Jacobian checks use the chart's remaining allowance. The injectivity
+certificate records the applied rows.

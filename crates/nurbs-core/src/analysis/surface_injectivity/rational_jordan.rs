@@ -4,11 +4,66 @@ use super::*;
 use crate::curve::Curve;
 use num_rational::BigRational as Q;
 
+fn supported(s: &Surface) -> bool {
+    !s.periodic_u && !s.periodic_v && [s.degree_u, s.degree_v].iter().all(|d| (2..=5).contains(d))
+}
+
+pub(super) fn certify_oblique(
+    s: &Surface,
+    work: &mut usize,
+    limit: usize,
+) -> Option<[[f64; 3]; 2]> {
+    if !supported(s) {
+        return None;
+    }
+    let poles = s.control_points.len() * s.control_points[0].len();
+    if poles > limit - *work {
+        return None;
+    }
+    *work += poles;
+    // The evaluated midpoint only proposes a frame. Exact signed sums
+    // can also remove a common displacement along a diagonal direction.
+    let midpoint = crate::surface_linear_monotonicity::midpoint_projection(s)
+        .ok()
+        .flatten();
+    let diagonals = (0..3).flat_map(|drop| {
+        let keep = [(drop + 1) % 3, (drop + 2) % 3];
+        [[-1, -1], [-1, 1], [1, -1], [1, 1]].map(move |signs| {
+            let mut rows = [[0_i8; 3]; 2];
+            for row in 0..2 {
+                rows[row][keep[row]] = 1;
+                rows[row][drop] = signs[row];
+            }
+            rows
+        })
+    });
+    for rows in midpoint.into_iter().chain(diagonals) {
+        if rows
+            .iter()
+            .all(|row| row.iter().filter(|&&value| value != 0).count() == 1)
+        {
+            continue;
+        }
+        if poles > limit - *work {
+            break;
+        }
+        *work += poles;
+        let Some(projected) = crate::surface_linear_monotonicity::exact_projected_surface(s, rows)
+        else {
+            continue;
+        };
+        if certify(&projected, work, limit).is_some() {
+            return Some(rows.map(|row| row.map(f64::from)));
+        }
+    }
+    None
+}
+
 pub(crate) fn certify(s: &Surface, work: &mut usize, limit: usize) -> Option<[usize; 2]> {
     let degree = [s.degree_u, s.degree_v];
     let size = [s.control_points.len(), s.control_points[0].len()];
     let knots = [&s.knots_u, &s.knots_v];
-    if s.periodic_u || s.periodic_v || degree.iter().any(|d| !(2..=5).contains(d)) {
+    if !supported(s) {
         return None;
     }
     let mut spend = |cost: usize| {
@@ -292,8 +347,7 @@ mod tests {
         assert!(certify(&surface, &mut 0, used - 1).is_none());
     }
 
-    #[test]
-    fn bowed_boundary_uses_jordan_degree_and_rejects_crossings() {
+    fn bowed_wall() -> Surface {
         let mut s = Surface {
             degree_u: 2,
             degree_v: 4,
@@ -315,6 +369,40 @@ mod tests {
         for j in 0..3 {
             s.control_points[1][j][2] += 0.125;
         }
+        s
+    }
+
+    #[test]
+    fn oblique_projection_proves_a_chart_with_no_coordinate_certificate() {
+        let mut surface = bowed_wall();
+        // A large common displacement folds the coordinate projections.
+        // Subtracting Z from X and Y recovers the original bowed chart.
+        for row in &mut surface.control_points {
+            for (point, h) in row.iter_mut().zip([0., 32., 32., 32., 0.]) {
+                *point = vec![point[0] + h, point[2] + h, h];
+            }
+        }
+        let mut coordinate_work = 0;
+        assert!(certify(&surface, &mut coordinate_work, 10_000).is_none());
+        let mut used = 0;
+        let rows = certify_oblique(&surface, &mut used, 10_000).expect("oblique Jordan proof");
+        assert!(
+            rows.iter()
+                .any(|row| row.iter().filter(|&&value| value != 0.).count() > 1)
+        );
+        assert!(certify_oblique(&surface, &mut 0, used - 1).is_none());
+        let report = super::super::certify_chart(&surface, 10_000).unwrap();
+        assert_eq!(
+            report.reason, "global-exact-oblique-jordan-jacobian",
+            "{report:?}"
+        );
+        assert_eq!(report.linear_projection, Some(rows));
+        assert!(report.proven && report.contraction_upper.is_none());
+    }
+
+    #[test]
+    fn bowed_boundary_uses_jordan_degree_and_rejects_crossings() {
+        let mut s = bowed_wall();
         assert!(super::super::rational_quadrilateral::certify(&s, &mut 0, 1000).is_none());
         let mut used = 0;
         assert_eq!(certify(&s, &mut used, 1000), Some([0, 2]));
