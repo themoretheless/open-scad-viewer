@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 932,
-  "unallocatedCount": 68,
+  "specifiedCount": 933,
+  "unallocatedCount": 67,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21341,6 +21341,25 @@
       ],
       "remainingQualification": [
         "Single selected assembly root with unambiguous product links. Imports root and part definition labels, not occurrence-specific labels."
+      ]
+    },
+    {
+      "id": "NURBS-0933",
+      "name": "Количественная спецификация деталей импортированной STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::NamedStepAssembly::parts_list",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-assembly-parts-list-933-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-assembly-parts-list-933-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Flat occurrence quantities by shared definition identity. Placement transforms do not split rows."
       ]
     }
   ],

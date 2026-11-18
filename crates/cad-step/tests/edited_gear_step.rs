@@ -134,3 +134,24 @@ fn imports_product_names_by_representation_after_step_rows_are_reordered() {
         assert_eq!(read.definition_names[occurrence.definition], if occurrence.transform[0][3] == 3. { "Pin 'A'" } else { "Колесо" });
     }
 }
+
+#[test]
+fn named_parts_list_counts_coincident_instances_and_separates_same_name_parts() {
+    use cad_step::{export_named_step_assembly, import_named_step_assembly, StepAssemblyOccurrence, StepSharedAssembly};
+    let placement = |definition,x| StepAssemblyOccurrence { definition,transform:
+        [[1.,0.,0.,x],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]] };
+    let assembly = StepSharedAssembly::from_placed_solids(vec![
+        brep_core::cuboid([0.;3],[1.,2.,3.]).unwrap(),brep_core::cuboid([0.;3],[4.,5.,6.]).unwrap()],
+        vec![placement(1,8.),placement(0,2.),placement(1,8.),placement(1,10.)]).unwrap();
+    let step = export_named_step_assembly(&assembly,"Узел",&["Вставка","Вставка"]).unwrap();
+    let mut read = import_named_step_assembly(&step).unwrap();
+    let rows = read.parts_list().unwrap();
+    assert_eq!(rows.len(),2);
+    let repeated = read.assembly.occurrences().iter().find(|o| o.transform[0][3]==8.).unwrap().definition;
+    for row in rows {
+        assert_eq!(row.name,"Вставка");
+        assert_eq!(row.quantity,if row.definition==repeated {3} else {1});
+    }
+    read.definition_names.pop();
+    assert!(read.parts_list().is_err());
+}

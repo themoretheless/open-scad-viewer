@@ -1,0 +1,44 @@
+{
+  "id": "NURBS-0933",
+  "testedBase": "70cc8f2050a9ec58f3450e461c2d4c1f84cafe52",
+  "gearCommand": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "gear_profile",
+    "--test",
+    "gear_verified_profile"
+  ],
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--test",
+    "edited_gear_step",
+    "--",
+    "--nocapture"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 15,
+  "scope": [
+    "Two same-name definitions with four placements, including an explicit coincident pair. Verify quantities per geometry identity and reject inconsistent label count."
+  ],
+  "logSha256": "a88d0a74ffb8d3fe0fc394d4d4992f8cef3198167abb45932d7fafe0dac29136",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "58d8fc2d0e1cfbaa5a10424f1c12dac196df9cf4da17653bc1f1edd2d9ca3c50",
+    "crates/cad-step/src/step_interchange_v3.rs": "7ce4b347ee9924e877883caf3f8350ddf4bd71d2d35cd223cccf02d14118a630",
+    "crates/cad-step/src/lib.rs": "424954bc627e81bf3e7ab962a4eeb8be65ba8af45e212d2b240562fa297411fb",
+    "crates/cad-step/tests/edited_gear_step.rs": "995f0636a63728a3bc6592115b5992723a5c19910bbbe2b51f255e175b028ff9"
+  }
+}

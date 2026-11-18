@@ -2035,6 +2035,30 @@ pub struct NamedStepAssembly {
     pub definition_names: Vec<String>,
 }
 
+/// A part definition and its placed quantity in the flattened assembly.
+#[derive(Debug, PartialEq, Eq)]
+pub struct StepPartsListRow<'a> {
+    pub definition: usize,
+    pub name: &'a str,
+    pub quantity: usize,
+}
+
+impl NamedStepAssembly {
+    /// Count placements by definition identity, including coincident placements.
+    /// A scale or orientation on a placement does not create a new definition.
+    pub fn parts_list(&self) -> Result<Vec<StepPartsListRow<'_>>> {
+        if self.definition_names.len() != self.assembly.definitions().len() {
+            return Err(refuse("Expected one parts-list label per definition"));
+        }
+        let mut quantities = vec![0; self.definition_names.len()];
+        for occurrence in self.assembly.occurrences() { quantities[occurrence.definition] += 1; }
+        Ok(quantities.into_iter().enumerate().filter(|(_, quantity)| *quantity > 0)
+            .map(|(definition, quantity)| StepPartsListRow {
+                definition, name: &self.definition_names[definition], quantity,
+            }).collect())
+    }
+}
+
 pub fn import_named_step_assembly(text: &str) -> Result<NamedStepAssembly> {
     let (assembly, labels) = read_shared_products(text, true)?;
     let (name, definition_names) = labels.ok_or_else(|| refuse("Missing assembly product names"))?;
