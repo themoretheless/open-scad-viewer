@@ -272,6 +272,23 @@ pub fn spur_contact_ratio_over_mounting_range(
     spur_contact_ratio(module, teeth, pressure_degrees, internal, Some(centres))
 }
 
+fn contact_flank(
+    module: f64,
+    count: usize,
+    pressure_degrees: f64,
+    ring: bool,
+) -> Result<(I, I, I)> {
+    let gear =
+        derive_gear_parameter_bounds(module, count, pressure_degrees, module / 4., 0., ring)?;
+    check(
+        gear.half_high_angle[0] > 0.,
+        "Active flank angular extent must stay positive",
+    )?;
+    let base = I::new(gear.base_radius[0], gear.base_radius[1])?;
+    let distance = |roll: [f64; 2]| base.mul(I::new(roll[0], roll[1])?);
+    Ok((distance(gear.roll_start)?, distance(gear.roll_end)?, base))
+}
+
 fn spur_contact_ratio(
     module: f64,
     teeth: [usize; 2],
@@ -279,19 +296,9 @@ fn spur_contact_ratio(
     internal: bool,
     mounted: Option<I>,
 ) -> Result<[f64; 2]> {
-    let flank = |count, ring| -> Result<(I, I, I)> {
-        let gear =
-            derive_gear_parameter_bounds(module, count, pressure_degrees, module / 4., 0., ring)?;
-        check(
-            gear.half_high_angle[0] > 0.,
-            "Active flank angular extent must stay positive",
-        )?;
-        let base = I::new(gear.base_radius[0], gear.base_radius[1])?;
-        let distance = |roll: [f64; 2]| base.mul(I::new(roll[0], roll[1])?);
-        Ok((distance(gear.roll_start)?, distance(gear.roll_end)?, base))
-    };
-    let (low, high, base) = flank(teeth[0], false)?;
-    let (peer_low, peer_high, peer_base) = flank(teeth[1], internal)?;
+    let (low, high, base) = contact_flank(module, teeth[0], pressure_degrees, false)?;
+    let (peer_low, peer_high, peer_base) =
+        contact_flank(module, teeth[1], pressure_degrees, internal)?;
     let span = if let Some(centres) = mounted {
         let offset = if internal {
             peer_base.sub(base)?
@@ -596,4 +603,62 @@ pub fn spur_backlash_over_mounting_range(
     Ok(pair(
         distance.mul(I::new(low.lo.min(high.lo), low.hi.max(high.hi))?)?,
     ))
+}
+
+/// Inward-rounded centre-distance window guaranteeing at least the requested
+/// active transverse contact ratio for nominal external or internal spur gears.
+/// Solves the four flank-overlap inequalities in common-tangent coordinates.
+/// This window only certifies active contact length; clearance is separate.
+pub fn mounting_window_for_contact_ratio(
+    module: f64,
+    teeth: [usize; 2],
+    pressure_degrees: f64,
+    mesh: SpurMesh,
+    minimum_ratio: f64,
+) -> Result<[f64; 2]> {
+    check(
+        minimum_ratio.is_finite() && minimum_ratio > 0.,
+        "Expected positive finite contact ratio",
+    )?;
+    let ring = matches!(mesh, SpurMesh::Internal);
+    check(
+        !ring || teeth[1] > teeth[0],
+        "Ring must have more teeth than pinion",
+    )?;
+    let (low, high, base) = contact_flank(module, teeth[0], pressure_degrees, false)?;
+    let (peer_low, peer_high, peer_base) = contact_flank(module, teeth[1], pressure_degrees, ring)?;
+    let needed = base
+        .mul(pi()?)?
+        .mul(I::point(2.))?
+        .div(I::point(teeth[0] as f64))?
+        .mul(I::point(minimum_ratio))?;
+    check(
+        high.sub(low)?.lo.min(peer_high.sub(peer_low)?.lo) >= needed.hi,
+        "Required overlap exceeds certified active flank width",
+    )?;
+    let (offset, lower, upper) = if ring {
+        (
+            peer_base.sub(base)?,
+            peer_low.sub(high)?.add(needed)?,
+            peer_high.sub(low)?.sub(needed)?,
+        )
+    } else {
+        (
+            peer_base.add(base)?,
+            low.add(peer_low)?.add(needed)?,
+            high.add(peer_high)?.sub(needed)?,
+        )
+    };
+    check(
+        upper.lo > 0.,
+        "No positive tangent span for requested overlap",
+    )?;
+    let squared_offset = offset.mul(offset)?;
+    let distance = |span: f64| {
+        let s = I::point(span);
+        sqrt_positive(squared_offset.add(s.mul(s)?)?)
+    };
+    let first = distance(lower.hi.max(0.))?.hi.max(offset.hi.next_up());
+    let last = distance(upper.lo)?.lo;
+    Ok(pair(I::new(first, last)?))
 }

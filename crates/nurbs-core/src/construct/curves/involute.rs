@@ -221,7 +221,7 @@ mod quintic_certificate;
 pub use quintic_certificate::{QuinticCertificate, certify_quintic, certify_quintic_placed};
 
 mod gear_parameters;
-pub use gear_parameters::{GearParameterBounds, derive_gear_parameter_bounds, external_spur_contact_ratio_bounds, internal_spur_contact_ratio_bounds, mounted_spur_contact_ratio_bounds, spur_tip_root_clearance_bounds, spur_tooth_chord_bounds, spur_tooth_thinning_bounds, mounted_spur_backlash_bounds, mounted_internal_spur_backlash_bounds, spur_backlash_over_mounting_range, spur_contact_ratio_over_mounting_range, ToothChordBounds, SpurMesh};
+pub use gear_parameters::{GearParameterBounds, derive_gear_parameter_bounds, external_spur_contact_ratio_bounds, internal_spur_contact_ratio_bounds, mounted_spur_contact_ratio_bounds, spur_tip_root_clearance_bounds, spur_tooth_chord_bounds, spur_tooth_thinning_bounds, mounted_spur_backlash_bounds, mounted_internal_spur_backlash_bounds, spur_backlash_over_mounting_range, spur_contact_ratio_over_mounting_range, mounting_window_for_contact_ratio, ToothChordBounds, SpurMesh};
 pub use quintic_certificate::certify_quintic_parameter_box;
 
 pub(crate) use quintic_certificate::trig as certified_trig;

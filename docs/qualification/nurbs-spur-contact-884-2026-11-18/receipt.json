@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0884",
+  "testedBase": "050ffa7b767527fbe11839b6b430a76c8646fa0f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 13,
+  "scope": [
+    "Inverse window from four overlap inequalities. Verified inward bounds against independent analytic endpoints, both mesh types and impossible targets."
+  ],
+  "logSha256": "700339408a5f4d43fc37e7199ebebf1428366decf69e59a74f09f2949d254e5b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute.rs": "0b86305e71526bc20646cb56d6fb1b2b9fc9dd3701cee1c92d358635c043b43c",
+    "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs": "58847cd56f6b64d80e2bfcc6943b29130c6cbcf2267c0e3152346a57049481e4",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "1e1da83b5774599a009a7274672dab82a6ed2c77ce47a8def778b24afdacb175"
+  }
+}

@@ -348,3 +348,32 @@ fn contact_tolerance_captures_an_interior_peak_and_ring_overlap() {
     assert!(range(1., [8, 8], 20., SpurMesh::External, [7., 8.]).is_err());
     assert!(range(1., [8, 8], 20., SpurMesh::External, [8., 12.]).is_err());
 }
+
+#[test]
+fn inverse_contact_window_brackets_both_limiting_tangent_spans() {
+    use involute::{SpurMesh, mounting_window_for_contact_ratio as window};
+    let cosine = 20_f64.to_radians().cos();
+    let base = 4. * cosine;
+    let flank = (25. - base * base).sqrt();
+    let length = std::f64::consts::PI * cosine;
+    let [lo, hi] = window(1., [8, 8], 20., SpurMesh::External, 1.).unwrap();
+    let first = (2. * base).hypot(length);
+    let last = (2. * base).hypot(2. * flank - length);
+    assert!(lo >= first && lo - first < 1e-10 && hi <= last && last - hi < 1e-10);
+    for mesh in [SpurMesh::Internal, SpurMesh::External] {
+        let teeth = if matches!(mesh, SpurMesh::Internal) {
+            [20, 80]
+        } else {
+            [20, 40]
+        };
+        let [a, b] = window(1., teeth, 20., mesh, 1.25).unwrap();
+        for d in [a + 1e-6, (a + b) / 2., b - 1e-6] {
+            assert!(
+                involute::mounted_spur_contact_ratio_bounds(1., teeth, 20., mesh, d).unwrap()[0]
+                    >= 1.25
+            );
+        }
+    }
+    assert!(window(1., [8, 8], 20., SpurMesh::External, 2.).is_err());
+    assert!(window(1., [80, 20], 20., SpurMesh::Internal, 1.).is_err());
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 883,
-  "unallocatedCount": 117,
+  "specifiedCount": 884,
+  "unallocatedCount": 116,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20462,6 +20462,24 @@
         "crates/nurbs-core/tests/gear_parameter_bounds.rs",
         "docs/qualification/nurbs-spur-contact-883-2026-11-18/receipt.json",
         "docs/qualification/nurbs-spur-contact-883-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "External and internal spur pairs. Requires a proven tangent and positive active overlap throughout. Off-pitch interference is separate."
+      ]
+    },
+    {
+      "id": "NURBS-0884",
+      "name": "Диапазон межосевых расстояний по требуемому коэффициенту перекрытия",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::mounting_window_for_contact_ratio",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-884-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-884-2026-11-18/native.log.gz"
       ],
       "remainingQualification": [
         "External and internal spur pairs. Requires a proven tangent and positive active overlap throughout. Off-pitch interference is separate."
