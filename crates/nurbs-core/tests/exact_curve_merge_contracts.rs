@@ -9792,3 +9792,35 @@ fn ball_obstacle_clearance_respects_tool_radius_and_normal_scale() {
     assert_eq!(check(&line(-0.25), 0.5).unwrap().cells[0].status, Status::Exceeds);
     assert!(check(&line(0.25), -1.).is_err());
 }
+
+#[test]
+fn ball_workspace_partition_finds_overtravel_before_the_center_crosses() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace, partition_curve_ball_convex_workspace,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![2., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let plane = [WorkspaceHalfSpace { normal: &[3., 4.], offset: 6. }];
+    let check = |radius, budget| {
+        partition_curve_ball_convex_workspace(&curve, [0., 1.], &plane, radius, 0.01, budget)
+    };
+    let report = check(0.6, 128).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Exceeds);
+    for (parameter, status) in [(0.5, Status::Undetermined), (0.75, Status::Exceeds)] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= parameter && parameter <= b && cell.status == status
+        }));
+    }
+    let [lo, hi] = report.cells.last().unwrap().plane_residuals[0];
+    assert!(lo > 0. && hi >= 3.);
+    assert_eq!(check(0., 128).unwrap().cells.first().unwrap().status, Status::Within);
+    assert_eq!(check(0.6, 1).unwrap().cells[0].status, Status::Undetermined);
+    assert!(check(f64::NAN, 128).is_err());
+}

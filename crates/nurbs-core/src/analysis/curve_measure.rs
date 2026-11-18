@@ -1820,7 +1820,8 @@ pub struct WorkspaceHalfSpace<'a> {
 pub struct WorkspaceCell {
     pub parameter_interval: [f64; 2],
     pub span: usize,
-    /// Enclosures of `normal · point - offset`, in input order.
+    /// Maximum plane residual over the tool at each center, in input order.
+    /// A point tool has residual `normal · point - offset`.
     pub plane_residuals: Vec<[f64; 2]>,
     pub status: DirectionalMotionStatus,
 }
@@ -1841,6 +1842,23 @@ pub fn partition_curve_convex_workspace(
     parameter_tolerance: f64,
     max_plane_cells: usize,
 ) -> Result<WorkspacePartition> {
+    partition_curve_ball_convex_workspace(
+        curve, interval, planes, 0., parameter_tolerance, max_plane_cells,
+    )
+}
+
+/// Test containment of a closed ball at every center along the curve.
+/// The plane residual includes the support radius, `radius * |normal|`.
+/// A positive residual throughout a cell proves the ball exceeds that plane.
+pub fn partition_curve_ball_convex_workspace(
+    curve: &Curve,
+    interval: [f64; 2],
+    planes: &[WorkspaceHalfSpace<'_>],
+    radius: f64,
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspacePartition> {
+    check(radius.is_finite() && radius >= 0., "Tool radius must be finite and nonnegative")?;
     validate(parameter_tolerance, max_plane_cells)?;
     check(!planes.is_empty(), "Workspace requires at least one half-space")?;
     let max_cells = max_plane_cells / planes.len();
@@ -1849,12 +1867,22 @@ pub fn partition_curve_convex_workspace(
     }
     curve.validate()?;
     let dimension = curve.control_points[0].len();
-    let planes = prepare_workspace_planes(planes, dimension)?;
+    let planes = prepare_workspace_planes(planes, dimension)?.into_iter().map(|(normal, offset)| {
+        let margin = if radius == 0. {
+            None
+        } else {
+            Some(norm(&normal)?.mul(Interval::point(radius))?)
+        };
+        Ok((normal, offset, margin))
+    }).collect::<Result<Vec<_>>>()?;
     let (cells, work_cells) = partition_motion_cells(
         curve, interval, parameter_tolerance, max_cells,
         |jets, _| {
-            let residuals = planes.iter().map(|(normal, offset)| {
-                let residual = project_jet(&jets[0], normal)?.sub(*offset)?;
+            let residuals = planes.iter().map(|(normal, offset, margin)| {
+                let mut residual = project_jet(&jets[0], normal)?.sub(*offset)?;
+                if let Some(margin) = margin {
+                    residual = residual.add(*margin)?;
+                }
                 Ok([residual.lo, residual.hi])
             }).collect::<Result<Vec<_>>>()?;
             let status = if residuals.iter().any(|[lo, _]| *lo > 0.) {

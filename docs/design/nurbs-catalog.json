@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 707,
-  "unallocatedCount": 293,
+  "specifiedCount": 708,
+  "unallocatedCount": 292,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17125,6 +17125,25 @@
       "remainingQualification": [
         "Certify separation for a swept ball with plane-normal scaling and conservative contact classification.",
         "Check radius-aware separation with a non-unit plane normal, tangency uncertainty, known collision and invalid radius.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0708",
+      "name": "Проверка сферического инструмента внутри выпуклой рабочей области",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_ball_convex_workspace",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-708-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-708-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify containment of a swept ball using plane support radii.",
+        "Check radius-induced overtravel before the center crosses a nonunit oblique plane, residual bounds, zero radius, and work exhaustion.",
         "WASM and application integration are separate."
       ]
     }
