@@ -277,7 +277,7 @@ impl Sweep<'_> {
         check(matches!(order,1|2)&&max_cells<=100000&&max_exact_work<=1000000,"Invalid closed guided frame proof limits")?;
         let mut out=ClosedPathFrameSmoothnessReport{order,closed_source_frame_smoothness_certified:false,cells:0,exact_work:0,reason:Some("closed-guided-frame-mode-unproved")};
         let Some(guide)=self.orientation_guide else{return Ok(out);};
-        if self.frame_laws.is_some()||self.path.periodic||guide.periodic||!path_is_closed(self.path)?||!path_is_closed(guide)?{return Ok(out);}
+        if self.frame_laws.is_some()||!path_is_closed(self.path)?||!path_is_closed(guide)?{return Ok(out);}
         // Keep the cheaper sufficient Cartesian route. A failed source jet
         // query is charged before trying the geometric arc owner.
         let mut cartesian=true;
@@ -293,7 +293,7 @@ impl Sweep<'_> {
         }
         if !cartesian {
             return if self.options.spacing==Spacing::Parameter {Ok(out)}
-                else {guided_arc::certify(self,guide,out,max_cells,max_exact_work)};
+                else {guided_arc::certify(self,guide,out,false,max_cells,max_exact_work)};
         }
         if self.options.spacing!=Spacing::Parameter {
             for curve in [self.path,guide] {
@@ -306,7 +306,7 @@ impl Sweep<'_> {
             let (status,cells)=frame::certify_independent_guided_cover(self.path,guide,self.twist,(max_cells-out.cells).min(4096))?;
             out.cells+=cells;
             if status!=Status::Certified {
-                return guided_arc::certify(self,guide,out,max_cells,max_exact_work);
+                return guided_arc::certify(self,guide,out,true,max_cells,max_exact_work);
             }
             out.closed_source_frame_smoothness_certified=true;out.reason=None;
         }else {

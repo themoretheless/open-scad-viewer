@@ -22,6 +22,28 @@ pub(in crate::sweeps::progressive_sweep) struct ArcMap {
     suffixes: Vec<I>,
 }
 impl ArcMap {
+    /// A positive-speed arc map can normalize a proven C1 Cartesian path
+    /// directly. The exact join proof is charged against the same source
+    /// ledger and uses the immutable path that owns this arc map.
+    pub(super) fn certify_periodic_tangent(
+        &self,
+        spent: &mut u64,
+        max: u64,
+    ) -> Result<bool> {
+        if !self.path.periodic {
+            return Ok(false);
+        }
+        use super::super::endpoint_jets;
+        let knots = endpoint_jets::certify_basis_knots(&self.path, 1, max - *spent)?;
+        *spent += knots.exact_work;
+        if !knots.certified {
+            return Ok(false);
+        }
+        let seam = endpoint_jets::certify(&self.path, 1, max - *spent)?;
+        *spent += seam.exact_work;
+        Ok(seam.certified)
+    }
+
     pub(super) fn length(&self) -> I { self.total }
     pub(in crate::sweeps::progressive_sweep) fn build(path: &Curve, spent: &mut usize, max: usize) -> Result<Option<Self>> {
         let max = max.min(spent.saturating_add(100000));

@@ -49,3 +49,24 @@ pub fn periodic_path() -> Curve {
         periodic: true,
     }
 }
+
+/// The authored axis is a periodic degree-four spline, with a deliberate
+/// axial tilt relative to the derivative of the degree-five source path.
+pub fn periodic_authored_axis(path: &Curve) -> Curve {
+    let control_points: Vec<_> = path
+        .control_points
+        .windows(2)
+        .map(|p| vec![
+            8. * (p[1][0] - p[0][0]),
+            8. * (p[1][1] - p[0][1]),
+            8. * (p[1][2] - p[0][2]) + 0.25,
+        ])
+        .collect();
+    Curve {
+        degree: 4,
+        knots: path.knots[1..path.knots.len() - 1].to_vec(),
+        weights: vec![1.; control_points.len()],
+        control_points,
+        periodic: true,
+    }
+}

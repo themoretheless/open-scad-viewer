@@ -125,7 +125,7 @@ impl MultiSweep<'_> {
         if !surface_c0(caps[0])
             || !surface_c0(caps[1])
             || !(curve_c0(s.path)
-                || (closed::uses_periodic_frenet(s, closed) && curve_active_c0(s.path)))
+                || (closed::uses_periodic_path(s, closed) && curve_active_c0(s.path)))
             || !curve_c0(s.scale)
             || !curve_c0(s.twist)
             || s.affine_laws

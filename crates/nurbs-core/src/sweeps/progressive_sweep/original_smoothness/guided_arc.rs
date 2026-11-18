@@ -9,48 +9,54 @@ pub(super) fn certify(
     s: &Sweep<'_>,
     guide: &Curve,
     mut out: ClosedPathFrameSmoothnessReport,
+    cartesian_seams: bool,
     max_cells: usize,
     max_exact_work: u64,
 ) -> Result<ClosedPathFrameSmoothnessReport> {
-    // For a regular normalized arc curve X, X_s=L*T and
-    // X_ss=L^2*T_length. The path frame uses T through order k;
-    // the guide offset uses its position through order k, hence T through k-1.
-    for (curve, order) in [(s.path, out.order), (guide, out.order - 1)] {
-        for endpoints in [false, true] {
-            let position = super::super::endpoint_jets::certify_position(
-                curve,
-                endpoints,
-                max_exact_work - out.exact_work,
-            )?;
-            out.exact_work += position.exact_work;
-            if !position.certified {
-                out.reason = Some("closed-guided-arc-position-jets-unproved");
-                return Ok(out);
-            }
-            let tangent = super::super::endpoint_jets::certify_direction(
-                curve,
-                order,
-                endpoints,
-                true,
-                max_exact_work - out.exact_work,
-            )?;
-            out.exact_work += tangent.exact_work;
-            if !tangent.certified {
-                out.reason = Some("closed-guided-arc-direction-jets-unproved");
-                return Ok(out);
+    // A failed independent path×guide cover leaves previously proved
+    // Cartesian seams intact. The fresh arc maps below supply positive
+    // speed, so those derivatives compose with the actual inverse clocks.
+    if !cartesian_seams {
+        // For a regular normalized arc curve X, X_s=L*T and
+        // X_ss=L^2*T_length. The path frame uses T through order k;
+        // the guide offset uses its position through order k, hence T through k-1.
+        for (curve, order) in [(s.path, out.order), (guide, out.order - 1)] {
+            for endpoints in [false, true] {
+                let position = super::super::endpoint_jets::certify_position(
+                    curve,
+                    endpoints,
+                    max_exact_work - out.exact_work,
+                )?;
+                out.exact_work += position.exact_work;
+                if !position.certified {
+                    out.reason = Some("closed-guided-arc-position-jets-unproved");
+                    return Ok(out);
+                }
+                let tangent = super::super::endpoint_jets::certify_direction(
+                    curve,
+                    order,
+                    endpoints,
+                    true,
+                    max_exact_work - out.exact_work,
+                )?;
+                out.exact_work += tangent.exact_work;
+                if !tangent.certified {
+                    out.reason = Some("closed-guided-arc-direction-jets-unproved");
+                    return Ok(out);
+                }
             }
         }
-    }
-    if !knot_continuity(s.twist, out.order, &mut out.exact_work, max_exact_work)? {
-        out.reason = Some("closed-guided-frame-knot-jets-unproved");
-        return Ok(out);
-    }
-    let twist =
-        super::super::endpoint_jets::certify(s.twist, out.order, max_exact_work - out.exact_work)?;
-    out.exact_work += twist.exact_work;
-    if !twist.certified {
-        out.reason = Some("closed-guided-frame-endpoint-jets-unproved");
-        return Ok(out);
+        if !knot_continuity(s.twist, out.order, &mut out.exact_work, max_exact_work)? {
+            out.reason = Some("closed-guided-frame-knot-jets-unproved");
+            return Ok(out);
+        }
+        let twist =
+            super::super::endpoint_jets::certify(s.twist, out.order, max_exact_work - out.exact_work)?;
+        out.exact_work += twist.exact_work;
+        if !twist.certified {
+            out.reason = Some("closed-guided-frame-endpoint-jets-unproved");
+            return Ok(out);
+        }
     }
     out.reason = Some("closed-guided-arc-source-speed-unproved");
     let Some(path_arc) = ArcMap::build(s.path, &mut out.cells, max_cells)? else {

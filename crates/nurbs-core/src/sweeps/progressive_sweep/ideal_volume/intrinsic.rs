@@ -46,8 +46,8 @@ impl Tube {
         let clamped = !path.periodic
             && path.knots[..=p].iter().all(|u| *u == a)
             && path.knots[path.control_points.len()..].iter().all(|u| *u == b);
-        let periodic_frenet = super::closed::uses_periodic_frenet(s, closed);
-        if p == 0 || !(clamped || periodic_frenet) {
+        let periodic_path = super::closed::uses_periodic_path(s, closed);
+        if p == 0 || !(clamped || periodic_path) {
             return Ok(None);
         }
         if out.cells == max || out.exact_work == exact {
@@ -58,8 +58,12 @@ impl Tube {
         // Integrating the tangent-rate bound across source knots/seams needs
         // its OWN connected position/forward-tangent premises. An authored
         // smooth frame does not establish any path derivative continuity.
-        if c.transport.is_none() && !frame_bounds::tangent_continuity(path, closed, out, exact)? {
-            return Ok(None);
+        if c.transport.is_none() {
+            let cartesian = periodic_path
+                && c.arc.as_ref().unwrap().certify_periodic_tangent(&mut out.exact_work, exact)?;
+            if !cartesian && !frame_bounds::tangent_continuity(path, closed, out, exact)? {
+                return Ok(None);
+            }
         }
         let mut transverse_carrier = clamped && plane::certify_frame(
             path,

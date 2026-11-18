@@ -16,12 +16,12 @@ fn endpoint_identity(c: &Curve, spent: &mut usize, max: usize) -> bool {
         && c.knots[c.control_points.len()..].iter().all(|&u| u == b)
         && c.control_points.first() == c.control_points.last()
 }
-pub(super) fn uses_periodic_frenet(s: &Sweep<'_>, closed: bool) -> bool {
+pub(super) fn uses_periodic_path(s: &Sweep<'_>, closed: bool) -> bool {
     closed
         && s.path.periodic
-        && s.options.orientation == Orientation::Frenet
-        && s.frame_laws.is_none()
-        && s.orientation_guide.is_none()
+        && (s.frame_laws.is_some()
+            || s.orientation_guide.is_some()
+            || s.options.orientation == Orientation::Frenet)
 }
 
 pub(super) fn premises(
@@ -36,27 +36,25 @@ pub(super) fn premises(
         out.reason = Some("ideal-volume-closed-common-carrier-required");
         return Ok(false);
     }
-    // Periodic Frenet storage owns its active endpoint basis through an
-    // exact position identity. Repeated controls and numerical closure alone
-    // cannot stand in for that identity.
-    let path_law = if uses_periodic_frenet(s, true) {
-        let seam = super::super::endpoint_jets::certify_position(
-            s.path, true, max_work - out.exact_work,
-        )?;
-        out.exact_work += seam.exact_work;
-        if !seam.certified {
-            out.reason = Some("ideal-volume-exact-source-seam-unproved");
-            return Ok(false);
-        }
-        None
-    } else {
-        Some(s.path)
-    };
-    for law in path_law.into_iter().chain([s.scale, s.twist])
-        .chain(s.orientation_guide)
-        .chain(s.affine_laws.into_iter().flat_map(|(a, c)| [a, c]))
+    let laws = [(s.path, uses_periodic_path(s, true)), (s.scale, false), (s.twist, false)]
+        .into_iter()
+        .chain(s.orientation_guide.map(|g| (g, g.periodic)))
+        .chain(s.affine_laws.into_iter().flat_map(|(a, c)| [(a, false), (c, false)]));
+    for (law, active_basis) in laws
     {
-        if !endpoint_identity(law, &mut out.cells, max_cells) {
+        // Periodic path and guide storage require an identity of the
+        // original active endpoint basis. Frame and pose laws still
+        // pass through their respective full continuity proofs below.
+        let equal = if active_basis {
+            let seam = super::super::endpoint_jets::certify_position(
+                law, true, max_work - out.exact_work,
+            )?;
+            out.exact_work += seam.exact_work;
+            seam.certified
+        } else {
+            endpoint_identity(law, &mut out.cells, max_cells)
+        };
+        if !equal {
             out.reason = Some("ideal-volume-exact-source-seam-unproved");
             return Ok(false);
         }

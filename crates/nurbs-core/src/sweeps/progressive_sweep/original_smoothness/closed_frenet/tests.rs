@@ -170,3 +170,73 @@ fn periodic_frenet_rejects_an_inexact_exterior_knot_seam() {
     assert!(!body.embedding_certified && !body.regularity_certified && !body.parameter_topology_preserved, "{body:?}");
     assert_eq!(body.reason, Some("ideal-volume-exact-source-seam-unproved"));
 }
+
+#[test]
+fn periodic_path_owns_authored_and_guided_closed_volume_charts() {
+    let path = frenet_source::periodic_path();
+    let axis = frenet_source::periodic_authored_axis(&path);
+    let normal = constant_vector_law([0., 0., 1.]).unwrap();
+    let mut guide = path.clone();
+    for p in &mut guide.control_points {
+        p[2] += 0.125;
+    }
+    let (profiles, cap, _) = source::material(true, true);
+    let scale = source::periodic(1., 1.03125);
+    let twist = source::periodic(0., 1. / 1024.);
+    for arc in [false, true] {
+        for authored in [false, true] {
+            let orientation = if authored { Orientation::Fixed } else { Orientation::FixedNormal };
+            let sweep = MultiSweep::new(&profiles, &path, &scale, &twist, Options {
+                orientation, ..options(arc)
+            }).unwrap();
+            let sweep = if authored {
+                sweep.with_frame_laws(&axis, &normal)
+            } else {
+                sweep.with_orientation_guide(&guide)
+            }.unwrap();
+            let body = sweep.certify_ideal_volume_atlas(
+                [&cap, &cap], [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]], 1000000, 1000000,
+            ).unwrap();
+            assert!(body.embedding_certified && body.regularity_certified && body.parameter_topology_preserved,
+                "arc={arc} authored={authored}: {body:?}");
+            eprintln!("periodic volume arc={arc} authored={authored}: {body:?}");
+        }
+    }
+}
+
+#[test]
+fn periodic_guide_and_authored_axis_require_exact_active_seam() {
+    let path = frenet_source::periodic_path();
+    let (profiles, cap, _) = source::material(false, true);
+    let scale = source::periodic(1., 1.03125);
+    let zero = constant_vector_law([0.; 3]).unwrap();
+    let normal = constant_vector_law([0., 0., 1.]).unwrap();
+    let mut guide = path.clone();
+    for point in &mut guide.control_points {
+        point[2] += 0.125;
+    }
+    guide.knots[1] = guide.knots[1].next_up();
+    guide.validate().unwrap();
+
+    let mut axis = frenet_source::periodic_authored_axis(&path);
+    axis.knots[1] = axis.knots[1].next_up();
+    axis.validate().unwrap();
+    let projection = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
+    for arc in [false, true] {
+        let guided = MultiSweep::new(&profiles, &path, &scale, &zero, options(arc))
+            .unwrap().with_orientation_guide(&guide).unwrap();
+        let proof = guided.certify_closed_guided_frame_smoothness(2, 100000, 1000000).unwrap();
+        assert!(!proof.closed_source_frame_smoothness_certified, "{proof:?}");
+        let body = guided.certify_ideal_volume_atlas([&cap, &cap], projection, 1000000, 1000000).unwrap();
+        assert_eq!(body.reason, Some("ideal-volume-exact-source-seam-unproved"));
+        assert!(!body.embedding_certified && !body.regularity_certified && !body.parameter_topology_preserved);
+
+        let authored = MultiSweep::new(&profiles, &path, &scale, &zero, Options {
+            orientation: Orientation::Fixed, ..options(arc)
+        }).unwrap().with_frame_laws(&axis, &normal).unwrap();
+        let proof = authored.certify_closed_authored_frame_smoothness(2, 100000, 1000000).unwrap();
+        assert!(!proof.closed_source_frame_smoothness_certified, "{proof:?}");
+        let body = authored.certify_ideal_volume_atlas([&cap, &cap], projection, 1000000, 1000000).unwrap();
+        assert!(!body.embedding_certified && !body.regularity_certified && !body.parameter_topology_preserved, "{body:?}");
+    }
+}
