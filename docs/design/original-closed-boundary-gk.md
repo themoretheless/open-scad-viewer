@@ -88,3 +88,19 @@ G1/G2, pole quotients, mixed C0/G1/G2 policies, unsupported contact/frame modes
 and arbitrary reindexed STEP gauges remain unproved and receive no success
 flag. Sharp corners and curvature jumps are preserved; a strict higher-order
 request refuses. This checkpoint does not complete the full user goal.
+
+## Exact material boundary for source charts
+
+`source_seam_tangency::vertices::material_boundary` combines the material
+volume owner, certified original face interiors, exact declared seam jets,
+material-side orientation, and complete physical vertex neighborhoods. The
+face and seam proofs must refer to the same immutable source body. Regular
+and pole-stratified face proofs use the same certificate. The edge and vertex
+projections select candidates for the native proofs.
+
+The certificate retains each declared C0/G1/G2 edge and every vertex order.
+The global order is the minimum of the face-interior, edge and vertex orders.
+A failure or budget exhaustion in any stage leaves the certificate absent and
+reports the stage and unresolved entity. This pipeline starts from admitted
+original charts. An analytic loft or sweep law still needs a separate proof
+that those charts describe its full original material boundary.
