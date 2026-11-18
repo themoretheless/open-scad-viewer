@@ -1134,8 +1134,25 @@ impl StepSharedAssembly {
         }).collect()
     }
 
+    /// Bound the forward ray parameter interval for each intersectable
+    /// occurrence box. These are broad-phase candidates in assembly order.
+    pub fn ray_candidates(
+        &self,
+        origin: [f64; 3],
+        direction: [f64; 3],
+    ) -> Result<Vec<(usize, [f64; 2])>> {
+        if !origin.iter().chain(&direction).all(|coordinate| coordinate.is_finite())
+            || direction == [0.; 3]
+        {
+            return Err(refuse("STEP assembly ray requires a finite origin and nonzero finite direction"));
+        }
+        Ok(self.occurrence_bounds()?.into_iter().enumerate().filter_map(|(index, bounds)| {
+            ray_box_interval(origin, direction, bounds).map(|interval| (index, interval))
+        }).collect())
+    }
+
     /// Trace a forward ray against placed trimmed faces. Returns occurrence
-    /// indices in assembly order, omitting only boxes excluded by axis signs.
+    /// indices in assembly order after conservative ray-box culling.
     /// Unresolved crossings and exhausted work remain explicit per occurrence.
     pub fn ray_crossings(
         &self,
@@ -1145,24 +1162,16 @@ impl StepSharedAssembly {
         max_cells: usize,
         max_domain_cells: usize,
     ) -> Result<Vec<(usize, Result<brep_core::ray_parity::Report>)>> {
-        if !origin.iter().chain(&direction).all(|coordinate| coordinate.is_finite())
-            || direction == [0.; 3]
-            || !tolerance_uv.is_finite() || tolerance_uv <= 0.
+        if !tolerance_uv.is_finite() || tolerance_uv <= 0.
             || !(1..=1_000_000).contains(&max_cells)
             || !(1..=8_000_000).contains(&max_domain_cells)
         {
-            return Err(refuse("STEP assembly ray requires finite geometry, positive tolerance and bounded work"));
+            return Err(refuse("STEP assembly ray requires positive tolerance and bounded work"));
         }
         let mut remaining_cells = max_cells;
         let mut remaining_domain = max_domain_cells;
         let mut results = Vec::new();
-        for (index, [lower, upper]) in self.occurrence_bounds()?.into_iter().enumerate() {
-            if (0..3).any(|axis| {
-                (direction[axis] >= 0. && upper[axis] < origin[axis])
-                    || (direction[axis] <= 0. && lower[axis] > origin[axis])
-            }) {
-                continue;
-            }
+        for (index, _) in self.ray_candidates(origin, direction)? {
             let report = if remaining_cells == 0 || remaining_domain == 0 {
                 Err(refuse("STEP assembly ray work budget exhausted"))
             } else {
@@ -1217,6 +1226,38 @@ impl StepSharedAssembly {
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
         brep_core::transform::affine(&self.definitions[occurrence.definition], occurrence.transform)
     }
+}
+
+fn ray_box_interval(
+    origin: [f64; 3],
+    direction: [f64; 3],
+    [min, max]: [[f64; 3]; 2],
+) -> Option<[f64; 2]> {
+    let (mut entry, mut exit) = (0_f64, f64::INFINITY);
+    for axis in 0..3 {
+        let start = origin[axis];
+        let velocity = direction[axis];
+        if velocity == 0. {
+            if start < min[axis] || start > max[axis] {
+                return None;
+            }
+            continue;
+        }
+        // Form both numerators for division by a positive speed, then
+        // round each arithmetic operation outward.
+        let (lo, hi) = if velocity > 0. {
+            (min[axis] - start, max[axis] - start)
+        } else {
+            (start - max[axis], start - min[axis])
+        };
+        let speed = velocity.abs();
+        entry = entry.max((lo.next_down() / speed).next_down());
+        exit = exit.min((hi.next_up() / speed).next_up());
+        if entry > exit {
+            return None;
+        }
+    }
+    Some([entry, exit])
 }
 
 fn weighted_centroid(placed: &[(f64, [f64; 3])]) -> Result<[f64; 3]> {

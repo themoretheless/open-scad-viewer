@@ -2848,6 +2848,33 @@ fn shared_step_scaled_cube_pair() -> crate::StepSharedAssembly {
 }
 
 #[test]
+fn shared_step_ray_candidates_filter_diagonal_misses() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let identity = assembly.occurrences()[0].transform;
+    let mut miss = identity;
+    miss[0][3] = 5.;
+    miss[1][3] = 10.;
+    assembly.set_occurrence_placement(1, miss).unwrap();
+    for (origin, direction) in [
+        ([-1., -1., 1.], [1., 1., 0.]),
+        ([3., 3., 1.], [-1., -1., 0.]),
+    ] {
+        let candidates = assembly.ray_candidates(origin, direction).unwrap();
+        assert_eq!(candidates.len(), 1);
+        let (index, [lo, hi]) = candidates[0];
+        assert_eq!(index, 0);
+        assert!(lo <= 1. && hi >= 3.);
+        assert!(1. - lo < 1e-12 && hi - 3. < 1e-12);
+    }
+    let inside = assembly.ray_candidates([1., 1., 1.], [1., 1., 0.]).unwrap();
+    assert_eq!(inside[0].1[0], 0.);
+    let corner = assembly.ray_candidates([-1., 1., 1.], [1., 1., 0.]).unwrap();
+    assert_eq!(corner.len(), 1);
+    assert!(corner[0].1[0] <= 1. && corner[0].1[1] >= 1.);
+    assert!(assembly.ray_candidates([0.; 3], [0.; 3]).is_err());
+}
+
+#[test]
 fn shared_step_first_ray_crossing_requires_unique_nearest_interval() {
     let mut assembly = shared_step_scaled_cube_pair();
     let identity = assembly.occurrences()[0].transform;

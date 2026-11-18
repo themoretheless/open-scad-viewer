@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 844,
-  "unallocatedCount": 156,
+  "specifiedCount": 845,
+  "unallocatedCount": 155,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19753,6 +19753,25 @@
       "remainingQualification": [
         "Return the nearest retained trimmed crossing when its complete ray interval strictly precedes all other candidates.",
         "Check nearest crossing out of occurrence order, a resolved miss, work exhaustion and coincident independent placements.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0845",
+      "name": "Консервативные интервалы луча по габаритам экземпляров STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::ray_candidates",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-845-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-845-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Intersect outward-rounded slab intervals to cull diagonal ray misses before trimmed face tracing.",
+        "Check diagonal rejection, forward and reverse bounds, inside origins, corner contact and zero direction refusal.",
         "WASM and application integration are separate."
       ]
     }
