@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 908,
-  "unallocatedCount": 92,
+  "specifiedCount": 909,
+  "unallocatedCount": 91,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20906,6 +20906,23 @@
       ],
       "remainingQualification": [
         "Two full untrimmed positive-weight tensor surfaces. Unproved threshold decisions remain unresolved."
+      ]
+    },
+    {
+      "id": "NURBS-0909",
+      "name": "Проверка монтажного зазора между обрезанными NURBS-гранями с отверстиями",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::analysis::curve_measure::inspect_trimmed_surface_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/surface_distance_queries.rs",
+        "docs/qualification/nurbs-spatial-clearance-909-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-909-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Trimmed positive-weight tensor surfaces with oriented UV loops. An admitted witness is required on each face. Unproved threshold decisions remain unresolved."
       ]
     }
   ],

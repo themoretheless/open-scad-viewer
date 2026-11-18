@@ -2604,6 +2604,27 @@ pub fn inspect_surface_surface_clearance(
     Ok((decision, report))
 }
 
+/// Inspect clearance on the retained regions of two UV-trimmed surfaces.
+/// A decision requires an admitted witness on each face, including for a zero threshold.
+pub fn inspect_trimmed_surface_clearance(
+    first: (&crate::surface::Surface, &crate::trim_domain::TrimDomain),
+    second: (&crate::surface::Surface, &crate::trim_domain::TrimDomain),
+    minimum: f64, tolerance: f64, max_cells: usize, max_domain_cells: usize,
+) -> Result<(ClearanceDecision, crate::trimmed_surface_distance::TrimmedDistance)> {
+    check(minimum.is_finite() && minimum >= 0., "Expected finite nonnegative clearance")?;
+    let report = crate::trimmed_surface_distance::distance(
+        first.0, first.1, second.0, second.1, tolerance, max_cells, max_domain_cells,
+    )?;
+    let decision = match (report.upper_bound_mm, &report.points, &report.point_enclosures) {
+        (Some(upper), Some(points), Some(bounds)) => patch_clearance_decision(
+            [report.lower_bound_mm, upper], points, [&bounds[0], &bounds[1]], minimum,
+            first.0.control_points.iter().flatten(), second.0.control_points.iter().flatten(),
+        ),
+        _ => ClearanceDecision::Unresolved,
+    };
+    Ok((decision, report))
+}
+
 fn patch_clearance_decision<'a>(
     [lo, hi]: [f64; 2], points: &[impl AsRef<[f64]>; 2], bounds: [&[[f64; 2]]; 2], minimum: f64,
     first: impl Iterator<Item=&'a Vec<f64>>, second: impl Iterator<Item=&'a Vec<f64>>,
