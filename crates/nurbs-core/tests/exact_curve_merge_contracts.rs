@@ -7616,3 +7616,52 @@ fn weighted_periodic_trim_inertia_about_line_accounts_for_nested_island() {
         None
     );
 }
+
+#[test]
+fn assembly_tensor_about_point_adds_all_shifted_components_and_cross_terms() {
+    use nurbs_core::analysis::surface_measure::{
+        SurfaceAssemblyMassBounds, bound_assembly_inertia_about_point,
+    };
+
+    let mut pieces = [([1., 2.], 2.), ([2., 4.], -3.)].map(|(mass, x)| SurfaceAssemblyMassBounds {
+        mass_bounds: mass,
+        centroid_bounds: [[x; 2], [1.; 2], [0.; 2]],
+        central_inertia_bounds: [[1., 0., 0.], [0., 1., 0.], [0., 0., 2.]]
+            .map(|row| row.map(|value| [value; 2])),
+    });
+    let tensor = bound_assembly_inertia_about_point(&pieces, [0.; 3]).unwrap();
+    for (interval, expected) in [
+        (tensor[0][0], [5., 8.]),
+        (tensor[1][1], [24., 46.]),
+        (tensor[2][2], [29., 54.]),
+        (tensor[0][1], [2., 10.]),
+    ] {
+        assert!(interval[0] <= expected[0] && expected[1] <= interval[1]);
+        assert!((interval[0] - expected[0]).abs() < 1e-12);
+        assert!((interval[1] - expected[1]).abs() < 1e-12);
+    }
+    assert_eq!(tensor[0][1], tensor[1][0]);
+    pieces[1].mass_bounds = [-1., 2.];
+    assert!(bound_assembly_inertia_about_point(&pieces, [0.; 3]).is_err());
+}
+
+#[test]
+fn weighted_periodic_trim_tensor_about_point_encloses_analytic_offset_inertia() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_mass_with_density;
+    let patches = periodic_trim_patches_with_nested_island();
+    let densities = [[2.; 2], [6.; 2]];
+    let report = periodic_trim_patch_set_mass_with_density(
+        &patches, &densities, 0.005, 1e-10, 20_000, 1_000_000,
+    )
+    .unwrap();
+    let tensor = report.bound_inertia_about_point([1., 0., 0.]).unwrap().unwrap();
+    let expected_zz = 2. * 83. / 768. + 6. * 49. / 12288. - 2. * 0.34375 + 2.875;
+    assert!(tensor[2][2][0] <= expected_zz && expected_zz <= tensor[2][2][1]);
+    assert!(tensor[0][1][0] <= 0.375 && 0.375 <= tensor[0][1][1]);
+    assert_eq!(tensor[0][1], tensor[1][0]);
+
+    let incomplete =
+        periodic_trim_patch_set_mass_with_density(&patches, &densities, 0.005, 1e-10, 2, 1_000_000)
+            .unwrap();
+    assert_eq!(incomplete.bound_inertia_about_point([1., 0., 0.]).unwrap(), None);
+}

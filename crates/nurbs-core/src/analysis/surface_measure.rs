@@ -958,7 +958,6 @@ pub fn bound_inertia_about_point(
     point: [f64; 3],
 ) -> Result<[[[f64; 2]; 3]; 3]> {
     let mass = Interval::new(mass_bounds[0], mass_bounds[1])?;
-    check(mass.lo >= 0., "Inertia mass bounds must be nonnegative")?;
     let centroid = centroid_intervals(centroid_bounds)?;
     let reference = centroid_intervals(point.map(|coordinate| [coordinate; 2]))?;
     translate_inertia(central, mass, centroid, reference)
@@ -970,6 +969,7 @@ fn translate_inertia(
     centroid: [Interval; 3],
     reference: [Interval; 3],
 ) -> Result<[[[f64; 2]; 3]; 3]> {
+    check(mass.lo >= 0., "Inertia mass bounds must be nonnegative")?;
     let matrix = symmetric_tensor_intervals(central)?;
     if mass.hi == 0. {
         return Ok(central);
@@ -1082,13 +1082,38 @@ fn combine_mass_properties(
 ) -> Result<SurfaceAssemblyMassBounds> {
     let pieces = pieces.collect::<Result<Vec<_>>>()?;
     let (mass, centroid) = enclose_mass_weighted_centroid(&pieces)?;
+    Ok(SurfaceAssemblyMassBounds {
+        mass_bounds: [mass.lo, mass.hi],
+        centroid_bounds: centroid.map(|coordinate| [coordinate.lo, coordinate.hi]),
+        central_inertia_bounds: sum_translated_surface_inertia(&pieces, centroid)?,
+    })
+}
+
+/// Enclose the complete tensor about a fixed reference point, translating
+/// each component before summing its contribution.
+pub fn bound_assembly_inertia_about_point(
+    pieces: &[SurfaceAssemblyMassBounds],
+    point: [f64; 3],
+) -> Result<[[[f64; 2]; 3]; 3]> {
+    check(
+        !pieces.is_empty(),
+        "Surface mass properties require at least one piece",
+    )?;
+    let reference = centroid_intervals(point.map(|coordinate| [coordinate; 2]))?;
+    sum_translated_surface_inertia(pieces, reference)
+}
+
+fn sum_translated_surface_inertia(
+    pieces: &[SurfaceAssemblyMassBounds],
+    reference: [Interval; 3],
+) -> Result<[[[f64; 2]; 3]; 3]> {
     let mut inertia = [[Interval::point(0.); 3]; 3];
     for piece in pieces {
         let translated = translate_inertia(
             piece.central_inertia_bounds,
             Interval::new(piece.mass_bounds[0], piece.mass_bounds[1])?,
             centroid_intervals(piece.centroid_bounds)?,
-            centroid,
+            reference,
         )?;
         for (i, row) in inertia.iter_mut().enumerate() {
             for (value, [lo, hi]) in row.iter_mut().zip(translated[i]) {
@@ -1096,11 +1121,7 @@ fn combine_mass_properties(
             }
         }
     }
-    Ok(SurfaceAssemblyMassBounds {
-        mass_bounds: [mass.lo, mass.hi],
-        centroid_bounds: centroid.map(|coordinate| [coordinate.lo, coordinate.hi]),
-        central_inertia_bounds: inertia.map(|row| row.map(|value| [value.lo, value.hi])),
-    })
+    Ok(inertia.map(|row| row.map(|value| [value.lo, value.hi])))
 }
 
 /// Enclose the moment of a surface assembly about a fixed spatial line by
@@ -1596,6 +1617,13 @@ impl TrimmedPatchSetDensityReport {
             .map(|_| {
                 bound_mass_weighted_centroid_plane_distance(&self.weighted_components, point, normal)
             })
+            .transpose()
+    }
+
+    /// Enclose the density-weighted tensor about a point in model coordinates.
+    pub fn bound_inertia_about_point(&self, point: [f64; 3]) -> Result<Option<[[[f64; 2]; 3]; 3]>> {
+        self.mass_properties
+            .map(|_| bound_assembly_inertia_about_point(&self.weighted_components, point))
             .transpose()
     }
 

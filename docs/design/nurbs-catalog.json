@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 640,
-  "unallocatedCount": 360,
+  "specifiedCount": 641,
+  "unallocatedCount": 359,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15815,6 +15815,25 @@
         "Expose opt-in density-weighted moment about a fixed spatial axis through the existing request.",
         "Check analytic offset-axis inertia of a density-weighted nested island through the compiled ABI, coexistence with plane distance, and refusal of incomplete or invalid input.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0641",
+      "name": "Полный тензор инерции разноплотной NURBS-сборки относительно заданной точки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::bound_assembly_inertia_about_point",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-641-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-641-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Translate each component tensor to the same fixed world point and add its contribution with outward rounding.",
+        "Check signed cross terms and analytic tensor diagonals under independent interval masses, a weighted nested island and incomplete integration.",
+        "WASM and application integration are separate."
       ]
     }
   ],
