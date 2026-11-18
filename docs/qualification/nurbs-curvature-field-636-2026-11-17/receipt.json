@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0636",
+  "testedBase": "189eb8488309092b75e132cacc52320710a9813e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 232,
+  "scope": [
+    "Bound the centroid using sorted mass endpoint assignments with shared numerator and denominator weights.",
+    "Compare against exhaustive interval-corner extrema, preserve one-piece bounds, and rerun density-weighted assembly regressions."
+  ],
+  "logSha256": "c1d1e4a164b5b2cf7dcb69add5a3b74ac53b6cf4e26563de61a78dffccb381f1",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "57bd1746c6b074365973eed6113f2e0cd420594e37af973f9affef0c16d9a288",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "6b6fd419d50619f3d9ee65c88f6f54132082b808c4240c7cd5e6a54e3fe47c77"
+  }
+}

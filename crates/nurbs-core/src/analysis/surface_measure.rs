@@ -1054,45 +1054,12 @@ pub fn combine_surface_mass_properties_with_density(
 }
 
 fn combine_mass_properties(
-    pieces: impl Iterator<Item = Result<SurfaceAssemblyMassBounds>> + Clone,
+    pieces: impl Iterator<Item = Result<SurfaceAssemblyMassBounds>>,
 ) -> Result<SurfaceAssemblyMassBounds> {
-    let Some(first) = pieces.clone().next().transpose()? else {
-        return Err(crate::input("Surface mass properties require at least one piece"));
-    };
-    let first_centroid = centroid_intervals(first.centroid_bounds)?;
-    let origin = first_centroid.map(|coordinate| {
-        Interval::point(crate::distance_bounds::midpoint(coordinate.lo, coordinate.hi))
-    });
-    let mut hull = first_centroid;
-    let mut mass = Interval::point(0.);
-    let mut first_moments = [Interval::point(0.); 3];
-    for piece in pieces.clone() {
-        let piece = piece?;
-        let weight = Interval::new(piece.mass_bounds[0], piece.mass_bounds[1])?;
-        check(
-            weight.lo > 0.,
-            "Each surface piece must have strictly positive mass or area",
-        )?;
-        let sum = mass.add(weight)?;
-        mass = sum.intersect(mass.lo.max(weight.lo), sum.hi)?;
-        let centroid = centroid_intervals(piece.centroid_bounds)?;
-        for i in 0..3 {
-            hull[i].lo = hull[i].lo.min(centroid[i].lo);
-            hull[i].hi = hull[i].hi.max(centroid[i].hi);
-            let local = centroid[i].sub(origin[i])?;
-            first_moments[i] = first_moments[i].add(local.mul(weight)?)?;
-        }
-    }
-
-    let mut centroid = origin;
-    for i in 0..3 {
-        centroid[i] = origin[i]
-            .add(first_moments[i].div(mass)?)?
-            .intersect(hull[i].lo, hull[i].hi)?;
-    }
+    let pieces = pieces.collect::<Result<Vec<_>>>()?;
+    let (mass, centroid) = enclose_mass_weighted_centroid(&pieces)?;
     let mut inertia = [[Interval::point(0.); 3]; 3];
     for piece in pieces {
-        let piece = piece?;
         let translated = translate_inertia(
             piece.central_inertia_bounds,
             Interval::new(piece.mass_bounds[0], piece.mass_bounds[1])?,
@@ -1110,6 +1077,88 @@ fn combine_mass_properties(
         centroid_bounds: centroid.map(|coordinate| [coordinate.lo, coordinate.hi]),
         central_inertia_bounds: inertia.map(|row| row.map(|value| [value.lo, value.hi])),
     })
+}
+
+/// Enclose the common center of positive-mass pieces. The extremal mass
+/// assignments account for the same weights in the numerator and denominator.
+pub fn bound_mass_weighted_centroid(
+    pieces: &[SurfaceAssemblyMassBounds],
+) -> Result<[[f64; 2]; 3]> {
+    let (_, centroid) = enclose_mass_weighted_centroid(pieces)?;
+    Ok(centroid.map(|axis| [axis.lo, axis.hi]))
+}
+
+fn enclose_mass_weighted_centroid(
+    pieces: &[SurfaceAssemblyMassBounds],
+) -> Result<(Interval, [Interval; 3])> {
+    check(!pieces.is_empty(), "Surface mass properties require at least one piece")?;
+    let mut mass = Interval::point(0.);
+    for piece in pieces {
+        let weight = Interval::new(piece.mass_bounds[0], piece.mass_bounds[1])?;
+        check(weight.lo > 0., "Each surface piece must have strictly positive mass or area")?;
+        mass = add_component_masses(mass, weight)?;
+        centroid_intervals(piece.centroid_bounds)?;
+    }
+
+    let mut centroid = [Interval::point(0.); 3];
+    let mut endpoints = Vec::with_capacity(pieces.len());
+    for (axis, interval) in centroid.iter_mut().enumerate() {
+        let mut bounds = [0.; 2];
+        for (side, output) in bounds.iter_mut().enumerate() {
+            endpoints.clear();
+            endpoints.extend(pieces.iter().map(|piece| {
+                (piece.centroid_bounds[axis][side], piece.mass_bounds)
+            }));
+            endpoints.sort_by(|a, b| a.0.total_cmp(&b.0));
+            *output = extremal_weighted_coordinate(&endpoints, side == 1)?;
+        }
+        *interval = Interval::new(bounds[0], bounds[1])?;
+    }
+    Ok((mass, centroid))
+}
+
+fn extremal_weighted_coordinate(endpoints: &[(f64, [f64; 2])], maximize: bool) -> Result<f64> {
+    let minimum = endpoints[0].0;
+    let maximum = endpoints[endpoints.len() - 1].0;
+    if minimum == maximum {
+        return Ok(minimum);
+    }
+    let origin = Interval::point(crate::distance_bounds::midpoint(minimum, maximum));
+    let mut samples = Vec::with_capacity(endpoints.len());
+    for &(position, weights) in endpoints {
+        samples.push((Interval::point(position).sub(origin)?, weights));
+    }
+
+    // Differentiating a weighted mean with respect to a weight gives
+    // the sign of (position - mean). An extremizer therefore switches
+    // between lower and upper weights at a single sorted position.
+    let left_weight = usize::from(!maximize);
+    let right_weight = usize::from(maximize);
+    let mut suffixes = vec![(Interval::point(0.), Interval::point(0.)); samples.len() + 1];
+    for (i, &(position, weights)) in samples.iter().enumerate().rev() {
+        let (mass, moment) = suffixes[i + 1];
+        let weight = Interval::point(weights[right_weight]);
+        suffixes[i] = (add_component_masses(mass, weight)?, moment.add(position.mul(weight)?)?);
+    }
+    let mut prefix_mass = Interval::point(0.);
+    let mut prefix_moment = Interval::point(0.);
+    let mut extreme = if maximize { minimum } else { maximum };
+    for (split, (right_mass, right_moment)) in suffixes.into_iter().enumerate() {
+        let mass = add_component_masses(prefix_mass, right_mass)?;
+        let moment = prefix_moment.add(right_moment)?;
+        let coordinate = origin.add(moment.div(mass)?)?;
+        extreme = if maximize {
+            extreme.max(coordinate.hi.min(maximum))
+        } else {
+            extreme.min(coordinate.lo.max(minimum))
+        };
+        if let Some(&(position, weights)) = samples.get(split) {
+            let weight = Interval::point(weights[left_weight]);
+            prefix_mass = add_component_masses(prefix_mass, weight)?;
+            prefix_moment = prefix_moment.add(position.mul(weight)?)?;
+        }
+    }
+    Ok(extreme)
 }
 
 fn symmetric_tensor_intervals(bounds: [[[f64; 2]; 3]; 3]) -> Result<[[Interval; 3]; 3]> {

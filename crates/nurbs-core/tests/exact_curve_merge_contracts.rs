@@ -7470,3 +7470,59 @@ fn periodic_trim_component_mass_fractions_follow_patch_order() {
             .unwrap();
     assert!(incomplete.component_mass_fractions().unwrap().is_none());
 }
+
+#[test]
+fn weighted_centroid_brackets_exact_interval_corner_extrema_tightly() {
+    use nurbs_core::analysis::surface_measure::{
+        SurfaceAssemblyMassBounds, bound_mass_weighted_centroid,
+    };
+
+    let pieces = [
+        ([6., 12.], [[10., 11.], [0.; 2], [-10., -9.]]),
+        ([2., 8.], [[-2., 0.], [0.; 2], [3., 4.]]),
+        ([1., 3.], [[2., 3.], [0.; 2], [1., 2.]]),
+    ]
+    .map(|(mass_bounds, centroid_bounds)| SurfaceAssemblyMassBounds {
+        mass_bounds,
+        centroid_bounds,
+        central_inertia_bounds: [[[0.; 2]; 3]; 3],
+    });
+    let bounds = bound_mass_weighted_centroid(&pieces).unwrap();
+    for (axis, [lo, hi]) in bounds.into_iter().enumerate() {
+        let mut reference = [f64::INFINITY, f64::NEG_INFINITY];
+        for side in 0..2 {
+            for mask in 0..8 {
+                let mut sum = 0.;
+                let mut mass = 0.;
+                for (i, piece) in pieces.iter().enumerate() {
+                    let weight = piece.mass_bounds[(mask >> i) & 1];
+                    sum += weight * piece.centroid_bounds[axis][side];
+                    mass += weight;
+                }
+                reference[0] = reference[0].min(sum / mass);
+                reference[1] = reference[1].max(sum / mass);
+            }
+        }
+        assert!(lo <= reference[0] && hi >= reference[1]);
+        assert!((lo - reference[0]).abs() < 1e-12 && (hi - reference[1]).abs() < 1e-12);
+    }
+}
+
+#[test]
+fn weighted_centroid_handles_one_piece_and_rejects_unproved_mass() {
+    use nurbs_core::analysis::surface_measure::{
+        SurfaceAssemblyMassBounds, bound_mass_weighted_centroid,
+    };
+    let mut piece = SurfaceAssemblyMassBounds {
+        mass_bounds: [f64::from_bits(1); 2],
+        centroid_bounds: [[-3., 1.], [4., 5.], [7.; 2]],
+        central_inertia_bounds: [[[0.; 2]; 3]; 3],
+    };
+    assert_eq!(
+        bound_mass_weighted_centroid(&[piece]).unwrap(),
+        piece.centroid_bounds
+    );
+    piece.mass_bounds = [0., 1.];
+    assert!(bound_mass_weighted_centroid(&[piece]).is_err());
+    assert!(bound_mass_weighted_centroid(&[]).is_err());
+}

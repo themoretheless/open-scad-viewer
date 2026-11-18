@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 635,
-  "unallocatedCount": 365,
+  "specifiedCount": 636,
+  "unallocatedCount": 364,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15715,6 +15715,25 @@
         "Attach interval mass fractions to each outer-contour component in WASM.",
         "Check dependent mass fractions through WASM, density-interval corner ratios, component identity, and incomplete-budget behavior.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0636",
+      "name": "Уточнение центра масс сборки NURBS при интервальных массах",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::bound_mass_weighted_centroid",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-636-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-636-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound the centroid using sorted mass endpoint assignments with shared numerator and denominator weights.",
+        "Compare against exhaustive interval-corner extrema, preserve one-piece bounds, and rerun density-weighted assembly regressions.",
+        "WASM and application integration are separate."
       ]
     }
   ],
