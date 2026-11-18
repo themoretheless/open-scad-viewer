@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0786",
+  "testedBase": "1bcd0bfba78efc086cb4917f7f342b6c695655a5",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 412,
+  "scope": [
+    "Certify relative planar angular derivatives on the union of both knot grids.",
+    "Check opposing rotations, combined derivative peaks, a reference knot and a singular reference."
+  ],
+  "logSha256": "43d75411d44f1fb1c69e129ae572daa4573185a223a97f4c6cde084e33a93a2d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "50928097f9310d90f4d59f42fbdf3edc211d0e08c6fdb2493d8f533981ef99f2",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "f62e5c0ea1cd87d72dc21b282549f80c3afa60714b9a5cdf5c8fafbddc187173"
+  }
+}

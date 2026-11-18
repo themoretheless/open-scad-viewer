@@ -12509,3 +12509,45 @@ fn relative_planar_orientation_sector_tracks_the_reference_knot_grid() {
         a <= 0.5 && 0.5 <= b && cell.status == Status::Undetermined
     }));
 }
+
+#[test]
+fn relative_planar_angular_motion_limits_find_combined_rotation_peaks() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status,
+        partition_relative_planar_angular_motion_limits,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 4.],
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let reference = Curve {
+        knots: vec![2., 2., 3., 4., 4.],
+        control_points: vec![vec![1., 1.], vec![1., 0.], vec![1., -1.]],
+        weights: vec![1.; 3],
+        ..direction.clone()
+    };
+    let limits = DirectionalMotionLimits { speed: 1.5, acceleration: 10., jerk: 3. };
+    let measure = |frame, budget| partition_relative_planar_angular_motion_limits(
+        &direction, frame, [2., 4.], limits, 0.005, budget,
+    );
+    assert!(measure(&reference, 1).is_err());
+    let report = measure(&reference, 511).unwrap();
+    assert_eq!(report.cells.first().unwrap().statuses, [Status::Within; 3]);
+    assert_eq!(report.cells.last().unwrap().statuses, [Status::Within; 3]);
+    assert!(report.cells.iter().any(|cell| {
+        cell.parameter_interval[0] == 3. && cell.spans == [1, 2]
+            && cell.statuses == [Status::Exceeds, Status::Within, Status::Exceeds]
+    }));
+    let singular = Curve {
+        control_points: vec![vec![1., 0.], vec![-1., 0.]],
+        ..direction.clone()
+    };
+    let report = measure(&singular, 511).unwrap();
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 3. && 3. <= b && cell.statuses == [Status::Undetermined; 3]
+    }));
+}

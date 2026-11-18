@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 785,
-  "unallocatedCount": 215,
+  "specifiedCount": 786,
+  "unallocatedCount": 214,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18607,6 +18607,25 @@
       "remainingQualification": [
         "Certify an angular sector in a synchronized rotating NURBS reference frame.",
         "Check relative rotation, independent rational reference knots and uncertainty at a zero reference direction.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0786",
+      "name": "Проверка пределов относительного углового движения двух NURBS-кривых",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_relative_planar_angular_motion_limits",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-786-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-786-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify relative planar angular derivatives on the union of both knot grids.",
+        "Check opposing rotations, combined derivative peaks, a reference knot and a singular reference.",
         "WASM and application integration are separate."
       ]
     }

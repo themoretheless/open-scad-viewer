@@ -1544,6 +1544,73 @@ pub fn partition_relative_planar_orientation_sector(
     Ok(RelativePlanarOrientationPartition { cells, work_cells })
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct RelativePlanarAngularMotionCell {
+    pub parameter_interval: [f64; 2],
+    /// The original spans of the direction and reference, respectively.
+    pub spans: [usize; 2],
+    /// Classifications of absolute relative speed, acceleration and jerk.
+    pub statuses: [DirectionalMotionStatus; 3],
+}
+
+#[derive(Clone, Debug)]
+pub struct RelativePlanarAngularMotionPartition {
+    pub cells: Vec<RelativePlanarAngularMotionCell>,
+    pub work_cells: usize,
+}
+
+/// Classify angular derivative limits in a rotating planar reference
+/// frame. Both curves use the same source parameter. Knot spans use
+/// one-sided derivatives and possible zero directions remain unresolved.
+pub fn partition_relative_planar_angular_motion_limits(
+    direction: &Curve,
+    reference: &Curve,
+    interval: [f64; 2],
+    limits: DirectionalMotionLimits,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<RelativePlanarAngularMotionPartition> {
+    use DirectionalMotionStatus::Undetermined;
+
+    validate(parameter_tolerance, max_cells)?;
+    let limits = [limits.speed, limits.acceleration, limits.jerk];
+    validate_motion_partition_limits(limits)?;
+    let (_, initial) = synchronized_clearance_cells([direction, reference], interval, [0.; 2])?;
+    check(direction.control_points[0].len() == 2, "Angular derivatives require planar direction curves")?;
+    let fixed = [direction, reference].map(|curve| fixed_cardinal_rotation(curve).is_some());
+    let (cells, work_cells) = partition_enclosed_cells(
+        initial, parameter_tolerance, max_cells,
+        |[span, reference_span], domain| {
+            let width = Interval::point(domain[1]).sub(Interval::point(domain[0]))?;
+            let angular = |curve, span, fixed| {
+                if fixed {
+                    return Ok(Some([Interval::point(0.); 3]));
+                }
+                let jets = curve_jets::enclose(curve, span, domain)?;
+                planar_angular_jets(&jets, width, 3)
+            };
+            let (Some(moving), Some(frame)) = (
+                angular(direction, span, fixed[0])?,
+                angular(reference, reference_span, fixed[1])?,
+            ) else {
+                return Ok(([Undetermined; 3], true));
+            };
+            if fixed == [true; 2] {
+                return Ok(([DirectionalMotionStatus::Within; 3], false));
+            }
+            let mut statuses = [Undetermined; 3];
+            for i in 0..3 {
+                statuses[i] = classify_absolute_motion(moving[i].sub(frame[i])?, limits[i]);
+            }
+            Ok((statuses, statuses.contains(&Undetermined)))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(spans, parameter_interval, statuses)| {
+        RelativePlanarAngularMotionCell { parameter_interval, spans, statuses }
+    }).collect();
+    Ok(RelativePlanarAngularMotionPartition { cells, work_cells })
+}
+
 fn prepare_orientation_sector(rays: [[f64; 2]; 2]) -> Result<([[f64; 2]; 2], bool)> {
     let [start, end] = rays;
     check(rays.iter().all(|ray| ray.iter().all(|x| x.is_finite()) && *ray != [0.; 2]),
@@ -1672,7 +1739,7 @@ fn partition_planar_angular_derivatives<const N: usize>(
     parameter_tolerance: f64,
     max_cells: usize,
 ) -> Result<(Vec<DirectionalMotionLimitCell<N>>, usize)> {
-    use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
+    use DirectionalMotionStatus::{Undetermined, Within};
 
     validate_motion_partition_limits(limits)?;
     direction.validate()?;
@@ -1691,15 +1758,7 @@ fn partition_planar_angular_derivatives<const N: usize>(
             let mut statuses = [Undetermined; N];
             for ((status, order), limit) in statuses.iter_mut().zip(orders).zip(limits) {
                 let value = values[order - 1];
-                let upper = value.lo.abs().max(value.hi.abs());
-                let lower = value.lo.max(-value.hi).max(0.);
-                *status = if upper <= limit {
-                    Within
-                } else if lower > limit {
-                    Exceeds
-                } else {
-                    Undetermined
-                };
+                *status = classify_absolute_motion(value, limit);
             }
             Ok((statuses, statuses.contains(&Undetermined)))
         },
@@ -1838,6 +1897,18 @@ pub fn planar_angular_motion_duration_bounds(
     )?;
     let duration_bounds = uniform_motion_duration_bounds(time_window, slowdown_bounds)?;
     Ok(PlanarAngularMotionDurationReport { slowdown_bounds, duration_bounds })
+}
+
+fn classify_absolute_motion(value: Interval, limit: f64) -> DirectionalMotionStatus {
+    let upper = value.lo.abs().max(value.hi.abs());
+    let lower = value.lo.max(-value.hi).max(0.);
+    if upper <= limit {
+        DirectionalMotionStatus::Within
+    } else if lower > limit {
+        DirectionalMotionStatus::Exceeds
+    } else {
+        DirectionalMotionStatus::Undetermined
+    }
 }
 
 fn planar_angular_jets(
