@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0621",
+  "testedBase": "e373aff77430cd5464931c1d7b9e5fd0fafa2a95",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 213,
+  "scope": [
+    "Tighten each ordered eigenvalue with an independent diagonal order bound and an outward-rounded off-diagonal norm bound.",
+    "Use overlapping uncertain diagonals and analytic coupled eigenvalues to verify rank-specific intervals; reject asymmetric and malformed tensors."
+  ],
+  "logSha256": "2594498e1f2baf401ef63e9e10d23f219c7a66d9c07bbbf3922d9f12dbcd7982",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "4b9c58f509cb4d5924d8e3887a239ade5c781b66538c7f985562d8b49d21d183",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "fabc9e748a11bd64225f582f1824c490f4a65fe31e3cda30e9c427582b2d133c"
+  }
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 620,
-  "unallocatedCount": 380,
+  "specifiedCount": 621,
+  "unallocatedCount": 379,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15416,6 +15416,25 @@
         "Expose sorted principal moment bounds and tolerance status for the common inertia tensor via an opt-in request field.",
         "Check optional tolerance, three principal intervals, unchanged legacy response shape, and absence of spectral output when the shared integration budget is exhausted.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0621",
+      "name": "Индивидуальные гарантированные интервалы собственных значений интервального тензора",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::bound_principal_moments_from_tensor",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-621-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-621-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Tighten each ordered eigenvalue with an independent diagonal order bound and an outward-rounded off-diagonal norm bound.",
+        "Use overlapping uncertain diagonals and analytic coupled eigenvalues to verify rank-specific intervals; reject asymmetric and malformed tensors.",
+        "WASM and application integration are separate."
       ]
     }
   ],

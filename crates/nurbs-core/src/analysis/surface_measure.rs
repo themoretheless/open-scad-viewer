@@ -772,13 +772,13 @@ fn bound_optional_principal_moments(
     central_inertia_bounds: Option<[[[f64; 2]; 3]; 3]>,
     moment_tolerance: f64,
 ) -> Result<(Option<PrincipalMomentBounds>, bool)> {
-    check(
-        moment_tolerance.is_finite() && moment_tolerance > 0.,
-        "Principal moment tolerance must be positive and finite",
-    )?;
-    let principal_bounds = central_inertia_bounds
-        .map(|bounds| principal_moment_intervals(bounds, moment_tolerance))
-        .transpose()?;
+    let principal_bounds = match central_inertia_bounds {
+        Some(bounds) => Some(bound_principal_moments_from_tensor(bounds, moment_tolerance)?),
+        None => {
+            validate_moment_tolerance(moment_tolerance)?;
+            None
+        }
+    };
     let within_moment_tolerance = principal_bounds.is_some_and(|bounds| {
         bounds
             .into_iter()
@@ -787,10 +787,24 @@ fn bound_optional_principal_moments(
     Ok((principal_bounds, within_moment_tolerance))
 }
 
-fn principal_moment_intervals(bounds: [[[f64; 2]; 3]; 3], tolerance: f64) -> Result<[[f64; 2]; 3]> {
+fn validate_moment_tolerance(tolerance: f64) -> Result<()> {
+    check(
+        tolerance.is_finite() && tolerance > 0.,
+        "Principal moment tolerance must be positive and finite",
+    )
+}
+
+/// Enclose the ascending eigenvalues of every symmetric tensor inside the
+/// supplied entry intervals. The tolerance controls spectral refinement.
+pub fn bound_principal_moments_from_tensor(
+    bounds: [[[f64; 2]; 3]; 3],
+    tolerance: f64,
+) -> Result<[[f64; 2]; 3]> {
+    validate_moment_tolerance(tolerance)?;
     let mut matrix = [[Interval::point(0.); 3]; 3];
     let mut low = f64::INFINITY;
     let mut high = f64::NEG_INFINITY;
+    let mut off_diagonal_norm = 0.0_f64;
     for (i, row) in matrix.iter_mut().enumerate() {
         let mut radius = 0.0_f64;
         for (j, value) in row.iter_mut().enumerate() {
@@ -804,10 +818,17 @@ fn principal_moment_intervals(bounds: [[[f64; 2]; 3]; 3], tolerance: f64) -> Res
                 radius = (radius + lo.abs().max(hi.abs())).next_up();
             }
         }
+        off_diagonal_norm = off_diagonal_norm.max(radius);
         low = low.min((row[i].lo - radius).next_down());
         high = high.max((row[i].hi + radius).next_up());
     }
     Interval::new(low, high)?;
+    // Weyl bounds the ordered eigenvalue shift by the symmetric
+    // off-diagonal matrix's maximum absolute row sum.
+    let mut diagonal_lower = [0, 1, 2].map(|i| matrix[i][i].lo);
+    let mut diagonal_upper = [0, 1, 2].map(|i| matrix[i][i].hi);
+    diagonal_lower.sort_by(f64::total_cmp);
+    diagonal_upper.sort_by(f64::total_cmp);
     let mut moments = [[low; 2]; 3];
     for (index, moment) in moments.iter_mut().enumerate() {
         let mut bounds = [low, high];
@@ -837,7 +858,9 @@ fn principal_moment_intervals(bounds: [[[f64; 2]; 3]; 3], tolerance: f64) -> Res
                 break;
             }
         }
-        *moment = bounds;
+        let ordered_lo = (diagonal_lower[index] - off_diagonal_norm).next_down();
+        let ordered_hi = (diagonal_upper[index] + off_diagonal_norm).next_up();
+        *moment = [bounds[0].max(ordered_lo), bounds[1].min(ordered_hi)];
     }
     Ok(moments)
 }

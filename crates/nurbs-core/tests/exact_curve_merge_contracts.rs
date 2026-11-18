@@ -6980,3 +6980,51 @@ fn periodic_trim_patch_set_principal_moments_resolve_repeated_exact_values() {
         assert!(lo <= reference && reference <= hi);
     }
 }
+
+#[test]
+fn interval_tensor_eigenvalues_keep_individual_bounds_under_entry_uncertainty() {
+    use nurbs_core::analysis::surface_measure::bound_principal_moments_from_tensor;
+
+    let tensor = [
+        [[12., 20.], [-0.5, 1.], [0.; 2]],
+        [[-0.5, 1.], [1., 8.], [0.; 2]],
+        [[0.; 2], [0.; 2], [6., 11.]],
+    ];
+    // A large stopping tolerance bypasses spectral bisection, isolating
+    // the individual bounds from the diagonal order statistics.
+    let ranges = bound_principal_moments_from_tensor(tensor, 100.).unwrap();
+    for (range, expected) in ranges.into_iter().zip([[0., 9.], [5., 12.], [11., 21.]]) {
+        for axis in 0..2 {
+            assert!((range[axis] - expected[axis]).abs() < 1e-12, "{ranges:?}");
+        }
+    }
+    for a in [12., 20.] {
+        for b in [1., 8.] {
+            for c in [6., 11.] {
+                for off in [-0.5, 0., 1.] {
+                    let split = ((a - b) / 2.0_f64).hypot(off);
+                    let mut eigenvalues = [(a + b) / 2. - split, (a + b) / 2. + split, c];
+                    eigenvalues.sort_by(f64::total_cmp);
+                    for ([lo, hi], eigenvalue) in ranges.into_iter().zip(eigenvalues) {
+                        assert!(lo <= eigenvalue && eigenvalue <= hi);
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn interval_tensor_eigenvalues_validate_bounds_and_tolerance() {
+    use nurbs_core::analysis::surface_measure::bound_principal_moments_from_tensor;
+
+    let mut tensor = [[[0.; 2]; 3]; 3];
+    assert!(bound_principal_moments_from_tensor(tensor, 0.).is_err());
+    tensor[0][1] = [0., 1.];
+    assert!(bound_principal_moments_from_tensor(tensor, 1.).is_err());
+    tensor[1][0] = tensor[0][1];
+    tensor[1][1] = [2., 1.];
+    assert!(bound_principal_moments_from_tensor(tensor, 1.).is_err());
+    tensor[1][1] = [1., f64::INFINITY];
+    assert!(bound_principal_moments_from_tensor(tensor, 1.).is_err());
+}
