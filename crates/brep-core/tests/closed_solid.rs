@@ -385,7 +385,17 @@ fn independent_open_ss_networks_complete_both_intersection_bodies() {
             [0., 0., 1., 0.], [0., 0., 0., 1.],
         ]).unwrap();
         let combined = brep_core::operations::boolean(model, &translated, "union").unwrap();
-        solid::qualify(combined, policy()).unwrap().into_solid().unwrap()
+        let admission = solid::qualify(combined, policy()).unwrap();
+        let report = admission.geometry();
+        assert!(report.proven,
+            "Disjoint fixture must qualify (agreement={}, joins={}, trim={}, injective={}, pairs={}, nesting={:?})",
+            report.boundary.agreement.all_equal,
+            report.boundary.agreement.all_joins_exact,
+            report.boundary.trim.all_valid,
+            report.boundary.intersections.faces.all_faces_injective,
+            report.boundary.intersections.pairs.all_pairs_classified,
+            report.nesting.as_ref().and_then(|nesting| nesting.roles_consistent));
+        admission.into_solid().unwrap()
     });
     let operands = solids.each_ref();
     let face_pairs = [[1, 1], [7, 7]];

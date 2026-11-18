@@ -7,8 +7,42 @@ use nurbs_core::surface::Surface;
 /// independently; exhausted work or unsupported nets retain unresolved status.
 pub(crate) fn inspect(a: &Surface, b: &Surface, max_cells: usize) -> (bool, usize) {
     let points = [a, b].map(|s| s.control_points.iter().flatten().collect::<Vec<_>>());
-    if max_cells == 0 || points.iter().any(|ps| ps.len() > 16) {
+    if max_cells == 0 || points.iter().any(|ps| ps.is_empty() || ps.len() > 16) {
         return (false, 0);
+    }
+    // A Cartesian gap needs only exact ordering of the original binary64 poles.
+    // This also covers separated coplanar chart hulls, where supporting planes
+    // through triples of poles can all contain both charts.
+    if [a, b].iter().all(|surface| {
+        surface
+            .weights
+            .iter()
+            .flatten()
+            .all(|w| w.is_finite() && *w > 0.)
+    }) {
+        let bounds = points.each_ref().map(|ps| {
+            ps.iter().fold(
+                [[f64::INFINITY, f64::NEG_INFINITY]; 3],
+                |mut bounds, point| {
+                    for (interval, value) in bounds.iter_mut().zip(point.iter().copied()) {
+                        interval[0] = interval[0].min(value);
+                        interval[1] = interval[1].max(value);
+                    }
+                    bounds
+                },
+            )
+        });
+        if points
+            .iter()
+            .flatten()
+            .all(|point| point.len() == 3 && point.iter().all(|v| v.is_finite()))
+            && bounds[0]
+                .iter()
+                .zip(bounds[1])
+                .any(|(a, b)| a[1] < b[0] || b[1] < a[0])
+        {
+            return (true, 1);
+        }
     }
     let values = points
         .iter()
@@ -30,7 +64,7 @@ pub(crate) fn inspect(a: &Surface, b: &Surface, max_cells: usize) -> (bool, usiz
         None,
     );
     let refs = |i: usize| std::array::from_fn(|k| source.leaf(3 * i + k).unwrap());
-    let mut cells = 0;
+    let mut cells = 1;
     let mut offset = 0;
     for face in 0..2 {
         let n = points[face].len();
@@ -106,6 +140,23 @@ mod tests {
             periodic_u: false,
             periodic_v: false,
         }
+    }
+    #[test]
+    fn cartesian_gap_separates_coplanar_hulls_in_one_cell() {
+        let mut a = patch(0.);
+        for point in a.control_points.iter_mut().flatten() {
+            point[2] = 0.;
+        }
+        let mut b = a.clone();
+        for point in b.control_points.iter_mut().flatten() {
+            point[0] += 2.;
+        }
+        assert_eq!(inspect(&a, &b, 1), (true, 1));
+        assert_eq!(inspect(&b, &a, 1), (true, 1));
+        for point in b.control_points.iter_mut().flatten() {
+            point[0] -= 1.;
+        }
+        assert_eq!(inspect(&a, &b, 1), (false, 1));
     }
     #[test]
     fn exact_oblique_gap_is_proved_but_touch_overlap_and_zero_budget_are_not() {
