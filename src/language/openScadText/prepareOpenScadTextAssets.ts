@@ -10,12 +10,11 @@ import {
   OpenScadTextError,
   loadHarfBuzz,
   preparedRuntimes,
+  textError,
 } from '../openScadText'
 import type {
   HarfBuzzApi,
   HarfBuzzFace,
-  OpenScadTextErrorCode,
-  OpenScadTextErrorDetails,
   OpenScadTextFont,
   ParsedFontQuery,
   PreparedOpenScadTextAssets,
@@ -26,14 +25,7 @@ import { OpenScadProject, resolveOpenScadProjectPath } from '../openScadProject'
 import type { OpenScadProjectBlobFile } from '../openScadProject'
 import { u32 } from '../../core/bytes'
 
-export function textError(
-  code: OpenScadTextErrorCode,
-  message: string,
-  details: OpenScadTextErrorDetails = {},
-  cause?: unknown,
-): never {
-  throw new OpenScadTextError(code, message, details, cause === undefined ? {} : { cause })
-}
+export { textError }
 
 export function u16(bytes: Uint8Array, offset: number): number {
   return bytes[offset]! * 0x100 + bytes[offset + 1]!

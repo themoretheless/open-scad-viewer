@@ -13,6 +13,7 @@ import { AbortedError } from '../language/openscadErrors'
 import type { RGBA } from '../language/openscadColors'
 import type { PreparedOpenScadImportAssets } from '../exchange/openScadImport'
 import type { OpenScadProject } from '../language/openScadProject'
+import type * as OpenScadProjectRuntime from '../language/openScadProjectRuntime'
 import type { OpenScadStableScope } from '../language/openScadStableScope'
 import type { PreparedOpenScadSurfaceAssets } from '../language/openScadSurface'
 import type { PreparedOpenScadTextAssets } from '../language/openScadText'
@@ -127,6 +128,8 @@ export interface EvalContext {
   importAssets?: PreparedOpenScadImportAssets | undefined
   surfaceAssets?: PreparedOpenScadSurfaceAssets | undefined
   textAssets?: PreparedOpenScadTextAssets | undefined
+  /** Loaded with the prepared assets; present exactly when `project` is. */
+  projectRuntime?: typeof OpenScadProjectRuntime | undefined
   languageProfile: OpenScadLanguageProfile
   env: Map<string, Value>
   functions: Map<string, FunctionNode>

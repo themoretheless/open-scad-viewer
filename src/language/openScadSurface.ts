@@ -1,12 +1,9 @@
 import type { CallNode } from './openscadCompiler'
 import { OpenSCADParseError } from './openscadErrors'
-export { parseOpenScadSurfaceDat } from './openScadSurface/parseOpenScadSurfaceDat'
-export {
-  decodeOpenScadSurfacePng,
-  prepareOpenScadSurfaceAssets,
-  loadOpenScadSurfaceHeightMap,
-  triangulateOpenScadSurface,
-} from './openScadSurface/decodeOpenScadSurfacePng'
+
+// Shared contract: constants, errors, types and small helpers. Asset preparation and evaluation code
+// lives in the modules under ./openScadSurface/ and is reached through openScadProjectRuntime, so
+// this module must not re-export it; a re-export pulls it back into the geometry build engine chunk.
 
 export const OPENSCAD_SURFACE_MAX_DIMENSION = 4_096
 export const OPENSCAD_SURFACE_MAX_PIXELS = 250_000

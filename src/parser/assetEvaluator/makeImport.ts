@@ -13,12 +13,7 @@ import {
   type OpenScad2021LegacyImportFormat,
 } from '../../exchange/openScadImport'
 
-import {
-  loadOpenScadSurfaceHeightMap,
-  OpenScadSurfaceDataError,
-  OpenScadSurfaceError,
-  triangulateOpenScadSurface,
-} from '../../language/openScadSurface'
+import { OpenScadSurfaceDataError, OpenScadSurfaceError } from '../../language/openScadSurface'
 
 import { nextColor } from '../../language/openscadColors'
 
@@ -249,7 +244,7 @@ export function surfaceError(
 }
 
 export function makeSurface(node: CallNode, ctx: EvalContext): Shape[] {
-  if (ctx.project === undefined || ctx.surfaceAssets === undefined) {
+  if (ctx.project === undefined || ctx.surfaceAssets === undefined || ctx.projectRuntime === undefined) {
     return surfaceError(
       node,
       ctx,
@@ -273,9 +268,15 @@ export function makeSurface(node: CallNode, ctx: EvalContext): Shape[] {
 
   let assetPath: string | undefined
   try {
-    const loaded = loadOpenScadSurfaceHeightMap(ctx.project, ctx.surfaceAssets, importer, fileValue, invert)
+    const loaded = ctx.projectRuntime.loadOpenScadSurfaceHeightMap(
+      ctx.project,
+      ctx.surfaceAssets,
+      importer,
+      fileValue,
+      invert,
+    )
     assetPath = loaded.path
-    const surface = triangulateOpenScadSurface(loaded.map, center)
+    const surface = ctx.projectRuntime.triangulateOpenScadSurface(loaded.map, center)
     const geometry = ctx.kernel.ofMesh(surface.vertices, surface.triangles)
     return [trackedSolid(geometry, nextColor(), node, ctx)]
   } catch (error) {
