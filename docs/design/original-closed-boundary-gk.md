@@ -124,3 +124,10 @@ proof checks each interface with positive reparameterization and regularity.
 Crossing U/V cuts contribute all adjacent tile interfaces. The audit uses the
 remaining regularity cells and exact work, and reports the unresolved face
 and number of geometric interfaces proved.
+
+For a periodic chart, the audit first opens exactly one authored period along
+each periodic axis. It checks all internal interfaces in the same grid and
+adds the physical last-to-first interface along each opened axis. A doubly
+periodic chart receives both families of wrap interfaces, including their
+intersection. Exact opening, tiling and geometric seam identities all draw
+from the shared exact work allowance.
