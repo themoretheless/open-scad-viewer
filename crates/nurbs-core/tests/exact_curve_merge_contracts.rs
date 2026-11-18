@@ -11332,3 +11332,37 @@ fn scheduled_peak_contact_report_returns_sorted_confirmed_pairs_and_time() {
     assert_eq!(uncertain.pair_count_bounds, [0, 1]);
     assert_eq!(uncertain.witness, None);
 }
+
+#[test]
+fn scheduled_contact_query_accounts_for_rounding_and_shared_endpoints() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, ScheduledClearanceCell, ScheduledContactPairs,
+        ScheduledToolPairCell, ScheduledToolsClearancePartition,
+    };
+    let cell = |tools, time, status| ScheduledToolPairCell {
+        tools,
+        clearance: ScheduledClearanceCell {
+            time_endpoint_bounds: time,
+            gap_bounds: if status == Status::Exceeds { [-2., -1.] } else { [-1., 1.] },
+            status,
+        },
+    };
+    let report = ScheduledToolsClearancePartition {
+        cells: vec![
+            cell([1, 2], [[2., 2.25], [4.; 2]], Status::Exceeds),
+            cell([0, 1], [[-1.; 2], [2.; 2]], Status::Exceeds),
+            cell([0, 1], [[2.; 2], [3.; 2]], Status::Exceeds),
+            cell([0, 2], [[2.; 2]; 2], Status::Undetermined),
+        ],
+        work_cells: 4,
+    };
+    assert_eq!(report.contact_pairs_at_time(2.).unwrap(), ScheduledContactPairs {
+        confirmed: vec![[0, 1]],
+        possible: vec![[0, 1], [0, 2], [1, 2]],
+    });
+    assert_eq!(report.contact_pairs_at_time(2.25).unwrap(), ScheduledContactPairs {
+        confirmed: vec![[0, 1], [1, 2]],
+        possible: vec![[0, 1], [1, 2]],
+    });
+    assert!(report.contact_pairs_at_time(f64::NAN).is_err());
+}

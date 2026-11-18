@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0752",
+  "testedBase": "cc47368bb2bb102411c15af56984cd838fdf9a1e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 377,
+  "scope": [
+    "Query concrete confirmed and possible tool pairs at a given absolute time.",
+    "Check inward and outward rounding, shared endpoints, distinct sorted pairs, and invalid time."
+  ],
+  "logSha256": "0a086847de71fadc663f7a10d16ef0fbfdc09c82cd94e2dfd6b5f668bbda2af9",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "bcbd6a510d0c22fc0bff2f2807f0711559c52fbf3eec7fad6f1e84cdb5ddc707",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "88578a4b45b0144d39d963164fd5b079aaeade48d9cd5782cf527891cd40eca4"
+  }
+}

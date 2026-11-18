@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 751,
-  "unallocatedCount": 249,
+  "specifiedCount": 752,
+  "unallocatedCount": 248,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17961,6 +17961,25 @@
       "remainingQualification": [
         "Return a certified time and distinct contacting pairs for the peak lower bound.",
         "Check the inward-rounded witness time, sorted distinct pairs, a larger possible peak and lack of a confirmed witness.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0752",
+      "name": "Подтверждённые и возможные пары контактов в заданный момент",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::contact_pairs_at_time",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-752-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-752-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Query concrete confirmed and possible tool pairs at a given absolute time.",
+        "Check inward and outward rounding, shared endpoints, distinct sorted pairs, and invalid time.",
         "WASM and application integration are separate."
       ]
     }

@@ -2901,7 +2901,41 @@ pub struct PeakScheduledContactReport {
     pub witness: Option<PeakScheduledContactWitness>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ScheduledContactPairs {
+    /// Sorted distinct pairs proved to be in contact.
+    pub confirmed: Vec<[usize; 2]>,
+    /// Sorted distinct pairs whose contact remains possible, including confirmed pairs.
+    pub possible: Vec<[usize; 2]>,
+}
+
 impl ScheduledToolsClearancePartition {
+    /// Query contact at a finite absolute time within the represented
+    /// pair timelines. Shared endpoints are included in both adjacent cells.
+    pub fn contact_pairs_at_time(&self, time: f64) -> Result<ScheduledContactPairs> {
+        check(time.is_finite(), "Contact query time must be finite")?;
+        let mut confirmed = Vec::new();
+        let mut possible = Vec::new();
+        for cell in &self.cells {
+            let [[start_lo, start_hi], [end_lo, end_hi]] = cell.clearance.time_endpoint_bounds;
+            if cell.clearance.status != DirectionalMotionStatus::Within
+                && start_lo <= time && time <= end_hi
+            {
+                possible.push(cell.tools);
+            }
+            if cell.clearance.status == DirectionalMotionStatus::Exceeds
+                && start_hi <= time && time <= end_lo
+            {
+                confirmed.push(cell.tools);
+            }
+        }
+        for pairs in [&mut confirmed, &mut possible] {
+            pairs.sort_unstable();
+            pairs.dedup();
+        }
+        Ok(ScheduledContactPairs { confirmed, possible })
+    }
+
     /// Bound the maximum number of distinct pairs in simultaneous contact
     /// across the represented timelines. Contacts include shared endpoints.
     pub fn peak_contact_pair_count_bounds(&self) -> [usize; 2] {
