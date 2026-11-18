@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0856",
+  "testedBase": "5a799d2be310a584e4bed3206a5ef050cfc65309",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 203,
+  "scope": [
+    "Create an editable shared assembly directly from local solids and authored orthogonal placements, preserving occurrence order and definition identities.",
+    "Reject invalid references, unused definitions, singular placement and occurrence overflow. Round-trip a local occurrence edit and the twenty-gear spinner."
+  ],
+  "logSha256": "23ce9798d597631a92e4d0fe311175fe7371cb626ad8a3df772da5f2c6471d3d",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "bb89e668a625d255541b6ca4d179c4cd4d9c88458c5bdb345c33728aff7bf764",
+    "crates/cad-step/src/step_v3_export.rs": "ea1ab5d27b1703976aaaff573b7550ecfb7ea698c4a1a8d718c48b630ec7c83f",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "d52b0c472efa828bfcd3c57b04e91a219eaa85b9616f9af89f67617d6f16f9b2"
+  }
+}

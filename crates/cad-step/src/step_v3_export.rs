@@ -870,21 +870,16 @@ pub fn export_planetary_gear_set_step(
     if planets.placements().len() > 254 {
         return Err(refuse("Planetary assembly exceeds the STEP limit of 256 occurrences"));
     }
-    if [sun, ring, planets.prototype()].iter().any(|model| {
-        model.bodies.len() != 1 || model.shells.iter().any(|shell| !shell.closed)
-    }) {
-        return Err(refuse("Planetary assembly requires one solid per gear definition"));
-    }
-    let model = crate::compose_step_v7_occurrences(&[sun.clone(), ring.clone(), planets.prototype().clone()])?;
     let identity = [
         [1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
     ];
-    let mut placements = vec![(0, identity), (1, identity)];
-    placements.extend(planets.placements().iter().copied().map(|matrix| (2, matrix)));
-    let (text, _, _) = export_step_direct_impl(
-        &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(AssemblyExport { placements: &placements, definition_tolerances: &[sun.tolerance_mm, ring.tolerance_mm, planets.prototype().tolerance_mm] }),
+    let placed = |definition, transform| crate::StepAssemblyOccurrence { definition, transform };
+    let mut placements = vec![placed(0, identity), placed(1, identity)];
+    placements.extend(planets.placements().iter().map(|&transform| placed(2, transform)));
+    let assembly = crate::StepSharedAssembly::from_placed_solids(
+        vec![sun.clone(), ring.clone(), planets.prototype().clone()], placements,
     )?;
-    Ok(text)
+    export_step_shared_assembly(&assembly)
 }
 
 /// Serialize current shared definitions with their nonsingular orthogonal placements.
