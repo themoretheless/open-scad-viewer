@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 650,
-  "unallocatedCount": 350,
+  "specifiedCount": 651,
+  "unallocatedCount": 349,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16015,6 +16015,28 @@
         "Generate candidate directions from row cross products of the shifted midpoint tensor and certify them against full intervals.",
         "Automatically certify all three rotated axes and preserve only the isolated axis when two moments coincide.",
         "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0651",
+      "name": "Сертифицированные главные оси инерции разноплотной NURBS-сборки через WASM",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
+      "evidence": [
+        "crates/geometry-bridge/src/brep/nurbs.rs",
+        "crates/geometry-bridge/src/dispatch/brep.rs",
+        "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
+        "scripts/check-exact-periodic-trim-sheet-abi.mts",
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "docs/qualification/nurbs-curvature-field-651-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-651-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Expose opt-in principal directions and angular certificates, preserving unavailable axes explicitly.",
+        "Check a certifiable isolated axis and unresolved repeated directions on separated density-weighted components through the compiled ABI, plus incomplete budget.",
+        "Editor and production delivery qualification remain."
       ]
     }
   ],

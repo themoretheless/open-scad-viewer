@@ -1,0 +1,49 @@
+{
+  "id": "NURBS-0651",
+  "testedBase": "abcb6ad0867616dd0436ab7d6e0dc9caa8487c42",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 296,
+  "scope": [
+    "Expose opt-in principal directions and angular certificates, preserving unavailable axes explicitly.",
+    "Check a certifiable isolated axis and unresolved repeated directions on separated density-weighted components through the compiled ABI, plus incomplete budget."
+  ],
+  "logSha256": "e426967d514b25f4621e8498fba648b2cf76fd5b7b5fa1da204ac9288f401b7e",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "1cf16a23be3cd5628ee845394dbf08ec03753d64377e71da2ac6b087ce89c78a",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "dc0fb5a668790fd7dd354f847ee463aa1180d490e32491a3ddb6bd0d0ebea1df",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "d4cc0fdc5bc83a376ab448d79f990089936c88b4cc366cdcdec31c40e9845f3b",
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "9ce7133f936fdeca2e72f64e5a573f4a15f1e219d4a319d1aed8bbecc401446d"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

@@ -1473,6 +1473,14 @@ pub fn exact_periodic_trim_patch_set_density_request(
             Ok(tolerance)
         })
         .transpose()?;
+    let include_principal_axes = request
+        .get("includePrincipalAxes")
+        .map(|_| field::<bool>(request, "includePrincipalAxes"))
+        .transpose()?
+        .unwrap_or(false);
+    if include_principal_axes && moment_tolerance.is_none() {
+        return Err(input("Principal axes require a moment tolerance"));
+    }
     let inertia_axis = optional_inertia_axis(request)?;
     let include_axis_radius = include_axis_radius(request, inertia_axis.is_some())?;
     let center_plane = request
@@ -1531,6 +1539,9 @@ pub fn exact_periodic_trim_patch_set_density_request(
     if include_axis_radius {
         response["axisRadiusOfGyrationBoundsMm"] = Value::Null;
     }
+    if include_principal_axes {
+        response["principalAxes"] = Value::Null;
+    }
     let Some(patches) = build.patches else {
         return Ok(response);
     };
@@ -1581,6 +1592,16 @@ pub fn exact_periodic_trim_patch_set_density_request(
         let (bounds, within_tolerance) = report.bound_principal_moments(tolerance)?;
         response["principalMomentBoundsKgMm2"] = json!(bounds);
         response["withinMomentTolerance"] = json!(within_tolerance);
+        if include_principal_axes {
+            let axes = report.bound_principal_axes(tolerance)?.map(|axes| {
+                axes.map(|axis| {
+                    axis.map(|axis| {
+                        json!({"direction": axis.direction, "sinAngleUpper": axis.sin_angle_upper})
+                    })
+                })
+            });
+            response["principalAxes"] = json!(axes);
+        }
     }
     response["massBoundsKg"] = json!(report.total_mass_bounds);
     let fractions = report.component_mass_fractions()?;

@@ -1028,3 +1028,30 @@ fn patch_set_density_encloses_first_mass_moment_about_requested_plane() {
         Some(&Value::Null)
     );
 }
+
+#[test]
+fn patch_set_density_certifies_axis_of_separated_components() {
+    let mut request = patch_set_density_request(20_000);
+    request["contours"] = json!([
+        [[0.125, 0.125], [0.1875, 0.125], [0.1875, 0.1875], [0.125, 0.1875], [0.125, 0.125]],
+        [[0.125, 0.8125], [0.1875, 0.8125], [0.1875, 0.875], [0.125, 0.875], [0.125, 0.8125]]
+    ]);
+    request["componentDensities"][0]["outerContour"] = json!(1);
+    request["includePrincipalAxes"] = json!(true);
+    assert_eq!(run(&request)["ok"], false);
+    request["momentToleranceKgMm2"] = json!(1e-8);
+    request["toleranceMm2"] = json!(1e-5);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let axes = response["value"]["principalAxes"].as_array().unwrap_or_else(|| panic!("{response}"));
+    assert_eq!(axes.len(), 3);
+    let least = &axes[0];
+    assert!(least["sinAngleUpper"].as_f64().unwrap() < 0.5, "{response}");
+    assert!(least["direction"][2].as_f64().unwrap().abs() > 0.9);
+    assert!(axes[1].is_null() && axes[2].is_null());
+
+    request["maxSurfaceCells"] = json!(1);
+    let incomplete = run(&request);
+    assert_eq!(incomplete["ok"], true, "{incomplete}");
+    assert_eq!(incomplete["value"].get("principalAxes"), Some(&Value::Null));
+}

@@ -1475,9 +1475,17 @@ pub fn find_certified_principal_axis(
     index: usize,
     moment_tolerance: f64,
 ) -> Result<Option<PrincipalAxisCertificate>> {
-    use crate::distance_bounds::midpoint;
     check(index < 3, "Principal moment index must be in 0..3")?;
     let moments = bound_physical_principal_moments(tensor, moment_tolerance)?;
+    find_principal_axis_from_bounds(tensor, moments, index)
+}
+
+fn find_principal_axis_from_bounds(
+    tensor: [[[f64; 2]; 3]; 3],
+    moments: PrincipalMomentBounds,
+    index: usize,
+) -> Result<Option<PrincipalAxisCertificate>> {
+    use crate::distance_bounds::midpoint;
     let shift = midpoint(moments[index][0], moments[index][1]);
     let mut matrix = tensor.map(|row| row.map(|[lo, hi]| midpoint(lo, hi)));
     let scale = matrix
@@ -1860,6 +1868,24 @@ impl TrimmedPatchSetDensityReport {
         self.mass_properties
             .map(|mass| bound_physical_principal_moment_gaps(mass.central_inertia_bounds, tolerance))
             .transpose()
+    }
+
+    /// Find every certifiable principal axis, in ascending moment order.
+    pub fn bound_principal_axes(
+        &self,
+        tolerance: f64,
+    ) -> Result<Option<[Option<PrincipalAxisCertificate>; 3]>> {
+        validate_moment_tolerance(tolerance)?;
+        let Some(mass) = self.mass_properties else {
+            return Ok(None);
+        };
+        let tensor = mass.central_inertia_bounds;
+        let moments = bound_physical_principal_moments(tensor, tolerance)?;
+        let mut axes = [None; 3];
+        for (index, axis) in axes.iter_mut().enumerate() {
+            *axis = find_principal_axis_from_bounds(tensor, moments, index)?;
+        }
+        Ok(Some(axes))
     }
 
     /// Enclose the density-weighted first moment about an oriented plane.

@@ -41,6 +41,7 @@ interface Report {
   axisMomentBoundsKgMm2?: [number, number] | null
   axisMomentBoundsMm4?: [number, number] | null
   principalMomentBoundsMm4?: [number, number][] | null
+  principalAxes?: ({ direction: [number, number, number]; sinAngleUpper: number } | null)[] | null
   principalMomentBoundsKgMm2?: [number, number][] | null
   boundsMm2?: [number, number] | [number, number][] | null
   stations?: { parameterBounds: [number, number] | null; pointBoundsMm: [number, number][] | null; status: string }[] | null
@@ -448,3 +449,21 @@ assert.ok(weightedRadius && weightedRadius[0] <= expectedWeightedRadius && expec
 const limitedWeightedRadius = call(request.maxWork, densityOp, { ...weightedRadiusOptions, maxSurfaceCells: 2 })
 assert.equal(limitedWeightedRadius.axisRadiusOfGyrationBoundsMm, null)
 console.log('WASM ABI enclosed the radius of gyration of the density-weighted assembly.')
+
+const axisCertificateOptions = {
+  ...densityOptions,
+  contours: [
+    [[0.125, 0.125], [0.1875, 0.125], [0.1875, 0.1875], [0.125, 0.1875], [0.125, 0.125]],
+    [[0.125, 0.8125], [0.1875, 0.8125], [0.1875, 0.875], [0.125, 0.875], [0.125, 0.8125]],
+  ],
+  componentDensities: [{ outerContour: 1, densityBoundsKgPerMm2: [6, 6] }, { outerContour: 0, densityBoundsKgPerMm2: [2, 2] }],
+  includePrincipalAxes: true,
+  momentToleranceKgMm2: 1e-8,
+  toleranceMm2: 1e-5,
+}
+const certifiedAxes = call(request.maxWork, densityOp, axisCertificateOptions).principalAxes
+assert.ok(certifiedAxes && certifiedAxes.length === 3)
+assert.ok(certifiedAxes[0] && certifiedAxes[0].sinAngleUpper < 0.5 && Math.abs(certifiedAxes[0].direction[2]) > 0.9)
+assert.deepEqual(certifiedAxes.slice(1), [null, null])
+assert.equal(call(request.maxWork, densityOp, { ...axisCertificateOptions, maxSurfaceCells: 1 }).principalAxes, null)
+console.log('WASM ABI returned a certified isolated principal direction.')
