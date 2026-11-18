@@ -215,7 +215,7 @@ describe('G0/G1 re-freeze generator', { timeout: 120_000 }, () => {
     const prepared = prepare(root)
     publishQualificationRefresh(prepared)
     for (const [id, path] of Object.entries(REFRESH_OUTPUTS)) {
-      expect(readFileSync(resolve(root, path))).toEqual(prepared.artifactBytes[id])
+      expect(readFileSync(resolve(root, path)).equals(prepared.artifactBytes[id]), path).toBe(true)
     }
     for (const [path, hash] of Object.entries(FROZEN_ARCHIVES)) {
       expect(sha256(readFileSync(resolve(root, path))), path).toBe(hash)
