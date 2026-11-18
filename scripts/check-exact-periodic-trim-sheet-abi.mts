@@ -27,6 +27,7 @@ interface Report {
   withinMomentTolerance?: boolean
   referenceInertiaBoundsMm4?: [number, number][][] | null
   axisRadiusOfGyrationBoundsMm?: [number, number] | null
+  componentMasses?: { outerContour: number; boundsKg: [number, number] }[]
   massBoundsKg?: [number, number] | null
   centerOfMassBoundsMm?: [number, number][] | null
   centralInertiaBoundsKgMm2?: [number, number][][] | null
@@ -361,3 +362,11 @@ for (const [bounds, expected] of [
 }
 assert.equal(call(request.maxWork, densityOp, { ...densityOptions, maxSurfaceCells: 2 }).massBoundsKg, null)
 console.log('WASM ABI enclosed density-weighted mass properties by outer contour.')
+
+assert.deepEqual(densityMass.componentMasses?.map(({ outerContour }) => outerContour), [0, 2])
+for (const [component, expected] of [[0, 2.5], [1, 0.375]]) {
+  const bounds = densityMass.componentMasses?.[component]?.boundsKg
+  assert.ok(bounds && bounds[0] <= expected && expected <= bounds[1])
+}
+assert.deepEqual(call(request.maxWork, densityOp, { ...densityOptions, maxSurfaceCells: 2 }).componentMasses, [])
+console.log('WASM ABI enclosed the mass of each retained component.')

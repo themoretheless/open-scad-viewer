@@ -817,3 +817,22 @@ fn patch_set_density_rejects_incomplete_and_non_outer_density_assignments() {
     missing["componentDensities"].as_array_mut().unwrap().pop();
     assert_eq!(run(&missing)["ok"], false);
 }
+
+#[test]
+fn patch_set_density_reports_each_component_mass_by_contour() {
+    let response = run(&patch_set_density_request(20_000));
+    assert_eq!(response["ok"], true, "{response}");
+    let components = response["value"]["componentMasses"].as_array().unwrap();
+    assert_eq!(components.len(), 2);
+    for (component, (contour, expected)) in components.iter().zip([(0, 2.5), (2, 0.375)]) {
+        assert_eq!(component["outerContour"], contour);
+        let interval = &component["boundsKg"];
+        assert!(
+            interval[0].as_f64().unwrap() <= expected && expected <= interval[1].as_f64().unwrap()
+        );
+    }
+    let incomplete = run(&patch_set_density_request(2));
+    assert_eq!(incomplete["ok"], true, "{incomplete}");
+    assert_eq!(incomplete["value"]["componentMasses"], json!([]));
+    assert_eq!(incomplete["value"]["massBoundsKg"], Value::Null);
+}

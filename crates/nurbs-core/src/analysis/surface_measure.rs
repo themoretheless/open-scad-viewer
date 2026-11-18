@@ -1431,6 +1431,10 @@ pub fn periodic_trim_patch_set_central_inertia(
 #[derive(Clone, Debug)]
 pub struct TrimmedPatchSetDensityReport {
     pub measure: TrimmedPatchSetAreaReport,
+    /// Component masses in patch order, empty when full area coverage is unavailable.
+    pub component_mass_bounds: Vec<[f64; 2]>,
+    /// Total mass can be enclosed even when no center of mass is certified.
+    pub total_mass_bounds: Option<[f64; 2]>,
     pub mass_properties: Option<SurfaceAssemblyMassBounds>,
 }
 
@@ -1482,11 +1486,31 @@ pub fn periodic_trim_patch_set_mass_with_density(
             Ok(())
         },
     )?;
+    let mut total_mass = Interval::point(0.);
+    let component_mass_bounds = measure
+        .components
+        .iter()
+        .zip(densities)
+        .map(|(area, density)| {
+            let area = Interval::new(area.bounds[0], area.bounds[1])?;
+            let mass = area.mul(Interval::new(density[0], density[1])?)?;
+            let mass = mass.intersect(0., mass.hi)?;
+            total_mass = total_mass.add(mass)?;
+            Ok([mass.lo, mass.hi])
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let total_mass_bounds = measure
+        .total
+        .area
+        .as_ref()
+        .map(|_| [total_mass.lo.max(0.), total_mass.hi]);
     let mass_properties = (pieces.len() == patches.len())
         .then(|| combine_surface_mass_properties_with_density(&pieces))
         .transpose()?;
     Ok(TrimmedPatchSetDensityReport {
         measure,
+        component_mass_bounds,
+        total_mass_bounds,
         mass_properties,
     })
 }

@@ -1467,7 +1467,7 @@ pub fn exact_periodic_trim_patch_set_density_request(
     let mut response = json!({
         "boundsMm2": null, "withinTolerance": false, "surfaceCells": 0,
         "minimumSurfaceCells": null, "trimCells": 0, "workUsed": build.work_used,
-        "status": "buildRefused", "componentAreas": [],
+        "status": "buildRefused", "componentAreas": [], "componentMasses": [],
         "massBoundsKg": null, "centerOfMassBoundsMm": null, "centralInertiaBoundsKgMm2": null,
     });
     let Some(patches) = build.patches else {
@@ -1495,8 +1495,14 @@ pub fn exact_periodic_trim_patch_set_density_request(
         max_surface,
         max_trim,
     )?;
+    response["massBoundsKg"] = json!(report.total_mass_bounds);
+    let component_masses = patches
+        .iter()
+        .zip(report.component_mass_bounds)
+        .map(|(patch, bounds)| json!({"outerContour": patch.trim.contours[0], "boundsKg": bounds}))
+        .collect::<Vec<_>>();
+    response["componentMasses"] = json!(component_masses);
     if let Some(properties) = report.mass_properties {
-        response["massBoundsKg"] = json!(properties.mass_bounds);
         response["centerOfMassBoundsMm"] = json!(properties.centroid_bounds);
         response["centralInertiaBoundsKgMm2"] = json!(properties.central_inertia_bounds);
     }

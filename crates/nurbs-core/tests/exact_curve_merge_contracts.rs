@@ -7399,3 +7399,30 @@ fn periodic_trim_set_density_mass_requires_aligned_inputs_and_full_coverage() {
         assert!(report.measure.components.is_empty());
     }
 }
+
+#[test]
+fn periodic_trim_set_reports_mass_of_each_component_under_density_ranges() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_mass_with_density;
+
+    let patches = periodic_trim_patches_with_nested_island();
+    let densities = [[2., 3.], [6., 8.]];
+    let report =
+        periodic_trim_patch_set_mass_with_density(&patches, &densities, 0.005, 1e-10, 20_000, 1_000_000)
+            .unwrap();
+    assert_eq!(report.component_mass_bounds.len(), 2);
+    for ([lo, hi], [minimum, maximum]) in report
+        .component_mass_bounds
+        .into_iter()
+        .zip([[2.5, 3.75], [0.375, 0.5]])
+    {
+        assert!(lo <= minimum && maximum <= hi);
+    }
+    let [lo, hi] = report.total_mass_bounds.unwrap();
+    assert!(lo <= 2.875 && 4.25 <= hi);
+
+    let incomplete =
+        periodic_trim_patch_set_mass_with_density(&patches, &densities, 0.005, 1e-10, 2, 1_000_000)
+            .unwrap();
+    assert!(incomplete.component_mass_bounds.is_empty());
+    assert!(incomplete.total_mass_bounds.is_none());
+}
