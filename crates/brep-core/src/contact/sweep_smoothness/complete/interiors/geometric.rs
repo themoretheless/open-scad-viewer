@@ -755,6 +755,24 @@ mod tests {
         assert!(mixed.certified, "{}", mixed.reason);
         assert_eq!(mixed.smooth_edges, [0, 1, 2]);
         assert_eq!(mixed.c0_edges, [3]);
+
+        let embedding_limits = crate::boundary_embedding::Limits {
+            exact_work: 1000000, trim_pairs: 1000, trim_cells: 10000,
+            trim_domain_cells: 100000, spans: 100,
+            contacts: crate::face_contacts::Limits {
+                pairs: 100, cells: 10000, domain_cells: 100000,
+                cells_per_pair: 16, domain_cells_per_pair: 1000,
+            },
+        };
+        let embedded = crate::boundary_embedding::inspect_with_linear(
+            &model, 1e-8, embedding_limits, 100000,
+        ).unwrap();
+        assert!(embedded.proven);
+        assert!(embedded.intersections.faces.faces.iter().all(|f| f.periodic_quotient));
+        assert!(embedded.hull_contacts.iter().any(|proof| proof.faces == [0, 1] && proof.edges == [0, 1]));
+        assert!(!crate::boundary_embedding::inspect_with_linear(
+            &model, 1e-8, embedding_limits, 1,
+        ).unwrap().proven);
     }
 
     #[test]

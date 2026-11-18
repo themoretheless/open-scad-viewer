@@ -104,9 +104,10 @@ fn qualify_periodic_charts(
     trim: &face_domain::TrimAudit,
     faces: &mut crate::face_injectivity::Report,
     max_cells: usize,
-) {
+) -> Vec<crate::boundary_hull_contact::Certificate> {
+    let mut contacts = Vec::new();
     if !agreement.all_equal || !agreement.all_joins_exact || !trim.all_valid {
-        return;
+        return contacts;
     }
     let mut remaining = max_cells.saturating_sub(faces.linear_cells);
     let mut pairs = 0;
@@ -130,8 +131,29 @@ fn qualify_periodic_charts(
                 ).unwrap_or(false);
         }
     }
+    for shell in &model.shells {
+        let [a, b] = shell.faces.as_slice() else { continue };
+        if remaining == 0 || pairs >= max_cells {
+            break;
+        }
+        let f = [a.face.min(b.face), a.face.max(b.face)];
+        if f.iter().all(|&i| faces.faces[i].absence_proven())
+            || f.iter().any(|&i| !trim.faces[i].as_ref().is_some_and(|r| r.winding.first() == Some(&Some(1))))
+        {
+            continue;
+        }
+        if let Ok(Some(contact)) = crate::feature_ops::region_pattern::qualification::periodic_charts::radial_incidence::certify_band_contact(
+            model, f, &mut remaining, &mut pairs, max_cells,
+        ) {
+            for i in f {
+                faces.faces[i].periodic_quotient = true;
+            }
+            contacts.push(contact);
+        }
+    }
     faces.linear_cells = max_cells - remaining;
     faces.all_faces_injective = faces.faces.iter().all(|report| report.absence_proven());
+    contacts
 }
 
 fn inspect_impl(
@@ -171,12 +193,11 @@ fn inspect_impl(
             proposals,
         )?
     };
-    qualify_periodic_charts(model, &agreement, &trim, &mut faces, max_linear_cells);
+    let mut hull_contacts = qualify_periodic_charts(model, &agreement, &trim, &mut faces, max_linear_cells);
     let winding = trim.faces.iter().all(|r| {
         r.as_ref()
             .is_some_and(|r| r.winding.first() == Some(&Some(1)))
     });
-    let mut hull_contacts = Vec::new();
     let exact_domain = agreement.all_equal
         && agreement.all_joins_exact
         && trim.all_valid
@@ -398,7 +419,7 @@ impl Inspector {
             let limits = self.limits;
             let sweep_hulls = self.sweep_hulls;
             let faces = self.faces.as_mut().unwrap();
-            qualify_periodic_charts(
+            let mut hull_contacts = qualify_periodic_charts(
                 model, self.agreement.as_ref().unwrap(), self.trim.as_ref().unwrap(),
                 faces, self.max_linear_cells,
             );
@@ -406,7 +427,6 @@ impl Inspector {
                 r.as_ref()
                     .is_some_and(|r| r.winding.first() == Some(&Some(1)))
             });
-            let mut hull_contacts = Vec::new();
             let exact_domain = self.agreement.as_ref().unwrap().all_equal
                 && self.agreement.as_ref().unwrap().all_joins_exact
                 && self.trim.as_ref().unwrap().all_valid
@@ -585,12 +605,11 @@ fn frozen_inspect_impl(
         max_linear_cells,
         proposals,
     )?;
-    qualify_periodic_charts(model, &agreement, &trim, &mut faces, max_linear_cells);
+    let mut hull_contacts = qualify_periodic_charts(model, &agreement, &trim, &mut faces, max_linear_cells);
     let winding = trim.faces.iter().all(|r| {
         r.as_ref()
             .is_some_and(|r| r.winding.first() == Some(&Some(1)))
     });
-    let mut hull_contacts = Vec::new();
     let exact_domain = agreement.all_equal
         && agreement.all_joins_exact
         && trim.all_valid

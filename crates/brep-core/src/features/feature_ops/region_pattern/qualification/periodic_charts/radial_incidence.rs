@@ -73,3 +73,53 @@ pub(crate) fn inspect(
         rims: rims[0].iter().flat_map(|rim| rim.keys().copied()).collect(),
     }))
 }
+
+pub(crate) fn certify_band_contact(
+    model: &Model,
+    faces: [usize; 2],
+    remaining: &mut usize,
+    pairs: &mut usize,
+    max_pairs: usize,
+) -> Result<Option<crate::boundary_hull_contact::Certificate>> {
+    let Some(topology) = inspect(model, faces, remaining)? else {
+        return Ok(None);
+    };
+    let surfaces = faces.map(|face| &model.faces[face].surface);
+    for height in 0..3 {
+        if *remaining == 0 || *pairs == max_pairs {
+            break;
+        }
+        let proof = nurbs_core::surface_injectivity::certify_radial_band_pair(
+            surfaces,
+            topology.periodic_axes,
+            height,
+            (*remaining).min(100000),
+            (max_pairs - *pairs).min(100000),
+        )?;
+        charge(remaining, proof.cells)?;
+        *pairs += proof.pairs;
+        if proof.proven {
+            let mut enclosure = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
+            for &edge in &topology.rims {
+                let poles = &model.edges[edge].curve.control_points;
+                charge(remaining, poles.len())?;
+                for pole in poles {
+                    for (interval, &value) in enclosure.iter_mut().zip(pole) {
+                        interval[0] = interval[0].min(value);
+                        interval[1] = interval[1].max(value);
+                    }
+                }
+            }
+            return Ok(Some(crate::boundary_hull_contact::Certificate {
+                faces,
+                contact_enclosure: enclosure,
+                edges: topology.rims,
+                vertex: None,
+                joined_proof: None,
+                polar_join: None,
+                source_join: None,
+            }));
+        }
+    }
+    Ok(None)
+}
