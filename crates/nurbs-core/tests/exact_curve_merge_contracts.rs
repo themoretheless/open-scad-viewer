@@ -10769,3 +10769,38 @@ fn synchronized_curve_clearance_measures_simultaneous_positions_with_distinct_kn
     assert_eq!(report.witness_parameter, 0.5);
     assert!(report.work_cells <= 64);
 }
+
+#[test]
+fn synchronized_clearance_partition_brackets_contact_and_preserves_both_knot_grids() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_synchronized_curve_clearance,
+    };
+    let first = Curve {
+        degree: 1,
+        knots: vec![0., 0., 0.25, 1., 1.],
+        control_points: vec![vec![0., 0.], vec![1., 0.], vec![4., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let mut second = first.clone();
+    second.knots[2] = 0.75;
+    second.control_points = vec![vec![4., 0.], vec![1., 0.], vec![0., 0.]];
+    let check = |budget| {
+        partition_synchronized_curve_clearance([&first, &second], [0., 1.], [0.5, 0.5], 0.01, budget)
+    };
+    assert!(check(2).is_err());
+    let report = check(128).unwrap();
+    assert!(report.work_cells <= 128);
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    for crossing in [0.375, 0.625] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= crossing && crossing <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+        }));
+    }
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 0.5 && 0.5 <= b && cell.spans == [2, 1] && cell.status == Status::Exceeds
+    }));
+}

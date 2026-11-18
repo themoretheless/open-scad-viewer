@@ -2502,6 +2502,87 @@ pub fn measure_synchronized_curve_clearance(
     max_cells: usize,
 ) -> Result<SynchronizedCurveClearance> {
     validate(tolerance, max_cells)?;
+    let [first, second] = curves;
+    let (radius, initial) = synchronized_clearance_cells(curves, interval, radii)?;
+    let measure = |[a, b]: [usize; 2], domain: [f64; 2], witness: &mut ClearanceWitness| {
+        let left = curve_jets::enclose(first, a, domain)?;
+        let right = curve_jets::enclose(second, b, domain)?;
+        let (lo, hi) = box_distance(&left[0], &right[0])?;
+        for (end, parameter) in [(false, domain[0]), (true, domain[1])] {
+            let left = curve_jets::endpoint(first, a, domain, end)?;
+            let right = curve_jets::endpoint(second, b, domain, end)?;
+            let (lo, hi) = box_distance(&left[0], &right[0])?;
+            let upper = Interval::new(lo, hi)?.sub(radius)?.hi;
+            if upper < witness.0 {
+                *witness = (upper, parameter, 0);
+            }
+        }
+        Ok(Interval::new(lo, hi)?.sub(radius)?.lo)
+    };
+    let (lower, witness, work_cells, stop_reason) =
+        refine_minimum_clearance(initial, interval[0], tolerance, max_cells, measure)?;
+    Ok(SynchronizedCurveClearance {
+        gap_bounds: [lower, witness.0],
+        witness_parameter: witness.1,
+        work_cells,
+        stop_reason,
+    })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct SynchronizedClearanceCell {
+    pub parameter_interval: [f64; 2],
+    pub spans: [usize; 2],
+    pub gap_bounds: [f64; 2],
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct SynchronizedClearancePartition {
+    pub cells: Vec<SynchronizedClearanceCell>,
+    pub work_cells: usize,
+}
+
+/// Classify simultaneous ball clearance over a shared parameter window.
+/// Every cell is evaluated against both curves' original knot grids.
+pub fn partition_synchronized_curve_clearance(
+    curves: [&Curve; 2],
+    interval: [f64; 2],
+    radii: [f64; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<SynchronizedClearancePartition> {
+    validate(parameter_tolerance, max_cells)?;
+    let (radius, initial) = synchronized_clearance_cells(curves, interval, radii)?;
+    let [first, second] = curves;
+    let (cells, work_cells) = partition_enclosed_cells(
+        initial, parameter_tolerance, max_cells,
+        |[a, b], domain| {
+            let left = curve_jets::enclose(first, a, domain)?;
+            let right = curve_jets::enclose(second, b, domain)?;
+            let (lo, hi) = box_distance(&left[0], &right[0])?;
+            let gap = Interval::new(lo, hi)?.sub(radius)?;
+            let status = if gap.lo > 0. {
+                DirectionalMotionStatus::Within
+            } else if gap.hi <= 0. {
+                DirectionalMotionStatus::Exceeds
+            } else {
+                DirectionalMotionStatus::Undetermined
+            };
+            Ok(((gap, status), status == DirectionalMotionStatus::Undetermined))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(spans, parameter_interval, (gap, status))| {
+        SynchronizedClearanceCell { parameter_interval, spans, gap_bounds: [gap.lo, gap.hi], status }
+    }).collect();
+    Ok(SynchronizedClearancePartition { cells, work_cells })
+}
+
+fn synchronized_clearance_cells(
+    curves: [&Curve; 2],
+    interval: [f64; 2],
+    radii: [f64; 2],
+) -> Result<(Interval, Vec<([usize; 2], [f64; 2])>)> {
     check(radii.iter().all(|radius| radius.is_finite() && *radius >= 0.),
         "Tool radii must be finite and nonnegative")?;
     let [first, second] = curves;
@@ -2532,29 +2613,7 @@ pub fn measure_synchronized_curve_clearance(
             second_spans.next();
         }
     }
-    let measure = |[a, b]: [usize; 2], domain: [f64; 2], witness: &mut ClearanceWitness| {
-        let left = curve_jets::enclose(first, a, domain)?;
-        let right = curve_jets::enclose(second, b, domain)?;
-        let (lo, hi) = box_distance(&left[0], &right[0])?;
-        for (end, parameter) in [(false, domain[0]), (true, domain[1])] {
-            let left = curve_jets::endpoint(first, a, domain, end)?;
-            let right = curve_jets::endpoint(second, b, domain, end)?;
-            let (lo, hi) = box_distance(&left[0], &right[0])?;
-            let upper = Interval::new(lo, hi)?.sub(radius)?.hi;
-            if upper < witness.0 {
-                *witness = (upper, parameter, 0);
-            }
-        }
-        Ok(Interval::new(lo, hi)?.sub(radius)?.lo)
-    };
-    let (lower, witness, work_cells, stop_reason) =
-        refine_minimum_clearance(initial, interval[0], tolerance, max_cells, measure)?;
-    Ok(SynchronizedCurveClearance {
-        gap_bounds: [lower, witness.0],
-        witness_parameter: witness.1,
-        work_cells,
-        stop_reason,
-    })
+    Ok((radius, initial))
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -3640,28 +3699,37 @@ fn partition_motion_cells<T>(
     max_cells: usize,
     mut classify: impl FnMut(&[Vec<Interval>], Interval) -> Result<(T, bool)>,
 ) -> Result<(Vec<(usize, [f64; 2], T)>, usize)> {
-    use std::collections::VecDeque;
-
     validate(parameter_tolerance, max_cells)?;
     validate_travel_interval(curve, interval)?;
-    let mut pending = VecDeque::new();
-    for span in active_spans(curve, interval) {
-        if pending.len() == max_cells {
-            return Err(resource("Initial motion spans exceed the work budget"));
-        }
-        pending.push_back((span, [
-            curve.knots[span].max(interval[0]),
-            curve.knots[span + 1].min(interval[1]),
-        ]));
+    let initial = active_spans(curve, interval).map(|span| (span, [
+        curve.knots[span].max(interval[0]),
+        curve.knots[span + 1].min(interval[1]),
+    ]));
+    partition_enclosed_cells(initial, parameter_tolerance, max_cells, |span, domain| {
+        let width = Interval::point(domain[1]).sub(Interval::point(domain[0]))?;
+        let jets = curve_jets::enclose(curve, span, domain)?;
+        classify(&jets, width)
+    })
+}
+
+fn partition_enclosed_cells<Span: Copy, T>(
+    initial: impl IntoIterator<Item = (Span, [f64; 2])>,
+    parameter_tolerance: f64,
+    max_cells: usize,
+    mut classify: impl FnMut(Span, [f64; 2]) -> Result<(T, bool)>,
+) -> Result<(Vec<(Span, [f64; 2], T)>, usize)> {
+    use std::collections::VecDeque;
+
+    let mut pending: VecDeque<_> = initial.into_iter().collect();
+    if pending.len() > max_cells {
+        return Err(resource("Initial motion spans exceed the work budget"));
     }
 
     let mut cells = Vec::new();
     let mut work_cells = 0;
     while let Some((span, domain @ [a, b])) = pending.pop_front() {
         work_cells += 1;
-        let width = Interval::point(b).sub(Interval::point(a))?;
-        let jets = curve_jets::enclose(curve, span, domain)?;
-        let (statuses, refine) = classify(&jets, width)?;
+        let (statuses, refine) = classify(span, domain)?;
         let middle = crate::distance_bounds::midpoint(a, b);
         if refine
             && (b - a).next_up() > parameter_tolerance
