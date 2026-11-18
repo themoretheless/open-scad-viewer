@@ -272,7 +272,32 @@ fn interior_holes(
     for &hole in holes {
         charge(cells, limit, 1)?;
         for use_ in &model.loops[hole].coedges {
-            interior_curve(&use_.pcurve, [lower, upper], 12, cells, limit)?;
+            if use_.trim().is_some_and(|trim| {
+                trim.periodic_lift != [[0; 2]; 2]
+                    || trim.curve_parameter != model.edges[use_.edge].curve.domain()
+            }) {
+                return None;
+            }
+            let curve = &use_.pcurve;
+            let range = use_.trim().map_or(curve.domain(), |trim| {
+                let [a, b] = trim.pcurve_parameter;
+                [a.min(b), a.max(b)]
+            });
+            if range == curve.domain() {
+                interior_curve(curve, [lower, upper], 12, cells, limit)?;
+            } else {
+                let remaining = ((limit - *cells) as u64).min(cad_predicates::MAX_WORK);
+                let (proved, used) = exact_knot_insertion::strict_box_containment_on(
+                    curve,
+                    range,
+                    [lower, upper],
+                    12,
+                    remaining,
+                )
+                .ok()?;
+                charge(cells, limit, used as usize)?;
+                proved.then_some(())?;
+            }
         }
     }
     Some(())

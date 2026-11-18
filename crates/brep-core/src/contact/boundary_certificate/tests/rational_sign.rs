@@ -610,6 +610,35 @@ fn check_jordan_contact_with_interior_hole(reference: &crate::Model, shared: usi
     assert!(certify(&model, [0, 4], used - 1).0.is_none());
     model.0.loops[hole].coedges[0].pcurve.control_points[0][0] = 0.;
     assert!(certify(&model, [0, 4], 3000).0.is_none());
+    // Extend the stored UV carrier across the chart boundary. Only [1, 2]
+    // is material, and it exactly lifts the complete original world edge.
+    let edge = model.0.loops[hole].coedges[0].edge;
+    let world = &model.0.edges[edge].curve;
+    let pcurve = crate::Curve {
+        degree: 1,
+        knots: vec![0., 0., 4., 4.],
+        control_points: vec![vec![0.25, 0.], vec![0.25, 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    assert!(!nurbs_core::editing::exact_knot_insertion::strict_box_containment_on(
+        &pcurve, [0., 2.], [[0.; 2], [1.; 2]], 12, 10_000,
+    ).unwrap().0);
+    let world_range = world.domain();
+    let proof = nurbs_core::curve_surface_agreement::verify_exact_trimmed(
+        world, &pcurve, &model.faces[0].surface, false, world_range, [1., 2.], 1_000_000,
+    ).unwrap().unwrap();
+    assert_eq!(proof.outcome, cad_predicates::BezierIdentity::Equal);
+    model.0.loops[hole].coedges[0] = crate::Coedge::new(edge, false, pcurve)
+        .with_trim(brep_topology::CoedgeTrim {
+            curve_parameter: world_range,
+            pcurve_parameter: [1., 2.],
+            periodic_lift: [[0; 2]; 2],
+        }).unwrap();
+    let (contact, used) = certify(&model, [0, 4], 3000);
+    assert_eq!(contact.unwrap().edges, [shared]);
+    assert!(certify(&model, [0, 4], used - 1).0.is_none());
+
 }
 
 fn check_audited_inset_jordan_contact(reference: &crate::Model, shared: usize) {

@@ -273,8 +273,10 @@ rational trim lies strictly inside the chart rectangle. The audit checks
 the original control hull first and can use exact subdivision to prove
 containment on all smaller hulls. The exact domain audit verifies each
 hole's lift, winding and nesting. Strict containment keeps each hole
-away from the shared natural boundary. Control point checks and exact
-subdivision share the contact proof's budget.
+away from the shared natural boundary. When a hole uses a trimmed UV
+carrier, strict containment is checked on the exact active restriction.
+Both the restriction and exact subdivision consume the same contact
+proof budget.
 For a nonperiodic B-spline trim, endpoint extraction, knot refinement and
 subdivision work in exact homogeneous coordinates on the active interval.
 The four boundary inequalities must be strictly positive throughout every

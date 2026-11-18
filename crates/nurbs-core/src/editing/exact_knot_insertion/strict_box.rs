@@ -11,16 +11,51 @@ pub fn strict_box_containment(
     depth: u8,
     max_work: u64,
 ) -> Result<(bool, u64)> {
+    inspect(curve, None, bounds, depth, max_work)
+}
+
+/// Prove strict containment on a declared interval of the original clock.
+/// Proper subintervals of periodic curves remain unsupported.
+pub fn strict_box_containment_on(
+    curve: &Curve,
+    range: [f64; 2],
+    bounds: [[f64; 2]; 2],
+    depth: u8,
+    max_work: u64,
+) -> Result<(bool, u64)> {
+    inspect(curve, Some(range), bounds, depth, max_work)
+}
+
+fn inspect(
+    curve: &Curve,
+    range: Option<[f64; 2]>,
+    bounds: [[f64; 2]; 2],
+    depth: u8,
+    max_work: u64,
+) -> Result<(bool, u64)> {
     curve.validate()?;
+    let [start, end] = curve.domain();
+    let range = range.unwrap_or([start, end]);
+    if !(start <= range[0] && range[0] < range[1] && range[1] <= end)
+        || (curve.periodic && range != [start, end])
+    {
+        return Ok((false, 0));
+    }
     let mut work = Work {
         used: 0,
         limit: max_work.min(cad_predicates::MAX_WORK),
     };
-    let proved = prove(curve, bounds, depth.min(16), &mut work).is_ok();
+    let proved = prove(curve, range, bounds, depth.min(16), &mut work).is_ok();
     Ok((proved, work.used))
 }
 
-fn prove(curve: &Curve, bounds: [[f64; 2]; 2], depth: u8, work: &mut Work) -> PResult<()> {
+fn prove(
+    curve: &Curve,
+    range: [f64; 2],
+    bounds: [[f64; 2]; 2],
+    depth: u8,
+    work: &mut Work,
+) -> PResult<()> {
     let p = curve.degree;
     let n = curve.control_points.len();
     let [start, end] = curve.domain();
@@ -36,15 +71,16 @@ fn prove(curve: &Curve, bounds: [[f64; 2]; 2], depth: u8, work: &mut Work) -> PR
         }
     }
 
-    let clamped =
-        curve.knots[..=p].iter().all(|&k| k == start) && curve.knots[n..].iter().all(|&k| k == end);
+    let clamped = range == [start, end]
+        && curve.knots[..=p].iter().all(|&k| k == start)
+        && curve.knots[n..].iter().all(|&k| k == end);
     let (mut net, mut knots) = if clamped {
         homogeneous(curve, start, 0, work)?
     } else {
         // Extract the active interval without converting its endpoint
         // coefficients to a stored Cartesian curve.
         work.charge(((n + 2 * p) * 2 * p) as u64)?;
-        super::super::exact_curve_merge::clamp_curve_net(curve, [start, end], work)?
+        super::super::exact_curve_merge::clamp_curve_net(curve, range, work)?
     };
     let internal = knots[p + 1..net.len()].to_vec();
     for block in internal.chunk_by(|a, b| a == b) {

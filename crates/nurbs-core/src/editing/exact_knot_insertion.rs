@@ -5,7 +5,7 @@ use crate::{Result, check, core::curve_identity::compare_definitions, curve::Cur
 use num_rational::BigRational as Q;
 use num_traits::{One, Zero};
 mod strict_box;
-pub use strict_box::strict_box_containment;
+pub use strict_box::{strict_box_containment, strict_box_containment_on};
 #[derive(Clone, Debug)]
 pub struct Report {
     /// Literal source on every refusal; no partly refined curve is emitted.
