@@ -31,8 +31,9 @@ impl<'s, 'a> OriginalClassifiedBody<'s, 'a> {
     pub fn boundary_classes(&self) -> &[OriginalProfileClass] {
         self.original.boundary_classes()
     }
+    /// Classification of the original product cap/wall spans.
     pub fn cap_wall_continuity(&self) -> &'static str {
-        "C0"
+        self.original.cap_wall_continuity()
     }
     pub fn into_model(self) -> Model {
         (*self.retained).into_model()

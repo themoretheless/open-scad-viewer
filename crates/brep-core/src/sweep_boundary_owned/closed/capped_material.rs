@@ -29,6 +29,25 @@ pub struct OriginalClassifiedCappedMaterialRefusal {
     pub work: OriginalClassifiedCappedMaterialWork,
     pub reason: Option<&'static str>,
 }
+/// One original cap/wall span whose two tangent planes are transverse.
+#[derive(Debug)]
+pub struct OriginalTransverseCapWallSpan<'a> {
+    endpoint: usize,
+    binding: &'a MaterialSpanBinding,
+}
+impl<'a> OriginalTransverseCapWallSpan<'a> {
+    pub const CONTINUITY: &'static str = "C0";
+
+    /// Zero for the start cap and one for the end cap.
+    pub fn endpoint(&self) -> usize {
+        self.endpoint
+    }
+
+    pub fn binding(&self) -> &'a MaterialSpanBinding {
+        self.binding
+    }
+}
+
 /// Immutable original material domain times an interval, globally embedded by
 /// the exact source map. This owner supplies no retained Solid/error guarantee.
 /// Its two cap carriers are reference sources, before physical endpoint pose.
@@ -58,9 +77,25 @@ impl<'s, 'a> OriginalClassifiedCappedMaterial<'s, 'a> {
     pub fn boundary_classes(&self) -> &[OriginalProfileClass] {
         self.volume.classes()
     }
-    /// No cap/wall geometric tangency is inferred from volume-chart Ck.
+    /// A full-rank derivative of the original filled map preserves the
+    /// two distinct boundary tangent planes of the parameter product.
+    /// Along a regular trim gamma, the cap has columns F_u and F_v.
+    /// The wall has the nonzero F_uv * gamma' and F_t. The latter cannot
+    /// lie in the cap plane. Exact normalized trace binding identifies
+    /// their common edge. This applies to each side approaching a trim
+    /// endpoint, including both sides of a sharp profile join.
+    pub fn transverse_cap_wall_spans(
+        &self,
+        endpoint: usize,
+    ) -> Option<impl ExactSizeIterator<Item = OriginalTransverseCapWallSpan<'_>>> {
+        Some(self.bindings.get(endpoint)?.iter().map(move |binding| {
+            OriginalTransverseCapWallSpan { endpoint, binding }
+        }))
+    }
+
+    /// Original cap/wall classification for the regular product.
     pub fn cap_wall_continuity(&self) -> &'static str {
-        "C0"
+        OriginalTransverseCapWallSpan::CONTINUITY
     }
 }
 pub enum OriginalClassifiedCappedMaterialAttempt<'s, 'a> {
