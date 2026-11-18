@@ -924,6 +924,20 @@ impl StepSharedAssembly {
         brep_core::boolean(&first, &second, "intersection")
     }
 
+    /// Bound the distance between the filled materials of two placed
+    /// occurrences, retaining unresolved solid and containment diagnostics.
+    pub fn occurrence_clearance(
+        &self,
+        pair: [usize; 2],
+        tolerance_mm: f64,
+        tolerance_uv: f64,
+        limits: brep_core::solid_distance::Limits,
+    ) -> Result<brep_core::solid_distance::Report> {
+        let first = self.materialize(pair[0])?;
+        let second = self.materialize(pair[1])?;
+        brep_core::solid_distance::distance(&first, &second, tolerance_mm, tolerance_uv, limits)
+    }
+
     /// Check overlapping occurrence boxes for common material. Each result
     /// retains the pair indices and any diagnostic from materialization or CSG.
     /// If there are more candidates than allowed, no CSG work is performed.

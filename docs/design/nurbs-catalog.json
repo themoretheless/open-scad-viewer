@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 851,
-  "unallocatedCount": 149,
+  "specifiedCount": 852,
+  "unallocatedCount": 148,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19891,6 +19891,26 @@
       "remainingQualification": [
         "Sweep conservative endpoint events and enclose spans covered by at least the requested number of distinct occurrences.",
         "Check analytically bounded double and triple material spans, finite segment clipping, a remote occurrence and an impossible multiplicity.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0852",
+      "name": "Измерение зазора между объёмами размещённых STEP-деталей",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::occurrence_clearance",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "crates/brep-core/src/body_analysis/solid_distance.rs",
+        "docs/qualification/nurbs-curvature-field-852-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-852-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Compare placed authored B-rep volumes and retain bounded clearance, containment and source-face witnesses.",
+        "Check a 3 mm separation with face witness, zero distance for an enclosed reflected occurrence and invalid pair refusal.",
         "WASM and application integration are separate."
       ]
     }

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0852",
+  "testedBase": "df4d960f1f9ab976862bdea92cef95b34729857f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 199,
+  "scope": [
+    "Compare placed authored B-rep volumes and retain bounded clearance, containment and source-face witnesses.",
+    "Check a 3 mm separation with face witness, zero distance for an enclosed reflected occurrence and invalid pair refusal."
+  ],
+  "logSha256": "d83d7d0ca83662630a7cb6fcf1238a3794a663a40d3bc5f041a2701b2e38c68b",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "e731c159e6e4d05f62aa9a95a6096b64ac258080d2b142abb6b9647432a98f13",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "020b11b77b48d8e47babd45811d85b55943aba3a3b7ea5633049f897965be1b4",
+    "crates/brep-core/src/body_analysis/solid_distance.rs": "52fbc6d22cfce96efe2b6d2ec889d4a8377d4842789deb87b35d60e512306b32"
+  }
+}

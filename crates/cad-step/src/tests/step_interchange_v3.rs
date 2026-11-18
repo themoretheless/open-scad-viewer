@@ -3185,6 +3185,38 @@ fn shared_step_material_volume_accounts_for_scale_and_reflection() {
 }
 
 #[test]
+fn shared_step_occurrence_clearance_distinguishes_separation_from_containment() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let mut shifted = assembly.occurrences()[0].transform;
+    shifted[0][3] = 5.;
+    assembly.set_occurrence_placement(1, shifted).unwrap();
+    let policy = shared_step_admission_policy();
+    let limits = brep_core::solid_distance::Limits {
+        validity: policy.geometry,
+        pairs: 100,
+        contact_pairs: 1000,
+        cells: 100_000,
+        domain_cells: 1_000_000,
+    };
+    assert!(assembly.occurrence_clearance([0, 2], 1e-5, policy.tolerance_uv, limits).is_err());
+    let gap = assembly.occurrence_clearance([0, 1], 1e-5, policy.tolerance_uv, limits).unwrap();
+    assert_eq!(gap.material_overlap, Some(false), "{}", gap.reason);
+    let [lo, hi] = gap.distance_interval_mm.unwrap();
+    assert!(lo <= 3. && 3. <= hi && hi - lo <= 1e-5, "{lo}..{hi}");
+    let first = assembly.materialize(0).unwrap();
+    let second = assembly.materialize(1).unwrap();
+    assert!(gap.separation_witness(&first, &second).is_some());
+
+    let enclosed = [
+        [0.5, 0., 0., 0.5], [0., 0.5, 0., 0.5], [0., 0., -0.5, 1.5], [0., 0., 0., 1.],
+    ];
+    assembly.set_occurrence_orthogonal_placement(1, enclosed).unwrap();
+    let contained = assembly.occurrence_clearance([0, 1], 1e-5, policy.tolerance_uv, limits).unwrap();
+    assert_eq!(contained.material_overlap, Some(true), "{}", contained.reason);
+    assert_eq!(contained.distance_interval_mm, Some([0.; 2]));
+}
+
+#[test]
 fn shared_step_interference_batch_distinguishes_overlap_and_touching() {
     let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
     let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
