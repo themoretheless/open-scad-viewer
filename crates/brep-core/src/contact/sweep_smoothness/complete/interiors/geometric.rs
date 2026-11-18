@@ -773,6 +773,25 @@ mod tests {
         assert!(!crate::boundary_embedding::inspect_with_linear(
             &model, 1e-8, embedding_limits, 1,
         ).unwrap().proven);
+
+        let admission = crate::closed_solid::qualify(model, crate::closed_solid::AdmissionPolicy {
+            tolerance_uv: 1e-8,
+            max_linear_cells: 100000,
+            geometry: crate::volume_validity::Limits {
+                boundary: embedding_limits,
+                nesting_pairs: 100, nesting_cells: 10000, nesting_domain_cells: 100000,
+                orientation_cells: 100000, orientation_domain_cells: 100000,
+                orientation_spans: 1000,
+            },
+        }).unwrap();
+        assert_eq!(admission.geometry().nesting.as_ref().unwrap().roles_consistent, Some(true));
+        assert_eq!(admission.geometry().orientations[0].outward, Some(true));
+        let solid = admission.into_solid().expect("the embedded oriented torus owns material");
+        let directions = [[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]];
+        for (point, inside) in [([4., 0.125, 0.125], true), ([0.; 3], false), ([7., 0.125, 0.125], false)] {
+            assert_eq!(solid.classify_point(point, &directions, 100000, 100000).unwrap().parity,
+                Some(inside), "{point:?}");
+        }
     }
 
     #[test]
