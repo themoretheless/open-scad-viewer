@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0816",
+  "testedBase": "3b96e4cdf50dcacafd47f232b2ea70f091442394",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib",
+    "planet_gear_step_assembly"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 0,
+  "scope": [
+    "Export one planet B-rep definition with AP242 product occurrences and rigid transformations.",
+    "Check one serialized gear body, two differently placed occurrences and closed round-trip topology."
+  ],
+  "logSha256": "66a838b6fef9ef232b664b8a43fec25bb6428d6b3796d3f27b561cb4fff69d3e",
+  "sourceSha256": {
+    "crates/cad-step/src/step_v3_export.rs": "d24d47630fd38f892da6ff4daea938d0a82b4d466aedadacacf729f89229b436",
+    "crates/cad-step/src/lib.rs": "f5ee227c90d646b6901c77bf16bc39afbd70cfbe6155c22fc3ad797b775311c5",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "680031f63d694f413eefb5ce37a3a7d15ef85b108ed4516b64e22f2efb6f7906"
+  }
+}

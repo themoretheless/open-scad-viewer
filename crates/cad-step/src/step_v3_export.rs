@@ -267,6 +267,7 @@ fn export_step_direct_impl(
     allow_degenerate: bool,
     capability: &'static str,
     semantic: Option<&StepSemanticMetadata>,
+    planet_placements: Option<&[[[f64; 4]; 4]]>,
 ) -> Result<(String, FeatureCertificate, StepV3Report)> {
     if let Some(semantic) = semantic {
         semantic.presentation.validate_for_model(model)?;
@@ -586,6 +587,43 @@ fn export_step_direct_impl(
         w.emit(format!(
             "SHAPE_DEFINITION_REPRESENTATION(#{shape},#{representation})"
         ));
+        if let Some(placements) = planet_placements {
+            let assembly_product = w.emit(format!(
+                "PRODUCT('planet-set','Planet gear set','',(#{product_context}))"
+            ));
+            let assembly_formation = w.emit(format!(
+                "PRODUCT_DEFINITION_FORMATION('1','',#{assembly_product})"
+            ));
+            let assembly_definition = w.emit(format!(
+                "PRODUCT_DEFINITION('design','',#{assembly_formation},#{definition_context})"
+            ));
+            let assembly_shape = w.emit(format!(
+                "PRODUCT_DEFINITION_SHAPE('','',#{assembly_definition})"
+            ));
+            let origin = w.point(&[0., 0., 0.]);
+            let frame = w.emit(format!("AXIS2_PLACEMENT_3D('',#{origin},$,$)"));
+            let assembly_rep = w.emit(format!("SHAPE_REPRESENTATION('',(#{frame}),#{context})"));
+            w.emit(format!("SHAPE_DEFINITION_REPRESENTATION(#{assembly_shape},#{assembly_rep})"));
+            for (index, matrix) in placements.iter().enumerate() {
+                let origin = w.point(&[matrix[0][3], matrix[1][3], matrix[2][3]]);
+                let axes = [0, 1, 2].map(|column| {
+                    let direction = [matrix[0][column], matrix[1][column], matrix[2][column]];
+                    w.emit(format!("DIRECTION('',({}))", floats(&direction)))
+                });
+                let [x, y, z] = axes;
+                let operator = w.emit(format!(
+                    "CARTESIAN_TRANSFORMATION_OPERATOR_3D('',#{x},#{y},#{origin},1.,#{z})"
+                ));
+                let relationship = w.emit(format!(
+                    "(REPRESENTATION_RELATIONSHIP('','',#{representation},#{assembly_rep})REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(#{operator})SHAPE_REPRESENTATION_RELATIONSHIP())"
+                ));
+                let occurrence = w.emit(format!(
+                    "NEXT_ASSEMBLY_USAGE_OCCURRENCE('planet-{index}','Planet {index}','',#{assembly_definition},#{definition},$)"
+                ));
+                let shape = w.emit(format!("PRODUCT_DEFINITION_SHAPE('','',#{occurrence})"));
+                w.emit(format!("CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#{relationship},#{shape})"));
+            }
+        }
         if let Some(semantic) = semantic {
             crate::step_interchange_v3::step_presentation::emit(
                 &mut w,
@@ -687,7 +725,7 @@ pub(crate) fn export_step_direct(
     allow_degenerate: bool,
     capability: &'static str,
 ) -> Result<(String, FeatureCertificate, StepV3Report)> {
-    export_step_direct_impl(model, ap242_composition, allow_degenerate, capability, None)
+    export_step_direct_impl(model, ap242_composition, allow_degenerate, capability, None, None)
 }
 
 pub fn export_step_v3(model: &Model) -> Result<(String, FeatureCertificate, StepV3Report)> {
@@ -744,6 +782,17 @@ pub fn export_step_v9(model: &Model) -> Result<(String, StepV8Certificate, StepV
     Ok((text, certificate, report))
 }
 
+/// Export one planet prototype and its placements as an AP242 product assembly.
+pub fn export_planet_gear_occurrences_step(
+    assembly: &brep_core::gear::PlanetGearOccurrences,
+) -> Result<String> {
+    let (text, _, _) = export_step_direct_impl(
+        assembly.prototype(), true, true, STEP_INTERCHANGE_V9_CAPABILITY,
+        None, Some(assembly.placements()),
+    )?;
+    Ok(text)
+}
+
 pub fn export_step_v9_with_metadata(
     model: &Model,
     semantic: &StepSemanticMetadata,
@@ -761,6 +810,7 @@ pub fn export_step_v9_with_metadata(
         true,
         STEP_INTERCHANGE_V9_CAPABILITY,
         Some(semantic),
+        None,
     )?;
     Ok((text, certificate, report))
 }

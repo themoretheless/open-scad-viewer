@@ -2785,3 +2785,18 @@ fn v10_rebuilds_an_inconsistent_planar_pcurve_from_its_edge_and_v9_still_refuses
     assert_eq!(topology_signature(&back), topology_signature(&clean));
     assert_eq!(topology_signature(&back), topology_signature(&model));
 }
+
+#[test]
+fn planet_gear_step_assembly_retains_one_prototype() {
+    let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
+    let assembly = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
+    let text = crate::export_planet_gear_occurrences_step(&assembly).unwrap();
+    assert_eq!(text.matches("MANIFOLD_SOLID_BREP(").count(), 1);
+    assert_eq!(text.matches("NEXT_ASSEMBLY_USAGE_OCCURRENCE(").count(), 2);
+    let (back, _, _) = crate::import_step_v9(&text).unwrap();
+    assert_eq!(back.bodies.len(), 2);
+    let radius = 18.;
+    assert!(back.vertices.iter().any(|vertex| vertex.point[0] > radius));
+    assert!(back.vertices.iter().any(|vertex| vertex.point[0] < -radius));
+    assert_eq!(back.validate().unwrap().boundary_edge_count, 0);
+}
