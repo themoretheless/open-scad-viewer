@@ -1274,6 +1274,55 @@ pub fn bound_assembly_two_plane_unbalance(
     Ok([at_first, at_second].map(|vector| vector.map(|value| [value.lo, value.hi])))
 }
 
+/// Certified unbalance magnitude and tolerance status in each correction plane.
+#[derive(Clone, Copy, Debug)]
+pub struct TwoPlaneBalanceReport {
+    pub magnitude_bounds: [[f64; 2]; 2],
+    pub plane_status: [BalanceTolerance; 2],
+    pub overall_status: BalanceTolerance,
+}
+
+/// Compare equivalent radial unbalance vectors with separate magnitude
+/// tolerances for the two correction planes.
+pub fn classify_two_plane_unbalance(
+    vectors: [[[f64; 2]; 3]; 2],
+    tolerances: [f64; 2],
+) -> Result<TwoPlaneBalanceReport> {
+    check(
+        tolerances.iter().all(|value| value.is_finite() && *value >= 0.),
+        "Balance tolerances must be finite and nonnegative",
+    )?;
+    let mut magnitude_bounds = [[0.; 2]; 2];
+    let mut plane_status = [BalanceTolerance::Undetermined; 2];
+    for (index, vector) in vectors.into_iter().enumerate() {
+        let magnitude = norm(centroid_intervals(vector)?)?;
+        magnitude_bounds[index] = [magnitude.lo, magnitude.hi];
+        plane_status[index] = classify_balance_tolerance(magnitude_bounds[index], tolerances[index]);
+    }
+    let overall_status = if plane_status.contains(&BalanceTolerance::Outside) {
+        BalanceTolerance::Outside
+    } else if plane_status == [BalanceTolerance::Within; 2] {
+        BalanceTolerance::Within
+    } else {
+        BalanceTolerance::Undetermined
+    };
+    Ok(TwoPlaneBalanceReport {
+        magnitude_bounds,
+        plane_status,
+        overall_status,
+    })
+}
+
+fn classify_balance_tolerance([lo, hi]: [f64; 2], tolerance: f64) -> BalanceTolerance {
+    if hi <= tolerance {
+        BalanceTolerance::Within
+    } else if lo > tolerance {
+        BalanceTolerance::Outside
+    } else {
+        BalanceTolerance::Undetermined
+    }
+}
+
 /// Enclose the perpendicular distance from the common center of mass to an
 /// axis, then compare the entire enclosure with the allowed eccentricity.
 pub fn bound_assembly_balance_about_line(
@@ -1312,14 +1361,8 @@ pub fn bound_assembly_balance_about_line(
     let distance = norm(perpendicular)?.div(plane_normal_length(&axis)?)?;
     let lo = distance.lo.max(0.);
     let hi = distance.hi;
-    let status = if hi <= tolerance {
-        BalanceTolerance::Within
-    } else if lo > tolerance {
-        BalanceTolerance::Outside
-    } else {
-        BalanceTolerance::Undetermined
-    };
-    Ok(([lo, hi], status))
+    let bounds = [lo, hi];
+    Ok((bounds, classify_balance_tolerance(bounds, tolerance)))
 }
 
 /// Enclose the signed distance of the common center of mass from an

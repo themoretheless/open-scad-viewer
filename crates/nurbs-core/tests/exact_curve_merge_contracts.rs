@@ -8119,3 +8119,31 @@ fn two_plane_balance_splits_midplane_mass_and_rejects_coincident_planes() {
         bound_assembly_two_plane_unbalance(&[piece], [0.; 3], direction, [1.; 2]).is_err()
     );
 }
+
+#[test]
+fn two_plane_tolerance_classifies_each_magnitude_and_the_assembly() {
+    use nurbs_core::analysis::surface_measure::{BalanceTolerance::*, classify_two_plane_unbalance};
+    let vectors = [[[3.; 2], [4.; 2], [0.; 2]], [[-2., 2.], [1.; 2], [0.; 2]]];
+    for (limits, planes, combined) in [
+        ([6., 3.], [Within, Within], Within),
+        ([4., 1.5], [Outside, Undetermined], Outside),
+        ([6., 1.5], [Within, Undetermined], Undetermined),
+    ] {
+        let report = classify_two_plane_unbalance(vectors, limits).unwrap();
+        assert_eq!(report.plane_status, planes);
+        assert_eq!(report.overall_status, combined);
+        let [first, second] = report.magnitude_bounds;
+        assert!(first[0] <= 5. && 5. <= first[1]);
+        assert!(second[0] <= 1. && 5_f64.sqrt() <= second[1]);
+    }
+}
+
+#[test]
+fn two_plane_tolerance_rejects_malformed_inputs() {
+    use nurbs_core::analysis::surface_measure::classify_two_plane_unbalance;
+    let mut vectors = [[[0.; 2]; 3]; 2];
+    assert!(classify_two_plane_unbalance(vectors, [-1., 2.]).is_err());
+    assert!(classify_two_plane_unbalance(vectors, [1., f64::INFINITY]).is_err());
+    vectors[1][0] = [3., 2.];
+    assert!(classify_two_plane_unbalance(vectors, [1.; 2]).is_err());
+}

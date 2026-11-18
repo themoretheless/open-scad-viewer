@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 664,
-  "unallocatedCount": 336,
+  "specifiedCount": 665,
+  "unallocatedCount": 335,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16297,6 +16297,25 @@
         "Expose equivalent radial vectors at two user-supplied axial offsets through the density request.",
         "Check analytic density-weighted plane vectors and offset order, coincident-plane validation and incomplete coverage through the compiled ABI.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0665",
+      "name": "Гарантированная проверка допусков дисбаланса в двух плоскостях",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::classify_two_plane_unbalance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-665-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-665-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify interval unbalance against separate limits in two correction planes and report the assembly status.",
+        "Check the three combined outcomes, bounds on vector magnitude, and invalid tolerance and interval rejection.",
+        "WASM and application integration are separate."
       ]
     }
   ],
