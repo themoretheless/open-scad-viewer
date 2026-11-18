@@ -120,18 +120,17 @@ fn factor(s: &Surface, axis: usize, height: usize, n: usize, m: usize) -> Option
             .collect::<Option<Vec<_>>>()?;
         Some((angular, meridian))
     };
-    let (angular, meridian) = encode(&Q::one()).or_else(|| {
-        // The angular factor may have a common exact scale, e.g. the first
-        // radius of a torus. Move it to the meridian before storing either.
-        let anchor = (0..n).find_map(|i| {
-            plane
-                .iter()
-                .zip(&center)
-                .map(|(&k, c)| (pole(i, 0, k) - c).abs())
-                .find(|v| !v.is_zero())
-        })?;
-        encode(&anchor)
+    // Prefer a common exact angular gauge across meridian subintervals.
+    // An exact original gauge remains usable when that normalization does
+    // not have a binary64 representation.
+    let anchor = (0..n).find_map(|i| {
+        plane
+            .iter()
+            .zip(&center)
+            .map(|(&k, c)| (pole(i, 0, k) - c).abs())
+            .find(|v| !v.is_zero())
     })?;
+    let (angular, meridian) = encode(&anchor).or_else(|| encode(&Q::one()))?;
     let angular = curve(
         axis,
         angular,
@@ -263,13 +262,30 @@ pub fn certify_radial_band_pair(
     max_cells: usize,
     max_pairs: usize,
 ) -> Result<RadialBandPairReport> {
+    certify_radial_band_cycle(&surfaces, &periodic_axes, height_axis, max_cells, max_pairs)
+}
+
+/// An ordered cycle of exact original bands. The simple closed meridian
+/// proves only cyclic-neighbor contacts. BRep ownership of rims and shores
+/// remains a separate obligation at the actual topology entry point.
+pub fn certify_radial_band_cycle(
+    surfaces: &[&Surface],
+    periodic_axes: &[usize],
+    height_axis: usize,
+    max_cells: usize,
+    max_pairs: usize,
+) -> Result<RadialBandPairReport> {
+    check(
+        (2..=256).contains(&surfaces.len()) && surfaces.len() == periodic_axes.len(),
+        "Radial band cycle requires matching surface and axis sequences",
+    )?;
     check(
         max_cells <= 100000 && max_pairs <= 100000,
         "Invalid radial band budget",
     )?;
     let mut out = RadialBandPairReport::default();
     let mut factors = Vec::new();
-    for (surface, axis) in surfaces.into_iter().zip(periodic_axes) {
+    for (&surface, &axis) in surfaces.iter().zip(periodic_axes) {
         surface.validate()?;
         let cost = surface
             .control_points
@@ -285,8 +301,9 @@ pub fn certify_radial_band_pair(
         factors.push(factor);
     }
     let left = &factors[0];
-    let right = &factors[1];
-    if left.center != right.center || !same_angular_curve(&left.angular, &right.angular) {
+    if factors[1..].iter().any(|other| {
+        left.center != other.center || !same_angular_curve(&left.angular, &other.angular)
+    }) {
         return Ok(out);
     }
     let angular = certify_angular_ring(&left.angular, max_cells - out.cells, max_pairs)?;
@@ -349,7 +366,7 @@ fn same_angular_curve(a: &Curve, b: &Curve) -> bool {
 mod tests {
     use super::*;
 
-    fn band(meridian: [[f64; 2]; 5]) -> Surface {
+    fn band<const N: usize>(meridian: [[f64; 2]; N]) -> Surface {
         let angular = [
             [1., -1.],
             [1., 0.],
@@ -367,7 +384,11 @@ mod tests {
             degree_u: 2,
             degree_v: 2,
             knots_u: vec![-1., -1., 0., 0., 1., 1., 2., 2., 3., 3., 4., 4., 5.],
-            knots_v: vec![0., 0., 0., 1., 1., 2., 2., 2.],
+            knots_v: if N == 3 {
+                vec![0., 0., 0., 1., 1., 1.]
+            } else {
+                vec![0., 0., 0., 1., 1., 2., 2., 2.]
+            },
             control_points: angular
                 .iter()
                 .map(|&[x, y]| {
@@ -379,7 +400,11 @@ mod tests {
                 .collect(),
             weights: w
                 .iter()
-                .map(|&u| [1., 0.5, 1., 0.5, 1.].map(|v| u * v).to_vec())
+                .map(|&u| {
+                    (0..N)
+                        .map(|i| if i % 2 == 0 { u } else { u * 0.5 })
+                        .collect()
+                })
                 .collect(),
             periodic_u: true,
             periodic_v: false,
@@ -400,6 +425,29 @@ mod tests {
         }
         assert!(
             !certify_radial_band_pair([&upper, &disconnected], [0; 2], 2, 10000, 100)
+                .unwrap()
+                .proven
+        );
+    }
+
+    #[test]
+    fn four_exact_meridian_arcs_form_one_radial_shell_cycle() {
+        let bands = [
+            band([[5., 0.], [5., 1.], [4., 1.]]),
+            band([[4., 1.], [3., 1.], [3., 0.]]),
+            band([[3., 0.], [3., -1.], [4., -1.]]),
+            band([[4., -1.], [5., -1.], [5., 0.]]),
+        ];
+        let [a, b, c, d] = &bands;
+        let good = certify_radial_band_cycle(&[a, b, c, d], &[0; 4], 2, 10000, 100).unwrap();
+        assert!(good.proven, "{good:?}");
+        assert!(
+            !certify_radial_band_cycle(&[a, c, b, d], &[0; 4], 2, 10000, 100)
+                .unwrap()
+                .proven
+        );
+        assert!(
+            !certify_radial_band_cycle(&[a, b, c, d], &[0; 4], 2, 10000, 1)
                 .unwrap()
                 .proven
         );
