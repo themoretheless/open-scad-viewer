@@ -1441,6 +1441,56 @@ pub fn partition_directional_speed_limit(
     Ok(DirectionalSpeedLimitPartition { cells, work_cells })
 }
 
+/// Classify absolute angular speed of a planar direction curve against an
+/// inclusive limit in radians per unit of the curve parameter. Each knot
+/// span is evaluated on its own side. The direction must stay nonzero to
+/// certify a cell, and jumps between spans are outside this derivative test.
+pub fn partition_planar_angular_speed_limit(
+    direction: &Curve,
+    interval: [f64; 2],
+    limit: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalSpeedLimitPartition> {
+    use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
+
+    check(limit.is_finite() && limit >= 0., "Angular speed limit must be finite and nonnegative")?;
+    direction.validate()?;
+    check(direction.control_points[0].len() == 2, "Angular speed requires a planar direction curve")?;
+    let fixed = fixed_cardinal_rotation(direction).is_some();
+    let (cells, work_cells) = partition_motion_cells(
+        direction, interval, parameter_tolerance, max_cells,
+        |jets, width| {
+            if fixed {
+                return Ok((Within, false));
+            }
+            let length = norm(&jets[0])?;
+            let denominator = length.mul(length)?.mul(width)?;
+            if denominator.lo <= 0. {
+                return Ok((Undetermined, true));
+            }
+            // The jets use a cell-local clock, so divide by the source
+            // width to obtain the derivative in the caller's clock.
+            let cross = jets[0][0].mul(jets[1][1])?.sub(jets[0][1].mul(jets[1][0])?)?;
+            let speed = cross.div(denominator)?;
+            let upper = speed.lo.abs().max(speed.hi.abs());
+            let lower = speed.lo.max(-speed.hi).max(0.);
+            let status = if upper <= limit {
+                Within
+            } else if lower > limit {
+                Exceeds
+            } else {
+                Undetermined
+            };
+            Ok((status, status == Undetermined))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(span, parameter_interval, status)| {
+        DirectionalSpeedLimitCell { parameter_interval, span, status }
+    }).collect();
+    Ok(DirectionalSpeedLimitPartition { cells, work_cells })
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct DirectionalMotionLimitCell<const N: usize = 3> {
     pub parameter_interval: [f64; 2],
