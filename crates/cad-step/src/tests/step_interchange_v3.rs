@@ -4075,3 +4075,23 @@ fn assembly_free_space_excludes_overlapping_material_and_preserves_empty_box() {
     assert!(scene.free_space_in_box([0.; 3], [4.; 3], 1).is_err());
     assert!(scene.free_space_in_box([1.; 3], [0.; 3], 2).is_err());
 }
+
+#[test]
+fn interference_regions_report_closed_geometry_and_volumes_for_each_colliding_pair() {
+    let block = brep_core::cuboid([0.; 3], [2.; 3]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![block],
+        vec![placed(0.), placed(1.), placed(2.5), placed(4.5)]).unwrap();
+    let regions = scene.interference_regions(3, 1e-8, 100_000).unwrap();
+    assert_eq!(regions.len(), 2);
+    for ((pair, region), (expected, volume)) in regions.into_iter().zip([([0, 1], 4.), ([1, 2], 2.)]) {
+        assert_eq!(pair, expected);
+        let (solid, properties) = region.unwrap();
+        assert_eq!(solid.validate().unwrap().boundary_edge_count, 0);
+        assert!((properties.signed_volume_mm3 - volume).abs() < 1e-8);
+    }
+    assert!(scene.interference_regions(2, 1e-8, 100_000).is_err());
+    assert!(scene.interference_regions(3, f64::NAN, 100_000).is_err());
+}

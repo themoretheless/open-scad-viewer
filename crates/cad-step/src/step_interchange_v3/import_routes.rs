@@ -1229,15 +1229,41 @@ impl StepSharedAssembly {
     /// retains the pair indices and any diagnostic from materialization or CSG.
     /// If there are more candidates than allowed, no CSG work is performed.
     pub fn check_interferences(&self, max_pairs: usize) -> Result<Vec<([usize; 2], Result<bool>)>> {
-        let pairs = self.proximity_candidates(0.)?;
-        if pairs.len() > max_pairs {
-            return Err(refuse("STEP assembly interference candidate budget exceeded"));
-        }
+        let pairs = self.interference_candidates(max_pairs)?;
         Ok(pairs.into_iter().map(|[first, second]| {
             let result = self.intersect_occurrences(first, second)
                 .map(|common| !common.bodies.is_empty());
             ([first, second], result)
         }).collect())
+    }
+
+    /// Recover pairwise common solids and their integrated mass properties in assembly coordinates.
+    /// Touch-only pairs are omitted. Each unresolved candidate retains its diagnostic.
+    pub fn interference_regions(&self, max_pairs: usize, relative_tolerance: f64, max_evaluations: usize)
+        -> Result<Vec<([usize; 2], Result<(Model, brep_core::analysis::MassProperties)>)>> {
+        if !(1e-10..=1e-3).contains(&relative_tolerance) || !(100..=2_000_000).contains(&max_evaluations) {
+            return Err(refuse("STEP interference measurement options outside mass integration limits"));
+        }
+        let pairs = self.interference_candidates(max_pairs)?;
+        let mut regions = Vec::new();
+        for [first, second] in pairs {
+            let region = match self.intersect_occurrences(first, second) {
+                Ok(common) if common.bodies.is_empty() => continue,
+                Ok(common) => brep_core::analysis::mass_properties(&common, relative_tolerance, max_evaluations)
+                    .map(|properties| (common, properties)),
+                Err(error) => Err(error),
+            };
+            regions.push(([first, second], region));
+        }
+        Ok(regions)
+    }
+
+    fn interference_candidates(&self, max_pairs: usize) -> Result<Vec<[usize; 2]>> {
+        let pairs = self.proximity_candidates(0.)?;
+        if pairs.len() > max_pairs {
+            return Err(refuse("STEP assembly interference candidate budget exceeded"));
+        }
+        Ok(pairs)
     }
 
     /// Estimate total material volume in mm³, counting each occurrence.
