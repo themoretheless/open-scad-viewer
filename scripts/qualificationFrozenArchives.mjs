@@ -45,6 +45,11 @@ const historicalPlanHashes = [
 ]
 export const FROZEN_ARCHIVES = Object.freeze({
   'scripts/refresh-qualification-fingerprints-v110-v127.mjs': '5b1c96dcb4723be5acf0bf1d089da6a4bd9525b5f7fa8863042f009c433951b4',
+  'docs/qualification/g0-toolchain-fingerprints-v111.json': 'aa35603b23ef04e397c4776e7a5cb4a70d96f68384532f9acca9d0c0b48430ee',
+  'docs/qualification/semantic-manifold-g1-plan-v128.json': '3179ee3f78467f67701dd882d9448a13a00899fa1e2e250733471d4fbe93036f',
+  'docs/qualification/g0-v111-g1-v128-refreeze-status-v1.json': '501b018134e9b763812c7006dcea39c4e6cefcdd4b1fbf7281bc41ca164708a0',
+  'docs/qualification/g0-v111-g1-v128-refreeze-review.md': '115bb2a9ea3c0c162a5a75c801be81b1f114590da196467c9a47925f2d1d81a3',
+  'scripts/refresh-qualification-fingerprints-v111-v128.mjs': '4c1f37e6bf599daa942cb979238dc5b654295541870d1f2c31dc43f1cce4415e',
   'docs/qualification/g0-toolchain-fingerprints-v110.json': 'af264f92743fdfc879d957056c9e0a28bcf50ed3c56cee87da1a6cd7efc4b7ea',
   'docs/qualification/semantic-manifold-g1-plan-v127.json': '3b7cef385781fc5fe5e7c62c1841f0539d29e4b572bb769dc6f01a860468e35d',
   'docs/qualification/g0-v110-g1-v127-refreeze-status-v1.json': 'e54834da6c9c1a975febe250d741766e8d96d38775416a7f5dfc374979255441',
