@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 672,
-  "unallocatedCount": 328,
+  "specifiedCount": 673,
+  "unallocatedCount": 327,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16457,6 +16457,25 @@
         "Expose minimum mounting radii and plane feasibility against positive mass limits.",
         "Check analytic minimum radius, mixed plane capacity, interoperability with counterweight placement, incomplete integration, and input validation.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0673",
+      "name": "Гарантированный суммарный ход NURBS-кривой вдоль заданной оси",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::directional_travel",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-673-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-673-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Integrate the absolute projected velocity of a rational curve, including reversals, under a shared work limit.",
+        "Check retracing with coincident endpoints, a rational circle and oblique axis, scale invariance and coarse budget enclosures.",
+        "WASM and application integration are separate."
       ]
     }
   ],

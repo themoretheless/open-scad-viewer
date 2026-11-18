@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0673",
+  "testedBase": "841a7807395e167d767e12e36c7b371f86bdbf33",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 272,
+  "scope": [
+    "Integrate the absolute projected velocity of a rational curve, including reversals, under a shared work limit.",
+    "Check retracing with coincident endpoints, a rational circle and oblique axis, scale invariance and coarse budget enclosures."
+  ],
+  "logSha256": "450f9743462cb03979d8ea8c969ec18a62ca17ed4da3a930b7e53d243fa43a85",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "841eacd29e5803ddb4ecf887c10b1c7427b48bbb321141173ceb3a56eddbf05d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "acf66b512372e138c864928ec28a11cab4cb469664eb2d5b29dfc6b8e4ae035d"
+  }
+}

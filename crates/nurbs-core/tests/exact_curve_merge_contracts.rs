@@ -8247,3 +8247,33 @@ fn two_plane_capacity_rejects_invalid_limits_and_mounting_radii() {
     assert!(bound_two_plane_counterweight_capacity(vectors, [1., f64::INFINITY], [1.; 2]).is_err());
     assert!(bound_two_plane_counterweight_capacity(vectors, [1.; 2], [1., f64::NAN]).is_err());
 }
+
+#[test]
+fn directional_curve_travel_counts_reversals_with_coincident_endpoints() {
+    use nurbs_core::analysis::curve_measure::directional_travel;
+    let curve = nurbs_core::paths::bezier(
+        vec![vec![0., 0.], vec![2., 2.], vec![0., 0.]],
+        None,
+    )
+    .unwrap();
+    for scale in [f64::from_bits(1), -1., f64::MAX] {
+        let report = directional_travel(&curve, &[scale, scale], 1e-7, 4096).unwrap();
+        let expected = 2. * 2_f64.sqrt();
+        assert!(report.within_tolerance, "{report:?}");
+        assert!(report.bounds[0] <= expected && expected <= report.bounds[1]);
+    }
+    let coarse = directional_travel(&curve, &[1., 1.], 1e-7, 1).unwrap();
+    assert!(!coarse.within_tolerance);
+    assert!(coarse.bounds[0] <= 2. * 2_f64.sqrt() && coarse.bounds[1] >= 2. * 2_f64.sqrt());
+}
+
+#[test]
+fn directional_curve_travel_encloses_rotated_rational_circle() {
+    use nurbs_core::analysis::curve_measure::directional_travel;
+    let curve = nurbs_core::primitives::circle([1., 2., 3.], [0., 0., 1.], 2.).unwrap();
+    let report = directional_travel(&curve, &[1., 2., 2.], 1e-6, 8192).unwrap();
+    let expected = 8. * 5_f64.sqrt() / 3.;
+    assert!(report.within_tolerance, "{report:?}");
+    assert!(report.bounds[0] <= expected && expected <= report.bounds[1]);
+    assert!(directional_travel(&curve, &[0.; 3], 1e-6, 8192).is_err());
+}

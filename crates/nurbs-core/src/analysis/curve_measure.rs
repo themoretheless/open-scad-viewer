@@ -661,3 +661,56 @@ pub(super) fn length_under_plane_metric(
     };
     Ok(measure_with_cells(curve,curve.domain(),tolerance,max_cells,mapped)?.0)
 }
+
+/// Enclose total travel along a fixed direction, including every reversal.
+/// The direction is normalized, so bounds and tolerance use model units.
+pub fn directional_travel(
+    curve: &Curve,
+    direction: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<LengthReport> {
+    curve.validate()?;
+    validate(tolerance, max_cells)?;
+    check(
+        direction.len() == curve.control_points[0].len()
+            && direction.iter().all(|value| value.is_finite()),
+        "Directional travel requires a finite vector matching the curve dimension",
+    )?;
+    let scale = direction.iter().map(|value| value.abs()).fold(0., f64::max);
+    check(scale > 0., "Directional travel requires a nonzero vector")?;
+    let coefficients = direction
+        .iter()
+        .map(|&value| {
+            let ratio = value / scale;
+            if value == 0. || value.abs() == scale {
+                Ok(Interval::point(ratio))
+            } else {
+                Interval::new(ratio.next_down(), ratio.next_up())
+            }
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let length = norm(&coefficients)?;
+    let unit = coefficients
+        .into_iter()
+        .map(|coefficient| coefficient.div(length))
+        .collect::<Result<Vec<_>>>()?;
+    let project = |jets: Vec<Vec<Interval>>| -> Result<Vec<Vec<Interval>>> {
+        jets.into_iter()
+            .map(|jet| {
+                let coordinate = jet
+                    .iter()
+                    .zip(&unit)
+                    .filter(|(_, coefficient)| coefficient.lo != 0. || coefficient.hi != 0.)
+                    .try_fold(Interval::point(0.), |sum, (&value, &coefficient)| {
+                        sum.add(value.mul(coefficient)?)
+                    })?;
+                Ok(vec![coordinate])
+            })
+            .collect()
+    };
+    let mapped = |curve: &Curve, span, domain, serial| {
+        mapped_cell(curve, span, domain, serial, project)
+    };
+    Ok(measure_with_cells(curve, curve.domain(), tolerance, max_cells, mapped)?.0)
+}
