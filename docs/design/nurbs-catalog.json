@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 764,
-  "unallocatedCount": 236,
+  "specifiedCount": 765,
+  "unallocatedCount": 235,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18208,6 +18208,25 @@
       "remainingQualification": [
         "Bound the worst signed plane clearance for a rotating planar vertex hull after certifying orientation regularity.",
         "Check an interior rotation witness, normalized plane clearance, coarse enclosure, work budget and zero orientation rejection.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0765",
+      "name": "Проверка вращающегося плоского инструмента на контакт с выпуклыми препятствиями",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_hull_obstacle_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-765-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-765-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify separating obstacle planes or a persistent tool vertex inside an obstacle while the hull rotates.",
+        "Check ordered obstacle contact and separation, a regular clear interval, zero orientation uncertainty and a vertex/plane budget.",
         "WASM and application integration are separate."
       ]
     }

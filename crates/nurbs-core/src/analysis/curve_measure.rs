@@ -2136,14 +2136,19 @@ fn planar_rotation(axis: &[Interval]) -> Result<([Interval; 2], bool)> {
 fn rotating_hull_support(
     offsets: &[Vec<Interval>],
     normal: &[Interval],
-    [cosine, sine]: [Interval; 2],
+    rotation: [Interval; 2],
 ) -> Result<Interval> {
-    // Project onto the inverse-rotated normal in the tool frame.
-    let inverse_normal = [
+    hull_plane_support(offsets, &inverse_rotated_normal(normal, rotation)?)
+}
+
+fn inverse_rotated_normal(
+    normal: &[Interval],
+    [cosine, sine]: [Interval; 2],
+) -> Result<[Interval; 2]> {
+    Ok([
         normal[0].mul(cosine)?.add(normal[1].mul(sine)?)?,
         normal[1].mul(cosine)?.sub(normal[0].mul(sine)?)?,
-    ];
-    hull_plane_support(offsets, &inverse_normal)
+    ])
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -2431,6 +2436,87 @@ pub fn partition_curve_ball_obstacle_clearance(
         ObstacleClearanceCell { parameter_interval, span, obstacles, status }
     }).collect();
     Ok(ObstacleClearancePartition { cells, work_plane_cells: work_cells * plane_count })
+}
+
+/// Partition clearance from closed convex obstacles for a rotating planar
+/// vertex hull. A plane separating all tool vertices proves clearance, while
+/// one tool vertex inside all planes proves contact. Other cases, including
+/// possible zero orientation, remain undetermined.
+pub fn partition_planar_rotating_hull_obstacle_clearance(
+    position: &Curve,
+    direction: &Curve,
+    interval: [f64; 2],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
+
+    validate(parameter_tolerance, max_vertex_plane_cells)?;
+    check(!obstacles.is_empty() && !vertex_offsets.is_empty(), "Clearance requires obstacles and hull vertices")?;
+    let plane_budget = max_vertex_plane_cells / vertex_offsets.len();
+    let mut plane_count = 0;
+    for obstacle in obstacles {
+        check(!obstacle.is_empty(), "Each obstacle requires at least one plane")?;
+        if obstacle.len() > plane_budget - plane_count {
+            return Err(resource("Clearance budget must cover every vertex and plane"));
+        }
+        plane_count += obstacle.len();
+    }
+    let (_, initial) = synchronized_clearance_cells([position, direction], interval, [0.; 2])?;
+    check(position.control_points[0].len() == 2, "Rotating hull clearance requires planar curves")?;
+    let vertices = prepare_workspace_hull(position, vertex_offsets, plane_count)?;
+    let obstacles = obstacles.iter().map(|planes| prepare_workspace_planes(planes, 2))
+        .collect::<Result<Vec<_>>>()?;
+    let pairs = plane_count * vertices.len();
+    let (cells, work_cells) = partition_enclosed_cells(
+        initial, parameter_tolerance, max_vertex_plane_cells / pairs,
+        |[span, direction_span], domain| {
+            let axis = curve_jets::enclose(direction, direction_span, domain)?;
+            let (rotation, regular) = planar_rotation(&axis[0])?;
+            let mut clearance = vec![Undetermined; obstacles.len()];
+            if regular {
+                let point = curve_jets::enclose(position, span, domain)?;
+                let mut candidates = vec![true; vertices.len()];
+                for (obstacle, status) in obstacles.iter().zip(&mut clearance) {
+                    candidates.fill(true);
+                    for (normal, offset) in obstacle {
+                        let inverse = inverse_rotated_normal(normal, rotation)?;
+                        let center = project_jet(&point[0], normal)?.sub(*offset)?;
+                        let mut separated = true;
+                        for (vertex, candidate) in vertices.iter().zip(&mut candidates) {
+                            let residual = center.add(project_jet(vertex, &inverse)?)?;
+                            separated &= residual.lo > 0.;
+                            *candidate &= residual.hi <= 0.;
+                        }
+                        if separated {
+                            *status = Within;
+                            break;
+                        }
+                    }
+                    if *status != Within && candidates.contains(&true) {
+                        *status = Exceeds;
+                    }
+                }
+            }
+            let refine = clearance.contains(&Undetermined);
+            let status = if clearance.contains(&Exceeds) {
+                Exceeds
+            } else if refine {
+                Undetermined
+            } else {
+                Within
+            };
+            Ok((ObstacleClearanceCell {
+                parameter_interval: domain, span, obstacles: clearance, status,
+            }, refine))
+        },
+    )?;
+    Ok(ObstacleClearancePartition {
+        cells: cells.into_iter().map(|(_, _, cell)| cell).collect(),
+        work_plane_cells: work_cells * pairs,
+    })
 }
 
 /// Check clearance for a translating convex hull of offsets, rounded by a

@@ -11797,3 +11797,46 @@ fn minimum_rotating_hull_clearance_refines_an_interior_rotation_witness() {
     };
     assert!(measure(&singular, 256).is_err());
 }
+
+#[test]
+fn rotating_hull_obstacle_clearance_tracks_vertex_contact_and_separation() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace, partition_planar_rotating_hull_obstacle_clearance,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., 0.], vec![0., 1.]],
+        weights: vec![1., 2.],
+        ..position.clone()
+    };
+    let right = [WorkspaceHalfSpace { normal: &[-1., 0.], offset: -1.6 }];
+    let above = [WorkspaceHalfSpace { normal: &[0., -2.], offset: -3.2 }];
+    let obstacles = [&right[..], &above[..]];
+    let hull = [&[0., 0.][..], &[2., 0.][..]];
+    let partition = |orientation, budget| partition_planar_rotating_hull_obstacle_clearance(
+        &position, orientation, [0., 1.], &obstacles, &hull, 0.005, budget,
+    );
+    assert!(partition(&direction, 3).is_err());
+    let report = partition(&direction, 512).unwrap();
+    assert!(report.work_plane_cells <= 512);
+    assert_eq!(report.cells.first().unwrap().obstacles, [Status::Exceeds, Status::Within]);
+    assert_eq!(report.cells.last().unwrap().obstacles, [Status::Within, Status::Exceeds]);
+    assert!(report.cells.iter().any(|cell| cell.status == Status::Within));
+    let singular = Curve {
+        control_points: vec![vec![1., 0.], vec![-1., 0.]],
+        weights: vec![1.; 2],
+        ..position.clone()
+    };
+    let report = partition(&singular, 128).unwrap();
+    for cell in report.cells.iter().filter(|cell| {
+        cell.parameter_interval[0] <= 0.5 && cell.parameter_interval[1] >= 0.5
+    }) {
+        assert_eq!(cell.obstacles, [Status::Undetermined; 2]);
+    }
+}
