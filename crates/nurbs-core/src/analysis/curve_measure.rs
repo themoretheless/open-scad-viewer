@@ -2883,6 +2883,40 @@ impl ScheduledToolsClearancePartition {
     /// Bound the maximum number of distinct pairs in simultaneous contact
     /// across the represented timelines. Contacts include shared endpoints.
     pub fn peak_contact_pair_count_bounds(&self) -> [usize; 2] {
+        self.contact_pair_intervals().map(|intervals| {
+            let mut peak = 0;
+            sweep_contact_pairs(intervals, |active, _| peak = peak.max(active));
+            peak
+        })
+    }
+
+    /// Bound elapsed time with at least the requested number of distinct
+    /// pairs in contact. An isolated instant contributes zero duration.
+    pub fn simultaneous_contact_duration_bounds(&self, minimum_pairs: usize) -> Result<[f64; 2]> {
+        check(minimum_pairs > 0, "Simultaneous contact requires a positive pair count")?;
+        let [confirmed, possible] = self.contact_pair_intervals();
+        let duration = |intervals: Vec<_>, upper| -> Result<f64> {
+            use num_rational::BigRational;
+
+            let mut total = BigRational::default();
+            let mut unbounded = false;
+            sweep_contact_pairs(intervals, |active, [start, end]| {
+                if active >= minimum_pairs && start < end {
+                    if let (Some(a), Some(b)) =
+                        (BigRational::from_float(start), BigRational::from_float(end))
+                    {
+                        total += b - a;
+                    } else {
+                        unbounded = true;
+                    }
+                }
+            });
+            if unbounded { Ok(f64::INFINITY) } else { round_motion_duration(&total, upper) }
+        };
+        Ok([duration(confirmed, false)?, duration(possible, true)?])
+    }
+
+    fn contact_pair_intervals(&self) -> [Vec<ToolPairInterval>; 2] {
         let mut confirmed = Vec::new();
         let mut possible = Vec::new();
         for cell in &self.cells {
@@ -2896,7 +2930,7 @@ impl ScheduledToolsClearancePartition {
                 possible.push((cell.tools, [start_lo, end_hi]));
             }
         }
-        [peak_active_contact_pairs(confirmed), peak_active_contact_pairs(possible)]
+        [confirmed, possible]
     }
 
     /// Bound the total duration of contact across the represented pair
@@ -2997,7 +3031,12 @@ impl ScheduledToolsClearancePartition {
     }
 }
 
-fn peak_active_contact_pairs(intervals: Vec<([usize; 2], [f64; 2])>) -> usize {
+type ToolPairInterval = ([usize; 2], [f64; 2]);
+
+fn sweep_contact_pairs(
+    intervals: Vec<ToolPairInterval>,
+    mut visit: impl FnMut(usize, [f64; 2]),
+) {
     let mut events = Vec::with_capacity(2 * intervals.len());
     for (pair, [start, end]) in intervals {
         events.push((if start == 0. { 0. } else { start }, false, pair));
@@ -3006,8 +3045,10 @@ fn peak_active_contact_pairs(intervals: Vec<([usize; 2], [f64; 2])>) -> usize {
     // Starts precede ends at the same instant because the cells are closed.
     events.sort_unstable_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
     let mut active = BTreeMap::<[usize; 2], usize>::new();
-    let mut peak = 0;
-    for (_, ending, pair) in events {
+    let mut previous = events.first().map_or(0., |event| event.0);
+    for (time, ending, pair) in events {
+        visit(active.len(), [previous, time]);
+        previous = time;
         if ending {
             if let std::collections::btree_map::Entry::Occupied(mut entry) = active.entry(pair) {
                 *entry.get_mut() -= 1;
@@ -3017,10 +3058,8 @@ fn peak_active_contact_pairs(intervals: Vec<([usize; 2], [f64; 2])>) -> usize {
             }
         } else {
             *active.entry(pair).or_default() += 1;
-            peak = peak.max(active.len());
         }
     }
-    peak
 }
 
 fn time_interval_union_duration(

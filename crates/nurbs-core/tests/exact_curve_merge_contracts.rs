@@ -11234,3 +11234,33 @@ fn peak_scheduled_contact_pairs_counts_distinct_pairs_at_shared_endpoints() {
     };
     assert_eq!(report.peak_contact_pair_count_bounds(), [2, 3]);
 }
+
+#[test]
+fn simultaneous_contact_duration_measures_distinct_pairs_and_excludes_isolated_instants() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, ScheduledClearanceCell, ScheduledToolPairCell,
+        ScheduledToolsClearancePartition,
+    };
+    let cell = |tools, time, status| ScheduledToolPairCell {
+        tools,
+        clearance: ScheduledClearanceCell {
+            time_endpoint_bounds: time,
+            gap_bounds: if status == Status::Exceeds { [-2., -1.] } else { [-1., 1.] },
+            status,
+        },
+    };
+    let report = ScheduledToolsClearancePartition {
+        cells: vec![
+            cell([0, 1], [[0.; 2], [3.; 2]], Status::Exceeds),
+            cell([0, 1], [[2.; 2], [4.; 2]], Status::Exceeds),
+            cell([0, 2], [[2., 2.25], [5., 5.25]], Status::Exceeds),
+            cell([1, 2], [[3.; 2]; 2], Status::Exceeds),
+            cell([1, 2], [[4.; 2], [5.; 2]], Status::Undetermined),
+        ],
+        work_cells: 5,
+    };
+    assert_eq!(report.peak_contact_pair_count_bounds(), [3, 3]);
+    assert_eq!(report.simultaneous_contact_duration_bounds(2).unwrap(), [1.75, 3.]);
+    assert_eq!(report.simultaneous_contact_duration_bounds(3).unwrap(), [0.; 2]);
+    assert!(report.simultaneous_contact_duration_bounds(0).is_err());
+}
