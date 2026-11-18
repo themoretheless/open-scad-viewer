@@ -2880,6 +2880,38 @@ pub enum LastScheduledToolContact {
 }
 
 impl ScheduledToolsClearancePartition {
+    /// Bound the total duration of contact across the represented pair
+    /// timelines. Simultaneous contacts contribute once. Confirmed cells
+    /// contribute inward-rounded intervals to the lower bound; all nonclear
+    /// cells contribute outward-rounded intervals to the upper bound.
+    pub fn contact_duration_bounds(&self) -> Result<[f64; 2]> {
+        let mut confirmed = Vec::new();
+        let mut possible = Vec::new();
+        let mut unbounded_upper = false;
+        for cell in &self.cells {
+            let [[start_lo, start_hi], [end_lo, end_hi]] = cell.clearance.time_endpoint_bounds;
+            if cell.clearance.status == DirectionalMotionStatus::Exceeds
+                && start_hi.is_finite() && end_lo.is_finite() && start_hi < end_lo
+            {
+                confirmed.push([start_hi, end_lo]);
+            }
+            if cell.clearance.status != DirectionalMotionStatus::Within {
+                if start_lo.is_finite() && end_hi.is_finite() {
+                    possible.push([start_lo, end_hi]);
+                } else {
+                    unbounded_upper = true;
+                }
+            }
+        }
+        let lower = round_motion_duration(&time_interval_union_duration(confirmed)?, false)?;
+        let upper = if unbounded_upper {
+            f64::INFINITY
+        } else {
+            round_motion_duration(&time_interval_union_duration(possible)?, true)?
+        };
+        Ok([lower, upper])
+    }
+
     /// Bracket the last contact across the represented pair timelines.
     /// A possible later contact on any pair contributes to the upper bound.
     pub fn last_contact(&self) -> LastScheduledToolContact {
@@ -2931,6 +2963,28 @@ impl ScheduledToolsClearancePartition {
             (None, _) => FirstScheduledToolContact::Clear,
         }
     }
+}
+
+fn time_interval_union_duration(
+    mut intervals: Vec<[f64; 2]>,
+) -> Result<num_rational::BigRational> {
+    intervals.sort_by(|a, b| a[0].total_cmp(&b[0]));
+    let mut total = num_rational::BigRational::default();
+    let mut current: Option<[f64; 2]> = None;
+    for [start, end] in intervals {
+        match current {
+            Some([a, b]) if start <= b => current = Some([a, b.max(end)]),
+            Some([a, b]) => {
+                total += exact_motion_operand(b)? - exact_motion_operand(a)?;
+                current = Some([start, end]);
+            }
+            None => current = Some([start, end]),
+        }
+    }
+    if let Some([a, b]) = current {
+        total += exact_motion_operand(b)? - exact_motion_operand(a)?;
+    }
+    Ok(total)
 }
 
 /// Classify clearance for every unordered tool pair with one budget.

@@ -11146,3 +11146,36 @@ fn last_scheduled_tool_contact_compares_times_across_pair_groups() {
     report.cells[0].clearance.status = Status::Within;
     assert_eq!(report.last_contact(), LastScheduledToolContact::Clear);
 }
+
+#[test]
+fn scheduled_contact_duration_counts_overlapping_pairs_once() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, ScheduledClearanceCell, ScheduledToolPairCell,
+        ScheduledToolsClearancePartition,
+    };
+    let cell = |tools, start, end, status| ScheduledToolPairCell {
+        tools,
+        clearance: ScheduledClearanceCell {
+            time_endpoint_bounds: [start, end],
+            gap_bounds: match status {
+                Status::Within => [1., 2.],
+                Status::Exceeds => [-2., -1.],
+                Status::Undetermined => [-1., 1.],
+            },
+            status,
+        },
+    };
+    let mut report = ScheduledToolsClearancePartition {
+        cells: vec![
+            cell([0, 1], [3., 3.25], [5., 5.25], Status::Exceeds),
+            cell([0, 2], [1., 1.25], [4., 4.25], Status::Exceeds),
+            cell([1, 2], [7., 7.25], [8., 8.25], Status::Undetermined),
+        ],
+        work_cells: 3,
+    };
+    assert_eq!(report.contact_duration_bounds().unwrap(), [3.75, 5.5]);
+    report.cells[2].clearance.time_endpoint_bounds[1] = [f64::MAX, f64::INFINITY];
+    assert_eq!(report.contact_duration_bounds().unwrap(), [3.75, f64::INFINITY]);
+    report.cells.clear();
+    assert_eq!(report.contact_duration_bounds().unwrap(), [0.; 2]);
+}
