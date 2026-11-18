@@ -179,16 +179,6 @@ fn audited_chart_domain(
         s.knots_u[s.control_points.len()],
         s.knots_v[s.control_points[0].len()],
     ];
-    // The nesting audit uses the first control point of each active hole
-    // as its boundary witness. Untrimmed, unclamped starts cannot supply it.
-    for &hole in &face.holes {
-        charge(cells, limit, 1)?;
-        let first = model.loops[hole].coedges.first()?;
-        let p = &first.pcurve;
-        if first.trim().is_none() && p.knots.first() != Some(&p.domain()[0]) {
-            return None;
-        }
-    }
     // The verified lift and loop simplicity apply to the active traversal.
     // Here the complete UV control hull conservatively places that same
     // traversal in the rectangle on which projection injectivity is proved.

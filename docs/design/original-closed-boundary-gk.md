@@ -257,6 +257,13 @@ projected exterior. The sum of the two projected outer-loop windings
 then has magnitude at most one, which excludes overlapping interiors.
 Strictly nested holes cannot add contact across that partition.
 
+The nesting audit classifies an enclosure of the active endpoint of
+each original loop. A control point outside the active interval has
+no authority to establish containment. When a loop has unclamped ends,
+the simplicity proof may materialize the exact active interval under
+its existing work allowance. Failure to represent it exactly leaves
+the loop unproved.
+
 A hole may subtract material from either natural chart when its entire
 rational trim lies strictly inside the chart rectangle. The audit checks
 the original control hull first and can use exact subdivision to prove
