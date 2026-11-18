@@ -85,6 +85,7 @@ export const mirrorMatrix = (x: number, y: number, z: number): Matrix4 | null =>
 
 export function createBrepGraphBuilder(): BrepGraphBuilder {
   const nodes: BrepNode[] = []
+  const gears = new Map<string, BrepValue>()
   let counter = 0
 
   const add = (node: Omit<BrepNode, 'id'>): string => {
@@ -116,7 +117,15 @@ export function createBrepGraphBuilder(): BrepGraphBuilder {
 
     box: (min, max) => node({ op: 'brep_box', min: [...min], max: [...max] }),
     sphere: radius => node({ op: 'brep_sphere', radius }),
-    gear: spec => node({ op: 'brep_gear', ...spec }),
+    gear: spec => {
+      // Gear parameters are finite scalars. Reuse the local shape across placements.
+      const key = JSON.stringify(Object.entries(spec).sort(([a], [b]) => a.localeCompare(b)))
+      const existing = gears.get(key)
+      if (existing) return existing
+      const gear = node({ op: 'brep_gear', ...spec })
+      gears.set(key, gear)
+      return gear
+    },
     tube: (outerRadius, innerRadius, height) =>
       node({ op: 'brep_tube', outer_radius: outerRadius, inner_radius: innerRadius, height }),
     torus: (majorRadius, minorRadius) =>

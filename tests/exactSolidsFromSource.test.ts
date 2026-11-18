@@ -83,6 +83,16 @@ describe('exact solids from source', () => {
     expect(result.meshes.length).toBeGreaterThan(0)
     const plan = result.exactSolids!
     expect(plan.roots).toHaveLength(20)
+    expect(plan.nodes.filter(node => node.op === 'brep_gear')).toHaveLength(3)
+    const byId = new Map(plan.nodes.map(node => [node.id, node]))
+    const prototypes = plan.roots.slice(2).map(root => {
+      if (!('id' in root)) throw Error('Expected an exact planet')
+      let node = byId.get(root.id)
+      while (node?.op === 'transform') node = byId.get(String(node.input))
+      expect(node?.teeth).toBe(4)
+      return node?.id
+    })
+    expect(new Set(prototypes).size).toBe(1)
     const bodies = buildExactSolidBodies(plan.nodes, plan.roots)
     expect(bodies).toHaveLength(20)
     expect(bodies.every(b => b.brep && b.brep.faces.length > 8)).toBe(true)
