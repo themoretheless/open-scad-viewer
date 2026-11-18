@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0814",
+  "testedBase": "b667ca27543255b184d7db4badfff3542ed4aa68",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 440,
+  "scope": [
+    "Bound signed distance to effective fill boundaries while skipping inactive source contours.",
+    "Check distance on an inactive source loop, remapped witness index and even-odd hole behavior."
+  ],
+  "logSha256": "592ab05751ef92d97dcc7e26d5fbba06ee3307badebebea4a3caadbecda83aac",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "237af5fc6cb0db95f4d5d771e0b35da42c7e5cf462dabf9bbc5a35ba0f931387",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "9e82bda066b256d275a18ba8b11d5aba7d08832e0ffc99c89a6aa20f56a87a78"
+  }
+}

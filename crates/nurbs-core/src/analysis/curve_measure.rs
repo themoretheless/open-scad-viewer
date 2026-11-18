@@ -2209,6 +2209,41 @@ pub fn measure_planar_curve_fill_signed_distance_over_box(
     Ok(PlanarCurveBoxSignedDistanceReport { signed_bounds, center })
 }
 
+/// Bound signed distance to the actual boundary of a certified filled
+/// region. Contours across which fill does not change are ignored.
+/// The witness contour index addresses the original input. The fill
+/// report's winding counts only contours active under the chosen rule.
+pub fn measure_planar_contour_fill_boundary_signed_distance(
+    contours: &[&Curve],
+    point: [f64; 2],
+    rule: crate::chord_winding::FillRule,
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_separation_cells: usize,
+    max_orientation_cells: usize,
+    max_fill_cells: usize,
+    max_distance_cells: usize,
+) -> Result<PlanarCurveSignedDistanceReport> {
+    validate(distance_tolerance, max_distance_cells)?;
+    check(point.iter().all(|value| value.is_finite()), "Distance point must be finite")?;
+    let (_, transitions) = certify_contour_fill_transitions(
+        contours, rule, parameter_tolerance, distance_tolerance, max_simplicity_work,
+        max_winding_cells, max_separation_cells, max_orientation_cells,
+    )?;
+    let indices: Vec<_> = transitions.into_iter().enumerate()
+        .filter_map(|(index, value)| (value != 0).then_some(index)).collect();
+    let active: Vec<_> = indices.iter().map(|&index| contours[index]).collect();
+    // Every retained contour toggles fill, even for a nonzero source rule.
+    let mut report = measure_planar_curve_fill_signed_distance(
+        &active, point, crate::chord_winding::FillRule::EvenOdd, parameter_tolerance,
+        distance_tolerance, max_fill_cells, max_distance_cells,
+    )?;
+    report.witness_contour = indices[report.witness_contour];
+    Ok(report)
+}
+
 fn measure_signed_contour_distance(
     contours: &[&Curve],
     point: [f64; 2],

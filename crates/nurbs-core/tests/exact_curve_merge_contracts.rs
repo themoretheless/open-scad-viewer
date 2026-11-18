@@ -13287,3 +13287,31 @@ fn planar_contour_fill_topology_assigns_holes_across_inactive_contours() {
     assert_eq!(report.components[1].holes, [3]);
     assert_eq!(report.euler_characteristic, 1);
 }
+
+#[test]
+fn planar_contour_fill_boundary_distance_ignores_inactive_loops() {
+    use nurbs_core::{
+        analysis::curve_measure::measure_planar_contour_fill_boundary_signed_distance,
+        chord_winding::FillRule,
+    };
+    let square = |r: f64| Curve {
+        degree: 1, knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-r, -r], vec![r, -r], vec![r, r], vec![-r, r], vec![-r, -r]],
+        weights: vec![1.; 5], periodic: false,
+    };
+    let outer = square(3.);
+    let inner = square(1.);
+    let measure = |point, rule| measure_planar_contour_fill_boundary_signed_distance(
+        &[&inner, &outer], point, rule, 0.02, 1e-5, 128, 4096, 512, 1024, 1024, 256,
+    );
+    let report = measure([1., 0.], FillRule::NonZero).unwrap();
+    assert_eq!(report.witness_contour, 1);
+    let [lo, hi] = report.signed_bounds;
+    assert!(lo <= -2. && -2. <= hi && hi - lo <= 1e-5);
+
+    let report = measure([0., 0.], FillRule::EvenOdd).unwrap();
+    assert_eq!(report.witness_contour, 0);
+    let [lo, hi] = report.signed_bounds;
+    assert!(lo <= 1. && 1. <= hi && hi - lo <= 1e-5);
+    assert!(measure([1., 0.], FillRule::EvenOdd).is_err());
+}

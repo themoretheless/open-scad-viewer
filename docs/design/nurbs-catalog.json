@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 813,
-  "unallocatedCount": 187,
+  "specifiedCount": 814,
+  "unallocatedCount": 186,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19139,6 +19139,25 @@
       "remainingQualification": [
         "Group connected fill components and holes under even-odd or nonzero winding.",
         "Check hole ownership across inactive winding boundaries, nested islands and both fill rules.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0814",
+      "name": "Знаковое расстояние до фактической границы заполнения NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_contour_fill_boundary_signed_distance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-814-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-814-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound signed distance to effective fill boundaries while skipping inactive source contours.",
+        "Check distance on an inactive source loop, remapped witness index and even-odd hole behavior.",
         "WASM and application integration are separate."
       ]
     }
