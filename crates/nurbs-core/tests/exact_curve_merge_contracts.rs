@@ -11692,3 +11692,66 @@ fn minimum_profiled_hull_workspace_clearance_reports_limiting_plane_and_paramete
     assert_eq!(report.witness_plane, 1);
     assert_eq!(report.witness_parameter, 0.5);
 }
+
+#[test]
+fn rotating_hull_workspace_tracks_rotation_and_orientation_knots() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace, partition_planar_rotating_hull_workspace,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![0., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        knots: vec![0., 0., 0.5, 1., 1.],
+        control_points: vec![vec![1., 0.], vec![1., 1.], vec![0., 1.]],
+        weights: vec![1., 2., 1.],
+        ..position.clone()
+    };
+    let planes = [WorkspaceHalfSpace { normal: &[1., 0.], offset: 1.5 }];
+    let hull = [&[2., 0.][..], &[0., 0.][..]];
+    let report = partition_planar_rotating_hull_workspace(
+        &position, &direction, [0., 1.], &planes, &hull, 0.005, 255,
+    ).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Exceeds);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    for cell in report.cells {
+        assert!(!(cell.parameter_interval[0] < 0.5 && cell.parameter_interval[1] > 0.5));
+        let [lo, hi] = cell.plane_residuals[0];
+        for t in cell.parameter_interval {
+            let (x, y): (f64, f64) = if t <= 0.5 {
+                (1. + 2. * t, 4. * t)
+            } else {
+                (4. * (1. - t), 3. - 2. * t)
+            };
+            let residual = 2. * x / x.hypot(y) - 1.5;
+            assert!(lo <= residual && residual <= hi);
+        }
+    }
+}
+
+#[test]
+fn rotating_hull_workspace_retains_undefined_orientation() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace, partition_planar_rotating_hull_workspace,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![1., 0.], vec![-1., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let planes = [WorkspaceHalfSpace { normal: &[1., 0.], offset: 10. }];
+    let report = partition_planar_rotating_hull_workspace(
+        &direction, &direction, [0., 1.], &planes, &[&[2., 0.]], 0.01, 100,
+    ).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().filter(|cell| {
+        cell.parameter_interval[0] <= 0.5 && cell.parameter_interval[1] >= 0.5
+    }).all(|cell| cell.status == Status::Undetermined));
+}

@@ -2073,6 +2073,72 @@ fn partition_profiled_workspace_with_support(
     })
 }
 
+/// Partition planar workspace containment for a translating and rotating
+/// convex hull. The orientation curve gives the local positive X direction
+/// at the same parameter as the position curve. Cells where that direction
+/// may vanish remain undetermined.
+pub fn partition_planar_rotating_hull_workspace(
+    position: &Curve,
+    direction: &Curve,
+    interval: [f64; 2],
+    planes: &[WorkspaceHalfSpace<'_>],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspacePartition> {
+    validate(parameter_tolerance, max_plane_cells)?;
+    check(!planes.is_empty(), "Workspace requires at least one half-space")?;
+    let (_, initial) = synchronized_clearance_cells([position, direction], interval, [0.; 2])?;
+    check(position.control_points[0].len() == 2, "Rotating hull workspace requires planar curves")?;
+    let offsets = prepare_workspace_hull(position, vertex_offsets, planes.len())?;
+    let planes = prepare_workspace_planes(planes, 2)?;
+    let max_cells = (max_plane_cells / planes.len())
+        .min(1_000_000 / offsets.len() / planes.len());
+    let (cells, work_cells) = partition_enclosed_cells(
+        initial, parameter_tolerance, max_cells,
+        |[span, direction_span], domain| {
+            let position_jets = curve_jets::enclose(position, span, domain)?;
+            let direction_jets = curve_jets::enclose(direction, direction_span, domain)?;
+            let axis = &direction_jets[0];
+            let length = norm(axis)?;
+            let unit_range = Interval::new(-1., 1.)?;
+            let normalized = |component: Interval| {
+                if length.lo > 0. {
+                    let bound = component.div(length)?;
+                    Interval::new(bound.lo.max(-1.), bound.hi.min(1.))
+                } else {
+                    Ok(unit_range)
+                }
+            };
+            let cosine = normalized(axis[0])?;
+            let sine = normalized(axis[1])?;
+            let plane_residuals = planes.iter().map(|(normal, offset)| {
+                // Dot products against the rotated hull equal dot products
+                // against the original hull with the inverse-rotated normal.
+                let inverse_normal = [
+                    normal[0].mul(cosine)?.add(normal[1].mul(sine)?)?,
+                    normal[1].mul(cosine)?.sub(normal[0].mul(sine)?)?,
+                ];
+                let support = hull_plane_support(&offsets, &inverse_normal)?;
+                let residual = project_jet(&position_jets[0], normal)?.sub(*offset)?.add(support)?;
+                Ok([residual.lo, residual.hi])
+            }).collect::<Result<Vec<_>>>()?;
+            let status = if length.lo > 0. {
+                workspace_residual_status(&plane_residuals)
+            } else {
+                DirectionalMotionStatus::Undetermined
+            };
+            Ok((WorkspaceCell {
+                parameter_interval: domain, span, plane_residuals, status,
+            }, status == DirectionalMotionStatus::Undetermined))
+        },
+    )?;
+    Ok(WorkspacePartition {
+        cells: cells.into_iter().map(|(_, _, cell)| cell).collect(),
+        work_plane_cells: work_cells * planes.len(),
+    })
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct WorkspaceMinimumClearance {
     /// Signed clearance to the most restrictive plane, in model units.
