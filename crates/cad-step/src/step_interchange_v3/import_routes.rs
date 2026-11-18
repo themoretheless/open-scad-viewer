@@ -2198,6 +2198,65 @@ impl NamedStepAssembly {
     }
 }
 
+/// Read explicit contextual solid surface colours in shared assembly occurrence order.
+pub fn import_step_occurrence_colours(text: &str) -> Result<Vec<Option<[f64; 3]>>> {
+    validate_exchange_structure(text)?;
+    let entities = parse(data_payload(text)?)?;
+    let route = DirectImportRoute {
+        entities: &entities, capability: STEP_INTERCHANGE_V9_CAPABILITY,
+        analytic_surfaces: true, ap242_composition: true, allow_degenerate: true,
+    };
+    let (placements, _, _, _, _) = inspect_direct_graph(&route)?;
+    let mut shapes = BTreeMap::new();
+    let mut contexts = BTreeMap::new();
+    for entity in entities.values() {
+        if let Value::Call(kind, args) = &entity.value
+            && let [Value::Ref(first), Value::Ref(second)] = args.as_slice() {
+            match kind.as_str() {
+                "CONTEXT_DEPENDENT_SHAPE_REPRESENTATION" => { shapes.insert(*first, *second); }
+                "SHAPE_DEFINITION_REPRESENTATION" => {
+                    if contexts.insert(*second, *first).is_some_and(|other| other != *first) {
+                        return Err(refuse("Ambiguous STEP presentation context"));
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    let mut colours = BTreeMap::new();
+    for entity in entities.values() {
+        let Value::Call(kind, args) = &entity.value else { continue };
+        let [_, Value::List(styles), Value::Ref(body)] = args.as_slice() else { continue };
+        if kind != "STYLED_ITEM" || !matches!(call(&entities, *body)?.0, "MANIFOLD_SOLID_BREP" | "BREP_WITH_VOIDS") {
+            continue;
+        }
+        for style in styles {
+            let style = one_ref(style, "occurrence style assignment")?;
+            let ("PRESENTATION_STYLE_BY_CONTEXT", [Value::List(items), Value::Ref(context)]) =
+                call(&entities, style)? else { continue };
+            let shape = contexts.get(context).ok_or_else(|| refuse("Missing occurrence style context"))?;
+            for item in items {
+                if let Some(rgb) = step_presentation::colour(&entities, one_ref(item, "contextual style")?, 0)? {
+                    let value = [rgb.red, rgb.green, rgb.blue];
+                    if colours.insert((*shape, *body), value).is_some_and(|other| other != value) {
+                        return Err(refuse("Conflicting colours on the same occurrence"));
+                    }
+                }
+            }
+        }
+    }
+    placements.iter().map(|placement| {
+        let shape = placement.path.iter().rev().nth(1).and_then(|rel| shapes.get(rel));
+        let Some(shape) = shape else { return Ok(None) };
+        let mut values = placement.bodies.iter().map(|body| colours.get(&(*shape, *body)).copied());
+        let value = values.next().flatten();
+        if values.any(|other| other != value) {
+            return Err(refuse("Several body colours on the same occurrence"));
+        }
+        Ok(value)
+    }).collect()
+}
+
 pub fn import_named_step_assembly(text: &str) -> Result<NamedStepAssembly> {
     let (assembly, labels) = read_shared_products(text, true)?;
     let (name, definition_names) = labels.ok_or_else(|| refuse("Missing assembly product names"))?;

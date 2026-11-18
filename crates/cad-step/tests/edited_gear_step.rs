@@ -309,6 +309,17 @@ fn shared_occurrences_keep_separate_surface_colours() {
     assert_eq!(text.matches("=PRESENTATION_STYLE_BY_CONTEXT(").count(), 2);
     let reopened = cad_step::import_step_shared_assembly(&text).unwrap();
     assert_eq!(reopened.occurrences().len(), 2);
+    assert_eq!(cad_step::import_step_occurrence_colours(&text).unwrap(), [Some([0.,0.,1.]),Some([1.,0.,0.])]);
+    let contexts: Vec<_> = text.lines().filter(|line| line.contains("=PRESENTATION_STYLE_BY_CONTEXT(")).collect();
+    let context_ref = |line: &str| line.rsplit_once(",#").unwrap().1.trim_end_matches(");").to_owned();
+    let conflicting = contexts[1].replace(&format!(",#{});", context_ref(contexts[1])),
+        &format!(",#{});", context_ref(contexts[0])));
+    assert!(cad_step::import_step_occurrence_colours(&text.replace(contexts[1], &conflicting)).is_err());
+    let grouped = export_styled_step_assembly(&scene, &["Drive"], &[None,Some(0)], &[None,Some(StepOccurrenceColour { name:"Amber",rgb:[1.,0.5,0.] })]).unwrap();
+    let reopened = cad_step::import_step_shared_assembly(&grouped).unwrap();
+    for (placement, colour) in reopened.occurrences().iter().zip(cad_step::import_step_occurrence_colours(&grouped).unwrap()) {
+        assert_eq!(colour, (placement.transform[0][3] == 5.).then_some([1.,0.5,0.]));
+    }
     if let Some(path) = std::env::var_os("CAD_STEP_OCCURRENCE_COLOUR_FIXTURE") {
         std::fs::write(path, text).unwrap();
     }

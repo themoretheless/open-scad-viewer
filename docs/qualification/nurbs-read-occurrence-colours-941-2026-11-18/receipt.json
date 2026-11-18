@@ -1,0 +1,17 @@
+{
+  "id": "NURBS-0941",
+  "testedBase": "ddc6fcceafeaaab874ed0a54e9d4e2be266cc145",
+  "nativeTestsPassed": 234,
+  "testTargets": [
+    "cad-step --lib",
+    "cad-step --test edited_gear_step"
+  ],
+  "sourceSha256": {
+    "crates/cad-step/src/lib.rs": "47629068b8190e89e57cad2276536e7147731e1e0827977f3b9fb41e95d37f8c",
+    "crates/cad-step/src/step_interchange_v3.rs": "68f56dc6e35f0c11ba25ba993af0435b4e38154f6adb3f034bc386ddc914801b",
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "aff8f4adefa1cab1c680c574b00d7f9177f2d2a63c76dbb593b5ce7c48961502",
+    "crates/cad-step/src/step_presentation.rs": "aac399941d3ad49d31efd6e22a5a7c2cb727e8353e8a85fe87973251102d7ab6",
+    "crates/cad-step/tests/edited_gear_step.rs": "1ba5da09ef93359663c95888c80044f329800d10c55227ac7943b0d52cb4e2f0"
+  },
+  "logSha256": "eb80120daa43c38f24323a7f45974222eeec1204094eddf469c6fa774b589fea"
+}
