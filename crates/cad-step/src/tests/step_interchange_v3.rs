@@ -4238,3 +4238,24 @@ fn copied_subassembly_keeps_original_definition_links_and_selection_order() {
     let positions: Vec<_> = back.occurrences().iter().map(|o| o.transform[0][3]).collect();
     assert_eq!(positions, [2., 5., 15., 12.]);
 }
+
+#[test]
+fn subset_variant_stays_shared_after_edit_and_step_round_trip() {
+    let block = |height| brep_core::cuboid([0.; 3], [1., 1., height]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let mut scene = crate::StepSharedAssembly::from_placed_solids(vec![block(1.)],
+        [0., 3., 6.].into_iter().map(placed).collect()).unwrap();
+    assert!(scene.replace_variant(&[1, 1], block(2.)).is_err());
+    assert_eq!(scene.replace_variant(&[2, 1], block(2.)).unwrap(), 1);
+    assert!(scene.replace_variant(&[0, 1], block(3.)).is_err());
+    assert_eq!(scene.replace_variant(&[1, 2], block(4.)).unwrap(), 1);
+    let back = crate::import_step_shared_assembly(&crate::export_step_shared_assembly(&scene).unwrap()).unwrap();
+    assert_eq!(back.definitions().len(), 2);
+    assert_eq!(back.occurrences()[1].definition, back.occurrences()[2].definition);
+    for (i, expected) in [1., 4., 4.].into_iter().enumerate() {
+        let mass = brep_core::analysis::mass_properties(&back.materialize(i).unwrap(), 1e-8, 100_000).unwrap();
+        assert!((mass.signed_volume_mm3 - expected).abs() < 1e-8);
+    }
+}

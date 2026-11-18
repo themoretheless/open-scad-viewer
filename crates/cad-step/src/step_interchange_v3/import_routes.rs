@@ -755,20 +755,35 @@ impl StepSharedAssembly {
     /// Replace one occurrence using geometry in its local coordinates.
     /// A shared definition is split only when other occurrences still use it.
     pub fn replace_occurrence_geometry(&mut self, index: usize, model: Model) -> Result<()> {
-        let definition = self.occurrences.get(index)
-            .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?
-            .definition;
-        let shared = self.occurrences.iter().enumerate().any(|(other, occurrence)| {
-            other != index && occurrence.definition == definition
-        });
-        if !shared {
-            return self.replace_definition(definition, model);
+        self.replace_variant(&[index], model).map(|_| ())
+    }
+
+    /// Give selected occurrences of one prototype a common local-space revision.
+    /// Reuse the definition when all its occurrences are selected.
+    pub fn replace_variant(&mut self, selection: &[usize], model: Model) -> Result<usize> {
+        let first = selection.first().and_then(|&i| self.occurrences.get(i))
+            .ok_or_else(|| refuse("STEP variant requires a valid occurrence selection"))?;
+        let definition = first.definition;
+        let mut seen = vec![false; self.occurrences.len()];
+        for &index in selection {
+            let occurrence = self.occurrences.get(index)
+                .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
+            if seen[index] || occurrence.definition != definition {
+                return Err(refuse("STEP variant requires distinct occurrences of one definition"));
+            }
+            seen[index] = true;
+        }
+        if selection.len() == self.occurrences.iter().filter(|o| o.definition == definition).count() {
+            self.replace_definition(definition, model)?;
+            return Ok(definition);
         }
         model.validate()?;
-        let new_definition = self.definitions.len();
+        let variant = self.definitions.len();
         self.definitions.push(model);
-        self.occurrences[index].definition = new_definition;
-        Ok(())
+        for &index in selection {
+            self.occurrences[index].definition = variant;
+        }
+        Ok(variant)
     }
 
     /// Apply one assembly-space rigid motion to selected occurrences, atomically.
