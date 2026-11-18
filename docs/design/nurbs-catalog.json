@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 704,
-  "unallocatedCount": 296,
+  "specifiedCount": 705,
+  "unallocatedCount": 295,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17068,6 +17068,25 @@
       "remainingQualification": [
         "Classify position, speed, acceleration and jerk on a common multi-axis subdivision.",
         "Check independent position and motion violations, cross-axis results, budget exhaustion, and invalid derivative limits.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0705",
+      "name": "Сертифицированная проверка выпуклой рабочей области NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_convex_workspace",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-705-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-705-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify a curve window against intersecting closed offset half-spaces on a shared subdivision.",
+        "Check two shifted oblique boundaries, residual ordering, analytic crossing windows, and invalid planes and budgets.",
         "WASM and application integration are separate."
       ]
     }

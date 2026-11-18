@@ -1809,6 +1809,80 @@ fn classify_position(
     Ok((position, status))
 }
 
+/// A closed half-space defined by `normal · point <= offset`.
+#[derive(Clone, Copy, Debug)]
+pub struct WorkspaceHalfSpace<'a> {
+    pub normal: &'a [f64],
+    pub offset: f64,
+}
+
+#[derive(Clone, Debug)]
+pub struct WorkspaceCell {
+    pub parameter_interval: [f64; 2],
+    pub span: usize,
+    /// Enclosures of `normal · point - offset`, in input order.
+    pub plane_residuals: Vec<[f64; 2]>,
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct WorkspacePartition {
+    pub cells: Vec<WorkspaceCell>,
+    pub work_plane_cells: usize,
+}
+
+/// Check a convex workspace defined by intersecting closed half-spaces.
+/// A cell exceeds the workspace if a plane excludes the whole cell.
+/// Each plane evaluation contributes one unit to the shared work budget.
+pub fn partition_curve_convex_workspace(
+    curve: &Curve,
+    interval: [f64; 2],
+    planes: &[WorkspaceHalfSpace<'_>],
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspacePartition> {
+    validate(parameter_tolerance, max_plane_cells)?;
+    check(!planes.is_empty(), "Workspace requires at least one half-space")?;
+    let max_cells = max_plane_cells / planes.len();
+    if max_cells == 0 {
+        return Err(resource("Workspace budget must cover every plane"));
+    }
+    curve.validate()?;
+    let dimension = curve.control_points[0].len();
+    let planes = planes.iter().map(|plane| {
+        check(
+            plane.normal.len() == dimension
+                && plane.normal.iter().all(|x| x.is_finite())
+                && plane.normal.iter().any(|x| *x != 0.)
+                && plane.offset.is_finite(),
+            "Workspace plane requires a finite nonzero normal and finite offset",
+        )?;
+        let normal = plane.normal.iter().copied().map(Interval::point).collect::<Vec<_>>();
+        Ok((normal, Interval::point(plane.offset)))
+    }).collect::<Result<Vec<_>>>()?;
+    let (cells, work_cells) = partition_motion_cells(
+        curve, interval, parameter_tolerance, max_cells,
+        |jets, _| {
+            let residuals = planes.iter().map(|(normal, offset)| {
+                let residual = project_jet(&jets[0], normal)?.sub(*offset)?;
+                Ok([residual.lo, residual.hi])
+            }).collect::<Result<Vec<_>>>()?;
+            let status = if residuals.iter().any(|[lo, _]| *lo > 0.) {
+                DirectionalMotionStatus::Exceeds
+            } else if residuals.iter().all(|[_, hi]| *hi <= 0.) {
+                DirectionalMotionStatus::Within
+            } else {
+                DirectionalMotionStatus::Undetermined
+            };
+            Ok(((residuals, status), status == DirectionalMotionStatus::Undetermined))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(span, parameter_interval, (plane_residuals, status))| {
+        WorkspaceCell { parameter_interval, span, plane_residuals, status }
+    }).collect();
+    Ok(WorkspacePartition { cells, work_plane_cells: work_cells * planes.len() })
+}
+
 fn partition_motion_cells<T>(
     curve: &Curve,
     interval: [f64; 2],

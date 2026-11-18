@@ -9684,3 +9684,40 @@ fn trajectory_limit_partition_preserves_independent_position_and_motion_results(
     axes[1].motion.jerk = -1.;
     assert!(check(&axes, 256).is_err());
 }
+
+#[test]
+fn convex_workspace_partition_checks_shifted_oblique_planes_in_original_order() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace, partition_curve_convex_workspace,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![2., 1.], vec![4., 3.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let mut planes = [
+        WorkspaceHalfSpace { normal: &[-2., -2.], offset: -8. },
+        WorkspaceHalfSpace { normal: &[1., 1.], offset: 6. },
+    ];
+    let check = |planes: &[WorkspaceHalfSpace<'_>], budget| {
+        partition_curve_convex_workspace(&curve, [0., 1.], planes, 0.01, budget)
+    };
+    assert!(check(&planes, 1).is_err());
+    let report = check(&planes, 128).unwrap();
+    assert!(report.work_plane_cells <= 128);
+    assert_eq!(report.cells.first().unwrap().status, Status::Exceeds);
+    assert!(report.cells.first().unwrap().plane_residuals[0][0] > 0.);
+    assert_eq!(report.cells.last().unwrap().status, Status::Exceeds);
+    assert!(report.cells.last().unwrap().plane_residuals[1][0] > 0.);
+    assert!(report.cells.iter().any(|cell| cell.status == Status::Within));
+    for crossing in [0.25, 0.75] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= crossing && crossing <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+        }));
+    }
+    planes[1].normal = &[0., 0.];
+    assert!(check(&planes, 128).is_err());
+}
