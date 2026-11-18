@@ -2737,22 +2737,11 @@ pub fn measure_planar_contour_nonzero_fill_area(
         contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
         max_winding_cells, max_distance_cells, max_area_cells,
     )?;
-    let mut order: Vec<_> = (0..contours.len()).collect();
-    order.sort_by_key(|&index| orientation.hierarchy.depths[index]);
-    let mut interior_windings = vec![0; contours.len()];
-    let mut area_multipliers = vec![0; contours.len()];
+    let (interior_windings, area_multipliers) = nonzero_contour_transitions(&orientation);
     let mut total = Interval::point(0.);
-    for index in order {
-        let exterior = orientation.hierarchy.parents[index].map_or(0, |parent| interior_windings[parent]);
-        let direction = match orientation.orientations[index] {
-            PlanarContourOrientation::Counterclockwise => 1,
-            PlanarContourOrientation::Clockwise => -1,
-        };
-        let interior = exterior + direction;
-        interior_windings[index] = interior;
-        let multiplier = i32::from(interior != 0) - i32::from(exterior != 0);
-        area_multipliers[index] = multiplier;
+    for (index, &multiplier) in area_multipliers.iter().enumerate() {
         if multiplier != 0 {
+            let direction = contour_orientation_sign(orientation.orientations[index]);
             let factor = Interval::point(f64::from(multiplier * direction));
             total = total.add(areas[index][0].mul(factor)?)?;
         }
@@ -2762,6 +2751,101 @@ pub fn measure_planar_contour_nonzero_fill_area(
         interior_windings,
         area_multipliers,
         orientation,
+    })
+}
+
+fn contour_orientation_sign(orientation: PlanarContourOrientation) -> i32 {
+    match orientation {
+        PlanarContourOrientation::Counterclockwise => 1,
+        PlanarContourOrientation::Clockwise => -1,
+    }
+}
+
+fn nonzero_contour_transitions(orientation: &PlanarContourOrientationReport) -> (Vec<i32>, Vec<i32>) {
+    let count = orientation.orientations.len();
+    let mut order: Vec<_> = (0..count).collect();
+    order.sort_by_key(|&index| orientation.hierarchy.depths[index]);
+    let mut windings = vec![0; count];
+    let mut multipliers = vec![0; count];
+    for index in order {
+        let exterior = orientation.hierarchy.parents[index].map_or(0, |parent| windings[parent]);
+        let interior = exterior + contour_orientation_sign(orientation.orientations[index]);
+        windings[index] = interior;
+        multipliers[index] = i32::from(interior != 0) - i32::from(exterior != 0);
+    }
+    (windings, multipliers)
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarContourFillPerimeterReport {
+    pub perimeter_bounds: [f64; 2],
+    /// Original indices of contours that separate filled and empty regions.
+    pub boundary_contours: Vec<usize>,
+    pub work_cells: usize,
+    pub converged: bool,
+}
+
+/// Bound the perimeter of a simple contour hierarchy under the given
+/// fill rule. Length work is shared only among actual fill boundaries.
+pub fn measure_planar_contour_fill_perimeter(
+    contours: &[&Curve],
+    rule: crate::chord_winding::FillRule,
+    parameter_tolerance: f64,
+    length_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_orientation_cells: usize,
+    max_length_cells: usize,
+) -> Result<PlanarContourFillPerimeterReport> {
+    use crate::chord_winding::FillRule;
+    validate(length_tolerance, max_length_cells)?;
+    let boundary_contours: Vec<_> = match rule {
+        FillRule::EvenOdd => {
+            certify_planar_contour_hierarchy(
+                contours, parameter_tolerance, length_tolerance, max_simplicity_work,
+                max_winding_cells, max_distance_cells,
+            )?;
+            (0..contours.len()).collect()
+        }
+        FillRule::NonZero => {
+            let orientation = certify_planar_contour_fill_orientations(
+                contours, parameter_tolerance, length_tolerance, max_simplicity_work,
+                max_winding_cells, max_distance_cells, max_orientation_cells,
+            )?;
+            let (_, multipliers) = nonzero_contour_transitions(&orientation);
+            multipliers.into_iter().enumerate()
+                .filter_map(|(index, value)| (value != 0).then_some(index)).collect()
+        }
+    };
+    let mut initial = 0;
+    let mut span_counts = Vec::with_capacity(boundary_contours.len());
+    for &index in &boundary_contours {
+        let curve = contours[index];
+        let spans = active_spans(curve, curve.domain()).count();
+        if spans > max_length_cells - initial {
+            return Err(resource("Perimeter budget must cover every boundary span"));
+        }
+        initial += spans;
+        span_counts.push(spans);
+    }
+    let mut extra = max_length_cells - initial;
+    let mut work_cells = 0;
+    let mut total = Interval::point(0.);
+    let count = boundary_contours.len();
+    let per_contour_tolerance = (length_tolerance / 2. / count as f64).max(f64::from_bits(1));
+    for (position, (&index, spans)) in boundary_contours.iter().zip(span_counts).enumerate() {
+        let share = extra / (count - position);
+        let report = length(contours[index], per_contour_tolerance, spans + share)?;
+        extra -= report.cells.saturating_sub(spans);
+        work_cells += report.cells;
+        total = total.add(Interval::new(report.bounds[0], report.bounds[1])?)?;
+    }
+    Ok(PlanarContourFillPerimeterReport {
+        perimeter_bounds: [total.lo.max(0.), total.hi],
+        boundary_contours,
+        work_cells,
+        converged: total.width().next_up() <= length_tolerance,
     })
 }
 

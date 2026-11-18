@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0812",
+  "testedBase": "c9686a52c652e140b2831fb9559aeb2e03fa8dc2",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 438,
+  "scope": [
+    "Measure the length of actual fill boundaries under even-odd or nonzero rules.",
+    "Check actual filled boundaries, both fill rules, reversed holes and length budget coverage."
+  ],
+  "logSha256": "ceda9cdcb215db576a24556610c590e9ea97051cc398999ef134a76f39d463d4",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "7df7e5848952e56d9d6f034e59db8466261bd80e3ba18fda51ac75c1411c49be",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "66c5ebbf8107a6f85b66b7a8e160200c5608d84f1b150e6df8bf55327b283656"
+  }
+}
