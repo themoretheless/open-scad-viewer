@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0736",
+  "testedBase": "00175b383d6136fb8c5044061d3c41a4d1ed5de4",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 361,
+  "scope": [
+    "Enclose simultaneous clearance with separate affine parameter windows and shared elapsed progress.",
+    "Check separate signed and shifted clocks, distinct internal knots, normalized witness and analytic gap."
+  ],
+  "logSha256": "41c114be80a8e33461fc855e5e5c5c7dd2b290786cdfdb4878cd5fa9d597e37d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "a7ed1c8114b32de71153140a0f002a22b8efbe19f916e3f6bd8c40dabfa1a90d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "c038b2c79db62af99355e4af00a8e8620d61ce4fdc8a3883647a38654ab30186"
+  }
+}

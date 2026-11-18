@@ -10804,3 +10804,24 @@ fn synchronized_clearance_partition_brackets_contact_and_preserves_both_knot_gri
         a <= 0.5 && 0.5 <= b && cell.spans == [2, 1] && cell.status == Status::Exceeds
     }));
 }
+
+#[test]
+fn affine_synchronized_clearance_handles_different_clocks_and_internal_knots() {
+    use nurbs_core::analysis::curve_measure::{StopReason, measure_affine_synchronized_curve_clearance};
+    let first = Curve {
+        degree: 1,
+        knots: vec![-4., -4., -2., 4., 4.],
+        control_points: vec![vec![0., 0.], vec![1., 0.], vec![4., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let mut second = first.clone();
+    second.knots = vec![10., 10., 19., 22., 22.];
+    second.control_points = vec![vec![4., 1.], vec![1., 1.], vec![0., 1.]];
+    let report = measure_affine_synchronized_curve_clearance(
+        [&first, &second], [[-4., 4.], [10., 22.]], [0.25, 0.25], 1e-6, 64,
+    ).unwrap();
+    assert_eq!(report.stop_reason, StopReason::Tolerance);
+    assert!(report.gap_bounds[0] <= 0.5 && report.gap_bounds[1] >= 0.5);
+    assert_eq!(report.witness_parameter, 0.5);
+}

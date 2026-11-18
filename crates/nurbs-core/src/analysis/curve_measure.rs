@@ -2578,6 +2578,87 @@ pub fn partition_synchronized_curve_clearance(
     Ok(SynchronizedClearancePartition { cells, work_cells })
 }
 
+/// Compare two windows traversed at uniform parameter rates over the same
+/// elapsed time. The witness parameter is normalized progress in [0, 1].
+/// Each work cell may enclose multiple source spans across the two curves.
+pub fn measure_affine_synchronized_curve_clearance(
+    curves: [&Curve; 2],
+    windows: [[f64; 2]; 2],
+    radii: [f64; 2],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<SynchronizedCurveClearance> {
+    validate(tolerance, max_cells)?;
+    check(radii.iter().all(|r| r.is_finite() && *r >= 0.),
+        "Tool radii must be finite and nonnegative")?;
+    for (curve, window) in curves.into_iter().zip(windows) {
+        curve.validate()?;
+        validate_travel_interval(curve, window)?;
+    }
+    check(curves[0].control_points[0].len() == curves[1].control_points[0].len(),
+        "Synchronized curves must have matching dimensions")?;
+    let radius = Interval::point(radii[0]).add(Interval::point(radii[1]))?;
+    let gap = |progress| {
+        let left = affine_progress_position(curves[0], windows[0], progress)?;
+        let right = affine_progress_position(curves[1], windows[1], progress)?;
+        let (lo, hi) = box_distance(&left, &right)?;
+        Interval::new(lo, hi)?.sub(radius)
+    };
+    let measure = |(), domain: [f64; 2], witness: &mut ClearanceWitness| {
+        let lower = gap(domain)?.lo;
+        for parameter in domain {
+            let upper = gap([parameter; 2])?.hi;
+            if upper < witness.0 {
+                *witness = (upper, parameter, 0);
+            }
+        }
+        Ok(lower)
+    };
+    let (lower, witness, work_cells, stop_reason) =
+        refine_minimum_clearance([((), [0., 1.])], 0., tolerance, max_cells, measure)?;
+    Ok(SynchronizedCurveClearance {
+        gap_bounds: [lower, witness.0],
+        witness_parameter: witness.1,
+        work_cells,
+        stop_reason,
+    })
+}
+
+fn affine_progress_position(
+    curve: &Curve,
+    window: [f64; 2],
+    progress: [f64; 2],
+) -> Result<Vec<Interval>> {
+    let start = exact_motion_operand(window[0])?;
+    let width = exact_motion_operand(window[1])? - &start;
+    let endpoint = |progress, upper| {
+        let parameter = &start + &width * exact_motion_operand(progress)?;
+        round_motion_duration(&parameter, upper)
+    };
+    let lo = endpoint(progress[0], false)?.max(window[0]);
+    let hi = endpoint(progress[1], true)?.min(window[1]);
+    if lo == hi {
+        let end = lo > window[0];
+        let adjacent = if end { [window[0], lo] } else { window };
+        let (span, domain) = motion_window_endpoint(curve, adjacent, end)?;
+        return Ok(curve_jets::endpoint(curve, span, domain, end)?.swap_remove(0));
+    }
+    let mut position: Option<Vec<Interval>> = None;
+    for span in active_spans(curve, [lo, hi]) {
+        let domain = [lo.max(curve.knots[span]), hi.min(curve.knots[span + 1])];
+        let enclosed = curve_jets::enclose(curve, span, domain)?.swap_remove(0);
+        if let Some(hull) = &mut position {
+            for (axis, bound) in hull.iter_mut().zip(enclosed) {
+                axis.lo = axis.lo.min(bound.lo);
+                axis.hi = axis.hi.max(bound.hi);
+            }
+        } else {
+            position = Some(enclosed);
+        }
+    }
+    position.ok_or_else(|| crate::numeric_err("Missing affine progress span coverage"))
+}
+
 fn synchronized_clearance_cells(
     curves: [&Curve; 2],
     interval: [f64; 2],
