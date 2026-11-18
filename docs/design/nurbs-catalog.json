@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 660,
-  "unallocatedCount": 340,
+  "specifiedCount": 661,
+  "unallocatedCount": 339,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16216,6 +16216,25 @@
         "Return opt-in static unbalance vector and magnitude intervals referenced to the supplied rotation axis.",
         "Check analytic vector and magnitude, coexistence with axis balance, invalid axis requests and incomplete integration through the compiled ABI.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0661",
+      "name": "Гарантированный моментный дисбаланс NURBS-сборки относительно оси",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::bound_assembly_couple_unbalance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-661-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-661-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the vector and magnitude of couple unbalance from an inertia tensor about a fixed axial reference point.",
+        "Check axial separation despite static balance, invariance under axis reversal and reference translation when statically balanced, and analytic products of inertia for trimmed geometry.",
+        "WASM and application integration are separate."
       ]
     }
   ],

@@ -8027,3 +8027,47 @@ fn weighted_trim_static_unbalance_encloses_analytic_offset_vector() {
     let [lo, hi] = result.magnitude_bounds;
     assert!(lo <= exact[0].hypot(exact[1]) && exact[0].hypot(exact[1]) <= hi);
 }
+
+#[test]
+fn couple_unbalance_detects_axial_mass_separation_in_a_statically_balanced_assembly() {
+    use nurbs_core::analysis::surface_measure::{
+        SurfaceAssemblyMassBounds, bound_assembly_couple_unbalance, bound_assembly_static_unbalance,
+    };
+    let pieces = [-1., 1.].map(|coordinate| SurfaceAssemblyMassBounds {
+        mass_bounds: [1.; 2],
+        centroid_bounds: [[coordinate; 2], [0.; 2], [coordinate; 2]],
+        central_inertia_bounds: [[[0.; 2]; 3]; 3],
+    });
+    let static_unbalance =
+        bound_assembly_static_unbalance(&pieces, [0.; 3], [0., 0., 1.]).unwrap();
+    assert!(static_unbalance.magnitude_bounds[1] < 1e-12);
+
+    for (point, direction) in [([0.; 3], [0., 0., 1.]), ([0., 0., 4.], [0., 0., -2.])] {
+        let couple = bound_assembly_couple_unbalance(&pieces, point, direction).unwrap();
+        for ([lo, hi], expected) in couple.vector_bounds.into_iter().zip([0., -2., 0.]) {
+            assert!(lo <= expected && expected <= hi);
+            assert!(hi - lo < 1e-12);
+        }
+        let [lo, hi] = couple.magnitude_bounds;
+        assert!(lo <= 2. && 2. <= hi && lo > 1.99);
+    }
+}
+
+#[test]
+fn weighted_trim_couple_unbalance_encloses_analytic_products_of_inertia() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_mass_with_density;
+    let patches = periodic_trim_patches_with_nested_island();
+    let report = periodic_trim_patch_set_mass_with_density(
+        &patches, &[[2.; 2], [6.; 2]], 0.005, 1e-10, 20_000, 1_000_000,
+    )
+    .unwrap();
+    let result = report.bound_couple_unbalance([0.; 3], [0., 0., 1.]).unwrap().unwrap();
+    // The retained ranges are symmetric around world z = 1.
+    let exact = [0.375_f64, -0.34375, 0.];
+    for ([lo, hi], expected) in result.vector_bounds.into_iter().zip(exact) {
+        assert!(lo <= expected && expected <= hi);
+    }
+    let [lo, hi] = result.magnitude_bounds;
+    let expected = exact[0].hypot(exact[1]);
+    assert!(lo <= expected && expected <= hi);
+}

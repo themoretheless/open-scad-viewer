@@ -1207,6 +1207,36 @@ pub fn bound_assembly_static_unbalance(
     })
 }
 
+/// Couple unbalance in mass times squared length units.
+#[derive(Clone, Copy, Debug)]
+pub struct CoupleUnbalanceBounds {
+    /// Components of the cross product of the unit axis and its inertia image.
+    pub vector_bounds: [[f64; 2]; 3],
+    pub magnitude_bounds: [f64; 2],
+}
+
+/// Enclose couple unbalance about an axis at a fixed axial reference point.
+pub fn bound_assembly_couple_unbalance(
+    pieces: &[SurfaceAssemblyMassBounds],
+    point: [f64; 3],
+    direction: [f64; 3],
+) -> Result<CoupleUnbalanceBounds> {
+    use crate::numerics::interval_vec3::{div, dot_tight};
+
+    let axis = InertiaAxis::new(direction)?;
+    let tensor = symmetric_tensor_intervals(bound_assembly_inertia_about_point(pieces, point)?)?;
+    let mut image = [Interval::point(0.); 3];
+    for (value, row) in image.iter_mut().zip(tensor) {
+        *value = dot_tight(row, axis.components)?;
+    }
+    let vector = div(cross(axis.components, image)?, axis.norm_squared)?;
+    let magnitude = norm(vector)?;
+    Ok(CoupleUnbalanceBounds {
+        vector_bounds: vector.map(|value| [value.lo, value.hi]),
+        magnitude_bounds: [magnitude.lo, magnitude.hi],
+    })
+}
+
 /// Enclose the perpendicular distance from the common center of mass to an
 /// axis, then compare the entire enclosure with the allowed eccentricity.
 pub fn bound_assembly_balance_about_line(
@@ -2073,6 +2103,17 @@ impl TrimmedPatchSetDensityReport {
     ) -> Result<Option<StaticUnbalanceBounds>> {
         self.mass_properties
             .map(|_| bound_assembly_static_unbalance(&self.weighted_components, point, direction))
+            .transpose()
+    }
+
+    /// Enclose couple unbalance about the supplied axial reference point.
+    pub fn bound_couple_unbalance(
+        &self,
+        point: [f64; 3],
+        direction: [f64; 3],
+    ) -> Result<Option<CoupleUnbalanceBounds>> {
+        self.mass_properties
+            .map(|_| bound_assembly_couple_unbalance(&self.weighted_components, point, direction))
             .transpose()
     }
 
