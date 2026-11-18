@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 792,
-  "unallocatedCount": 208,
+  "specifiedCount": 793,
+  "unallocatedCount": 207,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18740,6 +18740,25 @@
       "remainingQualification": [
         "Certify one winding number over an entire query box by continuous contour separation.",
         "Check interior and exterior boxes, contour crossing, endpoint contact and invalid bounds.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0793",
+      "name": "Знаковое расстояние до набора замкнутых плоских NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_curve_fill_signed_distance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-793-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-793-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose nearest contour distance and determine its sign from the selected fill rule.",
+        "Check both signed distances for nested contours, the nearest contour witness and mandatory initial distance coverage.",
         "WASM and application integration are separate."
       ]
     }

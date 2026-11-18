@@ -2112,6 +2112,66 @@ pub fn classify_planar_curve_fill(
     })
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarCurveSignedDistanceReport {
+    /// Negative inside the filled region, positive outside. The magnitude
+    /// measures distance to the nearest supplied contour.
+    pub signed_bounds: [f64; 2],
+    pub fill: PlanarCurveFillReport,
+    pub witness_contour: usize,
+    pub witness_parameter: f64,
+    pub distance_cells: usize,
+    pub distance_stop_reason: StopReason,
+}
+
+/// Measure distance to the nearest closed NURBS contour and sign it using
+/// the selected fill rule. Contours that cancel in the fill still count
+/// toward distance. Each stage has its own explicit cell budget.
+pub fn measure_planar_curve_fill_signed_distance(
+    contours: &[&Curve],
+    point: [f64; 2],
+    rule: crate::chord_winding::FillRule,
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_fill_cells: usize,
+    max_distance_cells: usize,
+) -> Result<PlanarCurveSignedDistanceReport> {
+    validate(distance_tolerance, max_distance_cells)?;
+    let fill = classify_planar_curve_fill(contours, point, rule, parameter_tolerance, max_fill_cells)?;
+    let point = point.map(Interval::point);
+    let initial = contours.iter().enumerate().flat_map(|(index, curve)| {
+        active_spans(curve, curve.domain()).map(move |span| {
+            ((index, span), [curve.knots[span], curve.knots[span + 1]])
+        })
+    });
+    let measure = |(index, span): (usize, usize), domain: [f64; 2], witness: &mut ClearanceWitness| {
+        let curve = contours[index];
+        let cell = curve_jets::enclose(curve, span, domain)?;
+        let (lower, _) = box_distance(&cell[0], &point)?;
+        for (end, parameter) in [(false, domain[0]), (true, domain[1])] {
+            let endpoint = curve_jets::endpoint(curve, span, domain, end)?;
+            let (_, upper) = box_distance(&endpoint[0], &point)?;
+            if upper < witness.0 {
+                *witness = (upper, parameter, index);
+            }
+        }
+        Ok(lower)
+    };
+    let (lower, witness, distance_cells, distance_stop_reason) = refine_minimum_clearance(
+        initial, contours[0].domain()[0], distance_tolerance, max_distance_cells, measure,
+    )?;
+    let upper = witness.0;
+    let signed_bounds = match fill.filled {
+        Some(true) => [-upper, -lower],
+        Some(false) => [lower, upper],
+        None => [-upper, upper],
+    };
+    Ok(PlanarCurveSignedDistanceReport {
+        signed_bounds, fill, witness_contour: witness.2, witness_parameter: witness.1,
+        distance_cells, distance_stop_reason,
+    })
+}
+
 fn validate_winding_curve(direction: &Curve) -> Result<[f64; 2]> {
     direction.validate()?;
     check(direction.control_points[0].len() == 2, "Orientation winding requires a planar direction curve")?;

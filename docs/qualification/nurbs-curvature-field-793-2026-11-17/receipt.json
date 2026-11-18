@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0793",
+  "testedBase": "614c439110c7328bfef9b91093b66d6fc56d7c39",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 419,
+  "scope": [
+    "Enclose nearest contour distance and determine its sign from the selected fill rule.",
+    "Check both signed distances for nested contours, the nearest contour witness and mandatory initial distance coverage."
+  ],
+  "logSha256": "ebada80558ab8a953e7bb07cf11b1753a7e0338c0c71a91e4904f89e2f5d02eb",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "5fc6853ee6936dd4e6f076101d7fd3798a7ff55a20c03dddad5af602507271e6",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "e73e347a92784aa827f97b6e5212b593824c6e85e220c0acb453ad79ba7e8270"
+  }
+}

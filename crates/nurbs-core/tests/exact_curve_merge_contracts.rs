@@ -12691,3 +12691,32 @@ fn planar_curve_winding_over_box_requires_separation_for_every_query() {
     assert!(measure([[0., 0.], [3., 0.]]).is_err());
     assert!(measure([[1., 0.], [0., 1.]]).is_err());
 }
+
+#[test]
+fn planar_curve_fill_signed_distance_uses_nearest_contour_and_fill_rule() {
+    use nurbs_core::{
+        analysis::curve_measure::{StopReason, measure_planar_curve_fill_signed_distance},
+        chord_winding::FillRule,
+    };
+    let square = |size: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-size, -size], vec![size, -size], vec![size, size],
+            vec![-size, size], vec![-size, -size]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let outer = square(3.);
+    let inner = square(1.);
+    let measure = |rule, budget| measure_planar_curve_fill_signed_distance(
+        &[&outer, &inner], [0., 0.], rule, 0.02, 1e-4, 1024, budget,
+    );
+    assert!(measure(FillRule::NonZero, 7).is_err());
+    for (rule, expected) in [(FillRule::NonZero, -1.), (FillRule::EvenOdd, 1.)] {
+        let report = measure(rule, 256).unwrap();
+        let [lo, hi] = report.signed_bounds;
+        assert!(lo <= expected && expected <= hi && hi - lo <= 1e-4);
+        assert_eq!(report.witness_contour, 1);
+        assert_eq!(report.distance_stop_reason, StopReason::Tolerance);
+    }
+}
