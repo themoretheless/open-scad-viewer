@@ -1469,16 +1469,128 @@ fn partition_axial_derivatives<const N: usize>(
     parameter_tolerance: f64,
     max_cells: usize,
 ) -> Result<(Vec<DirectionalMotionLimitCell<N>>, usize)> {
-    use std::collections::VecDeque;
-
+    validate_motion_partition_limits(limits)?;
     curve.validate()?;
-    validate(parameter_tolerance, max_cells)?;
-    validate_travel_interval(curve, interval)?;
+    let unit = travel_direction(curve, direction)?;
+    let (cells, work_cells) = partition_motion_cells(
+        curve, interval, parameter_tolerance, max_cells,
+        |jets, width| {
+            let statuses = classify_motion_cell(jets, width, &unit, limits)?;
+            Ok((statuses, statuses.contains(&DirectionalMotionStatus::Undetermined)))
+        },
+    )?;
+    let cells = cells
+        .into_iter()
+        .map(|(span, parameter_interval, statuses)| DirectionalMotionLimitCell {
+            span,
+            parameter_interval,
+            statuses,
+        })
+        .collect();
+    Ok((cells, work_cells))
+}
+
+#[derive(Clone, Debug)]
+pub struct MultiAxisMotionLimitCell {
+    pub parameter_interval: [f64; 2],
+    /// Original knot span for one-sided evaluation.
+    pub span: usize,
+    /// Speed, acceleration and jerk classifications for each axis in input order.
+    pub axis_statuses: Vec<[DirectionalMotionStatus; 3]>,
+}
+
+#[derive(Clone, Debug)]
+pub struct MultiAxisMotionLimitPartition {
+    /// Ordered closed cells covering the full requested window.
+    pub cells: Vec<MultiAxisMotionLimitCell>,
+    /// Axis evaluations, including cells replaced during subdivision.
+    pub work_axis_cells: usize,
+}
+
+/// Evaluate all axes on a shared subdivision. The budget counts each axis
+/// checked in each cell. Each cell shares one enclosure of the curve derivatives.
+pub fn partition_multi_axis_motion_limits(
+    curve: &Curve,
+    interval: [f64; 2],
+    axes: &[MotionAxis<'_>],
+    parameter_tolerance: f64,
+    max_axis_cells: usize,
+) -> Result<MultiAxisMotionLimitPartition> {
+    validate(parameter_tolerance, max_axis_cells)?;
+    check(!axes.is_empty(), "Motion partition requires at least one axis")?;
+    let max_cells = max_axis_cells / axes.len();
+    if max_cells == 0 {
+        return Err(resource("Motion partition budget must cover every axis"));
+    }
+    curve.validate()?;
+    let axes = axes.iter().map(|axis| {
+        let limits = [axis.limits.speed, axis.limits.acceleration, axis.limits.jerk];
+        validate_motion_partition_limits(limits)?;
+        Ok((travel_direction(curve, axis.direction)?, limits))
+    }).collect::<Result<Vec<_>>>()?;
+    let (cells, work_cells) = partition_motion_cells(
+        curve, interval, parameter_tolerance, max_cells,
+        |jets, width| {
+            let statuses = axes.iter()
+                .map(|(unit, limits)| classify_motion_cell(jets, width, unit, *limits))
+                .collect::<Result<Vec<_>>>()?;
+            let refine = statuses.iter().flatten().any(|status| {
+                *status == DirectionalMotionStatus::Undetermined
+            });
+            Ok((statuses, refine))
+        },
+    )?;
+    let cells = cells.into_iter()
+        .map(|(span, parameter_interval, axis_statuses)| MultiAxisMotionLimitCell {
+            span,
+            parameter_interval,
+            axis_statuses,
+        })
+        .collect();
+    Ok(MultiAxisMotionLimitPartition { cells, work_axis_cells: work_cells * axes.len() })
+}
+
+fn validate_motion_partition_limits<const N: usize>(limits: [f64; N]) -> Result<()> {
     check(
         limits.iter().all(|limit| limit.is_finite() && *limit >= 0.),
         "Motion limits must be finite and nonnegative",
-    )?;
-    let unit = travel_direction(curve, direction)?;
+    )
+}
+
+fn classify_motion_cell<const N: usize>(
+    jets: &[Vec<Interval>],
+    width: Interval,
+    unit: &[Interval],
+    limits: [f64; N],
+) -> Result<[DirectionalMotionStatus; N]> {
+    let mut statuses = [DirectionalMotionStatus::Undetermined; N];
+    for (index, (status, limit)) in statuses.iter_mut().zip(limits).enumerate() {
+        let mut derivative = project_jet(&jets[index + 1], unit)?;
+        for _ in 0..=index {
+            derivative = derivative.div(width)?;
+        }
+        *status = if derivative.lo.abs().max(derivative.hi.abs()) <= limit {
+            DirectionalMotionStatus::Within
+        } else if derivative.lo.max(-derivative.hi) > limit {
+            DirectionalMotionStatus::Exceeds
+        } else {
+            DirectionalMotionStatus::Undetermined
+        };
+    }
+    Ok(statuses)
+}
+
+fn partition_motion_cells<T>(
+    curve: &Curve,
+    interval: [f64; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+    mut classify: impl FnMut(&[Vec<Interval>], Interval) -> Result<(T, bool)>,
+) -> Result<(Vec<(usize, [f64; 2], T)>, usize)> {
+    use std::collections::VecDeque;
+
+    validate(parameter_tolerance, max_cells)?;
+    validate_travel_interval(curve, interval)?;
     let mut pending = VecDeque::new();
     for span in active_spans(curve, interval) {
         if pending.len() == max_cells {
@@ -1496,22 +1608,9 @@ fn partition_axial_derivatives<const N: usize>(
         work_cells += 1;
         let width = Interval::point(b).sub(Interval::point(a))?;
         let jets = curve_jets::enclose(curve, span, domain)?;
-        let mut statuses = [DirectionalMotionStatus::Undetermined; N];
-        for (index, (status, limit)) in statuses.iter_mut().zip(limits).enumerate() {
-            let mut derivative = project_jet(&jets[index + 1], &unit)?;
-            for _ in 0..=index {
-                derivative = derivative.div(width)?;
-            }
-            *status = if derivative.lo.abs().max(derivative.hi.abs()) <= limit {
-                DirectionalMotionStatus::Within
-            } else if derivative.lo.max(-derivative.hi) > limit {
-                DirectionalMotionStatus::Exceeds
-            } else {
-                DirectionalMotionStatus::Undetermined
-            };
-        }
+        let (statuses, refine) = classify(&jets, width)?;
         let middle = crate::distance_bounds::midpoint(a, b);
-        if statuses.contains(&DirectionalMotionStatus::Undetermined)
+        if refine
             && (b - a).next_up() > parameter_tolerance
             && a < middle
             && middle < b
@@ -1520,10 +1619,10 @@ fn partition_axial_derivatives<const N: usize>(
             pending.push_back((span, [a, middle]));
             pending.push_back((span, [middle, b]));
         } else {
-            cells.push(DirectionalMotionLimitCell { parameter_interval: domain, span, statuses });
+            cells.push((span, domain, statuses));
         }
     }
-    cells.sort_by(|a, b| a.parameter_interval[0].total_cmp(&b.parameter_interval[0]));
+    cells.sort_by(|a, b| a.1[0].total_cmp(&b.1[0]));
     Ok((cells, work_cells))
 }
 

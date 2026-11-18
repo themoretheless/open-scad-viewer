@@ -9096,3 +9096,76 @@ fn motion_limit_partition_measures_jerk_of_rational_linear_support() {
     assert_eq!(report.cells.first().unwrap().statuses, [Status::Within, Status::Within, Status::Exceeds]);
     assert_eq!(report.cells.last().unwrap().statuses, [Status::Within; 3]);
 }
+
+#[test]
+fn multi_axis_motion_partition_aligns_distinct_crossings_on_one_grid() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, MotionAxis,
+        partition_multi_axis_motion_limits,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 8.].map(|x| vec![x, 2. * x]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let axes = [
+        MotionAxis {
+            direction: &[1., 0.],
+            limits: DirectionalMotionLimits { speed: 3., acceleration: 20., jerk: 20. },
+        },
+        MotionAxis {
+            direction: &[0., -2.],
+            limits: DirectionalMotionLimits { speed: 30., acceleration: 6., jerk: 20. },
+        },
+    ];
+    let report = partition_multi_axis_motion_limits(&curve, [2., 4.], &axes, 0.01, 256)
+        .unwrap();
+    assert!(report.work_axis_cells <= 256);
+    for ([axis, order], crossing) in [([0, 0], 3.), ([1, 1], 2.5)] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= crossing && crossing <= b && b - a <= 0.01
+                && cell.axis_statuses[axis][order] == Status::Undetermined
+        }));
+    }
+    assert!(report.cells.iter().any(|cell| {
+        cell.axis_statuses[0] == [Status::Within; 3]
+            && cell.axis_statuses[1] == [Status::Within, Status::Exceeds, Status::Within]
+    }));
+}
+
+#[test]
+fn multi_axis_motion_partition_budget_covers_all_axes_and_spans() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, DirectionalMotionStatus as Status, MotionAxis,
+        partition_multi_axis_motion_limits,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 2.],
+        control_points: vec![vec![0., 0.], vec![1., 0.], vec![1., 3.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let limits = DirectionalMotionLimits { speed: 0.5, acceleration: 1., jerk: 1. };
+    let axes = [
+        MotionAxis { direction: &[1., 0.], limits },
+        MotionAxis { direction: &[0., 1.], limits },
+    ];
+    let measure = |axes: &[MotionAxis<'_>], budget| {
+        partition_multi_axis_motion_limits(&curve, [0.5, 1.5], axes, 0.01, budget)
+    };
+    assert!(measure(&[], 4).is_err());
+    assert!(measure(&axes, 3).is_err());
+    let report = measure(&axes, 4).unwrap();
+    assert_eq!(report.work_axis_cells, 4);
+    assert_eq!(report.cells.len(), 2);
+    assert_eq!(report.cells[0].parameter_interval, [0.5, 1.]);
+    assert_eq!(report.cells[1].parameter_interval, [1., 1.5]);
+    assert_eq!(report.cells[0].axis_statuses[0][0], Status::Exceeds);
+    assert_eq!(report.cells[0].axis_statuses[1][0], Status::Within);
+    assert_eq!(report.cells[1].axis_statuses[0][0], Status::Within);
+    assert_eq!(report.cells[1].axis_statuses[1][0], Status::Exceeds);
+}
