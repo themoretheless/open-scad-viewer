@@ -1,0 +1,35 @@
+{
+  "sourceBase": "14501e51ea3fc63a4d3dd0f343cf9f8dfb381c4b",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Complete and classified smoothness on a single doubly periodic torus face. A rational active trim covers the native side of one world loop, with exact sheet indices, two wrap edges, and one-short refusal.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2047 filtered out; finished in 0.89s",
+      "file": "brep.log.gz",
+      "sha256": "ff8d04e0befc1e75aea32bccc1a7c89051e17704389f568fece6eda6c208b07f"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2007 filtered out; finished in 10.70s",
+      "file": "shell.log.gz",
+      "sha256": "bafaea85b99ac23e77cb4cca409acbc23b75ecc655e08a9009d576d3975182f5"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_smoothness::complete",
+      "result": "test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 2041 filtered out; finished in 0.31s",
+      "file": "complete.log.gz",
+      "sha256": "556b0bc865dfcc4d674006cca3a035ac5c2ff163b3bf312f4c01b18c47711ece"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "9627582163f93c167e43877dea4de1c7f098f8eb4239536ec95b7953ef56e348",
+    "count": 4920
+  }
+}

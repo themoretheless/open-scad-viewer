@@ -866,7 +866,7 @@ impl PairContext<'_> {
     fn jordan_partition(&self, work: &mut PairWork, out: &mut Report) -> Result<()> {
         if self.chart_open(work, out) {
             self.chart_attempt(work, out, usize::MAX, |model, faces, budget| {
-                let (certificate, cells) = crate::shared_boundary::jordan_partition::certify(model, faces, budget);
+                let (certificate, cells) = crate::shared_boundary::jordan_partition::certify_audited(model, faces, budget);
                 Ok((cells, certificate.map(SharedBoundary::ExactHull)))
             })?;
         }

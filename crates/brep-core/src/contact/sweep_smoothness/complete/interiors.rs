@@ -52,11 +52,17 @@ pub(crate) fn geometric_joins(
     ))
 }
 
-pub(super) fn inspect(
+#[cfg(test)]
+pub(super) fn inspect(model: &Model, order: usize, cells: usize, exact_work: u64) -> Result<InteriorReport> {
+    inspect_with_charts(model, order, cells, exact_work, None)
+}
+
+pub(super) fn inspect_with_charts(
     model: &Model,
     order: usize,
     cells: usize,
     exact_work: u64,
+    charts: Option<&super::periodic_uses::Charts>,
 ) -> Result<InteriorReport> {
     let mut report = InteriorReport {
         certified: false,
@@ -81,12 +87,14 @@ pub(super) fn inspect(
         if proof.certificate.is_some() {
             continue;
         }
-        let geometric = geometric::inspect(
-            surface,
-            order,
-            cells - report.cells,
-            exact_work - report.exact_work,
-        )?;
+        let remaining_cells = cells - report.cells;
+        let remaining_work = exact_work - report.exact_work;
+        let geometric = if let Some(opened) = charts.and_then(|charts| charts.prepared(face)) {
+            geometric::inspect_opened(opened, [surface.periodic_u, surface.periodic_v],
+                order, remaining_cells, remaining_work)?
+        } else {
+            geometric::inspect(surface, order, remaining_cells, remaining_work)?
+        };
         report.cells += geometric.cells;
         report.exact_work += geometric.work;
         report.geometric_seams += geometric.seams;

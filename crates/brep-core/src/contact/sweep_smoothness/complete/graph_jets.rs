@@ -52,7 +52,7 @@ fn single_bezier_tile(s: &Surface) -> bool {
 
 // Sign of the inward transverse direction relative to the ordered
 // (increasing boundary tangent, inward transverse) chart coordinates.
-fn inward_sign(label: &str) -> f64 {
+pub(super) fn inward_sign(label: &str) -> f64 {
     match label {
         "uMax" | "vMin" => 1.,
         "uMin" | "vMax" => -1.,

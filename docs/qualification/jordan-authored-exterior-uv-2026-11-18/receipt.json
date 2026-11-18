@@ -1,0 +1,29 @@
+{
+  "sourceBase": "1f21887231df736b024aa8574a27497b2d0e51f8",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Exact shared Jordan contact for a trimmed affine exterior UV curve whose active span lifts to the complete world edge. Includes independent complete lift and loop closure, structural validation and one-short work refusal.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2046 filtered out; finished in 1.05s",
+      "file": "brep.log.gz",
+      "sha256": "31ce9462be21a8e4c945d2ce3e2e9d71b6a3420fce959fa78620e3679b937ef0"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2006 filtered out; finished in 13.94s",
+      "file": "shell.log.gz",
+      "sha256": "a4958daee09a4beb2b8cb22e9424d9a0eeb536f7a45684759a5b19f728dcc158"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "70b728dfae8ffc30516e03d14bc32a12fb84397f0ea078111a9e3b992676443d",
+    "count": 4919
+  }
+}

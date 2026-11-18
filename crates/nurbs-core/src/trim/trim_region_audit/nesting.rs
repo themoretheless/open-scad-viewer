@@ -216,8 +216,8 @@ fn forest(out: &Report) -> Option<Vec<Node>> {
     }
     Some(nodes)
 }
-/// Prove all input loops simple and mutually separated, then classify one EXACT
-/// endpoint of each connected boundary against every other Jordan domain. Full
+/// Prove all input loops simple and mutually separated, then classify an enclosure
+/// of one original endpoint of each connected boundary against every other Jordan domain. Full
 /// separation makes that winding constant on the whole boundary; Jordan nesting
 /// gives containment of the bounded interiors. The complete relation must form
 /// a transitive laminar forest before any depth, hole or component is published.
@@ -307,9 +307,8 @@ pub fn inspect(loops: &[Vec<Curve>], tolerance: f64, limits: Limits) -> Result<R
                     out.problem_loops = Some([i, j]);
                     return Ok(out);
                 }
-                let p = &loops[i][0].control_points[0];
-                let r = d.classify_point(
-                    [p[0], p[1]],
+                let r = d.classify(
+                    domains[i].first_endpoint_box(),
                     (limits.domain_cells - out.domain_cells).min(100000),
                 )?;
                 out.domain_cells += r.cells;

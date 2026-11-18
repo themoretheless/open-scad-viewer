@@ -1,0 +1,35 @@
+{
+  "sourceBase": "3507fbbb5cfb6c491b3f41fceed786bc0dd7210e",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Shared projected contact with an interior trimmed hole carrier that touches the chart boundary outside its active interval. Includes exact full-world lift, rejection of the untrimmed boundary-touching contour and one-short work refusal.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2047 filtered out; finished in 2.94s",
+      "file": "brep.log.gz",
+      "sha256": "d93797f29aba50fc64865f2795de85914e0b03464816ab258e5a9ff5074b73b3"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2007 filtered out; finished in 17.35s",
+      "file": "shell.log.gz",
+      "sha256": "6d0539947e02fd4ee1ca8c6591c17b073f21d3be258f1d64b133fc3ae5865fb0"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib shared_boundary::jordan_partition",
+      "result": "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 2057 filtered out; finished in 0.00s",
+      "file": "domain.log.gz",
+      "sha256": "d5fdbdc27cec3edd01018ae47534adcc8619ae2f7e9d9973e2a19ad8664ec3b2"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "fe24bd4761d69cc0ba83798599aa64b9e9398dae3d22e1f99d41c80e910249dd",
+    "count": 4919
+  }
+}

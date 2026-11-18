@@ -161,3 +161,43 @@ fn transposed_tensor_axis_and_global_world_weight_gauge_keep_the_same_source_tra
         B::Equal
     );
 }
+
+#[test]
+fn weighted_quadratic_uv_trace_requires_exact_affine_clock() {
+    let (c, mut p, s) = fixture();
+    p.degree = 2;
+    p.knots = vec![-4., -4., -4., 8., 8., 8.];
+    p.control_points.insert(1, vec![0.25, 0.]);
+    p.weights = vec![1., 2., 3.];
+    let check = |p: &Curve, budget| verify(&c, p, &s, true, [0., 2.], [4., 0.], budget).unwrap();
+    let proof = check(&p, 1_000_000).unwrap();
+    assert_eq!(proof.outcome, B::Equal);
+    assert!(!check(&p, proof.work_used - 1).is_some_and(|p| p.outcome == B::Equal));
+
+    // Same iso-line image and endpoints, different parameter correspondence.
+    p.control_points[1][0] = 0.375;
+    assert!(!check(&p, 1_000_000).is_some_and(|p| p.outcome == B::Equal));
+}
+
+#[test]
+fn unclamped_uv_uses_its_exact_affine_active_clock() {
+    let (c, _, s) = fixture();
+    let mut p = Curve {
+        degree: 2,
+        knots: vec![-16., -10., -4., 2., 8., 14., 20.],
+        control_points: [-0.25, 0.25, 0.75, 1.25].map(|x| vec![x, 0.]).to_vec(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let check = |p: &Curve, budget| verify(&c, p, &s, true, [0., 2.], [4., 0.], budget).unwrap();
+    let proof = check(&p, 1_000_000).unwrap();
+    assert_eq!(proof.outcome, B::Equal);
+    assert!(!check(&p, proof.work_used - 1).is_some_and(|p| p.outcome == B::Equal));
+    let full = nurbs_core::curve_surface_agreement::verify_exact(&c, &p, &s, false, 1_000_000)
+        .unwrap()
+        .unwrap();
+    assert_eq!(full.outcome, B::Equal);
+    // Keep a straight UV image while breaking affine clock recovery.
+    p.control_points[1][0] += 0.125;
+    assert!(!check(&p, 1_000_000).is_some_and(|p| p.outcome == B::Equal));
+}

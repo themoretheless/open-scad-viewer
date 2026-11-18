@@ -1,0 +1,41 @@
+{
+  "sourceBase": "5283bf3d22c1aa7ee544051495b877d8e43f4a9a",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Trim nesting uses enclosures of active endpoints; exact active clamping is work-bounded. Positive and negative unclamped cases place the first stored pole across the outer boundary from the active endpoint.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --lib trim_",
+      "result": "test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 2009 filtered out; finished in 0.02s",
+      "file": "native.log.gz",
+      "sha256": "ffe90b453d4648a2f85f666282a7102d75db3bcec1ba0408e2dbc6259435da34"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_agreement",
+      "result": "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 2046 filtered out; finished in 0.18s",
+      "file": "agreement.log.gz",
+      "sha256": "603f57f30bb4ec3541223bd49b838b81aeec0a941e27324fe8a533415e13de5f"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2047 filtered out; finished in 1.96s",
+      "file": "brep.log.gz",
+      "sha256": "0235a2595f14d9f22ecd451f4ac2b70519e90508dc24d3ec655ed5735c39de70"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2007 filtered out; finished in 25.21s",
+      "file": "shell.log.gz",
+      "sha256": "efcc399a99207c9fd96140ccdb96ad7884c329255c349b24921b44ad10d356f6"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "83da78930495a1b1c46c35d39bb62c451a8124b2483400c8ab45ff93d9340162",
+    "count": 4919
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "sourceBase": "197ed8aadbc57369c1f9f3d51fba631ca43cba9a",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Reuse of immutable opened charts and their exact clock reversals across seam proofs. The closed two-band torus debits exactly one chart opening per original face for its shared rims; classified one-short refusal and C0 controls are retained.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_smoothness",
+      "result": "test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 2030 filtered out; finished in 0.58s",
+      "file": "geometric.log.gz",
+      "sha256": "96b69d32e9ef67dba8068de8157a3f814b7a1a1af3e7202faaab6bae8e5f26dc"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2010 filtered out; finished in 17.95s",
+      "file": "shell.log.gz",
+      "sha256": "4094ac41aebc8d89658099dd98760709ebf1b4cf136e48178b54dd2d00766349"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "bc763375596955127f35965b66e2591860b9d8db45c6e62c8d020554f4b5ae20",
+    "count": 4920
+  }
+}

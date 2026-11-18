@@ -1,6 +1,7 @@
-//! Two natural charts with a common projection partition a Jordan region along
+//! Two source charts with a common projection partition a Jordan region along
 //! an exactly lifted edge chain. Only the joint exact-domain audit may call
 //! this, after all coedge lifts and domains have been independently checked.
+use super::chart_segments::natural_segment;
 use crate::{Model, boundary_hull_contact::Certificate};
 use cad_predicates::Sign;
 use num_rational::BigRational;
@@ -51,15 +52,35 @@ impl Projection {
     }
 }
 
+#[cfg(test)]
 pub(crate) fn certify(
     model: &Model,
     faces: [usize; 2],
     limit: usize,
 ) -> (Option<Certificate>, usize) {
+    certify_impl(model, faces, limit, false)
+}
+
+/// The caller has proved exact complete edge lifts, simple CCW outer loops
+/// and strictly nested, mutually disjoint holes on this same model.
+pub(crate) fn certify_audited(
+    model: &Model,
+    faces: [usize; 2],
+    limit: usize,
+) -> (Option<Certificate>, usize) {
+    certify_impl(model, faces, limit, true)
+}
+
+fn certify_impl(
+    model: &Model,
+    faces: [usize; 2],
+    limit: usize,
+    audited: bool,
+) -> (Option<Certificate>, usize) {
     let mut cells = 0;
     let mut ordered = faces;
     ordered.sort_unstable();
-    let result = prove(model, ordered, limit, &mut cells).map(|mut certificate| {
+    let result = prove(model, ordered, limit, &mut cells, audited).map(|mut certificate| {
         certificate.faces = faces;
         certificate
     });
@@ -74,7 +95,13 @@ fn charge(cells: &mut usize, limit: usize, cost: usize) -> Option<()> {
     Some(())
 }
 
-fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> Option<Certificate> {
+fn prove(
+    model: &Model,
+    faces: [usize; 2],
+    limit: usize,
+    cells: &mut usize,
+    audited: bool,
+) -> Option<Certificate> {
     let patches = faces.map(|i| &model.faces[i]);
     let surfaces = patches.map(|f| &f.surface);
     if !surfaces.iter().any(|s| {
@@ -83,19 +110,31 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
         return None;
     }
     let wires = patches.map(|f| model.loops[f.outer].coedges.as_slice());
-    if wires
-        .iter()
-        .any(|w| !(4..=128).contains(&w.len()) || w.iter().any(|c| c.trim().is_some()))
-    {
+    if wires.iter().any(|w| !(3..=128).contains(&w.len())) {
         return None;
+    }
+    // Trim diagnostics may select a proper world subinterval. The
+    // partition uses complete topology edges on both sides of the seam.
+    for c in wires.into_iter().flatten() {
+        if c.trim()
+            .is_some_and(|trim| trim.curve_parameter != model.edges[c.edge].curve.domain())
+        {
+            return None;
+        }
     }
     let (starts, edges) = shared_chain(wires, cells, limit)?;
     for patch in patches {
         interior_holes(model, &patch.surface, &patch.holes, cells, limit)?;
     }
     let mut proposals = [None; 2];
-    for ((s, wire), proposal) in surfaces.into_iter().zip(wires).zip(&mut proposals) {
-        natural_wire(s, wire, cells, limit)?;
+    for ((patch, wire), proposal) in patches.into_iter().zip(wires).zip(&mut proposals) {
+        let s = &patch.surface;
+        if natural_wire(s, wire, cells, limit).is_none() {
+            if !audited {
+                return None;
+            }
+            audited_chart_domain(model, patch, cells, limit)?;
+        }
 
         let remaining = limit - *cells;
         if remaining == 0 {
@@ -129,6 +168,65 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
     None
 }
 
+fn audited_chart_domain(
+    model: &Model,
+    face: &crate::Face,
+    cells: &mut usize,
+    limit: usize,
+) -> Option<()> {
+    let s = &face.surface;
+    let lower = [s.knots_u[s.degree_u], s.knots_v[s.degree_v]];
+    let upper = [
+        s.knots_u[s.control_points.len()],
+        s.knots_v[s.control_points[0].len()],
+    ];
+    // The verified lift and loop simplicity apply to the active traversal.
+    // Certify that traversal is in the rectangle of the chart projection.
+    for index in std::iter::once(face.outer).chain(face.holes.iter().copied()) {
+        for c in &model.loops[index].coedges {
+            if c.pcurve.periodic
+                || c.trim().is_some_and(|t| {
+                    t.periodic_lift != [[0; 2]; 2]
+                        || t.curve_parameter != model.edges[c.edge].curve.domain()
+                })
+            {
+                return None;
+            }
+            chart_curve_hull(c, [lower, upper], cells, limit)?;
+        }
+    }
+    Some(())
+}
+
+fn chart_curve_hull(
+    coedge: &crate::Coedge,
+    [lower, upper]: [[f64; 2]; 2],
+    cells: &mut usize,
+    limit: usize,
+) -> Option<()> {
+    let curve = &coedge.pcurve;
+    let within = |p: &Curve| {
+        p.control_points
+            .iter()
+            .all(|p| (0..2).all(|axis| lower[axis] <= p[axis] && p[axis] <= upper[axis]))
+    };
+    charge(cells, limit, curve.control_points.len())?;
+    if within(curve) {
+        return Some(());
+    }
+    let domain = curve.domain();
+    let range = coedge.trim().map_or(domain, |trim| {
+        let [a, b] = trim.pcurve_parameter;
+        [a.min(b), a.max(b)]
+    });
+    let work = ((limit - *cells) as u64).min(cad_predicates::MAX_WORK);
+    let (proved, used) =
+        exact_knot_insertion::closed_box_containment_on(curve, range, [lower, upper], 12, work)
+            .ok()?;
+    charge(cells, limit, used as usize)?;
+    proved.then_some(())
+}
+
 fn interior_holes(
     model: &Model,
     surface: &crate::Surface,
@@ -147,7 +245,32 @@ fn interior_holes(
     for &hole in holes {
         charge(cells, limit, 1)?;
         for use_ in &model.loops[hole].coedges {
-            interior_curve(&use_.pcurve, [lower, upper], 12, cells, limit)?;
+            if use_.trim().is_some_and(|trim| {
+                trim.periodic_lift != [[0; 2]; 2]
+                    || trim.curve_parameter != model.edges[use_.edge].curve.domain()
+            }) {
+                return None;
+            }
+            let curve = &use_.pcurve;
+            let range = use_.trim().map_or(curve.domain(), |trim| {
+                let [a, b] = trim.pcurve_parameter;
+                [a.min(b), a.max(b)]
+            });
+            if range == curve.domain() {
+                interior_curve(curve, [lower, upper], 12, cells, limit)?;
+            } else {
+                let remaining = ((limit - *cells) as u64).min(cad_predicates::MAX_WORK);
+                let (proved, used) = exact_knot_insertion::strict_box_containment_on(
+                    curve,
+                    range,
+                    [lower, upper],
+                    12,
+                    remaining,
+                )
+                .ok()?;
+                charge(cells, limit, used as usize)?;
+                proved.then_some(())?;
+            }
         }
     }
     Some(())
@@ -227,29 +350,26 @@ fn natural_wire(
         [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
     ];
     let corners = [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
-    let first = wire.iter().position(|c| {
-        c.pcurve
-            .control_points
-            .first()
-            .is_some_and(|p| *p == corners[0])
-    })?;
+    let segments = wire
+        .iter()
+        .map(|c| {
+            if c.trim().is_some_and(|t| t.periodic_lift != [[0; 2]; 2]) {
+                return None;
+            }
+            natural_segment(c, cells, limit)
+        })
+        .collect::<Option<Vec<_>>>()?;
+    let first = segments.iter().position(|p| p[0] == corners[0])?;
     let mut side = 0;
     let mut current = corners[0];
     for offset in 0..wire.len() {
         corners.get(side)?;
-        let p = &wire[(first + offset) % wire.len()].pcurve;
-        if p.periodic
-            || p.degree != 1
-            || p.control_points.len() != 2
-            || p.weights[0] != p.weights[1]
-            || p.knots != [p.knots[0], p.knots[0], p.knots[3], p.knots[3]]
-            || p.control_points[0] != current
-        {
+        let [start, point] = segments[(first + offset) % wire.len()];
+        if start != current {
             return None;
         }
         let end = corners[(side + 1) % 4];
         let axis = side % 2;
-        let point = &p.control_points[1];
         let progress = if side < 2 {
             current[axis] < point[axis] && point[axis] <= end[axis]
         } else {
@@ -258,7 +378,7 @@ fn natural_wire(
         if !progress || point[1 - axis] != end[1 - axis] {
             return None;
         }
-        current = [point[0], point[1]];
+        current = point;
         side += usize::from(current == end);
     }
     (side == 4).then_some(())
@@ -315,12 +435,9 @@ fn projected_exterior(
         for offset in shared_count..wire.len() {
             charge(cells, limit, 1)?;
             let c = &wire[(start + offset) % wire.len()];
+            let source = &model.edges[c.edge].curve;
             exterior.push(projected_member(
-                &model.edges[c.edge].curve,
-                c.reversed,
-                projection,
-                cells,
-                limit,
+                source, c.reversed, projection, cells, limit,
             )?);
         }
     }

@@ -229,6 +229,49 @@ An unclamped exterior is projected and then exactly clamped to its
 original active interval for the common loop proof. The input edge and
 its world-space parameterization stay intact.
 
+An exterior or shared coedge may select a directed subinterval of
+its chart curve when the exact lift covers the complete world
+edge. The proof uses the active chart endpoints with exact arithmetic
+under the same work budget. Opposite coedges on the shared chain can
+use independent chart intervals. A clamped rational B-spline can
+describe a straight natural side when its positive-weight poles are
+collinear with strict order along that side and the internal knots
+preserve continuity. Evaluating active endpoints in homogeneous form
+keeps the chart coverage proof exact. The tensor iso-trace solver admits
+a higher-degree or multispan UV representation after a separate proof of
+affine-clock identity on all its original knot spans. For an unclamped
+curve, the candidate affine clock uses the endpoints of an exact active
+restriction, while the identity is checked against the original basis.
+Partial world intervals remain diagnostic windows.
+
+The complete G1/G2 and classified seam audits can recover a full natural
+side from the active interval of a rational UV carrier. On a periodic
+chart, exact endpoints must be on the native sides with matching authored
+sheet indices. A complete periodic world edge uses the original periodic
+trace proof after exact recovery of the active affine UV clock. Ordered UV
+traversal proves side coverage, and exact world-edge agreement binds it
+to the authored seam. Side recovery and chart reversal share the seam
+work allowance.
+
+The selected-edge G2 inspection can also replay a directed active UV
+interval on a nonperiodic chart. It stores that interval exactly on its
+original clock and charges the restriction to the shared exact-work
+allowance. The geometric verifier still checks the whole world-edge
+lift, normal and curvature compatibility on both traversals. A
+restriction without exact storage leaves the seam unproved. For a same-face wrap or a join between distinct periodic charts, the
+selected-edge audit checks exact original world lifts and sheet indices,
+opens each periodic chart exactly, aligns the boundary traversals, and
+proves the complete G2 join under the shared budget.
+
+The complete and classified boundary audits use the same exact opening
+on both incident charts before comparing their jets. Opening and any
+traversal reversal debit the audit's shared work allowance once per
+prepared chart and clock direction. The complete audit also reuses each
+native opened chart for its original internal knot lines and wrap jets.
+Those proofs still check the original wrap axes and charge their own
+tiling and jet work. C0 edges
+remain outside the smooth-seam stage of the classified audit.
+
 The common boundary can be an authored chain of edges. The audit checks
 that both faces cover the complete natural rectangle, with exact
 consecutive segments along its sides. Both traversals of the shared
@@ -236,13 +279,34 @@ chain must be contiguous and opposite. Removing them leaves one
 projected exterior to certify. The contact certificate lists every
 edge of the chain and bounds their original world-space geometry.
 
+The joint exact-domain audit can also certify an inset or curved outer
+contour inside the natural rectangle. It establishes the actual simple
+CCW trim loops, hole nesting, and exact lifts before the projected
+partition proof. The partition bounds the active UV intervals within
+each proved chart. When stored poles extend beyond the chart, it checks
+nonnegative homogeneous margins on the original interval, including
+traversals that lie on a chart side. It checks the opposite shared chain
+and certifies the merged
+projected exterior. The sum of the two projected outer-loop windings
+then has magnitude at most one, which excludes overlapping interiors.
+Strictly nested holes cannot add contact across that partition.
+
+The nesting audit classifies an enclosure of the active endpoint of
+each original loop. A control point outside the active interval has
+no authority to establish containment. When a loop has unclamped ends,
+the simplicity proof may materialize the exact active interval under
+its existing work allowance. Failure to represent it exactly leaves
+the loop unproved.
+
 A hole may subtract material from either natural chart when its entire
 rational trim lies strictly inside the chart rectangle. The audit checks
 the original control hull first and can use exact subdivision to prove
 containment on all smaller hulls. The exact domain audit verifies each
 hole's lift, winding and nesting. Strict containment keeps each hole
-away from the shared natural boundary. Control point checks and exact
-subdivision share the contact proof's budget.
+away from the shared natural boundary. When a hole uses a trimmed UV
+carrier, strict containment is checked on the exact active restriction.
+Both the restriction and exact subdivision consume the same contact
+proof budget.
 For a nonperiodic B-spline trim, endpoint extraction, knot refinement and
 subdivision work in exact homogeneous coordinates on the active interval.
 The four boundary inequalities must be strictly positive throughout every

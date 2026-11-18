@@ -1,4 +1,4 @@
-//! Exact strict containment for a planar rational spline's complete active domain.
+//! Exact box containment for an original planar rational spline interval.
 use super::*;
 use num_traits::Signed;
 
@@ -11,16 +11,65 @@ pub fn strict_box_containment(
     depth: u8,
     max_work: u64,
 ) -> Result<(bool, u64)> {
+    inspect(curve, None, bounds, depth, true, max_work)
+}
+
+/// Prove strict containment on a declared interval of the original clock.
+/// Proper subintervals of periodic curves remain unsupported.
+pub fn strict_box_containment_on(
+    curve: &Curve,
+    range: [f64; 2],
+    bounds: [[f64; 2]; 2],
+    depth: u8,
+    max_work: u64,
+) -> Result<(bool, u64)> {
+    inspect(curve, Some(range), bounds, depth, true, max_work)
+}
+
+/// Prove containment in a closed chart box on the original parameter interval.
+/// Touching a box side is allowed, including a whole span on that side.
+pub fn closed_box_containment_on(
+    curve: &Curve,
+    range: [f64; 2],
+    bounds: [[f64; 2]; 2],
+    depth: u8,
+    max_work: u64,
+) -> Result<(bool, u64)> {
+    inspect(curve, Some(range), bounds, depth, false, max_work)
+}
+
+fn inspect(
+    curve: &Curve,
+    range: Option<[f64; 2]>,
+    bounds: [[f64; 2]; 2],
+    depth: u8,
+    strict: bool,
+    max_work: u64,
+) -> Result<(bool, u64)> {
     curve.validate()?;
+    let [start, end] = curve.domain();
+    let range = range.unwrap_or([start, end]);
+    if !(start <= range[0] && range[0] < range[1] && range[1] <= end)
+        || (curve.periodic && range != [start, end])
+    {
+        return Ok((false, 0));
+    }
     let mut work = Work {
         used: 0,
         limit: max_work.min(cad_predicates::MAX_WORK),
     };
-    let proved = prove(curve, bounds, depth.min(16), &mut work).is_ok();
+    let proved = prove(curve, range, bounds, depth.min(16), strict, &mut work).is_ok();
     Ok((proved, work.used))
 }
 
-fn prove(curve: &Curve, bounds: [[f64; 2]; 2], depth: u8, work: &mut Work) -> PResult<()> {
+fn prove(
+    curve: &Curve,
+    range: [f64; 2],
+    bounds: [[f64; 2]; 2],
+    depth: u8,
+    strict: bool,
+    work: &mut Work,
+) -> PResult<()> {
     let p = curve.degree;
     let n = curve.control_points.len();
     let [start, end] = curve.domain();
@@ -36,15 +85,16 @@ fn prove(curve: &Curve, bounds: [[f64; 2]; 2], depth: u8, work: &mut Work) -> PR
         }
     }
 
-    let clamped =
-        curve.knots[..=p].iter().all(|&k| k == start) && curve.knots[n..].iter().all(|&k| k == end);
+    let clamped = range == [start, end]
+        && curve.knots[..=p].iter().all(|&k| k == start)
+        && curve.knots[n..].iter().all(|&k| k == end);
     let (mut net, mut knots) = if clamped {
         homogeneous(curve, start, 0, work)?
     } else {
         // Extract the active interval without converting its endpoint
         // coefficients to a stored Cartesian curve.
         work.charge(((n + 2 * p) * 2 * p) as u64)?;
-        super::super::exact_curve_merge::clamp_curve_net(curve, [start, end], work)?
+        super::super::exact_curve_merge::clamp_curve_net(curve, range, work)?
     };
     let internal = knots[p + 1..net.len()].to_vec();
     for block in internal.chunk_by(|a, b| a == b) {
@@ -71,15 +121,22 @@ fn prove(curve: &Curve, bounds: [[f64; 2]; 2], depth: u8, work: &mut Work) -> PR
                 }
                 margins.push(bounds);
             }
-            positive_margins(margins, depth, work)?;
+            check_margins(margins, depth, strict, work)?;
         }
     }
     Ok(())
 }
 
-fn positive_margins(mut net: Vec<[Q; 4]>, depth: u8, work: &mut Work) -> PResult<()> {
+fn check_margins(mut net: Vec<[Q; 4]>, depth: u8, strict: bool, work: &mut Work) -> PResult<()> {
+    let admissible = |value: &Q| {
+        if strict {
+            value.is_positive()
+        } else {
+            !value.is_negative()
+        }
+    };
     work.charge(net.len() as u64)?;
-    if net.iter().flatten().all(Signed::is_positive) {
+    if net.iter().flatten().all(admissible) {
         return Ok(());
     }
     let n = net.len();
@@ -87,7 +144,7 @@ fn positive_margins(mut net: Vec<[Q; 4]>, depth: u8, work: &mut Work) -> PResult
         || [&net[0], &net[n - 1]]
             .into_iter()
             .flatten()
-            .any(|v| !v.is_positive())
+            .any(|v| !admissible(v))
     {
         return Err(Refusal::InvalidOutput);
     }
@@ -104,6 +161,6 @@ fn positive_margins(mut net: Vec<[Q; 4]>, depth: u8, work: &mut Work) -> PResult
         right.push(net[remaining - 1].clone());
     }
     right.reverse();
-    positive_margins(left, depth - 1, work)?;
-    positive_margins(right, depth - 1, work)
+    check_margins(left, depth - 1, strict, work)?;
+    check_margins(right, depth - 1, strict, work)
 }

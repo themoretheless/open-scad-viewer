@@ -1,0 +1,29 @@
+{
+  "sourceBase": "e6549bac3a39da430b4c173cbf285da6382c0c6a",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Selected geometric G2 on a coplanar station seam with a reversed active chart trim, exact original-clock restriction, bounded work and immutable source geometry.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_smoothness",
+      "result": "test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 2030 filtered out; finished in 0.36s",
+      "file": "geometric.log.gz",
+      "sha256": "350a905b29b8a2b3d796a6dbab140e75c717929dfa864bb27110e99b674d6fef"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2008 filtered out; finished in 11.86s",
+      "file": "shell.log.gz",
+      "sha256": "9ddbde9cfd7c388e16c717489e0bb998e3209d97248f0e0ff4fdd42d9bc08e95"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "e8aa186af8908fd121140cc658b6c1420e7d8c91d36366673343a5d0fe408469",
+    "count": 4920
+  }
+}
