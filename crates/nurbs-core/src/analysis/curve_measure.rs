@@ -2536,19 +2536,26 @@ pub fn prove_spatial_contour_clearance_along(
 }
 
 fn projected_support_proves(first: &Curve, second: &Curve, n: [num_rational::BigRational;3], minimum: f64) -> bool {
+    pole_support_proves(first.control_points.iter(), second.control_points.iter(), n, minimum)
+}
+
+fn pole_support_proves<'a>(
+    first: impl Iterator<Item=&'a Vec<f64>>, second: impl Iterator<Item=&'a Vec<f64>>,
+    n: [num_rational::BigRational;3], minimum: f64,
+) -> bool {
     use num_rational::BigRational as Q;
     use num_traits::Zero;
     if n.iter().all(Q::is_zero) { return false; }
     let exact = |x| Q::from_float(x).expect("validated finite input");
-    let support = |curve: &Curve| {
-        let mut projections = curve.control_points.iter().map(|p| {
+    let support = |poles: &mut dyn Iterator<Item=&Vec<f64>>| {
+        let mut projections = poles.map(|p| {
             n.iter().zip(p).map(|(a,&b)| a * exact(b)).sum::<Q>()
         });
         let first = projections.next().expect("validated nonempty control net");
         projections.fold((first.clone(),first), |(lo,hi),x| (lo.min(x.clone()),hi.max(x)))
     };
-    let (alo,ahi) = support(first);
-    let (blo,bhi) = support(second);
+    let (alo,ahi) = support(&mut first.into_iter());
+    let (blo,bhi) = support(&mut second.into_iter());
     let gap = (blo-ahi).max(alo-bhi).max(Q::zero());
     let squared_norm = n.iter().map(|a| a*a).sum::<Q>();
     let threshold = exact(minimum);
@@ -2566,6 +2573,29 @@ fn automatic_support_proves(first: &Curve, second: &Curve, points: &[Vec<f64>;2]
     if points.iter().flatten().any(|v| !v.is_finite()) { return false; }
     let candidate = direction(&points[0], &points[1]);
     candidate != seam && projected_support_proves(first,second,candidate,minimum)
+}
+
+/// Check clearance to the entire untrimmed tensor patch. The distance report
+/// retains the curve and UV witness parameters. In ambiguous cases, use the
+/// witness direction to certify the full control nets, or certify a strict
+/// violation using the enclosed witness coordinates.
+pub fn inspect_curve_surface_clearance(
+    curve: &Curve, surface: &crate::surface::Surface, minimum: f64, tolerance: f64, max_cells: usize,
+) -> Result<(ClearanceDecision, crate::curve_surface_distance::Report)> {
+    check(minimum.is_finite() && minimum >= 0., "Expected finite nonnegative clearance")?;
+    let report = crate::curve_surface_distance::distance(curve,surface,tolerance,max_cells)?;
+    let [lo,hi] = report.distance_interval;
+    let decision = if lo >= minimum { ClearanceDecision::MeetsMinimum }
+        else if hi < minimum || witnesses_below_clearance(&report.point_enclosures[0],&report.point_enclosures[1],minimum) {
+            ClearanceDecision::BelowMinimum
+        } else {
+            let exact = |x| num_rational::BigRational::from_float(x).expect("finite witness coordinate");
+            let direction = std::array::from_fn(|i| exact(report.points[1][i])-exact(report.points[0][i]));
+            if pole_support_proves(curve.control_points.iter(),surface.control_points.iter().flatten(),direction,minimum) {
+                ClearanceDecision::MeetsMinimum
+            } else { ClearanceDecision::Unresolved }
+        };
+    Ok((decision,report))
 }
 
 /// Check every distinct pair, in index order, against an inclusive minimum.

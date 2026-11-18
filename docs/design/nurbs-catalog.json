@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 906,
-  "unallocatedCount": 94,
+  "specifiedCount": 907,
+  "unallocatedCount": 93,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20872,6 +20872,23 @@
       ],
       "remainingQualification": [
         "Continuous clamped closed spatial contours. Bounds describe boundary distance only."
+      ]
+    },
+    {
+      "id": "NURBS-0907",
+      "name": "Проверка монтажного зазора между пространственной кривой и полным NURBS-патчем",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::analysis::curve_measure::inspect_curve_surface_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/curve_surface_distance.rs",
+        "docs/qualification/nurbs-spatial-clearance-907-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-907-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Full untrimmed tensor patch and spatial curve. Unproved threshold decisions remain unresolved."
       ]
     }
   ],

@@ -93,3 +93,16 @@ fn rational_quadratic_minimum_requires_subdivision() {
     assert!(!limited.converged);
     assert!(limited.distance_interval[0] <= expected && expected <= limited.distance_interval[1]);
 }
+
+#[test]
+fn clearance_inspection_uses_interior_uv_witness_and_whole_patch_support() {
+    use nurbs_core::analysis::curve_measure::{inspect_curve_surface_clearance as inspect, ClearanceDecision::*};
+    let c=line([2.,2.,3.],[2.,2.,3.]);
+    let s=panel();
+    let (decision,r)=inspect(&c,&s,3.,1e-6,1000).unwrap();
+    assert_eq!(decision,MeetsMinimum);
+    assert!(r.surface_parameters[0]>2. && r.surface_parameters[0]<7.);
+    assert!(r.surface_parameters[1]>-3. && r.surface_parameters[1]<1.);
+    assert_eq!(inspect(&c,&s,3.1,1e-6,1000).unwrap().0,BelowMinimum);
+    assert!(inspect(&c,&s,-1.,1e-6,1000).is_err());
+}
