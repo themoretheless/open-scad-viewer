@@ -1132,11 +1132,18 @@ pub fn directional_motion_slowdown_bounds(
     tolerances: [f64; 3],
     max_cells_per_derivative: usize,
 ) -> Result<[f64; 2]> {
-    use num_rational::BigRational;
-
     let report = check_directional_motion_limits(
         curve, interval, direction, limits, tolerances, max_cells_per_derivative,
     )?;
+    slowdown_from_motion_report(&report, limits)
+}
+
+fn slowdown_from_motion_report(
+    report: &DirectionalMotionReport,
+    limits: DirectionalMotionLimits,
+) -> Result<[f64; 2]> {
+    use num_rational::BigRational;
+
     let exact = |value| {
         BigRational::from_float(value)
             .ok_or_else(|| crate::numeric_err("Nonfinite motion bound"))
@@ -1185,6 +1192,64 @@ pub fn directional_motion_slowdown_bounds(
         Ok([f64::from_bits(lo), f64::from_bits(hi)])
     };
     Ok([bracket(0)?[0], bracket(1)?[1]])
+}
+
+/// Limits for one direction, which is normalized before projecting the curve.
+#[derive(Clone, Copy, Debug)]
+pub struct MotionAxis<'a> {
+    pub direction: &'a [f64],
+    pub limits: DirectionalMotionLimits,
+}
+
+#[derive(Clone, Debug)]
+pub struct MultiAxisSlowdownReport {
+    /// Enclosure of the minimum common slowdown. A finite upper endpoint
+    /// satisfies all axes simultaneously.
+    pub bounds: [f64; 2],
+    /// Individual slowdown enclosures in input order.
+    pub axis_bounds: Vec<[f64; 2]>,
+    pub cells: usize,
+}
+
+/// Compute one uniform parameter dilation under a shared cell budget.
+/// Reserve span coverage for each axis and derivative before refinement.
+pub fn multi_axis_motion_slowdown_bounds(
+    curve: &Curve,
+    interval: [f64; 2],
+    axes: &[MotionAxis<'_>],
+    tolerances: [f64; 3],
+    max_cells: usize,
+) -> Result<MultiAxisSlowdownReport> {
+    curve.validate()?;
+    for tolerance in tolerances {
+        validate(tolerance, max_cells)?;
+    }
+    validate_travel_interval(curve, interval)?;
+    check(!axes.is_empty(), "Motion slowdown requires at least one axis")?;
+    let minimum = 3 * active_spans(curve, interval).count();
+    if axes.len() > max_cells / minimum {
+        return Err(resource("Initial motion spans exceed the shared budget"));
+    }
+
+    let mut remaining = max_cells;
+    let mut axis_bounds = Vec::with_capacity(axes.len());
+    let mut bounds = [1_f64; 2];
+    for (index, axis) in axes.iter().enumerate() {
+        let budget = remaining / (axes.len() - index) / 3;
+        let report = check_directional_motion_limits(
+            curve, interval, axis.direction, axis.limits, tolerances, budget,
+        )?;
+        remaining -= report.speed.cells + report.acceleration.cells + report.jerk.cells;
+        let axis_bound = slowdown_from_motion_report(&report, axis.limits)?;
+        bounds[0] = bounds[0].max(axis_bound[0]);
+        bounds[1] = bounds[1].max(axis_bound[1]);
+        axis_bounds.push(axis_bound);
+    }
+    Ok(MultiAxisSlowdownReport {
+        bounds,
+        axis_bounds,
+        cells: max_cells - remaining,
+    })
 }
 
 fn measure_directional_derivative_peak(

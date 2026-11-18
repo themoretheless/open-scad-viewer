@@ -8786,3 +8786,70 @@ fn motion_slowdown_bounds_cover_coarse_peak_uncertainty() {
     assert!(coarse[1] >= 3.);
     assert!(fine[0] <= 1.5 && 1.5 <= fine[1] && fine[1] - fine[0] < 1e-4);
 }
+
+#[test]
+fn multi_axis_slowdown_reports_the_limiting_axis_in_input_order() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, MotionAxis, multi_axis_motion_slowdown_bounds,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 8.].map(|x| vec![x, 8. * x]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let axes = [
+        MotionAxis {
+            direction: &[2., 0.],
+            limits: DirectionalMotionLimits { speed: 6., acceleration: 12., jerk: 6. },
+        },
+        MotionAxis {
+            direction: &[0., -1.],
+            limits: DirectionalMotionLimits { speed: 96., acceleration: 96., jerk: 0.75 },
+        },
+    ];
+    let report = multi_axis_motion_slowdown_bounds(&curve, [2., 4.], &axes, [1e-5; 3], 32)
+        .unwrap();
+    for ([lo, hi], target) in report.axis_bounds.iter().copied().zip([2., 4.]) {
+        assert!(lo <= target && target <= hi && hi - lo < 1e-5, "{report:?}");
+    }
+    assert_eq!(report.axis_bounds.len(), 2);
+    assert_eq!(report.bounds, report.axis_bounds[1]);
+    assert!(report.cells <= 32);
+    let reversed = multi_axis_motion_slowdown_bounds(
+        &curve, [2., 4.], &[axes[1], axes[0]], [1e-5; 3], 32,
+    )
+    .unwrap();
+    assert_eq!(reversed.bounds, report.bounds);
+    assert_eq!(reversed.axis_bounds, [report.axis_bounds[1], report.axis_bounds[0]]);
+}
+
+#[test]
+fn multi_axis_slowdown_reserves_initial_coverage_for_every_derivative() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, MotionAxis, multi_axis_motion_slowdown_bounds,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 2.],
+        control_points: vec![vec![0., 0.], vec![1., 0.], vec![3., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let axes = [MotionAxis {
+        direction: &[1., 0.],
+        limits: DirectionalMotionLimits { speed: 1., acceleration: 1., jerk: 1. },
+    }; 2];
+    let check = |axes: &[MotionAxis<'_>], cells| {
+        multi_axis_motion_slowdown_bounds(&curve, [0., 2.], axes, [1e-5; 3], cells)
+    };
+    assert!(check(&[], 12).is_err());
+    assert!(check(&axes, 11).is_err());
+    let report = check(&axes, 12).unwrap();
+    assert_eq!(report.cells, 12);
+    assert!(report.bounds[0] <= 2. && 2. <= report.bounds[1]);
+    let mut blocked = axes;
+    blocked[1].limits.speed = 0.;
+    assert_eq!(check(&blocked, 12).unwrap().bounds, [f64::MAX, f64::INFINITY]);
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 687,
-  "unallocatedCount": 313,
+  "specifiedCount": 688,
+  "unallocatedCount": 312,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16745,6 +16745,25 @@
       "remainingQualification": [
         "Enclose minimum uniform parameter dilation under speed, acceleration and jerk limits.",
         "Check each derivative scaling power, existing feasibility, zero and subnormal limits, and enclosure under coarse work budgets.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0688",
+      "name": "Сертифицированное замедление NURBS-траектории для нескольких осей",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::multi_axis_motion_slowdown_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-688-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-688-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the common slowdown for all axes under one span coverage and refinement budget.",
+        "Check a jerk-limited axis dominating a speed-limited axis, input order, all-span budget reservation, and infeasible combined limits.",
         "WASM and application integration are separate."
       ]
     }
