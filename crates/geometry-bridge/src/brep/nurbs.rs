@@ -1520,6 +1520,14 @@ pub fn exact_periodic_trim_patch_set_density_request(
     if include_static_unbalance && inertia_axis.is_none() {
         return Err(input("Static unbalance requires an inertia axis"));
     }
+    let include_couple_unbalance = request
+        .get("includeCoupleUnbalance")
+        .map(|_| field::<bool>(request, "includeCoupleUnbalance"))
+        .transpose()?
+        .unwrap_or(false);
+    if include_couple_unbalance && inertia_axis.is_none() {
+        return Err(input("Couple unbalance requires an inertia axis"));
+    }
     let axis_balance_tolerance = request
         .get("axisBalanceToleranceMm")
         .map(|_| -> Result<f64> {
@@ -1598,6 +1606,9 @@ pub fn exact_periodic_trim_patch_set_density_request(
     if include_static_unbalance {
         response["staticUnbalance"] = Value::Null;
     }
+    if include_couple_unbalance {
+        response["coupleUnbalance"] = Value::Null;
+    }
     let Some(patches) = build.patches else {
         return Ok(response);
     };
@@ -1630,6 +1641,14 @@ pub fn exact_periodic_trim_patch_set_density_request(
             json!(report.first_mass_moment_about_plane(point, normal)?);
     }
     if let Some((point, direction)) = inertia_axis {
+        if include_couple_unbalance
+            && let Some(unbalance) = report.bound_couple_unbalance(point, direction)?
+        {
+            response["coupleUnbalance"] = json!({
+                "vectorBoundsKgMm2": unbalance.vector_bounds,
+                "magnitudeBoundsKgMm2": unbalance.magnitude_bounds,
+            });
+        }
         if include_static_unbalance
             && let Some(unbalance) = report.bound_static_unbalance(point, direction)?
         {

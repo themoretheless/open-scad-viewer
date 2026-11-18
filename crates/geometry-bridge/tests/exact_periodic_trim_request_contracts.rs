@@ -1151,3 +1151,35 @@ fn patch_set_density_returns_static_unbalance_about_requested_axis() {
     request["maxSurfaceCells"] = json!(2);
     assert_eq!(run(&request)["value"].get("staticUnbalance"), Some(&Value::Null));
 }
+
+#[test]
+fn patch_set_density_returns_couple_unbalance_about_the_axis_reference_point() {
+    let mut request = patch_set_density_request(20_000);
+    request["includeCoupleUnbalance"] = json!(true);
+    assert_eq!(run(&request)["ok"], false);
+    request["inertiaAxis"] = json!({"pointMm": [0., 0., 0.], "direction": [0., 0., 1.]});
+    for (z, scale) in [(0., 1.), (2., -2.)] {
+        request["inertiaAxis"]["pointMm"] = json!([0., 0., z]);
+        request["inertiaAxis"]["direction"] = json!([0., 0., scale]);
+        let response = run(&request);
+        assert_eq!(response["ok"], true, "{response}");
+        let couple = &response["value"]["coupleUnbalance"];
+        let vector = couple["vectorBoundsKgMm2"].as_array().unwrap();
+        assert_eq!(vector.len(), 3);
+        let exact = [0.375_f64 * (1. - z), -0.34375 * (1. - z), 0.];
+        for (interval, expected) in vector.iter().zip(exact) {
+            assert!(
+                interval[0].as_f64().unwrap() <= expected
+                    && expected <= interval[1].as_f64().unwrap()
+            );
+        }
+        let magnitude = &couple["magnitudeBoundsKgMm2"];
+        let expected = exact[0].hypot(exact[1]);
+        assert!(
+            magnitude[0].as_f64().unwrap() <= expected
+                && expected <= magnitude[1].as_f64().unwrap()
+        );
+    }
+    request["maxSurfaceCells"] = json!(2);
+    assert_eq!(run(&request)["value"].get("coupleUnbalance"), Some(&Value::Null));
+}

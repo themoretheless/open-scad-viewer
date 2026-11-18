@@ -38,6 +38,7 @@ interface Report {
   centerOfMassBoundsMm?: [number, number][] | null
   referenceInertiaBoundsKgMm2?: [number, number][][] | null
   centralInertiaBoundsKgMm2?: [number, number][][] | null
+  coupleUnbalance?: { vectorBoundsKgMm2: [number, number][]; magnitudeBoundsKgMm2: [number, number] } | null
   staticUnbalance?: { vectorBoundsKgMm: [number, number][]; magnitudeBoundsKgMm: [number, number] } | null
   axisBalance?: { eccentricityBoundsMm: [number, number]; status: string } | null
   axisMomentBoundsKgMm2?: [number, number] | null
@@ -513,3 +514,21 @@ assert.ok(unbalanceLo <= Math.hypot(...expectedUnbalance) && Math.hypot(...expec
 assert.deepEqual(unbalanceResult.axisBalance, balance)
 assert.equal(call(request.maxWork, densityOp, { ...unbalanceOptions, maxSurfaceCells: 2 }).staticUnbalance, null)
 console.log('WASM ABI enclosed the static unbalance vector and magnitude.')
+
+assert.equal(unbalanceResult.coupleUnbalance, undefined)
+const coupleOptions = {
+  ...densityOptions,
+  inertiaAxis: { pointMm: [0, 0, 0], direction: [0, 0, -2] },
+  includeCoupleUnbalance: true,
+}
+const couple = call(request.maxWork, densityOp, coupleOptions).coupleUnbalance
+const expectedCouple = [0.375, -0.34375, 0]
+assert.ok(couple)
+for (const [index, exact] of expectedCouple.entries()) {
+  const [lo, hi] = couple.vectorBoundsKgMm2[index]
+  assert.ok(lo <= exact && exact <= hi)
+}
+const [coupleLo, coupleHi] = couple.magnitudeBoundsKgMm2
+assert.ok(coupleLo <= Math.hypot(...expectedCouple) && Math.hypot(...expectedCouple) <= coupleHi)
+assert.equal(call(request.maxWork, densityOp, { ...coupleOptions, maxSurfaceCells: 2 }).coupleUnbalance, null)
+console.log('WASM ABI enclosed the couple unbalance vector and magnitude.')

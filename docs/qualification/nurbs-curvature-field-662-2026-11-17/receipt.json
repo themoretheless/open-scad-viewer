@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0662",
+  "testedBase": "39bc4f88f3ce923eb0bd11cfc831975b4ae90a32",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 313,
+  "scope": [
+    "Return opt-in couple unbalance about the requested axis and axial reference point.",
+    "Check weighted analytic vector and magnitude, reversal and axial reference translation, validation and incomplete coverage through the compiled ABI."
+  ],
+  "logSha256": "60bbe6eed63e8eb47941459f562ec06cc29b73c1fbb0f45ecc9497a1f802b99e",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "256b6278c61953ed46182ccb803e9ad307ead8405c71104d3589096cf43aa0ca",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "8b97b48c6980556a0880f3cb4c29d3377b2de30ac1c96cc7df9b9ccbfe0c09a1",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "132166ad093faf3e9da0f2959f6f451b598d269a5bd1c22d6e8ef8044696c032"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}
