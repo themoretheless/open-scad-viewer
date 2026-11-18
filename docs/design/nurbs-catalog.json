@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 681,
-  "unallocatedCount": 319,
+  "specifiedCount": 682,
+  "unallocatedCount": 318,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16631,6 +16631,25 @@
       "remainingQualification": [
         "Return the union of original parameter intervals that can still contain a global axial speed maximum.",
         "Check interior localization, a coarse enclosure with one cell, preservation of disconnected tied spans and sorted source intervals.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0682",
+      "name": "Гарантированная оценка пикового осевого ускорения NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::directional_peak_acceleration",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-682-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-682-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the maximum absolute axial second derivative on the original curve clock.",
+        "Check an interior acceleration extremum with nonunit parameter scaling, a rational degree-one support and coarse work limits.",
         "WASM and application integration are separate."
       ]
     }

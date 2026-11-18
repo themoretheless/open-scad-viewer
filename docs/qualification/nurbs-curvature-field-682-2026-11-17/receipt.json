@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0682",
+  "testedBase": "cdce60408c4e69f7723c21ff4c56c7884bb44e2a",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 286,
+  "scope": [
+    "Enclose the maximum absolute axial second derivative on the original curve clock.",
+    "Check an interior acceleration extremum with nonunit parameter scaling, a rational degree-one support and coarse work limits."
+  ],
+  "logSha256": "d5f16dc9956c72c9d6ea8ed74a1fa42a864bf2ade0338af11465b9f6e8eceb29",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "b62db4615b03000174af1d7aec48af3708a1be44be0d8e76ae93a0d061719f7e",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "e763191afaa24c50eaaf308661dd9495e161933c98d7ad43bda117634df79b45"
+  }
+}

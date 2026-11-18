@@ -921,6 +921,34 @@ pub struct DirectionalPeakSpeedReport {
     pub stop_reason: StopReason,
 }
 
+/// Bounds on the supremum of absolute axial acceleration in model units
+/// per squared original parameter unit.
+#[derive(Clone, Debug)]
+pub struct DirectionalPeakAccelerationReport {
+    pub bounds: [f64; 2],
+    pub cells: usize,
+    pub stop_reason: StopReason,
+}
+
+/// Certify the peak axial second derivative over an original-parameter window.
+/// The result covers span derivatives, including their one-sided limits.
+pub fn directional_peak_acceleration(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalPeakAccelerationReport> {
+    let report = measure_directional_derivative_peak(
+        curve, interval, direction, tolerance, max_cells, None, 2,
+    )?.peak;
+    Ok(DirectionalPeakAccelerationReport {
+        bounds: report.bounds,
+        cells: report.cells,
+        stop_reason: report.stop_reason,
+    })
+}
+
 /// Certify peak axial speed over an original-parameter window. The tolerance
 /// limits the width of the reported enclosure.
 pub fn directional_peak_speed(
@@ -930,7 +958,7 @@ pub fn directional_peak_speed(
     tolerance: f64,
     max_cells: usize,
 ) -> Result<DirectionalPeakSpeedReport> {
-    Ok(measure_directional_peak_speed(curve, interval, direction, tolerance, max_cells, None)?.peak)
+    Ok(measure_directional_derivative_peak(curve, interval, direction, tolerance, max_cells, None, 1)?.peak)
 }
 
 #[derive(Clone, Debug)]
@@ -955,18 +983,19 @@ pub fn locate_directional_peak_speed(
         parameter_tolerance.is_finite() && parameter_tolerance > 0.,
         "Peak parameter tolerance must be positive and finite",
     )?;
-    measure_directional_peak_speed(
-        curve, interval, direction, tolerance, max_cells, Some(parameter_tolerance),
+    measure_directional_derivative_peak(
+        curve, interval, direction, tolerance, max_cells, Some(parameter_tolerance), 1,
     )
 }
 
-fn measure_directional_peak_speed(
+fn measure_directional_derivative_peak(
     curve: &Curve,
     interval: [f64; 2],
     direction: &[f64],
     tolerance: f64,
     max_cells: usize,
     parameter_tolerance: Option<f64>,
+    derivative_order: usize,
 ) -> Result<DirectionalPeakLocations> {
     curve.validate()?;
     validate(tolerance, max_cells)?;
@@ -977,13 +1006,18 @@ fn measure_directional_peak_speed(
     let mut lower = 0.0_f64;
     let measure = |span, domain: [f64; 2]| -> Result<(f64, f64)> {
         let width = Interval::point(domain[1]).sub(Interval::point(domain[0]))?;
-        let jets = curve_jets::enclose(curve, span, domain)?;
-        let velocity = project_jet(&jets[1], &unit)?.div(width)?;
-        let upper = velocity.lo.abs().max(velocity.hi.abs());
+        let derivative = |jets: Vec<Vec<Interval>>| -> Result<Interval> {
+            let mut value = project_jet(&jets[derivative_order], &unit)?;
+            for _ in 0..derivative_order {
+                value = value.div(width)?;
+            }
+            Ok(value)
+        };
+        let bound = derivative(curve_jets::enclose(curve, span, domain)?)?;
+        let upper = bound.lo.abs().max(bound.hi.abs());
         let sample_lower = |end| -> Result<f64> {
-            let jets = curve_jets::endpoint(curve, span, domain, end)?;
-            let velocity = project_jet(&jets[1], &unit)?.div(width)?;
-            Ok(velocity.lo.max(-velocity.hi).max(0.))
+            let sample = derivative(curve_jets::endpoint(curve, span, domain, end)?)?;
+            Ok(sample.lo.max(-sample.hi).max(0.))
         };
         Ok((sample_lower(false)?.max(sample_lower(true)?), upper))
     };

@@ -8512,3 +8512,39 @@ fn directional_peak_locations_preserve_disjoint_tied_spans() {
     assert_eq!(result.parameter_intervals, vec![[0., 1.], [2., 3.]]);
     assert!(result.peak.bounds[0] <= 3. && 3. <= result.peak.bounds[1]);
 }
+
+#[test]
+fn directional_peak_acceleration_encloses_interior_maximum_with_source_clock_scaling() {
+    use nurbs_core::analysis::curve_measure::{StopReason, directional_peak_acceleration};
+    let curve = Curve {
+        degree: 4,
+        knots: vec![2., 2., 2., 2., 2., 4., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 1., 2.]
+            .into_iter()
+            .map(|x| vec![x, 0.])
+            .collect(),
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let result = directional_peak_acceleration(&curve, [2., 4.], &[1., 0.], 1e-5, 2048).unwrap();
+    assert_eq!(result.stop_reason, StopReason::Tolerance);
+    assert!(result.bounds[0] <= 1.5 && 1.5 <= result.bounds[1], "{result:?}");
+    let coarse = directional_peak_acceleration(&curve, [2., 4.], &[1., 0.], 1e-5, 1).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.bounds[0] <= 1.5 && 1.5 <= coarse.bounds[1]);
+}
+
+#[test]
+fn directional_peak_acceleration_accounts_for_rational_parameter_speed() {
+    use nurbs_core::analysis::curve_measure::{StopReason, directional_peak_acceleration};
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![6., 0.]],
+        weights: vec![1., 2.],
+        periodic: false,
+    };
+    let result = directional_peak_acceleration(&curve, [3., 4.], &[1., 0.], 1e-5, 2048).unwrap();
+    assert_eq!(result.stop_reason, StopReason::Tolerance);
+    assert!(result.bounds[0] <= 0.768 && 0.768 <= result.bounds[1], "{result:?}");
+}
