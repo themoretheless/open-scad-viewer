@@ -41,7 +41,7 @@ interface Report {
   axisMomentBoundsKgMm2?: [number, number] | null
   axisMomentBoundsMm4?: [number, number] | null
   principalMomentBoundsMm4?: [number, number][] | null
-  principalAxes?: ({ direction: [number, number, number]; sinAngleUpper: number; distanceBoundsMm?: [number, number] } | null)[] | null
+  principalAxes?: ({ direction: [number, number, number]; sinAngleUpper: number; distanceBoundsMm?: [number, number]; angleSineBounds?: [number, number] } | null)[] | null
   principalMomentBoundsKgMm2?: [number, number][] | null
   boundsMm2?: [number, number] | [number, number][] | null
   stations?: { parameterBounds: [number, number] | null; pointBoundsMm: [number, number][] | null; status: string }[] | null
@@ -476,3 +476,12 @@ const axisDistance = probedAxes?.[0]?.distanceBoundsMm
 assert.ok(axisDistance && axisDistance[0] <= 0.84375 && 0.84375 <= axisDistance[1])
 assert.deepEqual(probedAxes?.slice(1), [null, null])
 console.log('WASM ABI enclosed the probe distance to a certified principal axis.')
+
+assert.equal(certifiedAxes[0].angleSineBounds, undefined)
+const alignmentAxes = call(request.maxWork, densityOp, {
+  ...axisCertificateOptions, principalAxisProbeDirection: [1, 0, 1],
+}).principalAxes
+const axisAlignment = alignmentAxes?.[0]?.angleSineBounds
+assert.ok(axisAlignment && axisAlignment[0] <= Math.SQRT1_2 && Math.SQRT1_2 <= axisAlignment[1])
+assert.deepEqual(alignmentAxes?.slice(1), [null, null])
+console.log('WASM ABI enclosed the probe angle sine to a certified principal axis.')

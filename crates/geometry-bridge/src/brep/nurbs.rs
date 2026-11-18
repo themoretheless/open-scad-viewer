@@ -1447,7 +1447,8 @@ pub fn exact_periodic_trim_patch_set_density_request(
     use crate::field;
     use nurbs_core::{
         analysis::surface_measure::{
-            bound_distance_to_principal_axis, bound_radius_of_gyration,
+            bound_distance_to_principal_axis, bound_principal_axis_angle_sine,
+            bound_radius_of_gyration,
             periodic_trim_patch_set_mass_with_density,
         },
         editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
@@ -1492,6 +1493,21 @@ pub fn exact_periodic_trim_patch_set_density_request(
                 ));
             }
             Ok(point)
+        })
+        .transpose()?;
+    let axis_probe_direction = request
+        .get("principalAxisProbeDirection")
+        .map(|_| -> Result<[f64; 3]> {
+            let direction: [f64; 3] = field(request, "principalAxisProbeDirection")?;
+            if !include_principal_axes
+                || direction == [0.; 3]
+                || !direction.iter().all(|value| value.is_finite())
+            {
+                return Err(input(
+                    "Principal axis alignment requires a finite nonzero direction and requested axes",
+                ));
+            }
+            Ok(direction)
         })
         .transpose()?;
     let inertia_axis = optional_inertia_axis(request)?;
@@ -1616,6 +1632,10 @@ pub fn exact_periodic_trim_patch_set_density_request(
                             "direction": axis.direction,
                             "sinAngleUpper": axis.sin_angle_upper,
                         });
+                        if let Some(direction) = axis_probe_direction {
+                            value["angleSineBounds"] =
+                                json!(bound_principal_axis_angle_sine(axis, direction)?);
+                        }
                         if let Some(point) = axis_probe {
                             value["distanceBoundsMm"] = json!(bound_distance_to_principal_axis(
                                 axis,

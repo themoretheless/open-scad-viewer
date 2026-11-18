@@ -1081,3 +1081,23 @@ fn patch_set_density_encloses_point_distance_to_certified_axis() {
     request["principalAxisProbePointMm"] = json!([1., 0.]);
     assert_eq!(run(&request)["ok"], false);
 }
+
+#[test]
+fn patch_set_density_encloses_direction_angle_to_principal_axis() {
+    let mut request = separated_density_request();
+    request["momentToleranceKgMm2"] = json!(1e-8);
+    request["principalAxisProbeDirection"] = json!([1., 0., 1.]);
+    assert_eq!(run(&request)["ok"], false);
+    request["includePrincipalAxes"] = json!(true);
+    let forward = run(&request);
+    assert_eq!(forward["ok"], true, "{forward}");
+    let axes = &forward["value"]["principalAxes"];
+    let angle = &axes[0]["angleSineBounds"];
+    let (lo, hi) = (angle[0].as_f64().unwrap(), angle[1].as_f64().unwrap());
+    assert!(0. <= lo && lo <= 0.5_f64.sqrt() && 0.5_f64.sqrt() <= hi && hi <= 1.);
+    assert!(axes[1].is_null() && axes[2].is_null());
+    request["principalAxisProbeDirection"] = json!([-2., 0., -2.]);
+    assert_eq!(run(&request), forward);
+    request["principalAxisProbeDirection"] = json!([0., 0., 0.]);
+    assert_eq!(run(&request)["ok"], false);
+}

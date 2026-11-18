@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0656",
+  "testedBase": "71388048f0d697c2bf940a0b003ad3fc40b8540c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 304,
+  "scope": [
+    "Attach certified acute-angle sine bounds for a fixed probe direction to each available principal axis.",
+    "Check analytic oblique alignment, reversal invariance, unresolved axes and invalid direction requests through Rust and the compiled ABI."
+  ],
+  "logSha256": "e7bef6d35e70efae09d71009bb92f3382c9e22aa6a2e96f48a06c7bcfcb5ec02",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "4a05509f51a54815db3494cea987970cd62df9cb479b50a054e2d3ef447d00bd",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "fe635174c08de0c655440db3eeeaab2f449a948b4614b0cb96fbe092828b7d2c",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "4ebcc4ca7b311706ccae4a64ba7f8a32a3a0402fdfb3759ec7e3257fb527dd0a"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}
