@@ -254,9 +254,11 @@ edge of the chain and bounds their original world-space geometry.
 The joint exact-domain audit can also certify an inset or curved outer
 contour inside the natural rectangle. It establishes the actual simple
 CCW trim loops, hole nesting, and exact lifts before the projected
-partition proof. The partition bounds the UV control hulls within each
-proved chart, using exact active restrictions when stored poles extend
-beyond the chart. It checks the opposite shared chain and certifies the merged
+partition proof. The partition bounds the active UV intervals within
+each proved chart. When stored poles extend beyond the chart, it checks
+nonnegative homogeneous margins on the original interval, including
+traversals that lie on a chart side. It checks the opposite shared chain
+and certifies the merged
 projected exterior. The sum of the two projected outer-loop windings
 then has magnitude at most one, which excludes overlapping interiors.
 Strictly nested holes cannot add contact across that partition.

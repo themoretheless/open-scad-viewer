@@ -1,4 +1,4 @@
-//! Exact strict containment for a planar rational spline's complete active domain.
+//! Exact box containment for an original planar rational spline interval.
 use super::*;
 use num_traits::Signed;
 
@@ -11,7 +11,7 @@ pub fn strict_box_containment(
     depth: u8,
     max_work: u64,
 ) -> Result<(bool, u64)> {
-    inspect(curve, None, bounds, depth, max_work)
+    inspect(curve, None, bounds, depth, true, max_work)
 }
 
 /// Prove strict containment on a declared interval of the original clock.
@@ -23,7 +23,19 @@ pub fn strict_box_containment_on(
     depth: u8,
     max_work: u64,
 ) -> Result<(bool, u64)> {
-    inspect(curve, Some(range), bounds, depth, max_work)
+    inspect(curve, Some(range), bounds, depth, true, max_work)
+}
+
+/// Prove containment in a closed chart box on the original parameter interval.
+/// Touching a box side is allowed, including a whole span on that side.
+pub fn closed_box_containment_on(
+    curve: &Curve,
+    range: [f64; 2],
+    bounds: [[f64; 2]; 2],
+    depth: u8,
+    max_work: u64,
+) -> Result<(bool, u64)> {
+    inspect(curve, Some(range), bounds, depth, false, max_work)
 }
 
 fn inspect(
@@ -31,6 +43,7 @@ fn inspect(
     range: Option<[f64; 2]>,
     bounds: [[f64; 2]; 2],
     depth: u8,
+    strict: bool,
     max_work: u64,
 ) -> Result<(bool, u64)> {
     curve.validate()?;
@@ -45,7 +58,7 @@ fn inspect(
         used: 0,
         limit: max_work.min(cad_predicates::MAX_WORK),
     };
-    let proved = prove(curve, range, bounds, depth.min(16), &mut work).is_ok();
+    let proved = prove(curve, range, bounds, depth.min(16), strict, &mut work).is_ok();
     Ok((proved, work.used))
 }
 
@@ -54,6 +67,7 @@ fn prove(
     range: [f64; 2],
     bounds: [[f64; 2]; 2],
     depth: u8,
+    strict: bool,
     work: &mut Work,
 ) -> PResult<()> {
     let p = curve.degree;
@@ -107,15 +121,22 @@ fn prove(
                 }
                 margins.push(bounds);
             }
-            positive_margins(margins, depth, work)?;
+            check_margins(margins, depth, strict, work)?;
         }
     }
     Ok(())
 }
 
-fn positive_margins(mut net: Vec<[Q; 4]>, depth: u8, work: &mut Work) -> PResult<()> {
+fn check_margins(mut net: Vec<[Q; 4]>, depth: u8, strict: bool, work: &mut Work) -> PResult<()> {
+    let admissible = |value: &Q| {
+        if strict {
+            value.is_positive()
+        } else {
+            !value.is_negative()
+        }
+    };
     work.charge(net.len() as u64)?;
-    if net.iter().flatten().all(Signed::is_positive) {
+    if net.iter().flatten().all(admissible) {
         return Ok(());
     }
     let n = net.len();
@@ -123,7 +144,7 @@ fn positive_margins(mut net: Vec<[Q; 4]>, depth: u8, work: &mut Work) -> PResult
         || [&net[0], &net[n - 1]]
             .into_iter()
             .flatten()
-            .any(|v| !v.is_positive())
+            .any(|v| !admissible(v))
     {
         return Err(Refusal::InvalidOutput);
     }
@@ -140,6 +161,6 @@ fn positive_margins(mut net: Vec<[Q; 4]>, depth: u8, work: &mut Work) -> PResult
         right.push(net[remaining - 1].clone());
     }
     right.reverse();
-    positive_margins(left, depth - 1, work)?;
-    positive_margins(right, depth - 1, work)
+    check_margins(left, depth - 1, strict, work)?;
+    check_margins(right, depth - 1, strict, work)
 }

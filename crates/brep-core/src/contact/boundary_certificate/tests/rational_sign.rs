@@ -715,6 +715,35 @@ fn check_audited_inset_jordan_contact(reference: &crate::Model, shared: usize) {
             periodic: false,
         };
     }
+    // The other use is stored on a larger affine carrier. Its active
+    // interval spans one entire natural side and touches both chart corners.
+    let common_range = model.0.edges[common].curve.domain();
+    let c = model.0.loops[0].coedges.iter_mut().find(|c| c.edge == common).unwrap();
+    let a = &c.pcurve.control_points[1];
+    let b = &c.pcurve.control_points[2];
+    let step: Vec<_> = a.iter().zip(b).map(|(a, b)| 2. * (b - a)).collect();
+    let start: Vec<_> = a.iter().zip(&step).map(|(a, d)| a - 0.25 * d).collect();
+    let carrier = crate::Curve {
+        degree: 1,
+        knots: vec![0., 0., 4., 4.],
+        control_points: [-1., 3.].map(|t| {
+            start.iter().zip(&step).map(|(a, d)| a + t * d).collect()
+        }).to_vec(),
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let bounds = [[0.; 2], [1.; 2]];
+    use nurbs_core::editing::exact_knot_insertion::{closed_box_containment_on, strict_box_containment_on};
+    let (proven, used) = closed_box_containment_on(&carrier, [1., 2.], bounds, 12, 10_000).unwrap();
+    assert!(proven);
+    assert!(!closed_box_containment_on(&carrier, [1., 2.], bounds, 12, used - 1).unwrap().0);
+    assert!(!closed_box_containment_on(&carrier, [0., 2.], bounds, 12, 10_000).unwrap().0);
+    assert!(!strict_box_containment_on(&carrier, [1., 2.], bounds, 12, 10_000).unwrap().0);
+    *c = crate::Coedge::new(common, c.reversed, carrier).with_trim(brep_topology::CoedgeTrim {
+        curve_parameter: common_range,
+        pcurve_parameter: [1., 2.],
+        periodic_lift: [[0; 2]; 2],
+    }).unwrap();
     model.rebuild_topology_ids();
     model.validate().unwrap();
 

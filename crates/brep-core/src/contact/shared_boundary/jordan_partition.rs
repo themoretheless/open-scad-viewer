@@ -219,39 +219,11 @@ fn chart_curve_hull(
         [a.min(b), a.max(b)]
     });
     let work = ((limit - *cells) as u64).min(cad_predicates::MAX_WORK);
-    if work == 0 {
-        return None;
-    }
-    let restricted;
-    let curve = if range == domain {
-        curve
-    } else {
-        let report = exact_knot_insertion::restrict(curve, range, work).ok()?;
-        charge(cells, limit, report.work_used as usize)?;
-        restricted = report.curve?;
-        charge(cells, limit, restricted.control_points.len())?;
-        if within(&restricted) {
-            return Some(());
-        }
-        &restricted
-    };
-    let [lo, hi] = curve.domain();
-    if curve.knots[..=curve.degree].iter().all(|t| *t == lo)
-        && curve.knots[curve.control_points.len()..]
-            .iter()
-            .all(|t| *t == hi)
-    {
-        return None;
-    }
-    let work = ((limit - *cells) as u64).min(cad_predicates::MAX_WORK);
-    if work == 0 {
-        return None;
-    }
-    let report = clamp_exact_curve(curve, work).ok()?;
-    charge(cells, limit, report.work_used as usize)?;
-    let active = report.curve?;
-    charge(cells, limit, active.control_points.len())?;
-    within(&active).then_some(())
+    let (proved, used) =
+        exact_knot_insertion::closed_box_containment_on(curve, range, [lower, upper], 12, work)
+            .ok()?;
+    charge(cells, limit, used as usize)?;
+    proved.then_some(())
 }
 
 fn interior_holes(
