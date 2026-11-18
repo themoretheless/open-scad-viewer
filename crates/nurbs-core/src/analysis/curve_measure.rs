@@ -2890,6 +2890,51 @@ pub fn measure_toolpath_clearance_violation_length(
     max_obstacle_cells: usize,
     max_length_cells: usize,
 ) -> Result<ToolpathViolationLength> {
+    measure_toolpath_violation_lengths(
+        curve, interval, obstacles, tool_radius, margin, parameter_tolerance,
+        length_tolerance, max_obstacle_cells, max_length_cells, false,
+    ).map(|report| report.union)
+}
+
+#[derive(Clone, Debug)]
+pub struct ToolpathObstacleViolationLengths {
+    pub union: ToolpathViolationLength,
+    /// Arc length bounds in obstacle order. Overlaps contribute to each
+    /// relevant obstacle, while the union counts the shared length once.
+    pub by_obstacle: Vec<[f64; 2]>,
+}
+
+/// Integrate each candidate cell once and attribute its bounded length to
+/// every obstacle whose clearance may violate the margin.
+pub fn measure_toolpath_violation_lengths_by_obstacle(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    margin: f64,
+    parameter_tolerance: f64,
+    length_tolerance: f64,
+    max_obstacle_cells: usize,
+    max_length_cells: usize,
+) -> Result<ToolpathObstacleViolationLengths> {
+    measure_toolpath_violation_lengths(
+        curve, interval, obstacles, tool_radius, margin, parameter_tolerance,
+        length_tolerance, max_obstacle_cells, max_length_cells, true,
+    )
+}
+
+fn measure_toolpath_violation_lengths(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    margin: f64,
+    parameter_tolerance: f64,
+    length_tolerance: f64,
+    max_obstacle_cells: usize,
+    max_length_cells: usize,
+    by_obstacle: bool,
+) -> Result<ToolpathObstacleViolationLengths> {
     validate(length_tolerance, max_length_cells)?;
     let partition = partition_toolpath_clearance_with_margin(
         curve, interval, obstacles, tool_radius, margin, parameter_tolerance, max_obstacle_cells,
@@ -2902,6 +2947,11 @@ pub fn measure_toolpath_clearance_violation_length(
     }
     let tolerance = length_tolerance / candidates.len().max(1) as f64;
     let mut bounds = Interval::point(0.);
+    let mut per_obstacle = if by_obstacle {
+        vec![Interval::point(0.); obstacles.len()]
+    } else {
+        Vec::new()
+    };
     let mut remaining = max_length_cells;
     for (index, candidate) in candidates.iter().enumerate() {
         let budget = remaining / (candidates.len() - index);
@@ -2913,11 +2963,20 @@ pub fn measure_toolpath_clearance_violation_length(
             0.
         };
         bounds = bounds.add(Interval::new(lower, length.bounds[1])?)?;
+        for (total, &[lo, hi]) in per_obstacle.iter_mut().zip(&candidate.gap_bounds) {
+            if lo <= 0. {
+                let lower = if hi <= 0. { length.bounds[0] } else { 0. };
+                *total = total.add(Interval::new(lower, length.bounds[1])?)?;
+            }
+        }
     }
-    Ok(ToolpathViolationLength {
-        bounds: [bounds.lo.max(0.), bounds.hi],
-        work_obstacle_cells: partition.work_obstacle_cells,
-        work_length_cells: max_length_cells - remaining,
+    Ok(ToolpathObstacleViolationLengths {
+        union: ToolpathViolationLength {
+            bounds: [bounds.lo.max(0.), bounds.hi],
+            work_obstacle_cells: partition.work_obstacle_cells,
+            work_length_cells: max_length_cells - remaining,
+        },
+        by_obstacle: per_obstacle.into_iter().map(|value| [value.lo.max(0.), value.hi]).collect(),
     })
 }
 

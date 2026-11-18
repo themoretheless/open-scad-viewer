@@ -10456,3 +10456,39 @@ fn toolpath_violation_length_measures_union_in_model_units() {
     assert_eq!(check([2., 2.125], 2, 1).unwrap().bounds, [0.; 2]);
     assert!(check([2., 3.], 512, 1).is_err());
 }
+
+#[test]
+fn toolpath_violation_lengths_attribute_shared_cells_to_each_obstacle() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, SphericalObstacle, ToolpathObstacle,
+        measure_toolpath_violation_lengths_by_obstacle,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 3., 3.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[3., 0.], radius: 1. }),
+        ToolpathObstacle::Box(BoxObstacle { minimum: &[3., -1.], maximum: &[6., 1.] }),
+        ToolpathObstacle::Sphere(SphericalObstacle { center: &[0., 9.], radius: 1. }),
+    ];
+    let check = |obstacle_budget, length_budget| {
+        measure_toolpath_violation_lengths_by_obstacle(
+            &curve, [2., 3.], &obstacles, 0., 0.25, 0.001, 1e-6, obstacle_budget, length_budget,
+        )
+    };
+    let report = check(768, 128).unwrap();
+    for (bounds, exact) in report.by_obstacle.iter().zip([2.5, 3.5, 0.]) {
+        assert!(bounds[0] <= exact && exact <= bounds[1] && bounds[1] - bounds[0] < 0.04);
+    }
+    let [lo, hi] = report.union.bounds;
+    assert!(lo <= 4.5 && 4.5 <= hi && hi - lo < 0.04);
+    let coarse = check(3, 1).unwrap();
+    assert_eq!(coarse.union.work_length_cells, 1);
+    assert_eq!(coarse.by_obstacle[0][0], 0.);
+    assert!(coarse.by_obstacle[0][1] >= 8.);
+    assert_eq!(coarse.by_obstacle[2], [0.; 2]);
+}
