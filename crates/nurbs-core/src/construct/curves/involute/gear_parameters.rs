@@ -744,3 +744,31 @@ pub fn planetary_layout_counts(
     }
     Ok(layouts)
 }
+
+/// Radial stock between a parallel cylindrical shaft bore and the external gear's
+/// nominal root circle. Negative stock means the bore crosses the root envelope.
+#[derive(Debug)]
+pub struct GearBoreStock {
+    pub root_web_mm: [f64; 2],
+    /// Signed diameter allowance for the requested web. A negative upper bound
+    /// means even a zero-radius bore at this offset cannot meet the requirement.
+    pub diameter_limit_mm: [f64; 2],
+}
+
+pub fn external_gear_bore_stock(
+    module: f64, teeth: usize, tooth_clearance: f64, offset: [f64; 2],
+    bore_diameter: f64, minimum_web: f64,
+) -> Result<GearBoreStock> {
+    check(offset.iter().all(|x| x.is_finite()), "Expected finite bore center offset")?;
+    check([bore_diameter, minimum_web].iter().all(|x| x.is_finite() && *x >= 0.),
+          "Expected nonnegative finite bore diameter and web")?;
+    // Pressure angle and backlash do not enter the nominal root-circle radius.
+    let gear = derive_gear_parameter_bounds(module, teeth, 20., tooth_clearance, 0., false)?;
+    let [x, y] = offset.map(I::point);
+    let eccentricity = sqrt_positive(x.mul(x)?.add(y.mul(y)?)?)?;
+    let available_radius = I::new(gear.root_radius[0], gear.root_radius[1])?.sub(eccentricity)?;
+    Ok(GearBoreStock {
+        root_web_mm: pair(available_radius.sub(I::point(bore_diameter).div(I::point(2.))?)?),
+        diameter_limit_mm: pair(available_radius.sub(I::point(minimum_web))?.mul(I::point(2.))?),
+    })
+}

@@ -410,3 +410,17 @@ fn spinner_layout_search_combines_integer_phase_and_envelope_clearance() {
     assert!(layouts(1., 200, 40, 0.).is_err());
     assert!(layouts(1., 32, 4, f64::NAN).is_err());
 }
+
+#[test]
+fn spinner_bore_stock_and_diameter_limit_include_eccentricity() {
+    use involute::external_gear_bore_stock as stock;
+    // The spinner's 32-tooth sun has pitch radius 24 and root radius 22.4 mm.
+    for (offset, eccentricity) in [([0.,0.],0.), ([3.,-4.],5.), ([24.,7.],25.)] {
+        let report = stock(1.5,32,0.1,offset,10.,0.375).unwrap();
+        contains(report.root_web_mm, 22.4-eccentricity-5.);
+        contains(report.diameter_limit_mm, 2.*(22.4-eccentricity-0.375));
+        assert!(report.root_web_mm[1]-report.root_web_mm[0] < 1e-10);
+    }
+    assert!(stock(1.5,32,0.1,[0.,f64::NAN],10.,0.).is_err());
+    assert!(stock(1.5,32,0.1,[0.;2],-1.,0.).is_err());
+}
