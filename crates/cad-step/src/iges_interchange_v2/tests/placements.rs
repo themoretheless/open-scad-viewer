@@ -255,3 +255,34 @@ fn rotated_composite_profile_maps_local_z_to_uv_before_projection() {
     let (text, shift) = matrix(&text, [1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 1.]);
     assert!(read(&attach(&text, composite, shift)).is_err());
 }
+
+#[test]
+fn standard_curve_flags_preserve_open_polynomials_and_rational_periodicity() {
+    let line = Curve::from_polyline(vec![vec![0., 0., 0.], vec![3., 0., 0.]]).unwrap();
+    let triangle = Curve {
+        degree: 1,
+        knots: vec![-1., 0., 1., 2., 3., 4.],
+        control_points: vec![vec![0., 0., 0.], vec![2., 0., 0.], vec![0., 2., 0.], vec![0., 0., 0.]],
+        weights: vec![1., 0.5, 1., 1.],
+        periodic: true,
+    };
+    let mut text = base_text();
+    for (curve, flags) in [(line, ["0", "1", "0"]), (triangle, ["1", "0", "1"])] {
+        let values = curve_values(&curve, 3).unwrap();
+        assert_eq!(values[4..7], flags);
+        let (next, de) = append_entity(&text, 126, 0, "00000000", |_| values);
+        text = next;
+        let (entities, _, _) = parse(&text).unwrap();
+        assert_eq!(curve126(&entities, de, 3, 1.).unwrap(), curve);
+        let previous = text.replace("IGES2.2", "IGES2.1");
+        let mut legacy = entities[&de].values.clone();
+        legacy[5] = usize::from(curve.periodic).to_string();
+        legacy[6] = "0".into();
+        let previous = replace_parameters(&previous, de, legacy);
+        let (entities, _, _) = parse(&previous).unwrap();
+        assert_eq!(curve126(&entities, de, 3, 1.).unwrap(), curve);
+    }
+    if let Some(path) = std::env::var_os("CAD_IGES_CURVE_FLAGS_FIXTURE") {
+        std::fs::write(path, text).unwrap();
+    }
+}

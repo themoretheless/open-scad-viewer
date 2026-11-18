@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0960",
+  "testedBase": "ca2044800ca280df9b406cf146bf95c67c147c53",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "e6aaf048e03e898b2f12762d093e91ed75322859858d38d14329665663382812",
+    "crates/cad-step/src/iges_interchange_v2/tests/mod.rs": "0a51c419c4497610bbffbfd5e17e2b6dd97b73224bea2d828f87303fdb5de135",
+    "crates/cad-step/src/iges_interchange_v2/tests/placements.rs": "774162ec363982a482dbdf70ed39b7644773b6e107e5c3aeac6029f7d6396a32"
+  },
+  "occtFlags": {
+    "openPolynomial": [
+      false,
+      true,
+      false
+    ],
+    "periodicRational": [
+      true,
+      false,
+      true
+    ]
+  },
+  "fixtureSha256": "4822936509e2327992e39dbd92a619a3a8990bb7eb0cc2dec79c85cfefe56d84",
+  "fixtureEnvironment": "CAD_IGES_CURVE_FLAGS_FIXTURE=/tmp/osv960-curves.igs",
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib",
+  "cases": [
+    "Open polynomial line and periodic rational triangle",
+    "Legacy IGES2.1 property layout",
+    "OCCT stored closed, polynomial and periodic flags checked"
+  ]
+}

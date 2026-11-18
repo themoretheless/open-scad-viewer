@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 959,
-  "unallocatedCount": 41,
+  "specifiedCount": 960,
+  "unallocatedCount": 40,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21867,6 +21867,25 @@
       ],
       "remainingQualification": [
         "Rigid form-zero placements on type 102. Tested in a nested circular edge of a closed cylinder and on a rotated two-segment UV profile."
+      ]
+    },
+    {
+      "id": "NURBS-0960",
+      "name": "Обмен периодическими рациональными и открытыми полиномиальными кривыми IGES 126",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
+        "docs/qualification/nurbs-iges-periodic-curves-960-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-iges-periodic-curves-960-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-iges-periodic-curves-960-2026-11-18/verify.py"
+      ],
+      "remainingQualification": [
+        "Standard type-126 closed, polynomial and periodic flags. Legacy IGES2 and IGES2.1 sender layout accepted. Independent check covers the exported flags."
       ]
     }
   ],

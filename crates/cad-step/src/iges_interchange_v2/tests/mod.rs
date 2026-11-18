@@ -253,9 +253,10 @@ fn append_entity(
         "{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{status}",
         ty, p_start, 0, 0, 0, 0, 0, 0
     );
+    let records = parameter_records(ty, &values(de));
     let b = format!(
         "{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{:<8}{:>8}",
-        ty, 0, 0, 0, form, 0, 0, "", 0
+        ty, 0, 0, records.len(), form, 0, 0, "", 0
     );
     let d_first = lines
         .iter()
@@ -268,7 +269,6 @@ fn append_entity(
             pad_record(&b, 'D', de + 1, 72).unwrap(),
         ],
     );
-    let records = parameter_records(ty, &values(de));
     let mut p_count = 0;
     for payload in records {
         let sequence = old_p + p_count + 1;
@@ -339,7 +339,7 @@ fn append_line(text: &str, a: Vec<f64>, b: Vec<f64>, bspline: bool) -> (String, 
     if bspline {
         let curve = Curve::from_polyline(vec![a, b]).unwrap();
         let dim = curve.control_points[0].len();
-        append_entity(text, 126, 0, "00000000", |_| curve_values(&curve, dim))
+        append_entity(text, 126, 0, "00000000", |_| curve_values(&curve, dim).unwrap())
     } else {
         let mut values = vec!["110".into()];
         for point in [a, b] {
@@ -1172,7 +1172,7 @@ fn imported_composite_retains_a_split_rational_cylinder_edge() {
     let mid = (a+b)*0.5;
     let mut members = Vec::new();
     for piece in [original.trim(a,mid).unwrap().reverse().unwrap(), original.trim(mid,b).unwrap()] {
-        let (updated, de) = append_entity(&text, 126, 0, "00000000", |_| curve_values(&piece, 3));
+        let (updated, de) = append_entity(&text, 126, 0, "00000000", |_| curve_values(&piece, 3).unwrap());
         text = updated;
         members.push(de);
     }

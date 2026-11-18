@@ -194,6 +194,7 @@ struct Entity {
     values: Vec<String>,
     canonical: String,
     legacy_surface_order: bool,
+    legacy_curve_flags: bool,
 }
 
 fn parse_directory_status(de: usize, text: &str) -> Result<DirectoryStatus> {
@@ -320,7 +321,7 @@ fn tokenize(text: &str, parameter_delimiter: char, record_delimiter: char) -> Re
     Ok(out)
 }
 
-fn parse_global(text: &str) -> Result<(char, char, IgesLengthUnit, f64, bool)> {
+fn parse_global(text: &str) -> Result<(char, char, IgesLengthUnit, f64, Option<String>)> {
     let mut parameter = ',';
     let mut record = ';';
     let provisional = tokenize(text, ',', ';')?;
@@ -360,8 +361,7 @@ fn parse_global(text: &str) -> Result<(char, char, IgesLengthUnit, f64, bool)> {
     if resolution <= 0. {
         return Err(refuse("IGES global minimum resolution must be positive"));
     }
-    let legacy_sender = values.get(4).map(String::as_str) == Some("OpenSCAD Viewer")
-        && values.get(11).map(String::as_str) == Some("IGES2");
+    let legacy_sender = values.get(11).filter(|_| values.get(4).map(String::as_str) == Some("OpenSCAD Viewer")).cloned();
     Ok((parameter, record, unit, resolution, legacy_sender))
 }
 
@@ -493,7 +493,9 @@ fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, IgesLengthUnit, f64)> {
             de,
             Entity {
                 legacy_surface_order: sections[&'S'][0].1[..72].trim_end() == "OpenSCAD Viewer direct finite B-rep"
-                    && legacy_sender,
+                    && legacy_sender.as_deref() == Some("IGES2"),
+                legacy_curve_flags: sections[&'S'][0].1[..72].trim_end() == "OpenSCAD Viewer direct finite B-rep"
+                    && matches!(legacy_sender.as_deref(), Some("IGES2" | "IGES2.1")),
                 directory: dir,
                 values,
                 canonical,
@@ -885,7 +887,7 @@ fn curve126(
         knots,
         control_points: cps,
         weights,
-        periodic: u(v, 5, "curve periodic flag")? != 0,
+        periodic: u(v, if entities[&de].legacy_curve_flags { 5 } else { 6 }, "curve periodic flag")? != 0,
     };
     c.validate()?;
     Ok(c)
@@ -2407,16 +2409,17 @@ impl Writer {
 fn number(x: f64) -> String {
     format!("{x:.17e}")
 }
-fn curve_values(c: &Curve, dim: usize) -> Vec<String> {
+fn curve_values(c: &Curve, dim: usize) -> Result<Vec<String>> {
+    let (start, end) = CurveDispatcher::endpoints(c)?;
     let n = c.control_points.len();
     let mut v = vec![
         "126".into(),
         (n - 1).to_string(),
         c.degree.to_string(),
         "0".into(),
-        ((c.degree + 1 == n) as usize).to_string(),
+        ((c.periodic || start == end) as usize).to_string(),
+        (c.weights.iter().all(|weight| *weight == c.weights[0]) as usize).to_string(),
         (c.periodic as usize).to_string(),
-        "0".into(),
     ];
     v.extend(c.knots.iter().map(|x| number(*x)));
     v.extend(c.weights.iter().map(|x| number(*x)));
@@ -2433,7 +2436,7 @@ fn curve_values(c: &Curve, dim: usize) -> Vec<String> {
         "0".into(),
         "1".into(),
     ]);
-    v
+    Ok(v)
 }
 fn surface_values(s: &Surface) -> Vec<String> {
     let nu = s.control_points.len();
@@ -2551,7 +2554,7 @@ fn render(mut w: Writer) -> Result<String> {
         hollerith("open-scad-viewer"),
         hollerith("OpenSCAD Viewer"),
         hollerith("open-scad-viewer"),
-        hollerith("IGES2.1"),
+        hollerith("IGES2.2"),
         hollerith("20260917.000000"),
         number(1e-7),
         hollerith(""),
@@ -2615,8 +2618,8 @@ pub fn export_iges_v2(model: &Model) -> Result<(String, FeatureCertificate, Iges
     let curves = model
         .edges
         .iter()
-        .map(|edge| w.emit(126, curve_values(&edge.curve, 3)))
-        .collect::<Vec<_>>();
+        .map(|edge| Ok(w.emit(126, curve_values(&edge.curve, 3)?)))
+        .collect::<Result<Vec<_>>>()?;
     let mut vertex_values = vec!["502".into(), model.vertices.len().to_string()];
     for vertex in &model.vertices {
         vertex_values.extend(vertex.point.iter().map(|x| number(*x)))
@@ -2637,7 +2640,7 @@ pub fn export_iges_v2(model: &Model) -> Result<(String, FeatureCertificate, Iges
     for l in &model.loops {
         let mut values = vec!["508".into(), l.coedges.len().to_string()];
         for c in &l.coedges {
-            let pc = w.emit(126, curve_values(&c.pcurve, 2));
+            let pc = w.emit(126, curve_values(&c.pcurve, 2)?);
             values.extend([
                 "0".into(),
                 edge_list.to_string(),
