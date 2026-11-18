@@ -8324,6 +8324,8 @@ it('retries a failed body calculation without changing inputs or adding history 
   expect(ui.doc().bodies).toHaveLength(2)
   await ui.click('↶')
   expect(ui.doc()).toEqual(before)
+  await ui.click('Split')
+  expect(ui.all().some(node => node.tag === 'button' && ui.text(node) === 'Retry calculation')).toBe(false)
 })
 
 it.each([
