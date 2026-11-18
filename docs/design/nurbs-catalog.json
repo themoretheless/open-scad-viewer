@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 800,
-  "unallocatedCount": 200,
+  "specifiedCount": 801,
+  "unallocatedCount": 199,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18892,6 +18892,25 @@
       "remainingQualification": [
         "Enclose global distance between two contour sets with paired source witnesses under a shared budget.",
         "Check the globally closest contour pair, source witnesses and mandatory coverage of all span pairs.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0801",
+      "name": "Классификация вложенности целых плоских NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::classify_planar_contour_placement",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-801-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-801-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify whole-contour fill placement after proving separation from every reference boundary.",
+        "Check entire loops in material, a hole and the exterior, and withhold placement when boundaries coincide.",
         "WASM and application integration are separate."
       ]
     }

@@ -12917,3 +12917,36 @@ fn planar_contour_sets_distance_finds_global_witness_under_shared_budget() {
         d.evaluate(report.witness_parameters[1]).unwrap().point];
     assert!(((points[0][0] - points[1][0]).hypot(points[0][1] - points[1][1]) - 0.5).abs() < 1e-5);
 }
+
+#[test]
+fn planar_contour_placement_classifies_whole_loops_in_material_and_holes() {
+    use nurbs_core::{
+        analysis::curve_measure::classify_planar_contour_placement, chord_winding::FillRule,
+    };
+    let square = |x: f64, size: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![x - size, -size], vec![x + size, -size],
+            vec![x + size, size], vec![x - size, size], vec![x - size, -size]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let outer = square(0., 3.);
+    let mut hole = square(0., 1.);
+    hole.control_points.reverse();
+    let [material, in_hole, outside] = [square(2., 0.25), square(0., 0.25), square(5., 0.25)];
+    let measure = |tested: &[&Curve]| classify_planar_contour_placement(
+        tested, &[&outer, &hole], FillRule::NonZero, 0.02, 1e-4, 3072, 1024,
+    );
+    let report = measure(&[&material, &in_hole, &outside]).unwrap();
+    assert!(report.boundary_distance.bounds[0] > 0.);
+    let placements: Vec<_> = report.placements.iter().map(|item| item.unwrap().filled).collect();
+    assert_eq!(placements, [Some(true), Some(false), Some(false)]);
+    assert!(report.fill_work_cells <= 3072);
+
+    let touching = square(0., 3.);
+    let report = measure(&[&touching]).unwrap();
+    assert_eq!(report.boundary_distance.bounds[0], 0.);
+    assert!(report.placements[0].is_none());
+    assert_eq!(report.fill_work_cells, 0);
+}

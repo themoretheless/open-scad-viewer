@@ -2379,6 +2379,50 @@ pub fn measure_planar_contour_sets_distance(
     Ok(report)
 }
 
+#[derive(Clone, Debug)]
+pub struct PlanarContourPlacementReport {
+    pub boundary_distance: PlanarContourPairDistanceReport,
+    /// Classification for each tested contour. A missing entry means
+    /// separation between the contour sets could not be proved.
+    pub placements: Vec<Option<PlanarCurveFillReport>>,
+    pub fill_work_cells: usize,
+}
+
+/// Classify entire tested contours against a filled planar contour set.
+/// Positive separation makes the fill constant along each connected
+/// tested contour, so its clamped endpoint determines the placement.
+pub fn classify_planar_contour_placement(
+    tested: &[&Curve],
+    region: &[&Curve],
+    rule: crate::chord_winding::FillRule,
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_fill_cells: usize,
+    max_distance_cells: usize,
+) -> Result<PlanarContourPlacementReport> {
+    validate(parameter_tolerance, max_fill_cells)?;
+    let boundary_distance = measure_planar_contour_sets_distance(
+        tested, region, distance_tolerance, max_distance_cells,
+    )?;
+    let mut placements = vec![None; tested.len()];
+    let mut fill_work_cells = 0;
+    if boundary_distance.bounds[0] > 0. {
+        for (index, (curve, placement)) in tested.iter().zip(&mut placements).enumerate() {
+            let first = &curve.control_points[0];
+            let budget = (max_fill_cells - fill_work_cells) / (tested.len() - index);
+            if budget == 0 {
+                return Err(resource("Placement budget must cover every contour query"));
+            }
+            let fill = classify_planar_curve_fill(
+                region, [first[0], first[1]], rule, parameter_tolerance, budget,
+            )?;
+            fill_work_cells += fill.work_cells;
+            *placement = Some(fill);
+        }
+    }
+    Ok(PlanarContourPlacementReport { boundary_distance, placements, fill_work_cells })
+}
+
 fn validate_distance_contours(contours: &[&Curve], max_cells: usize) -> Result<()> {
     check(!contours.is_empty(), "Contour distance requires at least one contour")?;
     check(contours.len() <= max_cells, "Distance budget must cover every contour")?;
