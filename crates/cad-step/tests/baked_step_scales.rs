@@ -126,3 +126,60 @@ fn coloured_mirrored_cylinders_share_geometry_with_distinct_occurrence_styles() 
         std::fs::write(path, text).unwrap();
     }
 }
+
+#[test]
+fn named_variants_retain_source_labels_and_quantities_after_export() {
+    let place = |definition, s, x| StepAssemblyOccurrence {
+        definition,
+        transform: [
+            [s, 0., 0., x],
+            [0., 1., 0., 0.],
+            [0., 0., 1., 0.],
+            [0., 0., 0., 1.],
+        ],
+    };
+    let assembly = StepSharedAssembly::from_placed_solids(
+        vec![
+            brep_core::cuboid([0.; 3], [1.; 3]).unwrap(),
+            brep_core::cylinder(2., 3.).unwrap(),
+        ],
+        vec![
+            place(1, -2., 0.),
+            place(0, 1., 20.),
+            place(1, 1., 40.),
+            place(1, -2., 60.),
+        ],
+    )
+    .unwrap();
+    let mut named = cad_step::NamedStepAssembly {
+        assembly,
+        name: "Drive".into(),
+        definition_names: vec!["Pin".into(), "Roller".into()],
+    };
+    let step = named.export_step_with_baked_scales().unwrap();
+    let back = cad_step::import_named_step_assembly(&step).unwrap();
+    assert_eq!(back.name, "Drive");
+    let mut rows: Vec<_> = back
+        .parts_list()
+        .unwrap()
+        .into_iter()
+        .map(|row| (row.name, row.quantity))
+        .collect();
+    rows.sort();
+    assert_eq!(rows, [("Pin", 1), ("Roller", 1), ("Roller", 2)]);
+    for o in back.assembly.occurrences() {
+        assert_eq!(
+            back.definition_names[o.definition],
+            if o.transform[0][3] == 20. {
+                "Pin"
+            } else {
+                "Roller"
+            }
+        );
+    }
+    if let Some(path) = std::env::var_os("CAD_NAMED_SCALE_FIXTURE") {
+        std::fs::write(path, step).unwrap();
+    }
+    named.definition_names.pop();
+    assert!(named.export_step_with_baked_scales().is_err());
+}

@@ -998,7 +998,7 @@ fn export_grouped_with_styles(
     let baked;
     let assembly = if colours.is_some() && assembly.occurrences().iter().any(|item|
         !crate::step_interchange_v3::is_proper_rigid_placement(item.transform)) {
-        baked = assembly.with_baked_scales()?;
+        baked = assembly.with_baked_scales()?.0;
         &baked
     } else {
         assembly

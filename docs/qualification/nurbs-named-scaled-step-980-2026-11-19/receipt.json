@@ -1,0 +1,12 @@
+{
+  "id": "NURBS-0980",
+  "testedBase": "171d35bc092bcc1830927e9c218b8aaa5a355294",
+  "sourceSha256": {
+    "crates/cad-step/src/step_v3_export.rs": "4e6a794c7902e922a0afe99009b3ae0bc103754deaa9daabb43631cef7b622e4",
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "ad58653277b3a7aa576981d425533f16c567ed2b2e26033ea258a57b1b1e6e35",
+    "crates/cad-step/tests/baked_step_scales.rs": "780da84b61505ec8939c74f0856ed55c7162b2b0c0c54af45152f3592e2e9f57"
+  },
+  "fixtureSha256": "45a1221e8b64537766ebce076c8b09fd95a012831ef11a2721255c89b56ca99e",
+  "command": "CAD_NAMED_SCALE_FIXTURE=/tmp/osv980.step cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test baked_step_scales --test shared_face_compression",
+  "external": "Drive: [(0.0, 'Roller'), (20.0, 'Pin'), (40.0, 'Roller'), (60.0, 'Roller')]"
+}

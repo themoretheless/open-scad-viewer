@@ -1917,14 +1917,15 @@ impl StepSharedAssembly {
     /// scaled or reflected placements into local geometry once per distinct
     /// source definition and linear map. Keep translations on the occurrences.
     pub fn export_step_with_baked_scales(&self) -> Result<String> {
-        crate::export_step_shared_assembly(&self.with_baked_scales()?)
+        crate::export_step_shared_assembly(&self.with_baked_scales()?.0)
     }
 
-    pub(crate) fn with_baked_scales(&self) -> Result<Self> {
+    pub(crate) fn with_baked_scales(&self) -> Result<(Self, Vec<usize>)> {
         let identity = [[1.,0.,0.,0.],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]];
         let mut definitions = Vec::new();
         let mut occurrences = Vec::new();
         let mut variants = BTreeMap::new();
+        let mut source_definitions = Vec::new();
         for occurrence in self.occurrences() {
             let mut placement = occurrence.transform;
             let mut linear = identity;
@@ -1943,13 +1944,14 @@ impl StepSharedAssembly {
                     definitions.push(if linear == identity { source.clone() } else {
                         brep_core::transform::affine(source, linear)?
                     });
+                    source_definitions.push(occurrence.definition);
                     entry.insert(index);
                     index
                 }
             };
             occurrences.push(StepAssemblyOccurrence { definition, transform: placement });
         }
-        Self::from_placed_solids(definitions, occurrences)
+        Ok((Self::from_placed_solids(definitions, occurrences)?, source_definitions))
     }
 
     pub fn materialize(&self, index: usize) -> Result<Model> {
@@ -2151,6 +2153,17 @@ pub struct StepPartQuantityChange {
 }
 
 impl NamedStepAssembly {
+    /// Keep product labels when nonuniform scales and reflections require
+    /// separate local definitions for exchange with rigid-placement readers.
+    pub fn export_step_with_baked_scales(&self) -> Result<String> {
+        if self.definition_names.len() != self.assembly.definitions().len() {
+            return Err(refuse("Expected one product label per source definition"));
+        }
+        let (baked, sources) = self.assembly.with_baked_scales()?;
+        let labels: Vec<_> = sources.iter().map(|&i| self.definition_names[i].as_str()).collect();
+        crate::export_named_step_assembly(&baked, &self.name, &labels)
+    }
+
     /// Compare flat parts lists across revisions, combining duplicate definitions
     /// within either revision and ignoring placement order and rigid motion.
     pub fn parts_list_changes(&self, revised: &Self) -> Result<Vec<StepPartQuantityChange>> {
