@@ -2491,8 +2491,69 @@ pub fn partition_curve_capsule_clearance(
         return Err(resource("Clearance budget must cover every capsule"));
     }
     curve.validate()?;
+    let obstacles = prepare_capsules(curve, obstacles, tool_radius)?;
+    partition_radial_clearance(
+        curve, interval, parameter_tolerance, max_cells, obstacles.len(),
+        |point, index| obstacles[index].gap(point),
+    )
+}
+
+/// Refine the minimum signed gap between a swept ball and fixed capsules.
+pub fn measure_minimum_capsule_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[CapsuleObstacle<'_>],
+    tool_radius: f64,
+    tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalMinimumClearance> {
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Capsule clearance requires at least one obstacle")?;
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if active_spans(curve, interval).count() > max_cells {
+        return Err(resource("Clearance budget must cover every initial obstacle cell"));
+    }
+    let obstacles = prepare_capsules(curve, obstacles, tool_radius)?;
+    measure_minimum_radial_clearance(
+        curve, interval, tolerance, max_cells, obstacles.len(),
+        |point, index| obstacles[index].gap(point),
+    )
+}
+
+struct PreparedCapsule {
+    start: Vec<Interval>,
+    axis: Option<(Vec<Interval>, Interval)>,
+    radius: Interval,
+}
+
+impl PreparedCapsule {
+    fn gap(&self, point: &[Interval]) -> Result<Interval> {
+        let distance = if let Some((delta, length_squared)) = &self.axis {
+            let relative = point.iter().zip(&self.start).map(|(&p, &a)| p.sub(a))
+                .collect::<Result<Vec<_>>>()?;
+            let projected = project_jet(&relative, delta)?.div(*length_squared)?;
+            let t = Interval::new(projected.lo.clamp(0., 1.), projected.hi.clamp(0., 1.))?;
+            let residual = relative.into_iter().zip(delta).map(|(p, &d)| p.sub(d.mul(t)?))
+                .collect::<Result<Vec<_>>>()?;
+            norm(&residual)?
+        } else {
+            let (lo, hi) = box_distance(point, &self.start)?;
+            Interval::new(lo, hi)?
+        };
+        distance.sub(self.radius)
+    }
+}
+
+fn prepare_capsules(
+    curve: &Curve,
+    obstacles: &[CapsuleObstacle<'_>],
+    tool_radius: f64,
+) -> Result<Vec<PreparedCapsule>> {
     let dimension = curve.control_points[0].len();
-    let obstacles = obstacles.iter().map(|obstacle| {
+    obstacles.iter().map(|obstacle| {
         let [a, b] = obstacle.endpoints;
         check(
             [a, b].iter().all(|p| p.len() == dimension && p.iter().all(|x| x.is_finite()))
@@ -2511,27 +2572,8 @@ pub fn partition_curve_capsule_clearance(
             Some((delta, length.mul(length)?))
         };
         let radius = Interval::point(obstacle.radius).add(Interval::point(tool_radius))?;
-        Ok((start, axis, radius))
-    }).collect::<Result<Vec<_>>>()?;
-    partition_radial_clearance(
-        curve, interval, parameter_tolerance, max_cells, obstacles.len(),
-        |point, index| {
-            let (start, axis, radius) = &obstacles[index];
-            let distance = if let Some((delta, length_squared)) = axis {
-                let relative = point.iter().zip(start).map(|(&p, &a)| p.sub(a))
-                    .collect::<Result<Vec<_>>>()?;
-                let projected = project_jet(&relative, delta)?.div(*length_squared)?;
-                let t = Interval::new(projected.lo.clamp(0., 1.), projected.hi.clamp(0., 1.))?;
-                let residual = relative.into_iter().zip(delta).map(|(p, &d)| p.sub(d.mul(t)?))
-                    .collect::<Result<Vec<_>>>()?;
-                norm(&residual)?
-            } else {
-                let (lo, hi) = box_distance(point, start)?;
-                Interval::new(lo, hi)?
-            };
-            distance.sub(*radius)
-        },
-    )
+        Ok(PreparedCapsule { start, axis, radius })
+    }).collect()
 }
 
 /// A closed axis-aligned box, including boxes of zero thickness.

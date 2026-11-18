@@ -10283,3 +10283,35 @@ fn minimum_oriented_box_clearance_refines_rotated_corner_distance() {
     let skew = OrientedBoxObstacle { axes: &[&[3., 4.], &[-4., 2.]], ..obstacle };
     assert!(check(skew, 4096).is_err());
 }
+
+#[test]
+fn minimum_capsule_clearance_refines_to_a_rounded_tip() {
+    use nurbs_core::analysis::curve_measure::{
+        CapsuleObstacle, StopReason, measure_minimum_capsule_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![4., 4.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        CapsuleObstacle { endpoints: [&[10., 10.]; 2], radius: 1. },
+        CapsuleObstacle { endpoints: [&[2., 0.], &[3., -1.]], radius: 0.25 },
+    ];
+    let exact = 2_f64.sqrt() - 0.5;
+    let check = |budget| {
+        measure_minimum_capsule_clearance(&curve, [2., 6.], &obstacles, 0.25, 1e-4, budget)
+    };
+    assert!(check(1).is_err());
+    let coarse = check(2).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= exact && exact <= coarse.gap_bounds[1]);
+    let fine = check(4096).unwrap();
+    assert_eq!(fine.stop_reason, StopReason::Tolerance);
+    let [lo, hi] = fine.gap_bounds;
+    assert!(lo <= exact && exact <= hi && hi - lo <= 1e-4);
+    assert_eq!(fine.witness_obstacle, 1);
+    assert!((fine.witness_parameter - 3.).abs() < 0.01);
+}
