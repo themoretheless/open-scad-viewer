@@ -10218,3 +10218,35 @@ fn minimum_spherical_clearance_refines_an_oblique_clear_path() {
     assert!((fine.witness_parameter - 3.).abs() < 0.01);
     assert!(fine.work_obstacle_cells <= 4096);
 }
+
+#[test]
+fn minimum_box_clearance_refines_a_corner_approach_and_reports_the_obstacle() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, StopReason, measure_minimum_box_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![4., 4.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        BoxObstacle { minimum: &[10., 10.], maximum: &[11., 11.] },
+        BoxObstacle { minimum: &[2., -1.], maximum: &[3., 0.] },
+    ];
+    let exact = 2_f64.sqrt() - 0.5;
+    let check = |budget| {
+        measure_minimum_box_clearance(&curve, [2., 6.], &obstacles, 0.5, 1e-4, budget)
+    };
+    assert!(check(1).is_err());
+    let coarse = check(2).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= exact && exact <= coarse.gap_bounds[1]);
+    let fine = check(4096).unwrap();
+    assert_eq!(fine.stop_reason, StopReason::Tolerance);
+    let [lo, hi] = fine.gap_bounds;
+    assert!(lo <= exact && exact <= hi && hi - lo <= 1e-4);
+    assert_eq!(fine.witness_obstacle, 1);
+    assert!((fine.witness_parameter - 3.).abs() < 0.01);
+}

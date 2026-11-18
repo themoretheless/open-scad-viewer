@@ -2390,6 +2390,24 @@ pub fn measure_minimum_spherical_clearance(
         return Err(resource("Clearance budget must cover every initial obstacle cell"));
     }
     let obstacles = prepare_spherical_obstacles(curve, obstacles, tool_radius)?;
+    measure_minimum_radial_clearance(
+        curve, interval, tolerance, max_cells, obstacles.len(),
+        |point, index| {
+            let (center, radius) = &obstacles[index];
+            let (lo, hi) = box_distance(point, center)?;
+            Interval::new(lo, hi)?.sub(*radius)
+        },
+    )
+}
+
+fn measure_minimum_radial_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    tolerance: f64,
+    max_cells: usize,
+    obstacle_count: usize,
+    gap: impl Fn(&[Interval], usize) -> Result<Interval>,
+) -> Result<SphericalMinimumClearance> {
     let mut pending = BTreeMap::new();
     let mut cells = 0;
     let mut witness = (f64::INFINITY, interval[0], 0);
@@ -2398,12 +2416,10 @@ pub fn measure_minimum_spherical_clearance(
         let start = curve_jets::endpoint(curve, span, domain, false)?;
         let end = curve_jets::endpoint(curve, span, domain, true)?;
         let mut lower = f64::INFINITY;
-        for (index, (center, radius)) in obstacles.iter().enumerate() {
-            let (lo, hi) = box_distance(&jets[0], center)?;
-            lower = lower.min(Interval::new(lo, hi)?.sub(*radius)?.lo);
+        for index in 0..obstacle_count {
+            lower = lower.min(gap(&jets[0], index)?.lo);
             for (point, parameter) in [(&start[0], domain[0]), (&end[0], domain[1])] {
-                let (lo, hi) = box_distance(point, center)?;
-                let bound = Interval::new(lo, hi)?.sub(*radius)?.hi;
+                let bound = gap(point, index)?.hi;
                 if bound < witness.0 {
                     *witness = (bound, parameter, index);
                 }
@@ -2446,7 +2462,7 @@ pub fn measure_minimum_spherical_clearance(
         gap_bounds: [lower, witness.0],
         witness_parameter: witness.1,
         witness_obstacle: witness.2,
-        work_obstacle_cells: cells * obstacles.len(),
+        work_obstacle_cells: cells * obstacle_count,
         stop_reason,
     })
 }
@@ -2544,6 +2560,46 @@ pub fn partition_curve_box_clearance(
         return Err(resource("Clearance budget must cover every box"));
     }
     curve.validate()?;
+    validate_box_obstacles(curve, obstacles)?;
+    partition_radial_clearance(
+        curve, interval, parameter_tolerance, max_cells, obstacles.len(),
+        |point, index| {
+            let obstacle = obstacles[index];
+            solid_box_gap(point, obstacle.minimum, obstacle.maximum, tool_radius)
+        },
+    )
+}
+
+/// Refine the minimum signed gap to solid axis-aligned boxes. The report
+/// includes a parameter attaining the sampled upper bound within rounding.
+pub fn measure_minimum_box_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[BoxObstacle<'_>],
+    tool_radius: f64,
+    tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalMinimumClearance> {
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Box clearance requires at least one obstacle")?;
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if active_spans(curve, interval).count() > max_cells {
+        return Err(resource("Clearance budget must cover every initial obstacle cell"));
+    }
+    validate_box_obstacles(curve, obstacles)?;
+    measure_minimum_radial_clearance(
+        curve, interval, tolerance, max_cells, obstacles.len(),
+        |point, index| {
+            let obstacle = obstacles[index];
+            solid_box_gap(point, obstacle.minimum, obstacle.maximum, tool_radius)
+        },
+    )
+}
+
+fn validate_box_obstacles(curve: &Curve, obstacles: &[BoxObstacle<'_>]) -> Result<()> {
     let dimension = curve.control_points[0].len();
     for obstacle in obstacles {
         check(
@@ -2554,13 +2610,7 @@ pub fn partition_curve_box_clearance(
             "Box requires finite ordered bounds matching the curve dimension",
         )?;
     }
-    partition_radial_clearance(
-        curve, interval, parameter_tolerance, max_cells, obstacles.len(),
-        |point, index| {
-            let obstacle = obstacles[index];
-            solid_box_gap(point, obstacle.minimum, obstacle.maximum, tool_radius)
-        },
-    )
+    Ok(())
 }
 
 /// A rectangular box centered at a world point. Axes must be pairwise
