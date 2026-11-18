@@ -1,0 +1,29 @@
+{
+  "sourceBase": "2e0e0d618161aa87424afc0b1c13783d2ac16170",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Original natural wall pair with a noncoplanar control net and an unchanged exact authored shared edge. Common XZ Jordan partition proves the sole allowed contact and one-short work refuses. Existing joint boundary and source shell cases are rerun.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2042 filtered out; finished in 0.78s",
+      "file": "brep.log.gz",
+      "sha256": "aaa6b90ca1d018b1427a6fd1deba6e5f6a4c7a3e7d082d6579436896221cf404"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2002 filtered out; finished in 9.99s",
+      "file": "shell.log.gz",
+      "sha256": "f9e7f885e63ce46eb43fda6f66bacc54c2bc868aa4a2c2dff0e200224a29a1ef"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "0d87c2a36ce1e4c0e7f6d8ff381b7251961cf7002d273b2f289f900ce807bf20",
+    "count": 4918
+  }
+}

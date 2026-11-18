@@ -1,9 +1,37 @@
-//! Two coplanar natural Jordan charts partition a Jordan region along one
+//! Two natural charts with a common projection partition a Jordan region along one
 //! original, exactly lifted edge. Only the joint exact-domain audit may call
 //! this, after all coedge lifts and domains have been independently checked.
 use crate::{Model, boundary_hull_contact::Certificate};
 use cad_predicates::Sign;
+use num_rational::BigRational;
+use num_traits::ToPrimitive;
 use nurbs_core::{curve::Curve, surface_injectivity::certify_chart};
+
+#[derive(Clone, Copy, PartialEq)]
+enum Projection {
+    Coordinate([usize; 2]),
+    Linear([[f64; 3]; 2]),
+}
+
+impl Projection {
+    fn point(self, point: &[f64]) -> Option<[f64; 2]> {
+        match self {
+            Self::Coordinate(axes) => Some(axes.map(|axis| point[axis])),
+            Self::Linear(rows) => {
+                let dot = |row: [f64; 3]| {
+                    let mut exact = BigRational::from_integer(0.into());
+                    for (coefficient, &value) in row.into_iter().zip(point) {
+                        exact +=
+                            BigRational::from_float(coefficient)? * BigRational::from_float(value)?;
+                    }
+                    let stored = exact.to_f64()?;
+                    (BigRational::from_float(stored).as_ref() == Some(&exact)).then_some(stored)
+                };
+                Some([dot(rows[0])?, dot(rows[1])?])
+            }
+        }
+    }
+}
 
 pub(crate) fn certify(
     model: &Model,
@@ -58,13 +86,6 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
         return None;
     }
 
-    // Limit the fallback to two carriers lying in the same coordinate plane.
-    let omitted = (0..3).find(|&k| {
-        let anchor = surfaces[0].control_points[0][0][k];
-        surfaces
-            .iter()
-            .all(|s| s.control_points.iter().flatten().all(|p| p[k] == anchor))
-    })?;
     let mut projection = None;
     let mut orientation = None;
     for (s, wire) in surfaces.into_iter().zip(wires) {
@@ -97,37 +118,38 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
         }
         let proof = certify_chart(s, remaining).ok()?;
         charge(cells, limit, proof.spans)?;
-        if !proof.proven
-            || !matches!(
-                proof.reason,
-                "global-rational-jordan-jacobian" | "global-rational-multispan-jordan-jacobian"
-            )
-        {
+        if !proof.proven {
             return None;
         }
-        let axes = proof.projection?;
-        if axes.contains(&omitted) || projection.is_some_and(|p| p != axes) {
+        let chart_projection = match proof.reason {
+            "global-rational-jordan-jacobian" | "global-rational-multispan-jordan-jacobian" => {
+                Projection::Coordinate(proof.projection?)
+            }
+            "global-exact-oblique-jordan-jacobian" => Projection::Linear(proof.linear_projection?),
+            _ => return None,
+        };
+        if projection.is_some_and(|p| p != chart_projection) {
             return None;
         }
-        projection = Some(axes);
+        projection = Some(chart_projection);
         charge(cells, limit, 1)?;
         // The Jordan route proves a nonzero Jacobian. Clamping and positive
         // weights give its sign at the corner from these three poles.
-        let sign = super::orient(
-            &[
-                &s.control_points[0][0],
-                &s.control_points[1][0],
-                &s.control_points[0][1],
-            ],
-            Some(axes),
-        )?;
+        let points = [
+            &s.control_points[0][0],
+            &s.control_points[1][0],
+            &s.control_points[0][1],
+        ];
+        let [a, b, c] = points.map(|p| chart_projection.point(p));
+        let [[ax, ay], [bx, by], [cx, cy]] = [a?, b?, c?];
+        let sign = super::orient(&[&[ax, ay, 0.], &[bx, by, 0.], &[cx, cy, 0.]], Some([0, 1]))?;
         if sign == Sign::Zero || orientation.is_some_and(|p| p != sign) {
             return None;
         }
         orientation = Some(sign);
     }
 
-    let axes = projection?;
+    let projection = projection?;
     let mut exterior = Vec::with_capacity(6);
     for (wire, start) in wires.into_iter().zip(*common) {
         for offset in 1..4 {
@@ -145,11 +167,14 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
             {
                 return None;
             }
+            if matches!(projection, Projection::Linear(_)) {
+                charge(cells, limit, source.control_points.len())?;
+            }
             let mut points = source
                 .control_points
                 .iter()
-                .map(|p| axes.map(|k| p[k]).to_vec())
-                .collect::<Vec<_>>();
+                .map(|p| projection.point(p).map(|point| point.to_vec()))
+                .collect::<Option<Vec<_>>>()?;
             let mut weights = source.weights.clone();
             if c.reversed {
                 points.reverse();

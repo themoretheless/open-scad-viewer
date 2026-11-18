@@ -509,6 +509,18 @@ fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, 
     });
     assert!(!nurbs_core::surface_injectivity::certify_chart(wall, chart.spans - 1).unwrap().proven);
 
+    if insertions == 4 {
+        // Move an interior pole out of the shared plane without modifying
+        // any edge. The two original walls still partition the XZ image.
+        let mut spatial = reference.clone();
+        spatial.0.faces[4].surface.control_points[1][6][1] = 0.125;
+        spatial.validate().unwrap();
+        let certify = crate::shared_boundary::jordan_partition::certify;
+        let (contact, used) = certify(&spatial, [0, 4], 1000);
+        assert_eq!(contact.unwrap().edges.len(), 1);
+        assert!(certify(&spatial, [0, 4], used - 1).0.is_none());
+    }
+
     let mut retained = reference.clone();
     for face in &mut retained.0.faces[..wall_count] {
         for weight in face.surface.weights.iter_mut().flatten() {

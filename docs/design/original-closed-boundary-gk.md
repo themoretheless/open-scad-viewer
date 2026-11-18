@@ -208,3 +208,11 @@ integer linear map. The map must produce exactly representable poles at
 the original weights and knots. Projection work and the simple-boundary
 and Jacobian checks use the chart's remaining allowance. The injectivity
 certificate records the applied rows.
+
+Two natural source faces can use a shared Jordan projection to prove
+that they meet only along their authored common edge. The exact-domain
+audit proves the world-space lifts. The contact proof checks the same
+projection and orientation on both faces and proves simplicity of the
+combined exterior after the opposite edge traversals cancel. This also
+covers faces on different spatial carriers. For an oblique projection,
+the exterior control points must project exactly under the certified map.
