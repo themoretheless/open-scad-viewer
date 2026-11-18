@@ -13254,3 +13254,36 @@ fn planar_contour_fill_perimeter_skips_boundaries_with_no_fill_transition() {
         assert!(report.work_cells <= 128);
     }
 }
+
+#[test]
+fn planar_contour_fill_topology_assigns_holes_across_inactive_contours() {
+    use nurbs_core::{
+        analysis::curve_measure::analyze_planar_contour_fill_topology, chord_winding::FillRule,
+    };
+    let square = |r: f64| Curve {
+        degree: 1, knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-r, -r], vec![r, -r], vec![r, r], vec![-r, r], vec![-r, -r]],
+        weights: vec![1.; 5], periodic: false,
+    };
+    let [a, b, mut c, mut d, e] = [square(5.), square(4.), square(3.), square(2.), square(0.5)];
+    c.control_points.reverse();
+    d.control_points.reverse();
+    let run = |rule| analyze_planar_contour_fill_topology(
+        &[&a, &b, &c, &d, &e], rule, 0.02, 1e-4, 256, 16384, 2048, 4096,
+    );
+    let report = run(FillRule::NonZero).unwrap();
+    assert_eq!(report.inactive_contours, [1, 2]);
+    assert_eq!(report.components.len(), 2);
+    assert_eq!(report.components[0].outer, 0);
+    assert_eq!(report.components[0].holes, [3]);
+    assert_eq!(report.components[1].outer, 4);
+    assert!(report.components[1].holes.is_empty());
+    assert_eq!(report.euler_characteristic, 1);
+
+    let report = run(FillRule::EvenOdd).unwrap();
+    assert!(report.inactive_contours.is_empty());
+    assert_eq!(report.components.len(), 3);
+    assert_eq!(report.components[0].holes, [1]);
+    assert_eq!(report.components[1].holes, [3]);
+    assert_eq!(report.euler_characteristic, 1);
+}

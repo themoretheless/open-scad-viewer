@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 812,
-  "unallocatedCount": 188,
+  "specifiedCount": 813,
+  "unallocatedCount": 187,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19120,6 +19120,25 @@
       "remainingQualification": [
         "Measure the length of actual fill boundaries under even-odd or nonzero rules.",
         "Check actual filled boundaries, both fill rules, reversed holes and length budget coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0813",
+      "name": "Компоненты и отверстия заполнения плоских NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::analyze_planar_contour_fill_topology",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-813-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-813-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Group connected fill components and holes under even-odd or nonzero winding.",
+        "Check hole ownership across inactive winding boundaries, nested islands and both fill rules.",
         "WASM and application integration are separate."
       ]
     }
