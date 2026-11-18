@@ -12673,3 +12673,21 @@ fn planar_curve_fill_respects_holes_orientation_and_fill_rule() {
     assert!(hole.work_cells <= 1024);
     assert!(classify(&inner, FillRule::NonZero, 7).is_err());
 }
+
+#[test]
+fn planar_curve_winding_over_box_requires_separation_for_every_query() {
+    use nurbs_core::analysis::curve_measure::measure_planar_curve_winding_over_box;
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![3., 0.], vec![0., 3.], vec![-3., 0.], vec![0., -3.], vec![3., 0.]],
+        weights: vec![1., 2., 1., 2., 1.],
+        periodic: false,
+    };
+    let measure = |bounds| measure_planar_curve_winding_over_box(&curve, bounds, 0.02, 1020);
+    assert_eq!(measure([[-0.5, -0.5], [0.5, 0.5]]).unwrap().winding, Some(1));
+    assert_eq!(measure([[4., -1.], [5., 1.]]).unwrap().winding, Some(0));
+    assert!(measure([[2., 0.], [4., 0.5]]).is_err());
+    assert!(measure([[0., 0.], [3., 0.]]).is_err());
+    assert!(measure([[1., 0.], [0., 1.]]).is_err());
+}

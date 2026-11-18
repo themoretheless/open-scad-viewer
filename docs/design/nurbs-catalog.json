@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 791,
-  "unallocatedCount": 209,
+  "specifiedCount": 792,
+  "unallocatedCount": 208,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18721,6 +18721,25 @@
       "remainingQualification": [
         "Classify a point by nonzero or even-odd rational contour winding under a shared work budget.",
         "Check nested opposite and equal contour orientation, both fill rules and the shared initial knot budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0792",
+      "name": "Подтверждение общего числа обходов NURBS-контура для прямоугольной области",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_curve_winding_over_box",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-792-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-792-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify one winding number over an entire query box by continuous contour separation.",
+        "Check interior and exterior boxes, contour crossing, endpoint contact and invalid bounds.",
         "WASM and application integration are separate."
       ]
     }

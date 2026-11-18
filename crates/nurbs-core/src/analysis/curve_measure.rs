@@ -1931,6 +1931,11 @@ fn measure_planar_angular_travel_from(
     direction.validate()?;
     check(direction.control_points[0].len() == 2, "Angular travel requires a planar direction curve")?;
     let fixed = origin.is_none() && fixed_cardinal_rotation(direction).is_some();
+    let region = origin.filter(|bounds| bounds.iter().any(|bound| bound.lo < bound.hi));
+    let center = origin.map(|bounds| bounds.map(|bound| {
+        let middle = crate::distance_bounds::midpoint(bound.lo, bound.hi);
+        Interval::point(middle.clamp(bound.lo, bound.hi))
+    }));
     let (cells, work_cells) = partition_motion_cells(
         direction, interval, parameter_tolerance, max_cells,
         |jets, _| {
@@ -1939,8 +1944,16 @@ fn measure_planar_angular_travel_from(
             }
             // The jet derivative is already in the local clock on [0, 1].
             // Its range also encloses its integral over the unit interval.
+            if let Some(region) = region {
+                let separated = jets[0].iter().zip(region).any(|(coordinate, bound)| {
+                    coordinate.hi < bound.lo || coordinate.lo > bound.hi
+                });
+                if !separated {
+                    return Ok((None, true));
+                }
+            }
             let shifted;
-            let jets = if let Some(origin) = origin {
+            let jets = if let Some(origin) = center {
                 let mut translated = jets.to_vec();
                 for (coordinate, offset) in translated[0].iter_mut().zip(origin) {
                     *coordinate = coordinate.sub(offset)?;
@@ -2011,6 +2024,26 @@ pub fn measure_planar_curve_winding_about_point(
     let origin = Some(point.map(Interval::point));
     let travel = measure_planar_angular_travel_from(
         curve, domain, origin, parameter_tolerance, max_cells,
+    )?;
+    winding_from_angular_travel(travel)
+}
+
+/// Certify a common winding for all points in a closed axis-aligned box.
+/// Bounds are given as lower and upper corners. Every curve cell must be
+/// separated from the box. The travel bounds in the report are for the
+/// box center, whose winding agrees with that of every point in the box.
+pub fn measure_planar_curve_winding_over_box(
+    curve: &Curve,
+    bounds: [[f64; 2]; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarOrientationWindingReport> {
+    let [[x_min, y_min], [x_max, y_max]] = bounds;
+    let region = [Interval::new(x_min, x_max)?, Interval::new(y_min, y_max)?];
+    let domain = validate_winding_curve(curve)?;
+    check(curve.control_points.first() == curve.control_points.last(), "Winding contour must be closed")?;
+    let travel = measure_planar_angular_travel_from(
+        curve, domain, Some(region), parameter_tolerance, max_cells,
     )?;
     winding_from_angular_travel(travel)
 }
