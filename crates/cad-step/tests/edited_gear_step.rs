@@ -247,3 +247,24 @@ fn part_consolidation_requires_both_matching_shape_and_matching_label() {
     source.definition_names.clear();
     assert!(source.consolidate_named_parts().is_err());
 }
+
+#[test]
+fn parts_delta_aggregates_duplicate_geometry_and_ignores_definition_order() {
+    use cad_step::{NamedStepAssembly,StepSharedAssembly,StepAssemblyOccurrence};
+    let revision = |widths:&[f64], placements:&[usize]| NamedStepAssembly {name:"Set".into(),
+        definition_names:vec!["Pin".into();widths.len()],assembly:StepSharedAssembly::from_placed_solids(
+            widths.iter().map(|&w| brep_core::cuboid([0.;3],[w,1.,1.]).unwrap()).collect(),
+            placements.iter().enumerate().map(|(i,&definition)| StepAssemblyOccurrence {definition,transform:
+                [[1.,0.,0.,i as f64],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]]}).collect()).unwrap()};
+    let before = revision(&[1.,2.,1.],&[0,1,2]);
+    let reordered = revision(&[2.,1.],&[1,1,0]);
+    assert!(before.parts_list_changes(&reordered).unwrap().is_empty());
+    let after = revision(&[3.,1.],&[1,0,1,1]);
+    let rows = before.parts_list_changes(&after).unwrap();
+    assert_eq!(rows.iter().map(|r|(r.before,r.after)).collect::<Vec<_>>(),[(2,3),(1,0),(0,1)]);
+    assert_eq!(rows[1].after_definition,None);
+    assert_eq!(rows[2].before_definition,None);
+    let mut broken = after;
+    broken.definition_names.clear();
+    assert!(before.parts_list_changes(&broken).is_err());
+}

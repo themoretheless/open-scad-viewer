@@ -2050,7 +2050,45 @@ pub struct StepPartsListRow<'a> {
     pub quantity: usize,
 }
 
+/// Quantity change for one label and indexed local geometry. The optional
+/// indices identify a representative definition on each side.
+#[derive(Debug, PartialEq, Eq)]
+pub struct StepPartQuantityChange {
+    pub name: String,
+    pub before_definition: Option<usize>,
+    pub after_definition: Option<usize>,
+    pub before: usize,
+    pub after: usize,
+}
+
 impl NamedStepAssembly {
+    /// Compare flat parts lists across revisions, combining duplicate definitions
+    /// within either revision and ignoring placement order and rigid motion.
+    pub fn parts_list_changes(&self, revised: &Self) -> Result<Vec<StepPartQuantityChange>> {
+        let mut groups: Vec<(&Model, StepPartQuantityChange)> = Vec::new();
+        for (assembly, after) in [(self, false), (revised, true)] {
+            for part in assembly.parts_list()? {
+                let model = &assembly.assembly.definitions()[part.definition];
+                let index = groups.iter().position(|(other, row)| row.name == part.name && other.0 == model.0);
+                let change = match index {
+                    Some(i) => &mut groups[i].1,
+                    None => &mut groups.push_mut((model, StepPartQuantityChange {
+                        name: part.name.to_owned(), before_definition: None, after_definition: None,
+                        before: 0, after: 0,
+                    })).1,
+                };
+                if after {
+                    change.after += part.quantity;
+                    change.after_definition.get_or_insert(part.definition);
+                } else {
+                    change.before += part.quantity;
+                    change.before_definition.get_or_insert(part.definition);
+                }
+            }
+        }
+        Ok(groups.into_iter().map(|(_,row)| row).filter(|row| row.before != row.after).collect())
+    }
+
     /// Consolidate definitions with equal names and equal indexed local B-reps.
     /// The first matching part supplies the retained topology identifiers.
     pub fn consolidate_named_parts(&mut self) -> Result<usize> {

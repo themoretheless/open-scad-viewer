@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 937,
-  "unallocatedCount": 63,
+  "specifiedCount": 938,
+  "unallocatedCount": 62,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21436,6 +21436,25 @@
       ],
       "remainingQualification": [
         "Indexed B-rep equality includes model tolerance. First matching topology identifiers retained. Geometrically equivalent reordered nets are outside scope."
+      ]
+    },
+    {
+      "id": "NURBS-0938",
+      "name": "Сравнение количественных спецификаций версий STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::NamedStepAssembly::parts_list_changes",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-parts-list-changes-938-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-parts-list-changes-938-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Flat definition quantities grouped by name and equal indexed B-rep including tolerance. Does not compare instance transforms or recognize reordered control nets."
       ]
     }
   ],
