@@ -3062,24 +3062,8 @@ pub fn measure_toolpath_chain_violation_duration(
     use num_rational::BigRational;
 
     validate(parameter_tolerance, max_obstacle_cells)?;
-    check(!segments.is_empty() && !obstacles.is_empty(), "Violation duration requires segments and obstacles")?;
-    if segments.len() > max_obstacle_cells / obstacles.len() {
-        return Err(resource("Clearance budget must cover every segment and obstacle"));
-    }
-    let mut minima = Vec::with_capacity(segments.len());
-    let mut reserve = 0;
-    for segment in segments {
-        segment.curve.validate()?;
-        validate_travel_interval(segment.curve, segment.interval)?;
-        check(segment.duration.is_finite() && segment.duration > 0., "Motion segment duration must be finite and positive")?;
-        let spans = active_spans(segment.curve, segment.interval).count();
-        if spans > (max_obstacle_cells - reserve) / obstacles.len() {
-            return Err(resource("Clearance budget must cover every segment span"));
-        }
-        let minimum = spans * obstacles.len();
-        reserve += minimum;
-        minima.push(minimum);
-    }
+    let (minima, mut reserve) =
+        reserve_toolpath_chain_cells(segments, obstacles.len(), max_obstacle_cells)?;
     let zero = [BigRational::default(), BigRational::default()];
     let mut total = zero.clone();
     let mut per_obstacle = vec![zero; obstacles.len()];
@@ -3110,6 +3094,114 @@ pub fn measure_toolpath_chain_violation_duration(
             work_obstacle_cells: max_obstacle_cells - remaining,
         },
         segments: reports,
+    })
+}
+
+fn reserve_toolpath_chain_cells(
+    segments: &[TimedMotionSegment<'_>],
+    obstacle_count: usize,
+    max_obstacle_cells: usize,
+) -> Result<(Vec<usize>, usize)> {
+    check(!segments.is_empty() && obstacle_count != 0, "Chain clearance requires segments and obstacles")?;
+    if segments.len() > max_obstacle_cells / obstacle_count {
+        return Err(resource("Clearance budget must cover every segment and obstacle"));
+    }
+    let mut minima = Vec::with_capacity(segments.len());
+    let mut reserve = 0;
+    for segment in segments {
+        segment.curve.validate()?;
+        validate_travel_interval(segment.curve, segment.interval)?;
+        check(segment.duration.is_finite() && segment.duration > 0., "Motion segment duration must be finite and positive")?;
+        let spans = active_spans(segment.curve, segment.interval).count();
+        if spans > (max_obstacle_cells - reserve) / obstacle_count {
+            return Err(resource("Clearance budget must cover every segment span"));
+        }
+        let minimum = spans * obstacle_count;
+        reserve += minimum;
+        minima.push(minimum);
+    }
+    Ok((minima, reserve))
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum FirstToolpathChainViolation {
+    Clear,
+    Possible {
+        earliest_time: f64,
+        earliest_segment: usize,
+    },
+    Confirmed {
+        time_bounds: [f64; 2],
+        earliest_segment: usize,
+        witness_segment: usize,
+        obstacle_index: usize,
+    },
+}
+
+/// Locate the first possible or confirmed clearance violation in elapsed
+/// chain time. Earlier unresolved contacts still bound the lower endpoint
+/// when a later segment provides the first confirmed witness.
+pub fn first_toolpath_chain_violation(
+    segments: &[TimedMotionSegment<'_>],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    margin: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<FirstToolpathChainViolation> {
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    let (minima, mut reserve) =
+        reserve_toolpath_chain_cells(segments, obstacles.len(), max_obstacle_cells)?;
+    let dimension = segments[0].curve.control_points[0].len();
+    check(
+        segments.iter().all(|segment| segment.curve.control_points[0].len() == dimension),
+        "Toolpath segments must match obstacle dimensions",
+    )?;
+    let mut elapsed = num_rational::BigRational::default();
+    let mut earliest = None;
+    let mut remaining = max_obstacle_cells;
+    for (index, (&segment, minimum)) in segments.iter().zip(minima).enumerate() {
+        let budget = minimum + (remaining - reserve) / (segments.len() - index);
+        let partition = partition_toolpath_clearance_with_margin(
+            segment.curve, segment.interval, obstacles, tool_radius, margin,
+            parameter_tolerance, budget,
+        )?;
+        let rate = motion_clock_factor(segment.interval, segment.duration)?;
+        let start = exact_motion_operand(segment.interval[0])?;
+        let time = |parameter, upper| {
+            let exact = &elapsed + (exact_motion_operand(parameter)? - &start) * &rate;
+            round_motion_duration(&exact, upper)
+        };
+        match partition.first_contact() {
+            FirstToolpathContact::Clear => {}
+            FirstToolpathContact::Possible { earliest_parameter } => {
+                if earliest.is_none() {
+                    earliest = Some((time(earliest_parameter, false)?, index));
+                }
+            }
+            FirstToolpathContact::Confirmed { parameter_bounds: [lo, hi], obstacle_index } => {
+                let (lower, earliest_segment) = match earliest {
+                    Some(bound) => bound,
+                    None => (time(lo, false)?, index),
+                };
+                return Ok(FirstToolpathChainViolation::Confirmed {
+                    time_bounds: [lower, time(hi, true)?],
+                    earliest_segment,
+                    witness_segment: index,
+                    obstacle_index,
+                });
+            }
+        }
+        elapsed += exact_motion_operand(segment.duration)?;
+        reserve -= minimum;
+        remaining -= partition.work_obstacle_cells;
+    }
+    Ok(match earliest {
+        None => FirstToolpathChainViolation::Clear,
+        Some((earliest_time, earliest_segment)) => FirstToolpathChainViolation::Possible {
+            earliest_time,
+            earliest_segment,
+        },
     })
 }
 
