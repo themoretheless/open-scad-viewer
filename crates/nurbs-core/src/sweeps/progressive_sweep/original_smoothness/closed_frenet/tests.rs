@@ -240,3 +240,62 @@ fn periodic_guide_and_authored_axis_require_exact_active_seam() {
         assert!(!body.embedding_certified && !body.regularity_certified && !body.parameter_topology_preserved, "{body:?}");
     }
 }
+
+#[test]
+fn periodic_spatial_bishop_owns_the_closed_volume_and_rejects_a_broken_seam() {
+    let path = frenet_source::periodic_path();
+    let mut damaged = path.clone();
+    damaged.knots[1] = damaged.knots[1].next_up();
+    damaged.validate().unwrap();
+    let (profiles, cap, _) = source::material(true, true);
+    let scale = source::periodic(1., 1.03125);
+    let twist = source::periodic(0., 1. / 1024.);
+    let projection = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
+    for arc in [false, true] {
+        for (source, expected) in [(&path, true), (&damaged, false)] {
+            let sweep = MultiSweep::new(&profiles, source, &scale, &twist, Options {
+                normal: [0., 0., 1.],
+                orientation: Orientation::RotationMinimizing,
+                ..options(arc)
+            }).unwrap().with_spatial_rmf_error_limits(4096, 100000, 1000000).unwrap();
+            let seam = sweep.certify_closed_path_frame_smoothness(2, 100000, 1000000).unwrap();
+            assert_eq!(seam.closed_source_frame_smoothness_certified, expected, "{seam:?}");
+            let body = sweep.certify_ideal_volume_atlas(
+                [&cap, &cap], projection, 1000000, 1000000,
+            ).unwrap();
+            assert_eq!([body.embedding_certified, body.regularity_certified, body.parameter_topology_preserved],
+                [expected; 3], "arc={arc}, exact seam={expected}: {body:?}");
+            eprintln!("periodic Bishop arc={arc} exact seam={expected} body={body:?}");
+        }
+    }
+}
+
+#[test]
+fn periodic_bishop_frame_does_not_certify_a_double_traversal() {
+    let mut path = frenet_source::periodic_path();
+    let cycle = path.control_points[..8].to_vec();
+    path.control_points.splice(8..8, cycle);
+    path.weights = vec![1.; path.control_points.len()];
+    path.knots = (0..27).map(|i| (f64::from(i) - 5.) / 8.).collect();
+    path.validate().unwrap();
+    let (profiles, cap, _) = source::material(false, false);
+    let scale = constant_vector_law([1., 0., 0.]).unwrap();
+    let zero = constant_vector_law([0.; 3]).unwrap();
+    let sweep = MultiSweep::new(&profiles, &path, &scale, &zero, Options {
+        normal: [0., 0., 1.],
+        orientation: Orientation::RotationMinimizing,
+        ..options(true)
+    }).unwrap().with_spatial_rmf_error_limits(4096, 100000, 1000000).unwrap();
+    let seam = sweep.certify_closed_path_frame_smoothness(2, 100000, 1000000).unwrap();
+    assert!(seam.closed_source_frame_smoothness_certified, "{seam:?}");
+    // The center of this filled cap coincides with the exact source start.
+    // Both traversals carry this same material point through the origin,
+    // independently of which rotation the transported frames have there.
+    let body = sweep.certify_ideal_volume_atlas(
+        [&cap, &cap], [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]], 500000, 1000000,
+    ).unwrap();
+    assert!(!body.embedding_certified && !body.regularity_certified && !body.parameter_topology_preserved,
+        "{body:?}");
+    assert!(body.boxes > 0 && body.cells <= 500000, "{body:?}");
+    eprintln!("periodic Bishop double traversal refused: {body:?}");
+}
