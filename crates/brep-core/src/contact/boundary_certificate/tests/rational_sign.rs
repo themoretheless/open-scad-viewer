@@ -672,6 +672,48 @@ fn check_reversed_multispan_exterior(reference: &crate::Model, shared: usize) {
     let (contact, used) = certify(&refined, [0, 4], 3000);
     assert_eq!(contact.unwrap().edges, [shared]);
     assert!(certify(&refined, [0, 4], used - 1).0.is_none());
+    check_trimmed_exterior(reference, shared, edge);
+}
+
+fn check_trimmed_exterior(reference: &crate::Model, shared: usize, edge: usize) {
+    let mut model = reference.clone();
+    // The active interval [1, 2] is asymmetric inside [0, 4].
+    let extend = |c: &crate::Curve| {
+        let a = &c.control_points[0];
+        let b = &c.control_points[1];
+        crate::Curve {
+            degree: 1,
+            knots: vec![0., 0., 4., 4.],
+            control_points: [-1., 3.]
+                .map(|t| a.iter().zip(b).map(|(a, b)| a + t * (b - a)).collect())
+                .to_vec(),
+            weights: vec![1.; 2],
+            periodic: false,
+        }
+    };
+    let curve_parameter = model.edges[edge].curve.domain();
+    let faces = model.faces.clone();
+    for face in faces {
+        for c in &mut model.0.loops[face.outer].coedges {
+            if c.edge != edge {
+                continue;
+            }
+            c.pcurve = extend(&c.pcurve);
+            *c = c.clone().with_trim(brep_topology::CoedgeTrim {
+                curve_parameter,
+                pcurve_parameter: [1., 2.],
+                periodic_lift: [[0; 2]; 2],
+            }).unwrap();
+        }
+    }
+    model.validate().unwrap();
+    let exact = crate::boundary_agreement::verify_exact(&model, 1_000_000).unwrap();
+    assert!(exact.all_equal && exact.all_joins_exact);
+    let certify = crate::shared_boundary::jordan_partition::certify;
+    let (contact, used) = certify(&model, [0, 4], 4000);
+    assert_eq!(contact.unwrap().edges, [shared]);
+    assert!(certify(&model, [0, 4], used - 1).0.is_none());
+
 }
 
 fn check_projection_from_either_face(reference: &crate::Model) {

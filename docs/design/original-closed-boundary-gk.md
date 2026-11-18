@@ -229,6 +229,11 @@ An unclamped exterior is projected and then exactly clamped to its
 original active interval for the common loop proof. The input edge and
 its world-space parameterization stay intact.
 
+An exterior coedge may select a directed subinterval of its affine
+chart curve when the exact lift covers the complete world edge. The
+proof uses the active chart endpoints with exact arithmetic under the
+same work budget. Partial world intervals remain diagnostic windows.
+
 The common boundary can be an authored chain of edges. The audit checks
 that both faces cover the complete natural rectangle, with exact
 consecutive segments along its sides. Both traversals of the shared

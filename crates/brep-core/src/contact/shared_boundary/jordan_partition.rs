@@ -83,10 +83,7 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
         return None;
     }
     let wires = patches.map(|f| model.loops[f.outer].coedges.as_slice());
-    if wires
-        .iter()
-        .any(|w| !(4..=128).contains(&w.len()) || w.iter().any(|c| c.trim().is_some()))
-    {
+    if wires.iter().any(|w| !(4..=128).contains(&w.len())) {
         return None;
     }
     let (starts, edges) = shared_chain(wires, cells, limit)?;
@@ -206,7 +203,11 @@ fn shared_chain(
     for offset in 0..count {
         let left = &wires[0][(a + offset) % wires[0].len()];
         let right = &wires[1][(b + count - 1 - offset) % wires[1].len()];
-        if left.edge != right.edge || left.reversed == right.reversed || edges.contains(&left.edge)
+        if left.edge != right.edge
+            || left.reversed == right.reversed
+            || left.trim().is_some()
+            || right.trim().is_some()
+            || edges.contains(&left.edge)
         {
             return None;
         }
@@ -227,29 +228,21 @@ fn natural_wire(
         [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
     ];
     let corners = [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
-    let first = wire.iter().position(|c| {
-        c.pcurve
-            .control_points
-            .first()
-            .is_some_and(|p| *p == corners[0])
-    })?;
+    let segments = wire
+        .iter()
+        .map(|c| natural_segment(c, cells, limit))
+        .collect::<Option<Vec<_>>>()?;
+    let first = segments.iter().position(|p| p[0] == corners[0])?;
     let mut side = 0;
     let mut current = corners[0];
     for offset in 0..wire.len() {
         corners.get(side)?;
-        let p = &wire[(first + offset) % wire.len()].pcurve;
-        if p.periodic
-            || p.degree != 1
-            || p.control_points.len() != 2
-            || p.weights[0] != p.weights[1]
-            || p.knots != [p.knots[0], p.knots[0], p.knots[3], p.knots[3]]
-            || p.control_points[0] != current
-        {
+        let [start, point] = segments[(first + offset) % wire.len()];
+        if start != current {
             return None;
         }
         let end = corners[(side + 1) % 4];
         let axis = side % 2;
-        let point = &p.control_points[1];
         let progress = if side < 2 {
             current[axis] < point[axis] && point[axis] <= end[axis]
         } else {
@@ -258,10 +251,48 @@ fn natural_wire(
         if !progress || point[1 - axis] != end[1 - axis] {
             return None;
         }
-        current = [point[0], point[1]];
+        current = point;
         side += usize::from(current == end);
     }
     (side == 4).then_some(())
+}
+
+fn exact_endpoint(value: &BigRational) -> Option<f64> {
+    let stored = value.to_f64()?;
+    (BigRational::from_float(stored).as_ref() == Some(value)).then_some(stored)
+}
+
+fn natural_segment(c: &crate::Coedge, cells: &mut usize, limit: usize) -> Option<[[f64; 2]; 2]> {
+    let p = &c.pcurve;
+    if p.periodic
+        || p.degree != 1
+        || p.control_points.len() != 2
+        || p.weights[0] != p.weights[1]
+        || p.knots != [p.knots[0], p.knots[0], p.knots[3], p.knots[3]]
+    {
+        return None;
+    }
+    let point = |i: usize| [p.control_points[i][0], p.control_points[i][1]];
+    let Some(trim) = c.trim() else {
+        return Some([point(0), point(1)]);
+    };
+    if trim.periodic_lift != [[0; 2]; 2] {
+        return None;
+    }
+    charge(cells, limit, 1)?;
+    let [lo, hi] = p.domain().map(BigRational::from_float);
+    let (lo, hi) = (lo?, hi?);
+    let evaluate = |t: f64| {
+        let fraction = (BigRational::from_float(t)? - &lo) / (&hi - &lo);
+        let at = |axis: usize| {
+            let a = BigRational::from_float(point(0)[axis])?;
+            let b = BigRational::from_float(point(1)[axis])?;
+            exact_endpoint(&(&a + &fraction * (b - &a)))
+        };
+        Some([at(0)?, at(1)?])
+    };
+    let [a, b] = trim.pcurve_parameter;
+    Some([evaluate(a)?, evaluate(b)?])
 }
 
 fn common_orientation(
@@ -315,12 +346,16 @@ fn projected_exterior(
         for offset in shared_count..wire.len() {
             charge(cells, limit, 1)?;
             let c = &wire[(start + offset) % wire.len()];
+            let source = &model.edges[c.edge].curve;
+            // A partial world interval is a diagnostic window and does
+            // not establish the full topology edge used by this proof.
+            if c.trim()
+                .is_some_and(|t| t.curve_parameter != source.domain())
+            {
+                return None;
+            }
             exterior.push(projected_member(
-                &model.edges[c.edge].curve,
-                c.reversed,
-                projection,
-                cells,
-                limit,
+                source, c.reversed, projection, cells, limit,
             )?);
         }
     }
