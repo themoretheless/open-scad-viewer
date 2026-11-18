@@ -2814,10 +2814,7 @@ pub fn measure_planar_contour_fill_principal_moments(
         contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
         max_winding_cells, max_distance_cells, max_moment_cells,
     )?;
-    let [[xx_lo, xx_hi], [xy_lo, xy_hi], [yy_lo, yy_hi]] = central.central_moment_bounds;
-    let xx = Interval::new(xx_lo, xx_hi)?;
-    let xy = Interval::new(xy_lo, xy_hi)?;
-    let yy = Interval::new(yy_lo, yy_hi)?;
+    let [xx, xy, yy] = central_moment_intervals(&central)?;
     let half = Interval::point(0.5);
     let mean = xx.mul(half)?.add(yy.mul(half)?)?;
     let difference = xx.mul(half)?.sub(yy.mul(half)?)?;
@@ -2830,6 +2827,53 @@ pub fn measure_planar_contour_fill_principal_moments(
         moment_gap_bounds: [gap.lo.max(0.), gap.hi],
         central,
     })
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarContourFillPrincipalAxesReport {
+    pub moments: PlanarContourFillPrincipalMomentsReport,
+    /// Orthogonal projectors onto the principal axes, in ascending moment
+    /// order. Each stores the XX, XY and YY entry bounds. None means that
+    /// the moments could not be separated.
+    pub projector_bounds: Option<[[[f64; 2]; 3]; 2]>,
+}
+
+/// Enclose the planar principal axes as sign-independent projectors.
+/// Axes are only reported when a strictly positive spectral gap is proved.
+pub fn measure_planar_contour_fill_principal_axes(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_moment_cells: usize,
+) -> Result<PlanarContourFillPrincipalAxesReport> {
+    let moments = measure_planar_contour_fill_principal_moments(
+        contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
+        max_winding_cells, max_distance_cells, max_moment_cells,
+    )?;
+    let [lower, upper] = moments.moment_gap_bounds;
+    let projector_bounds = if lower > 0. {
+        let [xx, xy, yy] = central_moment_intervals(&moments.central)?;
+        let gap = Interval::new(lower, upper)?;
+        let half = Interval::point(0.5);
+        let difference = xx.mul(half)?.sub(yy.mul(half)?)?.div(gap)?;
+        let off_diagonal = xy.div(gap)?.intersect(-0.5, 0.5)?;
+        let major_x = half.add(difference)?.intersect(0., 1.)?;
+        let major_y = half.sub(difference)?.intersect(0., 1.)?;
+        let minor_xy = Interval::new(-off_diagonal.hi, -off_diagonal.lo)?;
+        Some([[major_y, minor_xy, major_x], [major_x, off_diagonal, major_y]]
+            .map(|axis| axis.map(|value| [value.lo, value.hi])))
+    } else {
+        None
+    };
+    Ok(PlanarContourFillPrincipalAxesReport { moments, projector_bounds })
+}
+
+fn central_moment_intervals(central: &PlanarContourFillCentralMomentsReport) -> Result<[Interval; 3]> {
+    let [[a, b], [c, d], [e, f]] = central.central_moment_bounds;
+    Ok([Interval::new(a, b)?, Interval::new(c, d)?, Interval::new(e, f)?])
 }
 
 fn sum_oriented_contour_integrals<const N: usize>(
