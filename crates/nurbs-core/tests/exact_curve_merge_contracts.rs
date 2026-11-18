@@ -8213,3 +8213,37 @@ fn two_plane_residual_preserves_unmodified_planes_and_rejects_negative_mass() {
     weights[0].mass_bounds = [-1., 1.];
     assert!(bound_two_plane_residual_unbalance(vectors, weights, [1.; 2]).is_err());
 }
+
+#[test]
+fn two_plane_capacity_encloses_minimum_radii_under_mass_limits() {
+    use nurbs_core::analysis::surface_measure::{
+        BalanceTolerance::*, bound_two_plane_counterweight_capacity,
+    };
+    let vectors = [[[3.; 2], [4.; 2], [0.; 2]], [[2., 6.], [0.; 2], [0.; 2]]];
+    for (radii, statuses, overall) in [
+        ([3., 7.], [Within, Within], Within),
+        ([2., 4.], [Outside, Undetermined], Outside),
+        ([3., 4.], [Within, Undetermined], Undetermined),
+    ] {
+        let report = bound_two_plane_counterweight_capacity(vectors, radii, [2., 1.]).unwrap();
+        assert_eq!(report.plane_status, statuses);
+        assert_eq!(report.overall_status, overall);
+        for ([lo, hi], [min, max]) in report
+            .minimum_radius_bounds
+            .into_iter()
+            .zip([[2.5, 2.5], [2., 6.]])
+        {
+            assert!(lo <= min && max <= hi);
+            assert!((lo - min).abs() < 1e-12 && (hi - max).abs() < 1e-12);
+        }
+    }
+}
+
+#[test]
+fn two_plane_capacity_rejects_invalid_limits_and_mounting_radii() {
+    use nurbs_core::analysis::surface_measure::bound_two_plane_counterweight_capacity;
+    let vectors = [[[0.; 2]; 3]; 2];
+    assert!(bound_two_plane_counterweight_capacity(vectors, [1.; 2], [0., 1.]).is_err());
+    assert!(bound_two_plane_counterweight_capacity(vectors, [1., f64::INFINITY], [1.; 2]).is_err());
+    assert!(bound_two_plane_counterweight_capacity(vectors, [1.; 2], [1., f64::NAN]).is_err());
+}

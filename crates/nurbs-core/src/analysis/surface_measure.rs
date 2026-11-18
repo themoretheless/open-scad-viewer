@@ -1299,13 +1299,7 @@ pub fn classify_two_plane_unbalance(
         magnitude_bounds[index] = [magnitude.lo, magnitude.hi];
         plane_status[index] = classify_balance_tolerance(magnitude_bounds[index], tolerances[index]);
     }
-    let overall_status = if plane_status.contains(&BalanceTolerance::Outside) {
-        BalanceTolerance::Outside
-    } else if plane_status == [BalanceTolerance::Within; 2] {
-        BalanceTolerance::Within
-    } else {
-        BalanceTolerance::Undetermined
-    };
+    let overall_status = combine_plane_balance_status(plane_status);
     Ok(TwoPlaneBalanceReport {
         magnitude_bounds,
         plane_status,
@@ -1389,6 +1383,54 @@ pub fn bound_two_plane_residual_unbalance(
     }
     let report = classify_two_plane_unbalance(residual, tolerances)?;
     Ok((residual, report))
+}
+
+/// Required mounting radius and mass capacity status for each correction plane.
+#[derive(Clone, Copy, Debug)]
+pub struct TwoPlaneCounterweightCapacity {
+    pub minimum_radius_bounds: [[f64; 2]; 2],
+    pub plane_status: [BalanceTolerance; 2],
+    pub overall_status: BalanceTolerance,
+}
+
+/// Compare the mounting radii with the minimum radii needed to cancel each
+/// plane's unbalance without exceeding its positive counterweight mass limit.
+pub fn bound_two_plane_counterweight_capacity(
+    vectors: [[[f64; 2]; 3]; 2],
+    mounting_radii: [f64; 2],
+    mass_limits: [f64; 2],
+) -> Result<TwoPlaneCounterweightCapacity> {
+    check(
+        mounting_radii
+            .into_iter()
+            .chain(mass_limits)
+            .all(|value| value.is_finite() && value > 0.),
+        "Counterweight capacity requires finite positive radii and mass limits",
+    )?;
+    let mut minimum_radius_bounds = [[0.; 2]; 2];
+    let mut plane_status = [BalanceTolerance::Undetermined; 2];
+    for (index, vector) in vectors.into_iter().enumerate() {
+        let magnitude = norm(centroid_intervals(vector)?)?;
+        let radius = magnitude.div(Interval::point(mass_limits[index]))?;
+        let bounds = [radius.lo.max(0.), radius.hi];
+        minimum_radius_bounds[index] = bounds;
+        plane_status[index] = classify_balance_tolerance(bounds, mounting_radii[index]);
+    }
+    Ok(TwoPlaneCounterweightCapacity {
+        minimum_radius_bounds,
+        plane_status,
+        overall_status: combine_plane_balance_status(plane_status),
+    })
+}
+
+fn combine_plane_balance_status(plane_status: [BalanceTolerance; 2]) -> BalanceTolerance {
+    if plane_status.contains(&BalanceTolerance::Outside) {
+        BalanceTolerance::Outside
+    } else if plane_status == [BalanceTolerance::Within; 2] {
+        BalanceTolerance::Within
+    } else {
+        BalanceTolerance::Undetermined
+    }
 }
 
 fn classify_balance_tolerance([lo, hi]: [f64; 2], tolerance: f64) -> BalanceTolerance {
