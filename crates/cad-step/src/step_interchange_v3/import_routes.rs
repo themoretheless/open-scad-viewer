@@ -969,14 +969,50 @@ impl StepSharedAssembly {
         relative_tolerance: f64,
         max_evaluations_per_definition: usize,
     ) -> Result<[[f64; 3]; 3]> {
+        self.material_mass_properties(None, relative_tolerance, max_evaluations_per_definition)
+            .map(|properties| properties.inertia)
+    }
+
+    /// Estimate mass, center of mass and central inertia with one density
+    /// per occurrence, in kg/mm³. Outputs are kg, mm and kg·mm².
+    pub fn mass_properties_with_densities(
+        &self,
+        densities_kg_per_mm3: &[f64],
+        relative_tolerance: f64,
+        max_evaluations_per_definition: usize,
+    ) -> Result<brep_core::analysis::AssemblyMass> {
+        if densities_kg_per_mm3.len() != self.occurrences.len()
+            || densities_kg_per_mm3.iter().any(|value| !value.is_finite() || *value <= 0.)
+        {
+            return Err(refuse("STEP assembly requires a finite positive density for each occurrence"));
+        }
+        self.material_mass_properties(Some(densities_kg_per_mm3), relative_tolerance, max_evaluations_per_definition)
+    }
+
+    fn material_mass_properties(
+        &self,
+        densities: Option<&[f64]>,
+        relative_tolerance: f64,
+        max_evaluations_per_definition: usize,
+    ) -> Result<brep_core::analysis::AssemblyMass> {
         let properties = self.definition_mass_properties(relative_tolerance, max_evaluations_per_definition)?;
-        let placed = self.placed_centroids(&properties)?;
+        let mut placed = self.placed_centroids(&properties)?;
+        if let Some(densities) = densities {
+            for ((weight, _), density) in placed.iter_mut().zip(densities) {
+                *weight *= density;
+                if !weight.is_finite() || *weight <= 0. {
+                    return Err(refuse("STEP occurrence mass is outside the finite positive range"));
+                }
+            }
+        }
         let center = weighted_centroid(&placed)?;
         let mut second = [[0.; 3]; 3];
-        for (occurrence, (volume, point)) in self.occurrences.iter().zip(placed) {
+        let total_mass = placed.iter().map(|(weight, _)| weight).sum();
+        for (index, (occurrence, (weight, point))) in self.occurrences.iter().zip(placed).enumerate() {
             let mass = &properties[occurrence.definition];
             let half_trace = (0..3).map(|i| mass.inertia_mm5[i][i] / 2.).sum::<f64>();
-            let scale = placement_determinant(occurrence.transform).abs();
+            let density = densities.map_or(1., |values| values[index]);
+            let scale = placement_determinant(occurrence.transform).abs() * density;
             let offset: [f64; 3] = std::array::from_fn(|i| point[i] - center[i]);
             for i in 0..3 {
                 for j in i..3 {
@@ -988,7 +1024,7 @@ impl StepSharedAssembly {
                             transformed += occurrence.transform[i][k] * moment * occurrence.transform[j][l];
                         }
                     }
-                    second[i][j] += scale * transformed + volume * offset[i] * offset[j];
+                    second[i][j] += scale * transformed + weight * offset[i] * offset[j];
                     second[j][i] = second[i][j];
                 }
             }
@@ -1003,7 +1039,7 @@ impl StepSharedAssembly {
         if !inertia.iter().flatten().all(|entry| entry.is_finite()) {
             return Err(refuse("STEP assembly inertia exceeds the finite range"));
         }
-        Ok(inertia)
+        Ok(brep_core::analysis::AssemblyMass { mass: total_mass, centroid: center, inertia })
     }
 
     /// Estimate principal moments in mm⁵ and their right-handed unit axes

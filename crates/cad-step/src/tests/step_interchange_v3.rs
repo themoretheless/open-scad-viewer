@@ -2848,6 +2848,37 @@ fn shared_step_scaled_cube_pair() -> crate::StepSharedAssembly {
 }
 
 #[test]
+fn shared_step_mass_accounts_for_different_material_densities() {
+    let assembly = shared_step_scaled_cube_pair();
+    for invalid in [&[0.002][..], &[0.002, f64::NAN], &[0.002, 0.]] {
+        assert!(assembly.mass_properties_with_densities(invalid, 1e-8, 100_000).is_err());
+    }
+    let result = assembly.mass_properties_with_densities(&[0.002, 0.001], 1e-8, 100_000).unwrap();
+    let masses = [0.016, 0.192];
+    let total = masses[0] + masses[1];
+    assert!((result.mass - total).abs() < 1e-12);
+    let delta = [21., -7., 35.];
+    for (axis, offset) in delta.into_iter().enumerate() {
+        assert!((result.centroid[axis] - (1. + masses[1] / total * offset)).abs() < 1e-10);
+    }
+    let reduced_mass = masses[0] * masses[1] / total;
+    let norm_squared: f64 = delta.iter().map(|v| v * v).sum();
+    let sides_squared = [36., 16., 64.];
+    for i in 0..3 {
+        for j in 0..3 {
+            let expected = if i == j {
+                masses[0] * 8. / 12.
+                    + masses[1] * (sides_squared[(i + 1) % 3] + sides_squared[(i + 2) % 3]) / 12.
+                    + reduced_mass * (norm_squared - delta[i] * delta[i])
+            } else {
+                -reduced_mass * delta[i] * delta[j]
+            };
+            assert!((result.inertia[i][j] - expected).abs() < 1e-9);
+        }
+    }
+}
+
+#[test]
 fn shared_step_principal_inertia_recovers_rotated_axes() {
     let mut assembly = shared_step_scaled_cube_pair().extract_occurrences(&[1]).unwrap();
     let placement = [

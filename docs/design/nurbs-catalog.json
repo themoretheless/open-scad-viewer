@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 841,
-  "unallocatedCount": 159,
+  "specifiedCount": 842,
+  "unallocatedCount": 158,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19695,6 +19695,25 @@
       "remainingQualification": [
         "Diagonalize the normalized assembly inertia tensor and restore principal moments in physical units.",
         "Check analytically known principal moments and the directions of a rotated, anisotropically scaled reflected cuboid, including axis handedness.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0842",
+      "name": "Масса, центр масс и тензор инерции STEP-сборки из разных материалов",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::mass_properties_with_densities",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-842-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-842-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Integrate shared definitions once and accumulate density-weighted affine central moments for each occurrence.",
+        "Compare mass, centroid and full inertia tensor to analytical results for two placements sharing one imported definition, with different densities and scale factors.",
         "WASM and application integration are separate."
       ]
     }
