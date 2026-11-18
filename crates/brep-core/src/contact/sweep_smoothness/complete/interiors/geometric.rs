@@ -700,6 +700,32 @@ mod tests {
         assert!(!classified::inspect(&model, &classes, classified::Limits {
             exact_work: classified.exact_work - 1, ..classified_limits
         }).unwrap().certified);
+
+        let range = model.edges[1].curve.domain();
+        model.loops[1].coedges[0] = Coedge::new(1, false, Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 2., 4., 4.],
+            control_points: vec![vec![-1., 2.25], vec![0., 2.], vec![4., 2.], vec![5., 2.25]],
+            weights: vec![1.; 4],
+            periodic: false,
+        }).with_trim(brep_topology::CoedgeTrim {
+            curve_parameter: range,
+            pcurve_parameter: [1., 2.],
+            periodic_lift: [[0, 0], [1, 0]],
+        }).unwrap();
+        model.rebuild_topology_ids();
+        model.validate().unwrap();
+        let active = super::super::super::inspect(&model, limits).unwrap();
+        assert!(active.g2_certified, "{:?}", active.unresolved_edges);
+        assert_eq!(active.edge_ids, [0, 1]);
+        assert_eq!(active.periodic_edge_ids, [2, 3]);
+        assert!(active.parameter_work > opening_work);
+        let mixed = classified::inspect(
+            &model, &[Class::G1, Class::G2, Class::G2, Class::C0], classified_limits,
+        ).unwrap();
+        assert!(mixed.certified, "{}", mixed.reason);
+        assert_eq!(mixed.smooth_edges, [0, 1, 2]);
+        assert_eq!(mixed.c0_edges, [3]);
     }
 
     #[test]
