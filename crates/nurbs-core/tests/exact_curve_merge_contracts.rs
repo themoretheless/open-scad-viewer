@@ -7832,3 +7832,42 @@ fn automatic_principal_axes_skip_repeated_moments_but_return_isolated_axis() {
     assert_eq!(axis.direction.map(f64::abs), [0., 0., 1.]);
     assert!(axis.sin_angle_upper < 1e-8);
 }
+
+#[test]
+fn principal_axis_projector_encloses_rotated_direction_without_sign_convention() {
+    use nurbs_core::analysis::surface_measure::{
+        bound_principal_axis_projector, find_certified_principal_axis,
+    };
+    let tensor = [[3., 1., 0.], [1., 3., 0.], [0., 0., 5.]]
+        .map(|row| row.map(|value| [value; 2]));
+    let mut axis = find_certified_principal_axis(tensor, 0, 1e-9).unwrap().unwrap();
+    let bounds = bound_principal_axis_projector(axis).unwrap();
+    axis.direction = axis.direction.map(|component| -component);
+    assert_eq!(bounds, bound_principal_axis_projector(axis).unwrap());
+    for (row, expected) in bounds.into_iter().zip([[0.5, -0.5, 0.], [-0.5, 0.5, 0.], [0.; 3]]) {
+        for ([lo, hi], value) in row.into_iter().zip(expected) {
+            assert!(lo <= value && value <= hi);
+            assert!(hi - lo < 1e-8);
+        }
+    }
+}
+
+#[test]
+fn principal_axis_projector_accounts_for_certificate_uncertainty() {
+    use nurbs_core::analysis::surface_measure::{
+        PrincipalAxisCertificate, bound_principal_axis_projector,
+    };
+    let mut axis = PrincipalAxisCertificate {
+        direction: [1., 0., 0.],
+        sin_angle_upper: 0.5,
+    };
+    let bounds = bound_principal_axis_projector(axis).unwrap();
+    let exact = [[0.75, 3_f64.sqrt() / 4., 0.], [3_f64.sqrt() / 4., 0.25, 0.], [0.; 3]];
+    for (row, expected) in bounds.into_iter().zip(exact) {
+        for ([lo, hi], value) in row.into_iter().zip(expected) {
+            assert!(lo <= value && value <= hi);
+        }
+    }
+    axis.sin_angle_upper = f64::NAN;
+    assert!(bound_principal_axis_projector(axis).is_err());
+}

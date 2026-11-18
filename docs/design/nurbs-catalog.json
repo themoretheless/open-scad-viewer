@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 651,
-  "unallocatedCount": 349,
+  "specifiedCount": 652,
+  "unallocatedCount": 348,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16037,6 +16037,25 @@
         "Expose opt-in principal directions and angular certificates, preserving unavailable axes explicitly.",
         "Check a certifiable isolated axis and unresolved repeated directions on separated density-weighted components through the compiled ABI, plus incomplete budget.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0652",
+      "name": "Гарантированный ортогональный проектор на главную ось инерции",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::bound_principal_axis_projector",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-652-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-652-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Convert a principal-axis angular certificate into a sign-invariant interval projector.",
+        "Check a rotated exact projector, direction sign invariance, a nonzero angular uncertainty and invalid certificate rejection.",
+        "WASM and application integration are separate."
       ]
     }
   ],

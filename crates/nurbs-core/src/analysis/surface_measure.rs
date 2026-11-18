@@ -1468,6 +1468,38 @@ pub struct PrincipalAxisCertificate {
     pub sin_angle_upper: f64,
 }
 
+/// Enclose the entries of the orthogonal projector onto a certified axis.
+pub fn bound_principal_axis_projector(
+    certificate: PrincipalAxisCertificate,
+) -> Result<[[[f64; 2]; 3]; 3]> {
+    let error = certificate.sin_angle_upper;
+    check(
+        (0. ..=1.).contains(&error),
+        "Principal axis sine bound must lie in [0, 1]",
+    )?;
+    let axis = InertiaAxis::new(certificate.direction)?;
+    let uncertainty = Interval::new(-error, error)?;
+    let mut projector = [[[0.; 2]; 3]; 3];
+    // The spectral norm of the difference of two rank-one orthogonal
+    // projectors is the sine of their acute angle. It bounds every entry.
+    for i in 0..3 {
+        for j in i..3 {
+            let (product, minimum, maximum) = if i == j {
+                (axis.squares[i], 0., 1.)
+            } else {
+                (axis.components[i].mul(axis.components[j])?, -0.5, 0.5)
+            };
+            let entry = product
+                .div(axis.norm_squared)?
+                .add(uncertainty)?
+                .intersect(minimum, maximum)?;
+            projector[i][j] = [entry.lo, entry.hi];
+            projector[j][i] = projector[i][j];
+        }
+    }
+    Ok(projector)
+}
+
 /// Find and certify a direction for a selected principal moment. Candidate
 /// construction uses midpoint data, and certification uses the full intervals.
 pub fn find_certified_principal_axis(
