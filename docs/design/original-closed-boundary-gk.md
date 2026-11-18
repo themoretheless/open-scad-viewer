@@ -225,3 +225,10 @@ The projected exterior can include clamped edges with internal knots.
 It keeps their authored weights and knot intervals. A reversed coedge
 uses an exact affine reflection of its knot vector, charged to the
 shared budget. An unrepresentable reflection withholds the certificate.
+
+The common boundary can be an authored chain of edges. The audit checks
+that both faces cover the complete natural rectangle, with exact
+consecutive segments along its sides. Both traversals of the shared
+chain must be contiguous and opposite. Removing them leaves one
+projected exterior to certify. The contact certificate lists every
+edge of the chain and bounds their original world-space geometry.

@@ -521,6 +521,7 @@ fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, 
         assert_eq!(contact.edges.len(), 1);
         assert!(certify(&spatial, [0, 4], used - 1).0.is_none());
         check_reversed_multispan_exterior(&spatial, contact.edges[0]);
+        check_partitioned_jordan_seam(&spatial, contact.edges[0]);
 
         // Put the original XZ image in XY, then move the interiors along
         // a common diagonal. The authored edge curves stay unchanged.
@@ -569,6 +570,24 @@ fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, 
     assert!(station.extraction_complete && station.g1_certified && station.g2_certified,
         "complete={} g1={} g2={}", station.extraction_complete, station.g1_certified, station.g2_certified);
     assert_eq!(station.edge_ids.len(), 4);
+}
+
+fn check_partitioned_jordan_seam(reference: &crate::Model, shared: usize) {
+    use crate::feature_ops::edge_partition::{split, Limits};
+    let [a, b] = reference.edges[shared].curve.domain();
+    let cuts = [a + (b - a) / 4., a + (b - a) / 2.];
+    let partition = split(reference, shared, &cuts, "jordan-chain", Limits::default()).unwrap();
+    assert!(partition.exact_world_root_partition(1_000_000).unwrap().is_some());
+    let model = partition.model();
+    let certify = crate::shared_boundary::jordan_partition::certify;
+    let (certificate, used) = certify(model, [0, 4], 3000);
+    let mut edges = certificate.unwrap().edges;
+    let mut expected = partition.edges().to_vec();
+    edges.sort_unstable();
+    expected.sort_unstable();
+    assert_eq!(edges, expected);
+    assert_eq!(edges.len(), 3);
+    assert!(certify(model, [0, 4], used - 1).0.is_none());
 }
 
 fn check_reversed_multispan_exterior(reference: &crate::Model, shared: usize) {

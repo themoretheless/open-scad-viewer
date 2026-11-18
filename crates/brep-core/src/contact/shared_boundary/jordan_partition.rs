@@ -1,5 +1,5 @@
-//! Two natural charts with a common projection partition a Jordan region along one
-//! original, exactly lifted edge. Only the joint exact-domain audit may call
+//! Two natural charts with a common projection partition a Jordan region along
+//! an exactly lifted edge chain. Only the joint exact-domain audit may call
 //! this, after all coedge lifts and domains have been independently checked.
 use crate::{Model, boundary_hull_contact::Certificate};
 use cad_predicates::Sign;
@@ -84,53 +84,14 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
     let wires = patches.map(|f| model.loops[f.outer].coedges.as_slice());
     if wires
         .iter()
-        .any(|w| w.len() != 4 || w.iter().any(|c| c.trim().is_some()))
+        .any(|w| !(4..=128).contains(&w.len()) || w.iter().any(|c| c.trim().is_some()))
     {
         return None;
     }
-    charge(cells, limit, 4)?;
-    let shared = wires[0]
-        .iter()
-        .enumerate()
-        .flat_map(|(i, a)| {
-            wires[1]
-                .iter()
-                .enumerate()
-                .filter_map(move |(j, b)| (a.edge == b.edge).then_some([i, j]))
-        })
-        .collect::<Vec<_>>();
-    let [common] = shared.as_slice() else {
-        return None;
-    };
-    let edge = wires[0][common[0]].edge;
-    if wires[0][common[0]].reversed == wires[1][common[1]].reversed {
-        return None;
-    }
-
+    let (starts, edges) = shared_chain(wires, cells, limit)?;
     let mut proposals = [None; 2];
     for ((s, wire), proposal) in surfaces.into_iter().zip(wires).zip(&mut proposals) {
-        let [u0, u1] = [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]];
-        let [v0, v1] = [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]];
-        let corners = [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
-        let mut seen = [false; 4];
-        for coedge in wire {
-            charge(cells, limit, 1)?;
-            let p = &coedge.pcurve;
-            if p.periodic
-                || p.degree != 1
-                || p.control_points.len() != 2
-                || p.weights[0] != p.weights[1]
-                || p.knots != [p.knots[0], p.knots[0], p.knots[3], p.knots[3]]
-            {
-                return None;
-            }
-            let side = (0..4).find(|&i| {
-                p.control_points[0] == corners[i] && p.control_points[1] == corners[(i + 1) % 4]
-            })?;
-            if std::mem::replace(&mut seen[side], true) {
-                return None;
-            }
-        }
+        natural_wire(s, wire, cells, limit)?;
 
         let remaining = limit - *cells;
         if remaining == 0 {
@@ -155,12 +116,100 @@ fn prove(model: &Model, faces: [usize; 2], limit: usize, cells: &mut usize) -> O
     }
     for projection in candidates.into_iter().flatten() {
         if common_orientation(surfaces, proposals, projection, cells, limit).is_some()
-            && projected_exterior(model, wires, *common, projection, cells, limit).is_some()
+            && projected_exterior(model, wires, starts, edges.len(), projection, cells, limit)
+                .is_some()
         {
-            return edge_certificate(model, faces, edge, cells, limit);
+            return edge_certificate(model, faces, edges, cells, limit);
         }
     }
     None
+}
+
+fn shared_chain(
+    wires: [&[crate::Coedge]; 2],
+    cells: &mut usize,
+    limit: usize,
+) -> Option<([usize; 2], Vec<usize>)> {
+    charge(cells, limit, (wires[0].len() * wires[1].len()).div_ceil(4))?;
+    let common = [0, 1].map(|side| {
+        wires[side]
+            .iter()
+            .map(|c| wires[1 - side].iter().any(|d| c.edge == d.edge))
+            .collect::<Vec<_>>()
+    });
+    let run = |flags: &[bool]| {
+        let count = flags.iter().filter(|&&shared| shared).count();
+        let start =
+            (0..flags.len()).find(|&i| flags[i] && !flags[(i + flags.len() - 1) % flags.len()])?;
+        (0..count)
+            .all(|offset| flags[(start + offset) % flags.len()])
+            .then_some((start, count))
+    };
+    let (a, count) = run(&common[0])?;
+    let (b, other_count) = run(&common[1])?;
+    if count != other_count {
+        return None;
+    }
+    let mut edges = Vec::with_capacity(count);
+    for offset in 0..count {
+        let left = &wires[0][(a + offset) % wires[0].len()];
+        let right = &wires[1][(b + count - 1 - offset) % wires[1].len()];
+        if left.edge != right.edge || left.reversed == right.reversed || edges.contains(&left.edge)
+        {
+            return None;
+        }
+        edges.push(left.edge);
+    }
+    Some(([a, b], edges))
+}
+
+fn natural_wire(
+    s: &crate::Surface,
+    wire: &[crate::Coedge],
+    cells: &mut usize,
+    limit: usize,
+) -> Option<()> {
+    charge(cells, limit, wire.len())?;
+    let [[u0, u1], [v0, v1]] = [
+        [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
+        [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
+    ];
+    let corners = [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
+    let first = wire.iter().position(|c| {
+        c.pcurve
+            .control_points
+            .first()
+            .is_some_and(|p| *p == corners[0])
+    })?;
+    let mut side = 0;
+    let mut current = corners[0];
+    for offset in 0..wire.len() {
+        corners.get(side)?;
+        let p = &wire[(first + offset) % wire.len()].pcurve;
+        if p.periodic
+            || p.degree != 1
+            || p.control_points.len() != 2
+            || p.weights[0] != p.weights[1]
+            || p.knots != [p.knots[0], p.knots[0], p.knots[3], p.knots[3]]
+            || p.control_points[0] != current
+        {
+            return None;
+        }
+        let end = corners[(side + 1) % 4];
+        let axis = side % 2;
+        let point = &p.control_points[1];
+        let progress = if side < 2 {
+            current[axis] < point[axis] && point[axis] <= end[axis]
+        } else {
+            current[axis] > point[axis] && point[axis] >= end[axis]
+        };
+        if !progress || point[1 - axis] != end[1 - axis] {
+            return None;
+        }
+        current = [point[0], point[1]];
+        side += usize::from(current == end);
+    }
+    (side == 4).then_some(())
 }
 
 fn common_orientation(
@@ -202,16 +251,18 @@ fn common_orientation(
 fn projected_exterior(
     model: &Model,
     wires: [&[crate::Coedge]; 2],
-    common: [usize; 2],
+    starts: [usize; 2],
+    shared_count: usize,
     projection: Projection,
     cells: &mut usize,
     limit: usize,
 ) -> Option<()> {
-    let mut exterior = Vec::with_capacity(6);
-    for (wire, start) in wires.into_iter().zip(common) {
-        for offset in 1..4 {
+    let count = wires[0].len() + wires[1].len() - 2 * shared_count;
+    let mut exterior = Vec::with_capacity(count);
+    for (wire, start) in wires.into_iter().zip(starts) {
+        for offset in shared_count..wire.len() {
             charge(cells, limit, 1)?;
-            let c = &wire[(start + offset) % 4];
+            let c = &wire[(start + offset) % wire.len()];
             exterior.push(projected_member(
                 &model.edges[c.edge].curve,
                 c.reversed,
@@ -222,12 +273,13 @@ fn projected_exterior(
         }
     }
 
-    charge(cells, limit, 15)?;
+    let pairs = count * (count - 1) / 2;
+    charge(cells, limit, pairs)?;
     let remaining = (limit - *cells).min(64);
     if remaining == 0 {
         return None;
     }
-    let boundary = nurbs_core::trim_simplicity::inspect(&exterior, 1e-8, 15, remaining).ok()?;
+    let boundary = nurbs_core::trim_simplicity::inspect(&exterior, 1e-8, pairs, remaining).ok()?;
     charge(cells, limit, boundary.cells)?;
     if !boundary.proven_simple {
         return None;
@@ -302,12 +354,15 @@ fn projected_member(
 fn edge_certificate(
     model: &Model,
     faces: [usize; 2],
-    edge: usize,
+    edges: Vec<usize>,
     cells: &mut usize,
     limit: usize,
 ) -> Option<Certificate> {
     let mut enclosure = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
-    for pole in &model.edges[edge].curve.control_points {
+    for pole in edges
+        .iter()
+        .flat_map(|&edge| &model.edges[edge].curve.control_points)
+    {
         charge(cells, limit, 1)?;
         for (interval, &value) in enclosure.iter_mut().zip(pole) {
             interval[0] = interval[0].min(value);
@@ -317,7 +372,7 @@ fn edge_certificate(
     Some(Certificate {
         faces,
         contact_enclosure: enclosure,
-        edges: vec![edge],
+        edges,
         vertex: None,
         joined_proof: None,
         polar_join: None,
