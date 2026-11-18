@@ -47,6 +47,24 @@ fn spinner_bore_difference_preserves_teeth_or_reports_unproved_coverage() {
     for (face_index, _) in ends {
         let cap = &sun.faces[face_index].surface;
         let z = cap.control_points[0][0][2];
+        let cutter_cap = cutter.faces.iter().find(|face| face.surface.control_points.iter()
+            .flatten().all(|point| point[2] == z)).unwrap();
+        let opposite = &sun.faces[if face_index == ends[0].0 { ends[1].0 } else { ends[0].0 }].surface;
+        assert!(brep_core::profile_certificate::original_restriction::plane::pullback::
+            stored_affine_loop(&cutter, cutter_cap.outer, opposite, true, sun.tolerance_mm).is_err());
+        let original = &cutter.loops[cutter_cap.outer];
+        for reverse in [false, true] {
+            let rim = brep_core::profile_certificate::original_restriction::plane::pullback::
+                stored_affine_loop(&cutter, cutter_cap.outer, cap, reverse, sun.tolerance_mm).unwrap();
+            assert_eq!(rim.coedges.len(), 4);
+            for (i, coedge) in rim.coedges.iter().enumerate() {
+                let source = &original.coedges[if reverse { 3 - i } else { i }];
+                assert_eq!(coedge.edge, source.edge);
+                assert_eq!(coedge.reversed, source.reversed ^ reverse);
+                let next = &rim.coedges[(i + 1) % 4];
+                assert_eq!(coedge.pcurve.control_points.last(), next.pcurve.control_points.first());
+            }
+        }
         for edge in &cutter.edges {
             if edge.curve.control_points.iter().all(|p| p[2] == z) {
                 let proof = brep_core::profile_certificate::original_restriction::plane::pullback::

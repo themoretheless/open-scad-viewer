@@ -290,3 +290,56 @@ impl InverseBox {
         Ok(())
     }
 }
+
+/// Transfer a complete indexed loop onto another affine cap. Returned coedges
+/// refer to the source model's edges. Set `reverse` to traverse the loop in
+/// the opposite direction, for example when a cutter rim becomes a hole.
+pub fn stored_affine_loop(
+    model: &crate::Model,
+    loop_index: usize,
+    surface: &Surface,
+    reverse: bool,
+    tolerance: f64,
+) -> Result<crate::Loop> {
+    model.validate()?;
+    let wire = model.loops.get(loop_index).ok_or_else(|| refused("Missing source loop"))?;
+    let mut coedges = Vec::with_capacity(wire.coedges.len());
+    for i in 0..wire.coedges.len() {
+        let index = if reverse { wire.coedges.len() - 1 - i } else { i };
+        let source = &wire.coedges[index];
+        let edge = &model.edges[source.edge];
+        if source.trim().is_some() || edge.degenerate {
+            return Err(refused("Cap loop transfer requires whole nondegenerate edges"));
+        }
+        let reversed = source.reversed ^ reverse;
+        let curve = if reversed {
+            let curve = edge.curve.reverse()?;
+            let [lo, hi] = edge.curve.domain();
+            let sum = q(lo)? + q(hi)?;
+            for (before, after) in edge.curve.knots.iter().rev().zip(&curve.knots) {
+                if q(*before)? + q(*after)? != sum {
+                    return Err(refused("Edge parameter reversal is not exactly representable"));
+                }
+            }
+            curve
+        } else {
+            edge.curve.clone()
+        };
+        let proof = stored_affine_trim(surface, &curve, tolerance)?;
+        coedges.push(crate::Coedge::new(source.edge, reversed, proof.pcurve().clone()));
+    }
+    for (a, b) in coedges.iter().zip(coedges.iter().cycle().skip(1)) {
+        let end = model.edges[a.edge].vertices[usize::from(!a.reversed)];
+        let start = model.edges[b.edge].vertices[usize::from(b.reversed)];
+        let clamped = |c: &Curve| {
+            let [lo, hi] = c.domain();
+            c.knots[..=c.degree].iter().all(|k| *k == lo)
+                && c.knots[c.control_points.len()..].iter().all(|k| *k == hi)
+        };
+        if end != start || !clamped(&a.pcurve)
+            || a.pcurve.control_points.last() != b.pcurve.control_points.first() {
+            return Err(refused("Transferred cap loop does not close at every UV endpoint"));
+        }
+    }
+    Ok(crate::Loop { coedges })
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 944,
-  "unallocatedCount": 56,
+  "specifiedCount": 945,
+  "unallocatedCount": 55,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21574,6 +21574,24 @@
       ],
       "remainingQualification": [
         "Horizontal injective affine caps. Returns stored UV knots and weights with a continuous world-space agreement certificate. Loop sewing and the Boolean operation remain separate."
+      ]
+    },
+    {
+      "id": "NURBS-0945",
+      "name": "Перенос ориентированного контура между плоскими торцами с сохранением общих рёбер",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::profile_certificate::original_restriction::plane::pullback::stored_affine_loop",
+      "evidence": [
+        "crates/brep-core/src/profile/profile_certificate/original_restriction/plane/pullback.rs",
+        "crates/brep-core/tests/full_round_source_caps.rs",
+        "crates/brep-core/tests/spinner_bore_boolean.rs",
+        "docs/qualification/nurbs-affine-cap-loop-945-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-affine-cap-loop-945-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Whole nondegenerate clamped edges on a horizontal affine target. Checks indexed closure and stored UV endpoints, supports both traversals. Does not certify nesting or solid material."
       ]
     }
   ],
