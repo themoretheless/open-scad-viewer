@@ -9965,3 +9965,39 @@ fn spherical_clearance_certifies_collision_with_center_outside_obstacle() {
         }));
     }
 }
+
+#[test]
+fn capsule_clearance_checks_body_caps_and_degenerate_axis() {
+    use nurbs_core::analysis::curve_measure::{
+        CapsuleObstacle, DirectionalMotionStatus as Status, partition_curve_capsule_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![-2., 0.75], vec![4., 0.75]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        CapsuleObstacle { endpoints: [&[0., 0.], &[2., 0.]], radius: 0.5 },
+        CapsuleObstacle { endpoints: [&[1., 5.]; 2], radius: 1. },
+    ];
+    let report = partition_curve_capsule_clearance(
+        &curve, [0., 1.], &obstacles, 0.5, 0.01, 512,
+    ).unwrap();
+    assert!(report.work_obstacle_cells <= 512);
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 0.5 && 0.5 <= b && cell.status == Status::Exceeds
+            && cell.gap_bounds[0][0] <= -0.25 && cell.gap_bounds[1][0] > 0.
+    }));
+    let cap = 7_f64.sqrt() / 4.;
+    for t in [(2. - cap) / 6., (4. + cap) / 6.] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= t && t <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+        }));
+    }
+}

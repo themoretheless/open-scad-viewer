@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0713",
+  "testedBase": "e68a95d337c107f89958a4e7927b463769aeaa69",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 336,
+  "scope": [
+    "Enclose signed clearance against capsule bodies and rounded ends.",
+    "Check straight body collision, two analytical cap crossings, and a degenerate capsule."
+  ],
+  "logSha256": "9edb96df01d16f5c5c105c24644805d280bb80fa277f4167f8f058c444e608fe",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "c01ae9982315b92217425763d10e965cce1fd712423c4390ac21c5eb2f2fd9f6",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "36bb440cbc4ac7027062dc4648efdbe14f1ce3fabace997956a23b9d06fa2cde"
+  }
+}

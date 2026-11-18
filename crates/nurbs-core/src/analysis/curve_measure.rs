@@ -2258,12 +2258,96 @@ pub fn partition_curve_spherical_clearance(
         let radius = Interval::point(obstacle.radius).add(Interval::point(tool_radius))?;
         Ok((center, radius))
     }).collect::<Result<Vec<_>>>()?;
+    partition_radial_clearance(
+        curve, interval, parameter_tolerance, max_cells, obstacles.len(),
+        |point, index| {
+            let (center, radius) = &obstacles[index];
+            let (lo, hi) = box_distance(point, center)?;
+            Interval::new(lo, hi)?.sub(*radius)
+        },
+    )
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct CapsuleObstacle<'a> {
+    pub endpoints: [&'a [f64]; 2],
+    pub radius: f64,
+}
+
+/// Check a swept ball against closed capsules using the distance to the
+/// clamped projection onto each capsule axis. Coincident endpoints give a ball.
+pub fn partition_curve_capsule_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[CapsuleObstacle<'_>],
+    tool_radius: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalClearancePartition> {
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Capsule clearance requires at least one obstacle")?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if max_cells == 0 {
+        return Err(resource("Clearance budget must cover every capsule"));
+    }
+    curve.validate()?;
+    let dimension = curve.control_points[0].len();
+    let obstacles = obstacles.iter().map(|obstacle| {
+        let [a, b] = obstacle.endpoints;
+        check(
+            [a, b].iter().all(|p| p.len() == dimension && p.iter().all(|x| x.is_finite()))
+                && obstacle.radius.is_finite() && obstacle.radius >= 0.,
+            "Capsule requires finite matching endpoints and nonnegative finite radius",
+        )?;
+        let start = a.iter().copied().map(Interval::point).collect::<Vec<_>>();
+        let axis = if a == b {
+            None
+        } else {
+            let delta = b.iter().zip(a).map(|(&b, &a)| {
+                if a == b { Ok(Interval::point(0.)) }
+                else { Interval::point(b).sub(Interval::point(a)) }
+            }).collect::<Result<Vec<_>>>()?;
+            let length = norm(&delta)?;
+            Some((delta, length.mul(length)?))
+        };
+        let radius = Interval::point(obstacle.radius).add(Interval::point(tool_radius))?;
+        Ok((start, axis, radius))
+    }).collect::<Result<Vec<_>>>()?;
+    partition_radial_clearance(
+        curve, interval, parameter_tolerance, max_cells, obstacles.len(),
+        |point, index| {
+            let (start, axis, radius) = &obstacles[index];
+            let distance = if let Some((delta, length_squared)) = axis {
+                let relative = point.iter().zip(start).map(|(&p, &a)| p.sub(a))
+                    .collect::<Result<Vec<_>>>()?;
+                let projected = project_jet(&relative, delta)?.div(*length_squared)?;
+                let t = Interval::new(projected.lo.clamp(0., 1.), projected.hi.clamp(0., 1.))?;
+                let residual = relative.into_iter().zip(delta).map(|(p, &d)| p.sub(d.mul(t)?))
+                    .collect::<Result<Vec<_>>>()?;
+                norm(&residual)?
+            } else {
+                let (lo, hi) = box_distance(point, start)?;
+                Interval::new(lo, hi)?
+            };
+            distance.sub(*radius)
+        },
+    )
+}
+
+fn partition_radial_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+    obstacle_count: usize,
+    gap: impl Fn(&[Interval], usize) -> Result<Interval>,
+) -> Result<SphericalClearancePartition> {
     let (cells, work_cells) = partition_motion_cells(
         curve, interval, parameter_tolerance, max_cells,
         |jets, _| {
-            let gaps = obstacles.iter().map(|(center, radius)| {
-                let (lo, hi) = box_distance(&jets[0], center)?;
-                let gap = Interval::new(lo, hi)?.sub(*radius)?;
+            let gaps = (0..obstacle_count).map(|index| {
+                let gap = gap(&jets[0], index)?;
                 Ok([gap.lo, gap.hi])
             }).collect::<Result<Vec<_>>>()?;
             let status = if gaps.iter().any(|[_, hi]| *hi <= 0.) {
@@ -2280,7 +2364,7 @@ pub fn partition_curve_spherical_clearance(
     let cells = cells.into_iter().map(|(span, parameter_interval, (gap_bounds, status))| {
         SphericalClearanceCell { parameter_interval, span, gap_bounds, status }
     }).collect();
-    Ok(SphericalClearancePartition { cells, work_obstacle_cells: work_cells * obstacles.len() })
+    Ok(SphericalClearancePartition { cells, work_obstacle_cells: work_cells * obstacle_count })
 }
 
 fn partition_motion_cells<T>(
