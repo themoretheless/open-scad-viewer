@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0620",
+  "testedBase": "01e4d49c210120dfc9f47953ac639f755af990e4",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 241,
+  "scope": [
+    "Expose sorted principal moment bounds and tolerance status for the common inertia tensor via an opt-in request field.",
+    "Check optional tolerance, three principal intervals, unchanged legacy response shape, and absence of spectral output when the shared integration budget is exhausted."
+  ],
+  "logSha256": "9721c64635cba0e67c97127ed523935d91b86ad3ac9bca6510bf5b618204d7a2",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "19125c56affcdf6f90f363960508a83010afffcf50ba72ed679f30a809b2c756",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "72468f161540b728b202dd71795ea8966449596fe5bb6813e5e718efdd80cca6",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "b8b81e89b76605573ddf262171709dafefeeb4a7c3fb61ddede50d1facb7bb83",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "64f20d79506c6999518dcc78d16a3fc7027fb0faee2c9469ec60500b33374665"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

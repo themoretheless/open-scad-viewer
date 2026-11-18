@@ -24,6 +24,7 @@ interface Report {
   componentAreas?: { outerContour: number; boundsMm2: [number, number] }[]
   centroidBoundsMm?: [number, number][] | null
   centralInertiaBoundsMm4?: [number, number][][] | null
+  withinMomentTolerance?: boolean
   principalMomentBoundsMm4?: [number, number][] | null
   boundsMm2?: [number, number] | [number, number][] | null
   stations?: { parameterBounds: [number, number] | null; pointBoundsMm: [number, number][] | null; status: string }[] | null
@@ -280,3 +281,17 @@ assert.equal(incompleteSet.status, 'workLimit')
 assert.deepEqual(incompleteSet.componentAreas, [])
 assert.equal(incompleteSet.boundsMm2, null)
 console.log('WASM ABI returned complete multi-component trimmed surface mass properties.')
+
+assert.equal(patchSet.principalMomentBoundsMm4, undefined)
+const spectralOptions = { ...patchSetOptions, maxSurfaceCells: 20_000 }
+for (const [momentToleranceMm4, met] of [[10, true], [1e-8, false]]) {
+  const spectrum = call(request.maxWork, patchSetOp, { ...spectralOptions, momentToleranceMm4 })
+  assert.equal(spectrum.principalMomentBoundsMm4?.length, 3)
+  assert.equal(spectrum.withinMomentTolerance, met)
+}
+const incompleteSpectrum = call(request.maxWork, patchSetOp, {
+  ...spectralOptions, maxSurfaceCells: 2, momentToleranceMm4: 10,
+})
+assert.equal(incompleteSpectrum.principalMomentBoundsMm4, null)
+assert.equal(incompleteSpectrum.withinMomentTolerance, false)
+console.log('WASM ABI returned optional principal moments for the complete patch set.')

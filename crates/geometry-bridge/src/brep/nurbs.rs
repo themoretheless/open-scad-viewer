@@ -1130,13 +1130,18 @@ fn periodic_trim_surface_mass_response(
     request: &value_codec::Value,
     window: Option<[[f64; 2]; 2]>,
 ) -> Result<value_codec::Value> {
+    let tolerance = principal_moment_tolerance(request)?;
+    periodic_trim_surface_measure_response(request, Some(tolerance), window)
+}
+
+fn principal_moment_tolerance(request: &value_codec::Value) -> Result<f64> {
     let tolerance: f64 = crate::field(request, "momentToleranceMm4")?;
     if !tolerance.is_finite() || tolerance <= 0. {
         return Err(input(
             "Principal moment tolerance must be positive and finite",
         ));
     }
-    periodic_trim_surface_measure_response(request, Some(tolerance), window)
+    Ok(tolerance)
 }
 
 fn periodic_trim_surface_measure_response(
@@ -1278,6 +1283,10 @@ pub fn exact_periodic_trim_patch_set_mass_request(
     let max_work: u64 = field(request, "maxWork")?;
     let max_surface: usize = field(request, "maxSurfaceCells")?;
     let max_trim: usize = field(request, "maxTrimCells")?;
+    let moment_tolerance = request
+        .get("momentToleranceMm4")
+        .map(|_| principal_moment_tolerance(request))
+        .transpose()?;
     if [tolerance, tolerance_uv]
         .iter()
         .any(|t| !t.is_finite() || *t <= 0.)
@@ -1296,6 +1305,10 @@ pub fn exact_periodic_trim_patch_set_mass_request(
         "status": "buildRefused", "componentAreas": [],
         "centroidBoundsMm": null, "centralInertiaBoundsMm4": null,
     });
+    if moment_tolerance.is_some() {
+        response["principalMomentBoundsMm4"] = value_codec::Value::Null;
+        response["withinMomentTolerance"] = json!(false);
+    }
     let Some(patches) = build.patches else {
         return Ok(response);
     };
@@ -1306,6 +1319,14 @@ pub fn exact_periodic_trim_patch_set_mass_request(
         max_surface,
         max_trim,
     )?;
+    let mass = if let Some(moment_tolerance) = moment_tolerance {
+        let report = mass.bound_principal_moments(moment_tolerance)?;
+        response["principalMomentBoundsMm4"] = json!(report.principal_bounds);
+        response["withinMomentTolerance"] = json!(report.within_moment_tolerance);
+        report.central
+    } else {
+        mass
+    };
     let measure = mass.centroid.measure;
     let components = patches
         .iter()

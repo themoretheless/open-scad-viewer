@@ -593,3 +593,43 @@ fn patch_set_mass_operation_does_not_publish_partial_components() {
     assert_eq!(report["componentAreas"], json!([]));
     assert!(report["boundsMm2"].is_null() && report["centroidBoundsMm"].is_null());
 }
+
+#[test]
+fn patch_set_mass_operation_reports_principal_bounds_and_requested_tolerance() {
+    let mut request = patch_set_mass_request(20_000);
+    let legacy = run(&request);
+    assert_eq!(legacy["ok"], true, "{legacy}");
+    assert!(legacy["value"].get("principalMomentBoundsMm4").is_none());
+
+    for (tolerance, met) in [(10., true), (1e-8, false)] {
+        request["momentToleranceMm4"] = json!(tolerance);
+        let response = run(&request);
+        assert_eq!(response["ok"], true, "{response}");
+        let report = &response["value"];
+        assert_eq!(report["withinMomentTolerance"], met);
+        assert_eq!(report["boundsMm2"], legacy["value"]["boundsMm2"]);
+        assert_eq!(
+            report["principalMomentBoundsMm4"].as_array().unwrap().len(),
+            3
+        );
+    }
+}
+
+#[test]
+fn patch_set_mass_operation_validates_tolerance_and_withholds_unproved_spectrum() {
+    let mut request = patch_set_mass_request(2);
+    for invalid in [json!(0.), json!(-1.), json!(null), json!("1")] {
+        request["momentToleranceMm4"] = invalid;
+        assert_eq!(run(&request)["ok"], false);
+    }
+    request["momentToleranceMm4"] = json!(10.);
+    for status in ["workLimit", "buildRefused"] {
+        let response = run(&request);
+        assert_eq!(response["ok"], true, "{response}");
+        let report = &response["value"];
+        assert_eq!(report["status"], status);
+        assert!(report["principalMomentBoundsMm4"].is_null());
+        assert_eq!(report["withinMomentTolerance"], false);
+        request["maxWork"] = json!(1);
+    }
+}
