@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
-import {compileModelGraphText} from '../src/services/modelGraphText'
-import {buildOwnNurbs} from '../src/services/modelGraphNurbsKernel'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 import {evaluateNurbsSurface,isoNurbsCurve} from '../src/kernel/nurbsSurface'
 import {reverseNurbsCurve,type NurbsCurve} from '../src/kernel/nurbsCurve'
 import type {NurbsSurface} from '../src/kernel/nurbsSurface'
@@ -29,7 +29,7 @@ const cases=[
 ] as const
 const reports=[]
 for(const [name,source] of cases){
- const compiled=compileModelGraphText(source),built=buildOwnNurbs(compiled.document,{action:'build'})
+ const compiled=compileRushFrontend(source),built=buildOwnNurbs(compiled.document,{action:'build'})
  const definitions=Object.values(built.report.definitions) as any[]
  const retained=definitions.find(d=>d.kind==='brep')
  const definition=retained??definitions.find(d=>d.kind==='surface')
