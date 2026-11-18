@@ -10,37 +10,8 @@ pub(crate) fn inspect(a: &Surface, b: &Surface, max_cells: usize) -> (bool, usiz
     if max_cells == 0 || points.iter().any(|ps| ps.is_empty() || ps.len() > 16) {
         return (false, 0);
     }
-    // A Cartesian gap needs only exact ordering of the original binary64 poles.
-    // This also covers separated coplanar chart hulls, where supporting planes
-    // through triples of poles can all contain both charts.
-    if [a, b].iter().all(|surface| {
-        surface
-            .weights
-            .iter()
-            .flatten()
-            .all(|w| w.is_finite() && *w > 0.)
-    }) {
-        let bounds = points.each_ref().map(|ps| {
-            ps.iter().fold(
-                [[f64::INFINITY, f64::NEG_INFINITY]; 3],
-                |mut bounds, point| {
-                    for (interval, value) in bounds.iter_mut().zip(point.iter().copied()) {
-                        interval[0] = interval[0].min(value);
-                        interval[1] = interval[1].max(value);
-                    }
-                    bounds
-                },
-            )
-        });
-        if points
-            .iter()
-            .flatten()
-            .all(|point| point.len() == 3 && point.iter().all(|v| v.is_finite()))
-            && bounds[0]
-                .iter()
-                .zip(bounds[1])
-                .any(|(a, b)| a[1] < b[0] || b[1] < a[0])
-        {
+    if let [Some(a), Some(b)] = [a, b].map(cartesian_bounds) {
+        if a.iter().zip(b).any(|(a, b)| a[1] < b[0] || b[1] < a[0]) {
             return (true, 1);
         }
     }
@@ -121,6 +92,34 @@ pub(crate) fn inspect(a: &Surface, b: &Surface, max_cells: usize) -> (bool, usiz
         offset += n;
     }
     (false, cells)
+}
+
+// Exact binary64 ordering also separates coplanar hulls, for which a plane
+// through a triple of poles may contain both charts.
+fn cartesian_bounds(surface: &Surface) -> Option<[[f64; 2]; 3]> {
+    if surface.control_points.len() != surface.weights.len() {
+        return None;
+    }
+    let mut bounds = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
+    for (row, weights) in surface.control_points.iter().zip(&surface.weights) {
+        if row.len() != weights.len() {
+            return None;
+        }
+        for (point, weight) in row.iter().zip(weights) {
+            if point.len() != 3
+                || !point.iter().all(|v| v.is_finite())
+                || !weight.is_finite()
+                || *weight <= 0.
+            {
+                return None;
+            }
+            for (interval, &value) in bounds.iter_mut().zip(point) {
+                interval[0] = interval[0].min(value);
+                interval[1] = interval[1].max(value);
+            }
+        }
+    }
+    Some(bounds)
 }
 
 #[cfg(test)]
