@@ -55,6 +55,7 @@ pub(super) fn verify(
     max_work: u64,
 ) -> Result<Option<cad_predicates::BezierIdentityDecision>> {
     let pd = p.domain();
+    let count = p.control_points.len();
     if s.control_points
         .len()
         .saturating_mul(s.control_points[0].len())
@@ -66,21 +67,21 @@ pub(super) fn verify(
         || c.periodic
         || p.periodic
         || !(1..=5).contains(&p.degree)
-        || p.control_points.len() != p.degree + 1
+        || count > 4096
         || c.control_points.iter().any(|p| p.len() != 3)
         || p.control_points.iter().any(|p| p.len() != 2)
         || !p.knots[..=p.degree].iter().all(|k| *k == pd[0])
-        || !p.knots[p.degree + 1..].iter().all(|k| *k == pd[1])
+        || !p.knots[count..].iter().all(|k| *k == pd[1])
     {
         return Ok(None);
     }
     let mut affine_work = 0;
     let a = &p.control_points[0];
-    let z = &p.control_points[p.degree];
+    let z = &p.control_points[count - 1];
     if !(0..2).any(|axis| a[axis] == z[axis] && a[1 - axis] != z[1 - axis]) {
         return Ok(None);
     }
-    if p.degree != 1 || p.weights[0] != p.weights[1] {
+    if p.degree != 1 || count != 2 || p.weights[0] != p.weights[1] {
         let affine = Curve {
             degree: 1,
             knots: vec![pd[0], pd[0], pd[1], pd[1]],

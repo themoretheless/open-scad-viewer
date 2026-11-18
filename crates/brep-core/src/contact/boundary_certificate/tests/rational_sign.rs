@@ -684,13 +684,12 @@ fn check_trimmed_chart_segments(reference: &crate::Model, shared: usize, edges: 
         let b = &c.control_points[1];
         crate::Curve {
             degree: 2,
-            knots: vec![0., 0., 0., 4., 4., 4.],
-            // Multiply the homogeneous affine curve by the positive
-            // linear factor 1 + 2t to preserve the original clock.
-            control_points: [-1., 0., 3.]
+            knots: vec![0., 0., 0., 1.5, 2., 4., 4., 4.],
+            // Greville stations preserve the original affine traversal.
+            control_points: [-1., -0.25, 0.75, 2., 3.]
                 .map(|t| a.iter().zip(b).map(|(a, b)| a + t * (b - a)).collect())
                 .to_vec(),
-            weights: vec![1., 2., 3.],
+            weights: vec![1.; 5],
             periodic: false,
         }
     };

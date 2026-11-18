@@ -230,16 +230,16 @@ original active interval for the common loop proof. The input edge and
 its world-space parameterization stay intact.
 
 An exterior or shared coedge may select a directed subinterval of
-its affine chart curve when the exact lift covers the complete world
+its chart curve when the exact lift covers the complete world
 edge. The proof uses the active chart endpoints with exact arithmetic
 under the same work budget. Opposite coedges on the shared chain can
-use independent chart intervals. A clamped rational Bézier curve can
+use independent chart intervals. A clamped rational B-spline can
 describe a straight natural side when its positive-weight poles are
-collinear with strict order along that side. Evaluating active endpoints
-in homogeneous form keeps the chart coverage proof exact. For the tensor
-iso-trace lift, a higher-degree UV representation may use the affine
-trace solver after a separate complete proof that it preserves the affine
-clock. Partial world intervals remain diagnostic windows.
+collinear with strict order along that side and the internal knots
+preserve continuity. Evaluating active endpoints in homogeneous form
+keeps the chart coverage proof exact. The tensor iso-trace solver admits
+a higher-degree or multispan UV representation after a separate proof of
+affine-clock identity on all its original knot spans. Partial world intervals remain diagnostic windows.
 
 The common boundary can be an authored chain of edges. The audit checks
 that both faces cover the complete natural rectangle, with exact
