@@ -2044,6 +2044,22 @@ pub struct StepPartsListRow<'a> {
 }
 
 impl NamedStepAssembly {
+    /// Apply one named local-space geometry revision to selected occurrences.
+    /// Selecting the whole part revises its existing definition and label in place.
+    pub fn replace_named_variant(&mut self, selection: &[usize], model: Model, name: String) -> Result<usize> {
+        if self.definition_names.len() != self.assembly.definitions().len()
+            || name.is_empty() || name.chars().any(char::is_control) {
+            return Err(refuse("Expected consistent definition labels and a printable variant name"));
+        }
+        if model.bodies.len() != 1 || model.shells.iter().any(|shell| !shell.closed) {
+            return Err(refuse("Named STEP variant requires one closed solid"));
+        }
+        let definition = self.assembly.replace_variant(selection, model)?;
+        if definition == self.definition_names.len() { self.definition_names.push(name); }
+        else { self.definition_names[definition] = name; }
+        Ok(definition)
+    }
+
     /// Export all occurrences of the selected parts-list definitions in their
     /// original assembly coordinates. Definition indices, not labels, select parts.
     pub fn export_selected_parts(&self, definitions: &[usize], assembly_name: &str) -> Result<String> {

@@ -1,0 +1,44 @@
+{
+  "id": "NURBS-0935",
+  "testedBase": "2e64083cb1efa957453b447ac155e1091e18cfa0",
+  "gearCommand": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "gear_profile",
+    "--test",
+    "gear_verified_profile"
+  ],
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--test",
+    "edited_gear_step",
+    "--",
+    "--nocapture"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 17,
+  "scope": [
+    "Split two of three instances, revise the complete variant in place, reject mixed selection, export and reimport distinct geometry and part quantities."
+  ],
+  "logSha256": "1f2597ca576aa6ae16139f6e0c02a692968baa077c71ec460ee953bd8e9fd7c4",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "76ccc9782290db702f5fec70105ae91b04380dc840769fe3300f17f3a89fa3c5",
+    "crates/cad-step/src/step_interchange_v3.rs": "7ce4b347ee9924e877883caf3f8350ddf4bd71d2d35cd223cccf02d14118a630",
+    "crates/cad-step/src/lib.rs": "424954bc627e81bf3e7ab962a4eeb8be65ba8af45e212d2b240562fa297411fb",
+    "crates/cad-step/tests/edited_gear_step.rs": "3a432032c76681f0d4311ca27148506f0c1babfd71a63a43ac416e4054357602"
+  }
+}

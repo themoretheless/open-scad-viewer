@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 934,
-  "unallocatedCount": 66,
+  "specifiedCount": 935,
+  "unallocatedCount": 65,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21379,6 +21379,25 @@
       ],
       "remainingQualification": [
         "Selection of whole definitions from a flat named STEP assembly; all corresponding occurrences retain their world placements."
+      ]
+    },
+    {
+      "id": "NURBS-0935",
+      "name": "Именованные варианты геометрии выбранных экземпляров STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::NamedStepAssembly::replace_named_variant",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-named-assembly-variant-935-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-named-assembly-variant-935-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "One closed solid revision for selected occurrences of a single definition, specified in part-local coordinates."
       ]
     }
   ],

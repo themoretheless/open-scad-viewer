@@ -175,3 +175,25 @@ fn selected_parts_export_keeps_names_and_all_original_placements() {
     assert_eq!(observed,[(5,"Штифт"),(20,"Gear"),(25,"Gear")]);
     for invalid in [&[][..], &[0,0], &[3]] { assert!(source.export_selected_parts(invalid,"Subset").is_err()); }
 }
+
+#[test]
+fn named_variant_keeps_part_labels_geometry_and_quantities_aligned() {
+    use cad_step::{NamedStepAssembly,StepSharedAssembly,StepAssemblyOccurrence,import_named_step_assembly};
+    let block = |w| brep_core::cuboid([0.;3],[w,2.,3.]).unwrap();
+    let placements = [0.,5.,10.].map(|x| StepAssemblyOccurrence {definition:0,
+        transform:[[1.,0.,0.,x],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]]});
+    let mut source = NamedStepAssembly {name:"Set".into(),definition_names:vec!["Pin".into()],
+        assembly:StepSharedAssembly::from_placed_solids(vec![block(1.)],placements.to_vec()).unwrap()};
+    let variant = source.replace_named_variant(&[0,2],block(2.),"Wide".into()).unwrap();
+    assert_eq!(source.replace_named_variant(&[2,0],block(3.),"Final".into()).unwrap(),variant);
+    assert!(source.replace_named_variant(&[0,1],block(4.),"Invalid".into()).is_err());
+    let restored = import_named_step_assembly(&source.export_selected_parts(&[0,variant],"Set").unwrap()).unwrap();
+    for row in restored.parts_list().unwrap() {
+        let wide = row.name == "Final";
+        assert!(wide || row.name == "Pin");
+        assert_eq!(row.quantity,if wide {2} else {1});
+        let width = restored.assembly.definitions()[row.definition].vertices.iter()
+            .map(|v| v.point[0]).fold(0.,f64::max);
+        assert_eq!(width,if wide {3.} else {1.});
+    }
+}
