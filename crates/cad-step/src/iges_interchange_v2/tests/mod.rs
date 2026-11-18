@@ -1421,7 +1421,58 @@ fn standard_curve_on_surface_keeps_a_single_closed_trim_edge() {
     let model = import_iges_v2(&listed).unwrap().0;
     assert_eq!(model.edges.len(), 1);
     assert_eq!(model.validate().unwrap().boundary_edge_count, 1);
+    let uv_only = rewire_reference(&text, boundary, 4, 0);
+    let lifted = import_iges_v2(&uv_only).unwrap().0;
+    assert_eq!(lifted.validate().unwrap().boundary_edge_count, 4);
+    for coedge in &lifted.loops[0].coedges {
+        verify_correspondence(&lifted.edges[coedge.edge], &coedge.pcurve, &plane, coedge.reversed).unwrap();
+    }
+    if let Some(path) = std::env::var_os("CAD_IGES_UV_BOUNDARY_FIXTURE") {
+        let path = std::path::Path::new(&path);
+        std::fs::write(path, uv_only).unwrap();
+        std::fs::write(path.with_extension("step"), crate::export_step_v9(&lifted).unwrap().0).unwrap();
+    }
     if let Some(path) = std::env::var_os("CAD_IGES_BOUNDARY_PAIR_FIXTURE") {
         std::fs::write(path, text).unwrap();
     }
+}
+
+#[test]
+fn uv_only_boundary_lifts_diagonals_to_curved_spatial_edges() {
+    let saddle = Surface {
+        degree_u: 1, degree_v: 1, knots_u: vec![0.,0.,1.,1.], knots_v: vec![0.,0.,1.,1.],
+        control_points: vec![vec![vec![0.,0.,0.],vec![0.,4.,0.]],vec![vec![4.,0.,0.],vec![4.,4.,4.]]],
+        weights: vec![vec![1.;2];2], periodic_u: false, periodic_v: false,
+    };
+    let mut uv = Curve::from_polyline(vec![vec![0.,0.],vec![1.,0.],vec![1.,1.],vec![0.,0.]]).unwrap();
+    uv.weights = vec![1.,2.,1.,1.];
+    let mut writer = Writer::new();
+    let support = writer.emit(128, surface_values(&saddle).unwrap());
+    let parameter = writer.emit(126, curve_values(&uv, 2).unwrap());
+    let pair = writer.emit(142, vec!["142".into(),"1".into(),support.to_string(),parameter.to_string(),"0".into(),"1".into()]);
+    let face = writer.emit(144, vec!["144".into(),support.to_string(),"1".into(),"0".into(),pair.to_string()]);
+    let shell = writer.emit(514, vec!["514".into(),"1".into(),face.to_string(),"1".into()]);
+    writer.entities[(shell-1)/2].form = 1;
+    let text = render(writer).unwrap();
+    let model = import_iges_v2(&text).unwrap().0;
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 3);
+    let diagonal = model.loops[0].coedges.last().unwrap();
+    let curve = &model.edges[diagonal.edge].curve;
+    let [a,b] = curve.domain();
+    assert_eq!(curve.evaluate((a+b)/2.).unwrap().point, [2.,2.,1.]);
+    // A knot on the rational bottom edge at t=1/2 maps to U=2/3.
+    // Use unit weights for a second input with exactly representable crossings.
+    let divided = saddle.edit_axis(Axis::U, |c| c.insert(0.5, 1)).unwrap();
+    let (multi, surface_de) = append_entity(&text, 128, 0, "00000000", |_| surface_values(&divided).unwrap());
+    let multi = rewire_reference(&rewire_reference(&multi, pair, 2, surface_de), face, 1, surface_de);
+    let mut linear_uv = uv.clone();
+    linear_uv.weights.fill(1.);
+    let multi = replace_parameters(&multi, parameter, curve_values(&linear_uv, 2).unwrap());
+    let cut = import_iges_v2(&multi).unwrap().0;
+    assert_eq!(cut.validate().unwrap().boundary_edge_count, 5);
+    assert_eq!(cut.loops[0].coedges.len(), 5);
+    let mut outside = uv.clone();
+    outside.control_points[1][0] = 2.;
+    let invalid = replace_parameters(&text, parameter, curve_values(&outside, 2).unwrap());
+    assert!(import_iges_v2(&invalid).is_err());
 }

@@ -1514,6 +1514,7 @@ impl<'a> Builder<'a> {
         expected_surface: usize,
         curve_edges: &BTreeMap<usize, usize>,
         owned_edges: &mut BTreeSet<usize>,
+        work: &mut usize,
     ) -> Result<usize> {
         let entity = self.e.get(&de).ok_or_else(|| {
             trimmed_error(
@@ -1533,7 +1534,21 @@ impl<'a> Builder<'a> {
         let surface = surface128(self.e, expected_surface, self.scale)?;
         let mut coedges = Vec::with_capacity(segments.len());
         for segment in segments {
-            coedges.push(self.trimmed_boundary_coedge(de, segment, curve_edges, owned_edges)?);
+            if entity.directory.ty == 142 && segment.0 == 0 && segment.1 != 0 {
+                let uv = self.curve(segment.1, 2)?;
+                let remaining = MAX_GRAPH_WORK.saturating_sub(*work);
+                let lift = nurbs_core::editing::exact_projective::lift_pcurve_to_surface(&surface, &uv, (remaining as u64).min(1_000_000))?;
+                graph_work(work, lift.work_used as usize)?;
+                let pieces = lift.pieces.ok_or_else(|| trimmed_unsupported(de, "UV boundary image could not be certified"))?;
+                for piece in pieces {
+                    let [a,b] = piece.domain();
+                    let pcurve = if [a,b] == uv.domain() { uv.clone() } else { uv.trim(a,b)? };
+                    let (edge, reversed) = self.match_or_create_boundary_edge(de, piece, work)?;
+                    coedges.push(Coedge::new(edge, reversed, pcurve));
+                }
+            } else {
+                coedges.push(self.trimmed_boundary_coedge(de, segment, curve_edges, owned_edges)?);
+            }
         }
         for index in 1..coedges.len() {
             self.chain_trimmed_segment(de, index, &mut coedges)?;
@@ -1830,7 +1845,7 @@ impl<'a> Builder<'a> {
     ) -> Result<()> {
         let referenced_boundaries = referenced_trimmed_boundaries(self.e);
         let mut owned_edges = BTreeSet::new();
-        let mut natural_work = 0;
+        let mut boundary_work = 0;
         let entities: &'a BTreeMap<usize, Entity> = self.e;
         for (&de, e) in entities {
             if !matches!(e.directory.ty, 143 | 144)
@@ -1842,11 +1857,11 @@ impl<'a> Builder<'a> {
             let mut loops = Vec::with_capacity(boundaries.len());
             let surface = surface128(self.e, surface_de, self.scale)?;
             if e.directory.ty == 144 && u(&e.values, 2, "trimmed surface outer flag")? == 0 {
-                loops.push(self.natural_outer_loop(de, &surface, &mut natural_work)?);
+                loops.push(self.natural_outer_loop(de, &surface, &mut boundary_work)?);
             }
             for boundary in boundaries {
                 let index =
-                    self.trimmed_loop(boundary, surface_de, curve_edges, &mut owned_edges)?;
+                    self.trimmed_loop(boundary, surface_de, curve_edges, &mut owned_edges, &mut boundary_work)?;
                 let coedges = &mut self
                     .loops
                     .get_mut(index)
