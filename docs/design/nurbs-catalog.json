@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 832,
-  "unallocatedCount": 168,
+  "specifiedCount": 833,
+  "unallocatedCount": 167,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19520,6 +19520,25 @@
       "remainingQualification": [
         "Scan the control hull once per definition and apply directed-rounding affine bounds to each placement.",
         "Check analytic box extrema for a scaled reflected cuboid and containment of materialized gear vertices and rational surface witnesses.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0833",
+      "name": "Предварительный поиск близких пар экземпляров STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::proximity_candidates",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-833-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-833-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Identify conservatively close occurrence pairs using a directed-rounding lower bound on Euclidean box distance.",
+        "Check touching boxes at zero, a diagonal clearance threshold, a distant filtered occurrence and invalid distances.",
         "WASM and application integration are separate."
       ]
     }

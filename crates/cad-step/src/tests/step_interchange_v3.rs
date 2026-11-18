@@ -2802,6 +2802,29 @@ fn planet_gear_step_assembly_retains_one_prototype() {
 }
 
 #[test]
+fn shared_step_proximity_candidates_include_touching_and_euclidean_clearance() {
+    let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
+    let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
+    let step = crate::export_planet_gear_occurrences_step(&planets).unwrap();
+    let mut assembly = crate::import_step_shared_assembly(&step).unwrap();
+    let solid = freeform_cuboid_solid([0., 0., 0.], [2., 2., 2.]).unwrap();
+    assembly.replace_definition(0, solid).unwrap();
+    let placement = |x, y| [
+        [1., 0., 0., x], [0., 1., 0., y], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ];
+    assembly.set_occurrence_placement(0, placement(0., 0.)).unwrap();
+    assembly.set_occurrence_placement(1, placement(2., 0.)).unwrap();
+    assembly.add_occurrence(0, placement(5., 3.)).unwrap();
+    assembly.add_occurrence(0, placement(100., 0.)).unwrap();
+    assert!(assembly.proximity_candidates(f64::NAN).is_err());
+    assert!(assembly.proximity_candidates(-1.).is_err());
+    assert_eq!(assembly.proximity_candidates(0.).unwrap(), [[0, 1]]);
+    assert_eq!(assembly.proximity_candidates(1.1).unwrap(), [[0, 1]]);
+    assert_eq!(assembly.proximity_candidates(2_f64.sqrt()).unwrap(), [[0, 1], [1, 2]]);
+    assert_eq!(assembly.definitions().len(), 1);
+}
+
+#[test]
 fn shared_step_bounds_enclose_reflected_solids_and_rational_faces() {
     let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
     let gears = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();

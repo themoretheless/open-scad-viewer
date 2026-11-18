@@ -870,6 +870,32 @@ impl StepSharedAssembly {
         }).collect()
     }
 
+    /// Return unordered occurrence pairs whose boxes may be within the given
+    /// Euclidean distance in millimetres. Touching boxes are included at zero.
+    pub fn proximity_candidates(&self, distance_mm: f64) -> Result<Vec<[usize; 2]>> {
+        if !distance_mm.is_finite() || distance_mm < 0. {
+            return Err(refuse("STEP proximity distance must be finite and nonnegative"));
+        }
+        let bounds = self.occurrence_bounds()?;
+        let limit = (distance_mm * distance_mm).next_up();
+        let mut pairs = Vec::new();
+        for (index, a) in bounds.iter().enumerate() {
+            for (other, b) in bounds.iter().enumerate().skip(index + 1) {
+                let mut lower_squared: f64 = 0.;
+                for axis in 0..3 {
+                    let gap = (b[0][axis] - a[1][axis]).max(a[0][axis] - b[1][axis])
+                        .next_down().max(0.);
+                    lower_squared = (lower_squared + (gap * gap).next_down().max(0.))
+                        .next_down().max(0.);
+                }
+                if lower_squared <= limit {
+                    pairs.push([index, other]);
+                }
+            }
+        }
+        Ok(pairs)
+    }
+
     pub fn materialize(&self, index: usize) -> Result<Model> {
         let occurrence = self.occurrences.get(index)
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;

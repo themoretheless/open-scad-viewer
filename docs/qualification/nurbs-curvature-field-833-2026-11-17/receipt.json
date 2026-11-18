@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0833",
+  "testedBase": "e5cabbdc0521b55386a9455c2fcea11b024ac9ea",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 182,
+  "scope": [
+    "Identify conservatively close occurrence pairs using a directed-rounding lower bound on Euclidean box distance.",
+    "Check touching boxes at zero, a diagonal clearance threshold, a distant filtered occurrence and invalid distances."
+  ],
+  "logSha256": "e0b91ea086506b4bc983ee3b04af3edd79528b69e1b88cfbbce0e6b3f495796b",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "815185ff172f67b8f0937a59b32bec68bc2e467fbe8767e196904b29921501dc",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "801a3fc427e9b9883e2f3f19a266e4c291aa142f3a34a6b9e197a6d3fdd80798"
+  }
+}
