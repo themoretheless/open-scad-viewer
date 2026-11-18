@@ -2451,8 +2451,29 @@ pub fn partition_planar_rotating_hull_obstacle_clearance(
     parameter_tolerance: f64,
     max_vertex_plane_cells: usize,
 ) -> Result<ObstacleClearancePartition> {
+    partition_planar_rotating_rounded_hull_obstacle_clearance(
+        position, direction, interval, obstacles, vertex_offsets, 0.,
+        parameter_tolerance, max_vertex_plane_cells,
+    )
+}
+
+/// Check a rotating planar convex hull expanded by a disk of constant
+/// radius. A plane must separate the whole rounded tool to prove clearance.
+/// A vertex of the unrounded hull inside the obstacle still proves contact.
+/// Contacts that only involve the rounding can remain undetermined.
+pub fn partition_planar_rotating_rounded_hull_obstacle_clearance(
+    position: &Curve,
+    direction: &Curve,
+    interval: [f64; 2],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    radius: f64,
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
     use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
 
+    check(radius.is_finite() && radius >= 0., "Tool radius must be finite and nonnegative")?;
     validate(parameter_tolerance, max_vertex_plane_cells)?;
     check(!obstacles.is_empty() && !vertex_offsets.is_empty(), "Clearance requires obstacles and hull vertices")?;
     let plane_budget = max_vertex_plane_cells / vertex_offsets.len();
@@ -2467,8 +2488,16 @@ pub fn partition_planar_rotating_hull_obstacle_clearance(
     let (_, initial) = synchronized_clearance_cells([position, direction], interval, [0.; 2])?;
     check(position.control_points[0].len() == 2, "Rotating hull clearance requires planar curves")?;
     let vertices = prepare_workspace_hull(position, vertex_offsets, plane_count)?;
-    let obstacles = obstacles.iter().map(|planes| prepare_workspace_planes(planes, 2))
-        .collect::<Result<Vec<_>>>()?;
+    let obstacles = obstacles.iter().map(|planes| {
+        prepare_workspace_planes(planes, 2)?.into_iter().map(|(normal, offset)| {
+            let margin = if radius == 0. {
+                0.
+            } else {
+                norm(&normal)?.mul(Interval::point(radius))?.hi
+            };
+            Ok((normal, offset, margin))
+        }).collect::<Result<Vec<_>>>()
+    }).collect::<Result<Vec<_>>>()?;
     let pairs = plane_count * vertices.len();
     let (cells, work_cells) = partition_enclosed_cells(
         initial, parameter_tolerance, max_vertex_plane_cells / pairs,
@@ -2481,13 +2510,13 @@ pub fn partition_planar_rotating_hull_obstacle_clearance(
                 let mut candidates = vec![true; vertices.len()];
                 for (obstacle, status) in obstacles.iter().zip(&mut clearance) {
                     candidates.fill(true);
-                    for (normal, offset) in obstacle {
+                    for (normal, offset, margin) in obstacle {
                         let inverse = inverse_rotated_normal(normal, rotation)?;
                         let center = project_jet(&point[0], normal)?.sub(*offset)?;
                         let mut separated = true;
                         for (vertex, candidate) in vertices.iter().zip(&mut candidates) {
                             let residual = center.add(project_jet(vertex, &inverse)?)?;
-                            separated &= residual.lo > 0.;
+                            separated &= residual.lo > *margin;
                             *candidate &= residual.hi <= 0.;
                         }
                         if separated {

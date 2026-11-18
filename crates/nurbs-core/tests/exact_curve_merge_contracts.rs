@@ -11840,3 +11840,34 @@ fn rotating_hull_obstacle_clearance_tracks_vertex_contact_and_separation() {
         assert_eq!(cell.obstacles, [Status::Undetermined; 2]);
     }
 }
+
+#[test]
+fn rotating_rounded_hull_reserves_the_radius_against_nonunit_obstacle_planes() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_rounded_hull_obstacle_clearance,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., 0.], vec![0., 1.]],
+        ..position.clone()
+    };
+    let right = [WorkspaceHalfSpace { normal: &[-4., 0.], offset: -9. }];
+    let partition = |radius| partition_planar_rotating_rounded_hull_obstacle_clearance(
+        &position, &direction, [0., 1.], &[&right], &[&[2., 0.]], radius, 0.01, 255,
+    );
+    let sharp = partition(0.).unwrap();
+    assert!(sharp.cells.iter().all(|cell| cell.status == Status::Within));
+    let rounded = partition(0.3).unwrap();
+    assert_eq!(rounded.cells.first().unwrap().status, Status::Undetermined);
+    assert_eq!(rounded.cells.last().unwrap().status, Status::Within);
+    assert!(rounded.cells.iter().all(|cell| cell.status != Status::Exceeds));
+    assert!(partition(-0.1).is_err());
+    assert!(partition(f64::NAN).is_err());
+}

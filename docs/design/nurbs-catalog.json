@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 765,
-  "unallocatedCount": 235,
+  "specifiedCount": 766,
+  "unallocatedCount": 234,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18227,6 +18227,25 @@
       "remainingQualification": [
         "Certify separating obstacle planes or a persistent tool vertex inside an obstacle while the hull rotates.",
         "Check ordered obstacle contact and separation, a regular clear interval, zero orientation uncertainty and a vertex/plane budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0766",
+      "name": "Проверка вращающегося плоского инструмента со скруглением около препятствий",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_rounded_hull_obstacle_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-766-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-766-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify separating planes for a rotating planar hull expanded by a fixed disk and retain unresolved rounding contacts.",
+        "Check radius-dependent uncertainty, nonunit plane scaling, zero-radius clearance and invalid radius rejection.",
         "WASM and application integration are separate."
       ]
     }

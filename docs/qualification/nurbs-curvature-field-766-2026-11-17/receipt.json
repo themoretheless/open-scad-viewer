@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0766",
+  "testedBase": "5ce1a407f8e9b9cb94979e2387b902c38639547c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 392,
+  "scope": [
+    "Certify separating planes for a rotating planar hull expanded by a fixed disk and retain unresolved rounding contacts.",
+    "Check radius-dependent uncertainty, nonunit plane scaling, zero-radius clearance and invalid radius rejection."
+  ],
+  "logSha256": "04e98b32cfb178d2f23a59925fa6645a4a7de2fb1a731d4906de67eda11b8a0d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "899076c987d63fa7de1f5f3df8ac9337286fb5ad92bbe6738e03b8ba4658a9fe",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "beddda19664ca193397ace970e53acf46ecb20cc5bf5c4e50af8fcd737b21c2e"
+  }
+}
