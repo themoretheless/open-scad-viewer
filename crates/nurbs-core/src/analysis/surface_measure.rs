@@ -902,6 +902,37 @@ pub fn bound_inertia_about_line(
     Ok([result.lo.max(moment[0]), result.hi])
 }
 
+/// Enclose the radius of gyration from a polar moment and the strictly
+/// positive mass of the same distribution.
+pub fn bound_radius_of_gyration(
+    moment_bounds: [f64; 2],
+    mass_bounds: [f64; 2],
+) -> Result<[f64; 2]> {
+    let moment = Interval::new(moment_bounds[0], moment_bounds[1])?;
+    let mass = Interval::new(mass_bounds[0], mass_bounds[1])?;
+    check(
+        moment.hi >= 0.,
+        "Radius of gyration requires a nonnegative moment",
+    )?;
+    check(
+        mass.lo > 0.,
+        "Radius of gyration requires strictly positive mass",
+    )?;
+    if moment.hi == 0. {
+        return Ok([0.; 2]);
+    }
+
+    // Take square roots before dividing so the intermediate moment/mass
+    // ratio need not fit in binary64.
+    let numerator = Interval::new(
+        moment.lo.max(0.).sqrt().next_down().max(0.),
+        moment.hi.sqrt().next_up(),
+    )?;
+    let denominator = Interval::new(mass.lo.sqrt().next_down(), mass.hi.sqrt().next_up())?;
+    let radius = numerator.div(denominator)?;
+    Ok([radius.lo.max(0.), radius.hi])
+}
+
 /// Translate a central inertia enclosure to a fixed reference point using
 /// the parallel-axis theorem. Tensor, mass and centroid must describe the
 /// same distribution.
@@ -1188,6 +1219,23 @@ impl TrimmedPatchSetCentralInertiaReport {
             return Ok(None);
         };
         bound_inertia_about_line(central, area.bounds, centroid, point, direction).map(Some)
+    }
+
+    /// Enclose the radius of gyration around a fixed line for unit areal density.
+    pub fn bound_line_radius_of_gyration(
+        &self,
+        point: [f64; 3],
+        direction: [f64; 3],
+    ) -> Result<Option<[f64; 2]>> {
+        let Some(area) = self.centroid.measure.total.area.as_ref() else {
+            return Ok(None);
+        };
+        if area.bounds[0] <= 0. {
+            return Ok(None);
+        }
+        self.bound_inertia_about_line(point, direction)?
+            .map(|moment| bound_radius_of_gyration(moment, area.bounds))
+            .transpose()
     }
 
     /// Enclose the sorted principal moments of the complete patch set.

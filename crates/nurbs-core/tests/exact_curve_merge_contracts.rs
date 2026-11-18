@@ -7180,3 +7180,51 @@ fn periodic_trim_line_inertia_brackets_offset_axis_with_nested_island() {
         None
     );
 }
+
+#[test]
+fn radius_of_gyration_encloses_positive_mass_and_avoids_intermediate_overflow() {
+    use nurbs_core::analysis::surface_measure::bound_radius_of_gyration;
+
+    for (moment, mass, expected) in [
+        ([8., 16.], [1., 2.], [2., 4.]),
+        ([-1e-10, 16.], [1., 2.], [0., 4.]),
+        ([1e300; 2], [1e-300; 2], [1e300; 2]),
+        ([f64::from_bits(1); 2], [f64::from_bits(1); 2], [1.; 2]),
+    ] {
+        let bounds = bound_radius_of_gyration(moment, mass).unwrap();
+        assert!(bounds[0] <= expected[0] && expected[1] <= bounds[1]);
+        assert!(bounds[0] >= 0.);
+        assert!((bounds[0] - expected[0]).abs() <= expected[0] * 1e-12);
+        assert!((bounds[1] - expected[1]).abs() <= expected[1] * 1e-12);
+    }
+    assert_eq!(bound_radius_of_gyration([0.; 2], [1.; 2]).unwrap(), [0.; 2]);
+    assert!(bound_radius_of_gyration([8.; 2], [0., 1.]).is_err());
+    assert!(bound_radius_of_gyration([-8.; 2], [1.; 2]).is_err());
+}
+
+#[test]
+fn periodic_trim_line_radius_of_gyration_encloses_offset_axis_with_nested_island() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_central_inertia;
+
+    let patches = periodic_trim_patches_with_nested_island();
+    let report =
+        periodic_trim_patch_set_central_inertia(&patches, 0.005, 1e-10, 20_000, 1_000_000).unwrap();
+    let [lo, hi] = report
+        .bound_line_radius_of_gyration([1., 0., 5.], [0., 0., 1.])
+        .unwrap()
+        .unwrap();
+    let area = 1.3125;
+    let at_origin = 83. / 768. + 49. / 12288.;
+    let expected = (at_origin / area + 1. - 2. * 3. / 28_f64).sqrt();
+    assert!(lo <= expected && expected <= hi);
+    assert!(lo > 0.);
+
+    let incomplete =
+        periodic_trim_patch_set_central_inertia(&patches, 0.005, 1e-10, 2, 1_000_000).unwrap();
+    assert_eq!(
+        incomplete
+            .bound_line_radius_of_gyration([1., 0., 5.], [0., 0., 1.])
+            .unwrap(),
+        None
+    );
+}

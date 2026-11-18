@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0627",
+  "testedBase": "644c37750fdf934ebcc239314a4b97354d3e14f8",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 221,
+  "scope": [
+    "Enclose the square root of the polar moment divided by positive mass, including the whole periodic trim set at unit areal density.",
+    "Check positive-mass normalization, subnormal masses and wide exponents, and an analytic offset axis on periodic trim components with a nested island."
+  ],
+  "logSha256": "efa7099e3040a778009189a6281eddf7ecfefbb44dc2e98545843b5f89fb6a75",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "9cddf96faa7805b5c8457c200f6cf889ee82f7d6342f4b2c144e4ece950196b1",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "fd1a0287e4a24605a55a6292c5fa6dc0ab00189a9f6f6956e22d6cde9760ce8d"
+  }
+}
