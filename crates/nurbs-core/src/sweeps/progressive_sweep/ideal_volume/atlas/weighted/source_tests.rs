@@ -12,8 +12,7 @@ fn report() -> IdealVolumeReport {
         reason: None,
     }
 }
-#[test]
-fn nonplanar_cap_and_moving_tilted_frame_have_an_original_global_pair_certificate() {
+fn saddle_with_boundary_profiles() -> (Surface, Vec<Curve>) {
     let cap = Surface {
         degree_u: 1,
         degree_v: 1,
@@ -38,6 +37,12 @@ fn nonplanar_cap_and_moving_tilted_frame_have_an_original_global_pair_certificat
             Curve::from_polyline(vec![corners[i].clone(), corners[(i + 1) % 4].clone()]).unwrap()
         })
         .collect::<Vec<_>>();
+    (cap, profiles)
+}
+
+#[test]
+fn nonplanar_cap_and_moving_tilted_frame_have_an_original_global_pair_certificate() {
+    let (cap, profiles) = saddle_with_boundary_profiles();
     let uv = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
     let mut binding_work = 0;
     for i in 0..4 {
