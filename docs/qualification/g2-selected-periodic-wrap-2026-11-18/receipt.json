@@ -1,0 +1,29 @@
+{
+  "sourceBase": "a269a7211792e3ffebb4555608700eb9fe873061",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Selected periodic G2 at zero tolerances on the cut side of a doubly periodic torus with an active rational UV trim. Includes exact position ownership, wrong-sheet rejection and one-short refusal.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_smoothness",
+      "result": "test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 2030 filtered out; finished in 0.33s",
+      "file": "geometric.log.gz",
+      "sha256": "014e5e5f7c1d32b6aa02fbe3ca06b66011a6afda46209e9b21c98a2c5ed17908"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2008 filtered out; finished in 10.24s",
+      "file": "shell.log.gz",
+      "sha256": "160b723f90a54b7512cfcf9841fca7bcab1b3fb827927f7f50306ab6a8701c8f"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "94e28782881183871c53b351f4fd12e971f6aca085f3c39bfe2130f1d22af578",
+    "count": 4920
+  }
+}

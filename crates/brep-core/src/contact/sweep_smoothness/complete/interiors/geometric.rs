@@ -420,6 +420,24 @@ mod tests {
             "unresolved={:?} agreement={:?}", active.unresolved_edges,
             active.edge_correspondence.as_ref().map(|r| (r.all_equal, r.all_joins_exact)));
         assert_eq!(active.periodic_edge_ids, [0, 1]);
+        use crate::sweep_smoothness::geometric::{Tolerances, inspect_edges_with_exact};
+        let tolerances = Tolerances { position: 0., normal: 0., curvature: 0. };
+        let edge = inspect_edges_with_exact(&trimmed, &[1], tolerances, 1, 1_000_000).unwrap();
+        assert!(edge.within_tolerance && edge.complete);
+        assert!(edge.seams[0].positions.as_ref().unwrap().proven);
+        assert_eq!(edge.seams[0].inspection.as_ref().unwrap().position_bounds, [0.; 2]);
+        let short_edge = inspect_edges_with_exact(
+            &trimmed, &[1], tolerances, 1, edge.exact_work - 1,
+        ).unwrap();
+        assert!(!short_edge.within_tolerance);
+        let mut wrong_sheet = trimmed.clone();
+        let c = &mut wrong_sheet.loops[0].coedges[1];
+        let mut trim = c.trim().unwrap();
+        trim.periodic_lift[1][1] -= 1;
+        *c = c.clone().with_trim(trim).unwrap();
+        let wrong = inspect_edges_with_exact(&wrong_sheet, &[1], tolerances, 1, 1_000_000).unwrap();
+        assert!(!wrong.within_tolerance);
+
         let short = super::super::super::inspect(&trimmed, super::super::super::Limits {
             exact_work: active.exact_work - 1, ..limits
         }).unwrap();

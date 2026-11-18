@@ -29,6 +29,7 @@ pub struct Report {
 mod graph_jets;
 pub(crate) mod interiors;
 mod periodic_uses;
+pub(super) use periodic_uses::selected_wrap;
 pub use interiors::InteriorReport;
 mod reversal;
 use reversal::reverse_along;

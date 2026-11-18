@@ -52,6 +52,91 @@ pub(super) fn full_side(
     (side, work as u64)
 }
 
+/// Prove a selected same-face wrap using original edge ownership and the
+/// exact opened-chart jet owner. Both uses must traverse the full world edge.
+pub(crate) fn selected_wrap(
+    model: &Model,
+    face: usize,
+    uses: [&Coedge; 2],
+    work: &mut u64,
+    limit: u64,
+) -> Result<Option<nurbs_core::surface_g2_pcurves::Positions>> {
+    use cad_predicates::BezierIdentity;
+    use nurbs_core::{continuity::ProjectiveSeam, curve_surface_agreement, surface_g2_pcurves};
+    let surface = &model.faces[face].surface;
+    let edge = &model.edges[uses[0].edge].curve;
+    let mut sides = [None; 2];
+    for (c, side) in uses.into_iter().zip(&mut sides) {
+        let (found, used) = full_side(model, surface, c, limit - *work);
+        *work += used;
+        *side = found;
+    }
+    let [Some((a, ad)), Some((b, bd))] = sides else {
+        return Ok(None);
+    };
+    if !opposite_sides(surface, a, b) || ad != bd || uses[0].reversed == uses[1].reversed {
+        return Ok(None);
+    }
+    let first_work = *work;
+    let mut evidence = std::array::from_fn(|_| surface_g2_pcurves::PositionEvidence {
+        exact: None,
+        interval: None,
+    });
+    for (c, entry) in uses.into_iter().zip(&mut evidence) {
+        let remaining = limit - *work;
+        if remaining == 0 {
+            return Ok(None);
+        }
+        let exact = if let Some(trim) = c.trim() {
+            if crate::boundary_agreement::periodic_lifts(surface, &c.pcurve, trim.pcurve_parameter)?
+                != trim.periodic_lift
+            {
+                return Ok(None);
+            }
+            curve_surface_agreement::verify_exact_trimmed(
+                edge,
+                &c.pcurve,
+                surface,
+                c.reversed,
+                trim.curve_parameter,
+                trim.pcurve_parameter,
+                remaining,
+            )?
+        } else {
+            curve_surface_agreement::verify_exact(edge, &c.pcurve, surface, c.reversed, remaining)?
+        };
+        let Some(exact) = exact else {
+            return Ok(None);
+        };
+        *work += exact.work_used;
+        if exact.outcome != BezierIdentity::Equal {
+            return Ok(None);
+        }
+        entry.exact = Some(exact);
+    }
+    let exact_work = *work - first_work;
+    let (opened, used) = open(surface, limit - *work)?;
+    *work += used;
+    let Some(opened) = opened else {
+        return Ok(None);
+    };
+    let seams = [ProjectiveSeam {
+        patches: [0, 0],
+        boundaries: [a.into(), b.into()],
+        order: 2,
+        normal_scale: 1.,
+    }];
+    let proof = super::graph_jets::qualify(&[opened.into_owned()], &seams, limit - *work)?;
+    *work += proof.exact_work;
+    Ok(proof.certified.then_some(surface_g2_pcurves::Positions {
+        proven: true,
+        upper: Some(0.),
+        cells: 0,
+        exact_work,
+        sides: evidence,
+    }))
+}
+
 pub(super) fn open(surface: &Surface, budget: u64) -> Result<(Option<Cow<'_, Surface>>, u64)> {
     let mut work = 0;
     let periodic = [surface.periodic_u, surface.periodic_v];

@@ -211,6 +211,32 @@ fn inspect_manifold_seam(
         max_exact,
         graph_work,
     } = budgets;
+    let surface = &model.faces[a].surface;
+    if a == b && (surface.periodic_u || surface.periodic_v) {
+        let positions = super::complete::selected_wrap(
+            model, a, [ca, cb], &mut out.exact_work, max_exact,
+        )?;
+        return Ok(positions.map(|positions| (
+            surface_g2::Report {
+                position_bounds: [0., 0.],
+                branches: [
+                    surface_g2::BranchBounds {
+                        normal_lower: 0., tensor_lower: 0.,
+                        normal_upper: Some(0.), tensor_upper: Some(0.),
+                    },
+                    surface_g2::BranchBounds {
+                        normal_lower: 2., tensor_lower: 0.,
+                        normal_upper: Some(2.), tensor_upper: None,
+                    },
+                ],
+                orientation: Some(surface_g2::Orientation::Same),
+                regularity_proven: true,
+                decision: Decision::WithinTolerance,
+                cells: 1,
+            },
+            positions,
+        )));
+    }
     let surfaces = [&model.faces[a].surface, &model.faces[b].surface];
     let Some((pa, ra)) = active_seam_pcurve(model, a, ca, &mut out.exact_work, max_exact)? else {
         return Ok(None);

@@ -258,7 +258,10 @@ interval on a nonperiodic chart. It stores that interval exactly on its
 original clock and charges the restriction to the shared exact-work
 allowance. The geometric verifier still checks the whole world-edge
 lift, normal and curvature compatibility on both traversals. A
-restriction without exact storage leaves the seam unproved.
+restriction without exact storage leaves the seam unproved. For two
+opposite uses of a same-face periodic wrap, the selected-edge audit
+checks exact original world lifts and sheet indices, opens the periodic
+chart exactly, and proves the complete G2 join under the shared budget.
 
 The common boundary can be an authored chain of edges. The audit checks
 that both faces cover the complete natural rectangle, with exact
