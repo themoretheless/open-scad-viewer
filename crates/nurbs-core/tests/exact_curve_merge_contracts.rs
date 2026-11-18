@@ -11755,3 +11755,45 @@ fn rotating_hull_workspace_retains_undefined_orientation() {
         cell.parameter_interval[0] <= 0.5 && cell.parameter_interval[1] >= 0.5
     }).all(|cell| cell.status == Status::Undetermined));
 }
+
+#[test]
+fn minimum_rotating_hull_clearance_refines_an_interior_rotation_witness() {
+    use nurbs_core::analysis::curve_measure::{
+        StopReason, WorkspaceHalfSpace, measure_minimum_planar_rotating_hull_workspace_clearance,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![0., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        ..position.clone()
+    };
+    let planes = [
+        WorkspaceHalfSpace { normal: &[0., 3.], offset: 30. },
+        WorkspaceHalfSpace { normal: &[2., 0.], offset: 3. },
+    ];
+    let hull = [&[0., 0.][..], &[2., 0.][..]];
+    let measure = |orientation, budget| measure_minimum_planar_rotating_hull_workspace_clearance(
+        &position, orientation, [0., 1.], &planes, &hull, 1e-6, budget,
+    );
+    let coarse = measure(&direction, 4).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= -0.5 && coarse.gap_bounds[1] >= -0.5);
+    let refined = measure(&direction, 256).unwrap();
+    assert_eq!(refined.stop_reason, StopReason::Tolerance);
+    assert!(refined.gap_bounds[0] <= -0.5 && refined.gap_bounds[1] >= -0.5);
+    assert!(refined.gap_bounds[1] - refined.gap_bounds[0] <= 1e-6);
+    assert_eq!(refined.witness_plane, 1);
+    assert_eq!(refined.witness_parameter, 0.5);
+    assert!(measure(&direction, 3).is_err());
+
+    let singular = Curve {
+        control_points: vec![vec![1., 0.], vec![-1., 0.]],
+        ..direction.clone()
+    };
+    assert!(measure(&singular, 256).is_err());
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 763,
-  "unallocatedCount": 237,
+  "specifiedCount": 764,
+  "unallocatedCount": 236,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18189,6 +18189,25 @@
       "remainingQualification": [
         "Classify half-space containment for a vertex hull moving along a planar rational position and orientation curve.",
         "Check varying rational orientation, independent knot grids, endpoint residual bounds and a zero-direction refusal to classify.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0764",
+      "name": "Минимальный запас вращающегося плоского инструмента до границ рабочей области",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_planar_rotating_hull_workspace_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-764-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-764-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound the worst signed plane clearance for a rotating planar vertex hull after certifying orientation regularity.",
+        "Check an interior rotation witness, normalized plane clearance, coarse enclosure, work budget and zero orientation rejection.",
         "WASM and application integration are separate."
       ]
     }

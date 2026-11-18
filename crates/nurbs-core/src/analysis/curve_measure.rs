@@ -2099,31 +2099,13 @@ pub fn partition_planar_rotating_hull_workspace(
         |[span, direction_span], domain| {
             let position_jets = curve_jets::enclose(position, span, domain)?;
             let direction_jets = curve_jets::enclose(direction, direction_span, domain)?;
-            let axis = &direction_jets[0];
-            let length = norm(axis)?;
-            let unit_range = Interval::new(-1., 1.)?;
-            let normalized = |component: Interval| {
-                if length.lo > 0. {
-                    let bound = component.div(length)?;
-                    Interval::new(bound.lo.max(-1.), bound.hi.min(1.))
-                } else {
-                    Ok(unit_range)
-                }
-            };
-            let cosine = normalized(axis[0])?;
-            let sine = normalized(axis[1])?;
+            let (rotation, regular) = planar_rotation(&direction_jets[0])?;
             let plane_residuals = planes.iter().map(|(normal, offset)| {
-                // Dot products against the rotated hull equal dot products
-                // against the original hull with the inverse-rotated normal.
-                let inverse_normal = [
-                    normal[0].mul(cosine)?.add(normal[1].mul(sine)?)?,
-                    normal[1].mul(cosine)?.sub(normal[0].mul(sine)?)?,
-                ];
-                let support = hull_plane_support(&offsets, &inverse_normal)?;
+                let support = rotating_hull_support(&offsets, normal, rotation)?;
                 let residual = project_jet(&position_jets[0], normal)?.sub(*offset)?.add(support)?;
                 Ok([residual.lo, residual.hi])
             }).collect::<Result<Vec<_>>>()?;
-            let status = if length.lo > 0. {
+            let status = if regular {
                 workspace_residual_status(&plane_residuals)
             } else {
                 DirectionalMotionStatus::Undetermined
@@ -2139,6 +2121,31 @@ pub fn partition_planar_rotating_hull_workspace(
     })
 }
 
+fn planar_rotation(axis: &[Interval]) -> Result<([Interval; 2], bool)> {
+    let length = norm(axis)?;
+    if length.lo <= 0. {
+        return Ok(([Interval::new(-1., 1.)?; 2], false));
+    }
+    let normalize = |component: Interval| {
+        let bound = component.div(length)?;
+        Interval::new(bound.lo.max(-1.), bound.hi.min(1.))
+    };
+    Ok(([normalize(axis[0])?, normalize(axis[1])?], true))
+}
+
+fn rotating_hull_support(
+    offsets: &[Vec<Interval>],
+    normal: &[Interval],
+    [cosine, sine]: [Interval; 2],
+) -> Result<Interval> {
+    // Project onto the inverse-rotated normal in the tool frame.
+    let inverse_normal = [
+        normal[0].mul(cosine)?.add(normal[1].mul(sine)?)?,
+        normal[1].mul(cosine)?.sub(normal[0].mul(sine)?)?,
+    ];
+    hull_plane_support(offsets, &inverse_normal)
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct WorkspaceMinimumClearance {
     /// Signed clearance to the most restrictive plane, in model units.
@@ -2148,6 +2155,78 @@ pub struct WorkspaceMinimumClearance {
     pub witness_plane: usize,
     pub work_plane_cells: usize,
     pub stop_reason: StopReason,
+}
+
+/// Bound the minimum signed planar workspace clearance in model units.
+/// An orientation that cannot be certified nonzero within the work budget
+/// produces an error. Plane normals need not have unit length.
+pub fn measure_minimum_planar_rotating_hull_workspace_clearance(
+    position: &Curve,
+    direction: &Curve,
+    interval: [f64; 2],
+    planes: &[WorkspaceHalfSpace<'_>],
+    vertex_offsets: &[&[f64]],
+    tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspaceMinimumClearance> {
+    validate(tolerance, max_plane_cells)?;
+    check(!planes.is_empty(), "Workspace requires at least one half-space")?;
+    let (_, initial) = synchronized_clearance_cells([position, direction], interval, [0.; 2])?;
+    check(position.control_points[0].len() == 2, "Rotating hull workspace requires planar curves")?;
+    let offsets = prepare_workspace_hull(position, vertex_offsets, planes.len())?;
+    let planes = prepare_workspace_planes(planes, 2)?.into_iter().map(|(normal, offset)| {
+        let length = norm(&normal)?;
+        Ok((normal, offset, length))
+    }).collect::<Result<Vec<_>>>()?;
+    let max_cells = (max_plane_cells / planes.len())
+        .min(1_000_000 / offsets.len() / planes.len());
+
+    let (regular_cells, orientation_work) = partition_enclosed_cells(
+        initial, 0., max_cells,
+        |[_, span], domain| {
+            let jets = curve_jets::enclose(direction, span, domain)?;
+            let regular = norm(&jets[0])?.lo > 0.;
+            Ok((regular, !regular))
+        },
+    )?;
+    check(regular_cells.iter().all(|(_, _, regular)| *regular),
+        "Rotating hull clearance requires a certified nonzero orientation")?;
+    let initial = regular_cells.into_iter().map(|(spans, domain, _)| (spans, domain));
+
+    let measure = |[span, direction_span]: [usize; 2], domain: [f64; 2], witness: &mut ClearanceWitness| {
+        let position_cell = curve_jets::enclose(position, span, domain)?;
+        let direction_cell = curve_jets::enclose(direction, direction_span, domain)?;
+        let (rotation, _) = planar_rotation(&direction_cell[0])?;
+        let mut lower = f64::INFINITY;
+        for (normal, offset, length) in &planes {
+            let support = rotating_hull_support(&offsets, normal, rotation)?;
+            let gap = offset.sub(project_jet(&position_cell[0], normal)?)?.sub(support)?.div(*length)?;
+            lower = lower.min(gap.lo);
+        }
+        for (end, parameter) in [(false, domain[0]), (true, domain[1])] {
+            let point = curve_jets::endpoint(position, span, domain, end)?;
+            let axis = curve_jets::endpoint(direction, direction_span, domain, end)?;
+            let (rotation, _) = planar_rotation(&axis[0])?;
+            for (index, (normal, offset, length)) in planes.iter().enumerate() {
+                let support = rotating_hull_support(&offsets, normal, rotation)?;
+                let gap = offset.sub(project_jet(&point[0], normal)?)?.sub(support)?.div(*length)?;
+                if gap.hi < witness.0 {
+                    *witness = (gap.hi, parameter, index);
+                }
+            }
+        }
+        Ok(lower)
+    };
+    let (lower, witness, cells, stop_reason) = refine_minimum_clearance(
+        initial, interval[0], tolerance, max_cells - orientation_work, measure,
+    )?;
+    Ok(WorkspaceMinimumClearance {
+        gap_bounds: [lower, witness.0],
+        witness_parameter: witness.1,
+        witness_plane: witness.2,
+        work_plane_cells: (orientation_work + cells) * planes.len(),
+        stop_reason,
+    })
 }
 
 /// Refine the smallest signed plane clearance along a ball toolpath with a
