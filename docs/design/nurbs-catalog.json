@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 887,
-  "unallocatedCount": 113,
+  "specifiedCount": 888,
+  "unallocatedCount": 112,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20534,6 +20534,24 @@
         "crates/nurbs-core/tests/exact_degree_reduction_contracts.rs",
         "docs/qualification/nurbs-curve-compression-887-2026-11-18/receipt.json",
         "docs/qualification/nurbs-curve-compression-887-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped nonperiodic curves only. A completed search does not prove global minimality."
+      ]
+    },
+    {
+      "id": "NURBS-0888",
+      "name": "Атомарное точное сжатие набора параметрических NURBS-кривых",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_knot_removal::compress_curve_batch",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_knot_removal.rs",
+        "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs",
+        "crates/nurbs-core/tests/exact_degree_reduction_contracts.rs",
+        "docs/qualification/nurbs-curve-compression-888-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-curve-compression-888-2026-11-18/native.log.gz"
       ],
       "remainingQualification": [
         "Clamped nonperiodic curves only. A completed search does not prove global minimality."

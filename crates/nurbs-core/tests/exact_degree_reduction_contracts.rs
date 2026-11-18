@@ -93,3 +93,27 @@ fn joint_curve_compression_keeps_proved_steps_under_one_budget() {
     assert_eq!(short.curve, source);
     assert!(compress_curve(&source, 0).is_err());
 }
+
+#[test]
+fn curve_batch_commits_only_complete_ordered_profiles() {
+    use nurbs_core::editing::exact_knot_removal::{compress_curve, compress_curve_batch};
+    let first = cubic().insert(3.5, 1).unwrap();
+    let mut second = cubic();
+    second.knots = [vec![5.;4],vec![7.;4]].concat();
+    for p in &mut second.control_points { p[0]+=6.; p[2]+=6.; }
+    let sources = [first,second];
+    let batch = compress_curve_batch(&sources, 1_000_000).unwrap();
+    let segments = batch.segments.unwrap();
+    for (segment,source) in segments.iter().zip(&sources) {
+        assert_eq!(segment.curve, compress_curve(source,1_000_000).unwrap().curve);
+    }
+    assert_eq!(segments[0].curve.evaluate(5.).unwrap().point,segments[1].curve.evaluate(5.).unwrap().point);
+    let short = compress_curve_batch(&sources,batch.work_used-1).unwrap();
+    assert!(short.segments.is_none());
+    assert!(short.work_used < batch.work_used);
+    assert!(compress_curve_batch(&sources,batch.work_used).unwrap().segments.is_some());
+    assert!(compress_curve_batch(&[],100).is_err());
+    let mut bad = sources.clone();
+    bad[1].weights.clear();
+    assert!(compress_curve_batch(&bad,1_000_000).is_err());
+}

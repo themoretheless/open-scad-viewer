@@ -58,3 +58,46 @@ pub fn compress_curve(source: &Curve, max_work: u64) -> Result<CurveCompression>
     }
     Ok(report)
 }
+
+#[derive(Clone, Debug)]
+pub struct CurveCompressionBatch {
+    /// Complete segment reports in input order, or None on budget exhaustion.
+    pub segments: Option<Vec<CurveCompression>>,
+    pub work_used: u64,
+}
+
+/// Compress a collection of clamped curve segments as one transaction.
+/// Charges one unit per input control point plus the shared arithmetic budget.
+/// Individual parameter domains, orientation and segment indices are preserved.
+pub fn compress_curve_batch(sources: &[Curve], max_work: u64) -> Result<CurveCompressionBatch> {
+    check(!sources.is_empty(), "Expected at least one curve segment")?;
+    check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Invalid curve compression work limit",
+    )?;
+    let mut work_used = 0;
+    let mut segments = Vec::new();
+    for source in sources {
+        let controls = source.control_points.len() as u64;
+        if controls >= max_work - work_used {
+            return Ok(CurveCompressionBatch {
+                segments: None,
+                work_used,
+            });
+        }
+        work_used += controls;
+        let result = compress_curve(source, max_work - work_used)?;
+        work_used += result.work_used;
+        if !result.completed {
+            return Ok(CurveCompressionBatch {
+                segments: None,
+                work_used,
+            });
+        }
+        segments.push(result);
+    }
+    Ok(CurveCompressionBatch {
+        segments: Some(segments),
+        work_used,
+    })
+}

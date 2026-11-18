@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0888",
+  "testedBase": "3324ef24f1a227b74ec6e08b82d8e5d97717ff81",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_degree_reduction_contracts",
+    "--test",
+    "exact_knot_removal_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 25,
+  "scope": [
+    "Atomic ordered segment compression. Verified shared endpoint, independent results, exact budget, rollback and invalid input."
+  ],
+  "logSha256": "4cb9d4f1e5bdda2baedcf83f392c9f7f347b65bd14220b8c94e020d11c72517b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_knot_removal.rs": "a68a75571b9db227658e8ac5597a1df400c1be3bac0612013233e2c1c8e5805f",
+    "crates/nurbs-core/src/editing/exact_knot_removal/compression.rs": "2288c8504eacb909dc0b724a13afa48c2cabf8415c72ca55551e41ba76a17f48",
+    "crates/nurbs-core/tests/exact_degree_reduction_contracts.rs": "ff51964842c271fa369599316c76421ebc2cc7b96d94895cc7a687a2a9439e0b"
+  }
+}

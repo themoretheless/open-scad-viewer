@@ -120,4 +120,4 @@ pub fn simplify(source: &Curve, max_work: u64) -> Result<SimplificationReport> {
 }
 
 mod compression;
-pub use compression::{CurveCompression, compress_curve};
+pub use compression::{CurveCompression, CurveCompressionBatch, compress_curve, compress_curve_batch};
