@@ -2565,6 +2565,73 @@ pub fn certify_planar_contour_hierarchy(
     Ok(PlanarContourHierarchyReport { parents, depths, nesting, simplicity_pairs, simplicity_cells })
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PlanarContourOrientation {
+    Clockwise,
+    Counterclockwise,
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarContourOrientationReport {
+    pub hierarchy: PlanarContourHierarchyReport,
+    pub orientations: Vec<PlanarContourOrientation>,
+    /// Reverse these contours to orient even depths counterclockwise and
+    /// odd depths clockwise, so nonzero fill reproduces even-odd fill.
+    pub reverse: Vec<bool>,
+    pub orientation_work_cells: usize,
+}
+
+/// Determine the current and desired orientation of every boundary in a
+/// certified simple-contour hierarchy. The area integral retains the
+/// original NURBS definition and must certify a nonzero sign.
+pub fn certify_planar_contour_fill_orientations(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_orientation_cells: usize,
+) -> Result<PlanarContourOrientationReport> {
+    validate(parameter_tolerance, max_orientation_cells)?;
+    let hierarchy = certify_planar_contour_hierarchy(
+        contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
+        max_winding_cells, max_distance_cells,
+    )?;
+    let mut orientations = Vec::with_capacity(contours.len());
+    let mut orientation_work_cells = 0;
+    for (index, curve) in contours.iter().enumerate() {
+        let budget = (max_orientation_cells - orientation_work_cells) / (contours.len() - index);
+        let origin = &curve.control_points[0];
+        let (cells, work) = partition_motion_cells(
+            curve, curve.domain(), parameter_tolerance, budget,
+            |jets, _| {
+                // Translate by a point on the closed contour to limit
+                // cancellation. The local jet already includes cell width.
+                let x = jets[0][0].sub(Interval::point(origin[0]))?;
+                let y = jets[0][1].sub(Interval::point(origin[1]))?;
+                let cross = x.mul(jets[1][1])?.sub(y.mul(jets[1][0])?)?;
+                Ok((cross, true))
+            },
+        )?;
+        let doubled_area = cells.into_iter().try_fold(Interval::point(0.), |sum, (_, _, cross)| sum.add(cross))?;
+        let orientation = if doubled_area.lo > 0. {
+            PlanarContourOrientation::Counterclockwise
+        } else if doubled_area.hi < 0. {
+            PlanarContourOrientation::Clockwise
+        } else {
+            return Err(resource("Contour orientation is unresolved under the area work budget"));
+        };
+        orientations.push(orientation);
+        orientation_work_cells += work;
+    }
+    let reverse = orientations.iter().zip(&hierarchy.depths).map(|(orientation, depth)| {
+        let counterclockwise = *orientation == PlanarContourOrientation::Counterclockwise;
+        counterclockwise != (depth % 2 == 0)
+    }).collect();
+    Ok(PlanarContourOrientationReport { hierarchy, orientations, reverse, orientation_work_cells })
+}
+
 fn validate_distance_contours(contours: &[&Curve], max_cells: usize) -> Result<()> {
     check(!contours.is_empty(), "Contour distance requires at least one contour")?;
     check(contours.len() <= max_cells, "Distance budget must cover every contour")?;

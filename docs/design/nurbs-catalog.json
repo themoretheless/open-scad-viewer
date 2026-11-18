@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 803,
-  "unallocatedCount": 197,
+  "specifiedCount": 804,
+  "unallocatedCount": 196,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18949,6 +18949,25 @@
       "remainingQualification": [
         "Build a nesting forest from exact span segmentation, simplicity proofs and pairwise separation.",
         "Check immediate parents in arbitrary input order, hole depth, simplicity budget, self-crossing and coincident refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0804",
+      "name": "Проверка ориентации внешних контуров, отверстий и островов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::certify_planar_contour_fill_orientations",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-804-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-804-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify boundary orientations and identify reversals that make nonzero fill agree with nesting parity.",
+        "Check reversed roots, holes, islands and the shared orientation work budget.",
         "WASM and application integration are separate."
       ]
     }

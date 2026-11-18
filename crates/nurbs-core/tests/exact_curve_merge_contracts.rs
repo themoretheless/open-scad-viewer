@@ -13005,3 +13005,30 @@ fn planar_contour_hierarchy_finds_immediate_parents_and_requires_simplicity() {
     assert!(measure(&[&crossing], 128).is_err());
     assert!(measure(&[&inner, &inner], 128).is_err());
 }
+
+#[test]
+fn planar_contour_fill_orientations_identify_reversals_for_roots_and_holes() {
+    use nurbs_core::analysis::curve_measure::{
+        PlanarContourOrientation as Orientation, certify_planar_contour_fill_orientations,
+    };
+    let square = |r: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-r, -r], vec![r, -r], vec![r, r],
+            vec![-r, r], vec![-r, -r]],
+        weights: vec![1., 2., 1., 2., 1.],
+        periodic: false,
+    };
+    let [mut outer, hole, island] = [square(4.), square(2.), square(0.5)];
+    outer.control_points.reverse();
+    let check = |budget| certify_planar_contour_fill_orientations(
+        &[&hole, &island, &outer], 0.02, 1e-4, 128, 4096, 512, budget,
+    );
+    assert!(check(11).is_err());
+    let report = check(1024).unwrap();
+    assert_eq!(report.hierarchy.depths, [1, 2, 0]);
+    assert_eq!(report.orientations, [Orientation::Counterclockwise,
+        Orientation::Counterclockwise, Orientation::Clockwise]);
+    assert_eq!(report.reverse, [true, false, true]);
+    assert!(report.orientation_work_cells <= 1024);
+}
