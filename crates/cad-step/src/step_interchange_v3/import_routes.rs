@@ -2378,9 +2378,7 @@ pub fn import_step_product_paths(text: &str) -> Result<(NamedStepAssembly, Vec<V
 pub fn export_step_product_subassembly(text: &str, prefix: &[&str]) -> Result<String> {
     let name = prefix.last().ok_or_else(|| refuse("Expected a nonempty STEP product path"))?;
     let (scene, paths) = import_step_product_paths(text)?;
-    let indices: Vec<_> = paths.iter().enumerate()
-        .filter(|(_, path)| path.len() >= prefix.len() && path.iter().zip(prefix).all(|(a,b)| a == *b))
-        .map(|(index, _)| index).collect();
+    let indices = product_prefix_indices(&paths, prefix);
     let subset = scene.named_subset(&indices, name)?;
     let colours = import_step_occurrence_colours(text)?;
     let styles: Vec<_> = indices.iter().map(|&i| colours[i].map(|rgb|
@@ -2392,14 +2390,37 @@ pub fn export_step_product_subassembly(text: &str, prefix: &[&str]) -> Result<St
 /// and export the complete scene. Retains explicit occurrence RGB, group
 /// membership and world placements. Group frames are written at identity.
 pub fn replace_step_product_at_path(text: &str, path: &[&str], model: Model, name: &str) -> Result<String> {
+    edit_step_products(text, |scene, paths| {
+        let selected: Vec<_> = paths.iter().enumerate().filter(|(_, p)| p.as_slice() == path)
+            .map(|(i, _)| i).collect();
+        scene.replace_named_variant(&selected, model, name.to_owned())?;
+        Ok(())
+    })
+}
+
+/// Apply one assembly-space rigid motion to every occurrence below a named
+/// path. Preserves one level of group membership and explicit occurrence RGB.
+pub fn move_step_product_branch(text: &str, prefix: &[&str], motion: [[f64; 4]; 4]) -> Result<String> {
+    if prefix.is_empty() { return Err(refuse("Expected a nonempty STEP product path")); }
+    edit_step_products(text, |scene, paths| {
+        let indices = product_prefix_indices(paths, prefix);
+        scene.assembly.move_occurrences(&indices, motion)
+    })
+}
+
+fn product_prefix_indices(paths: &[Vec<String>], prefix: &[&str]) -> Vec<usize> {
+    paths.iter().enumerate()
+        .filter(|(_, path)| path.len() >= prefix.len() && path.iter().zip(prefix).all(|(a,b)| a == *b))
+        .map(|(index, _)| index).collect()
+}
+
+fn edit_step_products(text: &str, edit: impl FnOnce(&mut NamedStepAssembly, &[Vec<String>]) -> Result<()>) -> Result<String> {
     let mut paths = Vec::new();
     let mut branches = Vec::new();
     let (assembly, labels) = read_shared_products(text, true, Some(&mut paths), Some(&mut branches))?;
     let (root, definition_names) = labels.ok_or_else(|| refuse("Missing assembly product names"))?;
     let mut scene = NamedStepAssembly { assembly, name: root, definition_names };
-    let selected: Vec<_> = paths.iter().enumerate().filter(|(_, p)| p.as_slice() == path)
-        .map(|(i, _)| i).collect();
-    scene.replace_named_variant(&selected, model, name.to_owned())?;
+    edit(&mut scene, &paths)?;
     let mut group_indices = BTreeMap::new();
     let mut groups = Vec::new();
     let parents: Vec<_> = branches.iter().zip(&paths).map(|(branch, p)| branch.map(|id|

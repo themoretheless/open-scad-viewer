@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 984,
-  "unallocatedCount": 16,
+  "specifiedCount": 985,
+  "unallocatedCount": 15,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22368,6 +22368,27 @@
       ],
       "remainingQualification": [
         "Exact label path selects occurrences of one definition; local-space replacement. Root plus one group level, world-space placements, explicit occurrence colours. Group frames are rebased to identity."
+      ]
+    },
+    {
+      "id": "NURBS-0985",
+      "name": "Поворот и перенос выбранной ветви STEP-сборки с сохранением общих NURBS-деталей",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::move_step_product_branch",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-step-branch-motion-985-2026-11-19/verify.py",
+        "docs/qualification/nurbs-step-branch-motion-985-2026-11-19/occt.log",
+        "docs/qualification/nurbs-step-branch-motion-985-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-step-branch-motion-985-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Assembly-space rigid motion by named path prefix. Exports one group level with identity group frames. XDE confirms shared product identity, three volumes, world centroids, colours and group membership."
       ]
     }
   ],

@@ -290,3 +290,70 @@ fn named_coloured_parts_share_a_scaled_definition_across_group_and_root() {
         assert_eq!(colour, Some(rgb[usize::from(part.transform[0][3] == 20.)]));
     }
 }
+
+#[test]
+fn branch_motion_moves_two_linked_parts_and_preserves_external_sibling() {
+    let placements = [2., 5., 20.].map(|x| StepAssemblyOccurrence {
+        definition: 0,
+        transform: [
+            [1., 0., 0., x],
+            [0., 1., 0., 0.],
+            [0., 0., 1., 0.],
+            [0., 0., 0., 1.],
+        ],
+    });
+    let scene = cad_step::NamedStepAssembly {
+        name: "Drive".into(),
+        definition_names: vec!["Bracket".into()],
+        assembly: StepSharedAssembly::from_placed_solids(
+            vec![brep_core::cuboid([0.; 3], [2., 4., 6.]).unwrap()],
+            placements.to_vec(),
+        )
+        .unwrap(),
+    };
+    let colours = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]]
+        .map(|rgb| Some(cad_step::StepOccurrenceColour { name: "", rgb }));
+    let original = cad_step::export_named_styled_step_assembly(
+        &scene,
+        &["Feed"],
+        &[Some(0), Some(0), None],
+        &colours,
+    )
+    .unwrap();
+    let motion = [
+        [0., -1., 0., 10.],
+        [1., 0., 0., 3.],
+        [0., 0., 1., 0.],
+        [0., 0., 0., 1.],
+    ];
+    let result = cad_step::move_step_product_branch(&original, &["Drive", "Feed"], motion).unwrap();
+    let (back, paths) = cad_step::import_step_product_paths(&result).unwrap();
+    assert_eq!(back.assembly.definitions().len(), 1);
+    assert_eq!(paths.len(), 3);
+    for ((place, path), colour) in back
+        .assembly
+        .occurrences()
+        .iter()
+        .zip(paths)
+        .zip(cad_step::import_step_occurrence_colours(&result).unwrap())
+    {
+        let (x, y) = (place.transform[0][3], place.transform[1][3]);
+        if path.len() == 3 {
+            assert_eq!(path[1], "Feed");
+            assert_eq!(x, 10.);
+            assert_eq!(place.transform[1][0], 1.);
+            assert!(matches!(
+                (y, colour),
+                (5., Some([1., 0., 0.])) | (8., Some([0., 1., 0.]))
+            ));
+        } else {
+            assert_eq!((x, y, colour), (20., 0., Some([0., 0., 1.])));
+        }
+    }
+    assert!(cad_step::move_step_product_branch(&original, &[], motion).is_err());
+    assert!(cad_step::move_step_product_branch(&original, &["Missing"], motion).is_err());
+    assert!(cad_step::move_step_product_branch(&original, &["Drive"], [[0.; 4]; 4]).is_err());
+    if let Some(path) = std::env::var_os("CAD_BRANCH_MOTION_FIXTURE") {
+        std::fs::write(path, result).unwrap();
+    }
+}

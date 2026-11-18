@@ -1,0 +1,13 @@
+{
+  "id": "NURBS-0985",
+  "testedBase": "7b7d79db7cb7f57f2a8ce3ea5c0a54e6dc54fea6",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "517c86c8e43e8cebcd4824683dfb8fbe11f605271d2d8a0ccdc77cc8c252ec8f",
+    "crates/cad-step/src/step_interchange_v3.rs": "405f16f1736044e77dfbcc6157782a929931fbef0617b1c6b027cd6bf16b3f23",
+    "crates/cad-step/src/lib.rs": "9bbd0cd81c4c1a73ddbc51369280bffa86e71fac8880cdd4e92b080cd28528a3",
+    "crates/cad-step/tests/baked_step_scales.rs": "66e383df1a41ce6e2a5f4f3141814fdc845fb9688155e46f2d5beb31cfc10e17"
+  },
+  "fixtureSha256": "96b4dc3abd24914d5d954c25b393471aae3eda9ab0aab75e2de38b317c5f3d85",
+  "command": "CAD_BRANCH_MOTION_FIXTURE=/tmp/osv985.step cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test baked_step_scales",
+  "external": "Shared bracket: two rotated group centres and one unchanged root centre, all colours matched"
+}
