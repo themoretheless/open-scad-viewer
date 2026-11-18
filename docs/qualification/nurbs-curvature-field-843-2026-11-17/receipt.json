@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0843",
+  "testedBase": "10ff357be9157d81ee235639601becd67c612d03",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 192,
+  "scope": [
+    "Exclude occurrences by conservative world bounds and trace retained trimmed surfaces under shared root and domain work limits.",
+    "Check two entry and exit interval pairs for rigid and reflected scaled solids, rejection of zero direction, distant occurrence exclusion and explicit budget exhaustion."
+  ],
+  "logSha256": "f5a39acc26fdcf0bbb7b49ac28fae6c52efac623f5f100649528f57885e2427d",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "fff7886ccbd974f2051ad0ed42f34fa7fe522c0b9ff1fa861da0cec085e3a581",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "898d36d2803cce343cd7c661d7a2d7f93adf8c865bf86c905707ff48b763d17d",
+    "crates/brep-core/src/model/ray_parity.rs": "e9b5c0b000ee5c8b3874f4762eb16f4720b293a9023c3a4c317a12461516c3e2"
+  }
+}

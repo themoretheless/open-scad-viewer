@@ -1134,6 +1134,51 @@ impl StepSharedAssembly {
         }).collect()
     }
 
+    /// Trace a forward ray against placed trimmed faces. Returns occurrence
+    /// indices in assembly order, omitting only boxes excluded by axis signs.
+    /// Unresolved crossings and exhausted work remain explicit per occurrence.
+    pub fn ray_crossings(
+        &self,
+        origin: [f64; 3],
+        direction: [f64; 3],
+        tolerance_uv: f64,
+        max_cells: usize,
+        max_domain_cells: usize,
+    ) -> Result<Vec<(usize, Result<brep_core::ray_parity::Report>)>> {
+        if !origin.iter().chain(&direction).all(|coordinate| coordinate.is_finite())
+            || direction == [0.; 3]
+            || !tolerance_uv.is_finite() || tolerance_uv <= 0.
+            || !(1..=1_000_000).contains(&max_cells)
+            || !(1..=8_000_000).contains(&max_domain_cells)
+        {
+            return Err(refuse("STEP assembly ray requires finite geometry, positive tolerance and bounded work"));
+        }
+        let mut remaining_cells = max_cells;
+        let mut remaining_domain = max_domain_cells;
+        let mut results = Vec::new();
+        for (index, [lower, upper]) in self.occurrence_bounds()?.into_iter().enumerate() {
+            if (0..3).any(|axis| {
+                (direction[axis] >= 0. && upper[axis] < origin[axis])
+                    || (direction[axis] <= 0. && lower[axis] > origin[axis])
+            }) {
+                continue;
+            }
+            let report = if remaining_cells == 0 || remaining_domain == 0 {
+                Err(refuse("STEP assembly ray work budget exhausted"))
+            } else {
+                let model = self.materialize(index)?;
+                let report = brep_core::ray_parity::classify_ray(
+                    &model, origin, direction, tolerance_uv, remaining_cells, remaining_domain,
+                )?;
+                remaining_cells -= report.cells;
+                remaining_domain -= report.domain_cells;
+                Ok(report)
+            };
+            results.push((index, report));
+        }
+        Ok(results)
+    }
+
     pub fn materialize(&self, index: usize) -> Result<Model> {
         let occurrence = self.occurrences.get(index)
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;

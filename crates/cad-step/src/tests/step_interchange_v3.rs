@@ -2848,6 +2848,39 @@ fn shared_step_scaled_cube_pair() -> crate::StepSharedAssembly {
 }
 
 #[test]
+fn shared_step_ray_crossings_respect_placements_trims_and_shared_budget() {
+    let mut assembly = shared_step_scaled_cube_pair();
+    let placement = [
+        [0., -3., 0., 25.], [2., 0., 0., 0.], [0., 0., -4., 4.], [0., 0., 0., 1.],
+    ];
+    assembly.set_occurrence_orthogonal_placement(1, placement).unwrap();
+    let distant = [
+        [1., 0., 0., 0.], [0., 1., 0., 50.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ];
+    assembly.add_occurrence(0, distant).unwrap();
+    let origin = [-1., 0.75, 1.25];
+    let direction = [1., 0., 0.];
+    let reports = assembly.ray_crossings(origin, direction, 1e-7, 100_000, 200_000).unwrap();
+    assert_eq!(reports.len(), 2);
+    for ((index, report), expected) in reports.iter().zip([[1., 3.], [20., 26.]]) {
+        assert!(*index < 2);
+        let report = report.as_ref().unwrap();
+        assert!(report.unresolved.is_empty(), "{report:?}");
+        assert_eq!(report.crossings.len(), 2);
+        let mut parameters: Vec<_> = report.crossings.iter().map(|hit| hit.parameter).collect();
+        parameters.sort_by(|a, b| a[0].total_cmp(&b[0]));
+        for ([lo, hi], expected) in parameters.into_iter().zip(expected) {
+            assert!(lo <= expected && expected <= hi, "{lo}..{hi} vs {expected}");
+        }
+    }
+
+    let limited = assembly.ray_crossings(origin, direction, 1e-7, 1, 1).unwrap();
+    assert!(!limited[0].1.as_ref().unwrap().unresolved.is_empty());
+    assert!(limited[1].1.is_err());
+    assert!(assembly.ray_crossings(origin, [0.; 3], 1e-7, 1, 1).is_err());
+}
+
+#[test]
 fn shared_step_mass_accounts_for_different_material_densities() {
     let assembly = shared_step_scaled_cube_pair();
     for invalid in [&[0.002][..], &[0.002, f64::NAN], &[0.002, 0.]] {
