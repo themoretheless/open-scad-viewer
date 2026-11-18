@@ -27,7 +27,7 @@ pub struct QualifiedReport {
     pub fallback_exact_work: u64,
 }
 fn classified(p: &face_contacts::Pair) -> bool {
-    p.boundary.is_some() || p.hull_disjoint || p.result.as_ref().is_some_and(|r| r.absence_proven)
+    p.boundary.is_some() || p.hull_disjoint || p.radial_disjoint || p.result.as_ref().is_some_and(|r| r.absence_proven)
 }
 pub fn inspect_qualified(
     model: &Model,

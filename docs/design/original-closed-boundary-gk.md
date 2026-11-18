@@ -244,6 +244,20 @@ curve, the candidate affine clock uses the endpoints of an exact active
 restriction, while the identity is checked against the original basis.
 Partial world intervals remain diagnostic windows.
 
+A periodic face can pass the embedding audit with an extended UV
+carrier on a quotient shore. The audit proves the ordered active
+segment and uses its exact endpoints for chart coverage. It checks
+that opposite shores use the same full world edges after exact lift
+and trim validation. The original quotient still needs an independent
+injectivity and regularity proof. When the stored carrier has unused bends
+or the active contour is curved, the audit can use an exactly clamped
+restriction on the original parameter interval. Its poles bound the active
+trim chart, and the same restriction identifies an outer rectangle side or
+a collapsed shore when applicable. The exact lift check can also use the
+restriction to prove equality over the complete spatial edge, with the
+authored traversal direction and sheet endpoints. Restriction work is
+charged to the corresponding lift or chart allowance.
+
 The complete G1/G2 and classified seam audits can recover a full natural
 side from the active interval of a rational UV carrier. On a periodic
 chart, exact endpoints must be on the native sides with matching authored
@@ -251,7 +265,10 @@ sheet indices. A complete periodic world edge uses the original periodic
 trace proof after exact recovery of the active affine UV clock. Ordered UV
 traversal proves side coverage, and exact world-edge agreement binds it
 to the authored seam. Side recovery and chart reversal share the seam
-work allowance.
+work allowance. An exact clamped restriction can recover a complete
+natural side when the stored curve bends outside its active interval.
+Both selected and complete seam audits bind the recovered side to the
+whole original edge before comparing jets.
 
 The selected-edge G2 inspection can also replay a directed active UV
 interval on a nonperiodic chart. It stores that interval exactly on its
@@ -315,3 +332,36 @@ outside binary64.
 For a periodic trim, exact closure of the stored knot shifts and repeated
 controls permits the same proof on one full turn, including both sides of
 the wrap.
+
+## Closed torus split into two original periodic bands
+
+The native audit factors the original tensor coefficients into compatible
+azimuthal curves and positive-radius meridians. A strict angular derivative
+sign and a simple closed azimuthal curve prove a single visit to each ray.
+The two regular meridians form one simple closed curve. Their images meet
+only at the two exact meridian joins.
+
+The BRep audit verifies exact world lifts and valid positively wound trims.
+It checks both native UV rectangles, paired uses of their periodic shores,
+and the two matching original rims. This binds the carrier proof to the
+actual shell and limits the inter-band contact to the owned rim edges.
+The proof charges factorization, curve certification, and contour work
+against the existing bounded ledgers.
+
+The native two-band torus regression admits the closed material body,
+checks outward orientation, and distinguishes material, the torus hole,
+and the external region. It also checks complete G2, mixed G1/G2/C0,
+and refusal when the chart budget is below its mandatory work. This
+covers the certified radial tensor family with two complete band charts.
+
+The four-band native regression recovers the meridian order from a shuffled
+shell face list. The closed material audit proves the four neighboring rim
+contacts and the two exact disjoint non-neighbor pairs, then checks outward
+orientation and point parity. A five-pair allowance leaves the sixth pair
+pending and cannot admit the body.
+
+The radial factorization can also derive a common exact affine height
+coordinate from the source sections and a common center drift. The native
+four-band fixtures pass complete G2 and Solid admission after an exact
+axis shear and after also tilting the section planes. Both use the actual
+transformed BRep, including its original trim clocks and owned rims.

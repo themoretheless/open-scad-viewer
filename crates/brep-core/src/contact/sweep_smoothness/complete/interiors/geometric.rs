@@ -479,6 +479,48 @@ mod tests {
         assert!(partial.unresolved_edges.contains(&0));
     }
     #[test]
+    fn g2_uses_the_exact_active_interval_of_a_bent_periodic_shore() {
+        use crate::sweep_smoothness::geometric::{Tolerances, inspect_edges_with_exact};
+        let model = single_face_torus(periodic_chart(true));
+        let mut trimmed = model.clone();
+        let range = trimmed.edges[1].curve.domain();
+        let coedge = &mut trimmed.loops[0].coedges[1];
+        *coedge = crate::Coedge::new(1, false, crate::Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 2., 4., 4.],
+            control_points: vec![vec![3., -1.], vec![4., 0.], vec![4., 4.], vec![3., 5.]],
+            weights: vec![1.; 4],
+            periodic: false,
+        }).with_trim(brep_topology::CoedgeTrim {
+            curve_parameter: range,
+            pcurve_parameter: [1., 2.],
+            periodic_lift: [[1, 0], [1, 1]],
+        }).unwrap();
+        trimmed.validate().unwrap();
+        let report = super::super::super::inspect(&trimmed, super::super::super::Limits {
+            order: 2, exact_work: 16_000_000, agreement_work: 1_000_000, regularity_cells: 100_000,
+        }).unwrap();
+        assert!(report.g2_certified, "{:?}", report.unresolved_edges);
+        let tolerances = Tolerances { position: 0., normal: 0., curvature: 0. };
+        let selected = inspect_edges_with_exact(&trimmed, &[1], tolerances, 1, 1_000_000).unwrap();
+        assert!(selected.complete && selected.within_tolerance);
+        let limited = inspect_edges_with_exact(&trimmed, &[1], tolerances, 1, selected.exact_work - 1).unwrap();
+        assert!(!limited.within_tolerance);
+
+        use super::super::super::classified::{self, Class};
+        let mixed = classified::inspect(
+            &trimmed, &[Class::C0, Class::G2],
+            classified::Limits {
+                incidence_steps: 100, exact_work: 16_000_000,
+                agreement_work: 1_000_000, regularity_cells: 100_000,
+            },
+        ).unwrap();
+        assert!(mixed.certified, "{}", mixed.reason);
+        assert_eq!(mixed.c0_edges, [0]);
+        assert_eq!(mixed.smooth_edges, [1]);
+    }
+
+    #[test]
     fn selected_g2_joins_two_distinct_periodic_wall_faces() {
         use crate::sweep_smoothness::geometric::{Tolerances, inspect_edges_with_exact};
         use crate::{Coedge, Curve, Edge, Face, FaceUse, Loop, Shell, Vertex};
@@ -551,6 +593,29 @@ mod tests {
         }).unwrap();
         assert!(zero.unresolved_edges.contains(&1));
 
+        let range = model.edges[1].curve.domain();
+        model.loops[1].coedges[0] = Coedge::new(1, false, Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 2., 4., 4.],
+            control_points: vec![vec![-1., 0.25], vec![0., 0.], vec![4., 0.], vec![5., 0.25]],
+            weights: vec![1.; 4],
+            periodic: false,
+        }).with_trim(brep_topology::CoedgeTrim {
+            curve_parameter: range,
+            pcurve_parameter: [1., 2.],
+            periodic_lift: [[0, 0], [1, 0]],
+        }).unwrap();
+        model.rebuild_topology_ids();
+        model.validate().unwrap();
+        let active = inspect_edges_with_exact(&model, &[1], t, 1, 1_000_000).unwrap();
+        assert!(active.complete && active.within_tolerance);
+        assert_eq!(active.seams[0].faces, [0, 1]);
+        assert_eq!(active.seams[0].inspection.as_ref().unwrap().orientation,
+            Some(nurbs_core::surface_g2::Orientation::Same));
+        let complete = super::super::super::inspect(&model, limits).unwrap();
+        let index = complete.edge_ids.iter().position(|&edge| edge == 1).unwrap();
+        assert!(complete.proof.seams[index].certified);
+        assert!(!complete.extraction_complete);
     }
 
     #[test]
@@ -563,6 +628,28 @@ mod tests {
             .unwrap().surface.unwrap();
         let [lower, upper] = split_tensor_surface(&opened, Axis::V, 2., 1_000_000)
             .unwrap().parts.unwrap();
+        for band in [&lower, &upper] {
+            let count = band.control_points.len() * band.control_points[0].len();
+            let factors = nurbs_core::surface_injectivity::factor_radial_tensor(band, 0, 2, count)
+                .unwrap().unwrap();
+            assert_eq!(factors.center, [0.; 2]);
+            assert_eq!(factors.height_axis, 2);
+            assert!(factors.angular.periodic && !factors.meridian.periodic);
+            let angular = nurbs_core::surface_injectivity::certify_angular_ring(
+                &factors.angular, 10_000, 100,
+            ).unwrap();
+            assert!(angular.proven);
+            assert!(!nurbs_core::surface_injectivity::certify_angular_ring(
+                &factors.angular, 1, 100,
+            ).unwrap().proven);
+            assert!(nurbs_core::surface_injectivity::factor_radial_tensor(band, 0, 2, count - 1)
+                .unwrap().is_none());
+            let mut perturbation = band.clone();
+            let x = &mut perturbation.control_points[2][1][0];
+            *x = x.next_up();
+            assert!(nurbs_core::surface_injectivity::factor_radial_tensor(&perturbation, 0, 2, count)
+                .unwrap().is_none());
+        }
         let make_rim = |s: &Surface| Curve {
             degree: s.degree_u, knots: s.knots_u.clone(),
             control_points: s.control_points.iter().map(|r| r[0].clone()).collect(),
@@ -635,6 +722,223 @@ mod tests {
         assert!(!classified::inspect(&model, &classes, classified::Limits {
             exact_work: classified.exact_work - 1, ..classified_limits
         }).unwrap().certified);
+
+        let range = model.edges[1].curve.domain();
+        model.loops[1].coedges[0] = Coedge::new(1, false, Curve {
+            degree: 1,
+            knots: vec![0., 0., 1., 2., 4., 4.],
+            control_points: vec![vec![-1., 2.25], vec![0., 2.], vec![4., 2.], vec![5., 2.25]],
+            weights: vec![1.; 4],
+            periodic: false,
+        }).with_trim(brep_topology::CoedgeTrim {
+            curve_parameter: range,
+            pcurve_parameter: [1., 2.],
+            periodic_lift: [[0, 0], [1, 0]],
+        }).unwrap();
+        model.rebuild_topology_ids();
+        model.validate().unwrap();
+        use crate::feature_ops::region_pattern::qualification::periodic_charts::radial_incidence;
+        let mut chart_budget = 10000;
+        let incidence = radial_incidence::inspect(&model, [0, 1], &mut chart_budget).unwrap().unwrap();
+        assert_eq!(incidence.periodic_axes, [0, 0]);
+        assert_eq!(incidence.rims, [0, 1]);
+        assert!(chart_budget < 10000);
+        assert!(radial_incidence::inspect(&model, [0, 1], &mut 1).is_err());
+        let active = super::super::super::inspect(&model, limits).unwrap();
+        assert!(active.g2_certified, "{:?}", active.unresolved_edges);
+        assert_eq!(active.edge_ids, [0, 1]);
+        assert_eq!(active.periodic_edge_ids, [2, 3]);
+        assert!(active.parameter_work > opening_work);
+        let mixed = classified::inspect(
+            &model, &[Class::G1, Class::G2, Class::G2, Class::C0], classified_limits,
+        ).unwrap();
+        assert!(mixed.certified, "{}", mixed.reason);
+        assert_eq!(mixed.smooth_edges, [0, 1, 2]);
+        assert_eq!(mixed.c0_edges, [3]);
+
+        let embedding_limits = crate::boundary_embedding::Limits {
+            exact_work: 1000000, trim_pairs: 1000, trim_cells: 10000,
+            trim_domain_cells: 100000, spans: 100,
+            contacts: crate::face_contacts::Limits {
+                pairs: 100, cells: 10000, domain_cells: 100000,
+                cells_per_pair: 16, domain_cells_per_pair: 1000,
+            },
+        };
+        let embedded = crate::boundary_embedding::inspect_with_linear(
+            &model, 1e-8, embedding_limits, 100000,
+        ).unwrap();
+        assert!(embedded.proven);
+        assert!(embedded.intersections.faces.faces.iter().all(|f| f.periodic_quotient));
+        assert!(embedded.hull_contacts.iter().any(|proof| proof.faces == [0, 1] && proof.edges == [0, 1]));
+        assert!(!crate::boundary_embedding::inspect_with_linear(
+            &model, 1e-8, embedding_limits, 1,
+        ).unwrap().proven);
+
+        let admission = crate::closed_solid::qualify(model, crate::closed_solid::AdmissionPolicy {
+            tolerance_uv: 1e-8,
+            max_linear_cells: 100000,
+            geometry: crate::volume_validity::Limits {
+                boundary: embedding_limits,
+                nesting_pairs: 100, nesting_cells: 10000, nesting_domain_cells: 100000,
+                orientation_cells: 100000, orientation_domain_cells: 100000,
+                orientation_spans: 1000,
+            },
+        }).unwrap();
+        assert_eq!(admission.geometry().nesting.as_ref().unwrap().roles_consistent, Some(true));
+        assert_eq!(admission.geometry().orientations[0].outward, Some(true));
+        let solid = admission.into_solid().expect("the embedded oriented torus owns material");
+        let directions = [[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]];
+        for (point, inside) in [([4., 0.125, 0.125], true), ([0.; 3], false), ([7., 0.125, 0.125], false)] {
+            assert_eq!(solid.classify_point(point, &directions, 100000, 100000).unwrap().parity,
+                Some(inside), "{point:?}");
+        }
+    }
+
+    fn four_periodic_bands() -> crate::Model {
+        use crate::{Body, Coedge, Curve, Edge, Face, FaceUse, Loop, Shell, Vertex};
+        use nurbs_core::{editing::{exact_periodic_surface::open_exact_periodic_surface_axis,
+            exact_surface_knot_insertion::split_tensor_surface}, surface::Axis};
+        let native = periodic_chart(true);
+        let opened = open_exact_periodic_surface_axis(&native, Axis::V, 1_000_000)
+            .unwrap().surface.unwrap();
+        let split = |s: &Surface, t| split_tensor_surface(s, Axis::V, t, 1_000_000)
+            .unwrap().parts.unwrap();
+        let [lo, hi] = split(&opened, 2.);
+        let [a,b] = split(&lo, 1.);
+        let [c,d] = split(&hi, 3.);
+        let bands = [a,b,c,d];
+        let mut vertices = Vec::new();
+        let mut edges = Vec::new();
+        for (i, s) in bands.iter().enumerate() {
+            let p = &s.control_points[1][0];
+            vertices.push(Vertex { point: [p[0],p[1],p[2]] });
+            edges.push(Edge {
+                curve: Curve {
+                    degree: s.degree_u, knots: s.knots_u.clone(), periodic: true,
+                    control_points: s.control_points.iter().map(|r| r[0].clone()).collect(),
+                    weights: s.weights.iter().map(|r| r[0]).collect(),
+                },
+                vertices: [i,i], degenerate: false,
+            });
+        }
+        let mut loops = Vec::new();
+        for (i, s) in bands.iter().enumerate() {
+            let next = (i+1)%4;
+            let [lo,hi] = [i as f64, i as f64 + 1.];
+            edges.push(Edge {
+                curve: Curve {
+                    degree: s.degree_v, knots: s.knots_v.clone(), periodic: false,
+                    control_points: s.control_points[1].clone(), weights: s.weights[1].clone(),
+                },
+                vertices: [i,next], degenerate: false,
+            });
+            loops.push(Loop { coedges: [
+                (i,false,[0.,lo],[4.,lo]), (i+4,false,[4.,lo],[4.,hi]),
+                (next,true,[4.,hi],[0.,hi]), (i+4,true,[0.,hi],[0.,lo]),
+            ].map(|(edge, rev, a, b)| Coedge::new(edge, rev, crate::line(a.to_vec(), b.to_vec()))).to_vec() });
+        }
+        let mut model = crate::Model(brep_topology::Model {
+            vertices, edges, loops,
+            faces: bands.into_iter().enumerate().map(|(outer,surface)| Face { surface, outer, holes: vec![] }).collect(),
+            shells: vec![Shell { closed: true, faces: [2,0,3,1].map(|face| FaceUse { face, reversed: false }).to_vec() }],
+            bodies: vec![Body { outer_shell: 0, inner_shells: vec![] }], tolerance_mm: 1e-8,
+        }, crate::TopologyIds::default());
+        model.rebuild_topology_ids();
+        model.validate().unwrap();
+        model
+    }
+
+    fn four_band_policy() -> crate::closed_solid::AdmissionPolicy {
+        crate::closed_solid::AdmissionPolicy {
+            tolerance_uv: 1e-8,
+            max_linear_cells: 100000,
+            geometry: crate::volume_validity::Limits {
+                boundary: crate::boundary_embedding::Limits {
+                    exact_work: 1000000, trim_pairs: 1000, trim_cells: 10000,
+                    trim_domain_cells: 100000, spans: 100,
+                    contacts: crate::face_contacts::Limits {
+                        pairs: 100, cells: 10000, domain_cells: 100000,
+                        cells_per_pair: 16, domain_cells_per_pair: 1000,
+                    },
+                },
+                nesting_pairs: 100, nesting_cells: 10000, nesting_domain_cells: 100000,
+                orientation_cells: 100000, orientation_domain_cells: 100000,
+                orientation_spans: 1000,
+            },
+        }
+    }
+
+    #[test]
+    fn exact_four_band_shell_separates_nonadjacent_periodic_faces() {
+        let model = four_periodic_bands();
+        use crate::feature_ops::region_pattern::qualification::periodic_charts::radial_incidence;
+        let mut remaining = 10000;
+        let contacts = radial_incidence::certify_cycle_contacts(&model, &[2,0,3,1], &mut remaining, &mut 0, 100)
+            .unwrap().unwrap();
+        let mut disjoint = contacts.disjoint;
+        disjoint.sort();
+        assert_eq!(disjoint, [[0,2],[1,3]]);
+        assert_eq!(contacts.shared.len(),4);
+        for contact in contacts.shared {
+            assert_eq!(contact.edges.len(),1);
+        }
+        let policy = four_band_policy();
+        let mut limited_policy = policy;
+        limited_policy.geometry.boundary.contacts.pairs = 5;
+        let limited = crate::closed_solid::qualify(model.clone(), limited_policy).unwrap();
+        let limited_pairs = &limited.geometry().boundary.intersections.pairs;
+        assert_eq!(limited_pairs.next_pair, Some([2, 3]));
+        assert!(!limited_pairs.all_pairs_classified);
+        assert!(limited.solid().is_none());
+
+        let admission = crate::closed_solid::qualify(model, policy).unwrap();
+        let geometry = admission.geometry();
+        let disjoint = geometry.boundary.intersections.pairs.pairs.iter()
+            .filter(|pair| pair.radial_disjoint)
+            .map(|pair| {
+                assert_eq!(pair.reason, "pair-disjoint");
+                assert!(!pair.hull_disjoint && pair.result.is_none());
+                pair.faces
+            }).collect::<Vec<_>>();
+        assert_eq!(disjoint, [[0, 2], [1, 3]]);
+        assert!(geometry.boundary.proven);
+        assert_eq!(geometry.orientations[0].outward, Some(true));
+        let solid = admission.into_solid().expect("four radial bands own an oriented closed solid");
+        let directions = [[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]];
+        for (point, inside) in [([4., 0.125, 0.125], true), ([0.; 3], false)] {
+            assert_eq!(solid.classify_point(point, &directions, 100000, 100000).unwrap().parity, Some(inside));
+        }
+    }
+
+    #[test]
+    fn four_band_solid_preserves_material_under_exact_affine_slice_frames() {
+        let source = four_periodic_bands();
+        for height_row in [[0., 0., 1., 0.], [0.25, 0.5, 0.125, -1.]] {
+            let transform = [
+                [1., 0., 0.5, 2.],
+                [0., 1., -2., -3.],
+                height_row,
+                [0., 0., 0., 1.],
+            ];
+            let model = crate::transform::affine(&source, transform).unwrap();
+            let continuity = super::super::super::inspect(&model, super::super::super::Limits {
+                order: 2, exact_work: 16_000_000, agreement_work: 1_000_000, regularity_cells: 100_000,
+            }).unwrap();
+            assert!(continuity.g2_certified, "{height_row:?}: {:?}", continuity.unresolved_edges);
+            let admission = crate::closed_solid::qualify(model, four_band_policy()).unwrap();
+            let geometry = admission.geometry();
+            assert!(geometry.boundary.proven, "{height_row:?}");
+            assert_eq!(geometry.orientations[0].outward, Some(true));
+            assert_eq!(geometry.boundary.intersections.pairs.pairs.iter()
+                .filter(|p| p.radial_disjoint).count(), 2);
+            let solid = admission.into_solid().expect("affine radial shell owns material");
+            let directions = [[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]];
+            for (sample, inside) in [([4., 0.125, 0.125, 1.], true), ([0., 0., 0., 1.], false)] {
+                let point = std::array::from_fn(|i| (0..4).map(|j| transform[i][j] * sample[j]).sum());
+                assert_eq!(solid.classify_point(point, &directions, 100000, 100000).unwrap().parity,
+                    Some(inside), "{point:?}");
+            }
+        }
     }
 
     #[test]

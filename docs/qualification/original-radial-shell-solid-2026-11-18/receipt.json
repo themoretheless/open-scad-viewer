@@ -1,0 +1,23 @@
+{
+  "sourceBase": "3a94c6f761daa6f8daee40e301721a6cd4842d76",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Native BRep qualification of the original two-band torus with an active exact UV rim. Checks globally embedded bands and owned rim contacts, outward material admission, material and hole parity, complete G2, mixed G1/G2/C0 and bounded refusal.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib full_and_classified_g2_join_a_closed_torus",
+      "result": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2066 filtered out; finished in 0.42s",
+      "file": "solid.log.gz",
+      "sha256": "56b8e0a2244acd39fde39573b81b52ab7156c90144d4c048ab4faddfc3be01ed"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "b2a6bf7d7a9db21f7c96553e00ce06b66cb039e6dd85f96a694e085a84a39f95",
+    "count": 4922
+  }
+}

@@ -104,9 +104,11 @@ fn qualify_periodic_charts(
     trim: &face_domain::TrimAudit,
     faces: &mut crate::face_injectivity::Report,
     max_cells: usize,
-) {
+) -> (Vec<crate::boundary_hull_contact::Certificate>, Vec<[usize; 2]>) {
+    let mut contacts = Vec::new();
+    let mut disjoint = Vec::new();
     if !agreement.all_equal || !agreement.all_joins_exact || !trim.all_valid {
-        return;
+        return (contacts, disjoint);
     }
     let mut remaining = max_cells.saturating_sub(faces.linear_cells);
     let mut pairs = 0;
@@ -120,19 +122,40 @@ fn qualify_periodic_charts(
             .flat_map(|wire| &model.loops[wire].coedges)
             .all(|coedge| {
                 coedge.trim().is_none_or(|trim| {
-                    trim.pcurve_parameter == coedge.pcurve.domain()
-                        && trim.curve_parameter == model.edges[coedge.edge].curve.domain()
+                    trim.curve_parameter == model.edges[coedge.edge].curve.domain()
                 })
             });
         if full_intervals && remaining > 0 && pairs < max_cells {
             report.periodic_quotient =
-                crate::feature_ops::region_pattern::qualification::periodic_charts::verify(
+                crate::feature_ops::region_pattern::qualification::periodic_charts::verify_active(
                     model, report.face, &mut remaining, &mut pairs, max_cells,
                 ).unwrap_or(false);
         }
     }
+    for shell in &model.shells {
+        if remaining == 0 || pairs >= max_cells {
+            break;
+        }
+        if !(2..=256).contains(&shell.faces.len()) {
+            continue;
+        }
+        let shell_faces = shell.faces.iter().map(|f| f.face).collect::<Vec<_>>();
+        if shell_faces.iter().any(|&i| !trim.faces[i].as_ref().is_some_and(|r| r.winding.first() == Some(&Some(1)))) {
+            continue;
+        }
+        if let Ok(Some(cycle)) = crate::feature_ops::region_pattern::qualification::periodic_charts::radial_incidence::certify_cycle_contacts(
+            model, &shell_faces, &mut remaining, &mut pairs, max_cells,
+        ) {
+            for i in shell_faces {
+                faces.faces[i].periodic_quotient = true;
+            }
+            contacts.extend(cycle.shared);
+            disjoint.extend(cycle.disjoint);
+        }
+    }
     faces.linear_cells = max_cells - remaining;
     faces.all_faces_injective = faces.faces.iter().all(|report| report.absence_proven());
+    (contacts, disjoint)
 }
 
 fn inspect_impl(
@@ -172,12 +195,11 @@ fn inspect_impl(
             proposals,
         )?
     };
-    qualify_periodic_charts(model, &agreement, &trim, &mut faces, max_linear_cells);
+    let (mut hull_contacts, radial_disjoint) = qualify_periodic_charts(model, &agreement, &trim, &mut faces, max_linear_cells);
     let winding = trim.faces.iter().all(|r| {
         r.as_ref()
             .is_some_and(|r| r.winding.first() == Some(&Some(1)))
     });
-    let mut hull_contacts = Vec::new();
     let exact_domain = agreement.all_equal
         && agreement.all_joins_exact
         && trim.all_valid
@@ -227,25 +249,14 @@ fn inspect_impl(
             cap_contacts.push((cap, report));
         }
     }
-    let pairs = if sweep_hulls {
-        face_contacts::inspect_with_sweep_certificates(
-            model,
-            tolerance_uv,
-            limits.contacts,
-            &hull_contacts,
-            &allowed_caps,
-            exact_domain,
-        )?
-    } else {
-        face_contacts::inspect_with_certificates(
-            model,
-            tolerance_uv,
-            limits.contacts,
-            &hull_contacts,
-            &allowed_caps,
-            exact_domain,
-        )?
-    };
+    let pairs = face_contacts::inspect_with_radial_certificates(
+        model, tolerance_uv, limits.contacts, &hull_contacts, &allowed_caps,
+        face_contacts::ContactModes {
+            sweep_hulls: sweep_hulls || !allowed_caps.is_empty(),
+            joint_exact_domain: exact_domain,
+            prepared: None,
+        }, radial_disjoint,
+    )?;
     if sweep_hulls {
         // Contacts are recomputed for the actual scalar traversal. Group gaps
         // can skip a large prefix without authorizing unvisited contacts.
@@ -297,6 +308,7 @@ pub(crate) struct Inspector {
     contact_work: Option<face_contacts::Inspector>,
     result: Option<Report>,
     hull_contacts: Vec<crate::boundary_hull_contact::Certificate>,
+    radial_disjoint: Vec<[usize; 2]>,
     cover: Option<crate::face_contact_groups::Cover>,
     cover_cells: usize,
     cap_contacts: Vec<(usize, crate::sweep_cap_contacts::Report)>,
@@ -353,6 +365,7 @@ impl Inspector {
             contact_work: None,
             result: None,
             hull_contacts: vec![],
+            radial_disjoint: Vec::new(),
             cover: None,
             cover_cells: 0,
             cap_contacts: vec![],
@@ -399,7 +412,7 @@ impl Inspector {
             let limits = self.limits;
             let sweep_hulls = self.sweep_hulls;
             let faces = self.faces.as_mut().unwrap();
-            qualify_periodic_charts(
+            let (mut hull_contacts, radial_disjoint) = qualify_periodic_charts(
                 model, self.agreement.as_ref().unwrap(), self.trim.as_ref().unwrap(),
                 faces, self.max_linear_cells,
             );
@@ -407,7 +420,6 @@ impl Inspector {
                 r.as_ref()
                     .is_some_and(|r| r.winding.first() == Some(&Some(1)))
             });
-            let mut hull_contacts = Vec::new();
             let exact_domain = self.agreement.as_ref().unwrap().all_equal
                 && self.agreement.as_ref().unwrap().all_joins_exact
                 && self.trim.as_ref().unwrap().all_valid
@@ -444,6 +456,7 @@ impl Inspector {
             self.winding = winding;
             self.exact_domain = exact_domain;
             self.hull_contacts = hull_contacts;
+            self.radial_disjoint = radial_disjoint;
             self.cover = cover;
             self.cover_cells = cover_cells;
             self.cap_contacts = cap_contacts;
@@ -494,7 +507,7 @@ impl Inspector {
         }
         if self.contact_work.is_none() {
             self.contact_work = Some(face_contacts::Inspector::new(self.model.clone(), self.tolerance_uv, self.limits.contacts, self.hull_contacts.clone(), std::mem::take(&mut self.allowed_caps), crate::face_contacts::ContactModes { sweep_hulls: self.sweep_hulls, joint_exact_domain: self.exact_domain, prepared: self.sweep_hulls
-                    .then(|| (self.cover.take(), self.cover_cells)) })?);
+                    .then(|| (self.cover.take(), self.cover_cells)) })?.with_radial_separation(std::mem::take(&mut self.radial_disjoint)));
             return Ok(1);
         }
         let work = self.contact_work.as_mut().unwrap();
@@ -586,12 +599,11 @@ fn frozen_inspect_impl(
         max_linear_cells,
         proposals,
     )?;
-    qualify_periodic_charts(model, &agreement, &trim, &mut faces, max_linear_cells);
+    let (mut hull_contacts, radial_disjoint) = qualify_periodic_charts(model, &agreement, &trim, &mut faces, max_linear_cells);
     let winding = trim.faces.iter().all(|r| {
         r.as_ref()
             .is_some_and(|r| r.winding.first() == Some(&Some(1)))
     });
-    let mut hull_contacts = Vec::new();
     let exact_domain = agreement.all_equal
         && agreement.all_joins_exact
         && trim.all_valid
@@ -659,26 +671,14 @@ fn frozen_inspect_impl(
             cap_contacts.push((cap, report));
         }
     }
-    let pairs = if sweep_hulls {
-        face_contacts::inspect_with_prepared_sweep_certificates(
-            model,
-            tolerance_uv,
-            limits.contacts,
-            &hull_contacts,
-            &allowed_caps,
-            exact_domain,
-            (cover, cover_cells),
-        )?
-    } else {
-        face_contacts::inspect_with_certificates(
-            model,
-            tolerance_uv,
-            limits.contacts,
-            &hull_contacts,
-            &allowed_caps,
-            exact_domain,
-        )?
-    };
+    let pairs = face_contacts::inspect_with_radial_certificates(
+        model, tolerance_uv, limits.contacts, &hull_contacts, &allowed_caps,
+        face_contacts::ContactModes {
+            sweep_hulls: sweep_hulls || !allowed_caps.is_empty(),
+            joint_exact_domain: exact_domain,
+            prepared: sweep_hulls.then_some((cover, cover_cells)),
+        }, radial_disjoint,
+    )?;
     if sweep_hulls {
         // Contacts are recomputed for the actual scalar traversal. Group gaps
         // can skip a large prefix without authorizing unvisited contacts.

@@ -1,0 +1,23 @@
+{
+  "sourceBase": "32b2fe8b8269c462eb170cdc5d2de800887ab27c",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Native closed-solid integration suite. The original periodic cylinder has a bent stored UV carrier with a straight active shore. Exact restriction and world-lift identity bind the quotient, cap contacts, and inside/outside classification. Includes a mismatched interval and a short-budget refusal.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --test closed_solid",
+      "result": "test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.39s",
+      "file": "solid.log.gz",
+      "sha256": "bde3e428cd397314103149c3bf33d549219c257c821d6b250e592797e6994320"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "8f74926b0be3a32857305c15aea381902087a45ff9fc73ac8e203f52e42d0827",
+    "count": 4920
+  }
+}

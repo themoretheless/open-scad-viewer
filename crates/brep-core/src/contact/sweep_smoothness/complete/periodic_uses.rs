@@ -25,31 +25,53 @@ pub(super) fn full_side(
         return (None, 0);
     }
     let mut work = 0;
-    let side = crate::shared_boundary::chart_segments::natural_segment(
-        coedge,
-        &mut work,
-        budget.min(cad_predicates::MAX_WORK) as usize,
-    )
-    .and_then(|[a, b]| {
-        use super::super::{Axis, boundary_from_endpoints};
-        let label = boundary_from_endpoints(surface, &a, &b, Axis::Profile)
-            .or_else(|| boundary_from_endpoints(surface, &a, &b, Axis::Station))?;
-        if let Some(trim) = trim {
-            let high = [
-                surface.knots_u[surface.control_points.len()],
-                surface.knots_v[surface.control_points[0].len()],
-            ];
-            let periodic = [surface.periodic_u, surface.periodic_v];
-            let lift =
-                [a, b].map(|p| std::array::from_fn(|i| i32::from(periodic[i] && p[i] == high[i])));
-            if trim.periodic_lift != lift {
-                return None;
-            }
-        }
-        let free = usize::from(label.starts_with('u'));
-        Some((label, (a[free] < b[free]) != coedge.reversed))
-    });
+    let allowance = budget.min(cad_predicates::MAX_WORK) as usize;
+    let side =
+        crate::shared_boundary::chart_segments::natural_segment(coedge, &mut work, allowance)
+            .or_else(|| restricted_segment(coedge, &mut work, allowance))
+            .and_then(|[a, b]| {
+                use super::super::{Axis, boundary_from_endpoints};
+                let label = boundary_from_endpoints(surface, &a, &b, Axis::Profile)
+                    .or_else(|| boundary_from_endpoints(surface, &a, &b, Axis::Station))?;
+                if let Some(trim) = trim {
+                    let high = [
+                        surface.knots_u[surface.control_points.len()],
+                        surface.knots_v[surface.control_points[0].len()],
+                    ];
+                    let periodic = [surface.periodic_u, surface.periodic_v];
+                    let lift = [a, b].map(|p| {
+                        std::array::from_fn(|i| i32::from(periodic[i] && p[i] == high[i]))
+                    });
+                    if trim.periodic_lift != lift {
+                        return None;
+                    }
+                }
+                let free = usize::from(label.starts_with('u'));
+                Some((label, (a[free] < b[free]) != coedge.reversed))
+            });
     (side, work as u64)
+}
+
+fn restricted_segment(coedge: &Coedge, work: &mut usize, limit: usize) -> Option<[[f64; 2]; 2]> {
+    let [a, b] = coedge.trim()?.pcurve_parameter;
+    let range = [a.min(b), a.max(b)];
+    if coedge.pcurve.periodic || range == coedge.pcurve.domain() || *work == limit {
+        return None;
+    }
+    let restriction = nurbs_core::editing::exact_curve_merge::clamp_exact_curve_on(
+        &coedge.pcurve,
+        range,
+        (limit - *work) as u64,
+    )
+    .ok()?;
+    *work += restriction.work_used as usize;
+    let restricted = Coedge::new(coedge.edge, coedge.reversed, restriction.curve?);
+    let mut segment =
+        crate::shared_boundary::chart_segments::natural_segment(&restricted, work, limit)?;
+    if a > b {
+        segment.reverse();
+    }
+    Some(segment)
 }
 
 /// Prove a selected periodic join on exact native sides and the full world edge.
@@ -100,7 +122,7 @@ pub(crate) fn selected_periodic_join(
             {
                 return Ok(None);
             }
-            curve_surface_agreement::verify_exact_trimmed(
+            let proof = curve_surface_agreement::verify_exact_trimmed(
                 edge,
                 &c.pcurve,
                 surface,
@@ -108,7 +130,19 @@ pub(crate) fn selected_periodic_join(
                 trim.curve_parameter,
                 trim.pcurve_parameter,
                 remaining,
-            )?
+            )?;
+            if proof.is_none() {
+                crate::boundary_agreement::restricted_periodic_lift(
+                    edge,
+                    c,
+                    surface,
+                    trim.pcurve_parameter,
+                    work,
+                    limit,
+                )?
+            } else {
+                proof
+            }
         } else {
             curve_surface_agreement::verify_exact(edge, &c.pcurve, surface, c.reversed, remaining)?
         };
