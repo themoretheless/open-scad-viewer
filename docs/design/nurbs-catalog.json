@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 710,
-  "unallocatedCount": 290,
+  "specifiedCount": 711,
+  "unallocatedCount": 289,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17182,6 +17182,25 @@
       "remainingQualification": [
         "Certify containment of a translating convex vertex hull with optional spherical rounding.",
         "Check independent support vertices, rounded residuals, the analytic crossing, and invalid hull inputs.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0711",
+      "name": "Проверка зазора выпуклого инструмента до препятствий",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_rounded_hull_obstacle_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-711-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-711-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify separation and vertex-witnessed collision for translating rounded convex tools.",
+        "Check collision witnessed by an offset hull vertex, rounded separation, unresolved contact, and vertex/plane budget.",
         "WASM and application integration are separate."
       ]
     }

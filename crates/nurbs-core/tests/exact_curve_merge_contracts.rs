@@ -9895,3 +9895,35 @@ fn rounded_hull_workspace_selects_distinct_support_vertices_per_plane() {
     assert!(verify(&[], 0.).is_err());
     assert!(verify(&[&[1.]], 0.).is_err());
 }
+
+#[test]
+fn rounded_hull_obstacle_clearance_detects_contact_away_from_curve_origin() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_curve_rounded_hull_obstacle_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 2.], vec![1., 2.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacle = [
+        WorkspaceHalfSpace { normal: &[0., 2.], offset: 0. },
+        WorkspaceHalfSpace { normal: &[-1., 0.], offset: 1. },
+    ];
+    let check = |vertices: &[&[f64]], radius, budget| {
+        partition_curve_rounded_hull_obstacle_clearance(
+            &curve, [0., 1.], &[&obstacle], vertices, radius, 0.01, budget,
+        )
+    };
+    let colliding = [&[0., 0.][..], &[0., -3.][..], &[1., 0.][..]];
+    assert!(check(&colliding, 0., 5).is_err());
+    let report = check(&colliding, 0., 6).unwrap();
+    assert_eq!(report.work_plane_cells, 6);
+    assert_eq!(report.cells[0].status, Status::Exceeds);
+    let clear = [&[0., -1.][..], &[1., 0.][..]];
+    assert_eq!(check(&clear, 0.5, 4).unwrap().cells[0].status, Status::Within);
+    assert_eq!(check(&clear, 1.5, 4).unwrap().cells[0].status, Status::Undetermined);
+}

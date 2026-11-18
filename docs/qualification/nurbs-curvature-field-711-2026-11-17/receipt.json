@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0711",
+  "testedBase": "524cdd49dfd2d7d5c88bdb630b74d17718ba7d41",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 334,
+  "scope": [
+    "Certify separation and vertex-witnessed collision for translating rounded convex tools.",
+    "Check collision witnessed by an offset hull vertex, rounded separation, unresolved contact, and vertex/plane budget."
+  ],
+  "logSha256": "6cf3164bc53d0225cea35f91fafde022859692081e84f2ac189bb361bbd42e6a",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "9794723ca02fe059d1aee39be351c9dc86579463e8f4f248cefb0bcd447d3355",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "2fbfcfc49b42c6daa69d7386aba8351774279d327513c10c36c4ebabc3ec2c3f"
+  }
+}

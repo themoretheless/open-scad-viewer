@@ -2023,6 +2023,7 @@ pub struct ObstacleClearanceCell {
 pub struct ObstacleClearancePartition {
     pub cells: Vec<ObstacleClearanceCell>,
     /// Reserved plane evaluations, including planes skipped after separation.
+    /// For vertex hulls this counts vertex/plane pairs.
     pub work_plane_cells: usize,
 }
 
@@ -2110,6 +2111,98 @@ pub fn partition_curve_ball_obstacle_clearance(
         ObstacleClearanceCell { parameter_interval, span, obstacles, status }
     }).collect();
     Ok(ObstacleClearancePartition { cells, work_plane_cells: work_cells * plane_count })
+}
+
+/// Check clearance for a translating convex hull of offsets, rounded by a
+/// ball of the specified radius. A separating plane certifies clearance.
+/// A translated vertex inside all planes certifies collision. Other contact
+/// configurations may remain undetermined. The work budget accounts for
+/// every vertex/plane pair per enclosed cell.
+pub fn partition_curve_rounded_hull_obstacle_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    radius: f64,
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    check(radius.is_finite() && radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(parameter_tolerance, max_vertex_plane_cells)?;
+    check(!obstacles.is_empty() && !vertex_offsets.is_empty(), "Clearance requires obstacles and hull vertices")?;
+    let plane_budget = max_vertex_plane_cells / vertex_offsets.len();
+    let mut plane_count = 0;
+    for obstacle in obstacles {
+        check(!obstacle.is_empty(), "Each obstacle requires at least one plane")?;
+        if obstacle.len() > plane_budget - plane_count {
+            return Err(resource("Clearance budget must cover every vertex and plane"));
+        }
+        plane_count += obstacle.len();
+    }
+    curve.validate()?;
+    let dimension = curve.control_points[0].len();
+    let vertices = vertex_offsets.iter().map(|vertex| {
+        check(
+            vertex.len() == dimension && vertex.iter().all(|value| value.is_finite()),
+            "Tool hull vertices must be finite vectors matching the curve dimension",
+        )?;
+        Ok(vertex.iter().copied().map(Interval::point).collect::<Vec<_>>())
+    }).collect::<Result<Vec<_>>>()?;
+    let obstacles = obstacles.iter().map(|planes| {
+        prepare_workspace_planes(planes, dimension)?.into_iter().map(|(normal, offset)| {
+            let projected = vertices.iter().map(|vertex| project_jet(vertex, &normal))
+                .collect::<Result<Vec<_>>>()?;
+            let minimum = projected.iter().map(|value| value.lo).fold(f64::INFINITY, f64::min);
+            let support = if radius == 0. {
+                minimum
+            } else {
+                Interval::point(minimum).sub(norm(&normal)?.mul(Interval::point(radius))?)?.lo
+            };
+            Ok((normal, offset, projected, support))
+        }).collect::<Result<Vec<_>>>()
+    }).collect::<Result<Vec<_>>>()?;
+    let pairs = plane_count * vertices.len();
+    let (cells, work_cells) = partition_motion_cells(
+        curve, interval, parameter_tolerance, max_vertex_plane_cells / pairs,
+        |jets, _| {
+            let mut clearance = Vec::with_capacity(obstacles.len());
+            let mut candidates = vec![true; vertices.len()];
+            for obstacle in &obstacles {
+                candidates.fill(true);
+                let mut separated = false;
+                for (normal, offset, projected, minimum) in obstacle {
+                    let residual = project_jet(&jets[0], normal)?.sub(*offset)?;
+                    if residual.add(Interval::point(*minimum))?.lo > 0. {
+                        separated = true;
+                        break;
+                    }
+                    for (candidate, projection) in candidates.iter_mut().zip(projected) {
+                        *candidate &= residual.add(*projection)?.hi <= 0.;
+                    }
+                }
+                clearance.push(if separated {
+                    DirectionalMotionStatus::Within
+                } else if candidates.contains(&true) {
+                    DirectionalMotionStatus::Exceeds
+                } else {
+                    DirectionalMotionStatus::Undetermined
+                });
+            }
+            let refine = clearance.contains(&DirectionalMotionStatus::Undetermined);
+            let status = if clearance.contains(&DirectionalMotionStatus::Exceeds) {
+                DirectionalMotionStatus::Exceeds
+            } else if refine {
+                DirectionalMotionStatus::Undetermined
+            } else {
+                DirectionalMotionStatus::Within
+            };
+            Ok(((clearance, status), refine))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(span, parameter_interval, (obstacles, status))| {
+        ObstacleClearanceCell { parameter_interval, span, obstacles, status }
+    }).collect();
+    Ok(ObstacleClearancePartition { cells, work_plane_cells: work_cells * pairs })
 }
 
 fn partition_motion_cells<T>(
