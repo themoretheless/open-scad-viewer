@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0879",
+  "testedBase": "b295635e8c529be65f268341a76baf8d76b00a2b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 8,
+  "scope": [
+    "Inverse nominal pitch thinning from measured chord intervals, including uncertainty, active off-pitch round trip, clipping and invalid measurements."
+  ],
+  "logSha256": "337653696bf55efb2526a0420b8a7e3b5bd568919453771ee12b3e73292434c6",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute.rs": "119829ba9491bf565f14213d8f4fcb600176f66603f81b0c1924bec20f21bbad",
+    "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs": "5487a1b7b2b251b703bb34bba59356e1d8dcc1c50557bf1bb5722a6b5cc1ae58",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "70c1c95313240f408853bcfd59102396e462aaf47585b4feba50ea27662c71bf"
+  }
+}

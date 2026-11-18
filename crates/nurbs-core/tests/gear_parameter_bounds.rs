@@ -232,3 +232,25 @@ fn tooth_caliper_dimensions_follow_the_actual_measurement_circle() {
         assert!(measure(2., 20, 20., 0.5, 0., radius).is_err());
     }
 }
+
+#[test]
+fn caliper_uncertainty_encloses_pitch_circle_tooth_thinning() {
+    use involute::spur_tooth_thinning_bounds as infer;
+    let width = |thinning: f64| 40. * (std::f64::consts::PI / 40. - thinning / 40.).sin();
+    let bound = infer(2., 20, 20., 0.5, 20., [width(0.3), width(0.1)]).unwrap();
+    contains(bound, 0.1);
+    contains(bound, 0.3);
+    assert!(bound[1] - bound[0] < 0.200000001);
+    let chord = involute::spur_tooth_chord_bounds(2., 20, 20., 0.5, 0.42, 19.7).unwrap();
+    contains(
+        infer(2., 20, 20., 0.5, 19.7, chord.chord_length).unwrap(),
+        0.42,
+    );
+    assert_eq!(
+        infer(2., 20, 20., 0.5, 20., [0.1, 39.99]).unwrap(),
+        [0., 1.]
+    );
+    for invalid in [[4., 4.1], [0.1, 0.2], [3., 2.], [0., 1.], [2., f64::NAN]] {
+        assert!(infer(2., 20, 20., 0.5, 20., invalid).is_err());
+    }
+}

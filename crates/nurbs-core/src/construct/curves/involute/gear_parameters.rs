@@ -394,6 +394,17 @@ pub fn spur_tooth_chord_bounds(
 ) -> Result<ToothChordBounds> {
     let gear =
         derive_gear_parameter_bounds(module, teeth, pressure_degrees, clearance, backlash, false)?;
+    let angle = flank_half_angle(&gear, radius)?;
+    let r = I::point(radius);
+    let (sin, cos) = trig(angle)?;
+    let tip = I::new(gear.tip_radius[0], gear.tip_radius[1])?;
+    Ok(ToothChordBounds {
+        chord_length: pair(r.mul(sin)?.mul(I::point(2.))?),
+        depth_from_tip: pair(tip.sub(r.mul(cos)?)?),
+    })
+}
+
+fn flank_half_angle(gear: &GearParameterBounds, radius: f64) -> Result<I> {
     check(
         radius.is_finite()
             && radius >= gear.root_radius[1].max(gear.base_radius[1])
@@ -407,10 +418,42 @@ pub fn spur_tooth_chord_bounds(
     let half_base = I::new(gear.half_base_angle[0], gear.half_base_angle[1])?;
     let angle = half_base.sub(roll.sub(atan_positive(roll)?)?)?;
     check(angle.lo > 0., "Measurement circle crosses a pointed tooth")?;
-    let (sin, cos) = trig(angle)?;
-    let tip = I::new(gear.tip_radius[0], gear.tip_radius[1])?;
-    Ok(ToothChordBounds {
-        chord_length: pair(r.mul(sin)?.mul(I::point(2.))?),
-        depth_from_tip: pair(tip.sub(r.mul(cos)?)?),
-    })
+    Ok(angle)
+}
+
+/// Infer the single external tooth's pitch-circle thinning from an interval of
+/// measured chord widths on a known circle. The returned enclosure is clipped
+/// to the supported zero-to-half-module allowance. Assembly backlash also
+/// depends on the mate and the mounting distance.
+pub fn spur_tooth_thinning_bounds(
+    module: f64,
+    teeth: usize,
+    pressure_degrees: f64,
+    clearance: f64,
+    radius: f64,
+    measured_chord: [f64; 2],
+) -> Result<[f64; 2]> {
+    let gear = derive_gear_parameter_bounds(module, teeth, pressure_degrees, clearance, 0., false)?;
+    let nominal = flank_half_angle(&gear, radius)?;
+    let chord = I::new(measured_chord[0], measured_chord[1])?;
+    check(
+        chord.lo > 0. && chord.hi < 2. * radius,
+        "Expected positive chord widths below the diameter",
+    )?;
+    let half_angle = |width| -> Result<I> {
+        let sine = I::point(width).div(I::point(radius).mul(I::point(2.))?)?;
+        let cosine = sqrt_positive(I::point(1.).sub(sine.mul(sine)?)?)?;
+        atan_positive(sine.div(cosine)?)
+    };
+    let scale = I::new(gear.pitch_radius[0], gear.pitch_radius[1])?.mul(I::point(2.))?;
+    // Width decreases with thinning. Clip the measured range to the
+    // unthinned upper bound before evaluating the inverse near the diameter.
+    let nominal_width = I::point(radius).mul(I::point(2.))?.mul(trig(nominal)?.0)?;
+    let feasible = I::new(chord.lo, chord.hi.min(nominal_width.hi))?;
+    let observed = I::new(half_angle(feasible.lo)?.lo, half_angle(feasible.hi)?.hi)?;
+    let allowance = nominal.sub(observed)?.mul(scale)?;
+    Ok(pair(I::new(
+        allowance.lo.max(0.),
+        allowance.hi.min(module / 2.),
+    )?))
 }
