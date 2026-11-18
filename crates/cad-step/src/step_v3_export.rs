@@ -920,6 +920,19 @@ pub fn export_step_v9_with_metadata(
     model: &Model,
     semantic: &StepSemanticMetadata,
 ) -> Result<(String, StepV8Certificate, StepV3Report)> {
+    export_v9_metadata_points(model, semantic, false)
+}
+
+/// Write typed product and face attributes together with shared Cartesian points.
+pub fn export_step_v9_with_metadata_shared_points(
+    model: &Model, semantic: &StepSemanticMetadata,
+) -> Result<(String, StepV8Certificate, StepV3Report)> {
+    export_v9_metadata_points(model, semantic, true)
+}
+
+fn export_v9_metadata_points(
+    model: &Model, semantic: &StepSemanticMetadata, share_points: bool,
+) -> Result<(String, StepV8Certificate, StepV3Report)> {
     let mut certificate = certify_step_v8_topology(model)?;
     certificate.capability = STEP_INTERCHANGE_V9_CAPABILITY;
     certificate.notes.extend([
@@ -934,7 +947,7 @@ pub fn export_step_v9_with_metadata(
         STEP_INTERCHANGE_V9_CAPABILITY,
         Some(semantic),
         None,
-        false,
+        share_points,
     )?;
     Ok((text, certificate, report))
 }

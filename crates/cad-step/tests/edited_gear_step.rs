@@ -64,3 +64,32 @@ fn shared_step_points_reduce_spinner_size_and_preserve_authored_geometry() {
     assert_eq!(b.validate().unwrap().boundary_edge_count,0);
     eprintln!("spinner STEP bytes: original {}, reconstructed {}, shared {}",baseline.len(),expanded.len(),compact.len());
 }
+
+#[test]
+fn compact_gear_step_keeps_face_assignments_and_product_material() {
+    use cad_step::step_interchange_v3::*;
+    let model = brep_core::gear::gear(&GearSpec { teeth: 8, ..GearSpec::default() }).unwrap();
+    let mut meta = StepSemanticMetadata::empty(&model);
+    meta.xde.products.insert(42, StepProductMetadata { entity:42, id:"gear8".into(),
+        name:"Шестерня".into(), material:Some("Сталь".into()), ..Default::default() });
+    meta.xde.body_products[0] = Some(42);
+    meta.presentation.body_products[0] = Some(42);
+    let marked = model.faces.len()-1;
+    let style = StepPresentationStyle { colour:Some(StepColour::new(0.2,0.4,0.8).unwrap()),
+        layers:vec!["Контроль".into()], ..Default::default() };
+    meta.presentation.face_styles[marked] = Some(style.clone());
+    let (normal,..) = export_step_v9_with_metadata(&model,&meta).unwrap();
+    let (small,..) = export_step_v9_with_metadata_shared_points(&model,&meta).unwrap();
+    assert!(small.len() < normal.len());
+    let (baseline,_,_, baseline_meta) = import_step_v9_with_metadata(&normal).unwrap();
+    let (restored,_,_, read) = import_step_v9_with_metadata(&small).unwrap();
+    let product = &read.xde.products[&read.xde.body_products[0].unwrap()];
+    assert_eq!(product.name,"Шестерня");
+    assert_eq!(product.material.as_deref(),Some("Сталь"));
+    assert_eq!(baseline_meta.presentation.face_styles,read.presentation.face_styles);
+    assert_eq!(read.presentation.face_style(marked,0).unwrap().colour,style.colour);
+    assert_eq!(read.presentation.face_style(marked,0).unwrap().layers,style.layers);
+    assert_eq!(baseline.faces[marked].surface.control_points,restored.faces[marked].surface.control_points);
+    assert_eq!(restored.validate().unwrap().boundary_edge_count,0);
+    eprintln!("attributed gear STEP bytes: ordinary {} compact {}",normal.len(),small.len());
+}

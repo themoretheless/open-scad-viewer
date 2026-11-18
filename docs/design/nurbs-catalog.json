@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 929,
-  "unallocatedCount": 71,
+  "specifiedCount": 930,
+  "unallocatedCount": 70,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21283,6 +21283,25 @@
       ],
       "remainingQualification": [
         "Qualified on the full spinner sun with bore using the native AP242 v9 importer. Size savings depend on shared coordinates."
+      ]
+    },
+    {
+      "id": "NURBS-0930",
+      "name": "Компактный обмен STEP AP242 с материалом изделия и оформлением граней",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::step_interchange_v3::export_step_v9_with_metadata_shared_points",
+      "evidence": [
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-semantic-shared-points-930-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-semantic-shared-points-930-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Native AP242 metadata round trip on a single attributed gear body. External CAD interoperability not measured."
       ]
     }
   ],

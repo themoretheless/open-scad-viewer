@@ -16,7 +16,7 @@ pub(crate) use crate::step_v3_export::{
 #[cfg(test)] use crate::step_v3_export::canonical_face_senses;
 pub use crate::step_v3_export::{
     export_step_v3, export_step_v4, export_step_v5, export_step_v6, export_step_v7, export_step_v8,
-    export_step_v9, export_step_v9_shared_points, export_step_v9_with_metadata,
+    export_step_v9, export_step_v9_shared_points, export_step_v9_with_metadata, export_step_v9_with_metadata_shared_points,
 };
 use brep_core::{Body, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopoId, TopoKind, TopologyIds};
 use brep_topology::{CoedgeTrim, Vertex};
