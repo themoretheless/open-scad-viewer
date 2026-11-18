@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0861",
+  "testedBase": "3a6d5f9f0f36cbf2643ebad0259401fed901397a",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 208,
+  "scope": [
+    "Compare a blank to the material union of placed parts, returning both missing stock and surplus stock as solids.",
+    "Test overlapping contained placements with 4 cubic millimetres surplus and a layout with 8 cubic millimetres each missing and surplus. Reject invalid and empty selections."
+  ],
+  "logSha256": "8550eedf008984654a408ad1eeb1c5cddd9eb10a3b13d30da5ae97cd1d40550f",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "496520ae257edc96e2c670b31ba971a858db72da72f9c8f8d1ded6d51fc56917",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "24b041429b94dd68a54425aa5d2dc45ad5bffc40b126132dd851b0c75e95e46f"
+  }
+}

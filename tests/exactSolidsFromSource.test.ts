@@ -83,6 +83,16 @@ describe('exact solids from source', () => {
     expect(result.meshes.length).toBeGreaterThan(0)
     const plan = result.exactSolids!
     expect(plan.roots).toHaveLength(20)
+    expect(plan.nodes.filter(node => node.op === 'brep_gear')).toHaveLength(3)
+    const byId = new Map(plan.nodes.map(node => [node.id, node]))
+    const prototypes = plan.roots.slice(2).map(root => {
+      if (!('id' in root)) throw Error('Expected an exact planet')
+      let node = byId.get(root.id)
+      while (node?.op === 'transform') node = byId.get(String(node.input))
+      expect(node?.teeth).toBe(4)
+      return node?.id
+    })
+    expect(new Set(prototypes).size).toBe(1)
     const bodies = buildExactSolidBodies(plan.nodes, plan.roots)
     expect(bodies).toHaveLength(20)
     expect(bodies.every(b => b.brep && b.brep.faces.length > 8)).toBe(true)
@@ -90,8 +100,15 @@ describe('exact solids from source', () => {
     const definitions = step.match(/=MANIFOLD_SOLID_BREP\(/g)?.length ?? 0
     const occurrences = step.match(/=NEXT_ASSEMBLY_USAGE_OCCURRENCE\(/g)?.length ?? 0
     expect(occurrences).toBe(20)
-    expect(definitions).toBeGreaterThanOrEqual(3)
-    expect(definitions).toBeLessThanOrEqual(occurrences)
+    expect(definitions).toBe(3)
+    const prototype = bodies[2]
+    for (const planet of bodies.slice(3)) {
+      expect(planet.instance?.sourceId).toBe(prototype.id)
+      const matrix = planet.instance!.matrix
+      const point = prototype.brep!.vertices[0].point
+      const placed = matrix.slice(0, 3).map(row => row[3] + point.reduce((sum, x, i) => sum + x * row[i], 0))
+      placed.forEach((x, i) => expect(x).toBeCloseTo(planet.brep!.vertices[0].point[i], 9))
+    }
     console.info('Rush spinner STEP', { definitions, occurrences, bytes: Buffer.byteLength(step) })
   }, 600000)
 

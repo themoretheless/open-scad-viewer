@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0862",
+  "testedBase": "f95b25732d7795e887d82ac14f92ca2770a8220d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 209,
+  "scope": [
+    "Partition placed stock into ordered solid layers using up to 256 distinct increasing world coordinate stations.",
+    "Check three closed layers with volumes 6, 18 and 12 cubic millimetres, leading and trailing empty intervals, empty schedule and refusal of invalid coordinates."
+  ],
+  "logSha256": "b717356cf5b0a150278d118022267de8948f5ae2a93af66dc1f92ec25a1140f6",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "59d11d3861b02fb2042339cd3308f6f9f8b9562751ef11666119dc7a6f54a2ce",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "612d44337477c84db5b3932e7b83c1e6d5ab97b0b92c4aeb1f38b39b89381c2d"
+  }
+}

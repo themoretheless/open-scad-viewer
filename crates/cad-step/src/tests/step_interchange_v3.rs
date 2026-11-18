@@ -3912,3 +3912,224 @@ fn authored_shared_solids_reject_missing_definitions_and_split_local_edits() {
     assert_ne!(back.occurrences()[0].definition, back.occurrences()[1].definition);
     assert_eq!(back.occurrences()[1].transform, placed.transform);
 }
+
+#[test]
+fn placed_stock_cut_uses_two_shared_cutters_and_preserves_material_volume() {
+    let stock = brep_core::cuboid([0.; 3], [10., 2., 3.]).unwrap();
+    let tool = brep_core::cuboid([0., -1., -1.], [1., 3., 4.]).unwrap();
+    let placed = |definition, x| crate::StepAssemblyOccurrence { definition, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![stock, tool],
+        vec![placed(0, 17.), placed(1, 19.), placed(1, 24.)]).unwrap();
+    let result = scene.cut_stock(0, &[1, 2, 1]).unwrap();
+    assert_eq!(result.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(result.bodies.len(), 3);
+    let volume = |model: &Model| brep_core::analysis::mass_properties(model, 1e-8, 100_000).unwrap().signed_volume_mm3;
+    assert!((volume(&result) - 48.).abs() < 1e-8);
+    assert!((volume(&scene.cut_stock(0, &[]).unwrap()) - 60.).abs() < 1e-8);
+    assert!(scene.cut_stock(0, &[0]).unwrap().bodies.is_empty());
+    assert!(scene.cut_stock(0, &[0, 3]).is_err());
+    assert!(scene.cut_stock(3, &[]).is_err());
+    assert!(scene.cut_stock(0, &[1; 257]).is_err());
+}
+
+#[test]
+fn fusion_counts_overlapping_and_coincident_occurrences_once() {
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let solid = brep_core::cuboid([0.; 3], [2.; 3]).unwrap();
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![solid],
+        vec![placed(10.), placed(11.), placed(11.), placed(20.)]).unwrap();
+    let fused = scene.fuse_occurrences(&[1, 2, 0, 3, 0]).unwrap();
+    assert_eq!(fused.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(fused.bodies.len(), 2);
+    let volume = brep_core::analysis::mass_properties(&fused, 1e-8, 100_000).unwrap().signed_volume_mm3;
+    assert!((volume - 20.).abs() < 1e-8);
+    assert!(scene.fuse_occurrences(&[]).is_err());
+    assert!(scene.fuse_occurrences(&[1, 4]).is_err());
+    assert!(scene.fuse_occurrences(&[0; 257]).is_err());
+}
+
+#[test]
+fn placed_revision_delta_distinguishes_added_and_removed_stock() {
+    let before = brep_core::cuboid([0.; 3], [3., 2., 2.]).unwrap();
+    let after = brep_core::cuboid([0.; 3], [4., 2., 2.]).unwrap();
+    let placed = |definition, x| crate::StepAssemblyOccurrence { definition, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![before, after],
+        vec![placed(0, 10.), placed(1, 11.), placed(0, 10.)]).unwrap();
+    let delta = scene.material_delta(0, 1).unwrap();
+    for (part, volume, xmin, xmax) in [(delta.added, 8., 13., 15.), (delta.removed, 4., 10., 11.)] {
+        assert_eq!(part.validate().unwrap().boundary_edge_count, 0);
+        let mass = brep_core::analysis::mass_properties(&part, 1e-8, 100_000).unwrap();
+        assert!((mass.signed_volume_mm3 - volume).abs() < 1e-8);
+        let xs = part.vertices.iter().map(|v| v.point[0]);
+        assert_eq!(xs.clone().fold(f64::INFINITY, f64::min), xmin);
+        assert_eq!(xs.fold(f64::NEG_INFINITY, f64::max), xmax);
+    }
+    let unchanged = scene.material_delta(0, 2).unwrap();
+    assert!(unchanged.added.bodies.is_empty() && unchanged.removed.bodies.is_empty());
+    assert!(scene.material_delta(3, 0).is_err());
+    assert!(scene.material_delta(0, 3).is_err());
+}
+
+#[test]
+fn coordinate_split_preserves_placed_material_and_side_order() {
+    let solid = brep_core::cuboid([0.; 3], [2., 3., 4.]).unwrap();
+    let placement = crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [0., -1., 0., 17.], [1., 0., 0., 1.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![solid], vec![placement]).unwrap();
+    let [low, high] = scene.split_at_coordinate(0, 0, 15.).unwrap();
+    for (part, expected) in [(low, 8.), (high, 16.)] {
+        assert_eq!(part.validate().unwrap().boundary_edge_count, 0);
+        let mass = brep_core::analysis::mass_properties(&part, 1e-8, 100_000).unwrap();
+        assert!((mass.signed_volume_mm3 - expected).abs() < 1e-8);
+    }
+    assert!(scene.split_at_coordinate(0, 0, 14.).unwrap()[0].bodies.is_empty());
+    assert!(scene.split_at_coordinate(0, 2, 5.).unwrap()[1].bodies.is_empty());
+    assert!(scene.split_at_coordinate(0, 3, 0.).is_err());
+    assert!(scene.split_at_coordinate(0, 0, f64::NAN).is_err());
+    assert!(scene.split_at_coordinate(1, 0, 0.).is_err());
+}
+
+#[test]
+fn stock_layout_reports_allowance_and_missing_material_across_part_placements() {
+    let stock = brep_core::cuboid([0.; 3], [6., 2., 2.]).unwrap();
+    let part = brep_core::cuboid([0.; 3], [3., 2., 2.]).unwrap();
+    let placed = |definition, x| crate::StepAssemblyOccurrence { definition, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![stock, part],
+        vec![placed(0, 10.), placed(1, 10.), placed(1, 12.), placed(1, 15.)]).unwrap();
+    let volume = |model: &Model| brep_core::analysis::mass_properties(model, 1e-8, 100_000).unwrap().signed_volume_mm3;
+    let fits = scene.stock_layout_delta(0, &[1, 2, 1]).unwrap();
+    assert!(fits.added.bodies.is_empty());
+    assert!((volume(&fits.removed) - 4.).abs() < 1e-8);
+    let overhang = scene.stock_layout_delta(0, &[1, 3]).unwrap();
+    for model in [overhang.added, overhang.removed] {
+        assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+        assert!((volume(&model) - 8.).abs() < 1e-8);
+    }
+    assert!(scene.stock_layout_delta(0, &[]).is_err());
+    assert!(scene.stock_layout_delta(0, &[4]).is_err());
+}
+
+#[test]
+fn nonuniform_layers_keep_empty_intervals_and_account_for_placed_stock() {
+    let stock = brep_core::cuboid([0.; 3], [2., 3., 6.]).unwrap();
+    let placed = crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., 1., 10.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![stock], vec![placed]).unwrap();
+    let layers = scene.coordinate_layers(0, 2, &[8., 11., 14., 17., 18.]).unwrap();
+    assert_eq!(layers.len(), 6);
+    for (layer, expected) in layers.iter().zip([0., 6., 18., 12., 0., 0.]) {
+        if expected == 0. { assert!(layer.bodies.is_empty()); } else {
+            assert_eq!(layer.validate().unwrap().boundary_edge_count, 0);
+            let mass = brep_core::analysis::mass_properties(layer, 1e-8, 100_000).unwrap();
+            assert!((mass.signed_volume_mm3 - expected).abs() < 1e-8);
+        }
+    }
+    assert_eq!(scene.coordinate_layers(0, 2, &[]).unwrap().len(), 1);
+    for cuts in [&[2., 1.][..], &[1., 1.], &[f64::NAN], &[0.; 257]] {
+        assert!(scene.coordinate_layers(0, 2, cuts).is_err());
+    }
+}
+
+#[test]
+fn inspection_box_reports_clipped_material_with_occurrence_identity() {
+    let stock = brep_core::cuboid([0.; 3], [2.; 3]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![stock],
+        vec![placed(-9.), placed(0.), placed(3.), placed(4.)]).unwrap();
+    let min = [-1.; 3];
+    let max = [4., 3., 3.];
+    let hits = scene.material_in_box(min, max, 3).unwrap();
+    assert_eq!(hits.len(), 2);
+    for ((index, result), (expected_index, volume)) in hits.into_iter().zip([(1, 8.), (2, 4.)]) {
+        assert_eq!(index, expected_index);
+        let material = result.unwrap();
+        assert_eq!(material.validate().unwrap().boundary_edge_count, 0);
+        let mass = brep_core::analysis::mass_properties(&material, 1e-8, 100_000).unwrap();
+        assert!((mass.signed_volume_mm3 - volume).abs() < 1e-8);
+    }
+    assert!(scene.material_in_box(min, max, 1).is_err());
+    assert!(scene.material_in_box(max, min, 9).is_err());
+    assert!(scene.material_in_box([20.; 3], [21.; 3], 0).unwrap().is_empty());
+}
+
+#[test]
+fn assembly_free_space_excludes_overlapping_material_and_preserves_empty_box() {
+    let block = brep_core::cuboid([0.; 3], [2.; 3]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![block],
+        vec![placed(0.), placed(1.), placed(20.)]).unwrap();
+    let free = scene.free_space_in_box([-1., 0., 0.], [4., 2., 2.], 2).unwrap();
+    assert_eq!(free.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(free.bodies.len(), 2);
+    let volume = |model: &Model| brep_core::analysis::mass_properties(model, 1e-8, 100_000).unwrap().signed_volume_mm3;
+    assert!((volume(&free) - 8.).abs() < 1e-8);
+    assert!(scene.free_space_in_box([0.5; 3], [1.; 3], 2).unwrap().bodies.is_empty());
+    assert!((volume(&scene.free_space_in_box([6.; 3], [7.; 3], 0).unwrap()) - 1.).abs() < 1e-8);
+    assert!(scene.free_space_in_box([0.; 3], [4.; 3], 1).is_err());
+    assert!(scene.free_space_in_box([1.; 3], [0.; 3], 2).is_err());
+}
+
+#[test]
+fn interference_regions_report_closed_geometry_and_volumes_for_each_colliding_pair() {
+    let block = brep_core::cuboid([0.; 3], [2.; 3]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![block],
+        vec![placed(0.), placed(1.), placed(2.5), placed(4.5)]).unwrap();
+    let regions = scene.interference_regions(3, 1e-8, 100_000).unwrap();
+    assert_eq!(regions.len(), 2);
+    for ((pair, region), (expected, volume)) in regions.into_iter().zip([([0, 1], 4.), ([1, 2], 2.)]) {
+        assert_eq!(pair, expected);
+        let (solid, properties) = region.unwrap();
+        assert_eq!(solid.validate().unwrap().boundary_edge_count, 0);
+        assert!((properties.signed_volume_mm3 - volume).abs() < 1e-8);
+    }
+    assert!(scene.interference_regions(2, 1e-8, 100_000).is_err());
+    assert!(scene.interference_regions(3, f64::NAN, 100_000).is_err());
+}
+
+#[test]
+fn combined_interference_counts_triple_overlap_only_once() {
+    let block = brep_core::cuboid([0.; 3], [3., 2., 2.]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![block],
+        vec![placed(0.), placed(1.), placed(2.), placed(10.)]).unwrap();
+    let combined = scene.interference_material(3).unwrap();
+    assert_eq!(combined.bodies.len(), 1);
+    assert_eq!(combined.validate().unwrap().boundary_edge_count, 0);
+    let props = brep_core::analysis::mass_properties(&combined, 1e-8, 100_000).unwrap();
+    assert!((props.signed_volume_mm3 - 12.).abs() < 1e-8);
+    assert!(scene.interference_material(2).is_err());
+    let separate = scene.extract_occurrences(&[0, 3]).unwrap();
+    assert!(separate.interference_material(0).unwrap().bodies.is_empty());
+}
+
+#[test]
+fn interference_groups_connect_chains_but_exclude_touch_and_isolated_parts() {
+    let block = brep_core::cuboid([0.; 3], [2.; 3]).unwrap();
+    let placed = |x| crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![block],
+        [0., 10., 3., 11., 1.5, 5., 20.].into_iter().map(placed).collect()).unwrap();
+    assert_eq!(scene.interference_groups(4).unwrap(), [vec![0, 2, 4], vec![1, 3]]);
+    assert!(scene.interference_groups(3).is_err());
+    assert!(scene.extract_occurrences(&[0, 6]).unwrap().interference_groups(0).unwrap().is_empty());
+}

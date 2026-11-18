@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0860",
+  "testedBase": "de8d3bd0bf595423510a4a2d10289ec8a66479c0",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 207,
+  "scope": [
+    "Split placed material by a constant X, Y or Z plane, returning ordered low and high solids.",
+    "Rotated translated block splits into closed 8 and 16 cubic millimetre parts; boundary and exterior planes, invalid axis, coordinate and index covered."
+  ],
+  "logSha256": "84231ce09a0269f89f717de9ee0fef491fb67028b1266b87380509b7bfcd5f2a",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "86e0a0cfdfba5bbd36393c9068adee98ca8d35ca4bd5d99185367f04ac2faf08",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "c7a2767b216a0e3ec89f30957a291467b40d34c649862fc355b5cd53d0526788"
+  }
+}

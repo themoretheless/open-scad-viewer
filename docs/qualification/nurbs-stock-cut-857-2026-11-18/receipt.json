@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0857",
+  "testedBase": "614e2e3d155d39dc4cab937ba7045bb5d9117f29",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 204,
+  "scope": [
+    "Sequential regularized difference of a placed stock and bounded cutter list in assembly coordinates.",
+    "Two placements of one cutter separate a 60 mm³ stock into three closed solids totalling 48 mm³. Duplicate, empty and invalid selections are covered."
+  ],
+  "logSha256": "88b585e0bda462e66911ec7f482db6177c33d4b1c48156af4698d024917c3cb6",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "d363317334290fa4f77fb1901ce07cccc76c8e214c0ab9cfb89955054071ecef",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "13911434f27501d430c942bcab303bd39904d9386facb35184fcd3f8b0a3e4e7"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0858",
+  "testedBase": "c880357d07d3c475422c18099c3d67be22d4038c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 205,
+  "scope": [
+    "Regularized union of selected assembly occurrences in their placed coordinates.",
+    "Coincident, overlapping and separate boxes yield two closed bodies with 20 cubic millimetres of material. Duplicate selection, invalid indices and bounded work covered."
+  ],
+  "logSha256": "c751e2445d0ea479e17a37ae7f3e739a414bf156c3687ac833e76941696f3060",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "d1e3a7adaaa9db1bf8807319de917979bf7915d321d532673dcaaf47e47f0abb",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "56fb2df161a242a7f7d6861cc84c888571fe33c1d1fd372dbbe5a895fa944059"
+  }
+}

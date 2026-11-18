@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0865",
+  "testedBase": "e961d66df139df39612745e88e1431b76b6696e5",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 212,
+  "scope": [
+    "Return pair-specific interference solids and their mass properties, subject to Boolean and mass integration limits.",
+    "Verify pair identities and closed overlap volumes of 4 and 2 cubic millimetres, exclude tangential contact and refuse excessive candidates or invalid tolerance."
+  ],
+  "logSha256": "e82334432b39a631b2308a05584026227b178a1028368b7824abc53ced2e910f",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "7b0a80c20d3fcb6c38696320d1331b61a4981d1590976f0886697a8bf0440d9b",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "9ecc1a2cc94b76a4eb13e8a661a99d4c420d00ff57d22bfaf3cb94e1d368da26"
+  }
+}

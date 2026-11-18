@@ -659,6 +659,21 @@ pub struct StepSharedAssembly {
     occurrences: Vec<StepAssemblyOccurrence>,
 }
 
+/// Directional changes of material in assembly coordinates.
+pub struct StepMaterialDelta {
+    pub added: Model,
+    pub removed: Model,
+}
+
+impl StepMaterialDelta {
+    fn between(before: &Model, after: &Model) -> Result<Self> {
+        Ok(Self {
+            added: brep_core::boolean(after, before, "difference")?,
+            removed: brep_core::boolean(before, after, "difference")?,
+        })
+    }
+}
+
 /// Inner and outer unions of positive-length material spans in ray parameters.
 #[derive(Clone, Debug, PartialEq)]
 pub struct StepRayMaterialCoverage {
@@ -970,6 +985,132 @@ impl StepSharedAssembly {
         brep_core::boolean(&first, &second, "intersection")
     }
 
+    /// Clip placed material to a finite inspection box in assembly coordinates.
+    /// Preserve occurrence indices and report unresolved candidates individually.
+    pub fn material_in_box(&self, min: [f64; 3], max: [f64; 3], max_candidates: usize)
+        -> Result<Vec<(usize, Result<Model>)>> {
+        let candidates = self.box_candidates(min, max, max_candidates)?;
+        let clip = brep_core::cuboid(min, max)?;
+        let mut hits = Vec::new();
+        for (index, [lo, hi]) in candidates {
+            let inside = (0..3).all(|i| min[i] <= lo[i] && hi[i] <= max[i]);
+            let result = self.materialize(index).and_then(|model| {
+                if inside { Ok(model) } else { brep_core::boolean(&model, &clip, "intersection") }
+            });
+            if !matches!(&result, Ok(model) if model.bodies.is_empty()) {
+                hits.push((index, result));
+            }
+        }
+        Ok(hits)
+    }
+
+    /// Return the regularized free volume inside a finite assembly-space box.
+    pub fn free_space_in_box(&self, min: [f64; 3], max: [f64; 3], max_candidates: usize) -> Result<Model> {
+        let candidates = self.box_candidates(min, max, max_candidates)?;
+        let mut free = brep_core::cuboid(min, max)?;
+        for (index, _) in candidates {
+            if free.bodies.is_empty() { break; }
+            free = brep_core::boolean(&free, &self.materialize(index)?, "difference")?;
+        }
+        Ok(free)
+    }
+
+    fn box_candidates(&self, min: [f64; 3], max: [f64; 3], max_candidates: usize)
+        -> Result<Vec<(usize, [[f64; 3]; 2])>> {
+        if (0..3).any(|i| !min[i].is_finite() || !max[i].is_finite() || min[i] >= max[i]) {
+            return Err(refuse("STEP inspection box requires finite ordered limits"));
+        }
+        let bounds = self.occurrence_bounds()?;
+        let candidates: Vec<_> = bounds.into_iter().enumerate().filter(|(_, [lo, hi])| {
+            (0..3).all(|i| lo[i] < max[i] && min[i] < hi[i])
+        }).collect();
+        if candidates.len() > max_candidates {
+            return Err(refuse("STEP inspection box candidate budget exceeded"));
+        }
+        Ok(candidates)
+    }
+
+    /// Split at a world X, Y or Z coordinate. Return the low and high material respectively.
+    pub fn split_at_coordinate(&self, index: usize, axis: usize, coordinate: f64) -> Result<[Model; 2]> {
+        if axis >= 3 || !coordinate.is_finite() {
+            return Err(refuse("STEP coordinate split requires axis 0..2 and a finite coordinate"));
+        }
+        split_placed_model(self.materialize(index)?, axis, coordinate)
+    }
+
+    /// Return a solid for each interval between ordered parallel cuts, including both end intervals.
+    pub fn coordinate_layers(&self, index: usize, axis: usize, cuts: &[f64]) -> Result<Vec<Model>> {
+        if axis >= 3 || cuts.len() > 256 || cuts.iter().any(|x| !x.is_finite())
+            || cuts.windows(2).any(|pair| pair[0] >= pair[1]) {
+            return Err(refuse("STEP layers require an axis and up to 256 strictly increasing finite coordinates"));
+        }
+        let mut remaining = self.materialize(index)?;
+        let mut layers = Vec::with_capacity(cuts.len() + 1);
+        for &cut in cuts {
+            if remaining.bodies.is_empty() {
+                layers.push(Model::empty(remaining.tolerance_mm)?);
+            } else {
+                let [low, high] = split_placed_model(remaining, axis, cut)?;
+                layers.push(low);
+                remaining = high;
+            }
+        }
+        layers.push(remaining);
+        Ok(layers)
+    }
+
+    /// Compare two placed versions of a solid, preserving both directions of change.
+    pub fn material_delta(&self, before: usize, after: usize) -> Result<StepMaterialDelta> {
+        let before = self.materialize(before)?;
+        let after = self.materialize(after)?;
+        StepMaterialDelta::between(&before, &after)
+    }
+
+    /// Fuse the selected occurrences in assembly coordinates, retaining disjoint material.
+    /// Repeated indices select the same material once.
+    pub fn fuse_occurrences(&self, selection: &[usize]) -> Result<Model> {
+        if selection.is_empty() || selection.len() > super::MAX_OCCURRENCES
+            || selection.iter().any(|&index| index >= self.occurrences.len()) {
+            return Err(refuse("STEP fusion requires 1 to 256 valid occurrence indices"));
+        }
+        let mut fused = self.materialize(selection[0])?;
+        let mut used = vec![false; self.occurrences.len()];
+        used[selection[0]] = true;
+        for &index in &selection[1..] {
+            if !used[index] {
+                fused = brep_core::boolean(&fused, &self.materialize(index)?, "union")?;
+                used[index] = true;
+            }
+        }
+        Ok(fused)
+    }
+
+    /// Compare a stock blank with the combined material of a layout of finished parts.
+    /// Added material is missing from the blank; removed material is machining allowance.
+    pub fn stock_layout_delta(&self, stock: usize, parts: &[usize]) -> Result<StepMaterialDelta> {
+        let blank = self.materialize(stock)?;
+        let required = self.fuse_occurrences(parts)?;
+        StepMaterialDelta::between(&blank, &required)
+    }
+
+    /// Cut a placed stock solid with the selected occurrences, in assembly coordinates.
+    /// Duplicate cutters are applied once. The shared source assembly stays editable.
+    pub fn cut_stock(&self, stock: usize, cutters: &[usize]) -> Result<Model> {
+        if cutters.len() > super::MAX_OCCURRENCES || cutters.iter().any(|&i| i >= self.occurrences.len()) {
+            return Err(refuse("STEP stock cutting requires at most 256 valid cutter occurrences"));
+        }
+        let mut remaining = self.materialize(stock)?;
+        let mut applied = vec![false; self.occurrences.len()];
+        for &index in cutters {
+            if remaining.bodies.is_empty() { break; }
+            if !applied[index] {
+                remaining = brep_core::boolean(&remaining, &self.materialize(index)?, "difference")?;
+                applied[index] = true;
+            }
+        }
+        Ok(remaining)
+    }
+
     /// Bound the distance between the filled materials of two placed
     /// occurrences, retaining unresolved solid and containment diagnostics.
     pub fn occurrence_clearance(
@@ -1088,15 +1229,95 @@ impl StepSharedAssembly {
     /// retains the pair indices and any diagnostic from materialization or CSG.
     /// If there are more candidates than allowed, no CSG work is performed.
     pub fn check_interferences(&self, max_pairs: usize) -> Result<Vec<([usize; 2], Result<bool>)>> {
-        let pairs = self.proximity_candidates(0.)?;
-        if pairs.len() > max_pairs {
-            return Err(refuse("STEP assembly interference candidate budget exceeded"));
-        }
+        let pairs = self.interference_candidates(max_pairs)?;
         Ok(pairs.into_iter().map(|[first, second]| {
             let result = self.intersect_occurrences(first, second)
                 .map(|common| !common.bodies.is_empty());
             ([first, second], result)
         }).collect())
+    }
+
+    /// Recover pairwise common solids and their integrated mass properties in assembly coordinates.
+    /// Touch-only pairs are omitted. Each unresolved candidate retains its diagnostic.
+    pub fn interference_regions(&self, max_pairs: usize, relative_tolerance: f64, max_evaluations: usize)
+        -> Result<Vec<([usize; 2], Result<(Model, brep_core::analysis::MassProperties)>)>> {
+        if !(1e-10..=1e-3).contains(&relative_tolerance) || !(100..=2_000_000).contains(&max_evaluations) {
+            return Err(refuse("STEP interference measurement options outside mass integration limits"));
+        }
+        let pairs = self.interference_candidates(max_pairs)?;
+        let mut regions = Vec::new();
+        for [first, second] in pairs {
+            let region = match self.intersect_occurrences(first, second) {
+                Ok(common) if common.bodies.is_empty() => continue,
+                Ok(common) => brep_core::analysis::mass_properties(&common, relative_tolerance, max_evaluations)
+                    .map(|properties| (common, properties)),
+                Err(error) => Err(error),
+            };
+            regions.push(([first, second], region));
+        }
+        Ok(regions)
+    }
+
+    /// Connected groups of occurrences with positive-volume interference.
+    /// Return deterministic groups ordered by first index, omitting isolated occurrences.
+    /// An unresolved pair prevents claiming a complete partition.
+    pub fn interference_groups(&self, max_pairs: usize) -> Result<Vec<Vec<usize>>> {
+        let mut neighbors = vec![Vec::new(); self.occurrences.len()];
+        for ([first, second], intersects) in self.check_interferences(max_pairs)? {
+            if intersects? {
+                neighbors[first].push(second);
+                neighbors[second].push(first);
+            }
+        }
+        let mut seen = vec![false; neighbors.len()];
+        let mut groups = Vec::new();
+        for start in 0..neighbors.len() {
+            if seen[start] || neighbors[start].is_empty() { continue; }
+            seen[start] = true;
+            let mut pending = vec![start];
+            let mut group = Vec::new();
+            while let Some(current) = pending.pop() {
+                group.push(current);
+                for &next in &neighbors[current] {
+                    if !seen[next] {
+                        seen[next] = true;
+                        pending.push(next);
+                    }
+                }
+            }
+            group.sort_unstable();
+            groups.push(group);
+        }
+        Ok(groups)
+    }
+
+    /// Material occupied by at least two occurrences, with multiple overlaps counted once.
+    /// Propagate an unresolved pair or union instead of returning a partial solid.
+    pub fn interference_material(&self, max_pairs: usize) -> Result<Model> {
+        let pairs = self.interference_candidates(max_pairs)?;
+        let mut combined: Option<Model> = None;
+        for [first, second] in pairs {
+            let common = self.intersect_occurrences(first, second)?;
+            if !common.bodies.is_empty() {
+                combined = Some(match combined {
+                    None => common,
+                    Some(previous) => brep_core::boolean(&previous, &common, "union")?,
+                });
+            }
+        }
+        match combined {
+            Some(model) => Ok(model),
+            None => Model::empty(self.definitions.iter().map(|model| model.tolerance_mm)
+                .fold(DEFAULT_STEP_TOLERANCE_MM, f64::max)),
+        }
+    }
+
+    fn interference_candidates(&self, max_pairs: usize) -> Result<Vec<[usize; 2]>> {
+        let pairs = self.proximity_candidates(0.)?;
+        if pairs.len() > max_pairs {
+            return Err(refuse("STEP assembly interference candidate budget exceeded"));
+        }
+        Ok(pairs)
     }
 
     /// Estimate total material volume in mm³, counting each occurrence.
@@ -1511,6 +1732,25 @@ impl StepSharedAssembly {
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
         brep_core::transform::affine(&self.definitions[occurrence.definition], occurrence.transform)
     }
+}
+
+fn split_placed_model(model: Model, axis: usize, coordinate: f64) -> Result<[Model; 2]> {
+    let [min, max] = definition_control_bounds(&model);
+    let tolerance = model.tolerance_mm;
+    let empty = || Model::empty(tolerance);
+    if coordinate <= min[axis] { return Ok([empty()?, model]); }
+    if coordinate >= max[axis] { return Ok([model, empty()?]); }
+    // Pad every artificial face outside the complete positive-weight control hull.
+    let margin = (0..3).map(|i| max[i] - min[i]).fold(model.tolerance_mm, f64::max);
+    let lo = min.map(|v| (v - margin).next_down());
+    let mut hi = max.map(|v| (v + margin).next_up());
+    hi[axis] = coordinate;
+    if lo.iter().chain(&hi).any(|v| !v.is_finite()) {
+        return Err(refuse("STEP coordinate split exceeds finite bounds"));
+    }
+    let clip = brep_core::cuboid(lo, hi)?;
+    Ok([brep_core::boolean(&model, &clip, "intersection")?,
+        brep_core::boolean(&model, &clip, "difference")?])
 }
 
 fn plane_may_intersect_box(normal: [f64; 3], offset: f64, [min, max]: [[f64; 3]; 2]) -> bool {

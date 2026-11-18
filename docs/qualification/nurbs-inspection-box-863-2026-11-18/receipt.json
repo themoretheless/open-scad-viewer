@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0863",
+  "testedBase": "01232408464314b94d38f5687414129ed89229fd",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 210,
+  "scope": [
+    "Extract per-occurrence regularized material inside an assembly-space inspection box with candidate budgeting and per-body diagnostics.",
+    "Confirm complete and partial blocks at their original indices, closed volumes of 8 and 4 cubic millimetres, tangential exclusion, distant exclusion and invalid box refusal."
+  ],
+  "logSha256": "9a106f14fdd43f2059bb8cc076e830c9c164a9c7b2f8146083e616cf05b51579",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "e4025126aec65cd9538504d7d136210b344bc6bbee3e1f4e34f4e9fc42d0b9b0",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "2f4e4f42c9810f0430287c980d8bf338aa09d45bed99b0824b6e4ab156c84583"
+  }
+}

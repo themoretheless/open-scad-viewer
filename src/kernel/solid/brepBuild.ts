@@ -11,6 +11,7 @@ import { buildOwnNurbs } from '../../language/rushGraphNurbsKernel'
 import { brepGearFaceCount, gearDisplaySegments, type NurbsBrep } from '../geometry/brep'
 import { normalizePolygonMesh } from '../geometry/polygon'
 import type { DirectBody } from '../../app/directModeling'
+import { invertMatrixF64 } from '../geometry/matrixInverse'
 import type { BrepNode } from './brepGraph'
 
 /** Display tessellation only; the stored body keeps its exact topology. */
@@ -37,11 +38,40 @@ export class InexactSolidError extends Error {
  */
 export function buildExactSolidBodies(nodes: readonly BrepNode[], roots: readonly ExactSolidRoot[]): DirectBody[] {
   const bodies: DirectBody[] = []
+  const prototypes = new Map<string, { sourceId: string; inverse: number[][] }>()
+  const byId = new Map(nodes.map(node => [node.id, node]))
+
   for (const root of roots) {
     if ('inexact' in root) throw new InexactSolidError(root.name, root.inexact)
-    bodies.push(buildExactSolidBody(nodes, root.id, root.name))
+    const body = buildExactSolidBody(nodes, root.id, root.name)
+    bodies.push(body)
+    let node = byId.get(root.id)
+    let placement = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+    while (node?.op === 'transform') {
+      placement = compose(placement, node.matrix as number[][])
+      node = byId.get(String(node.input))
+    }
+    if (node?.op !== 'brep_gear') continue
+    // Only rigid placements preserve the tooth dimensions of the source body.
+    const rigid = [0, 1, 2].every(i => [0, 1, 2].every(j =>
+      Math.abs(placement.slice(0, 3).reduce((sum, row) => sum + row[i]! * row[j]!, 0) - Number(i === j)) < 1e-12))
+    if (!rigid) continue
+    const prototype = prototypes.get(node.id)
+    if (prototype) {
+      body.instance = { sourceId: prototype.sourceId, matrix: compose(placement, prototype.inverse) }
+    } else {
+      const inverse = invertMatrixF64(placement.flat())
+      if (inverse) prototypes.set(node.id, {
+        sourceId: body.id, inverse: placement.map((_, i) => Array.from(inverse.slice(i * 4, i * 4 + 4))),
+      })
+    }
   }
   return bodies
+}
+
+function compose(left: number[][], right: number[][]): number[][] {
+  return left.map(row => right[0]!.map((_, j) =>
+    row.reduce((sum, value, k) => sum + value * right[k]![j]!, 0)))
 }
 
 function buildExactSolidBody(nodes: readonly BrepNode[], root: string, name: string): DirectBody {
