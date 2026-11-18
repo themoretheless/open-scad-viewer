@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 807,
-  "unallocatedCount": 193,
+  "specifiedCount": 808,
+  "unallocatedCount": 192,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19025,6 +19025,25 @@
       "remainingQualification": [
         "Enclose the centroid using certified contour nesting, area and first boundary moments.",
         "Check certified centroid displacement due to an off-center hole, translated coordinates and bounded work.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0808",
+      "name": "Центральные моменты площади иерархии плоских NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_contour_fill_central_moments",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-808-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-808-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose central second moments and the mixed moment of an even-odd filled contour hierarchy.",
+        "Check a translated region with an off-axis hole, nonzero central product and analytical centroid.",
         "WASM and application integration are separate."
       ]
     }

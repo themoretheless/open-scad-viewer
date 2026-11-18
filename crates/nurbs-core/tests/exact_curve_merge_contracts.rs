@@ -13117,3 +13117,28 @@ fn planar_contour_fill_centroid_accounts_for_an_off_center_hole() {
     }
     assert!(report.orientation.orientation_work_cells <= 512);
 }
+
+#[test]
+fn planar_contour_fill_central_moments_include_off_axis_hole() {
+    use nurbs_core::analysis::curve_measure::measure_planar_contour_fill_central_moments;
+    let square = |x: f64, y: f64, r: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![x-r, y-r], vec![x+r, y-r], vec![x+r, y+r],
+            vec![x-r, y+r], vec![x-r, y-r]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let outer = square(10., -7., 3.);
+    let hole = square(11., -6.5, 1.);
+    let report = measure_planar_contour_fill_central_moments(
+        &[&hole, &outer], 0.005, 1e-4, 128, 4096, 512, 4096,
+    ).unwrap();
+    let expected = [108. - 4. / 3. - 4.5, -2.25, 108. - 4. / 3. - 1.125];
+    for ([lo, hi], value) in report.central_moment_bounds.into_iter().zip(expected) {
+        assert!(lo <= value && value <= hi && hi - lo < 1.35);
+    }
+    for ([lo, hi], value) in report.centroid_bounds.into_iter().zip([9.875, -7.0625]) {
+        assert!(lo <= value && value <= hi && hi - lo < 1e-6);
+    }
+}

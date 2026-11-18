@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0808",
+  "testedBase": "bc87fb357d52f863ab232ecfe9b7d0c14c42d662",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 434,
+  "scope": [
+    "Enclose central second moments and the mixed moment of an even-odd filled contour hierarchy.",
+    "Check a translated region with an off-axis hole, nonzero central product and analytical centroid."
+  ],
+  "logSha256": "fab619e86402e9deca6c387454f4d21c5a3d1ab1650dea24519d774826d93f36",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "a36c906f581b6c5bcf769791229f16f49b23f1cfd68bb6f00505bb3b7f85164e",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "9f014c79b46d5808873c6db2904a1f45c46aadc095dc3e17804bdfe3f0c56317"
+  }
+}
