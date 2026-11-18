@@ -2335,6 +2335,69 @@ pub fn partition_curve_capsule_clearance(
     )
 }
 
+/// A closed axis-aligned box, including boxes of zero thickness.
+#[derive(Clone, Copy, Debug)]
+pub struct BoxObstacle<'a> {
+    pub minimum: &'a [f64],
+    pub maximum: &'a [f64],
+}
+
+/// Enclose distance from the swept ball's center to each solid box, minus
+/// the tool radius. Euclidean distance accounts for rounded edge and corner
+/// contacts when the radius is positive.
+pub fn partition_curve_box_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[BoxObstacle<'_>],
+    tool_radius: f64,
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalClearancePartition> {
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Box clearance requires at least one obstacle")?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if max_cells == 0 {
+        return Err(resource("Clearance budget must cover every box"));
+    }
+    curve.validate()?;
+    let dimension = curve.control_points[0].len();
+    for obstacle in obstacles {
+        check(
+            obstacle.minimum.len() == dimension && obstacle.maximum.len() == dimension
+                && obstacle.minimum.iter().zip(obstacle.maximum).all(|(&a, &b)| {
+                    a.is_finite() && b.is_finite() && a <= b
+                }),
+            "Box requires finite ordered bounds matching the curve dimension",
+        )?;
+    }
+    let radius = Interval::point(tool_radius);
+    partition_radial_clearance(
+        curve, interval, parameter_tolerance, max_cells, obstacles.len(),
+        |point, index| {
+            let obstacle = obstacles[index];
+            let mut residuals = Vec::with_capacity(dimension);
+            for ((coord, &a), &b) in point.iter().zip(obstacle.minimum).zip(obstacle.maximum) {
+                if a <= coord.lo && coord.hi <= b {
+                    residuals.push(Interval::point(0.));
+                    continue;
+                }
+                let below = Interval::point(a).sub(*coord)?;
+                let above = coord.sub(Interval::point(b))?;
+                residuals.push(Interval::new(
+                    below.lo.max(above.lo).max(0.),
+                    below.hi.max(above.hi).max(0.),
+                )?);
+            }
+            if residuals.iter().all(|axis| axis.hi == 0.) {
+                return Ok(Interval::point(-tool_radius));
+            }
+            let distance = norm(&residuals)?;
+            if tool_radius == 0. { Ok(distance) } else { distance.sub(radius) }
+        },
+    )
+}
+
 fn partition_radial_clearance(
     curve: &Curve,
     interval: [f64; 2],

@@ -10001,3 +10001,35 @@ fn capsule_clearance_checks_body_caps_and_degenerate_axis() {
         }));
     }
 }
+
+#[test]
+fn box_clearance_checks_euclidean_corner_and_solid_interior() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, DirectionalMotionStatus as Status, partition_curve_box_clearance,
+    };
+    let line = |points: [[f64; 2]; 2]| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: points.map(Vec::from).into(),
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacle = BoxObstacle { minimum: &[0., 0.], maximum: &[1., 1.] };
+    let measure = |curve: &Curve, radius| {
+        partition_curve_box_clearance(curve, [0., 1.], &[obstacle], radius, 0.01, 128)
+            .unwrap()
+    };
+    let outside_corner = line([[1.6, 1.8], [2., 2.]]);
+    let report = measure(&outside_corner, 0.9);
+    assert_eq!(report.cells[0].status, Status::Within);
+    assert!(report.cells[0].gap_bounds[0][0] > 0.);
+    let report = measure(&outside_corner, 1.1);
+    assert_eq!(report.cells.first().unwrap().status, Status::Exceeds);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    let inside = line([[0.2, 0.2], [0.8, 0.8]]);
+    let report = measure(&inside, 0.);
+    assert_eq!(report.cells[0].status, Status::Exceeds);
+    assert_eq!(report.cells[0].gap_bounds[0], [0.; 2]);
+    let invalid = BoxObstacle { minimum: &[2., 0.], ..obstacle };
+    assert!(partition_curve_box_clearance(&inside, [0., 1.], &[invalid], 0., 0.01, 1).is_err());
+}
