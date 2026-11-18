@@ -1601,6 +1601,63 @@ fn classify_absolute_limit(value: Interval, limit: f64) -> DirectionalMotionStat
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct DirectionalPositionCell {
+    pub parameter_interval: [f64; 2],
+    pub span: usize,
+    pub position_bounds: [f64; 2],
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct DirectionalPositionPartition {
+    /// Ordered closed cells covering the requested parameter window.
+    pub cells: Vec<DirectionalPositionCell>,
+    pub work_cells: usize,
+}
+
+/// Classify the signed projection onto a normalized axis through the origin.
+/// Cells outside the inclusive position range are marked Exceeds. Cells
+/// overlapping a range boundary retain an unresolved status if refinement stops.
+pub fn partition_directional_position_range(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    allowed: [f64; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalPositionPartition> {
+    check(
+        allowed.iter().all(|value| value.is_finite()) && allowed[0] <= allowed[1],
+        "Position range must have finite ordered endpoints",
+    )?;
+    curve.validate()?;
+    let unit = travel_direction(curve, direction)?;
+    let (cells, work_cells) = partition_motion_cells(
+        curve, interval, parameter_tolerance, max_cells,
+        |jets, _| {
+            let position = project_jet(&jets[0], &unit)?;
+            let status = if position.lo >= allowed[0] && position.hi <= allowed[1] {
+                DirectionalMotionStatus::Within
+            } else if position.hi < allowed[0] || position.lo > allowed[1] {
+                DirectionalMotionStatus::Exceeds
+            } else {
+                DirectionalMotionStatus::Undetermined
+            };
+            Ok(((position, status), status == DirectionalMotionStatus::Undetermined))
+        },
+    )?;
+    let cells = cells.into_iter().map(|(span, parameter_interval, (position, status))| {
+        DirectionalPositionCell {
+            span,
+            parameter_interval,
+            position_bounds: [position.lo, position.hi],
+            status,
+        }
+    }).collect();
+    Ok(DirectionalPositionPartition { cells, work_cells })
+}
+
 fn partition_motion_cells<T>(
     curve: &Curve,
     interval: [f64; 2],

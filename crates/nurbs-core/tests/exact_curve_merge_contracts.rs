@@ -9547,3 +9547,60 @@ fn motion_chain_turns_keep_a_stationary_closing_tangent_unresolved() {
     assert_eq!(report.joins[0].gap_status, Status::Within);
     assert_eq!(report.status, Status::Undetermined);
 }
+
+#[test]
+fn directional_position_partition_locates_interior_overtravel_with_safe_endpoints() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_directional_position_range,
+    };
+    let curve = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 1., 1., 1.],
+        control_points: [0., 2., 0.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let check = |cells| {
+        partition_directional_position_range(&curve, [0., 1.], &[1., 0.], [-1., 0.75], 0.01, cells)
+            .unwrap()
+    };
+    assert_eq!(check(1).cells[0].status, Status::Undetermined);
+    let report = check(128);
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().any(|cell| {
+        cell.parameter_interval[0] <= 0.5 && 0.5 <= cell.parameter_interval[1]
+            && cell.status == Status::Exceeds
+    }));
+    for crossing in [0.25, 0.75] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            a <= crossing && crossing <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+        }));
+    }
+}
+
+#[test]
+fn directional_position_partition_handles_signed_oblique_projection() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_directional_position_range,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![3., 4.]],
+        weights: vec![1., 2.],
+        periodic: false,
+    };
+    let report = partition_directional_position_range(
+        &curve, [0., 1.], &[-3., -4.], [-3., 0.5], 0.01, 128,
+    )
+    .unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    let last = report.cells.last().unwrap();
+    assert_eq!(last.status, Status::Exceeds);
+    assert!(last.position_bounds[0] <= -5. && last.position_bounds[1] >= -5.);
+    assert!(partition_directional_position_range(
+        &curve, [0., 1.], &[-3., -4.], [0.5, -3.], 0.01, 128,
+    ).is_err());
+}
