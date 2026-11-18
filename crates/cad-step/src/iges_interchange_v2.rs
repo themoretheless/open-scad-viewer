@@ -893,6 +893,7 @@ enum CompositeVisit {
     Exit(usize, usize),
 }
 
+mod circular_arc;
 mod composite_join;
 
 struct CurveDispatcher<'a> {
@@ -928,12 +929,7 @@ impl<'a> CurveDispatcher<'a> {
             )
         })?;
         let curve = match entity.directory.ty {
-            100 => {
-                return Err(composite_error(
-                    "BREP_IGES_V2_COMPOSITE_UNSUPPORTED",
-                    format!("IGES circular arc DE {de} is unsupported in curve dispatch"),
-                ));
-            }
+            100 => circular_arc::read(entity, self.dim, self.scale, self.tolerance_mm)?,
             110 => {
                 let values = &entity.values;
                 if values.len() != 7 {

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 953,
-  "unallocatedCount": 47,
+  "specifiedCount": 954,
+  "unallocatedCount": 46,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21749,7 +21749,27 @@
         "docs/qualification/nurbs-iges-rational-composite-953-2026-11-18/verify_step.py"
       ],
       "remainingQualification": [
-        "Bounded ordered continuous splines with unambiguous endpoint orientation. Each concatenated interval must pass agreement against its source. IGES circular arcs (100) and general ambiguous or unproven joins remain unsupported."
+        "Bounded ordered continuous splines with unambiguous endpoint orientation. Each concatenated interval must pass agreement against its source. Type 100 arcs are qualified under NURBS-0954. Ambiguous or unproven joins remain unsupported."
+      ]
+    },
+    {
+      "id": "NURBS-0954",
+      "name": "Импорт круговой дуги IGES 100 как рациональной NURBS-кромки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/circular_arc.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/circular_arcs.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "docs/qualification/nurbs-iges-circular-arc-954-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-iges-circular-arc-954-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-iges-circular-arc-954-2026-11-18/verify.py"
+      ],
+      "remainingQualification": [
+        "Local XY circular arc, form 0; scaled world coordinates or zero-elevation UV coordinates. Direct and composite edge dispatch. Per-entity placement transforms remain outside this import path."
       ]
     }
   ],
