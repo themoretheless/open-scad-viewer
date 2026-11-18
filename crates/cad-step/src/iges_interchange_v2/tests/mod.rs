@@ -293,7 +293,13 @@ fn replace_parameters(text: &str, de: usize, values: Vec<String>) -> String {
         .map(|(index, _)| index)
         .collect::<Vec<_>>();
     let parameter = format!("{};", values.join(","));
-    let chunks = parameter.as_bytes().chunks(64).collect::<Vec<_>>();
+    let packed;
+    let chunks = if values[0] == "128" {
+        packed = surface_records(&values);
+        packed.iter().map(|s| s.as_bytes()).collect::<Vec<_>>()
+    } else {
+        parameter.as_bytes().chunks(64).collect()
+    };
     assert_eq!(chunks.len(), rows.len());
     for (row, chunk) in rows.into_iter().zip(chunks) {
         let payload = std::str::from_utf8(chunk).unwrap();

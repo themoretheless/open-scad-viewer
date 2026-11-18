@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 955,
-  "unallocatedCount": 45,
+  "specifiedCount": 956,
+  "unallocatedCount": 44,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21790,6 +21790,27 @@
       ],
       "remainingQualification": [
         "One proper rigid form-zero matrix per type 100, 110 or 126 member. Translation follows the declared length units. Mapped UV controls must lie in the parameter plane. Chained matrices and reflections remain unsupported."
+      ]
+    },
+    {
+      "id": "NURBS-0956",
+      "name": "Жёсткое размещение рациональной поверхности IGES 128 с сохранением UV-сетки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/placement.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/mod.rs",
+        "crates/cad-step/tests/fixtures/iges/legacy-spinner-rim.igs",
+        "docs/qualification/nurbs-iges-surface-placement-956-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-iges-surface-placement-956-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-iges-surface-placement-956-2026-11-18/verify.py"
+      ],
+      "remainingQualification": [
+        "One proper rigid form-zero matrix on an IGES 128 surface. U-fast pole/weight exchange and reader compatibility for legacy OpenSCAD Viewer files. Independent check covers the placed IGES surface and the restored STEP solid."
       ]
     }
   ],

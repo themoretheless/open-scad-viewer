@@ -192,6 +192,7 @@ struct Entity {
     directory: Directory,
     values: Vec<String>,
     canonical: String,
+    legacy_surface_order: bool,
 }
 
 fn parse_directory_status(de: usize, text: &str) -> Result<DirectoryStatus> {
@@ -318,7 +319,7 @@ fn tokenize(text: &str, parameter_delimiter: char, record_delimiter: char) -> Re
     Ok(out)
 }
 
-fn parse_global(text: &str) -> Result<(char, char, IgesLengthUnit, f64)> {
+fn parse_global(text: &str) -> Result<(char, char, IgesLengthUnit, f64, bool)> {
     let mut parameter = ',';
     let mut record = ';';
     let provisional = tokenize(text, ',', ';')?;
@@ -358,7 +359,9 @@ fn parse_global(text: &str) -> Result<(char, char, IgesLengthUnit, f64)> {
     if resolution <= 0. {
         return Err(refuse("IGES global minimum resolution must be positive"));
     }
-    Ok((parameter, record, unit, resolution))
+    let legacy_sender = values.get(4).map(String::as_str) == Some("OpenSCAD Viewer")
+        && values.get(11).map(String::as_str) == Some("IGES2");
+    Ok((parameter, record, unit, resolution, legacy_sender))
 }
 
 fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, IgesLengthUnit, f64)> {
@@ -416,7 +419,7 @@ fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, IgesLengthUnit, f64)> {
         .iter()
         .map(|(_, l)| field(l, 0, 72))
         .collect::<String>();
-    let (pd, rd, unit, resolution) = parse_global(&global)?;
+    let (pd, rd, unit, resolution, legacy_sender) = parse_global(&global)?;
     let directory = &sections[&'D'];
     if !directory.len().is_multiple_of(2) {
         return Err(refuse("IGES directory section must contain record pairs"));
@@ -488,6 +491,8 @@ fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, IgesLengthUnit, f64)> {
         entities.insert(
             de,
             Entity {
+                legacy_surface_order: sections[&'S'][0].1[..72].trim_end() == "OpenSCAD Viewer direct finite B-rep"
+                    && legacy_sender,
                 directory: dir,
                 values,
                 canonical,
@@ -1124,7 +1129,11 @@ impl<'a> CurveDispatcher<'a> {
 }
 
 fn surface128(entities: &BTreeMap<usize, Entity>, de: usize, scale: f64) -> Result<Surface> {
-    let v = &entity(entities, de, 128)?.values;
+    let surface_entity = entity(entities, de, 128)?;
+    let v = &surface_entity.values;
+    let placement = (surface_entity.directory.transform != 0)
+        .then(|| placement::read(entities, surface_entity.directory.transform))
+        .transpose()?;
     let ku = u(v, 1, "surface U upper index")?;
     let kv = u(v, 2, "surface V upper index")?;
     let du = u(v, 3, "surface U degree")?;
@@ -1154,14 +1163,19 @@ fn surface128(entities: &BTreeMap<usize, Entity>, de: usize, scale: f64) -> Resu
     at += n;
     let mut flat_p = Vec::with_capacity(n);
     for i in 0..n {
-        flat_p.push(vec![
+        let point = vec![
             f(v, at + 3 * i, "surface X")? * scale,
             f(v, at + 3 * i + 1, "surface Y")? * scale,
             f(v, at + 3 * i + 2, "surface Z")? * scale,
-        ]);
+        ];
+        flat_p.push(match &placement {
+            Some(matrix) => placement::apply(matrix, &point, scale, 3)?,
+            None => point,
+        });
     }
-    let control_points = flat_p.chunks(nv).map(|r| r.to_vec()).collect();
-    let weights = flat_w.chunks(nv).map(|r| r.to_vec()).collect();
+    let index = |u: usize, v: usize| if surface_entity.legacy_surface_order { u * nv + v } else { v * nu + u };
+    let control_points = (0..nu).map(|u| (0..nv).map(|v| flat_p[index(u,v)].clone()).collect()).collect();
+    let weights = (0..nu).map(|u| (0..nv).map(|v| flat_w[index(u,v)]).collect()).collect();
     let s = Surface {
         degree_u: du,
         degree_v: dv,
@@ -2289,8 +2303,8 @@ pub fn import_iges_v2_with_options(
             ignored.insert("directory-label".into());
         }
         if e.directory.transform != 0 {
-            if !matches!(e.directory.ty, 100 | 110 | 126) {
-                return Err(refuse("IGES directory placement is supported only on curve geometry"));
+            if !matches!(e.directory.ty, 100 | 110 | 126 | 128) {
+                return Err(refuse("IGES directory placement is supported only on curves and spline surfaces"));
             }
             placement::read(&entities, e.directory.transform)?;
         }
@@ -2422,9 +2436,13 @@ fn surface_values(s: &Surface) -> Vec<String> {
     ];
     v.extend(s.knots_u.iter().map(|x| number(*x)));
     v.extend(s.knots_v.iter().map(|x| number(*x)));
-    v.extend(s.weights.iter().flatten().map(|x| number(*x)));
-    for p in s.control_points.iter().flatten() {
-        v.extend(p.iter().map(|x| number(*x)))
+    for j in 0..nv {
+        v.extend((0..nu).map(|i| number(s.weights[i][j])));
+    }
+    for j in 0..nv {
+        for row in &s.control_points {
+            v.extend(row[j].iter().map(|x| number(*x)));
+        }
     }
     let u = [
         s.knots_u[s.degree_u],
@@ -2465,6 +2483,21 @@ fn pad_record(payload: &str, section: char, sequence: usize, width: usize) -> Re
 fn hollerith(s: &str) -> String {
     format!("{}H{s}", s.len())
 }
+// Keep every numeric field of a type-128 surface on one physical record.
+fn surface_records(values: &[String]) -> Vec<String> {
+    let mut rows = Vec::new();
+    let mut row = String::new();
+    for (i, value) in values.iter().enumerate() {
+        if row.len() + value.len() + 1 > 64 {
+            rows.push(std::mem::take(&mut row));
+        }
+        row.push_str(value);
+        row.push(if i + 1 == values.len() { ';' } else { ',' });
+    }
+    rows.push(row);
+    rows
+}
+
 fn render(mut w: Writer) -> Result<String> {
     let mut p_lines = Vec::new();
     let mut p_start = Vec::new();
@@ -2472,9 +2505,15 @@ fn render(mut w: Writer) -> Result<String> {
         let de = 2 * index + 1;
         let text = format!("{};", e.values.join(","));
         p_start.push(p_lines.len() + 1);
-        for chunk in text.as_bytes().chunks(64) {
-            let payload =
-                std::str::from_utf8(chunk).map_err(|_| refuse("Non-ASCII IGES parameter"))?;
+        let rows;
+        let chunks: Vec<&str> = if e.ty == 128 {
+            rows = surface_records(&e.values);
+            rows.iter().map(String::as_str).collect()
+        } else {
+            text.as_bytes().chunks(64).map(std::str::from_utf8).collect::<std::result::Result<_,_>>()
+                .map_err(|_| refuse("Non-ASCII IGES parameter"))?
+        };
+        for payload in chunks {
             p_lines.push(
                 pad_record(payload, 'P', p_lines.len() + 1, 64)?[..64].to_string()
                     + &format!("{de:>8}P{:>7}", p_lines.len() + 1),
@@ -2493,7 +2532,7 @@ fn render(mut w: Writer) -> Result<String> {
         hollerith("open-scad-viewer"),
         hollerith("OpenSCAD Viewer"),
         hollerith("open-scad-viewer"),
-        hollerith("IGES2"),
+        hollerith("IGES2.1"),
         hollerith("20260917.000000"),
         number(1e-7),
         hollerith(""),

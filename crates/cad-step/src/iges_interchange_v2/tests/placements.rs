@@ -110,3 +110,71 @@ fn refuses_dangling_reflected_scaled_and_chained_placements() {
     assert!(import_iges_v2(&attach(&text, curve, tr)).is_err());
     assert!(import_iges_v2(&attach(&attach(&text, curve, tr), tr, tr)).is_err());
 }
+
+#[test]
+fn placed_rational_surface_keeps_weights_charts_and_edge_incidence() {
+    let cylinder = brep_core::cylinder(3., 5.).unwrap();
+    let base = export_iges_v2(&cylinder).unwrap().0;
+    let original = import_iges_v2(&base).unwrap().0;
+    let (entities, _, _) = parse(&base).unwrap();
+    let (de, mut local) = entities
+        .iter()
+        .filter(|(_, e)| e.directory.ty == 128)
+        .find_map(|(&de, _)| {
+            let s = surface128(&entities, de, 1.).unwrap();
+            s.weights
+                .iter()
+                .flatten()
+                .any(|w| *w != 1.)
+                .then_some((de, s))
+        })
+        .unwrap();
+    // Inverse of the cyclic axis rotation and placement below.
+    for p in local.control_points.iter_mut().flatten() {
+        *p = vec![p[2] - 2., p[0] - 4., p[1] + 7.];
+    }
+    let changed = replace_parameters(&base, de, surface_values(&local));
+    let (changed, tr) = matrix(&changed, [0., 1., 0., 4., 0., 0., 1., -7., 1., 0., 0., 2.]);
+    let text = attach(&changed, de, tr);
+    let restored = import_iges_v2(&text).unwrap().0;
+    assert_eq!(restored.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!(restored.faces.len(), original.faces.len());
+    assert_eq!(restored.loops, original.loops);
+    for (actual, expected) in restored.faces.iter().zip(&original.faces) {
+        assert_eq!(actual.surface.weights, expected.surface.weights);
+        assert_eq!(actual.surface.knots_u, expected.surface.knots_u);
+        assert_eq!(actual.surface.knots_v, expected.surface.knots_v);
+        for (a, b) in actual
+            .surface
+            .control_points
+            .iter()
+            .flatten()
+            .flatten()
+            .zip(expected.surface.control_points.iter().flatten().flatten())
+        {
+            assert!((a - b).abs() < 1e-12);
+        }
+    }
+    if let Some(dir) = std::env::var_os("CAD_IGES_SURFACE_PLACEMENT_FIXTURE") {
+        let dir = std::path::Path::new(&dir);
+        std::fs::create_dir_all(dir).unwrap();
+        std::fs::write(dir.join("placed.igs"), text).unwrap();
+        std::fs::write(
+            dir.join("restored.step"),
+            crate::export_step_v9(&restored).unwrap().0,
+        )
+        .unwrap();
+    }
+}
+
+#[test]
+fn legacy_writer_surface_order_remains_readable() {
+    let text = include_str!("../../../tests/fixtures/iges/legacy-spinner-rim.igs");
+    let restored = import_iges_v2(text).unwrap().0;
+    let cylinder = brep_core::cylinder(3., 5.).unwrap();
+    assert_eq!(restored.faces.len(), cylinder.faces.len());
+    assert_eq!(restored.validate().unwrap().boundary_edge_count, 0);
+    for (actual, expected) in restored.faces.iter().zip(&cylinder.faces) {
+        assert_eq!(actual.surface, expected.surface);
+    }
+}

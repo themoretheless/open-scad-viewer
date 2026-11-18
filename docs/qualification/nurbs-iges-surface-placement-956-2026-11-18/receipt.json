@@ -1,0 +1,56 @@
+{
+  "id": "NURBS-0956",
+  "testedBase": "b49a4e530ff50766dfdd019b26d2fb17a4f307f0",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "31070948c06507f3ab428e9de2034585e2daf3c17d770faabce421c49344f6fc",
+    "crates/cad-step/src/iges_interchange_v2/placement.rs": "bdf6c2bae14e83c9df3adf309ee8a8718b66d94f4bd68669e157e2a1eb9b19f2",
+    "crates/cad-step/src/iges_interchange_v2/tests/placements.rs": "731e3d983c5a61f5e501834102d41f34481bfe9174a223e9aa2fa2497e4ad33b",
+    "crates/cad-step/src/iges_interchange_v2/tests/mod.rs": "5bbf1f0ae786439584ca773dd35520db9b3716cc895fa2f05ed1e56dfaed597a",
+    "crates/cad-step/tests/fixtures/iges/legacy-spinner-rim.igs": "c879c0f7eedcbe10b67ccfc71ff442eab8d447d0f61f843757dc032bfb914a7d"
+  },
+  "occt": {
+    "worldPoles": [
+      [
+        3.0,
+        0.0,
+        0.0
+      ],
+      [
+        3.0,
+        0.0,
+        5.0
+      ],
+      [
+        3.0,
+        3.0,
+        0.0
+      ],
+      [
+        3.0,
+        3.0,
+        5.0
+      ],
+      [
+        0.0,
+        3.0,
+        0.0
+      ],
+      [
+        0.0,
+        3.0,
+        5.0
+      ]
+    ],
+    "weights": [
+      1.0,
+      1.0,
+      0.7071067811865476,
+      0.7071067811865476,
+      1.0,
+      1.0
+    ],
+    "volume": 141.3716688561796,
+    "analytic": 141.3716694115407
+  },
+  "fixtureCommand": "CAD_IGES_SURFACE_PLACEMENT_FIXTURE=/tmp/iges-surface-placement cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib placements::"
+}
