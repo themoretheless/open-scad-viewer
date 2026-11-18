@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 775,
-  "unallocatedCount": 225,
+  "specifiedCount": 776,
+  "unallocatedCount": 224,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18417,6 +18417,25 @@
       "remainingQualification": [
         "Clip hull chords to candidate contact parameters and certify each witness with interval arithmetic.",
         "Check off-center chord contact, an infeasible opposing strip and reserved chord work.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0776",
+      "name": "Точное подтверждение касания вращающегося инструмента по хорде",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_exact_chord_contact",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-776-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-776-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Use exact rational chord clipping to preserve nonbinary singleton contact parameters.",
+        "Check a nonbinary singleton chord contact and reject a one-ULP gap between opposing half-spaces.",
         "WASM and application integration are separate."
       ]
     }

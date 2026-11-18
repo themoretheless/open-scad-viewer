@@ -2704,11 +2704,30 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_clipped_chord_contact(
     )
 }
 
+/// Clip the conservative chord bounds using exact rational arithmetic.
+/// A feasible chord parameter may be a singleton or need more than binary64
+/// precision. Rounded vertex witnesses are also checked.
+pub fn partition_planar_rotating_profiled_hull_obstacle_exact_chord_contact(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    partition_rotating_profiled_obstacles(
+        position, direction, radius_profile, obstacles, vertex_offsets,
+        parameter_tolerance, max_vertex_plane_cells, 4, ChordWitness::Exact,
+    )
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ChordWitness {
     None,
     Midpoint,
     Clipped,
+    Exact,
 }
 
 fn partition_rotating_profiled_obstacles(
@@ -2745,7 +2764,7 @@ fn partition_rotating_profiled_obstacles(
     let chord_passes = match chords {
         ChordWitness::None => 0,
         ChordWitness::Midpoint => 1 + witness_passes,
-        ChordWitness::Clipped => 2,
+        ChordWitness::Clipped | ChordWitness::Exact => 2,
     };
     let witness_work = chord_count.checked_mul(chord_passes)
         .and_then(|work| work.checked_add(vertex_count * (1 + witness_passes)))
@@ -2780,6 +2799,16 @@ fn partition_rotating_profiled_obstacles(
         }).collect::<Result<Vec<_>>>()
     }).collect::<Result<Vec<_>>>()?;
 
+    let exact_rotation = if chords == ChordWitness::Exact {
+        fixed_cardinal_rotation(direction)
+    } else {
+        None
+    };
+    let constant_position = [0, 1].map(|axis| {
+        let value = position.control_points[0][axis];
+        position.control_points.iter().all(|point| point[axis] == value).then_some(value)
+    });
+
     let (cells, work_cells) = partition_enclosed_cells(
         initial, parameter_tolerance, max_cells,
         |[span, direction_span, profile], domain| {
@@ -2805,7 +2834,7 @@ fn partition_rotating_profiled_obstacles(
                             let residual = center.add(project_jet(offset, &inverse)?)?;
                             separated &= residual.lo > margin;
                             candidates[vertex] &= residual.hi <= 0.;
-                            if seek_rounded || chords == ChordWitness::Clipped {
+                            if seek_rounded || matches!(chords, ChordWitness::Clipped | ChordWitness::Exact) {
                                 residuals.push(residual);
                             }
                             if seek_rounded {
@@ -2829,6 +2858,9 @@ fn partition_rotating_profiled_obstacles(
                     }
                     if candidates.contains(&true)
                         || (chords == ChordWitness::Clipped && clipped_chord_contacts(&residuals, vertex_count)?)
+                        || (chords == ChordWitness::Exact && exact_chord_contacts(
+                            &residuals, vertex_offsets, obstacle, exact_rotation, constant_position,
+                        )?)
                         || (seek_rounded && rounded_vertex_contacts(
                         obstacle, &residuals, &witness_planes, radius.lo, witness_passes,
                     )?) {
@@ -2890,6 +2922,83 @@ fn clipped_chord_contacts(residuals: &[Interval], vertex_count: usize) -> Result
                     continue 'chords;
                 }
             }
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn fixed_cardinal_rotation(direction: &Curve) -> Option<[f64; 2]> {
+    for axis in [0, 1] {
+        let sign = direction.control_points[0][axis].signum();
+        if direction.control_points.iter().all(|point| {
+            point[1 - axis] == 0. && point[axis] * sign > 0.
+        }) {
+            let mut rotation = [0.; 2];
+            rotation[axis] = sign;
+            return Some(rotation);
+        }
+    }
+    None
+}
+
+fn exact_chord_contacts(
+    residuals: &[Interval],
+    vertices: &[&[f64]],
+    planes: &[(Vec<Interval>, Interval, Interval)],
+    rotation: Option<[f64; 2]>,
+    position: [Option<f64>; 2],
+) -> Result<bool> {
+    let zero = exact_motion_operand(0.)?;
+    let one = exact_motion_operand(1.)?;
+    let vertex_count = vertices.len();
+    let mut bounds = Vec::with_capacity(residuals.len());
+    for (plane, (normal, offset, _)) in residuals.chunks_exact(vertex_count).zip(planes) {
+        let [nx, ny] = [normal[0].lo, normal[1].lo];
+        let exact = rotation.filter(|_| {
+            (nx == 0. || position[0].is_some()) && (ny == 0. || position[1].is_some())
+        });
+        if let Some([cosine, sine]) = exact {
+            // Positive weights preserve a constant coordinate throughout
+            // the curve. A cardinal rotation only swaps or negates axes.
+            let center = exact_motion_operand(nx)? * exact_motion_operand(position[0].unwrap_or(0.))?
+                + exact_motion_operand(ny)? * exact_motion_operand(position[1].unwrap_or(0.))?
+                - exact_motion_operand(offset.lo)?;
+            let local_x = exact_motion_operand(nx * cosine + ny * sine)?;
+            let local_y = exact_motion_operand(ny * cosine - nx * sine)?;
+            for point in vertices {
+                bounds.push(&center + &local_x * exact_motion_operand(point[0])?
+                    + &local_y * exact_motion_operand(point[1])?);
+            }
+        } else {
+            for residual in plane {
+                bounds.push(exact_motion_operand(residual.hi)?);
+            }
+        }
+    }
+    for end in 1..vertex_count {
+        'chords: for start in 0..end {
+            let mut lower = zero.clone();
+            let mut upper = one.clone();
+            for plane in bounds.chunks_exact(vertex_count) {
+                let (a, b) = (&plane[start], &plane[end]);
+                if a > &zero && b > &zero {
+                    continue 'chords;
+                }
+                if a > &zero || b > &zero {
+                    let crossing = a / (a - b);
+                    if a > &zero {
+                        lower = lower.max(crossing);
+                    } else {
+                        upper = upper.min(crossing);
+                    }
+                    if lower > upper {
+                        continue 'chords;
+                    }
+                }
+            }
+            // The exact affine interpolation of the endpoint upper bounds
+            // bounds the same fixed tool-local chord point across the cell.
             return Ok(true);
         }
     }

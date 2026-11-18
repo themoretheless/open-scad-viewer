@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0776",
+  "testedBase": "d476c835ad83cc5f0076c1d2eb182c65a3da732b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 402,
+  "scope": [
+    "Use exact rational chord clipping to preserve nonbinary singleton contact parameters.",
+    "Check a nonbinary singleton chord contact and reject a one-ULP gap between opposing half-spaces."
+  ],
+  "logSha256": "117fe696b3aeb121568d37ea3a154cb020f2ce9037824f932fd2db485cae9749",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "2c1b644c2c5a0cd01fd16c419de30e1fcb0b5c37ae0f784bc513ddc48f01ae0d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "6a83aa16d27f7115367baa95b9d3e1c63fbef65732b3acc4f9ffde3c3cf4ff25"
+  }
+}

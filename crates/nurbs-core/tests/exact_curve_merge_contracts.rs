@@ -12202,3 +12202,38 @@ fn rotating_clipped_chord_contact_finds_an_off_center_obstacle_strip() {
     assert_eq!(report.work_plane_cells, 48);
     assert_eq!(report.cells[0].obstacles, [Status::Exceeds, Status::Undetermined]);
 }
+
+#[test]
+fn rotating_exact_chord_contact_accepts_a_nonbinary_singleton() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_profiled_hull_obstacle_clipped_chord_contact,
+        partition_planar_rotating_profiled_hull_obstacle_exact_chord_contact,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![0., 0.1]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., 0.]; 2],
+        ..position.clone()
+    };
+    let plane = [
+        WorkspaceHalfSpace { normal: &[1., 0.], offset: 1. },
+        WorkspaceHalfSpace { normal: &[-1., 0.], offset: -1. },
+    ];
+    let impossible = [plane[0], WorkspaceHalfSpace { normal: &[-1., 0.], offset: -1.0000000000000002 }];
+    let hull = [&[0., 0.][..], &[3., 0.][..]];
+    let profile = [(0., 0.), (1., 0.)];
+    let binary = partition_planar_rotating_profiled_hull_obstacle_clipped_chord_contact(
+        &position, &direction, &profile, &[&plane], &hull, 0.01, 24,
+    ).unwrap();
+    assert_eq!(binary.cells[0].status, Status::Undetermined);
+    let report = partition_planar_rotating_profiled_hull_obstacle_exact_chord_contact(
+        &position, &direction, &profile, &[&plane, &impossible], &hull, 0.01, 48,
+    ).unwrap();
+    assert_eq!(report.cells[0].obstacles, [Status::Exceeds, Status::Undetermined]);
+}
