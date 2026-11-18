@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0915",
+  "testedBase": "6bc7429fe0535a78bac94aad86291bc82949a636",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 476,
+  "scope": [
+    "Check independent radial and circumferential stock on the spinner ring. Test each intrusion separately, six-hole and two-hole chord identities, invalid count and diameter."
+  ],
+  "logSha256": "2b5df982d2e89a687af78bdf7b162403914c1299d77cbab1008250d775350683",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs": "58b969812e097835fb32c4ef8cdf2529db901acfcb3ac4c6d41c11c4f5e8d21a",
+    "crates/nurbs-core/src/construct/curves/involute.rs": "3824604e9fc1c6cdd3043f7ffab5b2c10d2f1b24a01a6a5fa483a1225fa89b72",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "9cf456faa26ec5775b5bdeea06f452cf0ae58ef4ec170566e06c36d57d845d99"
+  }
+}

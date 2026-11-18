@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 914,
-  "unallocatedCount": 86,
+  "specifiedCount": 915,
+  "unallocatedCount": 85,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21009,6 +21009,24 @@
       ],
       "remainingQualification": [
         "Nominal external root circle and parallel circular bore. Does not measure a manufactured fillet or certify material strength."
+      ]
+    },
+    {
+      "id": "NURBS-0915",
+      "name": "Перемычки крепёжных отверстий на окружности внутренней шестерни",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::ring_gear_bolt_stock",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-gear-bolt-circle-915-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-gear-bolt-circle-915-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Nominal concentric root and outer circles with equally spaced cylindrical holes of equal diameter. Actual fillets and strength are outside the calculation."
       ]
     }
   ],

@@ -424,3 +424,19 @@ fn spinner_bore_stock_and_diameter_limit_include_eccentricity() {
     assert!(stock(1.5,32,0.1,[0.,f64::NAN],10.,0.).is_err());
     assert!(stock(1.5,32,0.1,[0.;2],-1.,0.).is_err());
 }
+
+#[test]
+fn spinner_ring_bolt_circle_distinguishes_all_three_ligaments() {
+    use involute::ring_gear_bolt_stock as stock;
+    // Ring root radius = 30 + 1.5 + 0.1 mm. Six holes give a chord equal to the radius.
+    let report = stock(1.5,40,0.1,38.,35.,4.,6).unwrap();
+    contains(report.root_web_mm, 1.4);
+    contains(report.outer_web_mm, 1.);
+    contains(report.adjacent_web_mm, 31.);
+    assert!(stock(1.5,40,0.1,38.,33.,4.,6).unwrap().root_web_mm[1] < 0.);
+    assert!(stock(1.5,40,0.1,38.,37.,4.,6).unwrap().outer_web_mm[1] < 0.);
+    assert!(stock(1.5,40,0.1,38.,35.,4.,60).unwrap().adjacent_web_mm[1] < 0.);
+    contains(stock(1.5,40,0.1,38.,35.,4.,2).unwrap().adjacent_web_mm, 66.);
+    assert!(stock(1.5,40,0.1,38.,35.,4.,1).is_err());
+    assert!(stock(1.5,40,0.1,38.,35.,f64::NAN,6).is_err());
+}

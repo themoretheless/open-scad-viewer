@@ -772,3 +772,35 @@ pub fn external_gear_bore_stock(
         diameter_limit_mm: pair(available_radius.sub(I::point(minimum_web))?.mul(I::point(2.))?),
     })
 }
+
+/// Signed edge-to-edge stock for equal circular holes in a concentric ring gear.
+#[derive(Debug)]
+pub struct RingGearBoltStock {
+    pub root_web_mm: [f64; 2],
+    pub outer_web_mm: [f64; 2],
+    pub adjacent_web_mm: [f64; 2],
+}
+
+/// Nominal radial and circumferential ligaments for an equally spaced bolt circle.
+/// A negative bound describes intrusion into the corresponding design envelope.
+pub fn ring_gear_bolt_stock(
+    module: f64, teeth: usize, tooth_clearance: f64, outer_radius: f64,
+    bolt_circle_radius: f64, hole_diameter: f64, holes: usize,
+) -> Result<RingGearBoltStock> {
+    check([outer_radius, bolt_circle_radius, hole_diameter].iter().all(|x| x.is_finite() && *x > 0.),
+          "Expected positive finite ring and bolt-circle dimensions")?;
+    check(holes >= 2 && holes as u128 <= (1u128 << 53),
+          "Expected at least two holes and an exactly representable hole count")?;
+    let gear = derive_gear_parameter_bounds(module, teeth, 20., tooth_clearance, 0., true)?;
+    let root = I::new(gear.root_radius[0], gear.root_radius[1])?;
+    let radius = I::point(bolt_circle_radius);
+    let diameter = I::point(hole_diameter);
+    let half = diameter.div(I::point(2.))?;
+    let sine = trig(pi()?.div(I::point(holes as f64))?)?.0;
+    let chord = radius.mul(I::point(2.))?.mul(sine)?;
+    Ok(RingGearBoltStock {
+        root_web_mm: pair(radius.sub(root)?.sub(half)?),
+        outer_web_mm: pair(I::point(outer_radius).sub(radius)?.sub(half)?),
+        adjacent_web_mm: pair(chord.sub(diameter)?),
+    })
+}
