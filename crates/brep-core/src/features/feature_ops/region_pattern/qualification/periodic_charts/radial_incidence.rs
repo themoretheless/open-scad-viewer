@@ -2,6 +2,7 @@
 use super::*;
 use std::collections::BTreeMap;
 
+#[cfg(test)]
 pub(crate) struct RadialIncidence {
     pub periodic_axes: [usize; 2],
     pub rims: Vec<usize>,
@@ -120,6 +121,7 @@ fn order_cycle(bands: Vec<RadialBand>, remaining: &mut usize) -> Result<Option<V
     ))
 }
 
+#[cfg(test)]
 pub(crate) fn inspect(
     model: &Model,
     faces: [usize; 2],
@@ -138,24 +140,33 @@ pub(crate) fn inspect(
     }))
 }
 
-pub(crate) fn certify_band_contact(
+pub(crate) struct RadialCycleContacts {
+    pub shared: Vec<crate::boundary_hull_contact::Certificate>,
+    pub disjoint: Vec<[usize; 2]>,
+}
+
+pub(crate) fn certify_cycle_contacts(
     model: &Model,
-    faces: [usize; 2],
+    faces: &[usize],
     remaining: &mut usize,
     pairs: &mut usize,
     max_pairs: usize,
-) -> Result<Option<crate::boundary_hull_contact::Certificate>> {
-    let Some(topology) = inspect(model, faces, remaining)? else {
+) -> Result<Option<RadialCycleContacts>> {
+    let Some(bands) = inspect_cycle(model, faces, remaining)? else {
         return Ok(None);
     };
-    let surfaces = faces.map(|face| &model.faces[face].surface);
+    let surfaces = bands
+        .iter()
+        .map(|band| &model.faces[band.face].surface)
+        .collect::<Vec<_>>();
+    let axes = bands.iter().map(|band| band.axis).collect::<Vec<_>>();
     for height in 0..3 {
         if *remaining == 0 || *pairs == max_pairs {
             break;
         }
-        let proof = nurbs_core::surface_injectivity::certify_radial_band_pair(
-            surfaces,
-            topology.periodic_axes,
+        let proof = nurbs_core::surface_injectivity::certify_radial_band_cycle(
+            &surfaces,
+            &axes,
             height,
             (*remaining).min(100000),
             (max_pairs - *pairs).min(100000),
@@ -163,29 +174,85 @@ pub(crate) fn certify_band_contact(
         charge(remaining, proof.cells)?;
         *pairs += proof.pairs;
         if proof.proven {
-            let mut enclosure = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
-            for &edge in &topology.rims {
-                let poles = &model.edges[edge].curve.control_points;
-                charge(remaining, poles.len())?;
-                for pole in poles {
-                    for (interval, &value) in enclosure.iter_mut().zip(pole) {
-                        interval[0] = interval[0].min(value);
-                        interval[1] = interval[1].max(value);
-                    }
-                }
-            }
-            return Ok(Some(crate::boundary_hull_contact::Certificate {
-                faces,
-                contact_enclosure: enclosure,
-                edges: topology.rims,
-                vertex: None,
-                joined_proof: None,
-                polar_join: None,
-                source_join: None,
-            }));
+            return Ok(Some(cycle_contacts(model, &bands, remaining)?));
         }
     }
     Ok(None)
+}
+
+fn cycle_contacts(
+    model: &Model,
+    bands: &[RadialBand],
+    remaining: &mut usize,
+) -> Result<RadialCycleContacts> {
+    let mut contacts = RadialCycleContacts {
+        shared: Vec::new(),
+        disjoint: Vec::new(),
+    };
+    for (i, a) in bands.iter().enumerate() {
+        for (j, b) in bands.iter().enumerate().skip(i + 1) {
+            charge(remaining, 1)?;
+            let faces = [a.face.min(b.face), a.face.max(b.face)];
+            let forward = j == i + 1;
+            let wrap = i == 0 && j + 1 == bands.len();
+            if !forward && !wrap {
+                contacts.disjoint.push(faces);
+                continue;
+            }
+            let rims = [wrap.then_some(&a.rims[0]), forward.then_some(&a.rims[1])];
+            let edges = rims
+                .into_iter()
+                .flatten()
+                .flat_map(|rim| rim.keys().copied())
+                .collect::<Vec<_>>();
+            contacts
+                .shared
+                .push(rim_certificate(model, faces, edges, remaining)?);
+        }
+    }
+    Ok(contacts)
+}
+
+fn rim_certificate(
+    model: &Model,
+    faces: [usize; 2],
+    edges: Vec<usize>,
+    remaining: &mut usize,
+) -> Result<crate::boundary_hull_contact::Certificate> {
+    let mut enclosure = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
+    for &edge in &edges {
+        let poles = &model.edges[edge].curve.control_points;
+        charge(remaining, poles.len())?;
+        for pole in poles {
+            for (interval, &value) in enclosure.iter_mut().zip(pole) {
+                interval[0] = interval[0].min(value);
+                interval[1] = interval[1].max(value);
+            }
+        }
+    }
+    Ok(crate::boundary_hull_contact::Certificate {
+        faces,
+        contact_enclosure: enclosure,
+        edges,
+        vertex: None,
+        joined_proof: None,
+        polar_join: None,
+        source_join: None,
+    })
+}
+
+pub(crate) fn certify_band_contact(
+    model: &Model,
+    faces: [usize; 2],
+    remaining: &mut usize,
+    pairs: &mut usize,
+    max_pairs: usize,
+) -> Result<Option<crate::boundary_hull_contact::Certificate>> {
+    let Some(contacts) = certify_cycle_contacts(model, &faces, remaining, pairs, max_pairs)? else {
+        return Ok(None);
+    };
+    debug_assert!(contacts.disjoint.is_empty());
+    Ok(contacts.shared.into_iter().next())
 }
 
 #[cfg(test)]
