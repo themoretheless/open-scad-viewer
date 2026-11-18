@@ -12,3 +12,4 @@ pub mod shell_thickness;
 pub mod solid_audit;
 pub mod solid_distance;
 pub mod volume_validity;
+pub mod through_wall;

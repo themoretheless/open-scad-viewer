@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 942,
-  "unallocatedCount": 58,
+  "specifiedCount": 943,
+  "unallocatedCount": 57,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21538,6 +21538,24 @@
       ],
       "remainingQualification": [
         "Clamped positive rational Bezier spans, degrees 1–8, internal knot multiplicity equal to degree, within the supplied patch budget. Bounds concern entire carriers. Trim construction and Boolean sewing remain open."
+      ]
+    },
+    {
+      "id": "NURBS-0943",
+      "name": "Поиск стенки сквозного отверстия между двумя контурами B-rep",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::body_analysis::through_wall::between_holes",
+      "evidence": [
+        "crates/brep-core/src/body_analysis.rs",
+        "crates/brep-core/src/body_analysis/through_wall.rs",
+        "crates/brep-core/tests/spinner_bore_boolean.rs",
+        "docs/qualification/nurbs-through-wall-943-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-through-wall-943-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Closed shell; proves wall-face connectivity and exact rim-edge membership for two selected cap holes. Geometry, radial clearance and Boolean sewing are separate."
       ]
     }
   ],

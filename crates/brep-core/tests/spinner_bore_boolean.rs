@@ -5,12 +5,34 @@ fn spinner_bore_difference_preserves_teeth_or_reports_unproved_coverage() {
     let spec = GearSpec { module: 1.5, teeth: 32, height: 10., helix_angle_deg: -35.,
         herringbone: true, clearance: 0.1, backlash: 0.05, bore: 42., ..Default::default() };
     let sun = gear(&spec).unwrap();
+    let caps: Vec<_> = sun
+        .faces
+        .iter()
+        .enumerate()
+        .filter_map(|(i, face)| (!face.holes.is_empty()).then_some((i, 0)))
+        .collect();
+    let ends = [caps[0], caps[1]];
+    let shell = sun.bodies[0].outer_shell;
+    let wall = brep_core::body_analysis::through_wall::between_holes(&sun, shell, ends).unwrap();
+    assert_eq!(wall.len(), 32);
+    assert!(
+        brep_core::body_analysis::through_wall::between_holes(&sun, shell, [ends[0]; 2]).is_err()
+    );
+    assert!(
+        brep_core::body_analysis::through_wall::between_holes(
+            &sun,
+            shell,
+            [ends[0], (ends[1].0, 1)]
+        )
+        .is_err()
+    );
     let mut inside = 0;
     let mut outside = 0;
-    for face in &sun.faces {
+    for (index, face) in sun.faces.iter().enumerate() {
         if !face.holes.is_empty() { continue; } // The two trimmed end caps meet the tool.
         let bounds = nurbs_core::radial_bounds::piecewise_axis_radius_bounds(
             &face.surface, 2, [0.;3], 256).unwrap().expect("whole wall radial certificate");
+        assert_eq!(wall.binary_search(&index).is_ok(), bounds[1] < 22.);
         if bounds[1] < 22. { inside += 1; }
         else if bounds[0] > 22. { outside += 1; }
         else { panic!("wall could meet the cutter: {bounds:?}"); }
@@ -42,4 +64,31 @@ fn spinner_bore_difference_preserves_teeth_or_reports_unproved_coverage() {
             }
         }
     }
+}
+
+#[test]
+fn cap_holes_on_distinct_passages_cannot_share_a_wall() {
+    let square =
+        |x: f64, width: f64| vec![[x, 0.], [x, width], [x + width, width], [x + width, 0.]];
+    let outer = [[-1., -1.], [9., -1.], [9., 5.], [-1., 5.]];
+    let model =
+        brep_core::extrude_polygon_with_holes(&outer, &[square(0., 2.), square(5., 2.)], 0., 3.)
+            .unwrap();
+    let caps: Vec<_> = model
+        .faces
+        .iter()
+        .enumerate()
+        .filter_map(|(i, face)| (face.holes.len() == 2).then_some(i))
+        .collect();
+    assert_eq!(caps.len(), 2);
+    let locate = |a, b| {
+        brep_core::body_analysis::through_wall::between_holes(
+            &model,
+            model.bodies[0].outer_shell,
+            [(caps[0], a), (caps[1], b)],
+        )
+    };
+    assert_eq!(locate(0, 0).unwrap().len(), 4);
+    assert_eq!(locate(1, 1).unwrap().len(), 4);
+    assert!(locate(0, 1).is_err());
 }
