@@ -1289,16 +1289,7 @@ pub fn exact_periodic_trim_patch_set_mass_request(
         .get("momentToleranceMm4")
         .map(|_| principal_moment_tolerance(request))
         .transpose()?;
-    let reference_point = request
-        .get("inertiaReferencePointMm")
-        .map(|_| -> Result<[f64; 3]> {
-            let point: [f64; 3] = field(request, "inertiaReferencePointMm")?;
-            if !point.iter().all(|x| x.is_finite()) {
-                return Err(input("Inertia reference point must be finite"));
-            }
-            Ok(point)
-        })
-        .transpose()?;
+    let reference_point = optional_inertia_reference_point(request)?;
     let inertia_axis = optional_inertia_axis(request)?;
     let include_axis_radius = request
         .get("includeAxisRadiusOfGyration")
@@ -1368,6 +1359,21 @@ pub fn exact_periodic_trim_patch_set_mass_request(
     response["centralInertiaBoundsMm4"] = json!(mass.central_inertia_bounds);
     write_trimmed_patch_set_area(&mut response, &patches, measure);
     Ok(response)
+}
+
+fn optional_inertia_reference_point(request: &value_codec::Value) -> Result<Option<[f64; 3]>> {
+    use crate::field;
+
+    request
+        .get("inertiaReferencePointMm")
+        .map(|_| -> Result<[f64; 3]> {
+            let point: [f64; 3] = field(request, "inertiaReferencePointMm")?;
+            if !point.iter().all(|x| x.is_finite()) {
+                return Err(input("Inertia reference point must be finite"));
+            }
+            Ok(point)
+        })
+        .transpose()
 }
 
 fn optional_inertia_axis(request: &value_codec::Value) -> Result<Option<([f64; 3], [f64; 3])>> {
@@ -1449,6 +1455,7 @@ pub fn exact_periodic_trim_patch_set_density_request(
     let max_surface: usize = field(request, "maxSurfaceCells")?;
     let max_trim: usize = field(request, "maxTrimCells")?;
     validate_trimmed_patch_set_limits(tolerance, tolerance_uv, max_surface, max_trim)?;
+    let reference_point = optional_inertia_reference_point(request)?;
     let inertia_axis = optional_inertia_axis(request)?;
     let center_plane = request
         .get("centerOfMassPlane")
@@ -1495,6 +1502,9 @@ pub fn exact_periodic_trim_patch_set_density_request(
     if inertia_axis.is_some() {
         response["axisMomentBoundsKgMm2"] = Value::Null;
     }
+    if reference_point.is_some() {
+        response["referenceInertiaBoundsKgMm2"] = Value::Null;
+    }
     let Some(patches) = build.patches else {
         return Ok(response);
     };
@@ -1526,6 +1536,9 @@ pub fn exact_periodic_trim_patch_set_density_request(
     }
     if let Some((point, direction)) = inertia_axis {
         response["axisMomentBoundsKgMm2"] = json!(report.bound_inertia_about_line(point, direction)?);
+    }
+    if let Some(point) = reference_point {
+        response["referenceInertiaBoundsKgMm2"] = json!(report.bound_inertia_about_point(point)?);
     }
     response["massBoundsKg"] = json!(report.total_mass_bounds);
     let fractions = report.component_mass_fractions()?;

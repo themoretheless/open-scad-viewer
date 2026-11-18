@@ -908,3 +908,38 @@ fn patch_set_density_returns_requested_moment_about_a_fixed_axis() {
     request["inertiaAxis"]["direction"] = json!([0., 0., 0.]);
     assert_eq!(run(&request)["ok"], false);
 }
+
+#[test]
+fn patch_set_density_returns_requested_tensor_about_fixed_reference_point() {
+    let mut request = patch_set_density_request(20_000);
+    let prior = run(&request);
+    assert_eq!(prior["ok"], true, "{prior}");
+    assert!(prior["value"].get("referenceInertiaBoundsKgMm2").is_none());
+    request["inertiaReferencePointMm"] = json!([1., 0., 0.]);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 5.], "direction": [0., 0., 1.]});
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    let tensor = &report["referenceInertiaBoundsKgMm2"];
+    let expected_zz = 2. * 83. / 768. + 6. * 49. / 12288. - 2. * 0.34375 + 2.875;
+    for (interval, expected) in [
+        (&tensor[2][2], expected_zz),
+        (&tensor[0][1], 0.375),
+        (&report["axisMomentBoundsKgMm2"], expected_zz),
+    ] {
+        assert!(
+            interval[0].as_f64().unwrap() <= expected && expected <= interval[1].as_f64().unwrap()
+        );
+    }
+    assert_eq!(tensor[0][1], tensor[1][0]);
+
+    request["maxSurfaceCells"] = json!(2);
+    let incomplete = run(&request);
+    assert_eq!(incomplete["ok"], true, "{incomplete}");
+    assert_eq!(
+        incomplete["value"].get("referenceInertiaBoundsKgMm2"),
+        Some(&Value::Null)
+    );
+    request["inertiaReferencePointMm"] = json!([1., 0.]);
+    assert_eq!(run(&request)["ok"], false);
+}

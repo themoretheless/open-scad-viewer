@@ -35,6 +35,7 @@ interface Report {
   massBoundsKg?: [number, number] | null
   centerOfMassPlaneDistanceBoundsMm?: [number, number] | null
   centerOfMassBoundsMm?: [number, number][] | null
+  referenceInertiaBoundsKgMm2?: [number, number][][] | null
   centralInertiaBoundsKgMm2?: [number, number][][] | null
   axisMomentBoundsKgMm2?: [number, number] | null
   axisMomentBoundsMm4?: [number, number] | null
@@ -406,3 +407,16 @@ assert.deepEqual(weightedAxis.centerOfMassPlaneDistanceBoundsMm, centerPlane)
 const incompleteWeightedAxis = call(request.maxWork, densityOp, { ...weightedAxisOptions, maxSurfaceCells: 2 })
 assert.equal(incompleteWeightedAxis.axisMomentBoundsKgMm2, null)
 console.log('WASM ABI enclosed the density-weighted moment about a fixed axis.')
+
+assert.equal(densityMass.referenceInertiaBoundsKgMm2, undefined)
+const weightedReferenceOptions = { ...weightedAxisOptions, inertiaReferencePointMm: [1, 0, 0] }
+const weightedReference = call(request.maxWork, densityOp, weightedReferenceOptions)
+const weightedTensor = weightedReference.referenceInertiaBoundsKgMm2
+assert.ok(weightedTensor)
+assert.deepEqual(weightedTensor[0][1], weightedTensor[1][0])
+assert.ok(weightedTensor[0][1][0] <= 0.375 && 0.375 <= weightedTensor[0][1][1])
+assert.ok(weightedTensor[2][2][0] <= expectedWeightedAxisMoment && expectedWeightedAxisMoment <= weightedTensor[2][2][1])
+assert.deepEqual(weightedReference.axisMomentBoundsKgMm2, weightedAxisBounds)
+const incompleteWeightedReference = call(request.maxWork, densityOp, { ...weightedReferenceOptions, maxSurfaceCells: 2 })
+assert.equal(incompleteWeightedReference.referenceInertiaBoundsKgMm2, null)
+console.log('WASM ABI enclosed the density-weighted tensor about a fixed point.')
