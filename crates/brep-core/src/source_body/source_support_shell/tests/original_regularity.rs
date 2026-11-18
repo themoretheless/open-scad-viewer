@@ -80,6 +80,12 @@ fn material_body_owns_all_original_face_ranks_with_one_budget() {
 
 #[test]
 fn embedded_original_body_owns_a_geometric_face_clock_change() {
+    for tilt in [0., 0.25] {
+        check_geometric_face_clock_change(tilt);
+    }
+}
+
+fn check_geometric_face_clock_change(tilt: f64) {
     let mut model = crate::cuboid([0.; 3], [2.; 3]).unwrap();
     let source = &mut model.faces[0].surface;
     let first = source.control_points[0][0].clone();
@@ -108,6 +114,20 @@ fn embedded_original_body_owns_a_geometric_face_clock_change() {
     source.knots_u = vec![0., 0., 0., 0.5, 1., 1., 1.];
     source.knots_v = vec![0., 0., 0., 1., 1., 1.];
     source.weights = vec![vec![1.; 3]; 4];
+    let shear = |p: &mut [f64]| p[2] += tilt * p[0] + tilt * p[1];
+    for vertex in &mut model.vertices {
+        shear(&mut vertex.point);
+    }
+    for edge in &mut model.edges {
+        for point in &mut edge.curve.control_points {
+            shear(point);
+        }
+    }
+    for face in &mut model.faces {
+        for point in face.surface.control_points.iter_mut().flatten() {
+            shear(point);
+        }
+    }
     let assembly = prepare_projective(&model, limits()).unwrap();
     let shell = assembly.shell.expect(assembly.reason);
     let geometry =

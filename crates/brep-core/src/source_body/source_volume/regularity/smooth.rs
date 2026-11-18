@@ -1,7 +1,13 @@
 //! Geometric smoothness of the interiors of every regular original material face. Ordinary edge/vertex
 //! classes and physical pole neighborhoods remain separate; C0 is not upgraded.
 use super::{Carrier, RegularBody};
-use nurbs_core::{Error, Result, analysis::surface_continuity};
+use nurbs_core::{
+    Error, Result,
+    analysis::{
+        exact_affine_hull::{SurfaceAffineHull, classify_surface_affine_hull},
+        surface_continuity,
+    },
+};
 pub struct SmoothFaces<'r, 's, E: Carrier> {
     regular: &'r RegularBody<'s, E>,
     faces: Vec<FaceContinuity<'s>>,
@@ -36,18 +42,34 @@ impl<'s> FaceContinuity<'s> {
     }
 }
 
-// The caller owns rank and a one-to-one material chart. A continuous chart
-// in one exact coordinate plane has open planar interior neighborhoods there.
-fn planar_joins(source: &crate::Surface) -> Option<usize> {
+// Rank and one-to-one material coordinates are owned by the caller. A
+// continuous embedded chart in an exact plane has open planar neighborhoods.
+fn planar_joins(source: &crate::Surface, work: u64) -> Result<(Option<usize>, u64)> {
+    let census = (3 * source.control_points.len() * source.control_points[0].len()
+        + source.knots_u.len()
+        + source.knots_v.len()) as u64;
+    if work < census {
+        return Ok((None, 0));
+    }
     let origin = &source.control_points[0][0];
-    if !(0..3).any(|axis| {
+    let axis_aligned = (0..3).any(|axis| {
         source
             .control_points
             .iter()
             .flatten()
             .all(|p| p[axis] == origin[axis])
-    }) {
-        return None;
+    });
+    let mut used = census;
+    if !axis_aligned {
+        let remaining = (work - used).min(cad_predicates::MAX_WORK);
+        if remaining == 0 {
+            return Ok((None, used));
+        }
+        let hull = classify_surface_affine_hull(source, remaining)?;
+        used += hull.work_used;
+        if !matches!(hull.hull, SurfaceAffineHull::Plane(_)) {
+            return Ok((None, used));
+        }
     }
     let mut joins = 0;
     for (knots, degree, count) in [
@@ -65,13 +87,13 @@ fn planar_joins(source: &crate::Surface) -> Option<usize> {
         for block in knots.chunk_by(|a, b| a == b) {
             if knots[degree] < block[0] && block[0] < knots[count] {
                 if block.len() > degree {
-                    return None;
+                    return Ok((None, used));
                 }
                 joins += 1;
             }
         }
     }
-    Some(joins)
+    Ok((Some(joins), used))
 }
 
 fn qualify_face(
@@ -93,17 +115,14 @@ fn qualify_face(
         ));
     }
     let mut used = raw.exact_work;
-    let plane_work = (3 * source.control_points.len() * source.control_points[0].len()
-        + source.knots_u.len()
-        + source.knots_v.len()) as u64;
     if raw.outcome == cad_predicates::BezierIdentity::Different
         && !source.periodic_u
         && !source.periodic_v
         && cells > raw.cells
-        && work - used >= plane_work
     {
+        let (joins, plane_work) = planar_joins(source, work - used)?;
         used += plane_work;
-        if let Some(geometric_joins) = planar_joins(source) {
+        if let Some(geometric_joins) = joins {
             return Ok((
                 Some(FaceContinuity {
                     source,

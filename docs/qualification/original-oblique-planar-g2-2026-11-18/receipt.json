@@ -1,0 +1,29 @@
+{
+  "sourceBase": "ea0c3faf9c9975deb72827c1d51206708975c1ac",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Axis-aligned and oblique embedded material faces with exact world edge ownership, volume and spanwise rank, a raw C2 mismatch and a geometric G2 certificate. Includes one-short exact-work refusal on both source bodies.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 49 passed; 0 failed; 4 ignored; 0 measured; 1996 filtered out; finished in 13.93s",
+      "file": "original-g2.log.gz",
+      "sha256": "911207e5603e0081976bb7fa963e58efe733ca73c796e8902388e9c6ce58527c"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_smoothness::complete",
+      "result": "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 2034 filtered out; finished in 0.23s",
+      "file": "sweep.log.gz",
+      "sha256": "3abf921a0d349cf03beb37a00f12e300de156e8ca810654ed4a683e7b4443a5c"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "4cfa190ecb3f3b15d2d09b97aea94c2c29e46bb92f23990b497382c4a1995764",
+    "count": 4916
+  }
+}

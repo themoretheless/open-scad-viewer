@@ -160,8 +160,10 @@ route checks chart inclusion and exact equality. It covers both directions
 of the full affine traversal. General projective and partial traversals
 continue to require their own exact composition evidence.
 
-An embedded regular face can use exact planarity when all source controls
-have the same coordinate on one axis and its internal knot multiplicities
-ensure position continuity. Its physical interior neighborhoods lie in that
-plane even when raw second derivatives jump. This case consumes work for
-the control and knot census and does not classify the face's boundary edges.
+An embedded regular face can use exact planarity when its active source
+controls span one plane and its internal knot multiplicities ensure position
+continuity. A constant coordinate proves the axis-aligned case. For an
+oblique plane, the exact rational affine hull supplies the certificate.
+Its physical interior neighborhoods lie in that plane even when raw second
+derivatives jump. The control census, knot census and affine hull share one
+work allowance. Edge classifications remain separate.
