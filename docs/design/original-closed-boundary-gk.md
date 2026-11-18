@@ -253,6 +253,13 @@ traversal proves side coverage, and exact world-edge agreement binds it
 to the authored seam. Side recovery and chart reversal share the seam
 work allowance.
 
+The selected-edge G2 inspection can also replay a directed active UV
+interval on a nonperiodic chart. It stores that interval exactly on its
+original clock and charges the restriction to the shared exact-work
+allowance. The geometric verifier still checks the whole world-edge
+lift, normal and curvature compatibility on both traversals. A
+restriction without exact storage leaves the seam unproved.
+
 The common boundary can be an authored chain of edges. The audit checks
 that both faces cover the complete natural rectangle, with exact
 consecutive segments along its sides. Both traversals of the shared

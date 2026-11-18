@@ -103,37 +103,48 @@ fn collect_edge_uses(model: &Model) -> Vec<Vec<EdgeUseRef<'_>>> {
     uses
 }
 
-fn coedge_clock_reversed(model: &Model, edge: usize, c: &crate::Coedge) -> Result<bool> {
+fn active_seam_pcurve<'a>(
+    model: &Model,
+    face: usize,
+    c: &'a crate::Coedge,
+    work: &mut u64,
+    limit: u64,
+) -> Result<Option<(std::borrow::Cow<'a, crate::Curve>, bool)>> {
+    use std::borrow::Cow;
     let Some(trim) = c.trim() else {
-        return Ok(c.reversed);
+        return Ok(Some((Cow::Borrowed(&c.pcurve), c.reversed)));
     };
-    let cd = model.edges[edge].curve.domain();
-    let pd = c.pcurve.domain();
-    let backward = |r: [f64; 2], d: [f64; 2]| {
-        if r == d {
-            Some(false)
-        } else if r == [d[1], d[0]] {
-            Some(true)
-        } else {
-            None
-        }
-    };
+    let edge = c.edge;
+    let [start, end] = model.edges[edge].curve.domain();
+    let reverse_world = trim.curve_parameter == [end, start];
+    if trim.curve_parameter != [start, end] && !reverse_world {
+        return Err(Error::new(
+            "BREP_G2_SCOPE",
+            &format!("edge={edge}: a partial world clock cannot authorize a whole seam"),
+        ));
+    }
     if trim.periodic_lift != [[0; 2]; 2] {
         return Err(Error::new(
             "BREP_G2_SCOPE",
             &format!("edge={edge}: periodic coedge lifts need a trim-aware G2 proof"),
         ));
     }
-    match (
-        backward(trim.curve_parameter, cd),
-        backward(trim.pcurve_parameter, pd),
-    ) {
-        (Some(cback), Some(pback)) => Ok(c.reversed ^ cback ^ pback),
-        _ => Err(Error::new(
-            "BREP_G2_SCOPE",
-            &format!("edge={edge}: partial authored coedge clocks need a trim-aware G2 proof"),
-        )),
+    let [a, b] = trim.pcurve_parameter;
+    let range = [a.min(b), a.max(b)];
+    let reversed = c.reversed ^ reverse_world ^ (a > b);
+    if range == c.pcurve.domain() {
+        return Ok(Some((Cow::Borrowed(&c.pcurve), reversed)));
     }
+    let surface = &model.faces[face].surface;
+    let remaining = limit - *work;
+    if c.pcurve.periodic || surface.periodic_u || surface.periodic_v || remaining == 0 {
+        return Ok(None);
+    }
+    let restricted = nurbs_core::editing::exact_curve_merge::clamp_exact_curve_on(
+        &c.pcurve, range, remaining,
+    )?;
+    *work += restricted.work_used;
+    Ok(restricted.curve.map(|p| (Cow::Owned(p), reversed)))
 }
 
 fn is_c2_surface(s: &nurbs_core::surface::Surface) -> bool {
@@ -192,7 +203,7 @@ fn inspect_manifold_seam(
     budgets: SeamInspectBudgets,
     coefficient_work: &mut usize,
     out: &mut Report,
-) -> Result<(surface_g2::Report, surface_g2_pcurves::Positions)> {
+) -> Result<Option<(surface_g2::Report, surface_g2_pcurves::Positions)>> {
     let [(a, ca), (b, cb)] = uses;
     let SeamInspectBudgets {
         tolerances: t,
@@ -201,11 +212,14 @@ fn inspect_manifold_seam(
         graph_work,
     } = budgets;
     let surfaces = [&model.faces[a].surface, &model.faces[b].surface];
-    let pcurves = [&ca.pcurve, &cb.pcurve];
-    let reversed = [
-        coedge_clock_reversed(model, edge, ca)?,
-        coedge_clock_reversed(model, edge, cb)?,
-    ];
+    let Some((pa, ra)) = active_seam_pcurve(model, a, ca, &mut out.exact_work, max_exact)? else {
+        return Ok(None);
+    };
+    let Some((pb, rb)) = active_seam_pcurve(model, b, cb, &mut out.exact_work, max_exact)? else {
+        return Ok(None);
+    };
+    let pcurves = [pa.as_ref(), pb.as_ref()];
+    let reversed = [ra, rb];
     let mut graph = None;
     let remaining = graph_work.unwrap_or(0).saturating_sub(*coefficient_work);
     let polynomial =
@@ -273,7 +287,7 @@ fn inspect_manifold_seam(
         )?
     };
     out.exact_work += p.positions.exact_work;
-    Ok((p.geometric, p.positions))
+    Ok(Some((p.geometric, p.positions)))
 }
 
 fn collect_vertex_corners(
@@ -396,7 +410,7 @@ fn inspect_edges_impl(
             None
         } else if let [(a, _, _, ca), (b, _, _, cb)] = owned.as_slice() {
             if out.cells < max_cells {
-                let (geom, pos) = inspect_manifold_seam(
+                inspect_manifold_seam(
                     model,
                     edge,
                     [(*a, ca), (*b, cb)],
@@ -408,9 +422,10 @@ fn inspect_edges_impl(
                     },
                     &mut coefficient_work,
                     &mut out,
-                )?;
-                positions = Some(pos);
-                Some(geom)
+                )?.map(|(geom, pos)| {
+                    positions = Some(pos);
+                    geom
+                })
             } else {
                 None
             }
@@ -457,6 +472,51 @@ mod corner_tests {
             assert!(!report.within_tolerance);
         }
         assert!(inspect_edges_with_exact(&model, &[0], t, 256, 1000001).is_err());
+        assert_eq!(model, before);
+    }
+    #[test]
+    fn active_chart_trim_preserves_selected_geometric_g2_and_its_budget() {
+        let sections = [0., 1., 2.].map(|z| {
+            let corners = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]];
+            vec![(0..4).map(|i| {
+                let [[x, y], [u, v]] = [corners[i], corners[(i + 1) % 4]];
+                crate::line(vec![x, y, z], vec![u, v, z])
+            }).collect::<Vec<_>>()]
+        });
+        let mut model = crate::rational_section_loft(&sections).unwrap();
+        let outer = model.faces[0].outer;
+        let other = model.faces[4].outer;
+        let index = model.loops[outer].coedges.iter().position(|c| {
+            model.loops[other].coedges.iter().any(|d| d.edge == c.edge)
+        }).unwrap();
+        let edge = model.loops[outer].coedges[index].edge;
+        let world = model.edges[edge].curve.domain();
+        let t = Tolerances { position: 1e-7, normal: 1e-5, curvature: 1e-4 };
+        let original = inspect_edges_with_exact(&model, &[edge], t, 256, 100_000).unwrap();
+        assert!(original.within_tolerance);
+        let c = &mut model.0.loops[outer].coedges[index];
+        let a = &c.pcurve.control_points[1];
+        let b = &c.pcurve.control_points[0];
+        c.pcurve = crate::Curve {
+            degree: 1,
+            knots: vec![0., 0., 4., 4.],
+            control_points: [-1., 3.].map(|t| {
+                a.iter().zip(b).map(|(a, b)| a + t * (b - a)).collect()
+            }).to_vec(),
+            weights: vec![1.; 2],
+            periodic: false,
+        };
+        *c = c.clone().with_trim(brep_topology::CoedgeTrim {
+            curve_parameter: world,
+            pcurve_parameter: [2., 1.],
+            periodic_lift: [[0; 2]; 2],
+        }).unwrap();
+        model.validate().unwrap();
+        let before = model.clone();
+        let report = inspect_edges_with_exact(&model, &[edge], t, 256, 100_000).unwrap();
+        assert!(report.within_tolerance);
+        assert!(report.exact_work > original.exact_work);
+        assert!(!inspect_edges_with_exact(&model, &[edge], t, 256, 0).unwrap().within_tolerance);
         assert_eq!(model, before);
     }
     #[test]
