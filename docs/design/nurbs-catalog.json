@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 771,
-  "unallocatedCount": 229,
+  "specifiedCount": 772,
+  "unallocatedCount": 228,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18341,6 +18341,25 @@
       "remainingQualification": [
         "Certify rounded hull contact along a two-plane inward direction while checking every obstacle half-space.",
         "Check diagonal rounded contact, independent plane scales, extra half-space rejection and the reserved three-pass budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0772",
+      "name": "Подтверждение несимметричного контакта скруглённого инструмента с углом",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_planar_rotating_profiled_hull_obstacle_asymmetric_contact",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-772-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-772-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify asymmetric rounded contact using violation-weighted inward directions and every obstacle half-space.",
+        "Check asymmetric rounded contact beyond a bisector, nonunit plane scale and the reserved four-pass budget.",
         "WASM and application integration are separate."
       ]
     }

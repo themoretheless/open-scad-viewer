@@ -2631,6 +2631,25 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_corner_contact(
     )
 }
 
+/// Also seek an asymmetric rounded contact by weighting inward normals
+/// by the relative plane violations. Each displacement must stay within
+/// the rounding disk and satisfy every half-space across the cell. The
+/// work budget reserves four vertex/plane passes per cell.
+pub fn partition_planar_rotating_profiled_hull_obstacle_asymmetric_contact(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    partition_rotating_profiled_obstacles(
+        position, direction, radius_profile, obstacles, vertex_offsets,
+        parameter_tolerance, max_vertex_plane_cells, 3,
+    )
+}
+
 fn partition_rotating_profiled_obstacles(
     position: &Curve,
     direction: &Curve,
@@ -2712,7 +2731,7 @@ fn partition_rotating_profiled_obstacles(
                         continue;
                     }
                     if candidates.contains(&true) || (seek_rounded && rounded_vertex_contacts(
-                        obstacle, &residuals, &witness_planes, radius.lo, witness_passes == 2,
+                        obstacle, &residuals, &witness_planes, radius.lo, witness_passes,
                     )?) {
                         *status = Exceeds;
                     }
@@ -2742,10 +2761,10 @@ fn rounded_vertex_contacts(
     residuals: &[Interval],
     witness_planes: &[[(usize, f64); 2]],
     radius: f64,
-    try_bisector: bool,
+    witness_passes: usize,
 ) -> Result<bool> {
     let vertex_count = witness_planes.len();
-    for (vertex, &[(first, _), (second, second_violation)]) in witness_planes.iter().enumerate() {
+    for (vertex, &[(first, first_violation), (second, second_violation)]) in witness_planes.iter().enumerate() {
         let inside_after_displacement = |axis: [Interval; 2], length_upper: f64| -> Result<bool> {
             if length_upper == 0. {
                 return Ok(false);
@@ -2767,16 +2786,31 @@ fn rounded_vertex_contacts(
         if inside_after_displacement([normal[0], normal[1]], length.hi)? {
             return Ok(true);
         }
-        if try_bisector && second_violation > 0. {
+        if witness_passes >= 2 && second_violation > 0. {
             let (other, _, other_length) = &planes[second];
-            let axis = [
-                normal[0].div(Interval::point(length.hi))?
-                    .add(other[0].div(Interval::point(other_length.hi))?)?,
-                normal[1].div(Interval::point(length.hi))?
-                    .add(other[1].div(Interval::point(other_length.hi))?)?,
+            let unit = [
+                normal[0].div(Interval::point(length.hi))?,
+                normal[1].div(Interval::point(length.hi))?,
             ];
-            if inside_after_displacement(axis, norm(&axis)?.hi)? {
+            let other_unit = [
+                other[0].div(Interval::point(other_length.hi))?,
+                other[1].div(Interval::point(other_length.hi))?,
+            ];
+            let bisector = [unit[0].add(other_unit[0])?, unit[1].add(other_unit[1])?];
+            let length = norm(&bisector)?;
+            if length.lo > 0. && inside_after_displacement(bisector, length.hi)? {
                 return Ok(true);
+            }
+            if witness_passes >= 3 && first_violation.is_finite() {
+                let weight = Interval::point(second_violation / first_violation);
+                let axis = [
+                    unit[0].add(other_unit[0].mul(weight)?)?,
+                    unit[1].add(other_unit[1].mul(weight)?)?,
+                ];
+                let length = norm(&axis)?;
+                if length.lo > 0. && inside_after_displacement(axis, length.hi)? {
+                    return Ok(true);
+                }
             }
         }
     }

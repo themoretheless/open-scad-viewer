@@ -12049,3 +12049,41 @@ fn rotating_rounded_corner_contact_checks_diagonal_reach_and_extra_planes() {
     }));
     assert!(diagonal.work_plane_cells <= 240);
 }
+
+#[test]
+fn rotating_rounded_asymmetric_contact_weights_unequal_plane_deficits() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_profiled_hull_obstacle_asymmetric_contact,
+        partition_planar_rotating_profiled_hull_obstacle_corner_contact,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., 0.], vec![1., 0.001]],
+        ..position.clone()
+    };
+    let corner = [
+        WorkspaceHalfSpace { normal: &[-8., 0.], offset: -10.72 },
+        WorkspaceHalfSpace { normal: &[0., -2.], offset: -0.2 },
+    ];
+    let profile = [(0., 0.37), (1., 0.37)];
+    let diagonal = partition_planar_rotating_profiled_hull_obstacle_corner_contact(
+        &position, &direction, &profile, &[&corner], &[&[1., 0.]], 0.01, 500,
+    ).unwrap();
+    assert!(diagonal.cells.iter().all(|cell| cell.status == Status::Undetermined));
+
+    let measure = |budget| partition_planar_rotating_profiled_hull_obstacle_asymmetric_contact(
+        &position, &direction, &profile, &[&corner], &[&[1., 0.]], 0.01, budget,
+    );
+    assert!(measure(7).is_err());
+    let report = measure(8).unwrap();
+    assert_eq!(report.work_plane_cells, 8);
+    assert_eq!(report.cells.len(), 1);
+    assert_eq!(report.cells[0].status, Status::Exceeds);
+}
