@@ -8974,3 +8974,68 @@ fn motion_deadline_retains_unknown_status_until_the_peak_is_resolved() {
     assert_eq!(check(3).cells, 3);
     assert_eq!(check(96).status, Status::Within);
 }
+
+#[test]
+fn speed_limit_partition_encloses_two_crossings_and_classifies_the_interior() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_directional_speed_limit,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 6., 6., 6., 6.],
+        control_points: [0., 0., 1., 1.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let limit = 0.25;
+    let report = partition_directional_speed_limit(&curve, [2., 6.], &[-1., 0.], limit, 0.01, 256)
+        .unwrap();
+    assert_eq!(report.cells.first().unwrap().parameter_interval[0], 2.);
+    assert_eq!(report.cells.last().unwrap().parameter_interval[1], 6.);
+    assert!(report.work_cells <= 256);
+    for pair in report.cells.windows(2) {
+        assert_eq!(pair[0].parameter_interval[1], pair[1].parameter_interval[0]);
+    }
+    let crossing_offset = 2. / 3_f64.sqrt();
+    for crossing in [4. - crossing_offset, 4. + crossing_offset] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            cell.status == Status::Undetermined && a <= crossing && crossing <= b && b - a <= 0.01
+        }));
+    }
+    for (sample, status) in [(2., Status::Within), (4., Status::Exceeds), (6., Status::Within)] {
+        assert!(report.cells.iter().any(|cell| {
+            let [a, b] = cell.parameter_interval;
+            cell.status == status && a <= sample && sample <= b
+        }));
+    }
+}
+
+#[test]
+fn speed_limit_partition_keeps_both_one_sided_knot_values() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_directional_speed_limit,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 2.],
+        control_points: [0., 1., 4.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let check = |limit, cells| {
+        partition_directional_speed_limit(&curve, [0.5, 1.5], &[1., 0.], limit, 0.01, cells)
+    };
+    assert!(check(2., 1).is_err());
+    assert!(check(-1., 2).is_err());
+    let report = check(2., 2).unwrap();
+    assert_eq!(report.work_cells, 2);
+    assert_eq!(report.cells.len(), 2);
+    assert_eq!(report.cells[0].parameter_interval, [0.5, 1.]);
+    assert_eq!(report.cells[0].status, Status::Within);
+    assert_eq!(report.cells[1].parameter_interval, [1., 1.5]);
+    assert_eq!(report.cells[1].status, Status::Exceeds);
+    assert_ne!(report.cells[0].span, report.cells[1].span);
+    let coarse = check(1., 2).unwrap();
+    assert_ne!(coarse.cells[0].status, Status::Exceeds);
+}

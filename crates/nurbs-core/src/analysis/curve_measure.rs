@@ -1382,6 +1382,82 @@ pub fn check_multi_axis_motion_deadline(
     Ok(MultiAxisMotionDeadlineReport { status, axis_statuses, cells })
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct DirectionalSpeedLimitCell {
+    pub parameter_interval: [f64; 2],
+    /// Original knot span. Values at either endpoint use this span's limit.
+    pub span: usize,
+    pub status: DirectionalMotionStatus,
+}
+
+#[derive(Clone, Debug)]
+pub struct DirectionalSpeedLimitPartition {
+    /// Ordered closed cells covering the full requested window.
+    pub cells: Vec<DirectionalSpeedLimitCell>,
+    /// Number of derivative enclosures, including replaced cells.
+    pub work_cells: usize,
+}
+
+/// Classify where the absolute axial speed is within or above an inclusive
+/// limit. Unresolved cells are retained when the requested parameter width,
+/// floating-point resolution or the shared work budget prevents subdivision.
+pub fn partition_directional_speed_limit(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    limit: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalSpeedLimitPartition> {
+    use std::collections::VecDeque;
+
+    curve.validate()?;
+    validate(parameter_tolerance, max_cells)?;
+    validate_travel_interval(curve, interval)?;
+    check(limit.is_finite() && limit >= 0., "Speed limit must be finite and nonnegative")?;
+    let unit = travel_direction(curve, direction)?;
+    let mut pending = VecDeque::new();
+    for span in active_spans(curve, interval) {
+        if pending.len() == max_cells {
+            return Err(resource("Initial speed spans exceed the work budget"));
+        }
+        pending.push_back((span, [
+            curve.knots[span].max(interval[0]),
+            curve.knots[span + 1].min(interval[1]),
+        ]));
+    }
+
+    let mut cells = Vec::new();
+    let mut work_cells = 0;
+    while let Some((span, domain @ [a, b])) = pending.pop_front() {
+        work_cells += 1;
+        let width = Interval::point(b).sub(Interval::point(a))?;
+        let jets = curve_jets::enclose(curve, span, domain)?;
+        let speed = project_jet(&jets[1], &unit)?.div(width)?;
+        let status = if speed.lo.abs().max(speed.hi.abs()) <= limit {
+            DirectionalMotionStatus::Within
+        } else if speed.lo.max(-speed.hi) > limit {
+            DirectionalMotionStatus::Exceeds
+        } else {
+            DirectionalMotionStatus::Undetermined
+        };
+        let middle = crate::distance_bounds::midpoint(a, b);
+        if status == DirectionalMotionStatus::Undetermined
+            && (b - a).next_up() > parameter_tolerance
+            && a < middle
+            && middle < b
+            && work_cells + pending.len() + 2 <= max_cells
+        {
+            pending.push_back((span, [a, middle]));
+            pending.push_back((span, [middle, b]));
+        } else {
+            cells.push(DirectionalSpeedLimitCell { parameter_interval: domain, span, status });
+        }
+    }
+    cells.sort_by(|a, b| a.parameter_interval[0].total_cmp(&b.parameter_interval[0]));
+    Ok(DirectionalSpeedLimitPartition { cells, work_cells })
+}
+
 fn measure_directional_derivative_peak(
     curve: &Curve,
     interval: [f64; 2],

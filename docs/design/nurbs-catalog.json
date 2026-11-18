@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 690,
-  "unallocatedCount": 310,
+  "specifiedCount": 691,
+  "unallocatedCount": 309,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16802,6 +16802,25 @@
       "remainingQualification": [
         "Classify uniform-clock traversal at an inclusive deadline for all motion axes.",
         "Check nonbinary clock ratios, an independently limiting axis, the original-duration floor, invalid deadlines, and coarse uncertainty resolved by refinement.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0691",
+      "name": "Сертифицированное разбиение NURBS-траектории по лимиту осевой скорости",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_directional_speed_limit",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-691-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-691-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Partition the original curve window into within-limit, exceeding and unresolved axial speed intervals.",
+        "Check two analytic crossings, contiguous coverage, signed-axis invariance, both one-sided values at a knot, and mandatory initial work coverage.",
         "WASM and application integration are separate."
       ]
     }
