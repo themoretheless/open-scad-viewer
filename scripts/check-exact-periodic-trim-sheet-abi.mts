@@ -44,6 +44,10 @@ interface Report {
     massBoundsKg: [number, number]
     radialOffsetBoundsMm: [number, number][] | null
   }[] | null
+  twoPlaneResidualBalance?: {
+    status: string
+    planes: { offsetMm: number; vectorBoundsKgMm: [number, number][]; status: string }[]
+  } | null
   twoPlaneBalance?: {
     status: string
     planes: { offsetMm: number; magnitudeBoundsKgMm: [number, number]; status: string }[]
@@ -588,3 +592,22 @@ for (const plane of counterweights) {
 }
 assert.equal(call(request.maxWork, densityOp, { ...counterweightOptions, maxSurfaceCells: 2 }).twoPlaneCounterweights, null)
 console.log('WASM ABI enclosed counterweights at both designated radii.')
+
+const installedWeight = {
+  massBoundsKg: [1, 1],
+  radialOffsetBoundsMm: [[1.265625, 1.265625], [-0.1875, -0.1875], [0, 0]],
+}
+const residualOptions = {
+  ...twoPlaneOptions, balancePlaneTolerancesKgMm: [5, 5],
+  installedCounterweights: [installedWeight, installedWeight],
+}
+const residualBalance = call(request.maxWork, densityOp, residualOptions).twoPlaneResidualBalance
+assert.ok(residualBalance)
+assert.equal(residualBalance.status, 'within')
+assert.deepEqual(residualBalance.planes.map(plane => plane.offsetMm), [0, 2])
+for (const plane of residualBalance.planes) {
+  assert.equal(plane.status, 'within')
+  assert.ok(plane.vectorBoundsKgMm.every(([lo, hi]) => lo <= 0 && 0 <= hi))
+}
+assert.equal(call(request.maxWork, densityOp, { ...residualOptions, maxSurfaceCells: 2 }).twoPlaneResidualBalance, null)
+console.log('WASM ABI enclosed residual unbalance after installed counterweights.')

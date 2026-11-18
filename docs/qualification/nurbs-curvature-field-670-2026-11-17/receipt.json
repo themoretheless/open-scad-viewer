@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0670",
+  "testedBase": "fdf25664ee33261f06baa5cc84aa7537783e19c0",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 325,
+  "scope": [
+    "Expose interval residual unbalance and tolerance classification after installing correction weights.",
+    "Check analytic cancellation, retained plane offsets, residual classifications, invalid installed bounds and unavailable coverage through the compiled ABI."
+  ],
+  "logSha256": "04070370d8f447ec108758b6bc5284f4f97aa6ee3d4626ff9194e603523c19b7",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "742eec3d2a4ff0cac8c23f0565d7fd48e1c99f2fafec49d4d8cc11c2461451a8",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "fca952f9388eadd8d76bf5c00c4b9ea7b9c840bbe045306bce2f075da267a468",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "e8c719ea12e4417c128029885c4788aa8b3ee762e697681b4896f4f7e6220cd6"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

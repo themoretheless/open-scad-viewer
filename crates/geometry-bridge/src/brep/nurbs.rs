@@ -1448,7 +1448,8 @@ pub fn exact_periodic_trim_patch_set_density_request(
     use nurbs_core::{
         analysis::surface_measure::{
             bound_distance_to_principal_axis, bound_principal_axis_angle_sine,
-            bound_radius_of_gyration, bound_two_plane_counterweights, classify_two_plane_unbalance,
+            bound_radius_of_gyration, bound_two_plane_counterweights, bound_two_plane_residual_unbalance,
+            classify_two_plane_unbalance, InstalledCounterweightBounds,
             periodic_trim_patch_set_mass_with_density,
         },
         editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
@@ -1566,6 +1567,33 @@ pub fn exact_periodic_trim_patch_set_density_request(
             Ok(tolerances)
         })
         .transpose()?;
+    let installed_counterweights = request
+        .get("installedCounterweights")
+        .map(|entries| -> Result<_> {
+            let Some(tolerances) = plane_tolerances else {
+                return Err(input("Installed counterweights require plane tolerances"));
+            };
+            let Some([first, second]) = entries.as_array().map(Vec::as_slice) else {
+                return Err(input("Expected one installed counterweight per plane"));
+            };
+            let parse = |entry: &Value| -> Result<InstalledCounterweightBounds> {
+                let mass_bounds: [f64; 2] = field(entry, "massBoundsKg")?;
+                let radial_offset_bounds: [[f64; 2]; 3] = field(entry, "radialOffsetBoundsMm")?;
+                if mass_bounds[0] < 0.
+                    || !std::iter::once(mass_bounds)
+                        .chain(radial_offset_bounds)
+                        .all(|[lo, hi]| lo.is_finite() && hi.is_finite() && lo <= hi)
+                {
+                    return Err(input("Invalid installed counterweight mass or offset bounds"));
+                }
+                Ok(InstalledCounterweightBounds {
+                    mass_bounds,
+                    radial_offset_bounds,
+                })
+            };
+            Ok(([parse(first)?, parse(second)?], tolerances))
+        })
+        .transpose()?;
     let axis_balance_tolerance = request
         .get("axisBalanceToleranceMm")
         .map(|_| -> Result<f64> {
@@ -1656,6 +1684,9 @@ pub fn exact_periodic_trim_patch_set_density_request(
     if counterweight_radii.is_some() {
         response["twoPlaneCounterweights"] = Value::Null;
     }
+    if installed_counterweights.is_some() {
+        response["twoPlaneResidualBalance"] = Value::Null;
+    }
     let Some(patches) = build.patches else {
         return Ok(response);
     };
@@ -1704,6 +1735,19 @@ pub fn exact_periodic_trim_patch_set_density_request(
                         "radialOffsetBoundsMm": counterweights[index].radial_offset_bounds,
                     })
                 }));
+            }
+            if let Some((counterweights, tolerances)) = installed_counterweights {
+                let (residual, balance) =
+                    bound_two_plane_residual_unbalance(vectors, counterweights, tolerances)?;
+                response["twoPlaneResidualBalance"] = json!({
+                    "status": balance_status_name(balance.overall_status),
+                    "planes": [0, 1].map(|index| json!({
+                        "offsetMm": offsets[index],
+                        "vectorBoundsKgMm": residual[index],
+                        "magnitudeBoundsKgMm": balance.magnitude_bounds[index],
+                        "status": balance_status_name(balance.plane_status[index]),
+                    })),
+                });
             }
             if let Some(tolerances) = plane_tolerances {
                 let balance = classify_two_plane_unbalance(vectors, tolerances)?;

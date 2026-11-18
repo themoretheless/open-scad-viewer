@@ -1269,3 +1269,34 @@ fn patch_set_density_encloses_counterweight_mass_and_radial_position() {
     request["counterweightRadiiMm"] = json!([2., 0.]);
     assert_eq!(run(&request)["ok"], false);
 }
+
+#[test]
+fn patch_set_density_encloses_residual_after_installed_counterweights() {
+    let mut request = patch_set_density_request(20_000);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 0.], "direction": [0., 0., 1.]});
+    request["balancePlaneOffsetsMm"] = json!([0., 2.]);
+    let weight = json!({
+        "massBoundsKg": [1., 1.],
+        "radialOffsetBoundsMm": [[1.265625, 1.265625], [-0.1875, -0.1875], [0., 0.]]
+    });
+    request["installedCounterweights"] = json!([weight.clone(), weight]);
+    assert_eq!(run(&request)["ok"], false);
+    request["balancePlaneTolerancesKgMm"] = json!([5., 5.]);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let balance = &response["value"]["twoPlaneResidualBalance"];
+    assert_eq!(balance["status"], "within");
+    let planes = balance["planes"].as_array().unwrap();
+    assert_eq!(planes.len(), 2);
+    for (plane, offset) in planes.iter().zip([0., 2.]) {
+        assert_eq!(plane["offsetMm"].as_f64(), Some(offset));
+        assert_eq!(plane["status"], "within");
+        for interval in plane["vectorBoundsKgMm"].as_array().unwrap() {
+            assert!(interval[0].as_f64().unwrap() <= 0. && 0. <= interval[1].as_f64().unwrap());
+        }
+    }
+    request["maxSurfaceCells"] = json!(2);
+    assert_eq!(run(&request)["value"].get("twoPlaneResidualBalance"), Some(&Value::Null));
+    request["installedCounterweights"][0]["massBoundsKg"] = json!([-1., 1.]);
+    assert_eq!(run(&request)["ok"], false);
+}
