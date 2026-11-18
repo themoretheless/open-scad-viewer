@@ -1,5 +1,5 @@
-import {createHash} from 'node:crypto'
-import {selectGeometryDeliveryBudget} from './geometry-delivery-budgets.mjs'
+import { createHash } from 'node:crypto'
+import { selectGeometryDeliveryBudget } from './geometry-delivery-budgets.mjs'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { extname, join, relative } from 'node:path'
 import { createRequire } from 'node:module'
@@ -14,18 +14,29 @@ function walk(directory) {
   for (const name of readdirSync(directory)) {
     const path = join(directory, name)
     if (statSync(path).isDirectory()) walk(path)
-    else files.push({ path: relative(root, path).replaceAll('\\', '/'), bytes: statSync(path).size, extension: extname(path) })
+    else
+      files.push({
+        path: relative(root, path).replaceAll('\\', '/'),
+        bytes: statSync(path).size,
+        extension: extname(path),
+      })
   }
 }
 walk(root)
 // The Content-Security-Policy forbids inline scripts, and the service worker must carry a build-derived version.
 const builtIndex = readFileSync(join(root, 'index.html'), 'utf8')
 const inlineScripts = findInlineScripts(builtIndex)
-if (inlineScripts.length) throw new Error(`dist/index.html has inline scripts, which the CSP blocks: ${inlineScripts.join(' ')}`)
-if (!/http-equiv="Content-Security-Policy"/.test(builtIndex)) throw new Error('dist/index.html has no Content-Security-Policy meta tag')
-if (readFileSync(join(root, 'sw.js'), 'utf8').includes(CACHE_VERSION_PLACEHOLDER)) throw new Error('dist/sw.js CACHE_VERSION was not stamped')
-const geometryDelivery=selectGeometryDeliveryBudget(createHash('sha256')
-  .update(readFileSync(new URL('../src/generated/geometry-kernels/kernel_bg.wasm',import.meta.url))).digest('hex'))
+if (inlineScripts.length)
+  throw new Error(`dist/index.html has inline scripts, which the CSP blocks: ${inlineScripts.join(' ')}`)
+if (!/http-equiv="Content-Security-Policy"/.test(builtIndex))
+  throw new Error('dist/index.html has no Content-Security-Policy meta tag')
+if (readFileSync(join(root, 'sw.js'), 'utf8').includes(CACHE_VERSION_PLACEHOLDER))
+  throw new Error('dist/sw.js CACHE_VERSION was not stamped')
+const geometryDelivery = selectGeometryDeliveryBudget(
+  createHash('sha256')
+    .update(readFileSync(new URL('../src/generated/geometry-kernels/kernel_bg.wasm', import.meta.url)))
+    .digest('hex'),
+)
 
 const limits = new Map([
   ['.html', 10_000],
@@ -181,17 +192,22 @@ for (const file of files) {
   // Raw streaming WASM: the geometry kernel takes the rawGeometryBytes of its delivery profile
   // (7467ec, runtime v13 record: 18,558,145 bytes); other kernels keep 17,700,000.
   const streamingWasmLimit = /^wasm\/(geometry-kernel|language-kernel|photogrammetry)\.wasm$/.test(file.path)
-    ? (file.path === 'wasm/geometry-kernel.wasm' ? geometryDelivery.rawGeometryBytes ?? 17_700_000 : 17_700_000)
+    ? file.path === 'wasm/geometry-kernel.wasm'
+      ? (geometryDelivery.rawGeometryBytes ?? 17_700_000)
+      : 17_700_000
     : undefined
   const explicitJsLimit = jsChunkBudgets.find(([pattern]) => pattern.test(file.path))?.[1]
-  const measuredName = /^assets\/(index|DirectModeler|geometryBuildEngine|wasmStreaming)-[^/]+\.js$/.exec(file.path)?.[1]
+  const measuredName = /^assets\/(index|DirectModeler|geometryBuildEngine|wasmStreaming)-[^/]+\.js$/.exec(
+    file.path,
+  )?.[1]
   const measuredLimit = measuredName ? geometryDelivery.namedJsChunkBytes?.[measuredName] : undefined
-  const limit = streamingWasmLimit
-    ?? geometryDelivery.exactJsChunkBytes?.[file.path]
-    ?? measuredLimit
-    ?? (/^assets\/geometry-kernel-bytes-[^/]+\.js$/.test(file.path) ? geometryChunkBudget : undefined)
-    ?? explicitJsLimit
-    ?? limits.get(file.extension)
+  const limit =
+    streamingWasmLimit ??
+    geometryDelivery.exactJsChunkBytes?.[file.path] ??
+    measuredLimit ??
+    (/^assets\/geometry-kernel-bytes-[^/]+\.js$/.test(file.path) ? geometryChunkBudget : undefined) ??
+    explicitJsLimit ??
+    limits.get(file.extension)
   if (file.bytes <= 0) throw new Error(`dist artifact ${file.path} is empty`)
   if (file.extension === '.js' && file.bytes > namedJsBudgetThreshold && limit === undefined) {
     throw new Error(`dist artifact ${file.path} is ${file.bytes} bytes; add an explicit named JS budget`)
@@ -203,11 +219,13 @@ for (const file of files) {
 const total = files
   .filter(file => !/^wasm\/(geometry-kernel|language-kernel|photogrammetry)\.wasm$/.test(file.path))
   .reduce((sum, file) => sum + file.bytes, 0)
-verifyUniquePackedWasm((function* () {
-  for (const file of files) {
-    if (file.extension === '.js') yield {path: file.path, source: readFileSync(join(root, file.path), 'utf8')}
-  }
-})())
+verifyUniquePackedWasm(
+  (function* () {
+    for (const file of files) {
+      if (file.extension === '.js') yield { path: file.path, source: readFileSync(join(root, file.path), 'utf8') }
+    }
+  })(),
+)
 // Own CAD adds ~96 kB to the shared Rust payload and must not ship a separate
 // foreign CSG package. The complete distribution is smaller (~2.3 MB).
 if (files.some(file => /manifold-3d/i.test(file.path))) throw new Error('Foreign manifold-3d artifact in dist')
@@ -415,7 +433,9 @@ for (const [name, artifact, compression] of [
 // This changes packaging limits only; native geometry, tolerance and work limits are unchanged.
 const totalBudget = geometryDelivery.totalAssetBytes
 if (total > totalBudget) throw new Error(`dist totals ${total} bytes; budget is ${totalBudget}`)
-console.log(`Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`)
+console.log(
+  `Verified ${files.length} dist artifacts (${total} asset bytes + ${rawWasmBytes} raw WASM bytes = ${total + rawWasmBytes} total bytes)`,
+)
 
 // Source STEP UI: DirectModeler measured 419618 bytes (+2329); asset total
 // 8199738 bytes (+2375, including 46 CSS bytes). Previous bounded margins remain unchanged.
