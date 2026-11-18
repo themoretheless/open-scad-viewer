@@ -809,3 +809,43 @@ fn measure_directional_travel(
     };
     Ok(measure_with_cells(curve, interval, tolerance, max_cells, mapped)?.0)
 }
+
+/// Classification of reverse travel against an inclusive upper limit.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ReverseTravelStatus {
+    Within,
+    Exceeds,
+    Undetermined,
+}
+
+/// Check reverse travel on an original-parameter interval. Classification
+/// remains valid on budget exhaustion if the bounds separate from the limit.
+pub fn check_directional_backtracking(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    reverse_limit: f64,
+    measurement_tolerance: f64,
+    max_cells: usize,
+) -> Result<(DirectionalTravelReport, ReverseTravelStatus)> {
+    check(
+        reverse_limit.is_finite() && reverse_limit >= 0.,
+        "Reverse travel limit must be finite and nonnegative",
+    )?;
+    let travel = directional_travel_on_interval(
+        curve,
+        interval,
+        direction,
+        measurement_tolerance,
+        max_cells,
+    )?;
+    let [lo, hi] = travel.reverse_bounds;
+    let status = if hi <= reverse_limit {
+        ReverseTravelStatus::Within
+    } else if lo > reverse_limit {
+        ReverseTravelStatus::Exceeds
+    } else {
+        ReverseTravelStatus::Undetermined
+    };
+    Ok((travel, status))
+}
