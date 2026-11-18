@@ -3,10 +3,31 @@ use super::*;
 type Matrix = [[f64; 4]; 3];
 
 pub(super) fn read(entities: &BTreeMap<usize, Entity>, de: usize) -> Result<Matrix> {
-    let e = entity(entities, de, 124)?;
-    if e.directory.form != 0 || e.directory.transform != 0 || e.values.len() != 13 {
+    let mut combined = [[1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., 1., 0.]];
+    let mut next = de;
+    let mut visited = BTreeSet::new();
+    while next != 0 {
+        if visited.len() >= 32 || !visited.insert(next) {
+            return Err(refuse("IGES placement cycle or nesting limit exceeded"));
+        }
+        let e = entity(entities, next, 124)?;
+        let parent = coefficients(e)?;
+        combined = parent.map(|row| std::array::from_fn(|j| {
+            let linear: f64 = (0..3).map(|k| row[k] * combined[k][j]).sum();
+            if j == 3 { linear + row[3] } else { linear }
+        }));
+        if combined.iter().flatten().any(|value| !value.is_finite()) {
+            return Err(refuse("IGES placement composition overflow"));
+        }
+        next = e.directory.transform;
+    }
+    Ok(combined)
+}
+
+fn coefficients(e: &Entity) -> Result<Matrix> {
+    if e.directory.form != 0 || e.values.len() != 13 {
         return Err(refuse(
-            "Expected one unchained form-zero IGES placement matrix",
+            "Expected a form-zero IGES placement matrix",
         ));
     }
     let mut matrix = [[0.; 4]; 3];

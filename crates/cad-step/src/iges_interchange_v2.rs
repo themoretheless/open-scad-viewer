@@ -2304,8 +2304,8 @@ pub fn import_iges_v2_with_options(
             ignored.insert("directory-label".into());
         }
         if e.directory.transform != 0 {
-            if !matches!(e.directory.ty, 100 | 110 | 126 | 128) {
-                return Err(refuse("IGES directory placement is supported only on curves and spline surfaces"));
+            if !matches!(e.directory.ty, 100 | 110 | 124 | 126 | 128) {
+                return Err(refuse("IGES directory placement is supported only on curves, spline surfaces and placement matrices"));
             }
             placement::read(&entities, e.directory.transform)?;
         }

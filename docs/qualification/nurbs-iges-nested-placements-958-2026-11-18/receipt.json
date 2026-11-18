@@ -1,0 +1,15 @@
+{
+  "id": "NURBS-0958",
+  "testedBase": "4cf399b073851bdf93815b96338c293ddc5a6f0e",
+  "sourceSha256": {
+    "crates/cad-step/src/iges_interchange_v2.rs": "96d843a0a497bef3f9b4a612ddad030fa3b68cc2206d7e51487ccfccd121a0d7",
+    "crates/cad-step/src/iges_interchange_v2/placement.rs": "bc853ca5cd2407d4725f046e9059bdc389662a69bb13194a78a90cfe9bebcc17",
+    "crates/cad-step/src/iges_interchange_v2/tests/placements.rs": "692ad8876e896a08375636c710e62d8f5fa1faa8cd07ccc3b0209b96bd207407"
+  },
+  "command": "cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib",
+  "cases": [
+    "Noncommuting placements on a circular rim and rational cylinder face",
+    "Two-matrix cycle refusal",
+    "Placement chains of length 1 through 32 accepted and length 33 refused"
+  ]
+}

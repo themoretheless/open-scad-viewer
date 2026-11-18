@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 957,
-  "unallocatedCount": 43,
+  "specifiedCount": 958,
+  "unallocatedCount": 42,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21831,6 +21831,24 @@
       ],
       "remainingQualification": [
         "Direct OCCT transfer qualified on a single closed six-face rational cylinder. Cavities, assemblies and edited solids require separate coverage."
+      ]
+    },
+    {
+      "id": "NURBS-0958",
+      "name": "Композиция вложенных жёстких размещений IGES при импорте кривых и NURBS-поверхностей",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Обмен IGES",
+      "nativeApi": "cad_step::iges_interchange_v2::import_iges_v2",
+      "evidence": [
+        "crates/cad-step/src/iges_interchange_v2.rs",
+        "crates/cad-step/src/iges_interchange_v2/placement.rs",
+        "crates/cad-step/src/iges_interchange_v2/tests/placements.rs",
+        "docs/qualification/nurbs-iges-nested-placements-958-2026-11-18/native.log.gz",
+        "docs/qualification/nurbs-iges-nested-placements-958-2026-11-18/receipt.json"
+      ],
+      "remainingQualification": [
+        "Up to 32 proper rigid form-zero matrices. Native cylinder edge and surface placement verified."
       ]
     }
   ],

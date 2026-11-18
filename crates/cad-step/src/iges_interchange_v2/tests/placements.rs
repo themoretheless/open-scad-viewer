@@ -53,9 +53,17 @@ fn placed_arc_survives_a_composite_rim_and_preserves_the_cylinder() {
     let (text, tr) = matrix(&text, [0., -1., 0., 4., 1., 0., 0., -7., 0., 0., 1., 9.]);
     let (text, composite) = append_composite(&attach(&text, arc, tr), &[arc]);
     let text = rewire_reference(&text, edges, at, composite);
+    // First translate by (-7,-4,9), then rotate about Z in the parent frame.
+    let (chain, local) = matrix(&text, [1., 0., 0., -7., 0., 1., 0., -4., 0., 0., 1., 9.]);
+    let (chain, parent) = matrix(&chain, [0., -1., 0., 0., 1., 0., 0., 0., 0., 0., 1., 0.]);
+    let chain = attach(&attach(&chain, arc, local), local, parent);
+    let nested = import_iges_v2(&chain).unwrap().0;
+    assert_eq!(nested.validate().unwrap().boundary_edge_count, 0);
+    assert!(import_iges_v2(&attach(&chain, parent, local)).is_err());
     let restored = import_iges_v2(&text).unwrap().0;
     assert_eq!(restored.validate().unwrap().boundary_edge_count, 0);
     let curve = &restored.edges[(at - 2) / 5].curve;
+    assert_eq!(nested.edges[(at - 2) / 5].curve.control_points, curve.control_points);
     let (start, end) = CurveDispatcher::endpoints(curve).unwrap();
     for (p, expected) in [(start, &a), (end, &b)] {
         assert!(p.iter().zip(expected).all(|(x, y)| (x - y).abs() < 1e-12));
@@ -100,7 +108,7 @@ fn placed_line_and_spline_use_scaled_offsets_and_reject_nonplanar_uv() {
 }
 
 #[test]
-fn refuses_dangling_reflected_scaled_and_chained_placements() {
+fn refuses_dangling_reflected_scaled_and_cyclic_placements() {
     let base = composite_base_text();
     let curve = directory_entity(&base, 126, 0);
     assert!(import_iges_v2(&attach(&base, curve, 999999)).is_err());
@@ -109,6 +117,24 @@ fn refuses_dangling_reflected_scaled_and_chained_placements() {
     let (text, tr) = matrix(&base, [2., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0.]);
     assert!(import_iges_v2(&attach(&text, curve, tr)).is_err());
     assert!(import_iges_v2(&attach(&attach(&text, curve, tr), tr, tr)).is_err());
+}
+
+#[test]
+fn placement_depth_and_translation_sum_are_bounded() {
+    let mut text = base_text();
+    let mut previous = 0;
+    for depth in 1..=33 {
+        let (next, tr) = matrix(&text, [1., 0., 0., 1., 0., 1., 0., 0., 0., 0., 1., 0.]);
+        text = attach(&next, tr, previous);
+        previous = tr;
+        let (entities, _, _) = parse(&text).unwrap();
+        let result = placement::read(&entities, tr);
+        if depth <= 32 {
+            assert_eq!(result.unwrap()[0][3], depth as f64);
+        } else {
+            assert!(result.is_err());
+        }
+    }
 }
 
 #[test]
@@ -135,6 +161,12 @@ fn placed_rational_surface_keeps_weights_charts_and_edge_incidence() {
     }
     let changed = replace_parameters(&base, de, surface_values(&local));
     let (changed, tr) = matrix(&changed, [0., 1., 0., 4., 0., 0., 1., -7., 1., 0., 0., 2.]);
+    let (chain, rotation) = matrix(&changed, [0., 1., 0., 0., 0., 0., 1., 0., 1., 0., 0., 0.]);
+    let (chain, shift) = matrix(&chain, [1., 0., 0., 4., 0., 1., 0., -7., 0., 0., 1., 2.]);
+    let chain = attach(&attach(&chain, de, rotation), rotation, shift);
+    let nested = import_iges_v2(&chain).unwrap().0;
+    assert_eq!(nested.faces, original.faces);
+    assert_eq!(nested.validate().unwrap().boundary_edge_count, 0);
     let text = attach(&changed, de, tr);
     let restored = import_iges_v2(&text).unwrap().0;
     assert_eq!(restored.validate().unwrap().boundary_edge_count, 0);
