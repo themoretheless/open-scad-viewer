@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0893",
+  "testedBase": "f6dd5c993f21f1f89ba3d7cbfad2bef6c17bbb8d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_degree_reduction_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 459,
+  "scope": [
+    "Reconstruct a closed endpoint cycle with a directed starting edge. Check both traversals, invalid anchor, open chain and disconnected cycles."
+  ],
+  "logSha256": "55a89322a7dc2a3ec6724f7b0189d5ada0effbd353ebc1b6340f199fee3f3e1a",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "7d4cfde1ba6a5db3a96e8a82b5b5ef51e77358b8587434f0c9b741a5b4050a87",
+    "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs": "d7bfbbe3738dda7a25ac21183510e99fe99581a487f59cf5a085accb03a12112",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "285e3844f486db9919209d4ee701fc476bc764fd3c3ce686c0304a0d9ab7c56e"
+  }
+}

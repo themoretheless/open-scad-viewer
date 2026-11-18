@@ -18,6 +18,27 @@ pub fn assemble_open_endpoint_chain(
     start: &[f64],
     max_work: u64,
 ) -> Result<GaugeMergeReport> {
+    assemble(sources, Anchor::Open(start), max_work)
+}
+
+/// Assemble one closed clamped curve, preserving each local span duration.
+/// The chosen starting edge and orientation determine the seam and traversal.
+/// Endpoint closure alone does not certify simplicity or periodic derivatives.
+pub fn assemble_closed_endpoint_chain(
+    sources: &[Curve],
+    first_segment: usize,
+    reversed: bool,
+    max_work: u64,
+) -> Result<GaugeMergeReport> {
+    assemble(sources, Anchor::Closed(first_segment, reversed), max_work)
+}
+
+enum Anchor<'a> {
+    Open(&'a [f64]),
+    Closed(usize, bool),
+}
+
+fn assemble(sources: &[Curve], anchor: Anchor<'_>, max_work: u64) -> Result<GaugeMergeReport> {
     crate::check(
         (2..=256).contains(&sources.len()),
         "Expected 2..=256 wire segments",
@@ -42,13 +63,33 @@ pub fn assemble_open_endpoint_chain(
             .or_default()
             .push((i, true));
     }
-    let mut vertex = key(start);
-    crate::check(
-        vertices.values().all(|edges| edges.len() <= 2)
-            && vertices.values().filter(|edges| edges.len() == 1).count() == 2
-            && vertices.get(&vertex).is_some_and(|edges| edges.len() == 1),
-        "Expected unbranched open wire and endpoint anchor",
-    )?;
+    let (mut vertex, mut first) = match anchor {
+        Anchor::Open(start) => {
+            let vertex = key(start);
+            crate::check(
+                vertices.values().all(|edges| edges.len() <= 2)
+                    && vertices.values().filter(|edges| edges.len() == 1).count() == 2
+                    && vertices.get(&vertex).is_some_and(|edges| edges.len() == 1),
+                "Expected unbranched open wire and endpoint anchor",
+            )?;
+            (vertex, None)
+        }
+        Anchor::Closed(index, reversed) => {
+            crate::check(
+                vertices.values().all(|edges| edges.len() == 2),
+                "Expected a closed wire without branches",
+            )?;
+            let curve = sources
+                .get(index)
+                .ok_or_else(|| crate::input("Invalid starting edge"))?;
+            let point = if reversed {
+                curve.control_points.last().unwrap()
+            } else {
+                &curve.control_points[0]
+            };
+            (key(point), Some((index, reversed)))
+        }
+    };
     let mut used = vec![false; sources.len()];
     let mut ordered = Vec::with_capacity(sources.len());
     let mut cursor = 0.;
@@ -57,7 +98,10 @@ pub fn assemble_open_endpoint_chain(
         limit: max_work,
     };
     while ordered.len() < sources.len() {
-        let Some(&(i, backward)) = vertices[&vertex].iter().find(|(i, _)| !used[*i]) else {
+        let Some((i, backward)) = first
+            .take()
+            .or_else(|| vertices[&vertex].iter().copied().find(|(i, _)| !used[*i]))
+        else {
             return Err(crate::input("Disconnected endpoint graph"));
         };
         used[i] = true;

@@ -13393,3 +13393,23 @@ fn endpoint_graph_assembles_independent_local_clocks_from_the_selected_end() {
     disconnected.extend([line(7.,8.,0.,1.),line(8.,7.,0.,1.)]);
     assert!(assemble(&disconnected,&[0.,0.],1_000_000).is_err());
 }
+
+#[test]
+fn closed_endpoint_wire_obeys_chosen_edge_direction_and_rejects_other_cycles() {
+    use nurbs_core::editing::exact_curve_merge::assemble_closed_endpoint_chain as assemble;
+    let edge = |a:[f64;2], b:[f64;2]| Curve {degree:1, knots:vec![8.,8.,9.,9.],
+        control_points:vec![a.to_vec(),b.to_vec()],weights:vec![1.;2],periodic:false};
+    let a=[0.,0.]; let b=[1.,0.]; let c=[0.,1.];
+    let triangle = [edge(c,b),edge(a,b),edge(a,c)];
+    for (reverse,points) in [(false,[a,b,c,a]),(true,[b,a,c,b])] {
+        let curve=assemble(&triangle,1,reverse,1_000_000).unwrap().curve.unwrap();
+        for (i,point) in points.iter().enumerate() {
+            assert_eq!(curve.evaluate(i as f64).unwrap().point,point);
+        }
+    }
+    assert!(assemble(&triangle,3,false,1_000_000).is_err());
+    assert!(assemble(&triangle[..2],0,false,1_000_000).is_err());
+    let mut separate=triangle.to_vec();
+    separate.extend([edge([3.,0.],[4.,0.]),edge([4.,0.],[3.,0.])]);
+    assert!(assemble(&separate,0,false,1_000_000).is_err());
+}
