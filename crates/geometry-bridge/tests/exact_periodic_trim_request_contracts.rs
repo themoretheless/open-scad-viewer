@@ -1210,3 +1210,32 @@ fn patch_set_density_returns_equivalent_unbalance_in_requested_planes() {
     request["balancePlaneOffsetsMm"] = json!([1., 1.]);
     assert_eq!(run(&request)["ok"], false);
 }
+
+#[test]
+fn patch_set_density_classifies_separate_correction_plane_tolerances() {
+    let mut request = patch_set_density_request(20_000);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 0.], "direction": [0., 0., 1.]});
+    request["balancePlaneTolerancesKgMm"] = json!([5., 0.1]);
+    assert_eq!(run(&request)["ok"], false);
+    request["balancePlaneOffsetsMm"] = json!([0., 2.]);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let balance = &response["value"]["twoPlaneBalance"];
+    assert_eq!(balance["status"], "outside");
+    let exact = (-1.265625_f64).hypot(0.1875);
+    for (plane, (offset, status)) in balance["planes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .zip([(0., "within"), (2., "outside")])
+    {
+        assert_eq!(plane["offsetMm"].as_f64(), Some(offset));
+        assert_eq!(plane["status"], status);
+        let bounds = &plane["magnitudeBoundsKgMm"];
+        assert!(bounds[0].as_f64().unwrap() <= exact && exact <= bounds[1].as_f64().unwrap());
+    }
+    request["maxSurfaceCells"] = json!(2);
+    assert_eq!(run(&request)["value"].get("twoPlaneBalance"), Some(&Value::Null));
+    request["balancePlaneTolerancesKgMm"] = json!([-1., 2.]);
+    assert_eq!(run(&request)["ok"], false);
+}

@@ -1447,9 +1447,8 @@ pub fn exact_periodic_trim_patch_set_density_request(
     use crate::field;
     use nurbs_core::{
         analysis::surface_measure::{
-            BalanceTolerance,
             bound_distance_to_principal_axis, bound_principal_axis_angle_sine,
-            bound_radius_of_gyration,
+            bound_radius_of_gyration, classify_two_plane_unbalance,
             periodic_trim_patch_set_mass_with_density,
         },
         editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
@@ -1541,6 +1540,20 @@ pub fn exact_periodic_trim_patch_set_density_request(
             Ok([first, second])
         })
         .transpose()?;
+    let plane_tolerances = request
+        .get("balancePlaneTolerancesKgMm")
+        .map(|_| -> Result<[f64; 2]> {
+            let tolerances: [f64; 2] = field(request, "balancePlaneTolerancesKgMm")?;
+            if balance_planes.is_none()
+                || tolerances.iter().any(|value| !value.is_finite() || *value < 0.)
+            {
+                return Err(input(
+                    "Plane balance requires offsets and finite nonnegative tolerances",
+                ));
+            }
+            Ok(tolerances)
+        })
+        .transpose()?;
     let axis_balance_tolerance = request
         .get("axisBalanceToleranceMm")
         .map(|_| -> Result<f64> {
@@ -1625,6 +1638,9 @@ pub fn exact_periodic_trim_patch_set_density_request(
     if balance_planes.is_some() {
         response["twoPlaneUnbalance"] = Value::Null;
     }
+    if plane_tolerances.is_some() {
+        response["twoPlaneBalance"] = Value::Null;
+    }
     let Some(patches) = build.patches else {
         return Ok(response);
     };
@@ -1663,6 +1679,17 @@ pub fn exact_periodic_trim_patch_set_density_request(
             response["twoPlaneUnbalance"] = json!([0, 1].map(|index| {
                 json!({"offsetMm": offsets[index], "vectorBoundsKgMm": vectors[index]})
             }));
+            if let Some(tolerances) = plane_tolerances {
+                let balance = classify_two_plane_unbalance(vectors, tolerances)?;
+                response["twoPlaneBalance"] = json!({
+                    "status": balance_status_name(balance.overall_status),
+                    "planes": [0, 1].map(|index| json!({
+                        "offsetMm": offsets[index],
+                        "magnitudeBoundsKgMm": balance.magnitude_bounds[index],
+                        "status": balance_status_name(balance.plane_status[index]),
+                    })),
+                });
+            }
         }
         if include_couple_unbalance
             && let Some(unbalance) = report.bound_couple_unbalance(point, direction)?
@@ -1684,11 +1711,7 @@ pub fn exact_periodic_trim_patch_set_density_request(
             && let Some((bounds, status)) =
                 report.bound_balance_about_line(point, direction, tolerance)?
         {
-            let status = match status {
-                BalanceTolerance::Within => "within",
-                BalanceTolerance::Outside => "outside",
-                BalanceTolerance::Undetermined => "undetermined",
-            };
+            let status = balance_status_name(status);
             response["axisBalance"] = json!({"eccentricityBoundsMm": bounds, "status": status});
         }
         let moment = report.bound_inertia_about_line(point, direction)?;
@@ -1758,4 +1781,15 @@ pub fn exact_periodic_trim_patch_set_density_request(
     }
     write_trimmed_patch_set_area(&mut response, &patches, report.measure);
     Ok(response)
+}
+
+fn balance_status_name(
+    status: nurbs_core::analysis::surface_measure::BalanceTolerance,
+) -> &'static str {
+    use nurbs_core::analysis::surface_measure::BalanceTolerance;
+    match status {
+        BalanceTolerance::Within => "within",
+        BalanceTolerance::Outside => "outside",
+        BalanceTolerance::Undetermined => "undetermined",
+    }
 }

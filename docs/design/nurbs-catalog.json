@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 665,
-  "unallocatedCount": 335,
+  "specifiedCount": 666,
+  "unallocatedCount": 334,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16316,6 +16316,27 @@
         "Classify interval unbalance against separate limits in two correction planes and report the assembly status.",
         "Check the three combined outcomes, bounds on vector magnitude, and invalid tolerance and interval rejection.",
         "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0666",
+      "name": "Контроль отдельных допусков балансировки в двух плоскостях через WASM",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "geometry_bridge::brep::exact_periodic_trim_patch_set_density_request",
+      "evidence": [
+        "crates/geometry-bridge/src/brep/nurbs.rs",
+        "crates/geometry-bridge/src/dispatch/brep.rs",
+        "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs",
+        "scripts/check-exact-periodic-trim-sheet-abi.mts",
+        "docs/qualification/nurbs-curvature-field-666-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-666-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Expose independent plane magnitude bounds and statuses with an overall tolerance classification.",
+        "Check analytic magnitude, mixed plane statuses and aggregate failure, preservation of vector-only requests and incomplete coverage through the compiled ABI.",
+        "Editor and production delivery qualification remain."
       ]
     }
   ],

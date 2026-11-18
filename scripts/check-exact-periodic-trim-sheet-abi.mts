@@ -38,6 +38,10 @@ interface Report {
   centerOfMassBoundsMm?: [number, number][] | null
   referenceInertiaBoundsKgMm2?: [number, number][][] | null
   centralInertiaBoundsKgMm2?: [number, number][][] | null
+  twoPlaneBalance?: {
+    status: string
+    planes: { offsetMm: number; magnitudeBoundsKgMm: [number, number]; status: string }[]
+  } | null
   twoPlaneUnbalance?: { offsetMm: number; vectorBoundsKgMm: [number, number][] }[] | null
   coupleUnbalance?: { vectorBoundsKgMm2: [number, number][]; magnitudeBoundsKgMm2: [number, number] } | null
   staticUnbalance?: { vectorBoundsKgMm: [number, number][]; magnitudeBoundsKgMm: [number, number] } | null
@@ -550,3 +554,13 @@ for (const plane of twoPlane) {
 }
 assert.equal(call(request.maxWork, densityOp, { ...twoPlaneOptions, maxSurfaceCells: 2 }).twoPlaneUnbalance, null)
 console.log('WASM ABI returned equivalent unbalance in both correction planes.')
+
+const planeLimits = { ...twoPlaneOptions, balancePlaneTolerancesKgMm: [5, 0.1] }
+const planeBalanceResult = call(request.maxWork, densityOp, planeLimits)
+assert.deepEqual(planeBalanceResult.twoPlaneUnbalance, twoPlane)
+const planeBalance = planeBalanceResult.twoPlaneBalance
+assert.ok(planeBalance)
+assert.equal(planeBalance.status, 'outside')
+assert.deepEqual(planeBalance.planes.map(plane => [plane.offsetMm, plane.status]), [[0, 'within'], [2, 'outside']])
+assert.equal(call(request.maxWork, densityOp, { ...planeLimits, maxSurfaceCells: 2 }).twoPlaneBalance, null)
+console.log('WASM ABI classified independent correction-plane tolerances.')
