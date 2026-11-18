@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 905,
-  "unallocatedCount": 95,
+  "specifiedCount": 906,
+  "unallocatedCount": 94,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20852,6 +20852,23 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-spatial-clearance-905-2026-11-18/receipt.json",
         "docs/qualification/nurbs-spatial-clearance-905-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Continuous clamped closed spatial contours. Bounds describe boundary distance only."
+      ]
+    },
+    {
+      "id": "NURBS-0906",
+      "name": "Автоматический подбор разделяющей нормали для проверки зазоров NURBS-контуров",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::analysis::curve_measure::inspect_spatial_contour_clearances",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-spatial-clearance-906-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-906-2026-11-18/native.log.gz"
       ],
       "remainingQualification": [
         "Continuous clamped closed spatial contours. Bounds describe boundary distance only."

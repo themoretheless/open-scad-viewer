@@ -2527,13 +2527,19 @@ pub fn prove_spatial_contour_clearance_along(
     first: &Curve, second: &Curve, normal: [f64; 3], minimum: f64,
 ) -> Result<bool> {
     use num_rational::BigRational as Q;
-    use num_traits::Zero;
     validate_spatial_distance_set(&[first, second], 2)?;
     check(minimum.is_finite() && minimum >= 0., "Expected finite nonnegative clearance")?;
     check(normal.iter().all(|v| v.is_finite()) && normal.iter().any(|&v| v != 0.),
           "Expected finite nonzero separating normal")?;
     let exact = |x| Q::from_float(x).expect("validated finite input");
-    let n = normal.map(exact);
+    Ok(projected_support_proves(first, second, normal.map(exact), minimum))
+}
+
+fn projected_support_proves(first: &Curve, second: &Curve, n: [num_rational::BigRational;3], minimum: f64) -> bool {
+    use num_rational::BigRational as Q;
+    use num_traits::Zero;
+    if n.iter().all(Q::is_zero) { return false; }
+    let exact = |x| Q::from_float(x).expect("validated finite input");
     let support = |curve: &Curve| {
         let mut projections = curve.control_points.iter().map(|p| {
             n.iter().zip(p).map(|(a,&b)| a * exact(b)).sum::<Q>()
@@ -2546,7 +2552,20 @@ pub fn prove_spatial_contour_clearance_along(
     let gap = (blo-ahi).max(alo-bhi).max(Q::zero());
     let squared_norm = n.iter().map(|a| a*a).sum::<Q>();
     let threshold = exact(minimum);
-    Ok(&gap * &gap >= &threshold * &threshold * squared_norm)
+    &gap * &gap >= &threshold * &threshold * squared_norm
+}
+
+// The point differences only propose normals. Even a rounded witness can
+// suggest a valid direction: acceptance uses the entire exact support ranges.
+fn automatic_support_proves(first: &Curve, second: &Curve, points: &[Vec<f64>;2], minimum: f64) -> bool {
+    let direction = |a: &[f64], b: &[f64]| std::array::from_fn(|i|
+        num_rational::BigRational::from_float(b[i]).unwrap()
+        - num_rational::BigRational::from_float(a[i]).unwrap());
+    let seam = direction(&first.control_points[0], &second.control_points[0]);
+    if projected_support_proves(first,second,seam.clone(),minimum) { return true; }
+    if points.iter().flatten().any(|v| !v.is_finite()) { return false; }
+    let candidate = direction(&points[0], &points[1]);
+    candidate != seam && projected_support_proves(first,second,candidate,minimum)
 }
 
 /// Check every distinct pair, in index order, against an inclusive minimum.
@@ -2586,6 +2605,9 @@ pub fn inspect_spatial_contour_clearances(
                 parameters = [a.domain()[0], b.domain()[0]];
                 hi = minimum;
                 ClearanceDecision::BelowMinimum
+            } else if automatic_support_proves(a,b,&distance.points,minimum) {
+                lo = minimum;
+                ClearanceDecision::MeetsMinimum
             } else {
                 ClearanceDecision::Unresolved
             }

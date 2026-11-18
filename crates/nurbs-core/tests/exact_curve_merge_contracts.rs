@@ -13605,3 +13605,17 @@ fn oblique_support_proves_clearance_at_equality_for_overlapping_cartesian_boxes(
     assert!(!prove(&a,&b,[1.,0.,0.],5.).unwrap());
     assert!(prove(&a,&b,[0.;3],5.).is_err());
 }
+
+#[test]
+fn automatic_support_certifies_oblique_gap_and_preserves_strict_failure() {
+    use nurbs_core::analysis::curve_measure::{inspect_spatial_contour_clearances as inspect, ClearanceDecision::*};
+    let contour = |x:f64,y:f64| Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,2.,2.,2.],
+        control_points:vec![vec![x,y,0.],vec![x+8.,y-6.,2.],vec![x+4.,y-3.,4.],
+                            vec![x-4.,y+3.,2.],vec![x,y,0.]], weights:vec![1.,2.,1.,3.,1.], periodic:false};
+    let (a,b)=(contour(0.,0.),contour(3.,4.));
+    let pair=[&a,&b];
+    let r=inspect(&pair,5.,1e-6,4).unwrap();
+    assert_eq!(r[0].decision,MeetsMinimum);
+    assert_eq!(r[0].bounds[0],5.);
+    assert_eq!(inspect(&pair,5_f64.next_up(),1e-6,4).unwrap()[0].decision,BelowMinimum);
+}
