@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "statusId": "g0-v111-g1-v128-refreeze-status-v1",
   "recordedAt": "2026-11-18",
-  "reason": "Bind the merged loft, affine shell, and STEP sources and their verified WASM; preserve historical qualification results.",
+  "reason": "Bind the unpublished merged candidate to the current STEP sources and Solid runtime.",
   "qualificationClaim": "none",
   "qualificationApproval": "not-approved",
   "g0Closed": false,
@@ -4044,19 +4044,19 @@
     {
       "id": "fingerprint",
       "path": "docs/qualification/g0-toolchain-fingerprints-v111.json",
-      "sha256": "6f008d6a0b2fb4cd0007c071c45ceb0d3bed83888e8c321a26c570a04786ea36",
-      "byteLength": 1442072
+      "sha256": "8f5fc86d4829cb9da6c9f4b01be6896155b359f59350717bcff59a79b273a667",
+      "byteLength": 1443641
     },
     {
       "id": "plan",
       "path": "docs/qualification/semantic-manifold-g1-plan-v128.json",
-      "sha256": "722e3d30581ecc973c426570619ba4766ff8334b6156ab7022cd001afbf98ba3",
-      "byteLength": 85433
+      "sha256": "ef17cda93cef5363dc61e34757698fb486943283823d8f85f47bd269e5659749",
+      "byteLength": 85397
     }
   ],
   "inputSnapshot": {
     "canonicalization": "UTF-8 records sorted by path: path + NUL + lowercase-file-sha256 + LF",
-    "sha256": "165fdeb30acd53724d99a3404b7417a9c007c79c108408b4dc01b224638639ca",
+    "sha256": "576c1f528edfc7533b76f0793b8142a7fef6a80ff18d57fefd70a39d11bc3e51",
     "byteLength": 807971,
     "files": [
       {
@@ -10096,8 +10096,8 @@
       },
       {
         "path": "crates/cad-step/src/lib.rs",
-        "sha256": "cf2e3ee4d3b9b997e32337d9333e9c2ae9cbb7b697a12c0eb818b6d801e6a49e",
-        "byteLength": 3126
+        "sha256": "a0efa932ced089373d805b9d1a0914c1ccf341aa169c3bb80811d76216893045",
+        "byteLength": 3214
       },
       {
         "path": "crates/cad-step/src/nurbs_step_interchange.rs",
@@ -10131,8 +10131,8 @@
       },
       {
         "path": "crates/cad-step/src/step_interchange_v3.rs",
-        "sha256": "a3f9143ac620db8d8a8f2047948f076be760dc9cdbd2c99e112b9d70979a4405",
-        "byteLength": 99780
+        "sha256": "442ae70f0ecc85f32c3dfb4a0a4785608406b15909f18fe69b2c4c148f8e6cd8",
+        "byteLength": 99868
       },
       {
         "path": "crates/cad-step/src/step_interchange_v3/pcurve_binding.rs",
@@ -10186,8 +10186,8 @@
       },
       {
         "path": "crates/cad-step/src/tests/step_interchange_v3.rs",
-        "sha256": "49194b1922c1e8f8aec5a9f681a056830d3730632cbbe88fabc457053222205e",
-        "byteLength": 140889
+        "sha256": "906ceeca83acab61b44000e89ec972fb2a171cceb9920d8df773b50de004fc44",
+        "byteLength": 161731
       },
       {
         "path": "crates/cad-step/tests/analysis_freeform.rs",
@@ -15136,8 +15136,8 @@
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate.rs",
-        "sha256": "d20ab1aab118477ca726cf6c278846029a7dc55e181c8710f865124adad79485",
-        "byteLength": 26015
+        "sha256": "4a6c583133f903dad5097b133aa6e7eb5f827921f8fc5486b6ae61ff7d7ed02a",
+        "byteLength": 26044
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate/bishop_jets.rs",
@@ -15196,8 +15196,8 @@
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate/planar_principal_phase.rs",
-        "sha256": "318d56a194064c273bf157fc1c5373f8eef7df22f81a92a074fcd4e8602a0759",
-        "byteLength": 9874
+        "sha256": "59030b12c363ca9f5ca463294928859e31204c20a90f5a94fa0c8f67616eb151",
+        "byteLength": 10040
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate/tests/tests_integration.rs",
@@ -15336,8 +15336,8 @@
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error.rs",
-        "sha256": "11ee39da630bf625c621566adb9a8e5a9b82915430a3368ef3e01e940613a8b8",
-        "byteLength": 28628
+        "sha256": "71d39179c65acfe1128e32b3f5c87390c48770fcc9092e3e0ec0cdd5354b971a",
+        "byteLength": 28852
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/arc_frame_owned.rs",
@@ -15436,8 +15436,8 @@
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume.rs",
-        "sha256": "037309ff046094c7d8ec6c3d8a4562b346f31623ed49c1cb95298485b18ef4da",
-        "byteLength": 17332
+        "sha256": "060242fa251c6cf19ab39cac450c13b749f0b2a1fe6be7b56134724145f69dea",
+        "byteLength": 17782
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/arc.rs",
@@ -15451,8 +15451,8 @@
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/arc_frames.rs",
-        "sha256": "1d9cc5bf06c210756c461bd0ed588010a561be191eab818b042565eded474f68",
-        "byteLength": 6780
+        "sha256": "b5d3420cc2622c0768fb62400cfcf46be3c99a57b294402b02d1e41803429b70",
+        "byteLength": 6840
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/arc_frames/frenet_rates.rs",
@@ -15461,8 +15461,8 @@
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/arc_frames/frenet_spans.rs",
-        "sha256": "653a1def0daabffa44c3d703b5076f904d7ce1fae97da55e5370c1784093fe0c",
-        "byteLength": 2534
+        "sha256": "62a7b5af6aff9b19da4d468bd21bd92c69b71bd59b98912d497699227db7a966",
+        "byteLength": 2578
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/atlas.rs",
@@ -15471,18 +15471,18 @@
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/cell.rs",
-        "sha256": "480785d0ebb53acd2cf55b3974bf586299e6dd762f01cea0f3ebc8ed68bed9a8",
-        "byteLength": 13012
+        "sha256": "793a231ca4424c18982b1c870f2e7dddf37ae70763aeacedc439d148d7196800",
+        "byteLength": 14910
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/charts.rs",
-        "sha256": "33b8facb35ee835a2bfe3e56f3db6a10220347ef1f2c4681fd7358c4757966ee",
-        "byteLength": 12094
+        "sha256": "4c886337850a8d211b80aec797bd10b5fc6a06e2acb139aac55625eb06f2001a",
+        "byteLength": 14553
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/closed.rs",
-        "sha256": "8c62c4e7bf6288a9214ee2c316310348bc370cb39ceba72855be87c64034895d",
-        "byteLength": 4398
+        "sha256": "bd682134605905a0d6fb5aae986eb606920bb9f63a1c15d10d8f3815fd5c84cd",
+        "byteLength": 4454
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/fixed_rank.rs",
@@ -15526,8 +15526,8 @@
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/intrinsic/frame_bounds.rs",
-        "sha256": "42ff6abde7259516876b1e4fc857c55e682d7bdeaa01f16f5a5ce87fc75ef1fa",
-        "byteLength": 6893
+        "sha256": "ec98423b245383850f2d0d8b849578d088f128dfd9c9b1b148021e229c02e7b7",
+        "byteLength": 6702
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_sweep/ideal_volume/intrinsic/general_tests.rs",
@@ -15576,8 +15576,8 @@
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_sweep/original_smoothness.rs",
-        "sha256": "6c3bb16bf2fe11019ae917451b8e4938caedeba710922a8ad1f8304ecc169c1d",
-        "byteLength": 50655
+        "sha256": "5082884356679888594d16f143ba860ee522f7fe29c56a4b7d6c98ee593d8b4d",
+        "byteLength": 52670
       },
       {
         "path": "crates/nurbs-core/src/sweeps/progressive_sweep/original_smoothness/guided_arc.rs",
@@ -20196,13 +20196,13 @@
       },
       {
         "path": "docs/design/nurbs-api-map.md",
-        "sha256": "7b2a6149626f683dff386e95727d7bbbfe53049db6992af61ffd1c1887470093",
-        "byteLength": 745116
+        "sha256": "76f087a6b9c62f12f14ea0d4c23b71e32c1f7c3a16ef1f2b47dc80bd7316f0bd",
+        "byteLength": 759164
       },
       {
         "path": "docs/design/nurbs-catalog.json",
-        "sha256": "869e77b372b6de535bc9cf044d84fdf46357e41c6148c4beb3cdae704969fb22",
-        "byteLength": 1089485
+        "sha256": "c9867e85b5e84dd7e00262ed2c69d8e1c05e263da4cc48865cff6903216a2c9c",
+        "byteLength": 1108941
       },
       {
         "path": "docs/design/nurbs-exact-degree-reduction.md",
@@ -32181,8 +32181,8 @@
       },
       {
         "path": "src/kernel/geometry/brep/core.ts",
-        "sha256": "696b6c16a08bd2b7fd7dc8da9ab159b12733c758d573fe4b875188944431ff93",
-        "byteLength": 30368
+        "sha256": "c1e1d26ea1ca011c65e436886310f12e92a7ee72280b19f8008579319d741d9e",
+        "byteLength": 30657
       },
       {
         "path": "src/kernel/geometry/brep/sourceSnapshot.ts",
@@ -32701,8 +32701,8 @@
       },
       {
         "path": "src/kernel/solid/brepBuild.ts",
-        "sha256": "b2975469ab7bbaad8f11314d6d3748acbbe8825354eb184f4f206bd88470ff48",
-        "byteLength": 5162
+        "sha256": "e083a00901586fa797030523ebe2a03fa331a215a56dcd19723ab3fd0f5a7ee0",
+        "byteLength": 4834
       },
       {
         "path": "src/kernel/solid/brepGraph.ts",
@@ -33426,8 +33426,8 @@
       },
       {
         "path": "src/language/openscadParser.ts",
-        "sha256": "466976f07fd716437294afa234c7842854669a95596f6ea7ecd97d05ec196244",
-        "byteLength": 49528
+        "sha256": "acd108ba529675d23f891775b160ce1e79b1c9badedce18b9e8ebc29f12fe3c0",
+        "byteLength": 49485
       },
       {
         "path": "src/language/rushFrontend.ts",
@@ -35096,8 +35096,8 @@
       },
       {
         "path": "tests/exactSolidsFromSource.test.ts",
-        "sha256": "4a9c08331de0bab352d421f33110794538e83e6547ac8c7e12c2b0bcfb0dcb2b",
-        "byteLength": 5007
+        "sha256": "ba752b1ae4f298f9c65743b3e42cbaa1a0eba6bbbcd49a23046d17c7e7b9ec1f",
+        "byteLength": 5579
       },
       {
         "path": "tests/exampleCatalog.test.ts",
@@ -35346,8 +35346,8 @@
       },
       {
         "path": "tests/g0ToolchainFingerprints.test.ts",
-        "sha256": "ca4059c2345ad94ebe0369f22a93f2645eba0c26a02e2c82f4596d46afaec464",
-        "byteLength": 17229
+        "sha256": "c21643a461055fefdf15f3664fd48abafa135ccd100c12e66150905775d7c5ab",
+        "byteLength": 17245
       },
       {
         "path": "tests/g1BrowserPayloadTree.test.ts",
@@ -38511,7 +38511,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-05",
       "previousSha256": "fd0bd17fc303bf725e7c4674532cd9bee09ef9761845c7946084f7f9b179f64b",
-      "currentSha256": "a3f9143ac620db8d8a8f2047948f076be760dc9cdbd2c99e112b9d70979a4405"
+      "currentSha256": "442ae70f0ecc85f32c3dfb4a0a4785608406b15909f18fe69b2c4c148f8e6cd8"
     },
     {
       "kind": "g0-artifact",
@@ -38575,9 +38575,15 @@
     },
     {
       "kind": "g0-artifact",
+      "id": "geometry-v3-source-124",
+      "previousSha256": "d20ab1aab118477ca726cf6c278846029a7dc55e181c8710f865124adad79485",
+      "currentSha256": "4a6c583133f903dad5097b133aa6e7eb5f827921f8fc5486b6ae61ff7d7ed02a"
+    },
+    {
+      "kind": "g0-artifact",
       "id": "geometry-v3-source-160",
       "previousSha256": "397726b195e8dc23db9423ff1685a3857c4a7715f0006ee1041ae9f5101050d4",
-      "currentSha256": "466976f07fd716437294afa234c7842854669a95596f6ea7ecd97d05ec196244"
+      "currentSha256": "acd108ba529675d23f891775b160ce1e79b1c9badedce18b9e8ebc29f12fe3c0"
     },
     {
       "kind": "g0-artifact",
@@ -38614,6 +38620,24 @@
       "id": "geometry-v3-source-671",
       "previousSha256": "205bbb6b4cff7c23e46cdd1c93d83aa896252c49236237a4ff4b1087e6462765",
       "currentSha256": "004053da6dc3d752bb49e01bc1b723ec276aaf111d17506492bb97e00cbed428"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-962",
+      "previousSha256": "318d56a194064c273bf157fc1c5373f8eef7df22f81a92a074fcd4e8602a0759",
+      "currentSha256": "59030b12c363ca9f5ca463294928859e31204c20a90f5a94fa0c8f67616eb151"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-972",
+      "previousSha256": "11ee39da630bf625c621566adb9a8e5a9b82915430a3368ef3e01e940613a8b8",
+      "currentSha256": "71d39179c65acfe1128e32b3f5c87390c48770fcc9092e3e0ec0cdd5354b971a"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-979",
+      "previousSha256": "6c3bb16bf2fe11019ae917451b8e4938caedeba710922a8ad1f8304ecc169c1d",
+      "currentSha256": "5082884356679888594d16f143ba860ee522f7fe29c56a4b7d6c98ee593d8b4d"
     },
     {
       "kind": "g0-artifact",
@@ -38661,7 +38685,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1099",
       "previousSha256": "f516c3fe95b1f876bdf61ba91bf15fdff40f806d972ba2614fdd86a9281be070",
-      "currentSha256": "ca4059c2345ad94ebe0369f22a93f2645eba0c26a02e2c82f4596d46afaec464"
+      "currentSha256": "c21643a461055fefdf15f3664fd48abafa135ccd100c12e66150905775d7c5ab"
     },
     {
       "kind": "g0-artifact",
@@ -38673,13 +38697,13 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1167",
       "previousSha256": "9f5782944b4bd0b1186e5e6cf577361887a2798e7b3f0c37727ccbbc41c92e48",
-      "currentSha256": "7b2a6149626f683dff386e95727d7bbbfe53049db6992af61ffd1c1887470093"
+      "currentSha256": "76f087a6b9c62f12f14ea0d4c23b71e32c1f7c3a16ef1f2b47dc80bd7316f0bd"
     },
     {
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1168",
       "previousSha256": "1f917537d7091fe288c02f78431742d9bfd2ddd949833009466eee8e927f142e",
-      "currentSha256": "869e77b372b6de535bc9cf044d84fdf46357e41c6148c4beb3cdae704969fb22"
+      "currentSha256": "c9867e85b5e84dd7e00262ed2c69d8e1c05e263da4cc48865cff6903216a2c9c"
     },
     {
       "kind": "g0-artifact",
@@ -38709,13 +38733,19 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1315",
       "previousSha256": "decb56d182f04b2cf01c479561c51898378b1e3da19e214e43f4745504a77a06",
-      "currentSha256": "cf2e3ee4d3b9b997e32337d9333e9c2ae9cbb7b697a12c0eb818b6d801e6a49e"
+      "currentSha256": "a0efa932ced089373d805b9d1a0914c1ccf341aa169c3bb80811d76216893045"
     },
     {
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1323",
       "previousSha256": "bed6187d4852f06dabaad2d575f81247300ba1502e11bccf07a47fcda34510c6",
-      "currentSha256": "49194b1922c1e8f8aec5a9f681a056830d3730632cbbe88fabc457053222205e"
+      "currentSha256": "906ceeca83acab61b44000e89ec972fb2a171cceb9920d8df773b50de004fc44"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-3210",
+      "previousSha256": "696b6c16a08bd2b7fd7dc8da9ab159b12733c758d573fe4b875188944431ff93",
+      "currentSha256": "c1e1d26ea1ca011c65e436886310f12e92a7ee72280b19f8008579319d741d9e"
     },
     {
       "kind": "g0-artifact",
@@ -38728,6 +38758,12 @@
       "id": "geometry-v3-source-3305",
       "previousSha256": "dfe25f14b59b3181d95f08c4b89fe8f2f53ab10888c57233265a4c188e57e2d4",
       "currentSha256": "e5f6be34ef56058cf35d2767c74f2926698c9084f0d67ab74a4fc96d309e27b0"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-3366",
+      "previousSha256": "b2975469ab7bbaad8f11314d6d3748acbbe8825354eb184f4f206bd88470ff48",
+      "currentSha256": "e083a00901586fa797030523ebe2a03fa331a215a56dcd19723ab3fd0f5a7ee0"
     },
     {
       "kind": "g0-artifact",
@@ -38794,6 +38830,42 @@
       "id": "geometry-v3-source-4407",
       "previousSha256": "bb3311e5d6891ed5f0bcb1ff4c03531ada55b2192c4a2eee66f5b045ed0eb297",
       "currentSha256": "3308b26695af3a37f5c5660fcd6ca1223ca0fae889d280a20239466d1693fc39"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-4442",
+      "previousSha256": "037309ff046094c7d8ec6c3d8a4562b346f31623ed49c1cb95298485b18ef4da",
+      "currentSha256": "060242fa251c6cf19ab39cac450c13b749f0b2a1fe6be7b56134724145f69dea"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-4445",
+      "previousSha256": "1d9cc5bf06c210756c461bd0ed588010a561be191eab818b042565eded474f68",
+      "currentSha256": "b5d3420cc2622c0768fb62400cfcf46be3c99a57b294402b02d1e41803429b70"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-4447",
+      "previousSha256": "480785d0ebb53acd2cf55b3974bf586299e6dd762f01cea0f3ebc8ed68bed9a8",
+      "currentSha256": "793a231ca4424c18982b1c870f2e7dddf37ae70763aeacedc439d148d7196800"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-4448",
+      "previousSha256": "33b8facb35ee835a2bfe3e56f3db6a10220347ef1f2c4681fd7358c4757966ee",
+      "currentSha256": "4c886337850a8d211b80aec797bd10b5fc6a06e2acb139aac55625eb06f2001a"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-4449",
+      "previousSha256": "8c62c4e7bf6288a9214ee2c316310348bc370cb39ceba72855be87c64034895d",
+      "currentSha256": "bd682134605905a0d6fb5aae986eb606920bb9f63a1c15d10d8f3815fd5c84cd"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-4502",
+      "previousSha256": "42ff6abde7259516876b1e4fc857c55e682d7bdeaa01f16f5a5ce87fc75ef1fa",
+      "currentSha256": "ec98423b245383850f2d0d8b849578d088f128dfd9c9b1b148021e229c02e7b7"
     },
     {
       "kind": "g0-artifact",
@@ -38887,6 +38959,12 @@
     },
     {
       "kind": "g0-artifact",
+      "id": "geometry-v3-source-7087",
+      "previousSha256": "4a9c08331de0bab352d421f33110794538e83e6547ac8c7e12c2b0bcfb0dcb2b",
+      "currentSha256": "ba752b1ae4f298f9c65743b3e42cbaa1a0eba6bbbcd49a23046d17c7e7b9ec1f"
+    },
+    {
+      "kind": "g0-artifact",
       "id": "geometry-v3-source-7425",
       "previousSha256": "ab2fac7cfdb5c812ddc06fde19dcaa27814b750a1840417985a95199471cc16a",
       "currentSha256": "98dda6364466afe4d2fbd0c9c3a8b942bfde3d1095bfc4a416633d9735ebbc42"
@@ -38914,6 +38992,12 @@
       "id": "geometry-v3-source-7796",
       "previousSha256": "1c3f5e495d8f983e4bf80a775d0d4a935611c659c29bae0bf6f09ff44b0a7a7f",
       "currentSha256": "1dbdb08e00666edd8e358b745bd6cc17351cc7dfeb46c0419c7866c75b5f23d5"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-7803",
+      "previousSha256": "653a1def0daabffa44c3d703b5076f904d7ce1fae97da55e5370c1784093fe0c",
+      "currentSha256": "62a7b5af6aff9b19da4d468bd21bd92c69b71bd59b98912d497699227db7a966"
     },
     {
       "kind": "g0-artifact",
@@ -38961,7 +39045,7 @@
       "kind": "g1-bundle",
       "id": "g1-candidate-bundle",
       "previousSha256": "9de030b716a8c7bda61d6ba486b9efa0b36112dc6cdaf2b8716ba3246efcde9f",
-      "currentSha256": "d2d48c2d9a4b7dd4e10a4b7cd37d98e043aafaf44a8d7859250a231b1032979b"
+      "currentSha256": "fed8b080341c472edb8d7fa50f3c2652634d4fe6d14993e6e2ae2d3bfb8f8a81"
     },
     {
       "kind": "g1-bundle",
@@ -38973,7 +39057,7 @@
       "kind": "g1-bundle",
       "id": "g1-pinned-legacy-support-bundle",
       "previousSha256": "d2dbff62076741179e6884df1bb6cc449f2dab1b8a6ec01f09b42379d56a67ac",
-      "currentSha256": "a021009d97f1c615d94e7cddde59c282e2121b20588634a4e220a8a4793e048e"
+      "currentSha256": "b6da85282c32931a25d942b10cafa38cc6d736a7cd22fd242c0acfbae3150296"
     }
   ],
   "executionNotes": [

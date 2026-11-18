@@ -38,7 +38,7 @@
     "kind": "post-freeze-harness-amendment",
     "previousPlanId": "semantic-manifold-g1-plan-v127",
     "previousPlanSha256": "3b7cef385781fc5fe5e7c62c1841f0539d29e4b572bb769dc6f01a860468e35d",
-    "reason": "Bind the merged loft, affine shell, and STEP sources and their verified WASM; preserve historical qualification results.",
+    "reason": "Bind the unpublished merged candidate to the current STEP sources and Solid runtime.",
     "changes": [
       "Recompute artifact and canonical bundle digests from current source bytes.",
       "Bind the exact GitHub Actions workflow, evidence-producing harness, selectors, and hosted-runner image identities.",
@@ -598,7 +598,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "d2d48c2d9a4b7dd4e10a4b7cd37d98e043aafaf44a8d7859250a231b1032979b",
+          "value": "fed8b080341c472edb8d7fa50f3c2652634d4fe6d14993e6e2ae2d3bfb8f8a81",
           "byteLength": 15782,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
@@ -745,7 +745,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "a021009d97f1c615d94e7cddde59c282e2121b20588634a4e220a8a4793e048e",
+          "value": "b6da85282c32931a25d942b10cafa38cc6d736a7cd22fd242c0acfbae3150296",
           "byteLength": 850,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }
