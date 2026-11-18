@@ -52,21 +52,25 @@ pub(super) fn full_side(
     (side, work as u64)
 }
 
-/// Prove a selected same-face wrap using original edge ownership and the
-/// exact opened-chart jet owner. Both uses must traverse the full world edge.
-pub(crate) fn selected_wrap(
+/// Prove a selected periodic join on exact native sides and the full world edge.
+pub(crate) fn selected_periodic_join(
     model: &Model,
-    face: usize,
+    faces: [usize; 2],
     uses: [&Coedge; 2],
     work: &mut u64,
     limit: u64,
-) -> Result<Option<nurbs_core::surface_g2_pcurves::Positions>> {
+) -> Result<
+    Option<(
+        nurbs_core::surface_g2_pcurves::Positions,
+        nurbs_core::surface_g2::Orientation,
+    )>,
+> {
     use cad_predicates::BezierIdentity;
     use nurbs_core::{continuity::ProjectiveSeam, curve_surface_agreement, surface_g2_pcurves};
-    let surface = &model.faces[face].surface;
+    let surfaces = faces.map(|face| &model.faces[face].surface);
     let edge = &model.edges[uses[0].edge].curve;
     let mut sides = [None; 2];
-    for (c, side) in uses.into_iter().zip(&mut sides) {
+    for ((c, surface), side) in uses.into_iter().zip(surfaces).zip(&mut sides) {
         let (found, used) = full_side(model, surface, c, limit - *work);
         *work += used;
         *side = found;
@@ -74,7 +78,10 @@ pub(crate) fn selected_wrap(
     let [Some((a, ad)), Some((b, bd))] = sides else {
         return Ok(None);
     };
-    if !opposite_sides(surface, a, b) || ad != bd || uses[0].reversed == uses[1].reversed {
+    let same_face = faces[0] == faces[1];
+    if same_face
+        && (!opposite_sides(surfaces[0], a, b) || ad != bd || uses[0].reversed == uses[1].reversed)
+    {
         return Ok(None);
     }
     let first_work = *work;
@@ -82,7 +89,7 @@ pub(crate) fn selected_wrap(
         exact: None,
         interval: None,
     });
-    for (c, entry) in uses.into_iter().zip(&mut evidence) {
+    for ((c, surface), entry) in uses.into_iter().zip(surfaces).zip(&mut evidence) {
         let remaining = limit - *work;
         if remaining == 0 {
             return Ok(None);
@@ -115,26 +122,51 @@ pub(crate) fn selected_wrap(
         entry.exact = Some(exact);
     }
     let exact_work = *work - first_work;
-    let (opened, used) = open(surface, limit - *work)?;
+    let (left, used) = open(surfaces[0], limit - *work)?;
     *work += used;
-    let Some(opened) = opened else {
-        return Ok(None);
-    };
+    let Some(left) = left else { return Ok(None) };
+    let mut patches = vec![left.into_owned()];
+    if !same_face {
+        let (right, used) = open(surfaces[1], limit - *work)?;
+        *work += used;
+        let Some(right) = right else { return Ok(None) };
+        let mut right = right.into_owned();
+        if ad != bd {
+            let (proved, used) = super::reverse_along(&mut right, b, limit - *work)?;
+            *work += used;
+            if !proved {
+                return Ok(None);
+            }
+        }
+        patches.push(right);
+    }
     let seams = [ProjectiveSeam {
-        patches: [0, 0],
+        patches: [0, usize::from(!same_face)],
         boundaries: [a.into(), b.into()],
         order: 2,
         normal_scale: 1.,
     }];
-    let proof = super::graph_jets::qualify(&[opened.into_owned()], &seams, limit - *work)?;
+    let proof = super::graph_jets::qualify(&patches, &seams, limit - *work)?;
     *work += proof.exact_work;
-    Ok(proof.certified.then_some(surface_g2_pcurves::Positions {
-        proven: true,
-        upper: Some(0.),
-        cells: 0,
-        exact_work,
-        sides: evidence,
-    }))
+    // For glued charts the two inward transverse directions are opposite.
+    // Restore the original right-hand normal sign after any tangent reversal.
+    let same =
+        (super::graph_jets::inward_sign(a) != super::graph_jets::inward_sign(b)) != (ad != bd);
+    let orientation = if same {
+        nurbs_core::surface_g2::Orientation::Same
+    } else {
+        nurbs_core::surface_g2::Orientation::Opposite
+    };
+    Ok(proof.certified.then_some((
+        surface_g2_pcurves::Positions {
+            proven: true,
+            upper: Some(0.),
+            cells: 0,
+            exact_work,
+            sides: evidence,
+        },
+        orientation,
+    )))
 }
 
 pub(super) fn open(surface: &Surface, budget: u64) -> Result<(Option<Cow<'_, Surface>>, u64)> {

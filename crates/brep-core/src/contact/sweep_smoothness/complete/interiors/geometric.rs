@@ -466,6 +466,68 @@ mod tests {
         assert!(partial.unresolved_edges.contains(&0));
     }
     #[test]
+    fn selected_g2_joins_two_distinct_periodic_wall_faces() {
+        use crate::sweep_smoothness::geometric::{Tolerances, inspect_edges_with_exact};
+        use crate::{Coedge, Curve, Edge, Face, FaceUse, Loop, Shell, Vertex};
+        let lower = periodic_chart(false);
+        let mut upper = lower.clone();
+        for p in upper.control_points.iter_mut().flatten() {
+            p[2] += 2.;
+        }
+        let rim = |z: f64| Curve {
+            degree: lower.degree_u,
+            knots: lower.knots_u.clone(),
+            control_points: lower.control_points.iter().map(|row| {
+                vec![row[0][0], row[0][1], z]
+            }).collect(),
+            weights: lower.weights.iter().map(|row| row[0]).collect(),
+            periodic: true,
+        };
+        let stations = [0., 2., 4.];
+        let mut edges: Vec<_> = stations.into_iter().enumerate().map(|(i, z)| {
+            Edge { curve: rim(z), vertices: [i, i], degenerate: false }
+        }).collect();
+        for i in 0..2 {
+            edges.push(Edge {
+                curve: crate::line(vec![1., 0., stations[i]], vec![1., 0., stations[i + 1]]),
+                vertices: [i, i + 1],
+                degenerate: false,
+            });
+        }
+        let wire = |i| Loop {
+            coedges: [
+                (i, false, [0., 0.], [4., 0.]),
+                (i + 3, false, [4., 0.], [4., 1.]),
+                (i + 1, true, [4., 1.], [0., 1.]),
+                (i + 3, true, [0., 1.], [0., 0.]),
+            ].map(|(edge, rev, a, b)| Coedge::new(edge, rev, crate::line(a.to_vec(), b.to_vec()))).to_vec(),
+        };
+        let mut model = crate::Model(brep_topology::Model {
+            vertices: stations.map(|z| Vertex { point: [1., 0., z] }).to_vec(),
+            edges,
+            loops: vec![wire(0), wire(1)],
+            faces: vec![
+                Face { surface: lower, outer: 0, holes: vec![] },
+                Face { surface: upper, outer: 1, holes: vec![] },
+            ],
+            shells: vec![Shell { closed: false, faces: vec![
+                FaceUse { face: 0, reversed: false }, FaceUse { face: 1, reversed: false },
+            ] }],
+            bodies: vec![],
+            tolerance_mm: 1e-8,
+        }, crate::TopologyIds::default());
+        model.rebuild_topology_ids();
+        model.validate().unwrap();
+        let t = Tolerances { position: 0., normal: 0., curvature: 0. };
+        let report = inspect_edges_with_exact(&model, &[1], t, 1, 1_000_000).unwrap();
+        assert!(report.within_tolerance && report.seams[0].faces == [0, 1]);
+        assert_eq!(report.seams[0].inspection.as_ref().unwrap().orientation,
+            Some(nurbs_core::surface_g2::Orientation::Same));
+        assert!(!inspect_edges_with_exact(&model, &[1], t, 1, report.exact_work - 1)
+            .unwrap().within_tolerance);
+    }
+
+    #[test]
     fn classified_wraps_prove_each_requested_order_with_one_budget() {
         use super::super::super::classified::{Class, Limits, inspect};
         let model = single_face_torus(periodic_chart(true));
