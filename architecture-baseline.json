@@ -569,7 +569,7 @@
     "benchmarks/rush": 30,
     "examples": 1,
     "examples/skadis-box": 10,
-    "scripts": 453,
+    "scripts": 452,
     "tools/browser-qualification": 48,
     "tools/manifold-bench": 7,
     "tools/refactor-audit": 4

@@ -2,24 +2,31 @@ import { randomUUID } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Plugin } from 'vite'
 import {
-  LOCAL_EDITOR_HEADER, LOCAL_EDITOR_MAX_BYTES, LOCAL_EDITOR_PATH, LOCAL_EDITOR_TIMEOUT_MS,
+  LOCAL_EDITOR_HEADER,
+  LOCAL_EDITOR_MAX_BYTES,
+  LOCAL_EDITOR_PATH,
+  LOCAL_EDITOR_TIMEOUT_MS,
 } from '../src/core/localEditorProtocol'
 
 function respond(res: ServerResponse, status: number, value?: unknown) {
   res.writeHead(status, {
-    'Cache-Control': 'no-store', 'Content-Type': 'application/json', [LOCAL_EDITOR_HEADER]: 'bridge',
+    'Cache-Control': 'no-store',
+    'Content-Type': 'application/json',
+    [LOCAL_EDITOR_HEADER]: 'bridge',
   })
   res.end(value === undefined ? undefined : JSON.stringify(value))
 }
 
 /** Only the local Vite server brokers commands. The browser must acknowledge each one. */
 export function localEditorBridge(): Plugin {
-  let pending: {
-    id: string
-    bundle: unknown
-    claimed: boolean
-    finish: (status: number) => void
-  } | undefined
+  let pending:
+    | {
+        id: string
+        bundle: unknown
+        claimed: boolean
+        finish: (status: number) => void
+      }
+    | undefined
   let lastEditorPoll = 0
 
   async function middleware(req: IncomingMessage, res: ServerResponse, next: () => void) {
@@ -70,7 +77,9 @@ export function localEditorBridge(): Plugin {
       }
       const timer = setTimeout(() => finish(504), LOCAL_EDITOR_TIMEOUT_MS)
       pending = { id: randomUUID(), bundle, claimed: false, finish }
-      res.once('close', () => { if (pending?.finish === finish) finish(499) })
+      res.once('close', () => {
+        if (pending?.finish === finish) finish(499)
+      })
     } catch {
       if (!res.destroyed) respond(res, 400)
     }
@@ -78,7 +87,11 @@ export function localEditorBridge(): Plugin {
 
   return {
     name: 'openscada-local-mcp-editor',
-    configureServer(server) { server.middlewares.use(middleware) },
-    configurePreviewServer(server) { server.middlewares.use(middleware) },
+    configureServer(server) {
+      server.middlewares.use(middleware)
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(middleware)
+    },
   }
 }
