@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0878",
+  "testedBase": "f45240dd001be95ccdcb4cb514410edd53e12044",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 7,
+  "scope": [
+    "Certified chord length and measuring depth on three circles, two backlash allowances and invalid radii."
+  ],
+  "logSha256": "e1f4e8972cc746e818d47bba0cb5c15adc9811794b1c4a635a12bb2adfa4fbae",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute.rs": "e14ab6fdda5dcf4af6fecba2c89d2477ea44090efdf2fc98465d11fd5257507c",
+    "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs": "1eb17666d1673113a8045954227b07d5cc08106f52345fcfefcd92efb34671ff",
+    "crates/nurbs-core/tests/gear_parameter_bounds.rs": "08e9d0cd8684b4332c7d1b2fc1aa0d0f576d0eb47c5420accba8de9949258539"
+  }
+}

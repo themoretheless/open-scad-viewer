@@ -372,3 +372,45 @@ pub fn spur_tip_root_clearance_bounds(
     };
     Ok([pair(first), pair(second)])
 }
+
+/// Nominal external spur-tooth caliper dimensions in model units.
+#[derive(Clone, Copy, Debug)]
+pub struct ToothChordBounds {
+    pub chord_length: [f64; 2],
+    /// Radial measuring depth from the tip circle to the midpoint of the chord.
+    pub depth_from_tip: [f64; 2],
+}
+
+/// Measure between symmetric involute flanks where they cross a given circle.
+/// Requires a radius provably within the active involute and a positive tooth
+/// thickness there. Root transitions and manufacturing modifications are excluded.
+pub fn spur_tooth_chord_bounds(
+    module: f64,
+    teeth: usize,
+    pressure_degrees: f64,
+    clearance: f64,
+    backlash: f64,
+    radius: f64,
+) -> Result<ToothChordBounds> {
+    let gear =
+        derive_gear_parameter_bounds(module, teeth, pressure_degrees, clearance, backlash, false)?;
+    check(
+        radius.is_finite()
+            && radius >= gear.root_radius[1].max(gear.base_radius[1])
+            && radius <= gear.tip_radius[0],
+        "Measurement circle must lie on the active involute",
+    )?;
+    let r = I::point(radius);
+    let base = I::new(gear.base_radius[0], gear.base_radius[1])?;
+    let ratio = r.div(base)?;
+    let roll = sqrt_positive(ratio.mul(ratio)?.sub(I::point(1.))?)?;
+    let half_base = I::new(gear.half_base_angle[0], gear.half_base_angle[1])?;
+    let angle = half_base.sub(roll.sub(atan_positive(roll)?)?)?;
+    check(angle.lo > 0., "Measurement circle crosses a pointed tooth")?;
+    let (sin, cos) = trig(angle)?;
+    let tip = I::new(gear.tip_radius[0], gear.tip_radius[1])?;
+    Ok(ToothChordBounds {
+        chord_length: pair(r.mul(sin)?.mul(I::point(2.))?),
+        depth_from_tip: pair(tip.sub(r.mul(cos)?)?),
+    })
+}

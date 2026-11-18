@@ -212,3 +212,23 @@ fn tip_to_root_margins_distinguish_both_roots_and_mesh_directions() {
     assert!(margins(1., [40, 20], [0.; 2], SpurMesh::Internal, 10.).is_err());
     assert!(margins(1., [20, 40], [0.; 2], SpurMesh::External, f64::NAN).is_err());
 }
+
+#[test]
+fn tooth_caliper_dimensions_follow_the_actual_measurement_circle() {
+    use involute::spur_tooth_chord_bounds as measure;
+    let pitch = 20.;
+    let a = 20_f64.to_radians();
+    for (radius, backlash) in [(pitch, 0.), (20.8, 0.125), (19.5, 0.25)] {
+        let result = measure(2., 20, 20., 0.5, backlash, radius).unwrap();
+        let working = (pitch * a.cos() / radius).acos();
+        let angle = std::f64::consts::PI / 40. - backlash / (2. * pitch) + (a.tan() - a)
+            - (working.tan() - working);
+        contains(result.chord_length, 2. * radius * angle.sin());
+        contains(result.depth_from_tip, 22. - radius * angle.cos());
+        assert!(result.chord_length[1] - result.chord_length[0] < 1e-9);
+        assert!(result.depth_from_tip[1] - result.depth_from_tip[0] < 1e-9);
+    }
+    for radius in [18., 23., f64::NAN] {
+        assert!(measure(2., 20, 20., 0.5, 0., radius).is_err());
+    }
+}

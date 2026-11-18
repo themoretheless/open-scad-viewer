@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 877,
-  "unallocatedCount": 123,
+  "specifiedCount": 878,
+  "unallocatedCount": 122,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20357,6 +20357,24 @@
       ],
       "remainingQualification": [
         "Nominal radial clearance along the line of centres. Flank and fillet interference require separate checks."
+      ]
+    },
+    {
+      "id": "NURBS-0878",
+      "name": "Измерение толщины зуба по хорде и глубины установки зубомера",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::spur_tooth_chord_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/nurbs-core/src/construct/curves/involute/gear_parameters.rs",
+        "crates/nurbs-core/tests/gear_parameter_bounds.rs",
+        "docs/qualification/nurbs-spur-contact-878-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spur-contact-878-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "External standard spur involutes only. The measurement circle must be certified within the active flank."
       ]
     }
   ],
