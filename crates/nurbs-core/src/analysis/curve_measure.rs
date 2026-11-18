@@ -1918,9 +1918,19 @@ pub fn measure_planar_angular_travel(
     parameter_tolerance: f64,
     max_cells: usize,
 ) -> Result<PlanarAngularTravelReport> {
+    measure_planar_angular_travel_from(direction, interval, None, parameter_tolerance, max_cells)
+}
+
+fn measure_planar_angular_travel_from(
+    direction: &Curve,
+    interval: [f64; 2],
+    origin: Option<[Interval; 2]>,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarAngularTravelReport> {
     direction.validate()?;
     check(direction.control_points[0].len() == 2, "Angular travel requires a planar direction curve")?;
-    let fixed = fixed_cardinal_rotation(direction).is_some();
+    let fixed = origin.is_none() && fixed_cardinal_rotation(direction).is_some();
     let (cells, work_cells) = partition_motion_cells(
         direction, interval, parameter_tolerance, max_cells,
         |jets, _| {
@@ -1929,6 +1939,17 @@ pub fn measure_planar_angular_travel(
             }
             // The jet derivative is already in the local clock on [0, 1].
             // Its range also encloses its integral over the unit interval.
+            let shifted;
+            let jets = if let Some(origin) = origin {
+                let mut translated = jets.to_vec();
+                for (coordinate, offset) in translated[0].iter_mut().zip(origin) {
+                    *coordinate = coordinate.sub(offset)?;
+                }
+                shifted = translated;
+                &shifted
+            } else {
+                jets
+            };
             let local = planar_angular_jets(jets, Interval::point(1.), 1)?;
             Ok((local.map(|values| values[0]), true))
         },
@@ -1957,6 +1978,44 @@ pub fn measure_planar_orientation_winding(
     parameter_tolerance: f64,
     max_cells: usize,
 ) -> Result<PlanarOrientationWindingReport> {
+    let domain = validate_winding_curve(direction)?;
+    let last = direction.control_points.len();
+    let first = &direction.control_points[0];
+    let end = &direction.control_points[last - 1];
+    let [ax, ay, bx, by] = [
+        exact_motion_operand(first[0])?, exact_motion_operand(first[1])?,
+        exact_motion_operand(end[0])?, exact_motion_operand(end[1])?,
+    ];
+    let zero = exact_motion_operand(0.)?;
+    check(
+        &ax * &by == &ay * &bx && ax * bx + ay * by > zero,
+        "Orientation winding requires identical nonzero endpoint rays",
+    )?;
+    let travel = measure_planar_angular_travel(direction, domain, parameter_tolerance, max_cells)?;
+    winding_from_angular_travel(travel)
+}
+
+/// Measure the signed winding of a closed planar contour around a point.
+/// The curve must be clamped and continuous, with equal endpoints.
+/// A point on or too close to the curve for separation to be certified
+/// prevents a winding report.
+pub fn measure_planar_curve_winding_about_point(
+    curve: &Curve,
+    point: [f64; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarOrientationWindingReport> {
+    check(point.iter().all(|value| value.is_finite()), "Winding point must be finite")?;
+    let domain = validate_winding_curve(curve)?;
+    check(curve.control_points.first() == curve.control_points.last(), "Winding contour must be closed")?;
+    let origin = Some(point.map(Interval::point));
+    let travel = measure_planar_angular_travel_from(
+        curve, domain, origin, parameter_tolerance, max_cells,
+    )?;
+    winding_from_angular_travel(travel)
+}
+
+fn validate_winding_curve(direction: &Curve) -> Result<[f64; 2]> {
     direction.validate()?;
     check(direction.control_points[0].len() == 2, "Orientation winding requires a planar direction curve")?;
     let domain = direction.domain();
@@ -1976,18 +2035,10 @@ pub fn measure_planar_orientation_winding(
         check(run <= degree, "Interior direction knots must guarantee continuity")?;
         previous = knot;
     }
-    let first = &direction.control_points[0];
-    let end = &direction.control_points[last - 1];
-    let [ax, ay, bx, by] = [
-        exact_motion_operand(first[0])?, exact_motion_operand(first[1])?,
-        exact_motion_operand(end[0])?, exact_motion_operand(end[1])?,
-    ];
-    let zero = exact_motion_operand(0.)?;
-    check(
-        &ax * &by == &ay * &bx && ax * bx + ay * by > zero,
-        "Orientation winding requires identical nonzero endpoint rays",
-    )?;
-    let travel = measure_planar_angular_travel(direction, domain, parameter_tolerance, max_cells)?;
+    Ok(domain)
+}
+
+fn winding_from_angular_travel(travel: PlanarAngularTravelReport) -> Result<PlanarOrientationWindingReport> {
     let tau = std::f64::consts::TAU;
     let turns = Interval::new(travel.net_bounds[0], travel.net_bounds[1])?
         .div(Interval::new(tau.next_down(), tau.next_up())?)?;

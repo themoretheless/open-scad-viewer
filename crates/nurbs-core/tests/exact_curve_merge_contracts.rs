@@ -12626,3 +12626,22 @@ fn planar_orientation_winding_certifies_both_directions_and_refuses_open_rays() 
     direction.control_points[4] = vec![0., 1.];
     assert!(measure_planar_orientation_winding(&direction, 0.025, 1020).is_err());
 }
+
+#[test]
+fn planar_curve_winding_about_point_distinguishes_inside_outside_and_boundary() {
+    use nurbs_core::analysis::curve_measure::measure_planar_curve_winding_about_point;
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![
+            vec![11., -7.], vec![10., -6.], vec![9., -7.], vec![10., -8.], vec![11., -7.],
+        ],
+        weights: vec![1., 2., 1., 2., 1.],
+        periodic: false,
+    };
+    let winding = |point| measure_planar_curve_winding_about_point(&curve, point, 0.025, 1020);
+    assert_eq!(winding([10., -7.]).unwrap().winding, Some(1));
+    assert_eq!(winding([12., -7.]).unwrap().winding, Some(0));
+    assert!(winding([11., -7.]).is_err());
+    assert!(winding([f64::NAN, 0.]).is_err());
+}
