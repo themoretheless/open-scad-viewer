@@ -332,3 +332,19 @@ outside binary64.
 For a periodic trim, exact closure of the stored knot shifts and repeated
 controls permits the same proof on one full turn, including both sides of
 the wrap.
+
+## Closed torus split into two original periodic bands
+
+The exact active-rim fixture passes complete G2 and the classified seam
+inspection with G1, G2, and C0 edges. A separate native Solid audit of
+that same model establishes exact world lifts and valid trim loops. Both
+band interiors still lack an injectivity certificate and the band pair is
+reported as `periodic-trim-not-supported`. The audit returns no material
+volume. The periodic extrusion quotient theorem requires a transverse
+linear clock and cannot authorize these quadratic meridian bands.
+
+A global proof for this fixture must recognize the original tensor map,
+prove regular meridian and azimuthal coordinates away from the axis, and
+exclude intersections between retained meridian intervals except at the
+two exact owned rims. The quotient must identify the authored shores and
+the rim contacts before the native nesting and material-orientation checks.
