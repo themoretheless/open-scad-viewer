@@ -13445,3 +13445,18 @@ fn planar_wire_enforces_material_winding_without_moving_the_seam() {
     }
     assert!(assemble(&edges,0,true,1_000_000,1e-8,1e-8,3,2).is_err());
 }
+
+#[test]
+fn spatial_wire_preserves_height_and_requires_a_simple_projection() {
+    use nurbs_core::editing::exact_curve_merge::assemble_simple_spatial_loop as assemble;
+    let edge = |a:[f64;3], b:[f64;3]| Curve {degree:1, knots:vec![0.,0.,1.,1.],
+        control_points:vec![a.to_vec(),b.to_vec()],weights:vec![1.;2],periodic:false};
+    let a=[0.,0.,0.]; let b=[1.,0.,0.]; let c=[1.,1.,1.]; let d=[0.,1.,0.];
+    let edges=[edge(a,b),edge(c,b),edge(d,a),edge(c,d)];
+    let result=assemble(&edges,0,false,2,1_000_000,1e-8,6,10000).unwrap().curve.unwrap();
+    for (i,p) in [a,b,c,d,a].iter().enumerate() {
+        assert_eq!(result.evaluate(i as f64).unwrap().point,p);
+    }
+    assert!(assemble(&edges,0,false,0,1_000_000,1e-8,6,10000).is_err());
+    assert!(assemble(&edges,0,false,3,1_000_000,1e-8,6,10000).is_err());
+}

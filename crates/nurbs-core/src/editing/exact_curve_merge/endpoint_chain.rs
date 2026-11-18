@@ -55,16 +55,57 @@ pub fn assemble_simple_planar_loop(
         sources,
         Anchor::Closed(first_segment, reversed),
         max_work,
+        |ordered| prove_simple(ordered, tolerance_uv, max_pairs, max_cells),
+    )
+}
+
+fn prove_simple(
+    curves: &[Curve],
+    tolerance: f64,
+    max_pairs: usize,
+    max_cells: usize,
+) -> Result<()> {
+    let proof = crate::trim_simplicity::inspect(curves, tolerance, max_pairs, max_cells)?;
+    if !proof.proven_simple {
+        return Err(crate::input(format!(
+            "Projected loop simplicity unproven: {:?}",
+            proof.outcome()
+        )));
+    }
+    Ok(())
+}
+
+/// Certify a closed spatial wire using a simple coordinate projection.
+/// Dropping one Cartesian coordinate commutes with rational evaluation.
+/// A simple projection proves spatial simplicity even on nonplanar wires;
+/// an inconclusive projection can be retried along another axis.
+pub fn assemble_simple_spatial_loop(
+    sources: &[Curve],
+    first_segment: usize,
+    reversed: bool,
+    dropped_axis: usize,
+    max_work: u64,
+    projection_tolerance: f64,
+    max_pairs: usize,
+    max_cells: usize,
+) -> Result<GaugeMergeReport> {
+    crate::check(dropped_axis < 3, "Expected a Cartesian projection axis")?;
+    assemble(
+        sources,
+        Anchor::Closed(first_segment, reversed),
+        max_work,
         |ordered| {
-            let proof =
-                crate::trim_simplicity::inspect(ordered, tolerance_uv, max_pairs, max_cells)?;
-            if !proof.proven_simple {
-                return Err(crate::input(format!(
-                    "Planar loop simplicity unproven: {:?}",
-                    proof.outcome()
-                )));
+            let mut projected = ordered.to_vec();
+            for curve in &mut projected {
+                crate::check(
+                    curve.control_points[0].len() == 3,
+                    "Spatial wire requires 3D segments",
+                )?;
+                for point in &mut curve.control_points {
+                    point.remove(dropped_axis);
+                }
             }
-            Ok(())
+            prove_simple(&projected, projection_tolerance, max_pairs, max_cells)
         },
     )
 }

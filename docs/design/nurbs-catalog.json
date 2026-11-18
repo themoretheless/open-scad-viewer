@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 895,
-  "unallocatedCount": 105,
+  "specifiedCount": 896,
+  "unallocatedCount": 104,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20678,6 +20678,24 @@
         "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
         "docs/qualification/nurbs-curve-compression-895-2026-11-18/receipt.json",
         "docs/qualification/nurbs-curve-compression-895-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Clamped nonperiodic curves only. A completed search does not prove global minimality."
+      ]
+    },
+    {
+      "id": "NURBS-0896",
+      "name": "Сборка пространственного контура с доказательством простоты через координатную проекцию",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::assemble_simple_spatial_loop",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/exact_curve_merge/endpoint_chain.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curve-compression-896-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-curve-compression-896-2026-11-18/native.log.gz"
       ],
       "remainingQualification": [
         "Clamped nonperiodic curves only. A completed search does not prove global minimality."
