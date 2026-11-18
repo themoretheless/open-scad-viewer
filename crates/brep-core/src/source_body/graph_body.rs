@@ -8,6 +8,13 @@ use nurbs_core::ss_intersection::{
 pub(crate) mod tests;
 mod topology;
 pub mod nested;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GraphBooleanOperation {
+    Union,
+    Intersection,
+    Difference { minuend: usize },
+}
+
 pub struct Limits {
     /// Shared structural/coefficient work, with each core graph query <=4096.
     pub operations: usize,
