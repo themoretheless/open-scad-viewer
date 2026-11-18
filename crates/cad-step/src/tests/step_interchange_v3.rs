@@ -2802,6 +2802,35 @@ fn planet_gear_step_assembly_retains_one_prototype() {
 }
 
 #[test]
+fn shared_step_extracts_only_selected_occurrences_and_definitions() {
+    let spec = brep_core::GearSpec { teeth: 4, height: 10., ..Default::default() };
+    let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 120., 240.]).unwrap();
+    let step = crate::export_planet_gear_occurrences_step(&planets).unwrap();
+    let mut assembly = crate::import_step_shared_assembly(&step).unwrap();
+    let edited = brep_core::gear(&brep_core::GearSpec { height: 12., ..spec }).unwrap();
+    assembly.replace_occurrence_geometry(1, edited).unwrap();
+    for selection in [&[][..], &[0, 0], &[3]] {
+        assert!(assembly.extract_occurrences(selection).is_err());
+    }
+    let selected = [2, 0];
+    let extracted = assembly.extract_occurrences(&selected).unwrap();
+    let step = crate::export_step_shared_assembly(&extracted).unwrap();
+    assert_eq!(step.matches("MANIFOLD_SOLID_BREP(").count(), 1);
+    let back = crate::import_step_shared_assembly(&step).unwrap();
+    assert_eq!((back.definitions().len(), back.occurrences().len()), (1, 2));
+    for (index, original) in selected.into_iter().enumerate() {
+        let occurrence = back.occurrences()[index];
+        assert_eq!(occurrence.definition, 0);
+        let expected = assembly.occurrences()[original].transform;
+        for (actual, expected) in occurrence.transform.iter().flatten().zip(expected.iter().flatten()) {
+            assert!((actual - expected).abs() < 1e-10);
+        }
+        assert_eq!(back.materialize(index).unwrap().validate().unwrap().boundary_edge_count, 0);
+    }
+    assert_eq!((assembly.definitions().len(), assembly.occurrences().len()), (2, 3));
+}
+
+#[test]
 fn shared_step_deduplicates_exact_definitions_without_merging_edited_gear() {
     let spec = brep_core::GearSpec { teeth: 4, height: 10., ..Default::default() };
     let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();

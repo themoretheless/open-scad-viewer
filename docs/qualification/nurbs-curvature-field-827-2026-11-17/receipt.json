@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0827",
+  "testedBase": "9ad6e02e470e49fab099b7cf8b94aa43db1e081e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 176,
+  "scope": [
+    "Extract an ordered selection with its original placements and only the definitions it uses.",
+    "Check empty, duplicate and out-of-range selections, reversed output order, compact shared definitions and closed materialized solids after STEP round-trip."
+  ],
+  "logSha256": "d6a0d615c6d3664e550c456b8ac51f2db3f9c30353b47bf52e48de718b4d0f71",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "de80f9d8358c2b106dda26f973c9214ee141b2132e8b51105795181ff663b5f5",
+    "crates/cad-step/src/step_v3_export.rs": "0a2f23d34fb0cdf83de7d1b410acd9d27c6a0a4a259ebfe7ff5004d8cf0a4385",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "4e4b5a4bd034933b470fcd1c2d6f7da8c3a2e898df444d55c60c715e1544952c"
+  }
+}

@@ -759,6 +759,32 @@ impl StepSharedAssembly {
         original_count - self.definitions.len()
     }
 
+    /// Copy selected occurrences, in the requested order, with only the
+    /// definitions they reference and with their assembly-space placements.
+    pub fn extract_occurrences(&self, indices: &[usize]) -> Result<Self> {
+        if indices.is_empty() || indices.len() > self.occurrences.len() {
+            return Err(refuse("STEP assembly extraction requires a nonempty distinct selection"));
+        }
+        let mut seen = BTreeSet::new();
+        let mut remap = BTreeMap::new();
+        let mut definitions = Vec::new();
+        let mut occurrences = Vec::with_capacity(indices.len());
+        for &index in indices {
+            let occurrence = self.occurrences.get(index)
+                .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
+            if !seen.insert(index) {
+                return Err(refuse("STEP assembly extraction contains a duplicate occurrence"));
+            }
+            let definition = *remap.entry(occurrence.definition).or_insert_with(|| {
+                let index = definitions.len();
+                definitions.push(self.definitions[occurrence.definition].clone());
+                index
+            });
+            occurrences.push(StepAssemblyOccurrence { definition, transform: occurrence.transform });
+        }
+        Ok(Self { definitions, occurrences })
+    }
+
     fn check_new_placement(&self, transform: [[f64; 4]; 4]) -> Result<()> {
         if self.occurrences.len() >= super::MAX_OCCURRENCES {
             return Err(refuse("STEP assembly exceeds the limit of 256 occurrences"));

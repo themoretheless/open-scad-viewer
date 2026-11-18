@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 826,
-  "unallocatedCount": 174,
+  "specifiedCount": 827,
+  "unallocatedCount": 173,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19400,6 +19400,26 @@
       "remainingQualification": [
         "Deduplicate identical indexed B-rep payloads without modifying local geometry or occurrence transforms.",
         "Check exact duplicate collapse, idempotence, retention of an edited gear, five preserved transforms and closed materialized solids after STEP round-trip.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0827",
+      "name": "Извлечение выбранных экземпляров в самостоятельную STEP-сборку",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::extract_occurrences",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-827-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-827-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Extract an ordered selection with its original placements and only the definitions it uses.",
+        "Check empty, duplicate and out-of-range selections, reversed output order, compact shared definitions and closed materialized solids after STEP round-trip.",
         "WASM and application integration are separate."
       ]
     }
