@@ -43,13 +43,11 @@ impl Tube {
         let path = s.path;
         let p = path.degree;
         let [a, b] = path.domain();
-        if p == 0
-            || path.periodic
-            || path.knots[..=p].iter().any(|u| *u != a)
-            || path.knots[path.control_points.len()..]
-                .iter()
-                .any(|u| *u != b)
-        {
+        let clamped = !path.periodic
+            && path.knots[..=p].iter().all(|u| *u == a)
+            && path.knots[path.control_points.len()..].iter().all(|u| *u == b);
+        let periodic_frenet = super::closed::uses_periodic_frenet(s, closed);
+        if p == 0 || !(clamped || periodic_frenet) {
             return Ok(None);
         }
         if out.cells == max || out.exact_work == exact {
@@ -63,7 +61,7 @@ impl Tube {
         if c.transport.is_none() && !frame_bounds::tangent_continuity(path, closed, out, exact)? {
             return Ok(None);
         }
-        let mut transverse_carrier = plane::certify_frame(
+        let mut transverse_carrier = clamped && plane::certify_frame(
             path,
             cap,
             s.frame_laws.map(|(a, _)| a),
@@ -111,11 +109,11 @@ impl Tube {
         } else if !carrier::certify_pair(c.caps, out, max)? {
             return Ok(None);
         }
-        let origin = path.control_points[0]
-            .iter()
-            .copied()
-            .map(I::point)
-            .collect::<Vec<_>>();
+        let origin = if clamped {
+            std::array::from_fn(|k| I::point(path.control_points[0][k]))
+        } else {
+            c.start
+        };
         let mut radius = 0_f64;
         for (i, cap) in c.caps.iter().enumerate() {
             if i == 1 && c.same_cap() {

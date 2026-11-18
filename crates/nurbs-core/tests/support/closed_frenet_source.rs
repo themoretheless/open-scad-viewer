@@ -27,3 +27,25 @@ pub fn split_reclocked_path()->Curve {
     p.weights=[vec![1.;12],(1..12).map(|i|2f64.powi(i)).collect()].concat();
     p.knots=[vec![-3.;12],vec![1.;11],vec![5.;12]].concat();p
 }
+
+/// Uniform degree-five active basis with exact periodic endpoint jets.
+pub fn periodic_path() -> Curve {
+    let mut points = vec![
+        vec![4., -3.5, 0.],
+        vec![3., -0.5, 1. / 64.],
+        vec![0., 0.5, 0.],
+        vec![-3., -0.5, -1. / 64.],
+        vec![-4., -3.5, 0.],
+        vec![-3., -6.5, 1. / 64.],
+        vec![0., -7.5, 0.],
+        vec![3., -6.5, -1. / 64.],
+    ];
+    points.extend_from_within(..5);
+    Curve {
+        degree: 5,
+        knots: (0..19).map(|i| (f64::from(i) - 5.) / 8.).collect(),
+        control_points: points,
+        weights: vec![1.; 13],
+        periodic: true,
+    }
+}

@@ -132,3 +132,41 @@ fn closed_original_frenet_geometric_c2_seam_does_not_require_equal_raw_speed() {
     assert_eq!(p,before);eprintln!("geometric Frenet split={split} C2 seam={seam:?}; complete original body={q:?}");
     }
 }
+
+#[test]
+fn periodic_active_basis_frenet_certifies_the_original_filled_volume() {
+    let path = frenet_source::periodic_path();
+    let (profiles, cap, _) = source::material(true, true);
+    let scale = source::periodic(1., 1.03125);
+    let twist = source::periodic(0., 1. / 1024.);
+    for arc in [false, true] {
+        let sweep = MultiSweep::new(&profiles, &path, &scale, &twist, options(arc)).unwrap();
+        let seam = sweep.certify_closed_path_frame_smoothness(2, 100000, 1000000).unwrap();
+        assert!(seam.closed_source_frame_smoothness_certified, "{seam:?}");
+        let body = sweep.certify_ideal_volume_atlas(
+            [&cap, &cap], [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]], 1000000, 1000000,
+        ).unwrap();
+        assert!(body.embedding_certified && body.regularity_certified && body.parameter_topology_preserved, "arc={arc}: {body:?}");
+        eprintln!("periodic active basis arc={arc} body={body:?}");
+    }
+}
+
+#[test]
+fn periodic_frenet_rejects_an_inexact_exterior_knot_seam() {
+    let path = frenet_source::periodic_path();
+    let mut changed = path.clone();
+    changed.knots[1] = changed.knots[1].next_up();
+    changed.validate().unwrap();
+    let (profiles, cap, _) = source::material(false, true);
+    let scale = source::periodic(1., 1.03125);
+    let zero = constant_vector_law([0.; 3]).unwrap();
+    let sweep = MultiSweep::new(&profiles, &changed, &scale, &zero, options(true)).unwrap();
+    assert!(sweep.source_is_closed().unwrap());
+    let seam = sweep.certify_closed_path_frame_smoothness(2, 100000, 1000000).unwrap();
+    assert!(!seam.closed_source_frame_smoothness_certified, "{seam:?}");
+    let body = sweep.certify_ideal_volume_atlas(
+        [&cap, &cap], [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]], 1000000, 1000000,
+    ).unwrap();
+    assert!(!body.embedding_certified && !body.regularity_certified && !body.parameter_topology_preserved, "{body:?}");
+    assert_eq!(body.reason, Some("ideal-volume-exact-source-seam-unproved"));
+}

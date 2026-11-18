@@ -17,7 +17,12 @@ fn c0(degree: usize, knots: &[f64], end: usize) -> bool {
         .all(|u| knots.iter().filter(|v| *v == u).count() <= degree)
 }
 pub(super) fn curve_c0(c: &Curve) -> bool {
-    !c.periodic && c0(c.degree, &c.knots, c.control_points.len())
+    !c.periodic && curve_active_c0(c)
+}
+/// C0 across interior knots of the active curve domain. The endpoint
+/// identification of a periodic path is established separately.
+pub(super) fn curve_active_c0(c: &Curve) -> bool {
+    c0(c.degree, &c.knots, c.control_points.len())
 }
 pub(crate) fn surface_c0(s: &Surface) -> bool {
     !s.periodic_u

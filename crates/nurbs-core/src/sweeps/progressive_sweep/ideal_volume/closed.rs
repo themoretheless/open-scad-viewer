@@ -16,6 +16,14 @@ fn endpoint_identity(c: &Curve, spent: &mut usize, max: usize) -> bool {
         && c.knots[c.control_points.len()..].iter().all(|&u| u == b)
         && c.control_points.first() == c.control_points.last()
 }
+pub(super) fn uses_periodic_frenet(s: &Sweep<'_>, closed: bool) -> bool {
+    closed
+        && s.path.periodic
+        && s.options.orientation == Orientation::Frenet
+        && s.frame_laws.is_none()
+        && s.orientation_guide.is_none()
+}
+
 pub(super) fn premises(
     s: &Sweep<'_>,
     caps: [&Surface; 2],
@@ -28,8 +36,23 @@ pub(super) fn premises(
         out.reason = Some("ideal-volume-closed-common-carrier-required");
         return Ok(false);
     }
-    for law in [s.path, s.scale, s.twist]
-        .into_iter()
+    // Periodic Frenet storage owns its active endpoint basis through an
+    // exact position identity. Repeated controls and numerical closure alone
+    // cannot stand in for that identity.
+    let path_law = if uses_periodic_frenet(s, true) {
+        let seam = super::super::endpoint_jets::certify_position(
+            s.path, true, max_work - out.exact_work,
+        )?;
+        out.exact_work += seam.exact_work;
+        if !seam.certified {
+            out.reason = Some("ideal-volume-exact-source-seam-unproved");
+            return Ok(false);
+        }
+        None
+    } else {
+        Some(s.path)
+    };
+    for law in path_law.into_iter().chain([s.scale, s.twist])
         .chain(s.orientation_guide)
         .chain(s.affine_laws.into_iter().flat_map(|(a, c)| [a, c]))
     {

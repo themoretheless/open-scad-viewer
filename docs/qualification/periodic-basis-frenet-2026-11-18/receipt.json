@@ -1,0 +1,113 @@
+{
+  "sourceBase": "f8c8664d5160938e388fbe6a4286d71d577efabb",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "tests": {
+    "native": {
+      "file": "native.log.gz",
+      "sha256": "c995755ed360e00757d1b5642a2503d9604d984efe4109082f61beef8b31ae5c",
+      "result": "test result: ok. 2278 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 96.13s"
+    },
+    "focused": {
+      "file": "focused.log.gz",
+      "sha256": "141ec7ae269117ec2cff589dedd386bf091a26513287aef33b268dde1aaee606",
+      "result": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2277 filtered out; finished in 0.22s"
+    },
+    "material": {
+      "file": "material.log.gz",
+      "sha256": "99dedbd3172b932aa519e937067167eaa46ef557ec4c7f34bafbbc5feceeee53",
+      "result": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 69.34s"
+    }
+  },
+  "periodicMatrix": [
+    {
+      "periodic": true,
+      "split": false,
+      "reclock": false,
+      "arc": false,
+      "warped": false,
+      "hole": false,
+      "cells": 6300,
+      "exact": 66492,
+      "products": 52
+    },
+    {
+      "periodic": true,
+      "split": false,
+      "reclock": false,
+      "arc": false,
+      "warped": false,
+      "hole": true,
+      "cells": 6384,
+      "exact": 111082,
+      "products": 104
+    },
+    {
+      "periodic": true,
+      "split": false,
+      "reclock": false,
+      "arc": false,
+      "warped": true,
+      "hole": false,
+      "cells": 6268,
+      "exact": 74675,
+      "products": 52
+    },
+    {
+      "periodic": true,
+      "split": false,
+      "reclock": false,
+      "arc": false,
+      "warped": true,
+      "hole": true,
+      "cells": 6320,
+      "exact": 128099,
+      "products": 104
+    },
+    {
+      "periodic": true,
+      "split": false,
+      "reclock": false,
+      "arc": true,
+      "warped": false,
+      "hole": false,
+      "cells": 29397,
+      "exact": 67125,
+      "products": 52
+    },
+    {
+      "periodic": true,
+      "split": false,
+      "reclock": false,
+      "arc": true,
+      "warped": false,
+      "hole": true,
+      "cells": 29481,
+      "exact": 111715,
+      "products": 104
+    },
+    {
+      "periodic": true,
+      "split": false,
+      "reclock": false,
+      "arc": true,
+      "warped": true,
+      "hole": false,
+      "cells": 29478,
+      "exact": 75308,
+      "products": 52
+    },
+    {
+      "periodic": true,
+      "split": false,
+      "reclock": false,
+      "arc": true,
+      "warped": true,
+      "hole": true,
+      "cells": 29530,
+      "exact": 128732,
+      "products": 104
+    }
+  ],
+  "inputs": "cc35320706af39f52a1ce72576a88ad55ad5677d19706e2df8c38774126710cb",
+  "oracle": "52a69395f1678efcfb6d895161412beb0956dbf997b1404b0f4b4d243c7ff4c2"
+}
