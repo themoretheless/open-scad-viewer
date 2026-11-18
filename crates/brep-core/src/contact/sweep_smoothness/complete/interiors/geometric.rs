@@ -876,7 +876,12 @@ mod tests {
         }).unwrap();
         let geometry = admission.geometry();
         let disjoint = geometry.boundary.intersections.pairs.pairs.iter()
-            .filter(|pair| pair.radial_disjoint).map(|pair| pair.faces).collect::<Vec<_>>();
+            .filter(|pair| pair.radial_disjoint)
+            .map(|pair| {
+                assert_eq!(pair.reason, "pair-disjoint");
+                assert!(!pair.hull_disjoint && pair.result.is_none());
+                pair.faces
+            }).collect::<Vec<_>>();
         assert_eq!(disjoint, [[0, 2], [1, 3]]);
         assert!(geometry.boundary.proven);
         assert_eq!(geometry.orientations[0].outward, Some(true));

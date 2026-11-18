@@ -466,7 +466,7 @@ impl Inspector {
                     faces: [a, b], result: None, boundary: None,
                     hull_disjoint: false, radial_disjoint: true, hull_cells: 0,
                     boundary_cells: 0, source_chart_cells: 0, volume_separation: None,
-                    reason: "radial-meridian-disjoint",
+                    reason: "pair-disjoint",
                 });
                 continue;
             }

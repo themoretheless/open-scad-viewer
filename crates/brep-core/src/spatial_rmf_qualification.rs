@@ -325,7 +325,7 @@ fn qualify_closed_spatial_rmf_source(
         volume.boundary.intersections.pairs.all_pairs_classified,volume.boundary.intersections.pairs.next_pair,
         volume.boundary.intersections.pairs.pairs.len(),volume.boundary.intersections.pairs.grouped_pairs,
         volume.boundary.intersections.pairs.cells,
-        volume.boundary.intersections.pairs.pairs.iter().filter(|p| !p.hull_disjoint&&!p.radial_disjoint&&p.reason!="pair-disjoint"&&p.reason!="shared-boundary").take(8).map(|p|(p.faces,p.reason)).collect::<Vec<_>>(),
+        volume.boundary.intersections.pairs.pairs.iter().filter(|p| !p.hull_disjoint&&p.reason!="pair-disjoint"&&p.reason!="shared-boundary").take(8).map(|p|(p.faces,p.reason)).collect::<Vec<_>>(),
         volume.nesting.as_ref().map(|n|(&n.parents,n.roles_consistent)),
         volume.orientations.iter().map(|o|(o.expected_outward,o.outward)).collect::<Vec<_>>());
     if holes>1 {
