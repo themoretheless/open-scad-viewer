@@ -1,0 +1,43 @@
+{
+  "id": "NURBS-0924",
+  "testedBase": "8ba64fedbc37c49468a0688593e2bdb7f605141d",
+  "gearCommand": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "gear_profile",
+    "--",
+    "--nocapture"
+  ],
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 487,
+  "scope": [
+    "Accept interior pole edits on first and last teeth. Reject openings at both outer and internal joins while retaining committed coordinates."
+  ],
+  "logSha256": "4f34937e5745e3f33989416870aa5fa98f2082cd61f6b48b1a4aa5b395a8a147",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs": "80f03c01f418ea6f9a69fc861a4c7b437c79d94f5009334cb4652b2f6a715980",
+    "crates/nurbs-core/src/construct/curves/involute.rs": "2dcd0c05fed7322a0c9696d88eeb384a72c5c40808ba0f1885e3879ee0502535",
+    "crates/brep-core/tests/gear_profile.rs": "02dc99d08e1b8f3ff072221f0bf5e489b866c63f7e2045a6b943c23a023a133e"
+  }
+}

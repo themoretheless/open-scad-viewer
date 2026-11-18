@@ -144,3 +144,28 @@ fn lossless_gear_edits_are_local_even_on_the_predictor_tooth() {
         }
     }
 }
+
+#[test]
+fn guarded_tooth_edit_preserves_internal_joins_and_cyclic_seam() {
+    use nurbs_core::involute::LosslessSectorPattern;
+    let spec = GearSpec { teeth: 8, ..GearSpec::default() };
+    let (wires,_) = profile_with_report(&spec).unwrap();
+    let width = wires[0].len()/spec.teeth;
+    let mut packed = LosslessSectorPattern::encode(&wires[0],width).unwrap();
+    for index in [0, spec.teeth-1] {
+        let mut good = packed.sector(index).unwrap();
+        let flank = good.iter_mut().find(|c| c.control_points.len() > 2).unwrap();
+        flank.control_points[1][0] += 0.001;
+        packed.replace_sector_with_closed_joins(index,&good).unwrap();
+        for (piece,at_end) in [(0,false),(0,true),(width-1,true)] {
+            let mut bad = good.clone();
+            let pts = &mut bad[piece].control_points;
+            let pole = if at_end { pts.len()-1 } else { 0 };
+            pts[pole][0] += 0.01;
+            assert!(packed.replace_sector_with_closed_joins(index,&bad).is_err());
+        }
+        for (a,b) in good.iter().zip(packed.sector(index).unwrap()) {
+            assert_eq!(a.control_points,b.control_points);
+        }
+    }
+}

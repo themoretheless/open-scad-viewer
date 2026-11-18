@@ -212,6 +212,35 @@ impl LosslessSectorPattern {
         Ok(())
     }
 
+    /// Replace a sector only if every affected clamped endpoint joins exactly,
+    /// including both neighboring sectors or the self seam of a one-sector wire.
+    /// This local positional check does not establish tangency or wire simplicity.
+    pub fn replace_sector_with_closed_joins(&mut self, index: usize, curves: &[Curve]) -> Result<()> {
+        let count = self.pattern.sector_count;
+        check(index < count && curves.len() == self.pattern.pieces.len(), "Expected a complete sector")?;
+        for curve in curves { curve.validate()?; }
+        let join = |a: &Curve, b: &Curve| -> Result<()> {
+            let last = a.control_points.len();
+            let end = a.knots[last];
+            let start = b.knots[b.degree];
+            check(!a.periodic && !b.periodic && a.knots[last-1] < end &&
+                a.knots[last..].iter().all(|&k| k == end) && b.knots[b.degree+1] > start &&
+                b.knots[..=b.degree].iter().all(|&k| k == start), "Join requires clamped endpoints")?;
+            check(a.control_points.last() == b.control_points.first(), "Replacement opens a profile join")
+        };
+        for pair in curves.windows(2) { join(&pair[0], &pair[1])?; }
+        let last = curves.len() - 1;
+        if count == 1 {
+            join(&curves[last], &curves[0])?;
+        } else {
+            let previous = self.sector((index + count - 1) % count)?;
+            let next = self.sector((index + 1) % count)?;
+            join(&previous[last], &curves[0])?;
+            join(&curves[last], &next[0])?;
+        }
+        self.replace_sector(index, curves)
+    }
+
     fn residual(pattern: &CircularSectorPattern, predictor_index: usize, sector: &[Curve]) -> Result<SectorResidual> {
         let mut bytes = Vec::new();
         for (actual, predicted) in sector.iter().zip(pattern.sector(predictor_index)?) {

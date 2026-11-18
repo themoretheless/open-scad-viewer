@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 923,
-  "unallocatedCount": 77,
+  "specifiedCount": 924,
+  "unallocatedCount": 76,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21171,6 +21171,24 @@
       ],
       "remainingQualification": [
         "Replacement preserves the piece and knot layouts. This edits in-memory curves; join continuity and validity of a rebuilt solid require separate checks."
+      ]
+    },
+    {
+      "id": "NURBS-0924",
+      "name": "Редактирование зуба с точной проверкой внутренних стыков и циклического шва",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "nurbs_core::involute::LosslessSectorPattern::replace_sector_with_closed_joins",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs",
+        "crates/nurbs-core/src/construct/curves/involute.rs",
+        "crates/brep-core/tests/gear_profile.rs",
+        "docs/qualification/nurbs-gear-closed-edit-924-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-gear-closed-edit-924-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Exact positional joins at clamped ends incident to edited sector. Global simplicity, tangency and solid validity require separate checks."
       ]
     }
   ],
