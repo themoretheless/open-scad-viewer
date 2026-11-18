@@ -136,3 +136,35 @@ fn zero_direction_order_checks_positive_orientation_but_supplies_no_position_cre
         BezierIdentity::Equal
     );
 }
+
+#[test]
+fn third_arc_direction_jet_owns_reclocked_curvature_variation_and_exact_budget() {
+    let xyz=[[0.,0.,0.],[1.,0.,0.],[2.,1.,0.],[3.,3.,1.],[4.,6.,4.],
+        [2.,7.,2.],[-2.,7.,-2.],[-4.,6.,-4.],[-3.,3.,-1.],[-2.,1.,0.],[-1.,0.,0.],[0.,0.,0.]];
+    let p=xyz.iter().enumerate().map(|(i,q)|[q[0],q[1],q[2]/64.,(if i==5 || i==6 {1.125}else{1.})*2f64.powi(i as i32)]).collect::<Vec<_>>();
+    let knots=[vec![-3.;12],vec![5.;12]].concat();let before=p.clone();
+    let q=audit(&p,&knots,11,3,true,true,1000000);assert_eq!(q.outcome,BezierIdentity::Equal,"{q:?}");
+    assert_eq!(audit(&p,&knots,11,3,true,true,q.work_used).outcome,BezierIdentity::Equal);
+    for budget in [0,q.work_used-1] {let r=audit(&p,&knots,11,3,true,true,budget);assert_ne!(r.outcome,BezierIdentity::Equal);assert!(r.work_used<=budget);}
+    assert_ne!(audit(&p,&knots,11,3,true,false,1000000).outcome,BezierIdentity::Equal);
+    let mut wrong=p.clone();wrong[7][2]=wrong[7][2].next_up();
+    assert_eq!(audit(&wrong,&knots,11,2,true,true,1000000).outcome,BezierIdentity::Equal);
+    assert_eq!(audit(&wrong,&knots,11,3,true,true,1000000).outcome,BezierIdentity::Different);
+    for x in [0.,1.] {let mut wrong=p.clone();wrong[10][0]=x;assert_ne!(audit(&wrong,&knots,11,3,true,true,1000000).outcome,BezierIdentity::Equal);}
+    // Nonaxial initial tangents have irrational speed (sqrt(14) times a
+    // rational). The root-free comparison must remain exact for both signs.
+    for sign in [-1.,1.] {
+        let oblique=p.iter().map(|q|[sign*(q[0]+q[2]),2.*q[0]+q[1],3.*q[0]-q[1]+q[2],q[3]]).collect::<Vec<_>>();
+        assert_eq!(audit(&oblique,&knots,11,3,true,true,1000000).outcome,BezierIdentity::Equal);
+    }
+    // Two original Bezier spans share position but change raw speed at their
+    // common knot. Inspect every internal join, not only the outer endpoints.
+    let mut joined=p.iter().enumerate().map(|(i,q)|[q[0],q[1],q[2],q[3]/2f64.powi(i as i32)]).collect::<Vec<_>>();
+    joined.extend(p.iter().skip(1).copied());let joined_knots=[vec![2.;12],vec![3.;11],vec![4.;12]].concat();
+    assert_eq!(audit(&joined,&joined_knots,11,3,false,true,1000000).outcome,BezierIdentity::Equal);
+    assert_ne!(audit(&joined,&joined_knots,11,3,false,false,1000000).outcome,BezierIdentity::Equal);
+    joined[15][2]=joined[15][2].next_up();
+    assert_eq!(audit(&joined,&joined_knots,11,2,false,true,1000000).outcome,BezierIdentity::Equal);
+    assert_eq!(audit(&joined,&joined_knots,11,3,false,true,1000000).outcome,BezierIdentity::Different);
+    assert_eq!(p,before);eprintln!("third geometric direction jet exact work={}",q.work_used);
+}

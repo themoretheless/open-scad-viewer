@@ -15,8 +15,9 @@ fn options(arc:bool)->Options {Options{normal:[0.,1.,0.],orientation:Orientation
 fn projection()->[[f64;3];3] {[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]}
 #[test]
 fn frenet_closed_material_matrix_owns_c2_charts_g2_rings_caps_and_holes() {
-    for arc in [false,true] {for warped in [false,true] {for hole in [false,true] {
-        let path=frenet::path();let (profiles,surface,trims)=source::material(hole,warped);let material=LoftCap{surface,trims};
+    for clock in 0..4 {for warped in [false,true] {for hole in [false,true] {
+        let arc=clock!=0;let reclock=clock>=2;let split=clock==3;
+        let path=if split {frenet::split_reclocked_path()}else if reclock {frenet::reclocked_path()}else{frenet::path()};let (profiles,surface,trims)=source::material(hole,warped);let material=LoftCap{surface,trims};
         let scale=source::periodic(1.,1.03125);let twist=source::periodic(0.,1./1024.);let center=source::periodic(0.,source::R/16.);
         let mut axes=source::periodic(1.,1.0078125);for p in &mut axes.control_points {p[1]=1.125;p[2]=0.875;}
         let before=(path.clone(),profiles.clone(),material.surface.clone(),material.trims.clone(),scale.clone(),twist.clone(),axes.clone(),center.clone());
@@ -32,11 +33,11 @@ fn frenet_closed_material_matrix_owns_c2_charts_g2_rings_caps_and_holes() {
         assert_eq!(body.material_report().trim.as_ref().unwrap().winding,if hole {vec![Some(1),Some(-1)]}else{vec![Some(1)]});
         assert!(std::ptr::eq(body.material(),&material) && std::ptr::eq(body.volume().sweep(),&sweep));
         for (i,b) in body.bindings().iter().enumerate(){assert_eq!((b.ring(),b.profile(),b.trim()),(i/4,(i,0),(i%4,0)));assert_eq!(b.kind(),MaterialSpanBindingKind::NormalizedMap);}
-        let w=body.work();eprintln!("Frenet material arc={arc} warped={warped} hole={hole}: cells={} exact={} products={}",w.cells,w.exact_work,w.products);
+        let w=body.work();eprintln!("Frenet material split={split} reclock={reclock} arc={arc} warped={warped} hole={hole}: cells={} exact={} products={}",w.cells,w.exact_work,w.products);
         if arc && warped && hole {
             #[cfg(feature="codec")]
-            eprintln!("closed-frenet-material-source={}",value_codec::json!({"path":path,"profiles":profiles,"surface":&material.surface,"trims":&material.trims,
-                "scale":scale,"twist":twist,"axes":axes,"center":center,"clock":"arc-length"}));
+            eprintln!("{}={}",if reclock {"geometric-frenet-material-source"}else{"closed-frenet-material-source"},value_codec::json!({"path":path,"profiles":profiles,"surface":&material.surface,"trims":&material.trims,
+                "scale":scale,"twist":twist,"axes":axes,"center":center,"clock":"arc-length","sourceClock":if split {"split-mobius"}else if reclock {"mobius"}else{"raw"}}));
             let exact=OriginalClassifiedClosedMaterialLimits{volume:OriginalClassifiedVolumeLimits{
                 charts:OriginalSmoothVolumeLimits{cells:w.cells,exact_work:w.exact_work,products:w.products,..limits().volume.charts},
                 steps:v.profiles.as_ref().unwrap().steps},..limits()};

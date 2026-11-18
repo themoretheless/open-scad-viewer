@@ -102,6 +102,7 @@ pub(super) fn certify(
             None,
             shared,
             &zero,
+            None,
             max_cells - out.cells,
         )?;
         if let Some(proof) = proof {

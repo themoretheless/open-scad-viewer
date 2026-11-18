@@ -344,7 +344,7 @@ fn piecewise_bezier_tangent(curve:&Curve,endpoints:bool,max_work:u64,spent:&mut 
  Some(Report{certified:true,exact_work:work})
 }
 pub(super) fn certify_direction(curve:&Curve,order:usize,endpoints:bool,arc_length:bool,max_work:u64)->Result<Report>{
- check(matches!(order,0|1|2)&&max_work<=1000000,"Invalid direction jet limits")?;
+ check(matches!(order,0|1|2|3)&&max_work<=1000000,"Invalid direction jet limits")?;
  curve.validate()?;
  if curve.periodic{return Ok(Report{certified:false,exact_work:0});}
  check(curve.control_points.iter().all(|p|p.len()==3),"Direction jets require XYZ source")?;

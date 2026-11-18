@@ -212,6 +212,9 @@ impl Tube {
             let Some(phase) = map.phase(b[2], &mut out.cells, stage_max)? else {
                 return Ok(false);
             };
+            if let Some((omega,bend))=frame_bounds::frenet_rates(c,b[2],phase,out,max)? {
+                angular=angular.max(omega);curvature=curvature.max(bend);continue;
+            }
             let Some(jets) = phase.position_jets else {
                 return Ok(false);
             };

@@ -37,6 +37,7 @@ pub(super) mod cap_identity;
 pub(crate) mod charts;
 mod closed;
 mod exact;
+mod frenet_clock;
 mod carrier_rank;
 mod contact_coincidence;
 pub(crate) mod cap_difference;
@@ -142,9 +143,12 @@ impl MultiSweep<'_> {
         // scalar and positional C0 premises above suffice for the piecewise
         // segment integral; the stronger frame C1 gate is conservative.
         if closed {
+            // The stage limit is relative to the work already paid for cap
+            // identity and rank inspection, just as for the open frame gate.
+            let seam_ceiling = out.cells + (max_cells - out.cells).min(100000);
             if !closed::premises(
                 s, caps, cap_identity.as_ref(), &mut out,
-                max_cells.min(100000), max_exact_work,
+                seam_ceiling, max_exact_work,
             )? {
                 return Ok(out);
             }
@@ -159,6 +163,26 @@ impl MultiSweep<'_> {
                 return Ok(out);
             }
         }
+        // Closed Frenet position, frame and pose laws use physical arc.
+        // Once the original seam is proved, exact positive Bézier clock
+        // changes preserve the complete map and all its physical jets.
+        let conditioned = frenet_clock::conditioned(s, closed, &mut out.cells, max_cells);
+        let conditioned_sweep = conditioned.as_ref().map(|path| Sweep {
+            station_cache: Default::default(),
+            profile: s.profile,
+            path,
+            scale: s.scale,
+            twist: s.twist,
+            affine_laws: s.affine_laws,
+            frame_laws: s.frame_laws,
+            orientation_guide: s.orientation_guide,
+            contact_point: s.contact_point,
+            contact_source: s.contact_source,
+            spatial_rmf_error_limits: s.spatial_rmf_error_limits,
+            options: s.options,
+            next_sections: s.next_sections,
+        });
+        let s = conditioned_sweep.as_ref().unwrap_or(s);
         let zero = constant_vector_law([0.; 3])?;
         let Some(initial) = super::profile_domain::original_frame(
             s,

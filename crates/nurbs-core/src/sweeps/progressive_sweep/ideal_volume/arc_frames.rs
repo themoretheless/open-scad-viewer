@@ -1,6 +1,8 @@
 //! Original frame jets in the station coordinate, with independently proved
 //! normalized source-parameter maps. No inverse derivative is guessed.
 use super::*;
+mod frenet_spans;
+pub(super) mod frenet_rates;
 pub(in crate::sweeps::progressive_sweep) fn arc_frame(
     s: &Sweep<'_>,
     station: [f64; 2],
@@ -10,6 +12,7 @@ pub(in crate::sweeps::progressive_sweep) fn arc_frame(
     transport: Option<&OriginalRmfTransportReport>,
     shared_guide: bool,
     zero: &Curve,
+    length:Option<I>,
     max: usize,
 ) -> Result<Option<frame::Report>> {
     if let Some((a, n)) = s.frame_laws {
@@ -47,6 +50,9 @@ pub(in crate::sweeps::progressive_sweep) fn arc_frame(
             super::super::rmf_transport::phase_jets(transport, s.path, s.twist, station, p, max)
         }
         .map(Some);
+    }
+    if s.options.orientation==Orientation::Frenet {
+        if let Some(length)=length {return frenet_spans::certify(s,station,p,length,max).map(Some);}
     }
     let raw = {
         match s.options.orientation {

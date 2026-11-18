@@ -8,6 +8,7 @@ mod third;
 mod fourth;
 pub use fourth::{FourthReport,certify_fourth_traversal};
 pub(super) use fourth::certify_fourth_traversal_axis;
+pub(super) use fourth::span_jets_axis as fourth_span_jets_axis;
 mod first_point;
 pub use first_point::{PointFirstReport,certify_first_point};
 pub(super) use first_point::certify_first_point_axis;

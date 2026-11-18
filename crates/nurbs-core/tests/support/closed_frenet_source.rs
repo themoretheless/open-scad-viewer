@@ -13,3 +13,17 @@ pub fn twice()->Curve {
     p.control_points.extend(points.into_iter().skip(1));p.weights.extend(weights.into_iter().skip(1));
     p.knots=[vec![0.;12],vec![1.;11],vec![2.;12]].concat();p
 }
+/// Exact positive Mobius clock, preserving every original geometric point.
+pub fn reclocked_path()->Curve {
+    let mut p=path();for (i,w) in p.weights.iter_mut().enumerate(){*w*=2f64.powi(i as i32);}p
+}
+/// Exact dyadic half split of the polynomial source, then a positive clock
+/// change on the second half. The original internal knot has a speed jump.
+pub fn split_reclocked_path()->Curve {
+    let mut p=path();let mut row=p.control_points.clone();let mut left=vec![row[0].clone()];let mut right=vec![row.last().unwrap().clone()];
+    for width in (1..row.len()).rev(){for i in 0..width {for k in 0..3 {row[i][k]=(row[i][k]+row[i+1][k])*0.5;}}
+        left.push(row[0].clone());right.push(row[width-1].clone());}
+    right.reverse();left.extend(right.into_iter().skip(1));p.control_points=left;
+    p.weights=[vec![1.;12],(1..12).map(|i|2f64.powi(i)).collect()].concat();
+    p.knots=[vec![-3.;12],vec![1.;11],vec![5.;12]].concat();p
+}

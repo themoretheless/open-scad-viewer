@@ -89,3 +89,46 @@ fn record(label:&str,path:&Curve,twist:&Curve) {
     let scale=constant_vector_law([1.,0.,0.]).unwrap();
     eprintln!("closed-frenet-source={}",value_codec::json!({"label":label,"path":path,"twist":twist,"scale":scale,"orientation":"frenet","clock":"parameter"}));
 }
+
+#[test]
+fn closed_original_frenet_geometric_c2_seam_does_not_require_equal_raw_speed() {
+    for split in [false,true] {
+    let p=if split {frenet_source::split_reclocked_path()}else{frenet_source::reclocked_path()};let (profiles,cap,_)=source::material(false,true);
+    let scale=source::periodic(1.,1.03125);let zero=constant_vector_law([0.;3]).unwrap();let before=p.clone();
+    #[cfg(feature="codec")]
+    {
+        let mut reference=frenet_source::path();if split {reference.weights.fill(1.);}
+        eprintln!("geometric-frenet-source={}",value_codec::json!({"path":p,"reference":reference,"sourceClock":if split {"split-mobius"}else{"mobius"},"scale":scale,"twist":zero,"orientation":"frenet","clock":"arc-length"}));
+    }
+    let raw=MultiSweep::new(&profiles,&p,&scale,&zero,options(false)).unwrap();
+    assert!(!raw.certify_closed_path_frame_smoothness(2,100000,1000000).unwrap().closed_source_frame_smoothness_certified);
+    let sweep=MultiSweep::new(&profiles,&p,&scale,&zero,options(true)).unwrap();
+    let seam=sweep.certify_closed_path_frame_smoothness(2,100000,1000000).unwrap();
+    assert!(seam.closed_source_frame_smoothness_certified,"{seam:?}");
+    assert!(sweep.certify_closed_path_frame_smoothness(2,seam.cells,seam.exact_work).unwrap().closed_source_frame_smoothness_certified);
+    for (cells,work) in [(0,seam.exact_work),(seam.cells-1,seam.exact_work),(seam.cells,0),(seam.cells,seam.exact_work-1)] {
+        let q=sweep.certify_closed_path_frame_smoothness(2,cells,work).unwrap();assert!(!q.closed_source_frame_smoothness_certified && q.cells<=cells && q.exact_work<=work);
+    }
+    let q=sweep.certify_ideal_volume_atlas([&cap,&cap],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],1000000,1000000).unwrap();
+    assert!(q.embedding_certified && q.regularity_certified && q.parameter_topology_preserved,"{q:?}");
+    for warped in [false,true] {
+        let (profiles,cap,_)=source::material(false,warped);let twist=source::periodic(0.,1./1024.);
+        let center=source::periodic(0.,source::R/16.);let mut axes=source::periodic(1.,1.0078125);
+        for q in &mut axes.control_points {q[1]=1.125;q[2]=0.875;}
+        let dynamic=MultiSweep::new(&profiles,&p,&scale,&twist,options(true)).unwrap().with_affine_laws(&axes,&center).unwrap();
+        let r=dynamic.certify_ideal_volume_atlas([&cap,&cap],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],1000000,1000000).unwrap();
+        assert!(r.embedding_certified && r.regularity_certified && r.parameter_topology_preserved,"split={split} warped={warped}: {r:?}");
+        eprintln!("geometric Frenet dynamic split={split} warped={warped}: {r:?}");
+    }
+    let mut wrong=p.clone();wrong.control_points[7][2]=wrong.control_points[7][2].next_up();
+    let changed=MultiSweep::new(&profiles,&wrong,&scale,&zero,options(true)).unwrap();
+    assert!(changed.certify_closed_path_frame_smoothness(1,100000,1000000).unwrap().closed_source_frame_smoothness_certified);
+    let refused=changed.certify_closed_path_frame_smoothness(2,100000,1000000).unwrap();
+    assert!(!refused.closed_source_frame_smoothness_certified);assert_eq!(refused.reason,Some("closed-frenet-geometric-direction-jets-unproved"));
+    let mut gap=p.clone();for q in &mut gap.control_points {q[0]+=1.;}gap.control_points.last_mut().unwrap()[0]=1f64.next_up();
+    let changed=MultiSweep::new(&profiles,&gap,&scale,&zero,options(true)).unwrap();
+    let refused=changed.certify_closed_path_frame_smoothness(2,100000,1000000).unwrap();
+    assert!(!refused.closed_source_frame_smoothness_certified);assert_eq!(refused.reason,Some("closed-frenet-geometric-position-unproved"));
+    assert_eq!(p,before);eprintln!("geometric Frenet split={split} C2 seam={seam:?}; complete original body={q:?}");
+    }
+}

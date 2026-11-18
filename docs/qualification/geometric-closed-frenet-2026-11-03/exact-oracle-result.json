@@ -1,0 +1,39 @@
+{
+  "formalSeriesGeometricJets": [
+    {
+      "sourceClock": "mobius",
+      "exactMobiusIdentity": true,
+      "joinsWithEqualThirdArcTangentJets": 1,
+      "rawTangentJetsDiffer": true,
+      "oneUlpThirdJetMismatch": true,
+      "referenceWholeCurvature": {
+        "cells": 1,
+        "numeratorLower": "3684725/3264"
+      }
+    },
+    {
+      "sourceClock": "split-mobius",
+      "exactMobiusIdentity": true,
+      "joinsWithEqualThirdArcTangentJets": 2,
+      "rawTangentJetsDiffer": true,
+      "oneUlpThirdJetMismatch": true,
+      "referenceWholeCurvature": {
+        "cells": 3,
+        "numeratorLower": "222277/208"
+      }
+    }
+  ],
+  "materialBindings": [
+    {
+      "originalKnots": 24,
+      "exactLiftBindings": 8,
+      "nestedRings": 2
+    },
+    {
+      "originalKnots": 35,
+      "exactLiftBindings": 8,
+      "nestedRings": 2
+    }
+  ],
+  "scope": "Exact image-preserving source clocks and third physical-arc tangent jets; positive full body/material embedding is native atlas evidence."
+}
