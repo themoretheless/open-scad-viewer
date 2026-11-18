@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 972,
-  "unallocatedCount": 28,
+  "specifiedCount": 973,
+  "unallocatedCount": 27,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22121,6 +22121,27 @@
       ],
       "remainingQualification": [
         "Bit-identical normalized placement direction triples in a shared STEP assembly. Placement operators, scales and occurrence identity remain independent."
+      ]
+    },
+    {
+      "id": "NURBS-0973",
+      "name": "Оценка повторения граней и контрольных точек NURBS по деталям STEP-сборки",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::NamedStepAssembly::surface_usage",
+      "evidence": [
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-step-part-surface-usage-973-2026-11-19/integration.log.gz",
+        "docs/qualification/nurbs-step-part-surface-usage-973-2026-11-19/native.log.gz",
+        "docs/qualification/nurbs-step-part-surface-usage-973-2026-11-19/receipt.json"
+      ],
+      "remainingQualification": [
+        "Counts face carrier grids per referenced definition and per placement. Excludes edge and trim curves. Counts are structural, not serialized bytes."
       ]
     }
   ],

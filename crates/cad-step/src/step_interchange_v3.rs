@@ -2843,7 +2843,7 @@ fn restore_identity(
 #[path = "step_interchange_v3/import_routes.rs"]
 mod import_routes;
 pub use import_routes::{
-    import_step_shared_assembly, import_step_occurrence_colours, import_named_step_assembly, NamedStepAssembly, StepPartsListRow, StepPartQuantityChange, StepAssemblyOccurrence, StepClearanceCheck, StepClearanceStatus, StepMinimumClearance, StepMaterialDelta, StepRayMaterialCoverage, StepSharedAssembly,
+    import_step_shared_assembly, import_step_occurrence_colours, import_named_step_assembly, NamedStepAssembly, StepPartsListRow, StepPartSurfaceUsage, StepPartQuantityChange, StepAssemblyOccurrence, StepClearanceCheck, StepClearanceStatus, StepMinimumClearance, StepMaterialDelta, StepRayMaterialCoverage, StepSharedAssembly,
     export_step_v10, import_step_v3, import_step_v3_with_metadata, import_step_v4,
     import_step_v5, import_step_v6, import_step_v7, import_step_v8, import_step_v9,
     import_step_v9_with_metadata, import_step_v10,

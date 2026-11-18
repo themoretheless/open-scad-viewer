@@ -2077,6 +2077,16 @@ pub struct StepPartsListRow<'a> {
     pub quantity: usize,
 }
 
+/// Face-carrier storage per referenced definition, before and after expanding placements.
+#[derive(Debug, PartialEq, Eq)]
+pub struct StepPartSurfaceUsage<'a> {
+    pub part: StepPartsListRow<'a>,
+    pub stored_faces: usize,
+    pub placed_faces: usize,
+    pub stored_poles: u64,
+    pub placed_poles: u64,
+}
+
 /// Quantity change for one label and indexed local geometry. The optional
 /// indices identify a representative definition on each side.
 #[derive(Debug, PartialEq, Eq)]
@@ -2181,6 +2191,25 @@ impl NamedStepAssembly {
             names[part.definition] = &self.definition_names[original];
         }
         crate::export_named_step_assembly(&subset, assembly_name, &names)
+    }
+
+    /// Rank parts by the number of surface control points saved by sharing a
+    /// definition. Each face contributes its complete tensor grid once.
+    pub fn surface_usage(&self) -> Result<Vec<StepPartSurfaceUsage<'_>>> {
+        let mut rows = Vec::new();
+        for part in self.parts_list()? {
+            let model = &self.assembly.definitions()[part.definition];
+            let stored_faces = model.faces.len();
+            let stored_poles = model.faces.iter().flat_map(|face| &face.surface.control_points)
+                .map(|row| row.len() as u64).sum::<u64>();
+            let placed_poles = stored_poles.checked_mul(part.quantity as u64)
+                .ok_or_else(|| refuse("Placed surface pole count exceeds capacity"))?;
+            let placed_faces = stored_faces.checked_mul(part.quantity)
+                .ok_or_else(|| refuse("Placed face count exceeds capacity"))?;
+            rows.push(StepPartSurfaceUsage { part, stored_faces, placed_faces, stored_poles, placed_poles });
+        }
+        rows.sort_by_key(|row| std::cmp::Reverse(row.placed_poles - row.stored_poles));
+        Ok(rows)
     }
 
     /// Count placements by definition identity, including coincident placements.

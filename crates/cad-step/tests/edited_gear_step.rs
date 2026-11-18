@@ -152,7 +152,14 @@ fn named_parts_list_counts_coincident_instances_and_separates_same_name_parts() 
         assert_eq!(row.name,"Вставка");
         assert_eq!(row.quantity,if row.definition==repeated {3} else {1});
     }
+    let usage = read.surface_usage().unwrap();
+    assert_eq!(usage.len(), 2);
+    assert_eq!(usage[0].part.definition, repeated);
+    assert_eq!((usage[0].stored_faces, usage[0].placed_faces), (6, 18));
+    assert_eq!((usage[0].stored_poles, usage[0].placed_poles), (24, 72));
+    assert_eq!((usage[1].stored_poles, usage[1].placed_poles), (24, 24));
     read.definition_names.pop();
+    assert!(read.surface_usage().is_err());
     assert!(read.parts_list().is_err());
 }
 

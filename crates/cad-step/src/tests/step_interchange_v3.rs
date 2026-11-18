@@ -3867,6 +3867,17 @@ fn planetary_gear_set_step_exports_twenty_herringbone_occurrences() {
     assert_eq!(stored_faces, sun.faces.len() + ring.faces.len() + planets.prototype().faces.len());
     assert_eq!(placed_faces - stored_faces, 17 * planets.prototype().faces.len());
     eprintln!("Spinner STEP: {} bytes, {stored_faces} stored faces, {placed_faces} placed faces", text.len());
+    let named = crate::import_named_step_assembly(&text).unwrap();
+    let usage = named.surface_usage().unwrap();
+    assert_eq!(usage.len(), 3);
+    assert_eq!(usage[0].part.quantity, 18);
+    assert_eq!(usage.iter().map(|row| row.stored_faces).sum::<usize>(), stored_faces);
+    assert_eq!(usage.iter().map(|row| row.placed_faces).sum::<usize>(), placed_faces);
+    let planet_poles: u64 = planets.prototype().faces.iter().map(|face| {
+        (face.surface.control_points.len() * face.surface.control_points[0].len()) as u64
+    }).sum();
+    assert_eq!((usage[0].stored_poles, usage[0].placed_poles), (planet_poles, 18 * planet_poles));
+    eprintln!("Shared planet surface poles: {planet_poles} stored, {} placed", usage[0].placed_poles);
     let planet_index = imported.occurrences()[2].definition;
     assert!(imported.occurrences()[2..].iter().all(|item| item.definition == planet_index));
     let first_planet = imported.materialize(2).unwrap();
