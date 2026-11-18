@@ -12297,3 +12297,26 @@ fn planar_angular_acceleration_limit_detects_peak_in_a_scaled_clock() {
     let report = partition_planar_angular_acceleration_limit(&constant, [2., 4.], 0., 0.01, 1).unwrap();
     assert_eq!(report.cells[0].status, Status::Within);
 }
+
+#[test]
+fn planar_angular_jerk_limit_detects_interior_peak_in_original_parameter() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, partition_planar_angular_jerk_limit,
+    };
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 4., 4.],
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let report = partition_planar_angular_jerk_limit(&direction, [2., 4.], 1.5, 0.005, 511).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 3. && 3. <= b && cell.status == Status::Exceeds
+    }));
+    let coarse = partition_planar_angular_jerk_limit(&direction, [2., 4.], 1.5, 0.005, 1).unwrap();
+    assert_eq!(coarse.cells[0].status, Status::Undetermined);
+}

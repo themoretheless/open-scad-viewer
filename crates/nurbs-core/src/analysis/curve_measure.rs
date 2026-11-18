@@ -1453,7 +1453,7 @@ pub fn partition_planar_angular_speed_limit(
     max_cells: usize,
 ) -> Result<DirectionalSpeedLimitPartition> {
     partition_planar_angular_limit(
-        direction, interval, limit, parameter_tolerance, max_cells, false,
+        direction, interval, limit, parameter_tolerance, max_cells, 1,
     )
 }
 
@@ -1468,7 +1468,22 @@ pub fn partition_planar_angular_acceleration_limit(
     max_cells: usize,
 ) -> Result<DirectionalSpeedLimitPartition> {
     partition_planar_angular_limit(
-        direction, interval, limit, parameter_tolerance, max_cells, true,
+        direction, interval, limit, parameter_tolerance, max_cells, 2,
+    )
+}
+
+/// Classify absolute angular jerk in radians per cubed unit of the curve
+/// parameter. Knot spans are checked independently and possible zero
+/// directions leave their cells unresolved.
+pub fn partition_planar_angular_jerk_limit(
+    direction: &Curve,
+    interval: [f64; 2],
+    limit: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalSpeedLimitPartition> {
+    partition_planar_angular_limit(
+        direction, interval, limit, parameter_tolerance, max_cells, 3,
     )
 }
 
@@ -1478,7 +1493,7 @@ fn partition_planar_angular_limit(
     limit: f64,
     parameter_tolerance: f64,
     max_cells: usize,
-    acceleration: bool,
+    order: usize,
 ) -> Result<DirectionalSpeedLimitPartition> {
     use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
 
@@ -1497,19 +1512,30 @@ fn partition_planar_angular_limit(
             if squared.lo <= 0. || width.lo <= 0. {
                 return Ok((Undetermined, true));
             }
-            let cross = |order: usize| {
-                jets[0][0].mul(jets[order][1])?.sub(jets[0][1].mul(jets[order][0])?)
+            let cross = |a: usize, b: usize| {
+                jets[a][0].mul(jets[b][1])?.sub(jets[a][1].mul(jets[b][0])?)
             };
-            let local_speed = cross(1)?.div(squared)?;
+            let twice = Interval::point(2.);
+            let speed = cross(0, 1)?.div(squared)?;
+            let mut value = speed;
+            if order >= 2 {
+                let squared_derivative = project_jet(&jets[0], &jets[1])?.mul(twice)?;
+                let acceleration = cross(0, 2)?.sub(speed.mul(squared_derivative)?)?.div(squared)?;
+                value = acceleration;
+                if order == 3 {
+                    let squared_second = project_jet(&jets[1], &jets[1])?
+                        .add(project_jet(&jets[0], &jets[2])?)?.mul(twice)?;
+                    // Differentiate |v|² times angular speed twice.
+                    value = cross(1, 2)?.add(cross(0, 3)?)?
+                        .sub(acceleration.mul(squared_derivative)?.mul(twice)?)?
+                        .sub(speed.mul(squared_second)?)?.div(squared)?;
+                }
+            }
             // Jets use a cell-local clock. Apply the source-width factor
             // once per derivative order.
-            let value = if acceleration {
-                let squared_derivative = project_jet(&jets[0], &jets[1])?.mul(Interval::point(2.))?;
-                let local_acceleration = cross(2)?.sub(local_speed.mul(squared_derivative)?)?.div(squared)?;
-                local_acceleration.div(width)?.div(width)?
-            } else {
-                local_speed.div(width)?
-            };
+            for _ in 0..order {
+                value = value.div(width)?;
+            }
             let upper = value.lo.abs().max(value.hi.abs());
             let lower = value.lo.max(-value.hi).max(0.);
             let status = if upper <= limit {

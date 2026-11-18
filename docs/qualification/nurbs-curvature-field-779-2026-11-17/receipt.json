@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0779",
+  "testedBase": "36774ddc70b17af8b35f0479617166a40782593d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 405,
+  "scope": [
+    "Certify angular jerk limits from planar rational direction jets in the original parameter clock.",
+    "Check a scaled-clock interior angular jerk peak and the unresolved single-cell budget."
+  ],
+  "logSha256": "84c37f1aafe49f0fe3c58a14073b085f080c6e4af910dcd34c21eefa947c67e2",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "26ba948a1a3b62532043516abd8e8de03af8d00c4f0a1f6ebcaa2cd274dc1dc1",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "7e85a5ad8be6019bb7b1adb8c6379207353ce26ce3ae55cdc041564d6b9ac844"
+  }
+}
