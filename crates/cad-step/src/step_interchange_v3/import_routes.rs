@@ -665,6 +665,15 @@ pub struct StepMaterialDelta {
     pub removed: Model,
 }
 
+impl StepMaterialDelta {
+    fn between(before: &Model, after: &Model) -> Result<Self> {
+        Ok(Self {
+            added: brep_core::boolean(after, before, "difference")?,
+            removed: brep_core::boolean(before, after, "difference")?,
+        })
+    }
+}
+
 /// Inner and outer unions of positive-length material spans in ray parameters.
 #[derive(Clone, Debug, PartialEq)]
 pub struct StepRayMaterialCoverage {
@@ -1004,10 +1013,7 @@ impl StepSharedAssembly {
     pub fn material_delta(&self, before: usize, after: usize) -> Result<StepMaterialDelta> {
         let before = self.materialize(before)?;
         let after = self.materialize(after)?;
-        Ok(StepMaterialDelta {
-            added: brep_core::boolean(&after, &before, "difference")?,
-            removed: brep_core::boolean(&before, &after, "difference")?,
-        })
+        StepMaterialDelta::between(&before, &after)
     }
 
     /// Fuse the selected occurrences in assembly coordinates, retaining disjoint material.
@@ -1027,6 +1033,14 @@ impl StepSharedAssembly {
             }
         }
         Ok(fused)
+    }
+
+    /// Compare a stock blank with the combined material of a layout of finished parts.
+    /// Added material is missing from the blank; removed material is machining allowance.
+    pub fn stock_layout_delta(&self, stock: usize, parts: &[usize]) -> Result<StepMaterialDelta> {
+        let blank = self.materialize(stock)?;
+        let required = self.fuse_occurrences(parts)?;
+        StepMaterialDelta::between(&blank, &required)
     }
 
     /// Cut a placed stock solid with the selected occurrences, in assembly coordinates.

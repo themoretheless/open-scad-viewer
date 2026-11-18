@@ -3988,3 +3988,25 @@ fn coordinate_split_preserves_placed_material_and_side_order() {
     assert!(scene.split_at_coordinate(0, 0, f64::NAN).is_err());
     assert!(scene.split_at_coordinate(1, 0, 0.).is_err());
 }
+
+#[test]
+fn stock_layout_reports_allowance_and_missing_material_across_part_placements() {
+    let stock = brep_core::cuboid([0.; 3], [6., 2., 2.]).unwrap();
+    let part = brep_core::cuboid([0.; 3], [3., 2., 2.]).unwrap();
+    let placed = |definition, x| crate::StepAssemblyOccurrence { definition, transform: [
+        [1., 0., 0., x], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![stock, part],
+        vec![placed(0, 10.), placed(1, 10.), placed(1, 12.), placed(1, 15.)]).unwrap();
+    let volume = |model: &Model| brep_core::analysis::mass_properties(model, 1e-8, 100_000).unwrap().signed_volume_mm3;
+    let fits = scene.stock_layout_delta(0, &[1, 2, 1]).unwrap();
+    assert!(fits.added.bodies.is_empty());
+    assert!((volume(&fits.removed) - 4.).abs() < 1e-8);
+    let overhang = scene.stock_layout_delta(0, &[1, 3]).unwrap();
+    for model in [overhang.added, overhang.removed] {
+        assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+        assert!((volume(&model) - 8.).abs() < 1e-8);
+    }
+    assert!(scene.stock_layout_delta(0, &[]).is_err());
+    assert!(scene.stock_layout_delta(0, &[4]).is_err());
+}
