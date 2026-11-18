@@ -1396,6 +1396,35 @@ pub fn open_exact_periodic_curve(source: &Curve, max_work: u64) -> Result<GaugeM
     })
 }
 
+/// Store the complete active interval of a nonperiodic curve in clamped form.
+/// Refuses when the exact homogeneous restriction has no binary64 storage.
+pub fn clamp_exact_curve(source: &Curve, max_work: u64) -> Result<GaugeMergeReport> {
+    use super::rational_edit::Work;
+
+    source.validate()?;
+    crate::check(
+        !source.periodic && (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact active clamping needs a nonperiodic curve and bounded work",
+    )?;
+    let mut work = Work { used: 0, limit: max_work };
+    let result = work
+        .charge((source.control_points.len() * (2 * source.degree + 1)) as u64)
+        .map_err(super::rational_factor::Refusal::from)
+        .and_then(|()| clamp_curve_interval(source, source.domain(), &mut work));
+    Ok(match result {
+        Ok(curve) => GaugeMergeReport {
+            curve: Some(curve),
+            work_used: work.used,
+            refusal: None,
+        },
+        Err(reason) => GaugeMergeReport {
+            curve: None,
+            work_used: work.used,
+            refusal: Some(GaugeMergeRefusal::Exact(reason)),
+        },
+    })
+}
+
 fn clamp_curve_interval(
     source: &Curve,
     [lo, hi]: [f64; 2],

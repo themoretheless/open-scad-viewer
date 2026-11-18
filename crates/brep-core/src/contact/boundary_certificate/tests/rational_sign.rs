@@ -370,25 +370,31 @@ fn check_coupled_wall_certificates(
 
 #[test]
 fn rectangular_rational_wall_outside_the_rails_class_keeps_joint_certificates() {
-    check_polygonal_rational_wall_certificates(false, false, false);
+    check_polygonal_rational_wall_certificates(false, false, 0);
 }
 
 #[test]
 fn oblique_quadrilateral_rational_walls_keep_joint_certificates() {
-    check_polygonal_rational_wall_certificates(true, false, false);
+    check_polygonal_rational_wall_certificates(true, false, 0);
 }
 
 #[test]
 fn curved_nonconvex_wall_projection_keeps_joint_certificates() {
-    check_polygonal_rational_wall_certificates(false, true, false);
+    check_polygonal_rational_wall_certificates(false, true, 0);
 }
 
 #[test]
 fn multispan_curved_nonconvex_wall_projection_keeps_joint_certificates() {
-    check_polygonal_rational_wall_certificates(false, true, true);
+    check_polygonal_rational_wall_certificates(false, true, 1);
 }
 
-fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, multispan: bool) {
+#[test]
+fn full_multiplicity_nonconvex_wall_projection_keeps_joint_certificates() {
+    check_polygonal_rational_wall_certificates(false, true, 4);
+}
+
+fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, insertions: usize) {
+    let multispan = insertions > 0;
     let corners = [[0., 0.], [4., 0.], [4., 4.], [0., 4.]];
     let sections = [0., 4., 8.].map(|z| {
         vec![(0..4)
@@ -471,17 +477,20 @@ fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, 
         ]).unwrap();
     }
     if multispan {
-        // The inserted knot mixes weights 1 and 4. Scaling Z by five
-        // makes the new Cartesian coordinates exactly dyadic.
+        // Clear the odd factors of the new homogeneous weights so every
+        // inserted Cartesian coordinate stays exactly representable.
+        let axial_scale = if insertions == 1 { 5. } else { 5. * 7. * 17. };
         reference = crate::transform::affine(&reference, [
             [1., 0., 0., 0.], [0., 1., 0., 0.],
-            [0., 0., 5., 0.], [0., 0., 0., 1.],
+            [0., 0., axial_scale, 0.], [0., 0., 0., 1.],
         ]).unwrap();
         let surface = &mut reference.0.faces[4].surface;
-        *surface = nurbs_core::surface_edit::insert(
-            surface, nurbs_core::surface::Axis::V, 0.5, 1,
+        let inserted = nurbs_core::editing::exact_surface_knot_insertion::insert(
+            surface, nurbs_core::surface::Axis::V, 0.5, insertions, 1_000_000,
         ).unwrap();
-        assert_eq!(surface.knots_v.iter().filter(|&&k| k == 0.5).count(), 1);
+        assert_eq!(inserted.inserted, insertions, "{:?}", inserted.refusal);
+        *surface = inserted.surface;
+        assert_eq!(surface.knots_v.iter().filter(|&&k| k == 0.5).count(), insertions);
     }
     reference.validate().unwrap();
     let wall = &reference.faces[if curved_seam { 4 } else { 0 }].surface;
@@ -499,6 +508,42 @@ fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, 
         "global-rational-rectangle-jacobian"
     });
     assert!(!nurbs_core::surface_injectivity::certify_chart(wall, chart.spans - 1).unwrap().proven);
+
+    if insertions == 4 {
+        // Move an interior pole out of the shared plane without modifying
+        // any edge. The two original walls still partition the XZ image.
+        let mut spatial = reference.clone();
+        spatial.0.faces[4].surface.control_points[1][6][1] = 0.125;
+        spatial.validate().unwrap();
+        let certify = crate::shared_boundary::jordan_partition::certify;
+        let (contact, used) = certify(&spatial, [0, 4], 1000);
+        let contact = contact.unwrap();
+        assert_eq!(contact.edges.len(), 1);
+        assert!(certify(&spatial, [0, 4], used - 1).0.is_none());
+        check_reversed_multispan_exterior(&spatial, contact.edges[0]);
+        check_partitioned_jordan_seam(&spatial, contact.edges[0]);
+        check_jordan_contact_with_interior_hole(&spatial, contact.edges[0]);
+
+        // Put the original XZ image in XY, then move the interiors along
+        // a common diagonal. The authored edge curves stay unchanged.
+        let mut diagonal = crate::transform::affine(&reference, [
+            [1., 0., 0., 0.], [0., 0., 1., 0.],
+            [0., -1., 0., 0.], [0., 0., 0., 1.],
+        ]).unwrap();
+        for (face, knot_control) in [(0, 2), (4, 4)] {
+            let surface = &mut diagonal.0.faces[face].surface;
+            for coordinate in &mut surface.control_points[1][knot_control] {
+                *coordinate += 8192.;
+            }
+            let report = nurbs_core::surface_injectivity::certify_chart(surface, 10_000).unwrap();
+            assert_eq!(report.reason, "global-exact-oblique-jordan-jacobian", "{report:?}");
+        }
+        diagonal.validate().unwrap();
+        let (contact, used) = certify(&diagonal, [0, 4], 10_000);
+        assert_eq!(contact.unwrap().edges.len(), 1);
+        assert!(certify(&diagonal, [0, 4], used - 1).0.is_none());
+        check_projection_from_either_face(&reference);
+    }
 
     let mut retained = reference.clone();
     for face in &mut retained.0.faces[..wall_count] {
@@ -526,4 +571,135 @@ fn check_polygonal_rational_wall_certificates(oblique: bool, curved_seam: bool, 
     assert!(station.extraction_complete && station.g1_certified && station.g2_certified,
         "complete={} g1={} g2={}", station.extraction_complete, station.g1_certified, station.g2_certified);
     assert_eq!(station.edge_ids.len(), 4);
+}
+
+fn check_jordan_contact_with_interior_hole(reference: &crate::Model, shared: usize) {
+    use nurbs_core::curve_surface_agreement::{lift, verify_exact};
+    let mut model = reference.clone();
+    // The only nonunit weight is an interior pole. Setting it to one
+    // leaves the authored boundaries unchanged and gives dyadic lifts
+    // for the four interior isoparametric cuts.
+    model.0.faces[0].surface.weights[1][2] = 1.;
+    let corners = [[0.25, 0.25], [0.25, 0.5], [0.5, 0.5], [0.5, 0.25]];
+    let mut coedges = Vec::new();
+    let first_vertex = model.vertices.len();
+    for i in 0..4 {
+        let pcurve = crate::line(corners[i].to_vec(), corners[(i + 1) % 4].to_vec());
+        let surface = &model.faces[0].surface;
+        let curve = lift(&pcurve, surface, None, 1e-8, 10_000).unwrap().curve.unwrap();
+        let proof = verify_exact(&curve, &pcurve, surface, false, 1_000_000).unwrap().unwrap();
+        assert_eq!(proof.outcome, cad_predicates::BezierIdentity::Equal);
+        let pole = &curve.control_points[0];
+        model.0.vertices.push(crate::Vertex { point: [pole[0], pole[1], pole[2]] });
+        let edge = model.edges.len();
+        model.0.edges.push(crate::Edge {
+            curve,
+            vertices: [first_vertex + i, first_vertex + (i + 1) % 4],
+            degenerate: false,
+        });
+        coedges.push(crate::Coedge::new(edge, false, pcurve));
+    }
+    let hole = model.loops.len();
+    model.0.loops.push(crate::Loop { coedges });
+    model.0.faces[0].holes.push(hole);
+    model.rebuild_topology_ids();
+    let certify = crate::shared_boundary::jordan_partition::certify;
+    let (contact, used) = certify(&model, [0, 4], 3000);
+    assert_eq!(contact.unwrap().edges, [shared]);
+    assert!(certify(&model, [0, 4], used - 1).0.is_none());
+    model.0.loops[hole].coedges[0].pcurve.control_points[0][0] = 0.;
+    assert!(certify(&model, [0, 4], 3000).0.is_none());
+}
+
+fn check_partitioned_jordan_seam(reference: &crate::Model, shared: usize) {
+    use crate::feature_ops::edge_partition::{split, Limits};
+    let [a, b] = reference.edges[shared].curve.domain();
+    let cuts = [a + (b - a) / 4., a + (b - a) / 2.];
+    let partition = split(reference, shared, &cuts, "jordan-chain", Limits::default()).unwrap();
+    assert!(partition.exact_world_root_partition(1_000_000).unwrap().is_some());
+    let model = partition.model();
+    let certify = crate::shared_boundary::jordan_partition::certify;
+    let (certificate, used) = certify(model, [0, 4], 3000);
+    let mut edges = certificate.unwrap().edges;
+    let mut expected = partition.edges().to_vec();
+    edges.sort_unstable();
+    expected.sort_unstable();
+    assert_eq!(edges, expected);
+    assert_eq!(edges.len(), 3);
+    assert!(certify(model, [0, 4], used - 1).0.is_none());
+}
+
+fn check_reversed_multispan_exterior(reference: &crate::Model, shared: usize) {
+    let mut refined = reference.clone();
+    let edge = [0, 4].into_iter()
+        .flat_map(|face| &refined.loops[refined.faces[face].outer].coedges)
+        .find(|use_| use_.reversed && use_.edge != shared && refined.edges[use_.edge].curve.degree == 1)
+        .unwrap().edge;
+    let source = &refined.edges[edge].curve;
+    let [start, end] = source.domain();
+    let inserted = nurbs_core::editing::exact_knot_insertion::insert(
+        source, (start + end) / 2., 1, 1_000_000,
+    ).unwrap();
+    assert_eq!(inserted.inserted, 1, "{:?}", inserted.refusal);
+    refined.0.edges[edge].curve = inserted.curve;
+    refined.validate().unwrap();
+    let certify = crate::shared_boundary::jordan_partition::certify;
+    let (contact, used) = certify(&refined, [0, 4], 1000);
+    assert_eq!(contact.unwrap().edges, [shared]);
+    assert!(certify(&refined, [0, 4], used - 1).0.is_none());
+
+    // The same linear edge in an unclamped quadratic basis. The active
+    // endpoints fall halfway between the exterior and interior poles.
+    let original = &reference.edges[edge].curve;
+    let a = &original.control_points[0];
+    let b = &original.control_points[1];
+    let unclamped = crate::Curve {
+        degree: 2,
+        knots: (-2..=4).map(|i| start + f64::from(i) * (end - start) / 2.).collect(),
+        control_points: [-0.25, 0.25, 0.75, 1.25].into_iter()
+            .map(|t| (0..3).map(|axis| a[axis] + t * (b[axis] - a[axis])).collect())
+            .collect(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let clamped = nurbs_core::editing::exact_curve_merge::clamp_exact_curve(&unclamped, 100_000)
+        .unwrap().curve.unwrap();
+    assert!(nurbs_core::curve_partition_agreement::verify_exact_bspline_root_partition(
+        original, &[clamped], original.domain(), 1_000_000,
+    ).unwrap().is_some());
+    refined.0.edges[edge].curve = unclamped;
+    refined.validate().unwrap();
+    let (contact, used) = certify(&refined, [0, 4], 3000);
+    assert_eq!(contact.unwrap().edges, [shared]);
+    assert!(certify(&refined, [0, 4], used - 1).0.is_none());
+}
+
+fn check_projection_from_either_face(reference: &crate::Model) {
+    let mut spatial = crate::transform::affine(reference, [
+        [1., 0., 0., 0.], [0., 1., 2., 0.],
+        [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ]).unwrap();
+    // XY is the preferred projection of the lower wall. A displacement
+    // at an interior pole folds XY on the upper wall but preserves XZ.
+    spatial.0.faces[4].surface.control_points[1][6][1] -= 32_768.;
+    spatial.validate().unwrap();
+    use nurbs_core::surface_injectivity::{certify_chart, certify_jordan_projection};
+    let lower = &spatial.faces[0].surface;
+    let upper = &spatial.faces[4].surface;
+    assert_eq!(certify_chart(lower, 10_000).unwrap().projection, Some([0, 1]));
+    assert_eq!(certify_chart(upper, 10_000).unwrap().projection, Some([0, 2]));
+    assert!(!certify_jordan_projection(upper, [[1, 0, 0], [0, 1, 0]], 10_000).unwrap().0);
+
+    let certify = crate::shared_boundary::jordan_partition::certify;
+    let (forward, used) = certify(&spatial, [0, 4], 10_000);
+    let (reverse, reverse_used) = certify(&spatial, [4, 0], 10_000);
+    let [forward, reverse] = [forward.unwrap(), reverse.unwrap()];
+    assert_eq!(forward.faces, [0, 4]);
+    assert_eq!(reverse.faces, [4, 0]);
+    assert_eq!(forward.edges, reverse.edges);
+    assert_eq!(forward.contact_enclosure, reverse.contact_enclosure);
+    assert_eq!(used, reverse_used);
+    for faces in [[0, 4], [4, 0]] {
+        assert!(certify(&spatial, faces, used - 1).0.is_none());
+    }
 }

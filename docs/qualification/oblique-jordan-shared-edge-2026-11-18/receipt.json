@@ -1,0 +1,29 @@
+{
+  "sourceBase": "0ccf1a9698a8282df2056eb4c5030c3a873984e8",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Noncoplanar natural wall pair after exact diagonal interior displacement. Both charts require oblique Jordan proofs. The common projection proves sole contact on the unchanged authored seam and one-short work refuses.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2042 filtered out; finished in 1.00s",
+      "file": "brep-final.log.gz",
+      "sha256": "76d4556a664eafae28c048fb86674eb92e8af22c9d54e802e14fad6bd426b94c"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2002 filtered out; finished in 11.54s",
+      "file": "shell.log.gz",
+      "sha256": "872c912f21381ba25943e5536c16f14948866bf475d9ff573c31deb1d5231187"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "4fe5cca99a9860507834dc743fdaada7dfb456ddc1feb61870be4019476bad5c",
+    "count": 4918
+  }
+}

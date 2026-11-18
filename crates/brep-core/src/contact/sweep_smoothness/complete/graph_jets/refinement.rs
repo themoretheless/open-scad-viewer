@@ -1,5 +1,7 @@
 //! Exact common partition of a natural edge on two clamped source charts.
 use super::*;
+use num_rational::BigRational;
+use num_traits::ToPrimitive;
 use nurbs_core::{
     analysis::surface_continuity, editing::exact_surface_knot_insertion::tile_tensor_surface,
 };
@@ -9,6 +11,54 @@ struct Layout {
     cuts: [Vec<f64>; 2],
     fixed: usize,
     high: bool,
+}
+
+fn common_partition(
+    domains: [[f64; 2]; 2],
+    cuts: [&[f64]; 2],
+    work: u64,
+) -> (Option<[Vec<f64>; 2]>, u64) {
+    if domains[0] == domains[1] {
+        let mut partition = [cuts[0], cuts[1]].concat();
+        partition.sort_by(f64::total_cmp);
+        partition.dedup();
+        return (Some([partition.clone(), partition]), 0);
+    }
+    // Each axis has at most 33 controls. Reserve work for rational
+    // normalization, sorting, and the two exact pullbacks before starting.
+    let count = (cuts[0].len() + cuts[1].len()) as u64;
+    let cost = 8 + count * (count + 8);
+    if cost > work {
+        return (None, 0);
+    }
+    let map = || {
+        let clock = |[start, end]: [f64; 2]| {
+            let origin = BigRational::from_float(start)?;
+            let width = BigRational::from_float(end)? - &origin;
+            (start < end).then_some((origin, width))
+        };
+        let clocks = [clock(domains[0])?, clock(domains[1])?];
+        let mut partition = Vec::with_capacity(count as usize);
+        for ((origin, width), knots) in clocks.iter().zip(cuts) {
+            for &knot in knots {
+                partition.push((BigRational::from_float(knot)? - origin) / width);
+            }
+        }
+        partition.sort_unstable();
+        partition.dedup();
+        let pullback = |(origin, width): &(BigRational, BigRational)| {
+            partition
+                .iter()
+                .map(|fraction| {
+                    let exact = origin + width * fraction;
+                    let knot = exact.to_f64()?;
+                    (BigRational::from_float(knot).as_ref() == Some(&exact)).then_some(knot)
+                })
+                .collect::<Option<Vec<_>>>()
+        };
+        Some([pullback(&clocks[0])?, pullback(&clocks[1])?])
+    };
+    (map(), cost)
 }
 
 fn layout(surface: &Surface, boundary: &str) -> Option<Layout> {
@@ -101,33 +151,39 @@ pub(super) fn inspect(
     boundaries: [&str; 2],
     order: usize,
     work: u64,
+    chart_proof: ChartProof,
 ) -> Result<(bool, u64)> {
     let [Some(a), Some(b)] = std::array::from_fn(|i| layout(surfaces[i], boundaries[i])) else {
         return Ok((false, 0));
     };
-    // For now both authored clocks must already have the same active interval.
     // Exact reflection, if needed, has already been applied by the BRep owner.
-    if a.along_domain != b.along_domain {
-        return Ok((false, 0));
+    let (partitions, mut used) = common_partition(
+        [a.along_domain, b.along_domain],
+        [&a.cuts[1 - a.fixed], &b.cuts[1 - b.fixed]],
+        work,
+    );
+    let Some(partitions) = partitions else {
+        return Ok((false, used));
+    };
+    if partitions[0].is_empty() && a.cuts[a.fixed].is_empty() && b.cuts[b.fixed].is_empty() {
+        return Ok((false, used));
     }
-    let mut partition = a.cuts[1 - a.fixed].clone();
-    partition.extend_from_slice(&b.cuts[1 - b.fixed]);
-    partition.sort_by(f64::total_cmp);
-    partition.dedup();
-    if partition.len() > 254
-        || (partition.is_empty() && a.cuts[a.fixed].is_empty() && b.cuts[b.fixed].is_empty())
-    {
-        return Ok((false, 0));
-    }
-    let mut used = 0;
     let mut sides = Vec::with_capacity(2);
-    for (surface, layout) in surfaces.into_iter().zip([a, b]) {
+    for ((surface, layout), partition) in surfaces.into_iter().zip([a, b]).zip(partitions) {
         // The original chart must remain smooth where two edge subspans
         // meet. Per-piece jets alone would miss a crease across a knot.
         let raw = surface_continuity::qualify(surface, order, 4096, work - used)?;
         used += raw.exact_work;
         if raw.certificate.is_none() {
-            return Ok((false, used));
+            if matches!(chart_proof, ChartProof::Parametric) {
+                return Ok((false, used));
+            }
+            let (joins, _, spent) =
+                super::super::interiors::geometric_joins(surface, order, 4096, work - used)?;
+            used += spent;
+            if joins.is_none() {
+                return Ok((false, used));
+            }
         }
         let (tiles, tile_work) = edge_tiles(surface, layout, &partition, work - used)?;
         used += tile_work;
@@ -138,7 +194,9 @@ pub(super) fn inspect(
     }
     let right = sides.pop().unwrap();
     let left = sides.pop().unwrap();
-    assert_eq!(left.len(), right.len());
+    if left.len() != right.len() || left.is_empty() {
+        return Ok((false, used));
+    }
     for (a, b) in left.into_iter().zip(right) {
         let patches = [a, b];
         let seam = ProjectiveSeam {
@@ -167,4 +225,22 @@ pub(super) fn inspect(
         }
     }
     Ok((true, used))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::common_partition;
+
+    #[test]
+    fn pulls_back_exact_fractions_without_rounding_authored_knots() {
+        let domains = [[0., 3.], [10., 16.]];
+        let (partition, used) = common_partition(domains, [&[1.], &[14.]], 1_000);
+        assert_eq!(partition, Some([vec![1., 2.], vec![12., 14.]]));
+        assert_eq!(
+            common_partition(domains, [&[1.], &[14.]], used - 1),
+            (None, 0)
+        );
+        let (partition, used) = common_partition([[0., 3.], [10., 11.]], [&[1.], &[]], 1_000);
+        assert!(partition.is_none() && used > 0);
+    }
 }

@@ -1,0 +1,35 @@
+{
+  "sourceBase": "243b57dc130f902c7e7630d32228844e066bec0c",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Whole-chart projected Jordan injectivity after a folded primary projection, with exact whole-chart coverage for a secondary coordinate plane and a single work limit across attempts.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p nurbs-core --lib surface_injectivity",
+      "result": "test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 2008 filtered out; finished in 0.06s",
+      "file": "native.log.gz",
+      "sha256": "bc6f38e49f06bc2245fb01f557717f890262c9dff8a2b7777d43f93024583598"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2042 filtered out; finished in 1.34s",
+      "file": "brep.log.gz",
+      "sha256": "446035e3bafc4558ac16559482735e242f5c8cabe31a203094f4d8bf7c7c4dd3"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2002 filtered out; finished in 14.66s",
+      "file": "shell.log.gz",
+      "sha256": "30a80b583459123ef2e7b8178c4fad7c5ad604a4ed3134a2a8cf07be90f5d858"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "1ce11674422d7c87ddde9afdced58ad23e8c5e710b2451fdd7be44f40da763bb",
+    "count": 4918
+  }
+}

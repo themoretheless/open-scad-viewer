@@ -17,7 +17,7 @@ pub(crate) fn verify(m: &Model, o: Limits) -> Result<Verification> {
     verify_impl(m, o, false, false)
 }
 /// Edge refinement admits proved periodic FACE enclosures and independent
-/// original whole-chart monotonicity certificates for ordinary charts.
+/// original whole-chart injectivity certificates for ordinary charts.
 pub(crate) fn verify_edge_refinement(m: &Model, o: Limits) -> Result<Verification> {
     verify_impl(m, o, true, true)
 }
@@ -78,7 +78,11 @@ fn verify_impl(
         if remaining == 0 {
             return Err(error("Feature injectivity proof work exhausted"));
         }
-        let r = nurbs_core::surface_injectivity::certify(&f.surface, remaining)?;
+        let r = if edge_refinement {
+            nurbs_core::surface_injectivity::certify_chart(&f.surface, remaining)?
+        } else {
+            nurbs_core::surface_injectivity::certify(&f.surface, remaining)?
+        };
         remaining = remaining.saturating_sub(r.spans);
         if !r.proven {
             if !linear_charts || remaining == 0 {

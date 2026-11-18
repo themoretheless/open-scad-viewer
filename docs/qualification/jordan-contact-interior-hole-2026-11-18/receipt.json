@@ -1,0 +1,29 @@
+{
+  "sourceBase": "4e1a84a4806696c5091b82212ef37983fb651680",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Local shared-edge contact certificate for a rational loft wall pair with a strictly interior cutout and independently exact lifts of its four trim curves. Covers refusal when a hole trim touches the natural boundary and one-short budget refusal.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib boundary_certificate::tests::rational_sign",
+      "result": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 2042 filtered out; finished in 1.44s",
+      "file": "brep-resume.log.gz",
+      "sha256": "64a1b3eb8e9164fd885a49504799eabe477e224e76e0b2312293ff6d25fa7604"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2002 filtered out; finished in 17.27s",
+      "file": "shell.log.gz",
+      "sha256": "09af73532ade9b3e18ddeece090194ef227ed04ef035a36b851c7e04f44f7ed9"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "5ff8fbc2806e560ece40a73d95d8660a91ddf224d7b8ee6181a6848d2ccd5341",
+    "count": 4918
+  }
+}

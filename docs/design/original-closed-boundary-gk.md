@@ -177,9 +177,77 @@ seam after accounting for each face axis, boundary end and traversal. Exact grad
 identities then compare the physical graph in that projection. Normal
 enclosures and graph identities consume the remaining seam work.
 
-When complete natural edges have different clamped knot partitions on
-the same active parameter interval, a geometric audit can refine both to
-the exact union of their along-edge knots. The original charts first
-prove continuity across their internal knots. Each pair of closed edge
-pieces then proves position and geometric jets. Missing pieces, failed
-exact insertion and insufficient work withhold the whole-edge certificate.
+Complete natural edges with clamped knots can use different active parameter
+intervals. The audit forms the exact rational union of their normalized
+along-edge knots and pulls the partition back into each authored interval.
+Each pulled-back knot must be exactly representable. The original charts
+prove continuity across their internal knots. When their parameter
+derivatives jump, the audit can prove geometric continuity on the internal
+knot lines using the same work allowance. Each pair of closed edge pieces
+then proves position and geometric jets. A physical crease, missing pieces,
+failed exact insertion or insufficient work withholds the whole-edge
+certificate at the requested order.
+
+The projected Jordan-boundary test for chart injectivity also covers
+continuous joins at full-degree knot multiplicity. It proves a strict
+Jacobian sign on every closed knot cell. At an interior knot line or
+crossing, the one-sided maps isolate the preimage and give it a nonzero
+local degree. A simple projected boundary limits the global degree to one
+inside and zero outside. The chart test establishes injectivity. The
+original shell still checks regularity, contact ownership and smoothness
+with their own certificates.
+
+The largest projected corner tangent area orders the coordinate plane
+trials. If the first projection refuses, the remaining planes with a
+nonzero corner area can use the rest of the same work allowance. Each
+successful plane independently proves both the simple boundary and the
+strict Jacobian sign on the entire chart.
+
+For a chart that needs an oblique plane, the same proof can use a fixed
+integer linear map. The map must produce exactly representable poles at
+the original weights and knots. Projection work and the simple-boundary
+and Jacobian checks use the chart's remaining allowance. The injectivity
+certificate records the applied rows.
+
+Two natural source faces can use a shared Jordan projection to prove
+that they meet only along their authored common edge. The exact-domain
+audit proves the world-space lifts. The contact proof checks the same
+projection and orientation on both faces and proves simplicity of the
+combined exterior after the opposite edge traversals cancel. This also
+covers faces on different spatial carriers. For an oblique projection,
+the exterior control points must project exactly under the certified map.
+When the faces prefer different planes, the audit tries the projections
+proposed by either face. Each trial proves both complete charts and their
+combined exterior in that plane. The trials share one budget and follow
+the same order when the caller swaps the faces.
+
+The projected exterior can include clamped edges with internal knots.
+It keeps their authored weights and knot intervals. A reversed coedge
+uses an exact affine reflection of its knot vector, charged to the
+shared budget. An unrepresentable reflection withholds the certificate.
+An unclamped exterior is projected and then exactly clamped to its
+original active interval for the common loop proof. The input edge and
+its world-space parameterization stay intact.
+
+The common boundary can be an authored chain of edges. The audit checks
+that both faces cover the complete natural rectangle, with exact
+consecutive segments along its sides. Both traversals of the shared
+chain must be contiguous and opposite. Removing them leaves one
+projected exterior to certify. The contact certificate lists every
+edge of the chain and bounds their original world-space geometry.
+
+A hole may subtract material from either natural chart when its entire
+rational trim lies strictly inside the chart rectangle. The audit checks
+the original control hull first and can use exact subdivision to prove
+containment on all smaller hulls. The exact domain audit verifies each
+hole's lift, winding and nesting. Strict containment keeps each hole
+away from the shared natural boundary. Control point checks and exact
+subdivision share the contact proof's budget.
+For a nonperiodic B-spline trim, endpoint extraction, knot refinement and
+subdivision work in exact homogeneous coordinates on the active interval.
+The four boundary inequalities must be strictly positive throughout every
+original span, including endpoints whose Cartesian coordinates fall
+outside binary64.
+For a periodic trim, exact closure of the stored knot shifts and repeated
+controls permits the same proof on one full turn, including both sides of
+the wrap.

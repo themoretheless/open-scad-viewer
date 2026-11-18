@@ -1,0 +1,35 @@
+{
+  "sourceBase": "a990254fea02c5aeb45087765fa21124699e6e21",
+  "toolchain": "rustc 1.100.0-nightly (215a8af4b 2026-09-15)",
+  "scope": "Whole-edge G1 and G2 across distinct affine along-edge intervals and clamped knot partitions. Includes nonplanar chart perturbation, exact rational normalized knots, impossible pullback, and shared work refusal.",
+  "environment": {
+    "CARGO_BUILD_JOBS": 3,
+    "CARGO_PROFILE_TEST_OPT_LEVEL": 1,
+    "CARGO_PROFILE_TEST_DEBUG": 0
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_smoothness::complete",
+      "result": "test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 2035 filtered out; finished in 0.17s",
+      "file": "seam.log.gz",
+      "sha256": "1c8b52d312123e644fe202bc96d86427d382cf0cae3225b4fc9b341a357ce3ac"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib sweep_boundary_owned::closed::classified",
+      "result": "test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 2032 filtered out; finished in 17.00s",
+      "file": "closed.log.gz",
+      "sha256": "c9a14f578f97d7348665a8d02b71e8f9158de660cd19ca1ef9183990d6e55c14"
+    },
+    {
+      "command": "cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests",
+      "result": "test result: ok. 50 passed; 0 failed; 4 ignored; 0 measured; 2000 filtered out; finished in 11.35s",
+      "file": "source.log.gz",
+      "sha256": "b97f2bbd48cafbc81d88ebbcee2181863be9fa87922f5e9e38714102cad3d81a"
+    }
+  ],
+  "inputs": {
+    "file": "source-inputs.json.gz",
+    "sha256": "dc22a9422d6bdc1013645b98de720cee6a015c0182525bacb125893716a8fcac",
+    "count": 4918
+  }
+}

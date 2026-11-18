@@ -111,7 +111,12 @@ pub(super) fn inspect(surface: &Surface, order: usize, cells: usize, work: u64) 
             }
         }
     }
-    let proof = graph_jets::qualify(&patches, &seams, work - report.work)?;
+    let proof = graph_jets::qualify_with_chart_proof(
+        &patches,
+        &seams,
+        work - report.work,
+        graph_jets::ChartProof::Parametric,
+    )?;
     report.work += proof.exact_work;
     report.certified = proof.certified;
     if proof.certified {
