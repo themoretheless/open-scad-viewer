@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0831",
+  "testedBase": "ad9d45890f562deb7dd54e71cb139062d07bb037",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 180,
+  "scope": [
+    "Set independent scales and reflection on one shared occurrence under a nonsingular orthogonal placement.",
+    "Check atomic refusal of shear and singular matrices, unchanged peer and shared geometry, and a scaled reflected vertex after STEP round-trip."
+  ],
+  "logSha256": "adda1fecb3b180a62230bb46841302feac69687817f91835658fb2b8c590a923",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3.rs": "4201a4ecab22aaacbe09a3a52b80b873be30054f116c5a901b05c81dc9104c36",
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "df1987e862c1e6bf4b6f01689089f69207a7ea20a755d6efd4149dd22f3d4479",
+    "crates/cad-step/src/step_v3_export.rs": "6c26ac8764625f59e9f1e73e13205bf9c5e6f850625507488b28400c13c338d5",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "85efd6ff48272621c50ad66cffbc4bf397bac324e982e3d969fde53cf3e97368"
+  }
+}

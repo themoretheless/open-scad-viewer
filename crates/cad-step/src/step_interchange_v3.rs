@@ -1199,6 +1199,29 @@ pub(crate) fn is_proper_rigid_placement(matrix: [[f64; 4]; 4]) -> bool {
         && (dot(cross, z) - 1.).abs() <= 1e-12
 }
 
+pub(crate) fn orthogonal_placement_scales(mut matrix: [[f64; 4]; 4]) -> Option<[f64; 3]> {
+    let scales = [0, 1, 2].map(|column| {
+        matrix[0][column].hypot(matrix[1][column]).hypot(matrix[2][column])
+    });
+    let determinant = scales[0] * scales[1] * scales[2];
+    if !determinant.is_finite() || determinant <= 1e-14 {
+        return None;
+    }
+    for row in &mut matrix[..3] {
+        for (entry, scale) in row.iter_mut().zip(scales) {
+            *entry /= scale;
+        }
+    }
+    if is_proper_rigid_placement(matrix) {
+        return Some(scales);
+    }
+    // Test a left-handed frame by flipping its last axis for validation only.
+    for row in &mut matrix[..3] {
+        row[2] = -row[2];
+    }
+    is_proper_rigid_placement(matrix).then_some(scales)
+}
+
 fn cartesian_operator_3d(
     entities: &BTreeMap<usize, Entity>,
     args: &[Value],

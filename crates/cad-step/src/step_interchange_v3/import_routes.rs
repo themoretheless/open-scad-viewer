@@ -694,6 +694,22 @@ impl StepSharedAssembly {
         Ok(())
     }
 
+    /// Set a local-to-assembly placement with perpendicular axes, including
+    /// independent axis scales and reflection.
+    pub fn set_occurrence_orthogonal_placement(
+        &mut self,
+        index: usize,
+        transform: [[f64; 4]; 4],
+    ) -> Result<()> {
+        let occurrence = self.occurrences.get_mut(index)
+            .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
+        if super::orthogonal_placement_scales(transform).is_none() {
+            return Err(refuse("STEP assembly placement must be finite, orthogonal and nonsingular"));
+        }
+        occurrence.transform = transform;
+        Ok(())
+    }
+
     /// Place an existing definition again. Returns the new occurrence index.
     pub fn add_occurrence(&mut self, definition: usize, transform: [[f64; 4]; 4]) -> Result<usize> {
         if definition >= self.definitions.len() {

@@ -2802,6 +2802,41 @@ fn planet_gear_step_assembly_retains_one_prototype() {
 }
 
 #[test]
+fn shared_step_edits_scaled_reflected_placement_without_editing_shared_geometry() {
+    let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
+    let gears = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
+    let step = crate::export_planet_gear_occurrences_step(&gears).unwrap();
+    let mut assembly = crate::import_step_shared_assembly(&step).unwrap();
+    let before = assembly.occurrences().to_vec();
+    let placement = [
+        [0., -3., 0., 25.],
+        [2., 0., 0., -8.],
+        [0., 0., -4., 40.],
+        [0., 0., 0., 1.],
+    ];
+    let mut shear = placement;
+    shear[1][1] = 1.;
+    let mut singular = placement;
+    singular[2][2] = 0.;
+    for invalid in [shear, singular] {
+        assert!(assembly.set_occurrence_orthogonal_placement(1, invalid).is_err());
+        assert_eq!(assembly.occurrences()[1].transform, before[1].transform);
+    }
+    assembly.set_occurrence_orthogonal_placement(1, placement).unwrap();
+    let exported = crate::export_step_shared_assembly(&assembly).unwrap();
+    let back = crate::import_step_shared_assembly(&exported).unwrap();
+    assert_eq!((back.definitions().len(), back.occurrences().len()), (1, 2));
+    assert_eq!(back.occurrences()[0].transform, before[0].transform);
+    assert_eq!(back.occurrences()[1].transform, placement);
+    let model = back.materialize(1).unwrap();
+    let [x, y, z] = back.definitions()[0].vertices[0].point;
+    for (actual, expected) in model.vertices[0].point.into_iter().zip([25. - 3. * y, 2. * x - 8., 40. - 4. * z]) {
+        assert!((actual - expected).abs() < 1e-10);
+    }
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+}
+
+#[test]
 fn shared_step_round_trips_nonuniform_placement() {
     check_shared_step_affine_placement(4.);
 }

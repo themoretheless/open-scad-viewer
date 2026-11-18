@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 830,
-  "unallocatedCount": 170,
+  "specifiedCount": 831,
+  "unallocatedCount": 169,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19480,6 +19480,27 @@
       "remainingQualification": [
         "Reserialize imported reflected orthogonal placements with positive scale magnitudes and a reflected axis frame.",
         "Check shared definition, reflected placement matrices, independent vertex-coordinate evaluation and closed topology after Rust STEP round-trip.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0831",
+      "name": "Редактирование масштабированного и зеркального размещения STEP-экземпляра",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::set_occurrence_orthogonal_placement",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-831-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-831-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Set independent scales and reflection on one shared occurrence under a nonsingular orthogonal placement.",
+        "Check atomic refusal of shear and singular matrices, unchanged peer and shared geometry, and a scaled reflected vertex after STEP round-trip.",
         "WASM and application integration are separate."
       ]
     }

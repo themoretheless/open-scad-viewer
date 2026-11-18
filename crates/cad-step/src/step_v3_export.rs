@@ -661,7 +661,7 @@ fn export_step_direct_impl(
                 let scales = if rigid {
                     [1.; 3]
                 } else {
-                    orthogonal_placement_scales(*matrix)
+                    crate::step_interchange_v3::orthogonal_placement_scales(*matrix)
                         .ok_or_else(|| refuse("STEP assembly export requires nonsingular orthogonal placements"))?
                 };
                 let origin = w.point(&[matrix[0][3], matrix[1][3], matrix[2][3]]);
@@ -908,29 +908,6 @@ pub fn export_step_shared_assembly(assembly: &crate::StepSharedAssembly) -> Resu
         &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(AssemblyExport { placements: &placements, definition_tolerances: &tolerances }),
     )?;
     Ok(text)
-}
-
-fn orthogonal_placement_scales(mut matrix: [[f64; 4]; 4]) -> Option<[f64; 3]> {
-    let scales = [0, 1, 2].map(|column| {
-        matrix[0][column].hypot(matrix[1][column]).hypot(matrix[2][column])
-    });
-    let determinant = scales[0] * scales[1] * scales[2];
-    if !determinant.is_finite() || determinant <= 1e-14 {
-        return None;
-    }
-    for row in &mut matrix[..3] {
-        for (entry, scale) in row.iter_mut().zip(scales) {
-            *entry /= scale;
-        }
-    }
-    if crate::step_interchange_v3::is_proper_rigid_placement(matrix) {
-        return Some(scales);
-    }
-    // Test a left-handed frame by flipping its last axis for validation only.
-    for row in &mut matrix[..3] {
-        row[2] = -row[2];
-    }
-    crate::step_interchange_v3::is_proper_rigid_placement(matrix).then_some(scales)
 }
 
 pub fn export_step_v9_with_metadata(
