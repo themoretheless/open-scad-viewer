@@ -2879,6 +2879,14 @@ pub enum LastScheduledToolContact {
     },
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct SimultaneousContactWindows {
+    /// Closed intervals in which the requested number of pairs is confirmed.
+    pub confirmed: Vec<[f64; 2]>,
+    /// Closed intervals covering every time the threshold could be met.
+    pub possible: Vec<[f64; 2]>,
+}
+
 impl ScheduledToolsClearancePartition {
     /// Bound the maximum number of distinct pairs in simultaneous contact
     /// across the represented timelines. Contacts include shared endpoints.
@@ -2893,27 +2901,37 @@ impl ScheduledToolsClearancePartition {
     /// Bound elapsed time with at least the requested number of distinct
     /// pairs in contact. An isolated instant contributes zero duration.
     pub fn simultaneous_contact_duration_bounds(&self, minimum_pairs: usize) -> Result<[f64; 2]> {
-        check(minimum_pairs > 0, "Simultaneous contact requires a positive pair count")?;
-        let [confirmed, possible] = self.contact_pair_intervals();
-        let duration = |intervals: Vec<_>, upper| -> Result<f64> {
-            use num_rational::BigRational;
+        let windows = self.simultaneous_contact_windows(minimum_pairs)?;
+        let duration = |intervals: Vec<[f64; 2]>, upper| {
+            let intervals = intervals.into_iter().filter(|[a, b]| a < b).collect::<Vec<_>>();
+            if intervals.iter().flatten().any(|time| !time.is_finite()) {
+                return Ok(f64::INFINITY);
+            }
+            round_motion_duration(&time_interval_union_duration(intervals, |a, b| a + b)?, upper)
+        };
+        Ok([duration(windows.confirmed, false)?, duration(windows.possible, true)?])
+    }
 
-            let mut total = BigRational::default();
-            let mut unbounded = false;
+    /// Locate intervals where at least the requested number of distinct
+    /// pairs are in contact. Instantaneous contacts appear as point intervals.
+    pub fn simultaneous_contact_windows(
+        &self,
+        minimum_pairs: usize,
+    ) -> Result<SimultaneousContactWindows> {
+        check(minimum_pairs > 0, "Simultaneous contact requires a positive pair count")?;
+        let [confirmed, possible] = self.contact_pair_intervals().map(|intervals| {
+            let mut windows: Vec<[f64; 2]> = Vec::new();
             sweep_contact_pairs(intervals, |active, [start, end]| {
-                if active >= minimum_pairs && start < end {
-                    if let (Some(a), Some(b)) =
-                        (BigRational::from_float(start), BigRational::from_float(end))
-                    {
-                        total += b - a;
-                    } else {
-                        unbounded = true;
+                if active >= minimum_pairs {
+                    match windows.last_mut() {
+                        Some([_, previous_end]) if start == *previous_end => *previous_end = end,
+                        _ => windows.push([start, end]),
                     }
                 }
             });
-            if unbounded { Ok(f64::INFINITY) } else { round_motion_duration(&total, upper) }
-        };
-        Ok([duration(confirmed, false)?, duration(possible, true)?])
+            windows
+        });
+        Ok(SimultaneousContactWindows { confirmed, possible })
     }
 
     fn contact_pair_intervals(&self) -> [Vec<ToolPairInterval>; 2] {

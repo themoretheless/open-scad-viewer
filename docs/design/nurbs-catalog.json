@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 749,
-  "unallocatedCount": 251,
+  "specifiedCount": 750,
+  "unallocatedCount": 250,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17923,6 +17923,25 @@
       "remainingQualification": [
         "Bound elapsed time when at least a specified number of distinct pairs are in contact.",
         "Check distinct pairs, overlapping cells of one pair, uncertain duration, and instantaneous contacts with zero duration.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0750",
+      "name": "Временные интервалы одновременного контакта заданного числа пар",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::simultaneous_contact_windows",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-750-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-750-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Locate confirmed and possible simultaneous contact windows, including isolated instants.",
+        "Check merged confirmed and possible windows, distinct-pair thresholds, isolated instants, and retained duration bounds.",
         "WASM and application integration are separate."
       ]
     }

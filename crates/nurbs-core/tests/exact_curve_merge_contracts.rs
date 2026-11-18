@@ -11264,3 +11264,36 @@ fn simultaneous_contact_duration_measures_distinct_pairs_and_excludes_isolated_i
     assert_eq!(report.simultaneous_contact_duration_bounds(3).unwrap(), [0.; 2]);
     assert!(report.simultaneous_contact_duration_bounds(0).is_err());
 }
+
+#[test]
+fn simultaneous_contact_windows_include_isolated_instants_and_uncertain_extensions() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, ScheduledClearanceCell, ScheduledToolPairCell,
+        ScheduledToolsClearancePartition,
+    };
+    let cell = |tools, time, status| ScheduledToolPairCell {
+        tools,
+        clearance: ScheduledClearanceCell {
+            time_endpoint_bounds: time,
+            gap_bounds: if status == Status::Exceeds { [-2., -1.] } else { [-1., 1.] },
+            status,
+        },
+    };
+    let report = ScheduledToolsClearancePartition {
+        cells: vec![
+            cell([0, 1], [[0.; 2], [3.; 2]], Status::Exceeds),
+            cell([0, 1], [[2.; 2], [4.; 2]], Status::Exceeds),
+            cell([0, 2], [[2., 2.25], [5., 5.25]], Status::Exceeds),
+            cell([1, 2], [[3.; 2]; 2], Status::Exceeds),
+            cell([1, 2], [[4.; 2], [5.; 2]], Status::Undetermined),
+        ],
+        work_cells: 5,
+    };
+    let two = report.simultaneous_contact_windows(2).unwrap();
+    assert_eq!(two.confirmed, [[2.25, 4.]]);
+    assert_eq!(two.possible, [[2., 5.]]);
+    let three = report.simultaneous_contact_windows(3).unwrap();
+    assert_eq!(three.confirmed, [[3.; 2]]);
+    assert_eq!(three.possible, [[3.; 2], [4.; 2]]);
+    assert!(report.simultaneous_contact_windows(0).is_err());
+}
