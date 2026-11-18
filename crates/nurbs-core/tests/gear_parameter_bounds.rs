@@ -398,3 +398,15 @@ fn independent_carrier_pin_tolerances_enclose_planet_envelopes() {
     assert!(gap(1., [20, 16], [[0.; 2], [30.; 2]], [40.; 2]).is_err());
     assert!(gap(1., [20, 16], [[30.; 2]; 2], [40., 181.]).is_err());
 }
+
+#[test]
+fn spinner_layout_search_combines_integer_phase_and_envelope_clearance() {
+    use involute::planetary_layout_counts as layouts;
+    assert_eq!(layouts(1., 32, 4, 0.).unwrap(), [2, 3, 4, 6, 8, 9, 12, 18]);
+    assert_eq!(layouts(1., 32, 4, 4.).unwrap(), [2, 3, 4, 6, 8, 9]);
+    assert_eq!(layouts(2., 32, 4, 8.).unwrap(), [2, 3, 4, 6, 8, 9]);
+    assert!(layouts(1., 32, 4, 31.).unwrap().is_empty());
+    assert!(layouts(1., usize::MAX, 4, 0.).is_err());
+    assert!(layouts(1., 200, 40, 0.).is_err());
+    assert!(layouts(1., 32, 4, f64::NAN).is_err());
+}

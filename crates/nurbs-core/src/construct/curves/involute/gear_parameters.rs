@@ -706,3 +706,41 @@ pub fn planet_tip_gap_bounds(
     }
     Ok(pair(gap))
 }
+
+/// Equally spaced planet counts for a concentric, unshifted spur train.
+/// Each returned count satisfies the integer assembly-phase condition and
+/// has certified adjacent tip-circle clearance at least the requested value.
+/// Geometry is nominal; this is a layout filter, not a flank-contact proof.
+pub fn planetary_layout_counts(
+    module: f64,
+    sun_teeth: usize,
+    planet_teeth: usize,
+    minimum_gap: f64,
+) -> Result<Vec<usize>> {
+    check(
+        minimum_gap.is_finite() && minimum_gap >= 0.,
+        "Expected finite nonnegative minimum planet gap",
+    )?;
+    check(
+        (3..=256).contains(&sun_teeth) && (3..=256).contains(&planet_teeth),
+        "Unsupported tooth count",
+    )?;
+    let ring = sun_teeth + 2 * planet_teeth;
+    check(ring <= 256, "Derived ring exceeds supported tooth count")?;
+    let planet = derive_gear_parameter_bounds(module, planet_teeth, 20., module / 4., 0., false)?;
+    let diameter = I::new(planet.tip_radius[0], planet.tip_radius[1])?.mul(I::point(2.))?;
+    let orbit_diameter = I::point(module).mul(I::point((sun_teeth + planet_teeth) as f64))?;
+    let phase = sun_teeth + ring;
+    let pi = pi()?;
+    let mut layouts = Vec::new();
+    for count in 2..=phase {
+        if phase.is_multiple_of(count) {
+            let sine = trig(pi.div(I::point(count as f64))?)?.0;
+            let gap = orbit_diameter.mul(sine)?.sub(diameter)?;
+            if gap.lo >= minimum_gap {
+                layouts.push(count);
+            }
+        }
+    }
+    Ok(layouts)
+}
