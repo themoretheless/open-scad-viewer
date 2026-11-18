@@ -321,6 +321,31 @@ pub fn curve_distance(
     distance_with_regions(&sheet, face, [None, Some(domain)], tolerance_mm, max_cells, max_domain_cells)
 }
 
+/// Clearance of a ball swept along a spatial centerline, including its end caps.
+#[derive(Debug)]
+pub struct SweptBallClearance {
+    /// Centerline distance minus radius. Negative values indicate penetration.
+    /// Absent until both geometry sets have an admitted witness.
+    pub signed_margin_mm: Option<[f64; 2]>,
+    pub centerline_distance: TrimmedDistance,
+}
+
+pub fn swept_ball_clearance(
+    curve: &crate::curve::Curve, radius_mm: f64, face: &Surface, domain: &TrimDomain,
+    tolerance_mm: f64, max_cells: usize, max_domain_cells: usize,
+) -> Result<SweptBallClearance> {
+    check(radius_mm.is_finite() && radius_mm >= 0., "Expected finite nonnegative sweep radius")?;
+    let centerline_distance = curve_distance(curve, face, domain, tolerance_mm, max_cells, max_domain_cells)?;
+    let signed_margin_mm = if let Some(upper) = centerline_distance.upper_bound_mm {
+        let distance = Interval::new(centerline_distance.lower_bound_mm, upper)?;
+        let margin = distance.sub(Interval::point(radius_mm))?;
+        Some([margin.lo, margin.hi])
+    } else {
+        None
+    };
+    Ok(SweptBallClearance { signed_margin_mm, centerline_distance })
+}
+
 fn distance_with_regions(
     a: &Surface, b: &Surface, regions: [Option<&TrimDomain>; 2],
     tolerance_mm: f64, max_cells: usize, max_domain_cells: usize,

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 910,
-  "unallocatedCount": 90,
+  "specifiedCount": 911,
+  "unallocatedCount": 89,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20940,6 +20940,23 @@
       ],
       "remainingQualification": [
         "Spatial curve and positive-weight tensor surface with oriented UV loops. Upper bound requires an admitted witness. Work limits can leave a wider interval."
+      ]
+    },
+    {
+      "id": "NURBS-0911",
+      "name": "Монтажный запас сферического инструмента на криволинейной траектории у обрезанной грани",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::trimmed_surface_distance::swept_ball_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/trim/trimmed_surface_distance.rs",
+        "crates/nurbs-core/tests/curve_surface_distance.rs",
+        "docs/qualification/nurbs-spatial-clearance-911-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-911-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Constant radius ball swept along the full curve, including end caps. Signed margin refers to the retained surface image. Work limits can leave its sign unresolved."
       ]
     }
   ],
