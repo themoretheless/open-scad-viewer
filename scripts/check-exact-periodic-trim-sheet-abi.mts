@@ -40,6 +40,7 @@ interface Report {
   axisMomentBoundsKgMm2?: [number, number] | null
   axisMomentBoundsMm4?: [number, number] | null
   principalMomentBoundsMm4?: [number, number][] | null
+  principalMomentBoundsKgMm2?: [number, number][] | null
   boundsMm2?: [number, number] | [number, number][] | null
   stations?: { parameterBounds: [number, number] | null; pointBoundsMm: [number, number][] | null; status: string }[] | null
   pointBoundsMm?: [number, number][] | null
@@ -420,3 +421,13 @@ assert.deepEqual(weightedReference.axisMomentBoundsKgMm2, weightedAxisBounds)
 const incompleteWeightedReference = call(request.maxWork, densityOp, { ...weightedReferenceOptions, maxSurfaceCells: 2 })
 assert.equal(incompleteWeightedReference.referenceInertiaBoundsKgMm2, null)
 console.log('WASM ABI enclosed the density-weighted tensor about a fixed point.')
+
+const weightedSpectrumOptions = { ...weightedReferenceOptions, momentToleranceKgMm2: 10 }
+const weightedSpectrum = call(request.maxWork, densityOp, weightedSpectrumOptions)
+assert.equal(weightedSpectrum.withinMomentTolerance, true)
+assert.equal(weightedSpectrum.principalMomentBoundsKgMm2?.length, 3)
+assert.deepEqual(weightedSpectrum.referenceInertiaBoundsKgMm2, weightedTensor)
+const limitedSpectrum = call(request.maxWork, densityOp, { ...weightedSpectrumOptions, maxSurfaceCells: 2 })
+assert.equal(limitedSpectrum.principalMomentBoundsKgMm2, null)
+assert.equal(limitedSpectrum.withinMomentTolerance, false)
+console.log('WASM ABI enclosed the principal moments of the density-weighted assembly.')

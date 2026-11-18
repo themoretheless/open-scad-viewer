@@ -943,3 +943,36 @@ fn patch_set_density_returns_requested_tensor_about_fixed_reference_point() {
     request["inertiaReferencePointMm"] = json!([1., 0.]);
     assert_eq!(run(&request)["ok"], false);
 }
+
+#[test]
+fn patch_set_density_encloses_weighted_principal_moments() {
+    let mut request = patch_set_density_request(20_000);
+    assert!(run(&request)["value"].get("principalMomentBoundsKgMm2").is_none());
+    request["momentToleranceKgMm2"] = json!(10.);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    assert_eq!(report["withinMomentTolerance"], true);
+    let bounds = report["principalMomentBoundsKgMm2"].as_array().unwrap();
+    assert_eq!(bounds.len(), 3);
+    let mass = 2.875;
+    let cx = 0.34375 / mass;
+    let cy = 0.375 / mass;
+    let vx = 2. * (1. / 16. - 13. / 768.) + 6. * 49. / 12288. - mass * cx * cx;
+    let vy = 2. / 16. - mass * cy * cy;
+    let vz = 2. * (1.5 * 1.5_f64.powi(2) / 12. - 0.25 / 12.) + 6. * 0.0625 * 0.25 / 12.;
+    let average = vz + (vx + vy) / 2.;
+    let split = ((vx - vy) / 2.).hypot(mass * cx * cy);
+    let mut exact = [vx + vy, average - split, average + split];
+    exact.sort_by(f64::total_cmp);
+    for (interval, value) in bounds.iter().zip(exact) {
+        assert!(interval[0].as_f64().unwrap() <= value && value <= interval[1].as_f64().unwrap());
+    }
+
+    request["maxSurfaceCells"] = json!(2);
+    let limited = run(&request);
+    assert_eq!(limited["value"].get("principalMomentBoundsKgMm2"), Some(&Value::Null));
+    assert_eq!(limited["value"]["withinMomentTolerance"], false);
+    request["momentToleranceKgMm2"] = json!(0.);
+    assert_eq!(run(&request)["ok"], false);
+}

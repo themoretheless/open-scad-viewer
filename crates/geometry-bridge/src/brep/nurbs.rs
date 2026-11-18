@@ -1456,6 +1456,16 @@ pub fn exact_periodic_trim_patch_set_density_request(
     let max_trim: usize = field(request, "maxTrimCells")?;
     validate_trimmed_patch_set_limits(tolerance, tolerance_uv, max_surface, max_trim)?;
     let reference_point = optional_inertia_reference_point(request)?;
+    let moment_tolerance = request
+        .get("momentToleranceKgMm2")
+        .map(|_| -> Result<f64> {
+            let tolerance: f64 = field(request, "momentToleranceKgMm2")?;
+            if !tolerance.is_finite() || tolerance <= 0. {
+                return Err(input("Moment tolerance must be positive and finite"));
+            }
+            Ok(tolerance)
+        })
+        .transpose()?;
     let inertia_axis = optional_inertia_axis(request)?;
     let center_plane = request
         .get("centerOfMassPlane")
@@ -1505,6 +1515,10 @@ pub fn exact_periodic_trim_patch_set_density_request(
     if reference_point.is_some() {
         response["referenceInertiaBoundsKgMm2"] = Value::Null;
     }
+    if moment_tolerance.is_some() {
+        response["principalMomentBoundsKgMm2"] = Value::Null;
+        response["withinMomentTolerance"] = json!(false);
+    }
     let Some(patches) = build.patches else {
         return Ok(response);
     };
@@ -1539,6 +1553,11 @@ pub fn exact_periodic_trim_patch_set_density_request(
     }
     if let Some(point) = reference_point {
         response["referenceInertiaBoundsKgMm2"] = json!(report.bound_inertia_about_point(point)?);
+    }
+    if let Some(tolerance) = moment_tolerance {
+        let (bounds, within_tolerance) = report.bound_principal_moments(tolerance)?;
+        response["principalMomentBoundsKgMm2"] = json!(bounds);
+        response["withinMomentTolerance"] = json!(within_tolerance);
     }
     response["massBoundsKg"] = json!(report.total_mass_bounds);
     let fractions = report.component_mass_fractions()?;

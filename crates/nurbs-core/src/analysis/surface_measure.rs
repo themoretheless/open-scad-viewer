@@ -1638,6 +1638,17 @@ impl TrimmedPatchSetDensityReport {
             .transpose()
     }
 
+    /// Return the ordered principal moments and whether all bounds meet tolerance.
+    pub fn bound_principal_moments(
+        &self,
+        tolerance: f64,
+    ) -> Result<(Option<PrincipalMomentBounds>, bool)> {
+        bound_optional_principal_moments(
+            self.mass_properties.map(|mass| mass.central_inertia_bounds),
+            tolerance,
+        )
+    }
+
     /// Enclose the fractional mass of each patch in input order.
     pub fn component_mass_fractions(&self) -> Result<Option<Vec<[f64; 2]>>> {
         bound_component_mass_fractions(&self.component_mass_bounds)
