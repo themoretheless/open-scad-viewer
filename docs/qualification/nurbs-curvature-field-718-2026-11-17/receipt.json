@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0718",
+  "testedBase": "4d741480a82dd0be6796964d51cfaaede5f9b73e",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 343,
+  "scope": [
+    "Refine signed clearance minima by lower bounds with a certified endpoint witness.",
+    "Check guaranteed tolerance for an oblique clear path, preserved bounds on exhaustion, and the closest obstacle and witness."
+  ],
+  "logSha256": "654ccbd78b2fd1a76ba7bf74bf3ed7372ab23026ec934c870eb1fc6231a7496c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "8d643c1b9de1da48c793f5a6c9a688795d646373bff2c933ef49b1955f2209dc",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "8dacb7f2e22fb5e4f61b580016b977e4edaccd44bf193cc18ebe06344cbcda3f"
+  }
+}

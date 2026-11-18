@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 717,
-  "unallocatedCount": 283,
+  "specifiedCount": 718,
+  "unallocatedCount": 282,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17315,6 +17315,25 @@
       "remainingQualification": [
         "Enclose the minimum signed clearance and preserve every possible minimizer interval.",
         "Check positive and negative analytic minima, obstacle witness, and disjoint tied candidate windows.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0718",
+      "name": "Адаптивная оценка минимального зазора до сферических препятствий",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_spherical_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-718-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-718-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine signed clearance minima by lower bounds with a certified endpoint witness.",
+        "Check guaranteed tolerance for an oblique clear path, preserved bounds on exhaustion, and the closest obstacle and witness.",
         "WASM and application integration are separate."
       ]
     }

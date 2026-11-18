@@ -2327,8 +2327,26 @@ pub fn partition_curve_spherical_clearance(
         return Err(resource("Clearance budget must cover every sphere"));
     }
     curve.validate()?;
+    let obstacles = prepare_spherical_obstacles(curve, obstacles, tool_radius)?;
+    partition_radial_clearance(
+        curve, interval, parameter_tolerance, max_cells, obstacles.len(),
+        |point, index| {
+            let (center, radius) = &obstacles[index];
+            let (lo, hi) = box_distance(point, center)?;
+            Interval::new(lo, hi)?.sub(*radius)
+        },
+    )
+}
+
+type PreparedSphere = (Vec<Interval>, Interval);
+
+fn prepare_spherical_obstacles(
+    curve: &Curve,
+    obstacles: &[SphericalObstacle<'_>],
+    tool_radius: f64,
+) -> Result<Vec<PreparedSphere>> {
     let dimension = curve.control_points[0].len();
-    let obstacles = obstacles.iter().map(|obstacle| {
+    obstacles.iter().map(|obstacle| {
         check(
             obstacle.center.len() == dimension
                 && obstacle.center.iter().all(|value| value.is_finite())
@@ -2339,15 +2357,98 @@ pub fn partition_curve_spherical_clearance(
         let center = obstacle.center.iter().copied().map(Interval::point).collect::<Vec<_>>();
         let radius = Interval::point(obstacle.radius).add(Interval::point(tool_radius))?;
         Ok((center, radius))
-    }).collect::<Result<Vec<_>>>()?;
-    partition_radial_clearance(
-        curve, interval, parameter_tolerance, max_cells, obstacles.len(),
-        |point, index| {
-            let (center, radius) = &obstacles[index];
-            let (lo, hi) = box_distance(point, center)?;
-            Interval::new(lo, hi)?.sub(*radius)
-        },
-    )
+    }).collect()
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct SphericalMinimumClearance {
+    pub gap_bounds: [f64; 2],
+    /// Evaluated parameter and obstacle providing an upper bound.
+    pub witness_parameter: f64,
+    pub witness_obstacle: usize,
+    pub work_obstacle_cells: usize,
+    pub stop_reason: StopReason,
+}
+
+/// Refine the smallest gap bound first until the signed minimum is enclosed
+/// to the requested tolerance or refinement reaches a work or precision limit.
+pub fn measure_minimum_spherical_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[SphericalObstacle<'_>],
+    tool_radius: f64,
+    tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalMinimumClearance> {
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Spherical clearance requires at least one obstacle")?;
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if active_spans(curve, interval).count() > max_cells {
+        return Err(resource("Clearance budget must cover every initial obstacle cell"));
+    }
+    let obstacles = prepare_spherical_obstacles(curve, obstacles, tool_radius)?;
+    let mut pending = BTreeMap::new();
+    let mut cells = 0;
+    let mut witness = (f64::INFINITY, interval[0], 0);
+    let measure = |span, domain: [f64; 2], witness: &mut (f64, f64, usize)| -> Result<f64> {
+        let jets = curve_jets::enclose(curve, span, domain)?;
+        let start = curve_jets::endpoint(curve, span, domain, false)?;
+        let end = curve_jets::endpoint(curve, span, domain, true)?;
+        let mut lower = f64::INFINITY;
+        for (index, (center, radius)) in obstacles.iter().enumerate() {
+            let (lo, hi) = box_distance(&jets[0], center)?;
+            lower = lower.min(Interval::new(lo, hi)?.sub(*radius)?.lo);
+            for (point, parameter) in [(&start[0], domain[0]), (&end[0], domain[1])] {
+                let (lo, hi) = box_distance(point, center)?;
+                let bound = Interval::new(lo, hi)?.sub(*radius)?.hi;
+                if bound < witness.0 {
+                    *witness = (bound, parameter, index);
+                }
+            }
+        }
+        Ok(lower)
+    };
+    // Map finite signed floats to unsigned keys preserving ascending order.
+    let order = |value: f64| {
+        let bits = value.to_bits();
+        if value.is_sign_negative() { !bits } else { bits ^ (1 << 63) }
+    };
+    for span in active_spans(curve, interval) {
+        let domain = [curve.knots[span].max(interval[0]), curve.knots[span + 1].min(interval[1])];
+        let lower = measure(span, domain, &mut witness)?;
+        pending.insert((order(lower), cells), (lower, span, domain));
+        cells += 1;
+    }
+    let (lower, stop_reason) = loop {
+        let (&key, &(lower, span, [a, b])) = pending.first_key_value()
+            .ok_or_else(|| crate::numeric_err("Missing clearance span coverage"))?;
+        if (witness.0 - lower).next_up() <= tolerance {
+            break (lower, StopReason::Tolerance);
+        }
+        if cells + 2 > max_cells {
+            break (lower, StopReason::WorkLimit);
+        }
+        let middle = crate::distance_bounds::midpoint(a, b);
+        if !(a < middle && middle < b) {
+            break (lower, StopReason::PrecisionLimit);
+        }
+        pending.remove(&key);
+        for domain in [[a, middle], [middle, b]] {
+            let child = measure(span, domain, &mut witness)?.max(lower);
+            pending.insert((order(child), cells), (child, span, domain));
+            cells += 1;
+        }
+    };
+    Ok(SphericalMinimumClearance {
+        gap_bounds: [lower, witness.0],
+        witness_parameter: witness.1,
+        witness_obstacle: witness.2,
+        work_obstacle_cells: cells * obstacles.len(),
+        stop_reason,
+    })
 }
 
 #[derive(Clone, Copy, Debug)]

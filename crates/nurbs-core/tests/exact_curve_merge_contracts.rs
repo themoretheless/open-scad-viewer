@@ -10185,3 +10185,36 @@ fn minimum_toolpath_clearance_preserves_disjoint_tied_intervals() {
     assert_eq!(minimum.parameter_intervals, [[0., 1.], [2., 4.]]);
     assert_eq!(minimum.upper_witness, [0, 0]);
 }
+
+#[test]
+fn minimum_spherical_clearance_refines_an_oblique_clear_path() {
+    use nurbs_core::analysis::curve_measure::{
+        SphericalObstacle, StopReason, measure_minimum_spherical_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![2., 2., 6., 6.],
+        control_points: vec![vec![0., 0.], vec![4., 4.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let obstacles = [
+        SphericalObstacle { center: &[10., 10.], radius: 1. },
+        SphericalObstacle { center: &[2., 0.], radius: 0.25 },
+    ];
+    let exact = 2_f64.sqrt() - 0.5;
+    let check = |budget| {
+        measure_minimum_spherical_clearance(&curve, [2., 6.], &obstacles, 0.25, 1e-4, budget)
+    };
+    assert!(check(1).is_err());
+    let coarse = check(2).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= exact && exact <= coarse.gap_bounds[1]);
+    let fine = check(4096).unwrap();
+    assert_eq!(fine.stop_reason, StopReason::Tolerance);
+    let [lo, hi] = fine.gap_bounds;
+    assert!(lo <= exact && exact <= hi && hi - lo <= 1e-4);
+    assert_eq!(fine.witness_obstacle, 1);
+    assert!((fine.witness_parameter - 3.).abs() < 0.01);
+    assert!(fine.work_obstacle_cells <= 4096);
+}
