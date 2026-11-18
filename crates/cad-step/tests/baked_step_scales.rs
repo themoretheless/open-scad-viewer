@@ -517,6 +517,20 @@ fn branch_motion_moves_two_linked_parts_and_preserves_external_sibling() {
             })
         })
         .unwrap();
+    for (remove, expected) in [(&counterweight, &mass), (&mass, &counterweight)] {
+        let remaining = complete.without_component(remove).unwrap();
+        assert!((remaining.mass - expected.mass).abs() < 1e-12);
+        for i in 0..3 {
+            assert!((remaining.centroid[i] - expected.centroid[i]).abs() < 1e-9);
+            for j in 0..3 {
+                assert!((remaining.inertia[i][j] - expected.inertia[i][j]).abs() < 1e-9);
+            }
+        }
+    }
+    assert!(complete.without_component(&complete).is_err());
+    let mut distant = counterweight.clone();
+    distant.centroid[0] += 1000.;
+    assert!(complete.without_component(&distant).is_err());
     for fitted in [
         mass.combined_with(&counterweight).unwrap(),
         counterweight.combined_with(&mass).unwrap(),

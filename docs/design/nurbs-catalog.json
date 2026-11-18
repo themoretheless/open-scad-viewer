@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 996,
-  "unallocatedCount": 4,
+  "specifiedCount": 997,
+  "unallocatedCount": 3,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22607,6 +22607,25 @@
       ],
       "remainingQualification": [
         "Constant-density nonsingular affine map. Direct reintegration includes shear, nonuniform scaling and reflection; independent OCCT checks the reflected elliptic cylinder tensor."
+      ]
+    },
+    {
+      "id": "NURBS-0997",
+      "name": "Восстановление массы, центра и тензора инерции остатка после снятия известной NURBS-детали",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::analysis::AssemblyMass::without_component",
+      "evidence": [
+        "crates/brep-core/src/body_analysis/analysis/mechanics.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-assembly-composite-inertia-994-2026-11-19/verify.py",
+        "docs/qualification/nurbs-assembly-residual-inertia-997-2026-11-19/occt.log",
+        "docs/qualification/nurbs-assembly-residual-inertia-997-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-assembly-residual-inertia-997-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Known component in the same frame. Both complementary residuals checked against separate branch integrations. Rejects nonpositive mass and infeasible inertia. Membership must be known by the caller."
       ]
     }
   ],

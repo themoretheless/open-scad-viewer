@@ -245,6 +245,62 @@ impl AssemblyMass {
         Ok(combined)
     }
 
+    /// Remove a known component expressed in the same world frame. The caller
+    /// supplies component membership. Checks the physical principal-moment
+    /// inequalities of the residual up to floating-point roundoff.
+    pub fn without_component(&self, removed: &Self) -> Result<Self> {
+        let mass = self.mass - removed.mass;
+        if !mass.is_finite() || mass <= 0. || !removed.mass.is_finite() || removed.mass <= 0. {
+            return Err(indeterminate(
+                "Removal requires positive component and residual mass",
+            ));
+        }
+        let ratio = removed.mass / mass;
+        let delta: [f64; 3] = std::array::from_fn(|i| self.centroid[i] - removed.centroid[i]);
+        let centroid = std::array::from_fn(|i| ratio.mul_add(delta[i], self.centroid[i]));
+        // The two parallel-axis shifts reduce to M*m/(M-m) times
+        // the squared offset from the original centre to the removed centre.
+        let scaled = delta.map(|v| (v * removed.mass.sqrt()) * (self.mass / mass).sqrt());
+        let inertia: [[f64; 3]; 3] = std::array::from_fn(|i| {
+            std::array::from_fn(|j| {
+                let shift = if i == j {
+                    scaled[(i + 1) % 3].powi(2) + scaled[(i + 2) % 3].powi(2)
+                } else {
+                    -scaled[i] * scaled[j]
+                };
+                (self.inertia[i][j] - removed.inertia[i][j]) - shift
+            })
+        });
+        if centroid
+            .iter()
+            .chain(inertia.iter().flatten())
+            .any(|v| !v.is_finite())
+        {
+            return Err(indeterminate("Non-finite residual mass properties"));
+        }
+        let scale = inertia.iter().flatten().map(|x| x.abs()).fold(0., f64::max);
+        if scale > 0. {
+            let normalized = inertia.map(|row| row.map(|x| x / scale));
+            let tol = 128. * f64::EPSILON;
+            for i in 0..3 {
+                for j in 0..i {
+                    if (normalized[i][j] - normalized[j][i]).abs() > tol {
+                        return Err(indeterminate("Asymmetric residual inertia"));
+                    }
+                }
+            }
+            let [a, b, c] = principal_inertia(normalized)?.moments_mm5;
+            if c < -tol || a > b + c + tol {
+                return Err(indeterminate("Nonphysical residual inertia"));
+            }
+        }
+        Ok(Self {
+            mass,
+            centroid,
+            inertia,
+        })
+    }
+
     /// Mass moment in kg mm² for a world-space axis when mass is in kg
     /// and positions are in mm. Axis direction need not be normalized.
     pub fn moment_about_axis(&self, point: [f64; 3], direction: [f64; 3]) -> Result<f64> {
