@@ -331,3 +331,96 @@ pub fn assemble_oblique_simple_loop(
         },
     )
 }
+
+/// Certify each adjacent Bezier pair in a locally chosen coordinate plane.
+/// Every other pair must have a positive spatial distance lower bound.
+/// Pair and subdivision limits are shared across the complete wire.
+pub fn assemble_pairwise_simple_spatial_loop(
+    sources: &[Curve],
+    first_segment: usize,
+    reversed: bool,
+    max_work: u64,
+    tolerance: f64,
+    max_pairs: usize,
+    max_cells: usize,
+) -> Result<GaugeMergeReport> {
+    crate::check(
+        tolerance.is_finite()
+            && tolerance > 0.
+            && (1..=100000).contains(&max_cells)
+            && (1..=100000).contains(&max_pairs),
+        "Invalid spatial separation limits",
+    )?;
+    assemble(
+        sources,
+        Anchor::Closed(first_segment, reversed),
+        max_work,
+        |ordered, _| {
+            let n = ordered.len();
+            crate::check(
+                n * (n - 1) / 2 <= max_pairs,
+                "Spatial pair budget exhausted",
+            )?;
+            crate::check(
+                ordered.iter().all(|c| c.control_points[0].len() == 3),
+                "Expected 3D segments",
+            )?;
+            let projections: Vec<Vec<Curve>> = (0..3)
+                .map(|axis| {
+                    let mut curves = ordered.to_vec();
+                    for curve in &mut curves {
+                        for point in &mut curve.control_points {
+                            point.remove(axis);
+                        }
+                    }
+                    curves
+                })
+                .collect();
+            let mut remaining = max_cells;
+            for i in 0..n {
+                for j in i + 1..n {
+                    if j == i + 1 || (i == 0 && j == n - 1) {
+                        let mut proved = false;
+                        for curves in &projections {
+                            let a = &curves[i];
+                            let b = &curves[j];
+                            // Refuse views that collapse distinct unshared ends into
+                            // an additional apparent join.
+                            let contacts = [&a.control_points[0], a.control_points.last().unwrap()]
+                                .into_iter()
+                                .filter(|p| {
+                                    *p == &b.control_points[0]
+                                        || *p == b.control_points.last().unwrap()
+                                })
+                                .count();
+                            if contacts == if n == 2 { 2 } else { 1 }
+                                && crate::trim_simplicity::prove_endpoint_contacts_only(a, b)?
+                            {
+                                proved = true;
+                                break;
+                            }
+                        }
+                        crate::check(
+                            proved,
+                            "Adjacent spatial contact or segment injectivity unproven",
+                        )?;
+                    } else {
+                        crate::check(remaining > 0, "Spatial subdivision budget exhausted")?;
+                        let proof = crate::curve_distance::prove_separation(
+                            &ordered[i],
+                            &ordered[j],
+                            tolerance,
+                            remaining,
+                        )?;
+                        remaining -= proof.cells;
+                        crate::check(
+                            proof.distance_interval_mm[0] > 0.,
+                            "Nonadjacent spatial separation unproven",
+                        )?;
+                    }
+                }
+            }
+            Ok(())
+        },
+    )
+}

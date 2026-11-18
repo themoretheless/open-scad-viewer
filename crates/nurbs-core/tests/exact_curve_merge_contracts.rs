@@ -13473,3 +13473,19 @@ fn cube_edge_hexagon_admits_oblique_simple_projection() {
     for (i,p) in points.iter().enumerate() {assert_eq!(curve.evaluate(i as f64).unwrap().point,p);}
     assert!(oblique(&edges,0,false,[[1.;3];2],1_000_000,1e-8,15,10000).is_err());
 }
+
+#[test]
+fn pairwise_spatial_proof_distinguishes_a_lifted_from_a_true_crossing() {
+    use nurbs_core::editing::exact_curve_merge::assemble_pairwise_simple_spatial_loop as assemble;
+    let loop_at = |z| {
+        let p=[[0.,0.,0.],[2.,2.,0.],[0.,2.,z],[2.,0.,z]];
+        (0..4).map(|i| Curve {degree:1,knots:vec![0.,0.,1.,1.],weights:vec![1.;2],
+            control_points:vec![p[i].to_vec(),p[(i+1)%4].to_vec()],periodic:false}).collect::<Vec<_>>()
+    };
+    let raised=loop_at(1.);
+    let curve=assemble(&raised,0,false,1_000_000,1e-8,6,1000).unwrap().curve.unwrap();
+    assert_eq!(curve.evaluate(2.5).unwrap().point,[1.,1.,1.]);
+    assert_eq!(curve.evaluate(0.5).unwrap().point,[1.,1.,0.]);
+    assert!(assemble(&loop_at(0.),0,false,1_000_000,1e-8,6,1000).is_err());
+    assert!(assemble(&raised,0,false,1_000_000,1e-8,5,1000).is_err());
+}
