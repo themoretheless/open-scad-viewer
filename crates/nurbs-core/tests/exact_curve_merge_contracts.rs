@@ -13489,3 +13489,18 @@ fn pairwise_spatial_proof_distinguishes_a_lifted_from_a_true_crossing() {
     assert!(assemble(&loop_at(0.),0,false,1_000_000,1e-8,6,1000).is_err());
     assert!(assemble(&raised,0,false,1_000_000,1e-8,5,1000).is_err());
 }
+
+#[test]
+fn spatial_wire_proves_each_original_knot_span_including_same_edge_pairs() {
+    use nurbs_core::editing::exact_curve_merge::assemble_pairwise_simple_spatial_loop as assemble;
+    let build = |z| {
+        let a=vec![0.,0.,0.]; let b=vec![2.,2.,0.]; let c=vec![0.,2.,z]; let d=vec![2.,0.,z];
+        [Curve{degree:1,knots:vec![0.,0.,1.,2.,3.,3.],control_points:vec![a.clone(),b,c,d.clone()],
+            weights:vec![1.;4],periodic:false},
+         Curve{degree:1,knots:vec![0.,0.,1.,1.],control_points:vec![d,a],weights:vec![1.;2],periodic:false}]
+    };
+    let curve=assemble(&build(1.),0,false,1_000_000,1e-8,6,1000).unwrap().curve.unwrap();
+    assert_eq!(curve.evaluate(2.5).unwrap().point,[1.,1.,1.]);
+    assert!(assemble(&build(0.),0,false,1_000_000,1e-8,6,1000).is_err());
+    assert!(assemble(&build(1.),0,false,1_000_000,1e-8,5,1000).is_err());
+}

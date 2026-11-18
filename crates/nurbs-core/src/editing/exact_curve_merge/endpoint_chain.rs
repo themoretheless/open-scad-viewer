@@ -332,6 +332,7 @@ pub fn assemble_oblique_simple_loop(
     )
 }
 
+/// Partition multi-span edges exactly for proof, preserving original edges for output.
 /// Certify each adjacent Bezier pair in a locally chosen coordinate plane.
 /// Every other pair must have a positive spatial distance lower bound.
 /// Pair and subdivision limits are shared across the complete wire.
@@ -355,16 +356,46 @@ pub fn assemble_pairwise_simple_spatial_loop(
         sources,
         Anchor::Closed(first_segment, reversed),
         max_work,
-        |ordered, _| {
-            let n = ordered.len();
-            crate::check(
-                n * (n - 1) / 2 <= max_pairs,
-                "Spatial pair budget exhausted",
-            )?;
+        |ordered, work| {
             crate::check(
                 ordered.iter().all(|c| c.control_points[0].len() == 3),
                 "Expected 3D segments",
             )?;
+            let span_count: usize = ordered
+                .iter()
+                .map(|c| c.knots.windows(2).filter(|p| p[0] < p[1]).count())
+                .sum();
+            crate::check(
+                span_count * (span_count - 1) / 2 <= max_pairs,
+                "Spatial pair budget exhausted",
+            )?;
+            let mut spans = Vec::with_capacity(span_count);
+            for c in ordered {
+                let mut cuts = c.knots[c.degree + 1..c.control_points.len()].to_vec();
+                cuts.dedup();
+                if cuts.is_empty() {
+                    spans.push(c.clone());
+                    continue;
+                }
+                crate::check(
+                    work.used < work.limit,
+                    "Exact span partition budget exhausted",
+                )?;
+                let partition = crate::editing::exact_knot_insertion::partition(
+                    c,
+                    &cuts,
+                    work.limit - work.used,
+                )?;
+                work.used += partition.work_used;
+                spans.extend(partition.pieces.ok_or_else(|| {
+                    crate::input(format!(
+                        "Spatial proof partition refused: {:?}",
+                        partition.refusal
+                    ))
+                })?);
+            }
+            let ordered = spans.as_slice();
+            let n = ordered.len();
             let projections: Vec<Vec<Curve>> = (0..3)
                 .map(|axis| {
                     let mut curves = ordered.to_vec();
