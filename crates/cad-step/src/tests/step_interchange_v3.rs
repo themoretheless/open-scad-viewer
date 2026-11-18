@@ -3968,3 +3968,23 @@ fn placed_revision_delta_distinguishes_added_and_removed_stock() {
     assert!(scene.material_delta(3, 0).is_err());
     assert!(scene.material_delta(0, 3).is_err());
 }
+
+#[test]
+fn coordinate_split_preserves_placed_material_and_side_order() {
+    let solid = brep_core::cuboid([0.; 3], [2., 3., 4.]).unwrap();
+    let placement = crate::StepAssemblyOccurrence { definition: 0, transform: [
+        [0., -1., 0., 17.], [1., 0., 0., 1.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ] };
+    let scene = crate::StepSharedAssembly::from_placed_solids(vec![solid], vec![placement]).unwrap();
+    let [low, high] = scene.split_at_coordinate(0, 0, 15.).unwrap();
+    for (part, expected) in [(low, 8.), (high, 16.)] {
+        assert_eq!(part.validate().unwrap().boundary_edge_count, 0);
+        let mass = brep_core::analysis::mass_properties(&part, 1e-8, 100_000).unwrap();
+        assert!((mass.signed_volume_mm3 - expected).abs() < 1e-8);
+    }
+    assert!(scene.split_at_coordinate(0, 0, 14.).unwrap()[0].bodies.is_empty());
+    assert!(scene.split_at_coordinate(0, 2, 5.).unwrap()[1].bodies.is_empty());
+    assert!(scene.split_at_coordinate(0, 3, 0.).is_err());
+    assert!(scene.split_at_coordinate(0, 0, f64::NAN).is_err());
+    assert!(scene.split_at_coordinate(1, 0, 0.).is_err());
+}

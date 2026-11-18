@@ -976,6 +976,30 @@ impl StepSharedAssembly {
         brep_core::boolean(&first, &second, "intersection")
     }
 
+    /// Split at a world X, Y or Z coordinate. Return the low and high material respectively.
+    pub fn split_at_coordinate(&self, index: usize, axis: usize, coordinate: f64) -> Result<[Model; 2]> {
+        if axis >= 3 || !coordinate.is_finite() {
+            return Err(refuse("STEP coordinate split requires axis 0..2 and a finite coordinate"));
+        }
+        let model = self.materialize(index)?;
+        let [min, max] = definition_control_bounds(&model);
+        let tolerance = model.tolerance_mm;
+        let empty = || Model::empty(tolerance);
+        if coordinate <= min[axis] { return Ok([empty()?, model]); }
+        if coordinate >= max[axis] { return Ok([model, empty()?]); }
+        // Pad every artificial face outside the complete positive-weight control hull.
+        let margin = (0..3).map(|i| max[i] - min[i]).fold(model.tolerance_mm, f64::max);
+        let lo = min.map(|v| (v - margin).next_down());
+        let mut hi = max.map(|v| (v + margin).next_up());
+        hi[axis] = coordinate;
+        if lo.iter().chain(&hi).any(|v| !v.is_finite()) {
+            return Err(refuse("STEP coordinate split exceeds finite bounds"));
+        }
+        let clip = brep_core::cuboid(lo, hi)?;
+        Ok([brep_core::boolean(&model, &clip, "intersection")?,
+            brep_core::boolean(&model, &clip, "difference")?])
+    }
+
     /// Compare two placed versions of a solid, preserving both directions of change.
     pub fn material_delta(&self, before: usize, after: usize) -> Result<StepMaterialDelta> {
         let before = self.materialize(before)?;
