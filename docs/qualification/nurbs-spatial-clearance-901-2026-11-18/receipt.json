@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0901",
+  "testedBase": "0686e2bf293f759cd00ffb5395afac7abbe08336",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_degree_reduction_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 467,
+  "scope": [
+    "Exclude diagonal and reserve each distinct span pair once. Check closest indices, coincident entries, exact initial budget and singleton refusal."
+  ],
+  "logSha256": "cce2abd08381347c824e901ce29e0aba2bae25c4f4a35118385ed782250706ee",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "e194f41adef8d03e306ba127922e011a6a90d8fb9ea76e7bf7726aee99aa35eb",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "51273d43b992bd66bf8dccb05076e8e86adf454e29b072331f74f804f117de81"
+  }
+}

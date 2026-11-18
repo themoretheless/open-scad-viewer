@@ -13522,3 +13522,20 @@ fn spatial_contour_clearance_covers_all_pairs_and_preserves_source_witnesses() {
     let mut open=c.clone(); open.control_points[3][2]+=1.;
     assert!(measure(&[&a],&[&open],1e-6,1000).is_err());
 }
+
+#[test]
+fn closest_spatial_pair_skips_diagonal_and_keeps_coincident_members() {
+    use nurbs_core::analysis::curve_measure::closest_spatial_contour_pair as closest;
+    let triangle = |z| Curve {degree:1,knots:vec![0.,0.,1.,2.,3.,3.],
+        control_points:vec![vec![0.,0.,z],vec![1.,0.,z],vec![0.,1.,z],vec![0.,0.,z]],
+        weights:vec![1.;4],periodic:false};
+    let (a,b,c)=(triangle(10.),triangle(-1.),triangle(8.));
+    let r=closest(&[&a,&b,&c],1e-7,27).unwrap();
+    assert!(r.converged && r.bounds[0]<=2. && r.bounds[1]>=2.);
+    assert_eq!(r.witness_contours,[0,2]);
+    assert!(closest(&[&a,&b,&c],1e-7,26).is_err());
+    let duplicate=closest(&[&a,&b,&a],1e-7,1000).unwrap();
+    assert_eq!(duplicate.witness_contours,[0,2]);
+    assert!(duplicate.bounds[0]<=0. && duplicate.bounds[1]<1e-7);
+    assert!(closest(&[&a],1e-7,100).is_err());
+}

@@ -2380,7 +2380,7 @@ pub fn measure_planar_contour_sets_distance(
     validate(tolerance, max_cells)?;
     validate_distance_contours(first, max_cells)?;
     validate_distance_contours(second, max_cells)?;
-    measure_validated_contour_pairs(first, second, tolerance, max_cells)
+    measure_validated_contour_pairs(first, second, tolerance, max_cells, false)
 }
 
 /// Enclose the minimum 3D distance between two collections of clamped,
@@ -2389,29 +2389,48 @@ pub fn measure_spatial_contour_sets_distance(
     first: &[&Curve], second: &[&Curve], tolerance: f64, max_cells: usize,
 ) -> Result<ContourPairDistanceReport> {
     validate(tolerance,max_cells)?;
-    for set in [first,second] {
-        check(!set.is_empty() && set.len() <= max_cells, "Expected bounded nonempty spatial contour set")?;
-        for curve in set {
-            validate_continuous_clamped_curve(curve,3)?;
-            check(curve.control_points.first()==curve.control_points.last(), "Spatial contour must be closed")?;
-        }
+    validate_spatial_distance_set(first, max_cells)?;
+    validate_spatial_distance_set(second, max_cells)?;
+    measure_validated_contour_pairs(first, second, tolerance, max_cells, false)
+}
+
+fn validate_spatial_distance_set(set: &[&Curve], max_cells: usize) -> Result<()> {
+    check(!set.is_empty() && set.len() <= max_cells, "Expected bounded nonempty spatial contour set")?;
+    for curve in set {
+        validate_continuous_clamped_curve(curve, 3)?;
+        check(curve.control_points.first() == curve.control_points.last(), "Spatial contour must be closed")?;
     }
-    measure_validated_contour_pairs(first, second, tolerance, max_cells)
+    Ok(())
+}
+
+/// Bound clearance between distinct members of one collection. Witness
+/// indices are ordered. Two coincident entries are distinct members and
+/// therefore can attain zero clearance.
+pub fn closest_spatial_contour_pair(
+    contours: &[&Curve], tolerance: f64, max_cells: usize,
+) -> Result<ContourPairDistanceReport> {
+    validate(tolerance, max_cells)?;
+    check(contours.len() >= 2, "Closest pair needs at least two contours")?;
+    validate_spatial_distance_set(contours, max_cells)?;
+    measure_validated_contour_pairs(contours, contours, tolerance, max_cells, true)
 }
 
 fn measure_validated_contour_pairs(
-    first: &[&Curve], second: &[&Curve], tolerance: f64, max_cells: usize,
+    first: &[&Curve], second: &[&Curve], tolerance: f64, max_cells: usize, distinct_members: bool,
 ) -> Result<ContourPairDistanceReport> {
     let counts = [first, second].map(|set| {
         set.iter().map(|curve| active_spans(curve, curve.domain()).count()).collect::<Vec<_>>()
     });
-    let total = |spans: &[usize]| spans.iter().try_fold(0_usize, |sum, &count| sum.checked_add(count));
-    let initial = total(&counts[0]).zip(total(&counts[1]))
-        .and_then(|(a, b)| a.checked_mul(b))
-        .filter(|&work| work <= max_cells)
-        .ok_or_else(|| resource("Contour distance budget must cover every original span pair"))?;
-    let mut extra = max_cells - initial;
-    let mut pairs = first.len() * second.len();
+    let start = |i| if distinct_members { i + 1 } else { 0 };
+    let mut extra = max_cells;
+    let mut pairs = 0;
+    for (i, &left) in counts[0].iter().enumerate() {
+        for &right in &counts[1][start(i)..] {
+            extra = extra.checked_sub(left * right)
+                .ok_or_else(|| resource("Contour distance budget must cover every original span pair"))?;
+            pairs += 1;
+        }
+    }
     let mut report = PlanarContourPairDistanceReport {
         bounds: [f64::INFINITY; 2],
         witness_contours: [0; 2],
@@ -2420,7 +2439,7 @@ fn measure_validated_contour_pairs(
         converged: false,
     };
     for (i, a) in first.iter().enumerate() {
-        for (j, b) in second.iter().enumerate() {
+        for (j, b) in second.iter().enumerate().skip(start(i)) {
             let reserved = counts[0][i] * counts[1][j];
             let distance = crate::curve_distance::distance(a, b, tolerance, reserved + extra / pairs)?;
             pairs -= 1;
