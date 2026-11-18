@@ -38,7 +38,7 @@
     "kind": "post-freeze-harness-amendment",
     "previousPlanId": "semantic-manifold-g1-plan-v127",
     "previousPlanSha256": "3b7cef385781fc5fe5e7c62c1841f0539d29e4b572bb769dc6f01a860468e35d",
-    "reason": "Bind the unpublished merged candidate to the current STEP sources and Solid runtime.",
+    "reason": "Bind the merged STEP assembly exporter and its qualification catalog.",
     "changes": [
       "Recompute artifact and canonical bundle digests from current source bytes.",
       "Bind the exact GitHub Actions workflow, evidence-producing harness, selectors, and hosted-runner image identities.",

@@ -4,7 +4,7 @@
   "fingerprintId": "g0-toolchain-fingerprints-v111",
   "recordedAt": "2026-11-18",
   "previousFingerprintId": "g0-toolchain-fingerprints-v110",
-  "purpose": "Bind the unpublished merged candidate to the current STEP sources and Solid runtime.",
+  "purpose": "Bind the merged STEP assembly exporter and its qualification catalog.",
   "claimBoundary": {
     "includes": [
       "Exact SHA-256 of listed lock/manifest/notices/toolchain files",
@@ -6163,14 +6163,14 @@
     {
       "id": "geometry-v3-source-1167",
       "path": "docs/design/nurbs-api-map.md",
-      "sha256": "76f087a6b9c62f12f14ea0d4c23b71e32c1f7c3a16ef1f2b47dc80bd7316f0bd",
-      "byteLength": 759164
+      "sha256": "aac5955e9cc49d485a8a7458499281fdf41cb10731903c5b74652420915e054a",
+      "byteLength": 760000
     },
     {
       "id": "geometry-v3-source-1168",
       "path": "docs/design/nurbs-catalog.json",
-      "sha256": "c9867e85b5e84dd7e00262ed2c69d8e1c05e263da4cc48865cff6903216a2c9c",
-      "byteLength": 1108941
+      "sha256": "3ba0cb4384e603663dc84d9c9c6023c60801491f184d491fa802bd2934834dfd",
+      "byteLength": 1110081
     },
     {
       "id": "geometry-v3-source-1169",
@@ -6997,8 +6997,8 @@
     {
       "id": "geometry-v3-source-1323",
       "path": "crates/cad-step/src/tests/step_interchange_v3.rs",
-      "sha256": "906ceeca83acab61b44000e89ec972fb2a171cceb9920d8df773b50de004fc44",
-      "byteLength": 161731
+      "sha256": "d52b0c472efa828bfcd3c57b04e91a219eaa85b9616f9af89f67617d6f16f9b2",
+      "byteLength": 162990
     },
     {
       "id": "geometry-v3-source-1324",
@@ -25939,8 +25939,8 @@
     {
       "id": "geometry-v3-source-5487",
       "path": "crates/cad-step/src/step_v3_export.rs",
-      "sha256": "6c26ac8764625f59e9f1e73e13205bf9c5e6f850625507488b28400c13c338d5",
-      "byteLength": 38917
+      "sha256": "ea1ab5d27b1703976aaaff573b7550ecfb7ea698c4a1a8d718c48b630ec7c83f",
+      "byteLength": 38589
     },
     {
       "id": "geometry-v3-source-5488",
@@ -37143,432 +37143,432 @@
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-05",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-10",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "g1-v34-github-workflow",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "g1-v34-github-harness",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "g1-v34-clean-fragment-selector",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "g1-v34-ubuntu-selector",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-66",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-67",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-69",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-70",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-80",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-124",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-160",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-295",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-561",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-653",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-658",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-670",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-671",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-962",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-972",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-979",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1007",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1011",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1012",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1058",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1060",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1067",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1097",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1099",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1100",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1167",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1168",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1186",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1256",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1271",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1275",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1315",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-1323",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-3210",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-3304",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-3305",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-3366",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-3374",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-3484",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-3537",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-3539",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-3652",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-3653",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-3720",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-3986",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-4033",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-4401",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-4407",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-4442",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-4445",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-4447",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-4448",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-4449",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-4502",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-5013",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-5310",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-5344",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-5347",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-5425",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-5487",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-5497",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-6076",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-6789",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-6797",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-6799",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-6871",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-6872",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-6880",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-6986",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-7087",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-7425",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-7426",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-7683",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-7793",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-7796",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-7803",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-7806",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-7807",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-7808",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v110.json",
       "bindingId": "geometry-v3-source-7809",
-      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the unpublished merged candidate to the current STEP sources and Solid runtime."
+      "note": "Current bytes are newly bound in v111; v110 remains archived. Bind the merged STEP assembly exporter and its qualification catalog."
     }
   ],
   "previousFingerprintSha256": "af264f92743fdfc879d957056c9e0a28bcf50ed3c56cee87da1a6cd7efc4b7ea"

@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "statusId": "g0-v111-g1-v128-refreeze-status-v1",
   "recordedAt": "2026-11-18",
-  "reason": "Bind the unpublished merged candidate to the current STEP sources and Solid runtime.",
+  "reason": "Bind the merged STEP assembly exporter and its qualification catalog.",
   "qualificationClaim": "none",
   "qualificationApproval": "not-approved",
   "g0Closed": false,
@@ -4044,19 +4044,19 @@
     {
       "id": "fingerprint",
       "path": "docs/qualification/g0-toolchain-fingerprints-v111.json",
-      "sha256": "8f5fc86d4829cb9da6c9f4b01be6896155b359f59350717bcff59a79b273a667",
-      "byteLength": 1443641
+      "sha256": "aa35603b23ef04e397c4776e7a5cb4a70d96f68384532f9acca9d0c0b48430ee",
+      "byteLength": 1442336
     },
     {
       "id": "plan",
       "path": "docs/qualification/semantic-manifold-g1-plan-v128.json",
-      "sha256": "ef17cda93cef5363dc61e34757698fb486943283823d8f85f47bd269e5659749",
-      "byteLength": 85397
+      "sha256": "3179ee3f78467f67701dd882d9448a13a00899fa1e2e250733471d4fbe93036f",
+      "byteLength": 85382
     }
   ],
   "inputSnapshot": {
     "canonicalization": "UTF-8 records sorted by path: path + NUL + lowercase-file-sha256 + LF",
-    "sha256": "576c1f528edfc7533b76f0793b8142a7fef6a80ff18d57fefd70a39d11bc3e51",
+    "sha256": "29f2829503ed90cc0eeeed542b8f3a2a6922579a6922b9b1cebe1a61ec396508",
     "byteLength": 807971,
     "files": [
       {
@@ -10151,8 +10151,8 @@
       },
       {
         "path": "crates/cad-step/src/step_v3_export.rs",
-        "sha256": "6c26ac8764625f59e9f1e73e13205bf9c5e6f850625507488b28400c13c338d5",
-        "byteLength": 38917
+        "sha256": "ea1ab5d27b1703976aaaff573b7550ecfb7ea698c4a1a8d718c48b630ec7c83f",
+        "byteLength": 38589
       },
       {
         "path": "crates/cad-step/src/step_v3_export/algorithm_certify_periodic_surface.rs",
@@ -10186,8 +10186,8 @@
       },
       {
         "path": "crates/cad-step/src/tests/step_interchange_v3.rs",
-        "sha256": "906ceeca83acab61b44000e89ec972fb2a171cceb9920d8df773b50de004fc44",
-        "byteLength": 161731
+        "sha256": "d52b0c472efa828bfcd3c57b04e91a219eaa85b9616f9af89f67617d6f16f9b2",
+        "byteLength": 162990
       },
       {
         "path": "crates/cad-step/tests/analysis_freeform.rs",
@@ -20196,13 +20196,13 @@
       },
       {
         "path": "docs/design/nurbs-api-map.md",
-        "sha256": "76f087a6b9c62f12f14ea0d4c23b71e32c1f7c3a16ef1f2b47dc80bd7316f0bd",
-        "byteLength": 759164
+        "sha256": "aac5955e9cc49d485a8a7458499281fdf41cb10731903c5b74652420915e054a",
+        "byteLength": 760000
       },
       {
         "path": "docs/design/nurbs-catalog.json",
-        "sha256": "c9867e85b5e84dd7e00262ed2c69d8e1c05e263da4cc48865cff6903216a2c9c",
-        "byteLength": 1108941
+        "sha256": "3ba0cb4384e603663dc84d9c9c6023c60801491f184d491fa802bd2934834dfd",
+        "byteLength": 1110081
       },
       {
         "path": "docs/design/nurbs-exact-degree-reduction.md",
@@ -38697,13 +38697,13 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1167",
       "previousSha256": "9f5782944b4bd0b1186e5e6cf577361887a2798e7b3f0c37727ccbbc41c92e48",
-      "currentSha256": "76f087a6b9c62f12f14ea0d4c23b71e32c1f7c3a16ef1f2b47dc80bd7316f0bd"
+      "currentSha256": "aac5955e9cc49d485a8a7458499281fdf41cb10731903c5b74652420915e054a"
     },
     {
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1168",
       "previousSha256": "1f917537d7091fe288c02f78431742d9bfd2ddd949833009466eee8e927f142e",
-      "currentSha256": "c9867e85b5e84dd7e00262ed2c69d8e1c05e263da4cc48865cff6903216a2c9c"
+      "currentSha256": "3ba0cb4384e603663dc84d9c9c6023c60801491f184d491fa802bd2934834dfd"
     },
     {
       "kind": "g0-artifact",
@@ -38739,7 +38739,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1323",
       "previousSha256": "bed6187d4852f06dabaad2d575f81247300ba1502e11bccf07a47fcda34510c6",
-      "currentSha256": "906ceeca83acab61b44000e89ec972fb2a171cceb9920d8df773b50de004fc44"
+      "currentSha256": "d52b0c472efa828bfcd3c57b04e91a219eaa85b9616f9af89f67617d6f16f9b2"
     },
     {
       "kind": "g0-artifact",
@@ -38901,7 +38901,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-5487",
       "previousSha256": "58021731836aa992b7c78799ce339076ce3616decef7e91d7a7081c6663c7bee",
-      "currentSha256": "6c26ac8764625f59e9f1e73e13205bf9c5e6f850625507488b28400c13c338d5"
+      "currentSha256": "ea1ab5d27b1703976aaaff573b7550ecfb7ea698c4a1a8d718c48b630ec7c83f"
     },
     {
       "kind": "g0-artifact",
