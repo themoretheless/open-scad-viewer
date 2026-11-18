@@ -2632,6 +2632,54 @@ pub fn certify_planar_contour_fill_orientations(
     Ok(PlanarContourOrientationReport { hierarchy, orientations, reverse, orientation_work_cells })
 }
 
+#[derive(Clone, Debug)]
+pub struct OrientedPlanarContours {
+    pub contours: Vec<Curve>,
+    pub orientation: PlanarContourOrientationReport,
+    pub reversal_work: u64,
+}
+
+/// Orient simple planar boundaries for nonzero fill, preserving their
+/// exact geometry and original active parameter intervals. A required
+/// reversal that cannot store all reflected knots exactly fails the edit.
+pub fn orient_planar_contours_for_nonzero_fill(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_orientation_cells: usize,
+    max_reversal_work: u64,
+) -> Result<OrientedPlanarContours> {
+    check((1..=cad_predicates::MAX_WORK).contains(&max_reversal_work),
+        "Contour reversal requires bounded positive exact work")?;
+    let orientation = certify_planar_contour_fill_orientations(
+        contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
+        max_winding_cells, max_distance_cells, max_orientation_cells,
+    )?;
+    let mut reversal_work = 0;
+    let mut oriented = Vec::with_capacity(contours.len());
+    for (&curve, &reverse) in contours.iter().zip(&orientation.reverse) {
+        if !reverse {
+            oriented.push(curve.clone());
+            continue;
+        }
+        let remaining = max_reversal_work - reversal_work;
+        if remaining == 0 {
+            return Err(resource("Contour reversal work budget exhausted"));
+        }
+        let [start, end] = curve.domain();
+        let report = crate::editing::exact_projective::affine_curve_clock(curve, [end, start], remaining)?;
+        reversal_work += report.work_used;
+        let reversed = report.geometry.ok_or_else(|| {
+            resource("Contour reversal could not preserve the exact affine clock within the work budget")
+        })?;
+        oriented.push(reversed);
+    }
+    Ok(OrientedPlanarContours { contours: oriented, orientation, reversal_work })
+}
+
 fn validate_distance_contours(contours: &[&Curve], max_cells: usize) -> Result<()> {
     check(!contours.is_empty(), "Contour distance requires at least one contour")?;
     check(contours.len() <= max_cells, "Distance budget must cover every contour")?;

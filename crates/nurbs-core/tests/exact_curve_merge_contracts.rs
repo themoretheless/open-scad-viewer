@@ -13032,3 +13032,40 @@ fn planar_contour_fill_orientations_identify_reversals_for_roots_and_holes() {
     assert_eq!(report.reverse, [true, false, true]);
     assert!(report.orientation_work_cells <= 1024);
 }
+
+#[test]
+fn orient_planar_contours_for_nonzero_fill_preserves_exact_reversed_geometry() {
+    use nurbs_core::{
+        analysis::curve_measure::{classify_planar_curve_fill, orient_planar_contours_for_nonzero_fill},
+        chord_winding::FillRule,
+    };
+    let square = |r: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 0.5, 2., 3., 4., 4.],
+        control_points: vec![vec![-r, -r], vec![r, -r], vec![r, r],
+            vec![-r, r], vec![-r, -r]],
+        weights: vec![1., 2., 3., 2., 1.],
+        periodic: false,
+    };
+    let [outer, hole] = [square(3.), square(1.)];
+    let orient = |contours: &[&Curve], budget| orient_planar_contours_for_nonzero_fill(
+        contours, 0.02, 1e-4, 128, 4096, 512, 1024, budget,
+    );
+    assert!(orient(&[&outer, &hole], 1).is_err());
+    let report = orient(&[&outer, &hole], 10_000).unwrap();
+    assert_eq!(report.orientation.reverse, [false, true]);
+    assert_eq!(report.contours[0].control_points, outer.control_points);
+    assert_eq!(report.contours[1].knots, [0., 0., 1., 2., 3.5, 4., 4.]);
+    assert_eq!(report.contours[1].weights, hole.weights.iter().copied().rev().collect::<Vec<_>>());
+    for u in [0.125, 0.75, 2.25, 3.75] {
+        let original = hole.evaluate(4. - u).unwrap().point;
+        let reversed = report.contours[1].evaluate(u).unwrap().point;
+        assert!(original.iter().zip(reversed).all(|(a, b)| (a - b).abs() < 1e-12));
+    }
+    let contours = [&report.contours[0], &report.contours[1]];
+    assert_eq!(classify_planar_curve_fill(&contours, [0., 0.], FillRule::NonZero, 0.02, 1024)
+        .unwrap().filled, Some(false));
+    let mut unrepresentable = hole;
+    unrepresentable.knots[2] = 0.1;
+    assert!(orient(&[&outer, &unrepresentable], 10_000).is_err());
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 804,
-  "unallocatedCount": 196,
+  "specifiedCount": 805,
+  "unallocatedCount": 195,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18968,6 +18968,25 @@
       "remainingQualification": [
         "Certify boundary orientations and identify reversals that make nonzero fill agree with nesting parity.",
         "Check reversed roots, holes, islands and the shared orientation work budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0805",
+      "name": "Точная переориентация NURBS-контуров для правила ненулевого обхода",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::orient_planar_contours_for_nonzero_fill",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-805-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-805-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Normalize nested contour orientation by exact affine reversal of source knots and weights.",
+        "Check reversed pole weights and asymmetric knots, parameter agreement, hole fill and bounded exact reversal refusal.",
         "WASM and application integration are separate."
       ]
     }
