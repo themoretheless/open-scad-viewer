@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 633,
-  "unallocatedCount": 367,
+  "specifiedCount": 634,
+  "unallocatedCount": 366,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15675,6 +15675,25 @@
         "Return component mass bounds and sum them independently of centroidal inertia availability.",
         "Check weighted component mass intervals, their sum, stable outer-contour identities through WASM, and no partial masses under insufficient budget.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0634",
+      "name": "Гарантированные доли массы отдельных граней периодической NURBS-обрезки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::bound_component_mass_fractions",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-634-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-634-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose each mass fraction using monotonic dependence on its own mass and the sum of the other component masses.",
+        "Check exact endpoint dependence, zero and subnormal masses, nested-island component order, and absence of fractions when total positive mass is unproven.",
+        "WASM and application integration are separate."
       ]
     }
   ],

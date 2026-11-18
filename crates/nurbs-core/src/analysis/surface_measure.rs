@@ -1438,6 +1438,76 @@ pub struct TrimmedPatchSetDensityReport {
     pub mass_properties: Option<SurfaceAssemblyMassBounds>,
 }
 
+impl TrimmedPatchSetDensityReport {
+    /// Enclose the fractional mass of each patch in input order.
+    pub fn component_mass_fractions(&self) -> Result<Option<Vec<[f64; 2]>>> {
+        bound_component_mass_fractions(&self.component_mass_bounds)
+    }
+}
+
+/// Enclose each component's mass divided by the sum of all component
+/// masses. Return no fractions when the total can be zero.
+pub fn bound_component_mass_fractions(
+    mass_bounds: &[[f64; 2]],
+) -> Result<Option<Vec<[f64; 2]>>> {
+    let mut prefix = Vec::with_capacity(mass_bounds.len());
+    let mut total = Interval::point(0.);
+    for &[lo, hi] in mass_bounds {
+        let mass = Interval::new(lo, hi)?;
+        check(mass.lo >= 0., "Component mass bounds must be nonnegative")?;
+        prefix.push(total);
+        total = add_component_masses(total, mass)?;
+    }
+    if total.lo == 0. {
+        return Ok(None);
+    }
+
+    let mut fractions = Vec::with_capacity(mass_bounds.len());
+    let mut suffix = Interval::point(0.);
+    for (&[lo, hi], before) in mass_bounds.iter().zip(prefix).rev() {
+        let other = add_component_masses(before, suffix)?;
+        // The fraction increases with this mass and decreases with the
+        // sum of the other masses.
+        let lower = mass_fraction_endpoint(lo, other.hi)?;
+        let upper = mass_fraction_endpoint(hi, other.lo)?;
+        fractions.push([lower.lo, upper.hi]);
+        suffix = add_component_masses(suffix, Interval::new(lo, hi)?)?;
+    }
+    fractions.reverse();
+    Ok(Some(fractions))
+}
+
+fn add_component_masses(a: Interval, b: Interval) -> Result<Interval> {
+    if a.hi == 0. {
+        return Ok(b);
+    }
+    if b.hi == 0. {
+        return Ok(a);
+    }
+    let sum = a.add(b)?;
+    sum.intersect(a.lo.max(b.lo), sum.hi)
+}
+
+fn mass_fraction_endpoint(mass: f64, other: f64) -> Result<Interval> {
+    if mass == 0. {
+        return Ok(Interval::point(0.));
+    }
+    if other == 0. {
+        return Ok(Interval::point(1.));
+    }
+    let scale = mass.max(other);
+    let scaled = |value: f64| {
+        if value == scale {
+            return Ok(Interval::point(1.));
+        }
+        let quotient = value / scale;
+        Interval::new(quotient.next_down().max(0.), quotient.next_up().min(1.))
+    };
+    let mass = scaled(mass)?;
+    let other = scaled(other)?;
+    mass.div(mass.add(other)?)?.intersect(0., 1.)
+}
+
 /// Measure the mass of periodic trim patches with one areal density interval
 /// per patch in input order. The tolerance applies to geometric area, and the
 /// two integration limits are shared across the entire set.

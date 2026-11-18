@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0634",
+  "testedBase": "60d98f0f635d3d7f668e7e243bc5555cdedafcb8",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 230,
+  "scope": [
+    "Enclose each mass fraction using monotonic dependence on its own mass and the sum of the other component masses.",
+    "Check exact endpoint dependence, zero and subnormal masses, nested-island component order, and absence of fractions when total positive mass is unproven."
+  ],
+  "logSha256": "29c94b428be88fdb41f36175c7b104514f13b55a5678ab219cbb35a18a7eb5fd",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "491ad288dd4641252232def50ab0c5b6d794e2dfef0e3511a947607dac7f4bc7",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "2d605a1ed7cef8dc031f8c15d4961d0d4068a2669dc9d4e8d050e312ffe9b697"
+  }
+}

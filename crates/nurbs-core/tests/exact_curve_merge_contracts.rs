@@ -7426,3 +7426,47 @@ fn periodic_trim_set_reports_mass_of_each_component_under_density_ranges() {
     assert!(incomplete.component_mass_bounds.is_empty());
     assert!(incomplete.total_mass_bounds.is_none());
 }
+
+#[test]
+fn component_mass_fractions_preserve_shared_denominator_dependence() {
+    use nurbs_core::analysis::surface_measure::bound_component_mass_fractions;
+
+    let bounds = bound_component_mass_fractions(&[[2., 4.], [1., 2.], [0., 0.]])
+        .unwrap()
+        .unwrap();
+    for (actual, expected) in bounds.into_iter().zip([[0.5, 0.8], [0.2, 0.5], [0., 0.]]) {
+        assert!(actual[0] <= expected[0] && expected[1] <= actual[1]);
+        for (endpoint, reference) in actual.into_iter().zip(expected) {
+            assert!((endpoint - reference).abs() < 1e-14);
+        }
+    }
+    assert_eq!(
+        bound_component_mass_fractions(&[[0., 4.], [0., 2.]]).unwrap(),
+        None
+    );
+    assert!(bound_component_mass_fractions(&[[-1., 2.]]).is_err());
+    let tiny = f64::from_bits(1);
+    let tiny_bounds = bound_component_mass_fractions(&[[tiny; 2], [tiny; 2]])
+        .unwrap()
+        .unwrap();
+    assert!(tiny_bounds.iter().all(|[lo, hi]| *lo <= 0.5 && 0.5 <= *hi));
+}
+
+#[test]
+fn periodic_trim_component_mass_fractions_follow_patch_order() {
+    use nurbs_core::analysis::surface_measure::periodic_trim_patch_set_mass_with_density;
+
+    let patches = periodic_trim_patches_with_nested_island();
+    let densities = [[2.; 2], [6.; 2]];
+    let report =
+        periodic_trim_patch_set_mass_with_density(&patches, &densities, 0.005, 1e-10, 20_000, 1_000_000)
+            .unwrap();
+    let fractions = report.component_mass_fractions().unwrap().unwrap();
+    for ([lo, hi], reference) in fractions.into_iter().zip([20. / 23., 3. / 23.]) {
+        assert!(lo <= reference && reference <= hi);
+    }
+    let incomplete =
+        periodic_trim_patch_set_mass_with_density(&patches, &densities, 0.005, 1e-10, 2, 1_000_000)
+            .unwrap();
+    assert!(incomplete.component_mass_fractions().unwrap().is_none());
+}
