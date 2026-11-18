@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 786,
-  "unallocatedCount": 214,
+  "specifiedCount": 787,
+  "unallocatedCount": 213,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18626,6 +18626,25 @@
       "remainingQualification": [
         "Certify relative planar angular derivatives on the union of both knot grids.",
         "Check opposing rotations, combined derivative peaks, a reference knot and a singular reference.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0787",
+      "name": "Измерение результирующего и суммарного углового хода NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_angular_travel",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-787-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-787-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose signed angular change and total angular variation across planar NURBS spans.",
+        "Check retracing with zero net rotation and nonzero total angular travel, plus singular direction refusal.",
         "WASM and application integration are separate."
       ]
     }

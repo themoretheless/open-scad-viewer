@@ -12551,3 +12551,27 @@ fn relative_planar_angular_motion_limits_find_combined_rotation_peaks() {
         a <= 3. && 3. <= b && cell.statuses == [Status::Undetermined; 3]
     }));
 }
+
+#[test]
+fn planar_angular_travel_distinguishes_retracing_from_net_rotation() {
+    use nurbs_core::analysis::curve_measure::measure_planar_angular_travel;
+    let direction = Curve {
+        degree: 1,
+        knots: vec![2., 2., 3., 4., 4.],
+        control_points: vec![vec![1., 0.], vec![1., 1.], vec![1., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let report = measure_planar_angular_travel(&direction, [2., 4.], 0.01, 511).unwrap();
+    assert!(report.net_bounds[0] <= 0. && 0. <= report.net_bounds[1]);
+    assert!(report.net_bounds[1] - report.net_bounds[0] < 0.02);
+    let [lo, hi] = report.total_bounds;
+    assert!(lo <= std::f64::consts::FRAC_PI_2 && std::f64::consts::FRAC_PI_2 <= hi);
+    assert!(lo > 1.55 && hi < 1.59);
+    assert!(report.work_cells <= 511);
+    let singular = Curve {
+        control_points: vec![vec![1., 0.], vec![-1., 0.], vec![1., 0.]],
+        ..direction
+    };
+    assert!(measure_planar_angular_travel(&singular, [2., 4.], 0.01, 511).is_err());
+}

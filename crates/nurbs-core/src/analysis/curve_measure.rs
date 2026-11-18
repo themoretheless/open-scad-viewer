@@ -1899,6 +1899,62 @@ pub fn planar_angular_motion_duration_bounds(
     Ok(PlanarAngularMotionDurationReport { slowdown_bounds, duration_bounds })
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarAngularTravelReport {
+    /// Signed integral of angular speed in radians over the span interiors.
+    pub net_bounds: [f64; 2],
+    /// Integral of absolute angular speed in radians.
+    pub total_bounds: [f64; 2],
+    pub work_cells: usize,
+}
+
+/// Bound signed and total angular travel without wrapping angles at a
+/// branch cut. The integration covers each original knot span separately
+/// and excludes orientation jumps. Every retained cell must certify a
+/// nonzero direction.
+pub fn measure_planar_angular_travel(
+    direction: &Curve,
+    interval: [f64; 2],
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarAngularTravelReport> {
+    direction.validate()?;
+    check(direction.control_points[0].len() == 2, "Angular travel requires a planar direction curve")?;
+    let fixed = fixed_cardinal_rotation(direction).is_some();
+    let (cells, work_cells) = partition_motion_cells(
+        direction, interval, parameter_tolerance, max_cells,
+        |jets, _| {
+            if fixed {
+                return Ok((Some(Interval::point(0.)), false));
+            }
+            // The jet derivative is already in the local clock on [0, 1].
+            // Its range also encloses its integral over the unit interval.
+            let local = planar_angular_jets(jets, Interval::point(1.), 1)?;
+            Ok((local.map(|values| values[0]), true))
+        },
+    )?;
+    if fixed {
+        return Ok(PlanarAngularTravelReport {
+            net_bounds: [0.; 2], total_bounds: [0.; 2], work_cells,
+        });
+    }
+    let mut net = Interval::point(0.);
+    let mut total = Interval::point(0.);
+    for (_, _, speed) in cells {
+        let speed = speed.ok_or_else(|| resource("Angular travel requires a certified nonzero direction in every cell"))?;
+        net = net.add(speed)?;
+        total = total.add(Interval::new(
+            speed.lo.max(-speed.hi).max(0.),
+            speed.lo.abs().max(speed.hi.abs()),
+        )?)?;
+    }
+    Ok(PlanarAngularTravelReport {
+        net_bounds: [net.lo, net.hi],
+        total_bounds: [total.lo.max(0.), total.hi],
+        work_cells,
+    })
+}
+
 fn classify_absolute_motion(value: Interval, limit: f64) -> DirectionalMotionStatus {
     let upper = value.lo.abs().max(value.hi.abs());
     let lower = value.lo.max(-value.hi).max(0.);
