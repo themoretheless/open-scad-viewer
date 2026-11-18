@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0689",
+  "testedBase": "3d9ae711996f28c1833a09361e9c8dd97df9ae7f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 300,
+  "scope": [
+    "Enclose the minimum uniform-clock traversal time under simultaneous axis limits.",
+    "Check the clipped source time window, common jerk-limited duration, unit slowdown, and duration overflow with finite dilation."
+  ],
+  "logSha256": "e94e61b588f5ea4b1b81e440dafb2a1e42b81194db38d30eee533f783bc53063",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "d8f716bf58eaebe2555ef25c685bbd799f156c071c6ae331521815277afaef96",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "b0563d62c10b4bd590e9b2d74ec59e2a841735409bd3834fe009c34e442f4694"
+  }
+}

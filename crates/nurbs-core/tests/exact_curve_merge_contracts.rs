@@ -8853,3 +8853,63 @@ fn multi_axis_slowdown_reserves_initial_coverage_for_every_derivative() {
     blocked[1].limits.speed = 0.;
     assert_eq!(check(&blocked, 12).unwrap().bounds, [f64::MAX, f64::INFINITY]);
 }
+
+#[test]
+fn multi_axis_motion_duration_uses_window_width_and_common_dilation() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, MotionAxis, multi_axis_motion_duration_bounds,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 8.].map(|x| vec![x, 8. * x]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let axes = [
+        MotionAxis {
+            direction: &[1., 0.],
+            limits: DirectionalMotionLimits { speed: 6., acceleration: 12., jerk: 6. },
+        },
+        MotionAxis {
+            direction: &[0., -1.],
+            limits: DirectionalMotionLimits { speed: 96., acceleration: 96., jerk: 0.75 },
+        },
+    ];
+    let report =
+        multi_axis_motion_duration_bounds(&curve, [2.5, 4.], &axes, [1e-5; 3], 32).unwrap();
+    let [lo, hi] = report.duration_bounds;
+    assert!(lo <= 6. && 6. <= hi && hi - lo < 1e-5, "{report:?}");
+    assert_eq!(report.slowdown.axis_bounds.len(), 2);
+    assert!(report.slowdown.cells <= 32);
+    let unconstrained = [MotionAxis {
+        direction: &[1., 0.],
+        limits: DirectionalMotionLimits { speed: 20., acceleration: 20., jerk: 20. },
+    }];
+    let report =
+        multi_axis_motion_duration_bounds(&curve, [2.5, 4.], &unconstrained, [1e-5; 3], 32)
+            .unwrap();
+    assert_eq!(report.duration_bounds, [1.5; 2]);
+}
+
+#[test]
+fn multi_axis_motion_duration_encloses_overflow_with_finite_dilation() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionLimits, MotionAxis, multi_axis_motion_duration_bounds,
+    };
+    let curve = Curve {
+        degree: 3,
+        knots: vec![2., 2., 2., 2., 4., 4., 4., 4.],
+        control_points: [0., 0., 0., 8.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 4],
+        periodic: false,
+    };
+    let axes = [MotionAxis {
+        direction: &[1., 0.],
+        limits: DirectionalMotionLimits { speed: 1e-307, acceleration: 20., jerk: 20. },
+    }];
+    let report =
+        multi_axis_motion_duration_bounds(&curve, [2., 4.], &axes, [1e-5; 3], 32).unwrap();
+    assert!(report.slowdown.bounds[1].is_finite());
+    assert_eq!(report.duration_bounds, [f64::MAX, f64::INFINITY]);
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 688,
-  "unallocatedCount": 312,
+  "specifiedCount": 689,
+  "unallocatedCount": 311,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16764,6 +16764,25 @@
       "remainingQualification": [
         "Enclose the common slowdown for all axes under one span coverage and refinement budget.",
         "Check a jerk-limited axis dominating a speed-limited axis, input order, all-span budget reservation, and infeasible combined limits.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0689",
+      "name": "Сертифицированная длительность прохода NURBS-траектории по нескольким осям",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::multi_axis_motion_duration_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-689-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-689-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the minimum uniform-clock traversal time under simultaneous axis limits.",
+        "Check the clipped source time window, common jerk-limited duration, unit slowdown, and duration overflow with finite dilation.",
         "WASM and application integration are separate."
       ]
     }

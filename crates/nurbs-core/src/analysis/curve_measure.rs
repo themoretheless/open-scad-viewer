@@ -1252,6 +1252,60 @@ pub fn multi_axis_motion_slowdown_bounds(
     })
 }
 
+#[derive(Clone, Debug)]
+pub struct MultiAxisMotionDurationReport {
+    pub slowdown: MultiAxisSlowdownReport,
+    /// Enclosure of the minimum duration. A finite upper endpoint is
+    /// sufficient when traversing the window with a uniform clock.
+    pub duration_bounds: [f64; 2],
+}
+
+/// Compute the feasible uniform traversal duration for a source time window.
+/// Duration uses the same time units as the original curve parameter.
+pub fn multi_axis_motion_duration_bounds(
+    curve: &Curve,
+    time_window: [f64; 2],
+    axes: &[MotionAxis<'_>],
+    tolerances: [f64; 3],
+    max_cells: usize,
+) -> Result<MultiAxisMotionDurationReport> {
+    use num_rational::BigRational;
+    use num_traits::ToPrimitive;
+
+    let slowdown =
+        multi_axis_motion_slowdown_bounds(curve, time_window, axes, tolerances, max_cells)?;
+    let exact = |value| {
+        BigRational::from_float(value)
+            .ok_or_else(|| crate::numeric_err("Nonfinite duration operand"))
+    };
+    let width = exact(time_window[1])? - exact(time_window[0])?;
+    let duration_endpoint = |factor: f64, upper: bool| -> Result<f64> {
+        if factor == f64::INFINITY {
+            return Ok(f64::INFINITY);
+        }
+        let duration = &width * exact(factor)?;
+        let rounded = duration
+            .to_f64()
+            .ok_or_else(|| crate::numeric_err("Cannot represent duration endpoint"))?;
+        if rounded == f64::INFINITY {
+            return Ok(if upper { f64::INFINITY } else { f64::MAX });
+        }
+        let represented = exact(rounded)?;
+        Ok(if upper && represented < duration {
+            rounded.next_up()
+        } else if !upper && represented > duration {
+            rounded.next_down()
+        } else {
+            rounded
+        })
+    };
+    let duration_bounds = [
+        duration_endpoint(slowdown.bounds[0], false)?,
+        duration_endpoint(slowdown.bounds[1], true)?,
+    ];
+    Ok(MultiAxisMotionDurationReport { slowdown, duration_bounds })
+}
+
 fn measure_directional_derivative_peak(
     curve: &Curve,
     interval: [f64; 2],
