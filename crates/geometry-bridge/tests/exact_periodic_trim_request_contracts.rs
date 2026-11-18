@@ -999,3 +999,32 @@ fn patch_set_density_returns_radius_of_gyration_from_weighted_mass_and_moment() 
         Some(&Value::Null)
     );
 }
+
+#[test]
+fn patch_set_density_encloses_first_mass_moment_about_requested_plane() {
+    let mut request = patch_set_density_request(20_000);
+    assert!(
+        run(&request)["value"]
+            .get("firstMassMomentAboutPlaneBoundsKgMm")
+            .is_none()
+    );
+    request["centerOfMassPlane"] = json!({"pointMm": [1., 0., 0.], "normal": [2., -2., 0.]});
+    let expected = (0.34375 - 0.375 - 2.875) / 2_f64.sqrt();
+    for normal in [[2., -2., 0.], [-2., 2., 0.]] {
+        request["centerOfMassPlane"]["normal"] = json!(normal);
+        let response = run(&request);
+        assert_eq!(response["ok"], true, "{response}");
+        let bounds = &response["value"]["firstMassMomentAboutPlaneBoundsKgMm"];
+        let reference = if normal[0] > 0. { expected } else { -expected };
+        assert!(
+            bounds[0].as_f64().unwrap() <= reference && reference <= bounds[1].as_f64().unwrap()
+        );
+    }
+    request["maxSurfaceCells"] = json!(2);
+    let limited = run(&request);
+    assert_eq!(limited["ok"], true, "{limited}");
+    assert_eq!(
+        limited["value"].get("firstMassMomentAboutPlaneBoundsKgMm"),
+        Some(&Value::Null)
+    );
+}

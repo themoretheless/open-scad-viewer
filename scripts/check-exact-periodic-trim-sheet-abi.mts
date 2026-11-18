@@ -33,6 +33,7 @@ interface Report {
     massFractionBounds: [number, number] | null
   }[]
   massBoundsKg?: [number, number] | null
+  firstMassMomentAboutPlaneBoundsKgMm?: [number, number] | null
   centerOfMassPlaneDistanceBoundsMm?: [number, number] | null
   centerOfMassBoundsMm?: [number, number][] | null
   referenceInertiaBoundsKgMm2?: [number, number][][] | null
@@ -389,12 +390,19 @@ assert.equal(densityMass.centerOfMassPlaneDistanceBoundsMm, undefined)
 const planeOptions = {
   ...densityOptions, centerOfMassPlane: { pointMm: [1, 0, 0], normal: [2, -2, 0] },
 }
-const centerPlane = call(request.maxWork, densityOp, planeOptions).centerOfMassPlaneDistanceBoundsMm
+const planeResult = call(request.maxWork, densityOp, planeOptions)
+const centerPlane = planeResult.centerOfMassPlaneDistanceBoundsMm
 const expectedPlaneDistance = (expectedCenterX - expectedCenterY - 1) / Math.SQRT2
 assert.ok(centerPlane && centerPlane[0] <= expectedPlaneDistance && expectedPlaneDistance <= centerPlane[1])
 assert.ok(centerPlane[1] < 0)
 const incompletePlane = call(request.maxWork, densityOp, { ...planeOptions, maxSurfaceCells: 2 })
 assert.equal(incompletePlane.centerOfMassPlaneDistanceBoundsMm, null)
+const firstMassMoment = planeResult.firstMassMomentAboutPlaneBoundsKgMm
+const expectedFirstMassMoment = expectedPlaneDistance * 2.875
+assert.ok(firstMassMoment && firstMassMoment[0] <= expectedFirstMassMoment && expectedFirstMassMoment <= firstMassMoment[1])
+assert.equal(incompletePlane.firstMassMomentAboutPlaneBoundsKgMm, null)
+assert.equal(densityMass.firstMassMomentAboutPlaneBoundsKgMm, undefined)
+console.log('WASM ABI enclosed the signed first mass moment about a plane.')
 console.log('WASM ABI enclosed the signed distance from the density-weighted center to a plane.')
 
 assert.equal(densityMass.axisMomentBoundsKgMm2, undefined)

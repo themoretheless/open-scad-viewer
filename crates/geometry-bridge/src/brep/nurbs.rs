@@ -1516,6 +1516,7 @@ pub fn exact_periodic_trim_patch_set_density_request(
     });
     if center_plane.is_some() {
         response["centerOfMassPlaneDistanceBoundsMm"] = Value::Null;
+        response["firstMassMomentAboutPlaneBoundsKgMm"] = Value::Null;
     }
     if inertia_axis.is_some() {
         response["axisMomentBoundsKgMm2"] = Value::Null;
@@ -1558,6 +1559,8 @@ pub fn exact_periodic_trim_patch_set_density_request(
     if let Some((point, normal)) = center_plane {
         response["centerOfMassPlaneDistanceBoundsMm"] =
             json!(report.center_of_mass_plane_distance(point, normal)?);
+        response["firstMassMomentAboutPlaneBoundsKgMm"] =
+            json!(report.first_mass_moment_about_plane(point, normal)?);
     }
     if let Some((point, direction)) = inertia_axis {
         let moment = report.bound_inertia_about_line(point, direction)?;
