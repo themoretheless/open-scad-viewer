@@ -1159,6 +1159,61 @@ pub fn bound_mass_weighted_centroid(
     Ok(centroid.map(|axis| [axis.lo, axis.hi]))
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BalanceTolerance {
+    Within,
+    Outside,
+    Undetermined,
+}
+
+/// Enclose the perpendicular distance from the common center of mass to an
+/// axis, then compare the entire enclosure with the allowed eccentricity.
+pub fn bound_assembly_balance_about_line(
+    pieces: &[SurfaceAssemblyMassBounds],
+    point: [f64; 3],
+    direction: [f64; 3],
+    tolerance: f64,
+) -> Result<([f64; 2], BalanceTolerance)> {
+    check(
+        !pieces.is_empty() && tolerance.is_finite() && tolerance >= 0.,
+        "Balance requires surface pieces and a finite nonnegative tolerance",
+    )?;
+    let axis = InertiaAxis::new(direction)?;
+    let origin = centroid_intervals(point.map(|coordinate| [coordinate; 2]))?;
+    let mut projected = Vec::with_capacity(pieces.len());
+    for piece in pieces {
+        positive_piece_mass(piece)?;
+        let center = centroid_intervals(piece.centroid_bounds)?;
+        let offset = crate::numerics::interval_vec3::sub(center, origin)?;
+        projected.push((cross(offset, axis.components)?, piece.mass_bounds));
+    }
+
+    // Project each piece before averaging so common motion along the axis
+    // does not inflate the enclosure of the perpendicular displacement.
+    let mut endpoints = Vec::with_capacity(projected.len());
+    let mut perpendicular = [Interval::point(0.); 3];
+    for (component, interval) in perpendicular.iter_mut().enumerate() {
+        endpoints.extend(projected.iter().map(|(vector, mass)| (vector[component].lo, *mass)));
+        let lo = extremal_weighted_coordinate(&mut endpoints, false)?;
+        endpoints.clear();
+        endpoints.extend(projected.iter().map(|(vector, mass)| (vector[component].hi, *mass)));
+        let hi = extremal_weighted_coordinate(&mut endpoints, true)?;
+        endpoints.clear();
+        *interval = Interval::new(lo, hi)?;
+    }
+    let distance = norm(perpendicular)?.div(plane_normal_length(&axis)?)?;
+    let lo = distance.lo.max(0.);
+    let hi = distance.hi;
+    let status = if hi <= tolerance {
+        BalanceTolerance::Within
+    } else if lo > tolerance {
+        BalanceTolerance::Outside
+    } else {
+        BalanceTolerance::Undetermined
+    };
+    Ok(([lo, hi], status))
+}
+
 /// Enclose the signed distance of the common center of mass from an
 /// oriented plane, specified by a point and a finite nonzero normal.
 pub fn bound_mass_weighted_centroid_plane_distance(
@@ -1967,6 +2022,25 @@ impl TrimmedPatchSetDensityReport {
             *axis = find_principal_axis_from_bounds(tensor, moments, index)?;
         }
         Ok(Some(axes))
+    }
+
+    /// Check a fixed rotation axis against the density-weighted center of mass.
+    pub fn bound_balance_about_line(
+        &self,
+        point: [f64; 3],
+        direction: [f64; 3],
+        tolerance: f64,
+    ) -> Result<Option<([f64; 2], BalanceTolerance)>> {
+        self.mass_properties
+            .map(|_| {
+                bound_assembly_balance_about_line(
+                    &self.weighted_components,
+                    point,
+                    direction,
+                    tolerance,
+                )
+            })
+            .transpose()
     }
 
     /// Enclose the density-weighted first moment about an oriented plane.

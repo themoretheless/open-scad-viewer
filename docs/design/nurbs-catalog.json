@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 656,
-  "unallocatedCount": 344,
+  "specifiedCount": 657,
+  "unallocatedCount": 343,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16136,6 +16136,25 @@
         "Attach certified acute-angle sine bounds for a fixed probe direction to each available principal axis.",
         "Check analytic oblique alignment, reversal invariance, unresolved axes and invalid direction requests through Rust and the compiled ABI.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0657",
+      "name": "Гарантированная проверка эксцентриситета центра масс относительно оси балансировки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::bound_assembly_balance_about_line",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-657-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-657-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Project components before density-weighted extremization and classify eccentricity against a fixed tolerance.",
+        "Check projected cancellation under uncertain masses and all tolerance outcomes, a weighted nested-island analytic reference and incomplete coverage.",
+        "WASM and application integration are separate."
       ]
     }
   ],

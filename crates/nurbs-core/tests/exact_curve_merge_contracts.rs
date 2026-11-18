@@ -7934,3 +7934,53 @@ fn principal_axis_angle_sine_respects_certified_angular_uncertainty() {
     assert_eq!(hi, 1.);
     assert!(bound_principal_axis_angle_sine(axis, [0.; 3]).is_err());
 }
+
+#[test]
+fn assembly_balance_projects_before_combining_uncertain_masses() {
+    use nurbs_core::analysis::surface_measure::{
+        BalanceTolerance, SurfaceAssemblyMassBounds, bound_assembly_balance_about_line,
+    };
+    let pieces = [1., 100.].map(|x| SurfaceAssemblyMassBounds {
+        mass_bounds: [1., 10.],
+        centroid_bounds: [[x; 2], [x; 2], [3.; 2]],
+        central_inertia_bounds: [[[0.; 2]; 3]; 3],
+    });
+    for (tolerance, expected) in [
+        (3.01, BalanceTolerance::Within),
+        (2.99, BalanceTolerance::Outside),
+        (3., BalanceTolerance::Undetermined),
+    ] {
+        let ([lo, hi], status) =
+            bound_assembly_balance_about_line(&pieces, [0.; 3], [2., 2., 0.], tolerance)
+                .unwrap();
+        assert!(lo <= 3. && 3. <= hi && hi - lo < 1e-11);
+        assert_eq!(status, expected);
+    }
+    assert!(bound_assembly_balance_about_line(&pieces, [0.; 3], [0.; 3], 1.).is_err());
+}
+
+#[test]
+fn weighted_trim_balance_detects_offset_axis_and_incomplete_measurement() {
+    use nurbs_core::analysis::surface_measure::{
+        BalanceTolerance, periodic_trim_patch_set_mass_with_density,
+    };
+    let patches = periodic_trim_patches_with_nested_island();
+    let densities = [[2.; 2], [6.; 2]];
+    let report = periodic_trim_patch_set_mass_with_density(
+        &patches, &densities, 0.005, 1e-10, 20_000, 1_000_000,
+    )
+    .unwrap();
+    let point = [1., 0., 0.];
+    let direction = [0., 0., 1.];
+    let ([lo, hi], status) = report
+        .bound_balance_about_line(point, direction, 0.5)
+        .unwrap()
+        .unwrap();
+    let exact = (1. - 0.34375_f64 / 2.875).hypot(0.375 / 2.875);
+    assert!(lo <= exact && exact <= hi);
+    assert_eq!(status, BalanceTolerance::Outside);
+    let incomplete =
+        periodic_trim_patch_set_mass_with_density(&patches, &densities, 0.005, 1e-10, 2, 1_000_000)
+            .unwrap();
+    assert_eq!(incomplete.bound_balance_about_line(point, direction, 0.5).unwrap(), None);
+}
