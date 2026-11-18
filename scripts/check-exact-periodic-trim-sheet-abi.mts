@@ -38,6 +38,12 @@ interface Report {
   centerOfMassBoundsMm?: [number, number][] | null
   referenceInertiaBoundsKgMm2?: [number, number][][] | null
   centralInertiaBoundsKgMm2?: [number, number][][] | null
+  twoPlaneCounterweights?: {
+    offsetMm: number
+    radiusMm: number
+    massBoundsKg: [number, number]
+    radialOffsetBoundsMm: [number, number][] | null
+  }[] | null
   twoPlaneBalance?: {
     status: string
     planes: { offsetMm: number; magnitudeBoundsKgMm: [number, number]; status: string }[]
@@ -564,3 +570,21 @@ assert.equal(planeBalance.status, 'outside')
 assert.deepEqual(planeBalance.planes.map(plane => [plane.offsetMm, plane.status]), [[0, 'within'], [2, 'outside']])
 assert.equal(call(request.maxWork, densityOp, { ...planeLimits, maxSurfaceCells: 2 }).twoPlaneBalance, null)
 console.log('WASM ABI classified independent correction-plane tolerances.')
+
+const counterweightOptions = { ...twoPlaneOptions, counterweightRadiiMm: [2, 4] }
+const counterweights = call(request.maxWork, densityOp, counterweightOptions).twoPlaneCounterweights
+assert.ok(counterweights)
+assert.deepEqual(counterweights.map(plane => [plane.offsetMm, plane.radiusMm]), [[0, 2], [2, 4]])
+const expectedPlaneMagnitude = Math.hypot(1.265625, 0.1875)
+for (const plane of counterweights) {
+  const mass = expectedPlaneMagnitude / plane.radiusMm
+  assert.ok(plane.massBoundsKg[0] <= mass && mass <= plane.massBoundsKg[1])
+  const radial = plane.radialOffsetBoundsMm
+  assert.ok(radial)
+  for (const [i, component] of [1.265625, -0.1875, 0].entries()) {
+    const exact = component * plane.radiusMm / expectedPlaneMagnitude
+    assert.ok(radial[i][0] <= exact && exact <= radial[i][1])
+  }
+}
+assert.equal(call(request.maxWork, densityOp, { ...counterweightOptions, maxSurfaceCells: 2 }).twoPlaneCounterweights, null)
+console.log('WASM ABI enclosed counterweights at both designated radii.')

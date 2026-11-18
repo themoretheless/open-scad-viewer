@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0668",
+  "testedBase": "c8b35aa615ea9edb221ffcd84c58c455a5a626e3",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 322,
+  "scope": [
+    "Expose opt-in plane counterweight masses and opposing radial placement bounds at prescribed radii.",
+    "Check analytic counterweight masses and radial positions using two mounting radii, malformed options and incomplete coverage through the compiled ABI."
+  ],
+  "logSha256": "597a8575c5bd9c01114b6edd81e4d81fa54e0e4bb28ca3c42d846f435067b966",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "93056505b48b004f31c5ca4ecc87be3beeb42dd75a25e15ce0e59f5e3b6ca6b0",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "e5db1abf25d459483263e310eb8e1195b98a88092ae38db042f18c9d8f8d3654",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "96753240fc8a1b873b02c13cafd1836715148784f49b34b22a736d1d7bf6950d",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "1de741cdaca77ea5956acfee4fc3555d465df1753734c87b412eee5ec349170c"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}

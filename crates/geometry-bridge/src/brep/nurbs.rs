@@ -1448,7 +1448,7 @@ pub fn exact_periodic_trim_patch_set_density_request(
     use nurbs_core::{
         analysis::surface_measure::{
             bound_distance_to_principal_axis, bound_principal_axis_angle_sine,
-            bound_radius_of_gyration, classify_two_plane_unbalance,
+            bound_radius_of_gyration, bound_two_plane_counterweights, classify_two_plane_unbalance,
             periodic_trim_patch_set_mass_with_density,
         },
         editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
@@ -1538,6 +1538,18 @@ pub fn exact_periodic_trim_patch_set_density_request(
                 ));
             }
             Ok([first, second])
+        })
+        .transpose()?;
+    let counterweight_radii = request
+        .get("counterweightRadiiMm")
+        .map(|_| -> Result<[f64; 2]> {
+            let radii: [f64; 2] = field(request, "counterweightRadiiMm")?;
+            if balance_planes.is_none() || radii.iter().any(|r| !r.is_finite() || *r <= 0.) {
+                return Err(input(
+                    "Counterweights require balance planes and positive finite radii",
+                ));
+            }
+            Ok(radii)
         })
         .transpose()?;
     let plane_tolerances = request
@@ -1641,6 +1653,9 @@ pub fn exact_periodic_trim_patch_set_density_request(
     if plane_tolerances.is_some() {
         response["twoPlaneBalance"] = Value::Null;
     }
+    if counterweight_radii.is_some() {
+        response["twoPlaneCounterweights"] = Value::Null;
+    }
     let Some(patches) = build.patches else {
         return Ok(response);
     };
@@ -1679,6 +1694,17 @@ pub fn exact_periodic_trim_patch_set_density_request(
             response["twoPlaneUnbalance"] = json!([0, 1].map(|index| {
                 json!({"offsetMm": offsets[index], "vectorBoundsKgMm": vectors[index]})
             }));
+            if let Some(radii) = counterweight_radii {
+                let counterweights = bound_two_plane_counterweights(vectors, radii)?;
+                response["twoPlaneCounterweights"] = json!([0, 1].map(|index| {
+                    json!({
+                        "offsetMm": offsets[index],
+                        "radiusMm": radii[index],
+                        "massBoundsKg": counterweights[index].mass_bounds,
+                        "radialOffsetBoundsMm": counterweights[index].radial_offset_bounds,
+                    })
+                }));
+            }
             if let Some(tolerances) = plane_tolerances {
                 let balance = classify_two_plane_unbalance(vectors, tolerances)?;
                 response["twoPlaneBalance"] = json!({

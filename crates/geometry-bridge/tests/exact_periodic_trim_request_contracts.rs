@@ -1239,3 +1239,33 @@ fn patch_set_density_classifies_separate_correction_plane_tolerances() {
     request["balancePlaneTolerancesKgMm"] = json!([-1., 2.]);
     assert_eq!(run(&request)["ok"], false);
 }
+
+#[test]
+fn patch_set_density_encloses_counterweight_mass_and_radial_position() {
+    let mut request = patch_set_density_request(20_000);
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 0.], "direction": [0., 0., 1.]});
+    request["counterweightRadiiMm"] = json!([2., 4.]);
+    assert_eq!(run(&request)["ok"], false);
+    request["balancePlaneOffsetsMm"] = json!([0., 2.]);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let planes = response["value"]["twoPlaneCounterweights"].as_array().unwrap();
+    assert_eq!(planes.len(), 2);
+    let magnitude = 1.265625_f64.hypot(0.1875);
+    for (plane, radius) in planes.iter().zip([2., 4.]) {
+        assert_eq!(plane["radiusMm"].as_f64(), Some(radius));
+        let mass = &plane["massBoundsKg"];
+        let exact = magnitude / radius;
+        assert!(mass[0].as_f64().unwrap() <= exact && exact <= mass[1].as_f64().unwrap());
+        let radial = &plane["radialOffsetBoundsMm"];
+        assert!(radial[0][0].as_f64().unwrap() > 0.);
+        let expected = -0.1875 * radius / magnitude;
+        assert!(
+            radial[1][0].as_f64().unwrap() <= expected && expected <= radial[1][1].as_f64().unwrap()
+        );
+    }
+    request["maxSurfaceCells"] = json!(2);
+    assert_eq!(run(&request)["value"].get("twoPlaneCounterweights"), Some(&Value::Null));
+    request["counterweightRadiiMm"] = json!([2., 0.]);
+    assert_eq!(run(&request)["ok"], false);
+}
