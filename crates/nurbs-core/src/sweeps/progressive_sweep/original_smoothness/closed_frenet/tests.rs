@@ -429,3 +429,22 @@ fn periodic_corrected_principal_frame_owns_the_closed_original_volume() {
         }
     }
 }
+
+#[test]
+fn opposing_span_clocks_preserve_closed_frenet_material_and_seam() {
+    let mut path = frenet_source::split_reclocked_path();
+    let degree = path.degree;
+    for (i, weight) in path.weights.iter_mut().enumerate() {
+        *weight = 2f64.powi((degree - degree.abs_diff(i)) as i32);
+    }
+    let (profiles, cap, _) = source::material(false, true);
+    let scale = source::periodic(1., 1.03125);
+    let twist = constant_vector_law([0.; 3]).unwrap();
+    let sweep = MultiSweep::new(&profiles, &path, &scale, &twist, options(true)).unwrap();
+    let seam = sweep.certify_closed_path_frame_smoothness(2, 100000, 1000000).unwrap();
+    assert!(seam.closed_source_frame_smoothness_certified, "{seam:?}");
+    let body = sweep.certify_ideal_volume_atlas(
+        [&cap, &cap], [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]], 1000000, 1000000,
+    ).unwrap();
+    assert!(body.embedding_certified && body.regularity_certified && body.parameter_topology_preserved, "{body:?}");
+}
