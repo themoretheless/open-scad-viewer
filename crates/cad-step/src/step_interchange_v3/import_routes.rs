@@ -959,6 +959,57 @@ impl StepSharedAssembly {
         max_evaluations_per_definition: usize,
     ) -> Result<[f64; 3]> {
         let properties = self.definition_mass_properties(relative_tolerance, max_evaluations_per_definition)?;
+        weighted_centroid(&self.placed_centroids(&properties)?)
+    }
+
+    /// Estimate central volume inertia in mm⁵ for uniform unit density,
+    /// counting each occurrence independently.
+    pub fn material_inertia_mm5(
+        &self,
+        relative_tolerance: f64,
+        max_evaluations_per_definition: usize,
+    ) -> Result<[[f64; 3]; 3]> {
+        let properties = self.definition_mass_properties(relative_tolerance, max_evaluations_per_definition)?;
+        let placed = self.placed_centroids(&properties)?;
+        let center = weighted_centroid(&placed)?;
+        let mut second = [[0.; 3]; 3];
+        for (occurrence, (volume, point)) in self.occurrences.iter().zip(placed) {
+            let mass = &properties[occurrence.definition];
+            let half_trace = (0..3).map(|i| mass.inertia_mm5[i][i] / 2.).sum::<f64>();
+            let scale = placement_determinant(occurrence.transform).abs();
+            let offset: [f64; 3] = std::array::from_fn(|i| point[i] - center[i]);
+            for i in 0..3 {
+                for j in i..3 {
+                    // I = trace(C) Id - C, where C is the central second moment.
+                    let mut transformed = 0.;
+                    for k in 0..3 {
+                        for l in 0..3 {
+                            let moment = if k == l { half_trace } else { 0. } - mass.inertia_mm5[k][l];
+                            transformed += occurrence.transform[i][k] * moment * occurrence.transform[j][l];
+                        }
+                    }
+                    second[i][j] += scale * transformed + volume * offset[i] * offset[j];
+                    second[j][i] = second[i][j];
+                }
+            }
+        }
+        let inertia = std::array::from_fn(|i| std::array::from_fn(|j| {
+            if i == j {
+                second[(i + 1) % 3][(i + 1) % 3] + second[(i + 2) % 3][(i + 2) % 3]
+            } else {
+                -second[i][j]
+            }
+        }));
+        if !inertia.iter().flatten().all(|entry| entry.is_finite()) {
+            return Err(refuse("STEP assembly inertia exceeds the finite range"));
+        }
+        Ok(inertia)
+    }
+
+    fn placed_centroids(
+        &self,
+        properties: &[brep_core::analysis::MassProperties],
+    ) -> Result<Vec<(f64, [f64; 3])>> {
         let mut placed = Vec::with_capacity(self.occurrences.len());
         for occurrence in &self.occurrences {
             let mass = &properties[occurrence.definition];
@@ -970,17 +1021,7 @@ impl StepSharedAssembly {
             });
             placed.push((volume, center));
         }
-        let total: f64 = placed.iter().map(|entry| entry.0).sum();
-        if !total.is_finite() || total <= 0. {
-            return Err(refuse("STEP assembly volume is outside the finite positive range"));
-        }
-        let center = std::array::from_fn(|axis| {
-            placed.iter().map(|(volume, point)| (volume / total) * point[axis]).sum::<f64>()
-        });
-        if !center.iter().all(|coordinate| coordinate.is_finite()) {
-            return Err(refuse("STEP assembly centroid exceeds finite coordinates"));
-        }
-        Ok(center)
+        Ok(placed)
     }
 
     fn definition_mass_properties(
@@ -998,6 +1039,20 @@ impl StepSharedAssembly {
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
         brep_core::transform::affine(&self.definitions[occurrence.definition], occurrence.transform)
     }
+}
+
+fn weighted_centroid(placed: &[(f64, [f64; 3])]) -> Result<[f64; 3]> {
+    let total: f64 = placed.iter().map(|entry| entry.0).sum();
+    if !total.is_finite() || total <= 0. {
+        return Err(refuse("STEP assembly volume is outside the finite positive range"));
+    }
+    let center = std::array::from_fn(|axis| {
+        placed.iter().map(|(volume, point)| (volume / total) * point[axis]).sum::<f64>()
+    });
+    if !center.iter().all(|coordinate| coordinate.is_finite()) {
+        return Err(refuse("STEP assembly centroid exceeds finite coordinates"));
+    }
+    Ok(center)
 }
 
 fn placed_material_volume(occurrence: &StepAssemblyOccurrence, local_volume: f64) -> Result<f64> {

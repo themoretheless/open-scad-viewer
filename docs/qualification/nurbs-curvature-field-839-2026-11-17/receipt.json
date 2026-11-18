@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0839",
+  "testedBase": "571d8b8f382ca0e27acf23b0baf5798a6285ace2",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 188,
+  "scope": [
+    "Transform local central second moments with each occurrence matrix and sum them at the assembly centroid.",
+    "Check all nine tensor entries against box moments and the parallel-axis theorem for a reflected, scaled and rotated occurrence after STEP round-trip."
+  ],
+  "logSha256": "79ae2fb7050230a42d5dfb578bcdf49be8d6e8bf64200ebf74c4481554350fbb",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "c8c523fd1c8eca6bee9a427964242687831f7e8c586d3d7ece43b001acb77ffc",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "d63733bdf325c116d2e9f04ba4a025247e58d2bd7f9713214cc5d2bfb8b47e9e"
+  }
+}

@@ -2828,8 +2828,7 @@ fn shared_step_round_trips_explicit_coincident_product_occurrences() {
     assert!(crate::import_step_shared_assembly(&invalid).is_err());
 }
 
-#[test]
-fn shared_step_material_centroid_weights_reflected_scaled_occurrences() {
+fn shared_step_scaled_cube_pair() -> crate::StepSharedAssembly {
     let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
     let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
     let step = crate::export_planet_gear_occurrences_step(&planets).unwrap();
@@ -2845,7 +2844,34 @@ fn shared_step_material_centroid_weights_reflected_scaled_occurrences() {
     assembly.set_occurrence_placement(0, identity).unwrap();
     assembly.set_occurrence_orthogonal_placement(1, reflected).unwrap();
     let exported = crate::export_step_shared_assembly(&assembly).unwrap();
-    let back = crate::import_step_shared_assembly(&exported).unwrap();
+    crate::import_step_shared_assembly(&exported).unwrap()
+}
+
+#[test]
+fn shared_step_material_inertia_transforms_second_moments() {
+    let assembly = shared_step_scaled_cube_pair();
+    assert!(assembly.material_inertia_mm5(1e-8, 0).is_err());
+    let inertia = assembly.material_inertia_mm5(1e-8, 100_000).unwrap();
+    let delta = [21., -7., 35.];
+    let norm_squared: f64 = delta.iter().map(|x| x * x).sum();
+    let reduced_volume = 8. * 192. / 200.;
+    let local = [6. * 6., 4. * 4., 8. * 8.];
+    for i in 0..3 {
+        for j in 0..3 {
+            let expected = if i == j {
+                16. / 3. + 192. / 12. * (local[(i + 1) % 3] + local[(i + 2) % 3])
+                    + reduced_volume * (norm_squared - delta[i] * delta[i])
+            } else {
+                -reduced_volume * delta[i] * delta[j]
+            };
+            assert!((inertia[i][j] - expected).abs() < 1e-8);
+        }
+    }
+}
+
+#[test]
+fn shared_step_material_centroid_weights_reflected_scaled_occurrences() {
+    let back = shared_step_scaled_cube_pair();
     assert!(back.material_centroid_mm(1e-8, 0).is_err());
     let center = back.material_centroid_mm(1e-8, 100_000).unwrap();
     let expected = [22., -6., 36.].map(|coordinate| (1. + 24. * coordinate) / 25.);

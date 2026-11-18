@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 838,
-  "unallocatedCount": 162,
+  "specifiedCount": 839,
+  "unallocatedCount": 161,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19637,6 +19637,25 @@
       "remainingQualification": [
         "Integrate once per definition, transform each centroid and weight it by the placed material volume.",
         "Check analytic weighted centroid after STEP round-trip with reflected and scaled placement and invalid integration budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0839",
+      "name": "Центральный тензор инерции STEP-сборки с масштабированными экземплярами",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::material_inertia_mm5",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-839-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-839-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Transform local central second moments with each occurrence matrix and sum them at the assembly centroid.",
+        "Check all nine tensor entries against box moments and the parallel-axis theorem for a reflected, scaled and rotated occurrence after STEP round-trip.",
         "WASM and application integration are separate."
       ]
     }
