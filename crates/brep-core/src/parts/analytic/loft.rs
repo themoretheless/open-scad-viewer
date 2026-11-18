@@ -490,7 +490,10 @@ mod tests {
                 drawn.rotate_left(shift);
                 let fixed = correspond_sections(&[base.clone(), drawn.clone()]);
                 assert_eq!(fixed[1], top, "shift {shift} reversed {reversed}");
-                ruled_loft(&[base.clone(), drawn]).unwrap().validate().unwrap();
+                ruled_loft(&[base.clone(), drawn])
+                    .unwrap()
+                    .validate()
+                    .unwrap();
             }
         }
     }
@@ -554,9 +557,19 @@ mod tests {
         // A half-turn index shift is re-corresponded instead of collapsing the rulings.
         let shifted: Vec<P> = base.iter().map(|p| [-p[0], -p[1], 3.]).collect();
         let aligned = correspond_sections(&[base.clone(), shifted.clone()]);
-        assert_eq!(aligned[1], base.iter().map(|p| [p[0], p[1], 3.]).collect::<Vec<_>>());
+        assert_eq!(
+            aligned[1],
+            base.iter().map(|p| [p[0], p[1], 3.]).collect::<Vec<_>>()
+        );
         let error = ruled_loft_indexed(&[base.clone(), shifted.clone()]).unwrap_err();
         assert!(error.message.contains("intermediate"));
-        assert_eq!(ruled_loft(&[base, shifted]).unwrap().validate().unwrap().boundary_edge_count, 0);
+        assert_eq!(
+            ruled_loft(&[base, shifted])
+                .unwrap()
+                .validate()
+                .unwrap()
+                .boundary_edge_count,
+            0
+        );
     }
 }
