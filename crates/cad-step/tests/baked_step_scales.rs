@@ -353,6 +353,16 @@ fn branch_motion_moves_two_linked_parts_and_preserves_external_sibling() {
     assert!(cad_step::move_step_product_branch(&original, &[], motion).is_err());
     assert!(cad_step::move_step_product_branch(&original, &["Missing"], motion).is_err());
     assert!(cad_step::move_step_product_branch(&original, &["Drive"], [[0.; 4]; 4]).is_err());
+    for (path, upper_x) in [(vec!["Drive", "Feed"], 10.), (vec!["Drive"], 22.)] {
+        let [lo, hi] = cad_step::step_branch_bounds(&result, &path).unwrap();
+        let lower = [6., if path.len() == 1 { 0. } else { 5. }, 0.];
+        let upper = [upper_x, 10., 6.];
+        for axis in 0..3 {
+            assert!(lo[axis] <= lower[axis] && lower[axis] - lo[axis] < 1e-10);
+            assert!(hi[axis] >= upper[axis] && hi[axis] - upper[axis] < 1e-10);
+        }
+    }
+    assert!(cad_step::step_branch_bounds(&result, &["Drive", "Missing"]).is_err());
     if let Some(path) = std::env::var_os("CAD_BRANCH_MOTION_FIXTURE") {
         std::fs::write(path, result).unwrap();
     }

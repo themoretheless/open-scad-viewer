@@ -47,7 +47,7 @@ pub use step_interchange_v3::{
     STEP_INTERCHANGE_V3_CAPABILITY, STEP_INTERCHANGE_V4_CAPABILITY, STEP_INTERCHANGE_V5_CAPABILITY,
     STEP_INTERCHANGE_V6_CAPABILITY, STEP_INTERCHANGE_V7_CAPABILITY, STEP_INTERCHANGE_V8_CAPABILITY,
     STEP_INTERCHANGE_V9_CAPABILITY, STEP_INTERCHANGE_V10_CAPABILITY, StepRegularityEvidence,
-    StepAssemblyOccurrence, StepClearanceCheck, StepClearanceStatus, StepMinimumClearance, StepMaterialDelta, StepRayMaterialCoverage, StepSharedAssembly, import_step_shared_assembly, import_step_occurrence_colours, import_named_step_assembly, import_step_product_paths, export_step_product_subassembly, replace_step_product_at_path, move_step_product_branch, step_branch_parts_list, StepBranchPartQuantity, NamedStepAssembly, StepPartsListRow, StepPartSurfaceUsage, StepPartQuantityChange,
+    StepAssemblyOccurrence, StepClearanceCheck, StepClearanceStatus, StepMinimumClearance, StepMaterialDelta, StepRayMaterialCoverage, StepSharedAssembly, import_step_shared_assembly, import_step_occurrence_colours, import_named_step_assembly, import_step_product_paths, export_step_product_subassembly, replace_step_product_at_path, move_step_product_branch, step_branch_parts_list, step_branch_bounds, StepBranchPartQuantity, NamedStepAssembly, StepPartsListRow, StepPartSurfaceUsage, StepPartQuantityChange,
     StepV3Report, StepV8Certificate, StepV10Document, compose_step_v7_occurrences,
     compose_step_v8_occurrences, compose_step_v9_occurrences, export_step_v3, export_step_v4,
     export_step_v5, export_step_v6, export_step_v7, export_step_v8, export_step_v9, export_step_v9_shared_points,

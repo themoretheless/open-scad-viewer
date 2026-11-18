@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 986,
-  "unallocatedCount": 14,
+  "specifiedCount": 987,
+  "unallocatedCount": 13,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -22410,6 +22410,27 @@
       ],
       "remainingQualification": [
         "Named path prefix. Quantities grouped by definition identity. Includes coincident placements; verifies inside and outside counts independently with XDE."
+      ]
+    },
+    {
+      "id": "NURBS-0987",
+      "name": "Консервативный габаритный параллелепипед ветви NURBS-сборки STEP в мировых координатах",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::step_branch_bounds",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/baked_step_scales.rs",
+        "docs/qualification/nurbs-step-branch-bounds-987-2026-11-19/verify.py",
+        "docs/qualification/nurbs-step-branch-bounds-987-2026-11-19/occt.log",
+        "docs/qualification/nurbs-step-branch-bounds-987-2026-11-19/receipt.json",
+        "docs/qualification/nurbs-step-branch-bounds-987-2026-11-19/native.log.gz"
+      ],
+      "remainingQualification": [
+        "World-axis enclosure from control hulls with outward rounded placement arithmetic. Open CASCADE independently checks the actual branch and root extents of the rotated cuboid fixture. General trimmed carriers may yield a loose enclosure."
       ]
     }
   ],

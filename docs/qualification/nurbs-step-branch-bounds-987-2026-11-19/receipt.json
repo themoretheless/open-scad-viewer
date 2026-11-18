@@ -1,0 +1,13 @@
+{
+  "id": "NURBS-0987",
+  "testedBase": "a35e5af8c37b65e8f51f63aeebdb3d3ca3e4eda0",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "a56325492935f191e1043b2e764d97b18ea0a347e1664b529d4767d7cacdaff1",
+    "crates/cad-step/src/step_interchange_v3.rs": "45eadfd655f52b5fdfb41ca2abc511e0a35057bbe73431d9227ad0abe145a93b",
+    "crates/cad-step/src/lib.rs": "42afb65d74f65069a0229818b206a440ccdad8d57d8062e6f7f5aa564d73c6b1",
+    "crates/cad-step/tests/baked_step_scales.rs": "6358b4dab32d1866f59e68c1522d821c64ba6bf0be9bdc21ee8483744402957c"
+  },
+  "fixtureSha256": "96b4dc3abd24914d5d954c25b393471aae3eda9ab0aab75e2de38b317c5f3d85",
+  "command": "CAD_BRANCH_MOTION_FIXTURE=/tmp/osv987.step cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test baked_step_scales",
+  "external": "(6.0, 5.0, 0.0, 10.0, 10.0, 6.0)\n(6.0, 0.0, 0.0, 22.0, 10.0, 6.0)"
+}

@@ -1039,29 +1039,7 @@ impl StepSharedAssembly {
     pub fn occurrence_bounds(&self) -> Result<Vec<[[f64; 3]; 2]>> {
         let local: Vec<_> = self.definitions.iter().map(definition_control_bounds).collect();
         self.occurrences.iter().map(|occurrence| {
-            let [min, max] = local[occurrence.definition];
-            let mut placed = [[0.; 3]; 2];
-            for (axis, row) in occurrence.transform[..3].iter().enumerate() {
-                let (mut lower, mut upper) = (row[3], row[3]);
-                for (column, &coefficient) in row[..3].iter().enumerate() {
-                    if coefficient == 0. {
-                        continue;
-                    }
-                    let (lo, hi) = if coefficient > 0. {
-                        (min[column], max[column])
-                    } else {
-                        (max[column], min[column])
-                    };
-                    lower = (lower + (coefficient * lo).next_down()).next_down();
-                    upper = (upper + (coefficient * hi).next_up()).next_up();
-                }
-                if !lower.is_finite() || !upper.is_finite() || lower > upper {
-                    return Err(refuse("STEP occurrence bounds are empty or exceed finite coordinates"));
-                }
-                placed[0][axis] = lower;
-                placed[1][axis] = upper;
-            }
-            Ok(placed)
+            placed_control_bounds(local[occurrence.definition], occurrence)
         }).collect()
     }
 
@@ -2095,6 +2073,31 @@ fn placed_material_volume(occurrence: &StepAssemblyOccurrence, local_volume: f64
     Ok(volume)
 }
 
+fn placed_control_bounds([min, max]: [[f64; 3]; 2], occurrence: &StepAssemblyOccurrence) -> Result<[[f64; 3]; 2]> {
+    let mut placed = [[0.; 3]; 2];
+    for (axis, row) in occurrence.transform[..3].iter().enumerate() {
+        let (mut lower, mut upper) = (row[3], row[3]);
+        for (column, &coefficient) in row[..3].iter().enumerate() {
+            if coefficient == 0. {
+                continue;
+            }
+            let (lo, hi) = if coefficient > 0. {
+                (min[column], max[column])
+            } else {
+                (max[column], min[column])
+            };
+            lower = (lower + (coefficient * lo).next_down()).next_down();
+            upper = (upper + (coefficient * hi).next_up()).next_up();
+        }
+        if !lower.is_finite() || !upper.is_finite() || lower > upper {
+            return Err(refuse("STEP occurrence bounds are empty or exceed finite coordinates"));
+        }
+        placed[0][axis] = lower;
+        placed[1][axis] = upper;
+    }
+    Ok(placed)
+}
+
 fn definition_control_bounds(model: &Model) -> [[f64; 3]; 2] {
     let mut bounds = [[f64::INFINITY; 3], [f64::NEG_INFINITY; 3]];
     let points = model.vertices.iter().map(|vertex| vertex.point.as_slice())
@@ -2398,6 +2401,28 @@ pub fn step_branch_parts_list(text: &str, prefix: &[&str]) -> Result<Vec<StepBra
             definition: part.definition, name: part.name.to_owned(), inside, outside: part.quantity - inside,
         })
     }).collect())
+}
+
+/// Conservative world-axis bounding box (millimetres) of all placements below
+/// a product path. Untrimmed control nets can extend beyond the physical solid.
+pub fn step_branch_bounds(text: &str, prefix: &[&str]) -> Result<[[f64; 3]; 2]> {
+    if prefix.is_empty() { return Err(refuse("Expected a nonempty STEP product path")); }
+    let (scene, paths) = import_step_product_paths(text)?;
+    let indices = product_prefix_indices(&paths, prefix);
+    if indices.is_empty() { return Err(refuse("No occurrence matches the STEP product path")); }
+    let mut local = BTreeMap::new();
+    let mut bounds = [[f64::INFINITY; 3], [f64::NEG_INFINITY; 3]];
+    for i in indices {
+        let part = &scene.assembly.occurrences()[i];
+        let cached = local.entry(part.definition).or_insert_with(||
+            definition_control_bounds(&scene.assembly.definitions()[part.definition]));
+        let [lo, hi] = placed_control_bounds(*cached, part)?;
+        for axis in 0..3 {
+            bounds[0][axis] = bounds[0][axis].min(lo[axis]);
+            bounds[1][axis] = bounds[1][axis].max(hi[axis]);
+        }
+    }
+    Ok(bounds)
 }
 
 /// Export all leaves below a product-name prefix as a flat shared assembly.
