@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 709,
-  "unallocatedCount": 291,
+  "specifiedCount": 710,
+  "unallocatedCount": 290,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17163,6 +17163,25 @@
       "remainingQualification": [
         "Certify containment of a translating fixed-orientation capsule with asymmetric endpoint offsets.",
         "Check distinct overtravel thresholds for a segment and capsule, nonunit plane normals, asymmetric offsets, and invalid dimensions.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0710",
+      "name": "Проверка выпуклого профиля инструмента вдоль NURBS-траектории",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::partition_curve_rounded_hull_workspace",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-710-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-710-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify containment of a translating convex vertex hull with optional spherical rounding.",
+        "Check independent support vertices, rounded residuals, the analytic crossing, and invalid hull inputs.",
         "WASM and application integration are separate."
       ]
     }

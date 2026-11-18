@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0710",
+  "testedBase": "f2d00373a9ca6564d14cc4cca2fbd2728d6961d5",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 333,
+  "scope": [
+    "Certify containment of a translating convex vertex hull with optional spherical rounding.",
+    "Check independent support vertices, rounded residuals, the analytic crossing, and invalid hull inputs."
+  ],
+  "logSha256": "4ee713b8130fc5dcf22016a8ba485cbe5ba00d1ee0effd1dbbd442870092d0fc",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "915c21fb80252c5f83e285bd1d0a36d4b33b22bb07925e47fa1a8a555b930d4e",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "8a393955afc1c14ab5fbf9f1c959b6d30412dc8cc1c0f7cf71c676d7410c70a5"
+  }
+}

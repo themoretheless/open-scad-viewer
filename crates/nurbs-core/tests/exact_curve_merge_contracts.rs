@@ -9858,3 +9858,40 @@ fn capsule_workspace_partition_accounts_for_offset_and_radius() {
     }
     assert!(check([&[0.], &[0., 1.]], 0.).is_err());
 }
+
+#[test]
+fn rounded_hull_workspace_selects_distinct_support_vertices_per_plane() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace, partition_curve_rounded_hull_workspace,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![2., 2.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let planes = [
+        WorkspaceHalfSpace { normal: &[2., 0.], offset: 5. },
+        WorkspaceHalfSpace { normal: &[0., 1.], offset: 2.75 },
+    ];
+    let vertices = [&[0., 1.5][..], &[1., 0.][..], &[-1., -1.][..]];
+    let verify = |vertices: &[&[f64]], radius| {
+        partition_curve_rounded_hull_workspace(
+            &curve, [0., 1.], &planes, vertices, radius, 0.01, 256,
+        )
+    };
+    let report = verify(&vertices, 0.25).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    let last = report.cells.last().unwrap();
+    assert_eq!(last.status, Status::Exceeds);
+    for ([lo, hi], expected) in last.plane_residuals.iter().copied().zip([1.5, 1.]) {
+        assert!(lo <= expected && expected <= hi);
+    }
+    assert!(report.cells.iter().any(|cell| {
+        let [a, b] = cell.parameter_interval;
+        a <= 0.5 && 0.5 <= b && b - a <= 0.01 && cell.status == Status::Undetermined
+    }));
+    assert!(verify(&[], 0.).is_err());
+    assert!(verify(&[&[1.]], 0.).is_err());
+}

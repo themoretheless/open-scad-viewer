@@ -1889,29 +1889,56 @@ pub fn partition_curve_capsule_convex_workspace(
     parameter_tolerance: f64,
     max_plane_cells: usize,
 ) -> Result<WorkspacePartition> {
-    check(capsule.radius.is_finite() && capsule.radius >= 0., "Tool radius must be finite and nonnegative")?;
+    partition_curve_rounded_hull_workspace(
+        curve, interval, planes, &capsule.endpoint_offsets, capsule.radius,
+        parameter_tolerance, max_plane_cells,
+    )
+}
+
+/// Check a translating convex hull of vertex offsets, optionally rounded by
+/// a ball of the specified radius. The profile keeps its orientation and
+/// vertices may be unordered. At most one million vertex/plane pairs are
+/// evaluated during support preprocessing.
+pub fn partition_curve_rounded_hull_workspace(
+    curve: &Curve,
+    interval: [f64; 2],
+    planes: &[WorkspaceHalfSpace<'_>],
+    vertex_offsets: &[&[f64]],
+    radius: f64,
+    parameter_tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspacePartition> {
+    check(radius.is_finite() && radius >= 0., "Tool radius must be finite and nonnegative")?;
+    check(!vertex_offsets.is_empty(), "Tool hull requires at least one vertex")?;
+    check(!planes.is_empty(), "Workspace requires at least one half-space")?;
+    if vertex_offsets.len() > 1_000_000 / planes.len() {
+        return Err(resource("Tool hull support preprocessing exceeds one million vertex/plane pairs"));
+    }
     curve.validate()?;
     let dimension = curve.control_points[0].len();
-    let [first, second] = capsule.endpoint_offsets;
-    check(
-        [first, second].iter().all(|offset| {
-            offset.len() == dimension && offset.iter().all(|value| value.is_finite())
-        }),
-        "Capsule endpoints must be finite vectors matching the curve dimension",
-    )?;
-    let [first, second] = [first, second].map(|offset| {
-        offset.iter().copied().map(Interval::point).collect::<Vec<_>>()
-    });
+    let mut offsets = Vec::with_capacity(vertex_offsets.len());
+    for &offset in vertex_offsets {
+        check(
+            offset.len() == dimension && offset.iter().all(|value| value.is_finite()),
+            "Tool hull vertices must be finite vectors matching the curve dimension",
+        )?;
+        offsets.push(offset.iter().copied().map(Interval::point).collect::<Vec<_>>());
+    }
     partition_curve_workspace_with_support(
         curve, interval, planes, parameter_tolerance, max_plane_cells,
         |normal| {
-            let a = project_jet(&first, normal)?;
-            let b = project_jet(&second, normal)?;
-            let support = Interval::new(a.lo.max(b.lo), a.hi.max(b.hi))?;
-            if capsule.radius == 0. {
+            let mut lo = f64::NEG_INFINITY;
+            let mut hi = f64::NEG_INFINITY;
+            for offset in &offsets {
+                let projected = project_jet(offset, normal)?;
+                lo = lo.max(projected.lo);
+                hi = hi.max(projected.hi);
+            }
+            let support = Interval::new(lo, hi)?;
+            if radius == 0. {
                 Ok(Some(support))
             } else {
-                Ok(Some(support.add(norm(normal)?.mul(Interval::point(capsule.radius))?)?))
+                Ok(Some(support.add(norm(normal)?.mul(Interval::point(radius))?)?))
             }
         },
     )
