@@ -2777,18 +2777,76 @@ pub fn partition_scheduled_clearance_with_holds(
     max_cells: usize,
 ) -> Result<ScheduledClearancePartition> {
     validate(progress_tolerance, max_cells)?;
-    let (starts, durations, radius) = validate_motion_schedule(segments, start_times, radii)?;
-    let mut events = [starts[0].clone(), starts[1].clone(),
-        &starts[0] + &durations[0], &starts[1] + &durations[1]].to_vec();
-    events.sort();
-    events.dedup();
-    let phase_count = events.len() - 1;
+    let phases = prepare_schedule_with_holds(segments, start_times, radii)?;
+    let phase_count = phases.len();
     if phase_count > max_cells {
         return Err(resource("Clearance budget must cover every scheduled phase"));
     }
     let mut cells = Vec::new();
     let mut remaining = max_cells;
-    for (index, times) in events.windows(2).enumerate() {
+    for (index, phase) in phases.iter().enumerate() {
+        let report = partition_scheduled_phase(
+            phase, progress_tolerance, remaining / (phase_count - index),
+        )?;
+        remaining -= report.work_cells;
+        cells.extend(report.cells);
+    }
+    Ok(ScheduledClearancePartition { cells, work_cells: max_cells - remaining })
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ScheduledMinimumClearance {
+    pub gap_bounds: [f64; 2],
+    pub witness_time_bounds: [f64; 2],
+    pub work_cells: usize,
+    pub stop_reason: StopReason,
+}
+
+/// Refine the minimum gap over the full schedule, holding each tool at the
+/// corresponding endpoint outside its move. All phases share one work budget.
+pub fn measure_scheduled_clearance_with_holds(
+    segments: [TimedMotionSegment<'_>; 2],
+    start_times: [f64; 2],
+    radii: [f64; 2],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<ScheduledMinimumClearance> {
+    validate(tolerance, max_cells)?;
+    let phases = prepare_schedule_with_holds(segments, start_times, radii)?;
+    let initial = (0..phases.len()).map(|index| (index, [0., 1.]));
+    let measure = |index: usize, domain: [f64; 2], witness: &mut ClearanceWitness| {
+        let phase = &phases[index];
+        let lower = phase.gap(domain)?.lo;
+        for progress in domain {
+            let upper = phase.gap([progress; 2])?.hi;
+            if upper < witness.0 {
+                *witness = (upper, progress, index);
+            }
+        }
+        Ok(lower)
+    };
+    let (lower, witness, work_cells, stop_reason) =
+        refine_minimum_clearance(initial, 0., tolerance, max_cells, measure)?;
+    let time = phases[witness.2].time(witness.1)?;
+    Ok(ScheduledMinimumClearance {
+        gap_bounds: [lower, witness.0],
+        witness_time_bounds: [round_motion_duration(&time, false)?, round_motion_duration(&time, true)?],
+        work_cells,
+        stop_reason,
+    })
+}
+
+fn prepare_schedule_with_holds<'a>(
+    segments: [TimedMotionSegment<'a>; 2],
+    start_times: [f64; 2],
+    radii: [f64; 2],
+) -> Result<Vec<ScheduledOverlap<'a>>> {
+    let (starts, durations, radius) = validate_motion_schedule(segments, start_times, radii)?;
+    let mut events = [starts[0].clone(), starts[1].clone(),
+        &starts[0] + &durations[0], &starts[1] + &durations[1]].to_vec();
+    events.sort();
+    events.dedup();
+    events.windows(2).map(|times| {
         let origin = &times[0];
         let end = &times[1];
         let map = |tool: usize| -> Result<_> {
@@ -2804,20 +2862,14 @@ pub fn partition_scheduled_clearance_with_holds(
             let first = parameter(origin);
             Ok((first.clone(), parameter(end) - first))
         };
-        let phase = ScheduledOverlap {
+        Ok(ScheduledOverlap {
             segments,
             origin: origin.clone(),
             duration: end - origin,
             maps: [map(0)?, map(1)?],
             radius,
-        };
-        let report = partition_scheduled_phase(
-            &phase, progress_tolerance, remaining / (phase_count - index),
-        )?;
-        remaining -= report.work_cells;
-        cells.extend(report.cells);
-    }
-    Ok(ScheduledClearancePartition { cells, work_cells: max_cells - remaining })
+        })
+    }).collect()
 }
 
 fn partition_scheduled_phase(

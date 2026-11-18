@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 740,
-  "unallocatedCount": 260,
+  "specifiedCount": 741,
+  "unallocatedCount": 259,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17752,6 +17752,25 @@
       "remainingQualification": [
         "Classify tool clearance through all scheduled phases with endpoint holds.",
         "Check disjoint motion schedules, collision after a tool stops, exact shared phase boundaries, and shared budget refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0741",
+      "name": "Минимальный зазор в расписании с остановками инструментов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_scheduled_clearance_with_holds",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-741-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-741-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refine a certified gap minimum across the full schedule, including endpoint holds.",
+        "Check negative minimum during a parked phase, exact absolute witness time, retained coarse bounds, and mandatory phase budget.",
         "WASM and application integration are separate."
       ]
     }

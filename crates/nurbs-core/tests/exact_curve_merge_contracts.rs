@@ -10973,3 +10973,35 @@ fn scheduled_clearance_with_holds_finds_collision_after_first_tool_stops() {
         assert_eq!(pair[0].time_endpoint_bounds[1], pair[1].time_endpoint_bounds[0]);
     }
 }
+
+#[test]
+fn minimum_scheduled_clearance_with_holds_finds_witness_during_a_hold() {
+    use nurbs_core::analysis::curve_measure::{
+        StopReason, TimedMotionSegment, measure_scheduled_clearance_with_holds,
+    };
+    let line = |points: [[f64; 2]; 2]| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: points.map(Vec::from).into(),
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let first = line([[0., 0.], [2., 0.]]);
+    let second = line([[4., 0.25], [0., 0.25]]);
+    let segments = [
+        TimedMotionSegment { curve: &first, interval: [0., 1.], duration: 1. },
+        TimedMotionSegment { curve: &second, interval: [0., 1.], duration: 4. },
+    ];
+    let check = |budget| measure_scheduled_clearance_with_holds(
+        segments, [0., 2.], [0.25; 2], 1e-6, budget,
+    );
+    assert!(check(2).is_err());
+    let coarse = check(3).unwrap();
+    assert_eq!(coarse.stop_reason, StopReason::WorkLimit);
+    assert!(coarse.gap_bounds[0] <= -0.25 && coarse.gap_bounds[1] >= -0.25);
+    let fine = check(128).unwrap();
+    assert_eq!(fine.stop_reason, StopReason::Tolerance);
+    assert_eq!(fine.witness_time_bounds, [4.; 2]);
+    let [lo, hi] = fine.gap_bounds;
+    assert!(lo <= -0.25 && -0.25 <= hi && hi - lo < 1e-6);
+}
