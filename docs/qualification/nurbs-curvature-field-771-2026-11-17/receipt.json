@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0771",
+  "testedBase": "277d795cbe6b23aea2b757e9c3feb32b71b8f1e7",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 397,
+  "scope": [
+    "Certify rounded hull contact along a two-plane inward direction while checking every obstacle half-space.",
+    "Check diagonal rounded contact, independent plane scales, extra half-space rejection and the reserved three-pass budget."
+  ],
+  "logSha256": "e746a6b0f0a2ab09b1b23c509f5b7113d4e0763309c132b2fd0dfc6d8bb5953b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "b084f826986ee037eab3671bf695905688369b38d7fbcc2ce4b0c63ae13e0245",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "6edece6d08fa629c39b0f0e88f783f6b409aa9df61d81483dc67ebc72b5f9b22"
+  }
+}

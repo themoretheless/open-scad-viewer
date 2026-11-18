@@ -2590,7 +2590,7 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_clearance(
 ) -> Result<ObstacleClearancePartition> {
     partition_rotating_profiled_obstacles(
         position, direction, radius_profile, obstacles, vertex_offsets,
-        parameter_tolerance, max_vertex_plane_cells, false,
+        parameter_tolerance, max_vertex_plane_cells, 0,
     )
 }
 
@@ -2609,7 +2609,25 @@ pub fn partition_planar_rotating_profiled_hull_obstacle_contact(
 ) -> Result<ObstacleClearancePartition> {
     partition_rotating_profiled_obstacles(
         position, direction, radius_profile, obstacles, vertex_offsets,
-        parameter_tolerance, max_vertex_plane_cells, true,
+        parameter_tolerance, max_vertex_plane_cells, 1,
+    )
+}
+
+/// Also seek rounded contact along the bisector of the two most violated
+/// obstacle planes. Each candidate is verified against every half-space
+/// across the cell. The budget reserves three vertex/plane passes per cell.
+pub fn partition_planar_rotating_profiled_hull_obstacle_corner_contact(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[&[WorkspaceHalfSpace<'_>]],
+    vertex_offsets: &[&[f64]],
+    parameter_tolerance: f64,
+    max_vertex_plane_cells: usize,
+) -> Result<ObstacleClearancePartition> {
+    partition_rotating_profiled_obstacles(
+        position, direction, radius_profile, obstacles, vertex_offsets,
+        parameter_tolerance, max_vertex_plane_cells, 2,
     )
 }
 
@@ -2621,7 +2639,7 @@ fn partition_rotating_profiled_obstacles(
     vertex_offsets: &[&[f64]],
     parameter_tolerance: f64,
     max_vertex_plane_cells: usize,
-    rounded_witness: bool,
+    witness_passes: usize,
 ) -> Result<ObstacleClearancePartition> {
     use DirectionalMotionStatus::{Exceeds, Undetermined, Within};
 
@@ -2636,7 +2654,7 @@ fn partition_rotating_profiled_obstacles(
         }
         plane_count += obstacle.len();
     }
-    let pairs = plane_count * vertex_offsets.len() * if rounded_witness { 2 } else { 1 };
+    let pairs = plane_count * vertex_offsets.len() * (1 + witness_passes);
     let max_cells = max_vertex_plane_cells / pairs;
     let (initial, profiles) = prepare_planar_rotation_profile(position, direction, radius_profile, max_cells)?;
     let vertices = prepare_workspace_hull(position, vertex_offsets, plane_count)?;
@@ -2658,11 +2676,11 @@ fn partition_rotating_profiled_obstacles(
                 let radius = profiles[profile](domain)?;
                 let point = curve_jets::enclose(position, span, domain)?;
                 let mut candidates = vec![true; vertices.len()];
-                let mut witness_planes = vec![(0, 0.); vertices.len()];
+                let mut witness_planes = vec![[(0, 0.); 2]; vertices.len()];
                 for (obstacle, status) in obstacles.iter().zip(&mut clearance) {
                     candidates.fill(true);
-                    witness_planes.fill((0, 0.));
-                    let seek_rounded = rounded_witness && radius.lo > 0.;
+                    witness_planes.fill([(0, 0.); 2]);
+                    let seek_rounded = witness_passes > 0 && radius.lo > 0.;
                     let mut residuals = Vec::new();
                     for (plane, (normal, offset, length)) in obstacle.iter().enumerate() {
                         let margin = length.mul(radius)?.hi;
@@ -2676,8 +2694,12 @@ fn partition_rotating_profiled_obstacles(
                             if seek_rounded {
                                 residuals.push(residual);
                                 let violation = residual.hi / length.hi;
-                                if violation > witness_planes[vertex].1 {
-                                    witness_planes[vertex] = (plane, violation);
+                                let [first, second] = &mut witness_planes[vertex];
+                                if violation > first.1 {
+                                    *second = *first;
+                                    *first = (plane, violation);
+                                } else if violation > second.1 {
+                                    *second = (plane, violation);
                                 }
                             }
                         }
@@ -2690,7 +2712,7 @@ fn partition_rotating_profiled_obstacles(
                         continue;
                     }
                     if candidates.contains(&true) || (seek_rounded && rounded_vertex_contacts(
-                        obstacle, &residuals, &witness_planes, radius.lo,
+                        obstacle, &residuals, &witness_planes, radius.lo, witness_passes == 2,
                     )?) {
                         *status = Exceeds;
                     }
@@ -2718,27 +2740,44 @@ fn partition_rotating_profiled_obstacles(
 fn rounded_vertex_contacts(
     planes: &[(Vec<Interval>, Interval, Interval)],
     residuals: &[Interval],
-    witness_planes: &[(usize, f64)],
+    witness_planes: &[[(usize, f64); 2]],
     radius: f64,
+    try_bisector: bool,
 ) -> Result<bool> {
     let vertex_count = witness_planes.len();
-    for (vertex, &(plane, _)) in witness_planes.iter().enumerate() {
-        let (normal, _, length) = &planes[plane];
-        // Dividing by the upper length ensures the exact displacement
-        // has length at most the lower rounding radius over the cell.
-        let scale = Interval::point(-radius).div(Interval::point(length.hi))?;
-        let displacement = [normal[0].mul(scale)?, normal[1].mul(scale)?];
-        let mut inside = true;
-        for (index, (normal, _, _)) in planes.iter().enumerate() {
-            let shifted = residuals[index * vertex_count + vertex]
-                .add(project_jet(&displacement, normal)?)?;
-            if shifted.hi > 0. {
-                inside = false;
-                break;
+    for (vertex, &[(first, _), (second, second_violation)]) in witness_planes.iter().enumerate() {
+        let inside_after_displacement = |axis: [Interval; 2], length_upper: f64| -> Result<bool> {
+            if length_upper == 0. {
+                return Ok(false);
             }
-        }
-        if inside {
+            // Dividing by the upper length keeps the displacement within
+            // the lower rounding radius for the entire cell.
+            let scale = Interval::point(-radius).div(Interval::point(length_upper))?;
+            let displacement = [axis[0].mul(scale)?, axis[1].mul(scale)?];
+            for (index, (normal, _, _)) in planes.iter().enumerate() {
+                let shifted = residuals[index * vertex_count + vertex]
+                    .add(project_jet(&displacement, normal)?)?;
+                if shifted.hi > 0. {
+                    return Ok(false);
+                }
+            }
+            Ok(true)
+        };
+        let (normal, _, length) = &planes[first];
+        if inside_after_displacement([normal[0], normal[1]], length.hi)? {
             return Ok(true);
+        }
+        if try_bisector && second_violation > 0. {
+            let (other, _, other_length) = &planes[second];
+            let axis = [
+                normal[0].div(Interval::point(length.hi))?
+                    .add(other[0].div(Interval::point(other_length.hi))?)?,
+                normal[1].div(Interval::point(length.hi))?
+                    .add(other[1].div(Interval::point(other_length.hi))?)?,
+            ];
+            if inside_after_displacement(axis, norm(&axis)?.hi)? {
+                return Ok(true);
+            }
         }
     }
     Ok(false)

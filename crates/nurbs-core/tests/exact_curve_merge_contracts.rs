@@ -12007,3 +12007,45 @@ fn rotating_rounded_contact_checks_displaced_vertex_against_every_plane() {
     assert!(report.cells.iter().all(|cell| cell.obstacles[0] == Status::Exceeds));
     assert!(report.cells.iter().all(|cell| cell.obstacles[1] != Status::Exceeds));
 }
+
+#[test]
+fn rotating_rounded_corner_contact_checks_diagonal_reach_and_extra_planes() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, WorkspaceHalfSpace,
+        partition_planar_rotating_profiled_hull_obstacle_contact,
+        partition_planar_rotating_profiled_hull_obstacle_corner_contact,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.]; 2],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., 0.], vec![1., 0.02]],
+        ..position.clone()
+    };
+    let corner = [
+        WorkspaceHalfSpace { normal: &[-4., 0.], offset: -5. },
+        WorkspaceHalfSpace { normal: &[0., -2.], offset: -0.5 },
+    ];
+    let empty = [corner[0], corner[1], WorkspaceHalfSpace { normal: &[1., 1.], offset: 1.4 }];
+    let obstacles = [&corner[..], &empty[..]];
+    let hull = [&[1., 0.][..]];
+    let profile = [(0., 0.4), (1., 0.4)];
+    let face_only = partition_planar_rotating_profiled_hull_obstacle_contact(
+        &position, &direction, &profile, &obstacles, &hull, 0.01, 240,
+    ).unwrap();
+    assert!(face_only.cells.iter().all(|cell| cell.obstacles[0] == Status::Undetermined));
+    assert!(partition_planar_rotating_profiled_hull_obstacle_corner_contact(
+        &position, &direction, &profile, &obstacles, &hull, 0.01, 14,
+    ).is_err());
+    let diagonal = partition_planar_rotating_profiled_hull_obstacle_corner_contact(
+        &position, &direction, &profile, &obstacles, &hull, 0.01, 240,
+    ).unwrap();
+    assert!(diagonal.cells.iter().all(|cell| {
+        cell.obstacles[0] == Status::Exceeds && cell.obstacles[1] != Status::Exceeds
+    }));
+    assert!(diagonal.work_plane_cells <= 240);
+}
