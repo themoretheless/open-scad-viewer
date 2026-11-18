@@ -25,6 +25,7 @@ interface Report {
   centroidBoundsMm?: [number, number][] | null
   centralInertiaBoundsMm4?: [number, number][][] | null
   withinMomentTolerance?: boolean
+  axisMomentBoundsMm4?: [number, number] | null
   principalMomentBoundsMm4?: [number, number][] | null
   boundsMm2?: [number, number] | [number, number][] | null
   stations?: { parameterBounds: [number, number] | null; pointBoundsMm: [number, number][] | null; status: string }[] | null
@@ -295,3 +296,16 @@ const incompleteSpectrum = call(request.maxWork, patchSetOp, {
 assert.equal(incompleteSpectrum.principalMomentBoundsMm4, null)
 assert.equal(incompleteSpectrum.withinMomentTolerance, false)
 console.log('WASM ABI returned optional principal moments for the complete patch set.')
+
+assert.equal(patchSet.axisMomentBoundsMm4, undefined)
+const axisOptions = {
+  ...spectralOptions, momentToleranceMm4: 10,
+  inertiaAxis: { pointMm: [1, 0, 5], direction: [0, 0, -2] },
+}
+const axisMass = call(request.maxWork, patchSetOp, axisOptions)
+const expectedAxisMoment = 83 / 768 + 49 / 12288 + 1.3125 * (1 - 2 * 3 / 28)
+const axisBounds = axisMass.axisMomentBoundsMm4
+assert.ok(axisBounds && axisBounds[0] <= expectedAxisMoment && expectedAxisMoment <= axisBounds[1])
+assert.equal(axisMass.principalMomentBoundsMm4?.length, 3)
+assert.equal(call(request.maxWork, patchSetOp, { ...axisOptions, maxSurfaceCells: 2 }).axisMomentBoundsMm4, null)
+console.log('WASM ABI enclosed the patch set moment about an offset axis.')

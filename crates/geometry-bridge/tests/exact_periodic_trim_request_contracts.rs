@@ -633,3 +633,43 @@ fn patch_set_mass_operation_validates_tolerance_and_withholds_unproved_spectrum(
         request["maxWork"] = json!(1);
     }
 }
+
+#[test]
+fn patch_set_mass_operation_returns_offset_axis_moment_with_principal_moments() {
+    let mut request = patch_set_mass_request(20_000);
+    let legacy = run(&request);
+    assert!(legacy["value"].get("axisMomentBoundsMm4").is_none());
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 5.], "direction": [0., 0., -2.]});
+    request["momentToleranceMm4"] = json!(10.);
+    let response = run(&request);
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    assert_eq!(report["withinMomentTolerance"], true);
+    assert_eq!(report["boundsMm2"], legacy["value"]["boundsMm2"]);
+    let expected = 83. / 768. + 49. / 12288. + 1.3125 * (1. - 2. * 3. / 28.);
+    let bounds = &report["axisMomentBoundsMm4"];
+    assert!(bounds[0].as_f64().unwrap() <= expected && expected <= bounds[1].as_f64().unwrap());
+}
+
+#[test]
+fn patch_set_mass_operation_rejects_malformed_axes_and_withholds_unproved_moments() {
+    let mut request = patch_set_mass_request(2);
+    for invalid in [
+        json!(null),
+        json!({"pointMm": [0., 0., 0.]}),
+        json!({"pointMm": [0., 0.], "direction": [0., 0., 1.]}),
+        json!({"pointMm": [0., 0., 0.], "direction": [0., 0., 0.]}),
+    ] {
+        request["inertiaAxis"] = invalid;
+        assert_eq!(run(&request)["ok"], false);
+    }
+    request["inertiaAxis"] = json!({"pointMm": [1., 0., 5.], "direction": [0., 0., 1.]});
+    for status in ["workLimit", "buildRefused"] {
+        let response = run(&request);
+        assert_eq!(response["ok"], true, "{response}");
+        let report = &response["value"];
+        assert_eq!(report["status"], status);
+        assert_eq!(report.get("axisMomentBoundsMm4"), Some(&Value::Null));
+        request["maxWork"] = json!(1);
+    }
+}
