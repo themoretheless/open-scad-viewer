@@ -4,9 +4,24 @@
 //! after a complete nonzero speed/curvature cover. Arc mode also accepts
 //! exact C(k+1) geometric unit-tangent jets. This proves no embedding.
 use super::*;
-pub(super) fn certify(s:&Sweep<'_>,order:usize,max_cells:usize,max_work:u64)->Result<ClosedPathFrameSmoothnessReport> {
+pub(in crate::sweeps::progressive_sweep) fn certify(s:&Sweep<'_>,order:usize,max_cells:usize,max_work:u64)->Result<ClosedPathFrameSmoothnessReport> {
     let mut out=ClosedPathFrameSmoothnessReport{order,closed_source_frame_smoothness_certified:false,
         cells:0,exact_work:0,reason:Some("closed-frenet-path-jets-unproved")};
+    if s.options.orientation == Orientation::CorrectedFrenet {
+        out.reason = Some("closed-corrected-regular-branch-unproved");
+        if s.contact_point.is_some() {
+            return Ok(out);
+        }
+        let (regular, work) = authored_error::certify_corrected_regular_branch(
+            s.path, max_cells.min(max_work as usize),
+        )?;
+        out.cells = work;
+        out.exact_work = work as u64;
+        if !regular {
+            return Ok(out);
+        }
+    }
+    out.reason = Some("closed-frenet-path-jets-unproved");
     let mut path_ok=knot_continuity(s.path,order+2,&mut out.exact_work,max_work)?;
     if path_ok {
         let p=super::super::endpoint_jets::certify(s.path,order+2,max_work-out.exact_work)?;
@@ -34,8 +49,8 @@ pub(super) fn certify(s:&Sweep<'_>,order:usize,max_cells:usize,max_work:u64)->Re
     // For normalized arc composition, this same cover also owns the positive
     // source speed required by the smooth inverse clock. No sampled normal,
     // planar sign rule, or corrected-Frenet transport supplies these premises.
-    let cover=frame::certify_frenet_cover(s.path,s.twist,max_cells)?;
-    out.cells=cover.cells;
+    let cover=frame::certify_frenet_cover(s.path,s.twist,max_cells-out.cells)?;
+    out.cells+=cover.cells;
     out.closed_source_frame_smoothness_certified=cover.status==Status::Certified;
     out.reason=if out.closed_source_frame_smoothness_certified {None}else{cover.reason};
     Ok(out)

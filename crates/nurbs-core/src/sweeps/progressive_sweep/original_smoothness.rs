@@ -1,7 +1,7 @@
 //! Sufficient open original-frame C1/C2, separate from retained seams/error.
 use super::*;
 mod guided_arc;
-mod closed_frenet;
+pub(super) mod closed_frenet;
 pub(super) mod contact_motion;
 use crate::sweeps::progressive_miter::{
     authored_frame_certificate as frame, scalar_certificate::Status,
@@ -370,7 +370,7 @@ impl Sweep<'_> {
             return Ok(out);
         }
         let periodic_frame = spatial_bishop
-            || matches!(self.options.orientation, Orientation::FixedNormal | Orientation::Frenet);
+            || matches!(self.options.orientation, Orientation::FixedNormal | Orientation::Frenet | Orientation::CorrectedFrenet);
         if (self.path.periodic && !periodic_frame)
             || !path_is_closed(self.path)?
             || self.frame_laws.is_some()
@@ -385,6 +385,21 @@ impl Sweep<'_> {
         }
         if self.options.orientation==Orientation::Frenet {
             return closed_frenet::certify(self,order,max_cells,max_exact_work);
+        }
+        if self.options.orientation == Orientation::CorrectedFrenet {
+            let plane = super::source_plane::certify(self.path, self.options.normal, max_exact_work)?;
+            out.exact_work += plane.exact_work;
+            if self.path.periodic || plane.reason == Some("source-plane-coefficients-nonzero") {
+                let mut principal = closed_frenet::certify(
+                    self, order, max_cells, max_exact_work - out.exact_work,
+                )?;
+                principal.exact_work += out.exact_work;
+                return Ok(principal);
+            }
+            if !plane.proved {
+                out.reason = plane.reason;
+                return Ok(out);
+            }
         }
         // Preserve the cheaper sufficient Cartesian route. Failed work is
         // retained when trying exact direction charts under the same owner.
@@ -438,7 +453,7 @@ impl Sweep<'_> {
             // derivative enclosure nor a retained/source boundary certificate.
             return Ok(out);
         }
-        if self.options.orientation!=Orientation::FixedNormal {
+        if self.options.orientation == Orientation::RotationMinimizing {
             let plane=super::source_plane::certify(self.path,self.options.normal,max_exact_work-out.exact_work)?;
             out.exact_work+=plane.exact_work;
             if !plane.proved {out.reason=plane.reason;return Ok(out);}
@@ -446,8 +461,8 @@ impl Sweep<'_> {
         // Complete cover proves nonzero speed and nonparallel constant seed.
         // Arc composition follows the regular inverse map with matching seam
         // jets. No numerical inverse-jet or retained frame proof is inferred.
-        let cover=frame::certify_fixed_normal_cover(self.path,self.options.normal,self.twist,max_cells)?;
-        out.cells=cover.cells;
+        let cover=frame::certify_fixed_normal_cover(self.path,self.options.normal,self.twist,max_cells-out.cells)?;
+        out.cells+=cover.cells;
         out.closed_source_frame_smoothness_certified=cover.status==Status::Certified;
         out.reason=if out.closed_source_frame_smoothness_certified {None}else{cover.reason};
         Ok(out)

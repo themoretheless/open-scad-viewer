@@ -398,3 +398,34 @@ fn closed_fixed_transverse_volume_loses_rank_with_variable_pose_laws() {
         }
     }
 }
+
+#[test]
+fn periodic_corrected_principal_frame_owns_the_closed_original_volume() {
+    let path = frenet_source::periodic_path();
+    let (profiles, cap, _) = source::material(true, true);
+    let scale = source::periodic(1., 1.03125);
+    let twist = source::periodic(0., 1. / 1024.);
+    let projection = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
+    let mut broken = path.clone();
+    broken.knots[1] = broken.knots[1].next_up();
+
+    for arc in [false, true] {
+        let opts = Options { orientation: Orientation::CorrectedFrenet, ..options(arc) };
+        let sweep = MultiSweep::new(&profiles, &path, &scale, &twist, opts).unwrap();
+        let seam = sweep.certify_closed_path_frame_smoothness(2, 100000, 1000000).unwrap();
+        assert!(seam.closed_source_frame_smoothness_certified, "{arc}: {seam:?}");
+        let audit = |sweep: &MultiSweep<'_>, work| {
+            sweep.certify_ideal_volume_atlas([&cap, &cap], projection, 1000000, work).unwrap()
+        };
+        let body = audit(&sweep, 1000000);
+        assert!(body.embedding_certified && body.regularity_certified
+            && body.parameter_topology_preserved, "{arc}: {body:?}");
+        let broken = MultiSweep::new(&profiles, &broken, &scale, &twist, opts).unwrap();
+        let broken_seam = broken.certify_closed_path_frame_smoothness(2, 100000, 1000000).unwrap();
+        assert!(!broken_seam.closed_source_frame_smoothness_certified, "{broken_seam:?}");
+        for refused in [audit(&sweep, 0), audit(&broken, 1000000)] {
+            assert!(!refused.embedding_certified && !refused.regularity_certified
+                && !refused.parameter_topology_preserved, "{refused:?}");
+        }
+    }
+}

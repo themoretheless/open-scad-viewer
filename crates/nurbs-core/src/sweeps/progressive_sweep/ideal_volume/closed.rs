@@ -21,7 +21,7 @@ pub(super) fn uses_periodic_path(s: &Sweep<'_>, closed: bool) -> bool {
         && s.path.periodic
         && (s.frame_laws.is_some()
             || s.orientation_guide.is_some()
-            || matches!(s.options.orientation, Orientation::Fixed | Orientation::FixedNormal | Orientation::Frenet)
+            || matches!(s.options.orientation, Orientation::Fixed | Orientation::FixedNormal | Orientation::Frenet | Orientation::CorrectedFrenet)
             || (s.options.orientation == Orientation::RotationMinimizing
                 && s.spatial_rmf_error_limits.is_some()))
 }
@@ -86,22 +86,22 @@ pub(super) fn premises(
             r.reason,
         )
     } else {
-        // Explicit spatial Bishop uses its OWN corrected derivative owner and
-        // periodic source theorem. Frenet owns its nonzero curvature cover.
-        // Corrected-Frenet/implicit fallback modes
-        // still require their original source derivative owners.
-        if !matches!(s.options.orientation,Orientation::Fixed|Orientation::FixedNormal|Orientation::Frenet)
-            && !(s.options.orientation == Orientation::RotationMinimizing
-                && s.spatial_rmf_error_limits.is_some())
+        // The quotient uses the regular principal branch for Corrected
+        // Frenet. The public frame report may also prove a planar fallback,
+        // which does not authorize the principal jets used by this volume.
+        if s.options.orientation == Orientation::RotationMinimizing
+            && s.spatial_rmf_error_limits.is_none()
         {
             out.reason = Some("ideal-volume-closed-frame-jets-unproved");
             return Ok(false);
         }
-        let r = s.certify_closed_path_frame_smoothness(
-            1,
-            max_cells - out.cells,
-            max_work - out.exact_work,
-        )?;
+        let cells = max_cells - out.cells;
+        let work = max_work - out.exact_work;
+        let r = if s.options.orientation == Orientation::CorrectedFrenet {
+            super::super::original_smoothness::closed_frenet::certify(s, 1, cells, work)?
+        } else {
+            s.certify_closed_path_frame_smoothness(1, cells, work)?
+        };
         (
             r.closed_source_frame_smoothness_certified,
             r.cells,

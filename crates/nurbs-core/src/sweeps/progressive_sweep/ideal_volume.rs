@@ -188,13 +188,15 @@ impl MultiSweep<'_> {
         });
         let s = conditioned_sweep.as_ref().unwrap_or(s);
         let zero = constant_vector_law([0.; 3])?;
-        let Some(initial) = super::profile_domain::original_frame(
-            s,
-            &zero,
-            [0., 0.],
-            (max_cells - out.cells).min(100000),
-            true,
-        )?
+        let initial_budget = (max_cells - out.cells).min(100000);
+        let initial = if closed && s.options.orientation == Orientation::CorrectedFrenet
+            && s.frame_laws.is_none() && s.orientation_guide.is_none()
+        {
+            Some(frame::certify_frenet_path_values(s.path, &zero, [0., 0.], initial_budget)?)
+        } else {
+            super::profile_domain::original_frame(s, &zero, [0., 0.], initial_budget, true)?
+        };
+        let Some(initial) = initial
         else {
             out.reason = Some("ideal-volume-initial-frame-unproved");
             return Ok(out);

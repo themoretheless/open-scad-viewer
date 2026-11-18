@@ -177,12 +177,15 @@ pub(super) fn prepare_corrected_frame(
     max_cells: usize,
     max_exact_work: u64,
 ) -> Result<Option<CorrectedFrame>> {
-    if closed
-        || s.options.orientation != Orientation::CorrectedFrenet
+    if s.options.orientation != Orientation::CorrectedFrenet
         || s.frame_laws.is_some()
         || s.orientation_guide.is_some()
     {
         return Ok(None);
+    }
+    if closed {
+        // Closed volume premises have already certified this exact branch.
+        return Ok(Some(CorrectedFrame::RegularPrincipal));
     }
     // On a forward line, Corrected Frenet keeps the initial perpendicular
     // seed. Only the authored twist contributes frame jets in station units.
