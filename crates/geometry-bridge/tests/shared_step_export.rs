@@ -15,9 +15,11 @@ fn editor_payload_exports_one_local_definition_at_two_distinct_placements() {
     assert_eq!(scene.occurrences().len(), 2);
     assert_eq!(scene.occurrences()[1].transform, place(17.));
     let mut grouped = payload.clone();
-    grouped["groups"] = json!(["Drive"]);
+    grouped["groups"] = json!(["Drive", "Spare"]);
     grouped["parents"] = json!([None::<usize>, Some(0usize)]);
     let result = dispatch(grouped).unwrap();
+    let flattened = dispatch(json!({"op":"brep_nurbs_import_step_v9","text":result["text"].as_str().unwrap()})).unwrap();
+    assert_eq!(flattened["model"]["bodies"].as_array().unwrap().len(), 2);
     let reopened = cad_step::import_step_shared_assembly(result["text"].as_str().unwrap()).unwrap();
     assert_eq!(reopened.definitions().len(), 1);
     assert_eq!(reopened.occurrences().len(), 2);

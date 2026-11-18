@@ -202,6 +202,7 @@ fn validate_shape_representation_container(
     outgoing: &BTreeMap<usize, Vec<(usize, usize, usize, bool)>>,
     rep: usize,
     args: &[Value],
+    is_child: bool,
 ) -> Result<()> {
     let items = list(&args[1], "assembly placement items")?;
     let has_direct_body = items.iter().any(|item| {
@@ -210,7 +211,10 @@ fn validate_shape_representation_container(
                 .is_ok_and(|(ty, _)| matches!(ty, "MANIFOLD_SOLID_BREP" | "BREP_WITH_VOIDS"))
         })
     });
-    if !outgoing.contains_key(&rep) && !has_direct_body {
+    // A nested, frame-only product represents an empty group.
+    let empty_group = is_child && matches!(items, [Value::Ref(frame)]
+        if call(entities, *frame).is_ok_and(|(ty, _)| ty == "AXIS2_PLACEMENT_3D"));
+    if !outgoing.contains_key(&rep) && !has_direct_body && !empty_group {
         return Err(refuse("Empty product assembly container"));
     }
     for item in items {
@@ -324,7 +328,7 @@ fn walk(
         return Err(refuse("Shape representation argument count mismatch"));
     }
     if ty == "SHAPE_REPRESENTATION" {
-        validate_shape_representation_container(entities, outgoing, rep, args)?;
+        validate_shape_representation_container(entities, outgoing, rep, args, depth > 0)?;
     }
     let linked = reachable(entities, &[rep])?;
     let scale = length_scale(entities, &linked, false)?;
