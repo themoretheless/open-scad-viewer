@@ -191,3 +191,23 @@ fn certified_sector_edit_rejects_crossings_even_with_closed_joins() {
     assert!(edit(&mut whole,0,&cuts_hole,&holes,1e-7).is_err());
     for (a,b) in enlarged.iter().zip(whole.sector(0).unwrap()) { assert_eq!(a.control_points,b.control_points); }
 }
+
+#[test]
+fn full_spinner_sun_edit_checks_all_192_segments_before_commit() {
+    use brep_core::gear::{replace_verified_gear_sector as edit, ProfileEmbeddingLimits};
+    use nurbs_core::involute::LosslessSectorPattern;
+    let spec = GearSpec { teeth:32, module:1.5, clearance:0.1, bore:5., ..GearSpec::default() };
+    let (wires,_) = profile_with_report(&spec).unwrap();
+    assert_eq!(wires[0].len(),192);
+    let mut packed = LosslessSectorPattern::encode(&wires[0],6).unwrap();
+    let mut tooth = packed.sector(31).unwrap();
+    let flank = tooth.iter().position(|c| c.degree > 2).unwrap();
+    tooth[flank].control_points[1][0] += 1e-8;
+    let result = edit(&mut packed,31,&tooth,false,Some(&wires[1]),1e-7,ProfileEmbeddingLimits::default()).unwrap();
+    assert_eq!(result.winding(), &[1,-1]);
+    assert_eq!(result.profile()[0][31*6+flank].control_points,tooth[flank].control_points);
+    let mut bad = tooth.clone();
+    bad[flank].control_points[1] = vec![0.,0.];
+    assert!(edit(&mut packed,31,&bad,false,Some(&wires[1]),1e-7,ProfileEmbeddingLimits::default()).is_err());
+    assert_eq!(packed.sector(31).unwrap()[flank].control_points,tooth[flank].control_points);
+}

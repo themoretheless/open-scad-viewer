@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 926,
-  "unallocatedCount": 74,
+  "specifiedCount": 927,
+  "unallocatedCount": 73,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21226,6 +21226,25 @@
       ],
       "remainingQualification": [
         "Planar material-left loops within existing profile certificate limits. Does not certify a three-dimensional body or continuity above G0."
+      ]
+    },
+    {
+      "id": "NURBS-0927",
+      "name": "Проверка правки зуба полного сжатого контура с доказательством разделения групп",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::gear::replace_verified_gear_sector",
+      "evidence": [
+        "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs",
+        "crates/brep-core/src/parts/gear_profile_embedding.rs",
+        "crates/brep-core/src/parts/gear/mod.rs",
+        "crates/brep-core/tests/gear_profile.rs",
+        "docs/qualification/nurbs-grouped-gear-sector-edit-927-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-grouped-gear-sector-edit-927-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Grouped planar teeth with four or six pieces, optional bore or required outer rim, subject to local certificates and far-hull proof budgets."
       ]
     }
   ],

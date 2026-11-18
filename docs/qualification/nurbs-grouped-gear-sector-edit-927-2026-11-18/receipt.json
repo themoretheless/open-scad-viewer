@@ -1,0 +1,44 @@
+{
+  "id": "NURBS-0927",
+  "testedBase": "d3cad4d321e6b9ebf630197479ce5ff6ea84fa08",
+  "gearCommand": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "gear_profile",
+    "--",
+    "--nocapture"
+  ],
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "gear_parameter_bounds"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 490,
+  "scope": [
+    "Edit the final tooth of the generated 192-segment sun with a bore; verify the modified source and winding and refuse a control hull reaching the origin without publishing it."
+  ],
+  "logSha256": "219ec4e30ccfd71edc16b5db95bb02884f5814061059b96ab5853bc55497df66",
+  "sourceSha256": {
+    "crates/nurbs-core/src/construct/curves/involute/circular_pattern.rs": "f3160953ecec103c4060a8c26751c73fffb2524047f4de6ff0146027bd3d1a35",
+    "crates/brep-core/src/parts/gear_profile_embedding.rs": "e00462a195705e1e8c53f6db408333fe9d5a78f595b11a5d66dce72dd601ca25",
+    "crates/brep-core/src/parts/gear/mod.rs": "6fd71d32dbf785a48c77ca418c1c6a1fe0a0cd5a67f0c0e2eee68a198c0785d4",
+    "crates/brep-core/tests/gear_profile.rs": "603da3ef42404f812ebe7a401aebde2d37beef6f55de3c2f8e0c2245d063bc93"
+  }
+}
