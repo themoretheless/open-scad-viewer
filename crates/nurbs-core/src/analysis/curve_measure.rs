@@ -2593,12 +2593,29 @@ pub fn certify_planar_contour_fill_orientations(
     max_distance_cells: usize,
     max_orientation_cells: usize,
 ) -> Result<PlanarContourOrientationReport> {
+    let (report, _) = contour_fill_orientation_and_area(
+        contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
+        max_winding_cells, max_distance_cells, max_orientation_cells,
+    )?;
+    Ok(report)
+}
+
+fn contour_fill_orientation_and_area(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_orientation_cells: usize,
+) -> Result<(PlanarContourOrientationReport, Vec<Interval>)> {
     validate(parameter_tolerance, max_orientation_cells)?;
     let hierarchy = certify_planar_contour_hierarchy(
         contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
         max_winding_cells, max_distance_cells,
     )?;
     let mut orientations = Vec::with_capacity(contours.len());
+    let mut signed_areas = Vec::with_capacity(contours.len());
     let mut orientation_work_cells = 0;
     for (index, curve) in contours.iter().enumerate() {
         let budget = (max_orientation_cells - orientation_work_cells) / (contours.len() - index);
@@ -2623,13 +2640,52 @@ pub fn certify_planar_contour_fill_orientations(
             return Err(resource("Contour orientation is unresolved under the area work budget"));
         };
         orientations.push(orientation);
+        signed_areas.push(doubled_area.mul(Interval::point(0.5))?);
         orientation_work_cells += work;
     }
     let reverse = orientations.iter().zip(&hierarchy.depths).map(|(orientation, depth)| {
         let counterclockwise = *orientation == PlanarContourOrientation::Counterclockwise;
         counterclockwise != (depth % 2 == 0)
     }).collect();
-    Ok(PlanarContourOrientationReport { hierarchy, orientations, reverse, orientation_work_cells })
+    let report = PlanarContourOrientationReport { hierarchy, orientations, reverse, orientation_work_cells };
+    Ok((report, signed_areas))
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarContourFillAreaReport {
+    pub area_bounds: [f64; 2],
+    /// Signed area of each original contour in input order.
+    pub signed_contour_area_bounds: Vec<[f64; 2]>,
+    pub orientation: PlanarContourOrientationReport,
+}
+
+/// Bound the area filled by a certified contour hierarchy using even-odd
+/// parity. Odd depths subtract enclosed area and even depths add it,
+/// regardless of the direction of the input contours.
+pub fn measure_planar_contour_fill_area(
+    contours: &[&Curve],
+    parameter_tolerance: f64,
+    distance_tolerance: f64,
+    max_simplicity_work: usize,
+    max_winding_cells: usize,
+    max_distance_cells: usize,
+    max_area_cells: usize,
+) -> Result<PlanarContourFillAreaReport> {
+    let (orientation, areas) = contour_fill_orientation_and_area(
+        contours, parameter_tolerance, distance_tolerance, max_simplicity_work,
+        max_winding_cells, max_distance_cells, max_area_cells,
+    )?;
+    let mut total = Interval::point(0.);
+    for (area, &reverse) in areas.iter().zip(&orientation.reverse) {
+        let contribution = if reverse { Interval::new(-area.hi, -area.lo)? } else { *area };
+        total = total.add(contribution)?;
+    }
+    let signed_contour_area_bounds = areas.into_iter().map(|area| [area.lo, area.hi]).collect();
+    Ok(PlanarContourFillAreaReport {
+        area_bounds: [total.lo.max(0.), total.hi],
+        signed_contour_area_bounds,
+        orientation,
+    })
 }
 
 #[derive(Clone, Debug)]

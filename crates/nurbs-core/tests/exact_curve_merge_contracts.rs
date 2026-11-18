@@ -13069,3 +13069,27 @@ fn orient_planar_contours_for_nonzero_fill_preserves_exact_reversed_geometry() {
     unrepresentable.knots[2] = 0.1;
     assert!(orient(&[&outer, &unrepresentable], 10_000).is_err());
 }
+
+#[test]
+fn planar_contour_fill_area_subtracts_holes_and_adds_nested_islands() {
+    use nurbs_core::analysis::curve_measure::measure_planar_contour_fill_area;
+    let square = |r: f64| Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![-r, -r], vec![r, -r], vec![r, r],
+            vec![-r, r], vec![-r, -r]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let [mut outer, hole, island] = [square(4.), square(2.), square(0.5)];
+    outer.control_points.reverse();
+    let report = measure_planar_contour_fill_area(
+        &[&hole, &island, &outer], 0.02, 1e-4, 128, 4096, 512, 1024,
+    ).unwrap();
+    let [lo, hi] = report.area_bounds;
+    assert!(lo <= 49. && 49. <= hi && hi - lo < 1e-6);
+    for (bounds, expected) in report.signed_contour_area_bounds.into_iter().zip([16., 1., -64.]) {
+        assert!(bounds[0] <= expected && expected <= bounds[1]);
+        assert!(bounds[1] - bounds[0] < 1e-6);
+    }
+}

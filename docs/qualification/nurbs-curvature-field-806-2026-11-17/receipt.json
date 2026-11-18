@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0806",
+  "testedBase": "0500b49d8ea53ca2c8d7cf2f887d97eeeb741479",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 432,
+  "scope": [
+    "Enclose even-odd filled area and the signed source areas of a certified contour hierarchy.",
+    "Check area subtraction for a hole, addition of a nested island and signed source areas under arbitrary input orientation."
+  ],
+  "logSha256": "b20ca8dd56bcd81f4fc9bf1e5563da45bad1771cbb0731cb634a14426bc86e66",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "9e5fb66e2a9c66c992aff0165ffab10daa2c3b32f28bf0465832c5aac5cb82ec",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "9ac6e0690967cbb866a374a3441346d9e3a2164b33f82f10a0dfbce1641eaeb6"
+  }
+}
