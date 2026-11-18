@@ -263,8 +263,29 @@ fn ideal_wall_error_upper(
 
 pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
     let (loops, mut geometry) = profile_with_report(spec)?;
+    let (model, deviation, certified) = build_profile_body(&loops, spec, geometry.pitch_radius)?;
+    geometry.sweep_deviation = deviation;
+    geometry.sweep_rounding_certified = certified;
+    geometry.ideal_wall_error_upper = ideal_wall_error_upper(certified, geometry.profile_error_upper, deviation)?;
+    geometry.face_count = model.faces.len();
+    Ok((model, geometry))
+}
+
+/// Sweep the verified, possibly edited wire coordinates into a validated body.
+/// Height and helix use the supplied spec's nominal pitch radius. This does
+/// not transfer nominal involute accuracy claims onto edited flanks.
+pub fn gear_from_verified_profile(profile: &VerifiedGearProfile, spec: &GearSpec) -> Result<Model> {
+    profile_stages::validate_spec(spec)?;
+    if profile.teeth() != spec.teeth || profile.is_internal() != spec.internal {
+        return Err(invalid("Gear profile and sweep specification disagree"));
+    }
+    let pitch = spec.module * spec.teeth as f64 / 2.;
+    Ok(build_profile_body(profile.profile(), spec, pitch)?.0)
+}
+
+fn build_profile_body(loops: &[Vec<Curve>], spec: &GearSpec, pitch_radius: f64) -> Result<(Model, f64, bool)> {
     let beta = spec.helix_angle_deg.to_radians();
-    let total_twist = spec.height * beta.tan() / geometry.pitch_radius;
+    let total_twist = spec.height * beta.tan() / pitch_radius;
     let layers = axial_layers(spec, beta, total_twist);
     let nominal_twist = nurbs_core::involute::derive_gear_twist_bounds(
         spec.module,
@@ -274,7 +295,7 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
     )
     .ok();
     let mut builder = GearBodyBuilder {
-        loops: &loops,
+        loops,
         vertices: Vec::new(),
         edges: Vec::new(),
         loops_out: Vec::new(),
@@ -299,16 +320,9 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
         builder.push_cap(bottom, true);
         builder.push_cap(top, false);
     }
-    geometry.sweep_deviation = builder.sweep_deviation;
-    geometry.sweep_rounding_certified = builder.sweep_rounding_certified;
-    geometry.ideal_wall_error_upper = ideal_wall_error_upper(
-        builder.sweep_rounding_certified,
-        geometry.profile_error_upper,
-        builder.sweep_deviation,
-    )?;
-    geometry.face_count = builder.faces.len();
-    let model = builder.into_model()?;
-    Ok((model, geometry))
+    let deviation = builder.sweep_deviation;
+    let certified = builder.sweep_rounding_certified;
+    Ok((builder.into_model()?, deviation, certified))
 }
 
 pub fn gear(spec: &GearSpec) -> Result<Model> {

@@ -36,6 +36,7 @@ pub struct VerifiedGearProfile {
     winding: Vec<i32>,
     radial_ranges: Vec<[f64; 2]>,
     teeth: usize,
+    internal: bool,
 }
 impl VerifiedGearProfile {
     pub fn profile(&self) -> &[Vec<Curve>] {
@@ -47,6 +48,7 @@ impl VerifiedGearProfile {
     pub fn radial_ranges(&self) -> &[[f64; 2]] {
         &self.radial_ranges
     }
+    pub(super) fn is_internal(&self) -> bool { self.internal }
     pub fn teeth(&self) -> usize {
         self.teeth
     }
@@ -433,6 +435,7 @@ pub fn verify_profile_embedding(
         winding: winding_values,
         radial_ranges: ranges,
         teeth: c.teeth,
+        internal: c.tooth_wire == 1,
     })
 }
 
