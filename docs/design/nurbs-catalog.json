@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 721,
-  "unallocatedCount": 279,
+  "specifiedCount": 722,
+  "unallocatedCount": 278,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17391,6 +17391,25 @@
       "remainingQualification": [
         "Refine the minimum swept-ball clearance to capsule bodies and rounded tips.",
         "Check an analytic rounded tip minimum, certified tolerance and witness, degenerate capsule support, and retained coarse bounds.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0722",
+      "name": "Адаптивный поиск минимального зазора в сцене с разными типами препятствий",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_toolpath_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-722-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-722-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Find a certified minimum across mixed sphere, capsule and box obstacles in one search.",
+        "Check a mixed scene with four geometric types, certified corner minimum, reordered obstacle witness and initial budget refusal.",
         "WASM and application integration are separate."
       ]
     }

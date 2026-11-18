@@ -2765,6 +2765,78 @@ fn prepare_oriented_boxes<'a>(
     }).collect()
 }
 
+/// A fixed obstacle for a spherical tool moving along a NURBS curve.
+#[derive(Clone, Copy, Debug)]
+pub enum ToolpathObstacle<'a> {
+    Sphere(SphericalObstacle<'a>),
+    Capsule(CapsuleObstacle<'a>),
+    Box(BoxObstacle<'a>),
+    OrientedBox(OrientedBoxObstacle<'a>),
+}
+
+enum PreparedToolpathObstacle<'a> {
+    Sphere(PreparedSphere),
+    Capsule(PreparedCapsule),
+    Box(BoxObstacle<'a>),
+    OrientedBox(PreparedOrientedBox<'a>),
+}
+
+impl PreparedToolpathObstacle<'_> {
+    fn gap(&self, point: &[Interval], tool_radius: f64) -> Result<Interval> {
+        match self {
+            Self::Sphere((center, radius)) => {
+                let (lo, hi) = box_distance(point, center)?;
+                Interval::new(lo, hi)?.sub(*radius)
+            }
+            Self::Capsule(capsule) => capsule.gap(point),
+            Self::Box(bounds) => solid_box_gap(point, bounds.minimum, bounds.maximum, tool_radius),
+            Self::OrientedBox(bounds) => bounds.gap(point, tool_radius),
+        }
+    }
+}
+
+/// Refine the minimum signed clearance against mixed obstacle shapes in one
+/// search. The witness obstacle index refers to the original input order.
+pub fn measure_minimum_toolpath_clearance(
+    curve: &Curve,
+    interval: [f64; 2],
+    obstacles: &[ToolpathObstacle<'_>],
+    tool_radius: f64,
+    tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalMinimumClearance> {
+    check(tool_radius.is_finite() && tool_radius >= 0., "Tool radius must be finite and nonnegative")?;
+    validate(tolerance, max_obstacle_cells)?;
+    check(!obstacles.is_empty(), "Toolpath clearance requires at least one obstacle")?;
+    curve.validate()?;
+    validate_travel_interval(curve, interval)?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if active_spans(curve, interval).count() > max_cells {
+        return Err(resource("Clearance budget must cover every initial obstacle cell"));
+    }
+    let obstacles = obstacles.iter().map(|obstacle| {
+        Ok(match obstacle {
+            ToolpathObstacle::Sphere(sphere) => PreparedToolpathObstacle::Sphere(
+                prepare_spherical_obstacles(curve, std::slice::from_ref(sphere), tool_radius)?.remove(0),
+            ),
+            ToolpathObstacle::Capsule(capsule) => PreparedToolpathObstacle::Capsule(
+                prepare_capsules(curve, std::slice::from_ref(capsule), tool_radius)?.remove(0),
+            ),
+            ToolpathObstacle::Box(bounds) => {
+                validate_box_obstacles(curve, std::slice::from_ref(bounds))?;
+                PreparedToolpathObstacle::Box(*bounds)
+            }
+            ToolpathObstacle::OrientedBox(bounds) => PreparedToolpathObstacle::OrientedBox(
+                prepare_oriented_boxes(curve, std::slice::from_ref(bounds))?.remove(0),
+            ),
+        })
+    }).collect::<Result<Vec<_>>>()?;
+    measure_minimum_radial_clearance(
+        curve, interval, tolerance, max_cells, obstacles.len(),
+        |point, index| obstacles[index].gap(point, tool_radius),
+    )
+}
+
 fn solid_box_gap(
     point: &[Interval],
     minimum: &[f64],
