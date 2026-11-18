@@ -17,12 +17,14 @@ pub(crate) const STEP_V6_AUTHORED_CHART_MARKER: &str = "authored-chart-v1";
 
 pub(crate) struct Writer {
     next: usize,
+    shared_points: Option<BTreeMap<Vec<u64>, usize>>,
     pub(crate) rows: BTreeMap<usize, String>,
 }
 impl Writer {
     pub(crate) fn new() -> Self {
         Self {
             next: 1,
+            shared_points: None,
             rows: BTreeMap::new(),
         }
     }
@@ -40,7 +42,18 @@ impl Writer {
         id
     }
     pub(crate) fn point(&mut self, p: &[f64]) -> usize {
-        self.emit(format!("CARTESIAN_POINT('',({}))", floats(p)))
+        let Some(points) = &self.shared_points else {
+            return self.emit(format!("CARTESIAN_POINT('',({}))", floats(p)));
+        };
+        let key: Vec<_> = p.iter().map(|value| value.to_bits()).collect();
+        if let Some(&id) = points.get(&key) {
+            return id;
+        }
+        let id = self.emit(format!("CARTESIAN_POINT('',({}))", floats(p)));
+        if let Some(points) = &mut self.shared_points {
+            points.insert(key, id);
+        }
+        id
     }
 }
 fn floats(v: &[f64]) -> String {
@@ -267,7 +280,7 @@ fn export_step_direct_impl(
     allow_degenerate: bool,
     capability: &'static str,
     semantic: Option<&StepSemanticMetadata>,
-    planet_placements: Option<&[[[f64; 4]; 4]]>,
+    assembly_placements: Option<&[(usize, [[f64; 4]; 4])]>,
 ) -> Result<(String, FeatureCertificate, StepV3Report)> {
     if let Some(semantic) = semantic {
         semantic.presentation.validate_for_model(model)?;
@@ -291,6 +304,9 @@ fn export_step_direct_impl(
         return Err(refuse("STEP /9 export requires a solid body or open shell"));
     }
     let mut w = Writer::new();
+    if assembly_placements.is_some() {
+        w.shared_points = Some(BTreeMap::new());
+    }
     let mut vertex_entities = Vec::new();
     for v in &model.vertices {
         let p = w.point(&v.point);
@@ -545,7 +561,11 @@ fn export_step_direct_impl(
             "(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#{uncertainty}))GLOBAL_UNIT_ASSIGNED_CONTEXT((#{unit}))REPRESENTATION_CONTEXT('','3D'))"
         ));
         let mut items = body_entities.clone();
-        items.extend(surface_models.iter().copied());
+        if assembly_placements.is_some() {
+            items.truncate(1);
+        } else {
+            items.extend(surface_models.iter().copied());
+        }
         let representation_type = if body_entities.is_empty() {
             "MANIFOLD_SURFACE_SHAPE_REPRESENTATION"
         } else {
@@ -587,7 +607,7 @@ fn export_step_direct_impl(
         w.emit(format!(
             "SHAPE_DEFINITION_REPRESENTATION(#{shape},#{representation})"
         ));
-        if let Some(placements) = planet_placements {
+        if let Some(placements) = assembly_placements {
             let assembly_product = w.emit(format!(
                 "PRODUCT('planet-set','Planet gear set','',(#{product_context}))"
             ));
@@ -604,7 +624,24 @@ fn export_step_direct_impl(
             let frame = w.emit(format!("AXIS2_PLACEMENT_3D('',#{origin},$,$)"));
             let assembly_rep = w.emit(format!("SHAPE_REPRESENTATION('',(#{frame}),#{context})"));
             w.emit(format!("SHAPE_DEFINITION_REPRESENTATION(#{assembly_shape},#{assembly_rep})"));
-            for (index, matrix) in placements.iter().enumerate() {
+            let mut definitions = vec![(representation, definition)];
+            for (index, &body) in body_entities.iter().enumerate().skip(1) {
+                let product = w.emit(format!(
+                    "PRODUCT('gear-{index}','Gear {index}','',(#{product_context}))"
+                ));
+                let formation = w.emit(format!("PRODUCT_DEFINITION_FORMATION('1','',#{product})"));
+                let definition = w.emit(format!(
+                    "PRODUCT_DEFINITION('design','',#{formation},#{definition_context})"
+                ));
+                let representation = w.emit(format!(
+                    "ADVANCED_BREP_SHAPE_REPRESENTATION('',(#{body}),#{context})"
+                ));
+                let shape = w.emit(format!("PRODUCT_DEFINITION_SHAPE('','',#{definition})"));
+                w.emit(format!("SHAPE_DEFINITION_REPRESENTATION(#{shape},#{representation})"));
+                definitions.push((representation, definition));
+            }
+            for (index, (body, matrix)) in placements.iter().enumerate() {
+                let (representation, definition) = definitions[*body];
                 let origin = w.point(&[matrix[0][3], matrix[1][3], matrix[2][3]]);
                 let axes = [0, 1, 2].map(|column| {
                     let direction = [matrix[0][column], matrix[1][column], matrix[2][column]];
@@ -618,7 +655,7 @@ fn export_step_direct_impl(
                     "(REPRESENTATION_RELATIONSHIP('','',#{representation},#{assembly_rep})REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(#{operator})SHAPE_REPRESENTATION_RELATIONSHIP())"
                 ));
                 let occurrence = w.emit(format!(
-                    "NEXT_ASSEMBLY_USAGE_OCCURRENCE('planet-{index}','Planet {index}','',#{assembly_definition},#{definition},$)"
+                    "NEXT_ASSEMBLY_USAGE_OCCURRENCE('gear-occurrence-{index}','Gear occurrence {index}','',#{assembly_definition},#{definition},$)"
                 ));
                 let shape = w.emit(format!("PRODUCT_DEFINITION_SHAPE('','',#{occurrence})"));
                 w.emit(format!("CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#{relationship},#{shape})"));
@@ -786,9 +823,37 @@ pub fn export_step_v9(model: &Model) -> Result<(String, StepV8Certificate, StepV
 pub fn export_planet_gear_occurrences_step(
     assembly: &brep_core::gear::PlanetGearOccurrences,
 ) -> Result<String> {
+    let placements: Vec<_> = assembly.placements().iter().copied().map(|matrix| (0, matrix)).collect();
     let (text, _, _) = export_step_direct_impl(
         assembly.prototype(), true, true, STEP_INTERCHANGE_V9_CAPABILITY,
-        None, Some(assembly.placements()),
+        None, Some(&placements),
+    )?;
+    Ok(text)
+}
+
+/// Export a planetary gear assembly with separate sun, ring and planet
+/// definitions. All planet occurrences reference the same STEP geometry.
+pub fn export_planetary_gear_set_step(
+    sun: &Model,
+    ring: &Model,
+    planets: &brep_core::gear::PlanetGearOccurrences,
+) -> Result<String> {
+    if planets.placements().len() > 254 {
+        return Err(refuse("Planetary assembly exceeds the STEP limit of 256 occurrences"));
+    }
+    if [sun, ring, planets.prototype()].iter().any(|model| {
+        model.bodies.len() != 1 || model.shells.iter().any(|shell| !shell.closed)
+    }) {
+        return Err(refuse("Planetary assembly requires one solid per gear definition"));
+    }
+    let model = crate::compose_step_v7_occurrences(&[sun.clone(), ring.clone(), planets.prototype().clone()])?;
+    let identity = [
+        [1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ];
+    let mut placements = vec![(0, identity), (1, identity)];
+    placements.extend(planets.placements().iter().copied().map(|matrix| (2, matrix)));
+    let (text, _, _) = export_step_direct_impl(
+        &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(&placements),
     )?;
     Ok(text)
 }

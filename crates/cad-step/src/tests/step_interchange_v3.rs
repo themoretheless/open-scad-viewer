@@ -2800,3 +2800,34 @@ fn planet_gear_step_assembly_retains_one_prototype() {
     assert!(back.vertices.iter().any(|vertex| vertex.point[0] < -radius));
     assert_eq!(back.validate().unwrap().boundary_edge_count, 0);
 }
+
+#[test]
+fn planetary_gear_set_step_round_trips_twenty_spur_occurrences() {
+    let spec = brep_core::GearSpec {
+        module: 1.5, teeth: 4, height: 10., clearance: 0.1, backlash: 0.05, ..Default::default()
+    };
+    let angles: Vec<_> = (0..18).map(|index| f64::from(index) * 20.).collect();
+    let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &angles).unwrap();
+    let sun = brep_core::gear(&brep_core::GearSpec { teeth: 32, ..spec.clone() }).unwrap();
+    let ring = brep_core::gear(&brep_core::GearSpec { teeth: 40, internal: true, ..spec }).unwrap();
+    let text = crate::export_planetary_gear_set_step(&sun, &ring, &planets).unwrap();
+    assert_eq!(text.matches("MANIFOLD_SOLID_BREP(").count(), 3);
+    assert_eq!(text.matches("NEXT_ASSEMBLY_USAGE_OCCURRENCE(").count(), 20);
+    let (back, _, _) = crate::import_step_v9(&text).unwrap();
+    assert_eq!(back.bodies.len(), 20);
+    assert_eq!(back.validate().unwrap().boundary_edge_count, 0);
+}
+
+#[test]
+fn planetary_gear_set_step_exports_twenty_herringbone_occurrences() {
+    let spec = brep_core::GearSpec {
+        module: 1.5, teeth: 4, height: 10., helix_angle_deg: 35., herringbone: true, clearance: 0.1, backlash: 0.05, ..Default::default()
+    };
+    let angles: Vec<_> = (0..18).map(|index| f64::from(index) * 20.).collect();
+    let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &angles).unwrap();
+    let sun = brep_core::gear(&brep_core::GearSpec { teeth: 32, helix_angle_deg: -35., bore: 44., ..spec.clone() }).unwrap();
+    let ring = brep_core::gear(&brep_core::GearSpec { teeth: 40, internal: true, ..spec }).unwrap();
+    let text = crate::export_planetary_gear_set_step(&sun, &ring, &planets).unwrap();
+    assert_eq!(text.matches("MANIFOLD_SOLID_BREP(").count(), 3);
+    assert_eq!(text.matches("NEXT_ASSEMBLY_USAGE_OCCURRENCE(").count(), 20);
+}

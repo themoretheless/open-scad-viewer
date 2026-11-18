@@ -68,4 +68,4 @@ mod kernel_exchange;
 #[path = "tests/kernel_fixtures.rs"]
 mod kernel_fixtures;
 
-pub use step_v3_export::export_planet_gear_occurrences_step;
+pub use step_v3_export::{export_planet_gear_occurrences_step, export_planetary_gear_set_step};

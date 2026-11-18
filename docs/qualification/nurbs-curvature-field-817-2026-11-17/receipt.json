@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0817",
+  "testedBase": "11bdbdd27a96e76b210ef90ef1c176b34a33bb6b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib",
+    "planet"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 0,
+  "scope": [
+    "Export sun, ring and shared planet definitions with twenty AP242 occurrences.",
+    "Check three serialized herringbone gear bodies, twenty occurrences and closed spur round-trip topology."
+  ],
+  "logSha256": "da467d1dc8d248a456142c98fd14c40c476ed2b16507a1b3e630cd5b8d918e92",
+  "sourceSha256": {
+    "crates/cad-step/src/step_v3_export.rs": "d2b11b3c33b1762300e37366d0e11ec91e43247658db1cea1246c01c3cc96b02",
+    "crates/cad-step/src/lib.rs": "cd8e56fa163e6eee0bde4535bdda81123291210650523a512fb5d40beb6fe41b",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "d5284086da500680fae2f08e20a0fb01ba3ccc5c7a84dba17c47a565f9eba319"
+  }
+}
