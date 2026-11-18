@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0733",
+  "testedBase": "396044c8a7ae791becdda98eb28fc24527bbd9ac",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 358,
+  "scope": [
+    "Bound the longest contiguous clearance violation across segment boundaries.",
+    "Check a confirmed run spanning independent clocks, a separated shorter run, coarse uncertainty, and a wholly clear chain."
+  ],
+  "logSha256": "35955126029c249b4a0fe03e2e8407e4b1dd714b90ea8edd891bfd45421698dd",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "2ce2125884cb4b0eb503de490a9aaf1702f9af307cc66f7982a963a50519f129",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "4361fe9541c896648c14290866067da01a7687d69239770edb10b3b8246ff3f2"
+  }
+}

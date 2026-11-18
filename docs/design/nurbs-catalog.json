@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 732,
-  "unallocatedCount": 268,
+  "specifiedCount": 733,
+  "unallocatedCount": 267,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17600,6 +17600,25 @@
       "remainingQualification": [
         "Map certified clearance classes to ordered elapsed-time intervals across timed segments.",
         "Check independent clocks, exact shared time boundaries, separated violations with clear gaps, and merged same-status cells.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0733",
+      "name": "Границы длительности самого долгого непрерывного нарушения зазора",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ToolpathChainClearanceTimeline::longest_violation_duration",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-733-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-733-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound the longest contiguous clearance violation across segment boundaries.",
+        "Check a confirmed run spanning independent clocks, a separated shorter run, coarse uncertainty, and a wholly clear chain.",
         "WASM and application integration are separate."
       ]
     }

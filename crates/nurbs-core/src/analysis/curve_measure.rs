@@ -3365,6 +3365,44 @@ pub struct ToolpathChainClearanceTimeline {
     pub work_obstacle_cells: usize,
 }
 
+impl ToolpathChainClearanceTimeline {
+    /// Bound the longest continuous clearance violation. Confirmed intervals
+    /// establish the lower bound, and runs without a clear interval establish
+    /// the upper bound. Both runs may extend across segment boundaries.
+    pub fn longest_violation_duration(&self) -> [f64; 2] {
+        let mut confirmed_start = None;
+        let mut possible_start = None;
+        let mut longest = [0_f64; 2];
+        for interval in &self.intervals {
+            let [start, end] = interval.time_endpoint_bounds;
+            if interval.status == DirectionalMotionStatus::Within {
+                confirmed_start = None;
+                possible_start = None;
+                continue;
+            }
+            let earliest = *possible_start.get_or_insert(start[0]);
+            let upper = if end[1].is_infinite() {
+                f64::INFINITY
+            } else {
+                (end[1] - earliest).next_up()
+            };
+            longest[1] = longest[1].max(upper);
+            if interval.status == DirectionalMotionStatus::Exceeds {
+                let latest = *confirmed_start.get_or_insert(start[1]);
+                let lower = if latest.is_infinite() {
+                    0.
+                } else {
+                    (end[0] - latest).next_down()
+                };
+                longest[0] = longest[0].max(lower);
+            } else {
+                confirmed_start = None;
+            }
+        }
+        longest
+    }
+}
+
 /// Map clearance cells to elapsed chain time and merge adjacent cells with
 /// equal status within each segment. Each segment uses its own uniform clock.
 pub fn toolpath_chain_clearance_timeline(

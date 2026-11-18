@@ -10711,3 +10711,37 @@ fn toolpath_chain_timeline_keeps_clear_gaps_and_shared_time_boundaries() {
         assert!(pair[0].segment_index != pair[1].segment_index || pair[0].status != pair[1].status);
     }
 }
+
+#[test]
+fn longest_toolpath_violation_brackets_a_run_across_segment_boundaries() {
+    use nurbs_core::analysis::curve_measure::{
+        BoxObstacle, TimedMotionSegment, ToolpathObstacle, toolpath_chain_clearance_timeline,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 8., 8.],
+        control_points: vec![vec![0., 0.], vec![8., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let segments = [
+        TimedMotionSegment { curve: &curve, interval: [0., 2.], duration: 4. },
+        TimedMotionSegment { curve: &curve, interval: [2., 8.], duration: 6. },
+    ];
+    let obstacles = [
+        ToolpathObstacle::Box(BoxObstacle { minimum: &[1., -1.], maximum: &[3., 1.] }),
+        ToolpathObstacle::Box(BoxObstacle { minimum: &[5., -1.], maximum: &[7., 1.] }),
+    ];
+    let measure = |budget| {
+        toolpath_chain_clearance_timeline(&segments, &obstacles, 0., 0., 0.001, budget)
+            .unwrap().longest_violation_duration()
+    };
+    let [lo, hi] = measure(1024);
+    assert!(lo <= 3. && 3. <= hi && hi - lo < 0.02, "{lo}..{hi}");
+    let [lo, hi] = measure(4);
+    assert_eq!(lo, 0.);
+    assert!(hi >= 10.);
+    let free = [ToolpathObstacle::Box(BoxObstacle { minimum: &[10., -1.], maximum: &[12., 1.] })];
+    let report = toolpath_chain_clearance_timeline(&segments, &free, 0., 0., 0.001, 2).unwrap();
+    assert_eq!(report.longest_violation_duration(), [0.; 2]);
+}
