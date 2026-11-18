@@ -1006,6 +1006,26 @@ impl StepSharedAssembly {
         Ok(inertia)
     }
 
+    /// Estimate principal moments in mm⁵ and their right-handed unit axes
+    /// in assembly coordinates. Repeated moments have non-unique axes.
+    pub fn material_principal_inertia(
+        &self,
+        relative_tolerance: f64,
+        max_evaluations_per_definition: usize,
+    ) -> Result<brep_core::analysis::PrincipalInertia> {
+        let tensor = self.material_inertia_mm5(relative_tolerance, max_evaluations_per_definition)?;
+        let scale = tensor.iter().flatten().map(|entry| entry.abs()).fold(0., f64::max);
+        if scale == 0. {
+            return brep_core::analysis::principal_inertia(tensor);
+        }
+        let mut principal = brep_core::analysis::principal_inertia(tensor.map(|row| row.map(|entry| entry / scale)))?;
+        principal.moments_mm5 = principal.moments_mm5.map(|moment| moment * scale);
+        if !principal.moments_mm5.iter().all(|moment| moment.is_finite()) {
+            return Err(refuse("STEP assembly principal inertia exceeds the finite range"));
+        }
+        Ok(principal)
+    }
+
     /// Estimate the sum of occurrence boundary areas in mm². Area is reused
     /// per definition for similarities, and per linear map otherwise.
     pub fn material_surface_area_mm2(

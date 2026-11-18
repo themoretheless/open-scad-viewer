@@ -2848,6 +2848,29 @@ fn shared_step_scaled_cube_pair() -> crate::StepSharedAssembly {
 }
 
 #[test]
+fn shared_step_principal_inertia_recovers_rotated_axes() {
+    let mut assembly = shared_step_scaled_cube_pair().extract_occurrences(&[1]).unwrap();
+    let placement = [
+        [1.2, -2.4, 0., 25.], [1.6, 1.8, 0., -8.], [0., 0., -4., 40.], [0., 0., 0., 1.],
+    ];
+    assembly.set_occurrence_orthogonal_placement(0, placement).unwrap();
+    assert!(assembly.material_principal_inertia(1e-8, 0).is_err());
+    let principal = assembly.material_principal_inertia(1e-8, 100_000).unwrap();
+    let expected_axes = [[0.6, 0.8, 0.], [-0.8, 0.6, 0.], [0., 0., 1.]];
+    for (index, expected) in [1600., 1280., 832.].into_iter().enumerate() {
+        assert!((principal.moments_mm5[index] - expected).abs() < 1e-8);
+        let dot: f64 = principal.axes[index].iter().zip(expected_axes[index])
+            .map(|(a, b)| a * b).sum();
+        assert!((dot.abs() - 1.).abs() < 1e-10);
+    }
+    let [x, y, z] = principal.axes;
+    let handedness = (x[1] * y[2] - x[2] * y[1]) * z[0]
+        + (x[2] * y[0] - x[0] * y[2]) * z[1]
+        + (x[0] * y[1] - x[1] * y[0]) * z[2];
+    assert!((handedness - 1.).abs() < 1e-10);
+}
+
+#[test]
 fn shared_step_material_surface_area_handles_uniform_and_nonuniform_scale() {
     let mut assembly = shared_step_scaled_cube_pair();
     let index = assembly.add_occurrence(0, assembly.occurrences()[0].transform).unwrap();
