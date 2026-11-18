@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 833,
-  "unallocatedCount": 167,
+  "specifiedCount": 834,
+  "unallocatedCount": 166,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19539,6 +19539,25 @@
       "remainingQualification": [
         "Identify conservatively close occurrence pairs using a directed-rounding lower bound on Euclidean box distance.",
         "Check touching boxes at zero, a diagonal clearance threshold, a distant filtered occurrence and invalid distances.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0834",
+      "name": "Пересечение размещённых тел STEP-сборки с построением общего материала",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::intersect_occurrences",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-834-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-834-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Materialize only the selected pair and evaluate their regularized B-rep intersection.",
+        "Check closed 3 cubic millimetre prism overlap, empty regularized contact and separation, and invalid occurrence selection.",
         "WASM and application integration are separate."
       ]
     }

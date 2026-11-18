@@ -896,6 +896,14 @@ impl StepSharedAssembly {
         Ok(pairs)
     }
 
+    /// Build the regularized common material of two placed occurrences.
+    /// Unsupported cases propagate the B-rep kernel's diagnostic.
+    pub fn intersect_occurrences(&self, first: usize, second: usize) -> Result<Model> {
+        let first = self.materialize(first)?;
+        let second = self.materialize(second)?;
+        brep_core::boolean(&first, &second, "intersection")
+    }
+
     pub fn materialize(&self, index: usize) -> Result<Model> {
         let occurrence = self.occurrences.get(index)
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;

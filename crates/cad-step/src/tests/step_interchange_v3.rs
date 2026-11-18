@@ -2802,6 +2802,34 @@ fn planet_gear_step_assembly_retains_one_prototype() {
 }
 
 #[test]
+fn shared_step_intersection_builds_common_material_for_placed_solids() {
+    let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
+    let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
+    let step = crate::export_planet_gear_occurrences_step(&planets).unwrap();
+    let mut assembly = crate::import_step_shared_assembly(&step).unwrap();
+    let solid = brep_core::extrude_polygon(&[[0., 0.], [2., 0.], [2., 2.], [0., 2.]], 0., 2.).unwrap();
+    assembly.replace_definition(0, solid).unwrap();
+    let placement = |x, y| [
+        [1., 0., 0., x], [0., 1., 0., y], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ];
+    assembly.set_occurrence_placement(0, placement(0., 0.)).unwrap();
+    assembly.set_occurrence_placement(1, placement(1., 0.5)).unwrap();
+    assembly.add_occurrence(0, placement(2., 0.)).unwrap();
+    assembly.add_occurrence(0, placement(10., 0.)).unwrap();
+
+    let overlap = assembly.intersect_occurrences(0, 1).unwrap();
+    assert_eq!(overlap.bodies.len(), 1);
+    assert_eq!(overlap.validate().unwrap().boundary_edge_count, 0);
+    let mass = brep_core::analysis::mass_properties(&overlap, 1e-8, 100_000).unwrap();
+    assert!((mass.signed_volume_mm3 - 3.).abs() < 1e-8);
+    for index in [2, 3] {
+        assert!(assembly.intersect_occurrences(0, index).unwrap().bodies.is_empty());
+    }
+    assert!(assembly.intersect_occurrences(0, 4).is_err());
+    assert_eq!((assembly.definitions().len(), assembly.occurrences().len()), (1, 4));
+}
+
+#[test]
 fn shared_step_proximity_candidates_include_touching_and_euclidean_clearance() {
     let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
     let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();

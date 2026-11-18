@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0834",
+  "testedBase": "c005ad67961844a6568e884cd624831958710989",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 183,
+  "scope": [
+    "Materialize only the selected pair and evaluate their regularized B-rep intersection.",
+    "Check closed 3 cubic millimetre prism overlap, empty regularized contact and separation, and invalid occurrence selection."
+  ],
+  "logSha256": "4c0b44ab4262a047658fc5f485113d9dd3b36be525cd40f9e3c7af62f2b0b20f",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "28950dbe0b1299a14b6f3726cf480d8270d056e889118be3f3d7bb39228ca6c5",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "9da319be139f28493a246c4d455e86822633fa1056d93a380dc03ff52f1d997e"
+  }
+}
