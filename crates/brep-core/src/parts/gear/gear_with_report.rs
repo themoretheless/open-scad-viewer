@@ -314,3 +314,59 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
 pub fn gear(spec: &GearSpec) -> Result<Model> {
     gear_with_report(spec).map(|(model, _)| model)
 }
+
+/// One planet gear prototype and the rigid placements of its occurrences.
+pub struct PlanetGearOccurrences {
+    prototype: Model,
+    placements: Vec<[[f64; 4]; 4]>,
+}
+
+impl PlanetGearOccurrences {
+    pub fn prototype(&self) -> &Model {
+        &self.prototype
+    }
+
+    pub fn placements(&self) -> &[[[f64; 4]; 4]] {
+        &self.placements
+    }
+
+    /// Materialize the selected occurrence for consumers of standalone bodies.
+    pub fn materialize(&self, index: usize) -> Result<Model> {
+        let placement = self.placements.get(index)
+            .ok_or_else(|| crate::invalid("Planet gear occurrence index out of range"))?;
+        crate::transform::affine(&self.prototype, *placement)
+    }
+}
+
+/// Build one external planet gear and place its occurrences around a sun
+/// with the same module. Angles are the orbit positions in degrees.
+pub fn planetary_gear_occurrences(
+    planet: &GearSpec,
+    sun_teeth: usize,
+    orbit_angles_deg: &[f64],
+) -> Result<PlanetGearOccurrences> {
+    if planet.internal || !(3..=256).contains(&sun_teeth)
+        || !(1..=256).contains(&orbit_angles_deg.len())
+        || orbit_angles_deg.iter().any(|angle| !angle.is_finite())
+    {
+        return Err(crate::invalid("Planet gear occurrences require an external planet, valid sun teeth and finite orbit angles"));
+    }
+    let prototype = gear(planet)?;
+    let radius = planet.module * (sun_teeth + planet.teeth) as f64 / 2.;
+    let ratio = 1. + sun_teeth as f64 / planet.teeth as f64;
+    let phase = 180. - 180. / planet.teeth as f64;
+    let placements = orbit_angles_deg.iter().map(|angle| {
+        let orbit = angle.rem_euclid(360.);
+        let (orbit_sin, orbit_cos) = orbit.to_radians().sin_cos();
+        let phase_period = 360. * planet.teeth as f64;
+        let phase_angle = angle.rem_euclid(phase_period) * ratio + phase;
+        let (sin, cos) = phase_angle.to_radians().sin_cos();
+        [
+            [cos, -sin, 0., radius * orbit_cos],
+            [sin, cos, 0., radius * orbit_sin],
+            [0., 0., 1., 0.],
+            [0., 0., 0., 1.],
+        ]
+    }).collect();
+    Ok(PlanetGearOccurrences { prototype, placements })
+}

@@ -1,0 +1,29 @@
+{
+  "id": "NURBS-0815",
+  "testedBase": "a33fe0e35e5c28a0c357ef5a0f220c90b16ac343",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--lib",
+    "spinner_planet_occurrences",
+    "--",
+    "--nocapture"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 0,
+  "scope": [
+    "Store one planet gear B-rep and rigid placements for repeated occurrences.",
+    "Check eighteen spinner placements, shared source geometry and standalone manifold materialization."
+  ],
+  "logSha256": "170fa9d7d5bb0bbef742eb346f95041c7bfc0f362f000980b3337c3bc29fe6b0",
+  "sourceSha256": {
+    "crates/brep-core/src/parts/gear/gear_with_report.rs": "6989f4eb8a7225f8cb975a54f600a4d812fc0028bc2a5b2f050580f0895602d8",
+    "crates/brep-core/src/parts/gear/tests/mod.rs": "70af00c51c969ca4b360f02411614fbd224e60e926d5871e6514b535bffd7698"
+  }
+}

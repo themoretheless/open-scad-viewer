@@ -179,3 +179,29 @@ fn few_teeth_planet_and_refusals() {
 }
 
 mod involute_certificates;
+
+#[test]
+fn spinner_planet_occurrences_share_one_prototype_and_preserve_placement() {
+    let spec = GearSpec {
+        module: 1.5,
+        teeth: 4,
+        height: 10.,
+        helix_angle_deg: 35.,
+        herringbone: true,
+        clearance: 0.1,
+        backlash: 0.05,
+        ..Default::default()
+    };
+    let angles: Vec<_> = (0..18).map(|i| f64::from(i) * 20.).collect();
+    let assembly = planetary_gear_occurrences(&spec, 32, &angles).unwrap();
+    assert_eq!(assembly.prototype().faces.len(), 50);
+    assert_eq!(assembly.placements().len(), 18);
+    let [x, y, _, _] = assembly.placements()[9].map(|row| row[3]);
+    assert!((x + 27.).abs() < 1e-12 && y.abs() < 1e-12);
+    assert!(assembly.placements()[0][0][0] < 0.);
+    let occurrence = assembly.materialize(9).unwrap();
+    assert_eq!(occurrence.faces.len(), 50);
+    assert_eq!(occurrence.validate().unwrap().boundary_edge_count, 0);
+    assert!(assembly.materialize(18).is_err());
+    assert!(planetary_gear_occurrences(&spec, 32, &[f64::NAN]).is_err());
+}

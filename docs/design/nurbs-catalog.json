@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 814,
-  "unallocatedCount": 186,
+  "specifiedCount": 815,
+  "unallocatedCount": 185,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19158,6 +19158,25 @@
       "remainingQualification": [
         "Bound signed distance to effective fill boundaries while skipping inactive source contours.",
         "Check distance on an inactive source loop, remapped witness index and even-odd hole behavior.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0815",
+      "name": "Экземпляры сателлитов с общей NURBS-геометрией",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Сборки",
+      "nativeApi": "brep_core::gear::planetary_gear_occurrences",
+      "evidence": [
+        "crates/brep-core/src/parts/gear/gear_with_report.rs",
+        "crates/brep-core/src/parts/gear/tests/mod.rs",
+        "docs/qualification/nurbs-curvature-field-815-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-815-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Store one planet gear B-rep and rigid placements for repeated occurrences.",
+        "Check eighteen spinner placements, shared source geometry and standalone manifold materialization.",
         "WASM and application integration are separate."
       ]
     }
