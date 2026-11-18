@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0830",
+  "testedBase": "486a854890be1adc7efc8024da678c1bef1b73f6",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 179,
+  "scope": [
+    "Reserialize imported reflected orthogonal placements with positive scale magnitudes and a reflected axis frame.",
+    "Check shared definition, reflected placement matrices, independent vertex-coordinate evaluation and closed topology after Rust STEP round-trip."
+  ],
+  "logSha256": "c5f751400286637c05f884b3e6546b2faeaa3f4dc1d7a56ca0484d90ba38988f",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3.rs": "025de492a88f2ca8e38fd3c2f8d076c516064f7a01a8a861a61954b22ce4d81a",
+    "crates/cad-step/src/step_v3_export.rs": "8c818f169e5589d7d0b91b796232a015b3fe80cd3d2f3d46fb94ecc046b310b4",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "78af15bbae594a9d33075862f0f374b3cf005d3ad25a647e7d79643e3686cf4c"
+  }
+}

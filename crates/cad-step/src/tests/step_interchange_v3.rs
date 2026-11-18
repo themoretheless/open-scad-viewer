@@ -2803,6 +2803,15 @@ fn planet_gear_step_assembly_retains_one_prototype() {
 
 #[test]
 fn shared_step_round_trips_nonuniform_placement() {
+    check_shared_step_affine_placement(4.);
+}
+
+#[test]
+fn shared_step_round_trips_reflected_placement() {
+    check_shared_step_affine_placement(-4.);
+}
+
+fn check_shared_step_affine_placement(scale_z: f64) {
     let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
     let gears = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
     let step = crate::export_planet_gear_occurrences_step(&gears).unwrap();
@@ -2811,12 +2820,17 @@ fn shared_step_round_trips_nonuniform_placement() {
     let fields: Vec<_> = call.trim_end_matches(");").split(',').collect();
     let [_, x, y, p, _, z] = fields[..] else { panic!("unexpected operator fields"); };
     let affine = format!(
-        "{id}=(CARTESIAN_TRANSFORMATION_OPERATOR('',{x},{y},{p},2.)CARTESIAN_TRANSFORMATION_OPERATOR_3D({z})CARTESIAN_TRANSFORMATION_OPERATOR_3DNON_UNIFORM(3.,4.)GEOMETRIC_REPRESENTATION_ITEM()REPRESENTATION_ITEM(''));"
+        "{id}=(CARTESIAN_TRANSFORMATION_OPERATOR('',{x},{y},{p},2.)CARTESIAN_TRANSFORMATION_OPERATOR_3D({z})CARTESIAN_TRANSFORMATION_OPERATOR_3DNON_UNIFORM(3.,{scale_z:.1})GEOMETRIC_REPRESENTATION_ITEM()REPRESENTATION_ITEM(''));"
     );
     let assembly = crate::import_step_shared_assembly(&step.replacen(row, &affine, 1)).unwrap();
     let exported = crate::export_step_shared_assembly(&assembly).unwrap();
     assert_eq!(exported.matches("MANIFOLD_SOLID_BREP(").count(), 1);
     assert_eq!(exported.matches("CARTESIAN_TRANSFORMATION_OPERATOR_3DNON_UNIFORM(").count(), 1);
+    let scales = exported.split_once("CARTESIAN_TRANSFORMATION_OPERATOR_3DNON_UNIFORM(")
+        .unwrap().1.split_once(')').unwrap().0;
+    for scale in scales.split(',') {
+        assert!(scale.parse::<f64>().unwrap() > 0.);
+    }
     let back = crate::import_step_shared_assembly(&exported).unwrap();
     assert_eq!((back.definitions().len(), back.occurrences().len()), (1, 2));
     for (before, after) in assembly.occurrences().iter().zip(back.occurrences()) {
@@ -2831,7 +2845,7 @@ fn shared_step_round_trips_nonuniform_placement() {
     let [x, y, z] = back.definitions()[0].vertices[0].point;
     let expected = |axis: usize| {
         original[axis][0] * (2. * x) + original[axis][1] * (3. * y)
-            + original[axis][2] * (4. * z) + original[axis][3]
+            + original[axis][2] * (scale_z * z) + original[axis][3]
     };
     for (axis, actual) in model.vertices[0].point.into_iter().enumerate() {
         assert!((actual - expected(axis)).abs() < 1e-10);

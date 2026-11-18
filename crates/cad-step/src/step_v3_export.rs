@@ -662,7 +662,7 @@ fn export_step_direct_impl(
                     [1.; 3]
                 } else {
                     orthogonal_placement_scales(*matrix)
-                        .ok_or_else(|| refuse("STEP assembly export requires proper orthogonal placements"))?
+                        .ok_or_else(|| refuse("STEP assembly export requires nonsingular orthogonal placements"))?
                 };
                 let origin = w.point(&[matrix[0][3], matrix[1][3], matrix[2][3]]);
                 let [x, y, z] = [0, 1, 2].map(|column| {
@@ -887,7 +887,7 @@ pub fn export_planetary_gear_set_step(
     Ok(text)
 }
 
-/// Serialize current shared definitions with their proper orthogonal placements.
+/// Serialize current shared definitions with their nonsingular orthogonal placements.
 pub fn export_step_shared_assembly(assembly: &crate::StepSharedAssembly) -> Result<String> {
     let definitions = assembly.definitions();
     let occurrences = assembly.occurrences();
@@ -922,6 +922,13 @@ fn orthogonal_placement_scales(mut matrix: [[f64; 4]; 4]) -> Option<[f64; 3]> {
         for (entry, scale) in row.iter_mut().zip(scales) {
             *entry /= scale;
         }
+    }
+    if crate::step_interchange_v3::is_proper_rigid_placement(matrix) {
+        return Some(scales);
+    }
+    // Test a left-handed frame by flipping its last axis for validation only.
+    for row in &mut matrix[..3] {
+        row[2] = -row[2];
     }
     crate::step_interchange_v3::is_proper_rigid_placement(matrix).then_some(scales)
 }
