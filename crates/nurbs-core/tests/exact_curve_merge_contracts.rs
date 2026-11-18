@@ -11941,3 +11941,36 @@ fn rotating_profiled_hull_workspace_certifies_overtravel_at_a_radius_peak() {
         cell.parameter_interval[0] == 0.5 && cell.status == Status::Exceeds && lo <= 1.5 && hi >= 1.5
     }));
 }
+
+#[test]
+fn minimum_rotating_profiled_hull_workspace_clearance_witnesses_a_radius_break() {
+    use nurbs_core::analysis::curve_measure::{
+        StopReason, WorkspaceHalfSpace, measure_minimum_planar_rotating_profiled_hull_workspace_clearance,
+    };
+    let position = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![0., 1.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let direction = Curve {
+        control_points: vec![vec![1., -1.], vec![1., 1.]],
+        ..position.clone()
+    };
+    let planes = [
+        WorkspaceHalfSpace { normal: &[0., 3.], offset: 30. },
+        WorkspaceHalfSpace { normal: &[2., 0.], offset: 4.5 },
+    ];
+    let profile = [(0.25, 0.), (0.5, 1.), (0.75, 0.)];
+    let measure = |budget| measure_minimum_planar_rotating_profiled_hull_workspace_clearance(
+        &position, &direction, &profile, &planes, &[&[2., 0.]], 1e-6, budget,
+    );
+    assert!(measure(7).is_err());
+    let report = measure(8).unwrap();
+    assert_eq!(report.stop_reason, StopReason::Tolerance);
+    assert!(report.gap_bounds[0] <= -0.75 && report.gap_bounds[1] >= -0.75);
+    assert!(report.gap_bounds[1] - report.gap_bounds[0] <= 1e-6);
+    assert_eq!(report.witness_plane, 1);
+    assert_eq!(report.witness_parameter, 0.5);
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 768,
-  "unallocatedCount": 232,
+  "specifiedCount": 769,
+  "unallocatedCount": 231,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18284,6 +18284,25 @@
       "remainingQualification": [
         "Enclose workspace plane residuals for planar rotation and a piecewise linear rounding radius.",
         "Check workspace overtravel at the combined radius and orientation peak, nonunit residual scale and shared grid budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0769",
+      "name": "Минимальный зазор вращающегося инструмента с переменным скруглением",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_minimum_planar_rotating_profiled_hull_workspace_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-769-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-769-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound the minimum normalized plane clearance for a rotating hull with piecewise linear rounding.",
+        "Check a clipped radius profile with an interior minimum witness, nonunit plane scaling and the initial work budget.",
         "WASM and application integration are separate."
       ]
     }

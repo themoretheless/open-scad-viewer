@@ -2254,21 +2254,38 @@ pub fn measure_minimum_planar_rotating_hull_workspace_clearance(
     tolerance: f64,
     max_plane_cells: usize,
 ) -> Result<WorkspaceMinimumClearance> {
+    measure_minimum_planar_rotating_profiled_hull_workspace_clearance(
+        position, direction, &[(interval[0], 0.), (interval[1], 0.)],
+        planes, vertex_offsets, tolerance, max_plane_cells,
+    )
+}
+
+/// Bound the minimum signed workspace clearance for a rotating planar hull
+/// rounded by a piecewise-linear radius. The profile defines the checked
+/// window. The orientation must be certified nonzero throughout it.
+pub fn measure_minimum_planar_rotating_profiled_hull_workspace_clearance(
+    position: &Curve,
+    direction: &Curve,
+    radius_profile: &[(f64, f64)],
+    planes: &[WorkspaceHalfSpace<'_>],
+    vertex_offsets: &[&[f64]],
+    tolerance: f64,
+    max_plane_cells: usize,
+) -> Result<WorkspaceMinimumClearance> {
     validate(tolerance, max_plane_cells)?;
-    check(!planes.is_empty(), "Workspace requires at least one half-space")?;
-    let (_, initial) = synchronized_clearance_cells([position, direction], interval, [0.; 2])?;
-    check(position.control_points[0].len() == 2, "Rotating hull workspace requires planar curves")?;
+    check(!planes.is_empty() && !vertex_offsets.is_empty(), "Workspace requires planes and hull vertices")?;
+    let max_cells = (max_plane_cells / planes.len())
+        .min(1_000_000 / vertex_offsets.len() / planes.len());
+    let (initial, profiles) = prepare_planar_rotation_profile(position, direction, radius_profile, max_cells)?;
     let offsets = prepare_workspace_hull(position, vertex_offsets, planes.len())?;
     let planes = prepare_workspace_planes(planes, 2)?.into_iter().map(|(normal, offset)| {
         let length = norm(&normal)?;
         Ok((normal, offset, length))
     }).collect::<Result<Vec<_>>>()?;
-    let max_cells = (max_plane_cells / planes.len())
-        .min(1_000_000 / offsets.len() / planes.len());
 
     let (regular_cells, orientation_work) = partition_enclosed_cells(
         initial, 0., max_cells,
-        |[_, span], domain| {
+        |[_, span, _], domain| {
             let jets = curve_jets::enclose(direction, span, domain)?;
             let regular = norm(&jets[0])?.lo > 0.;
             Ok((regular, !regular))
@@ -2278,23 +2295,25 @@ pub fn measure_minimum_planar_rotating_hull_workspace_clearance(
         "Rotating hull clearance requires a certified nonzero orientation")?;
     let initial = regular_cells.into_iter().map(|(spans, domain, _)| (spans, domain));
 
-    let measure = |[span, direction_span]: [usize; 2], domain: [f64; 2], witness: &mut ClearanceWitness| {
+    let measure = |[span, direction_span, profile]: [usize; 3], domain: [f64; 2], witness: &mut ClearanceWitness| {
         let position_cell = curve_jets::enclose(position, span, domain)?;
         let direction_cell = curve_jets::enclose(direction, direction_span, domain)?;
         let (rotation, _) = planar_rotation(&direction_cell[0])?;
+        let radius = profiles[profile](domain)?;
         let mut lower = f64::INFINITY;
         for (normal, offset, length) in &planes {
             let support = rotating_hull_support(&offsets, normal, rotation)?;
-            let gap = offset.sub(project_jet(&position_cell[0], normal)?)?.sub(support)?.div(*length)?;
+            let gap = offset.sub(project_jet(&position_cell[0], normal)?)?.sub(support)?.div(*length)?.sub(radius)?;
             lower = lower.min(gap.lo);
         }
         for (end, parameter) in [(false, domain[0]), (true, domain[1])] {
             let point = curve_jets::endpoint(position, span, domain, end)?;
             let axis = curve_jets::endpoint(direction, direction_span, domain, end)?;
             let (rotation, _) = planar_rotation(&axis[0])?;
+            let radius = profiles[profile]([parameter; 2])?;
             for (index, (normal, offset, length)) in planes.iter().enumerate() {
                 let support = rotating_hull_support(&offsets, normal, rotation)?;
-                let gap = offset.sub(project_jet(&point[0], normal)?)?.sub(support)?.div(*length)?;
+                let gap = offset.sub(project_jet(&point[0], normal)?)?.sub(support)?.div(*length)?.sub(radius)?;
                 if gap.hi < witness.0 {
                     *witness = (gap.hi, parameter, index);
                 }
@@ -2303,7 +2322,7 @@ pub fn measure_minimum_planar_rotating_hull_workspace_clearance(
         Ok(lower)
     };
     let (lower, witness, cells, stop_reason) = refine_minimum_clearance(
-        initial, interval[0], tolerance, max_cells - orientation_work, measure,
+        initial, radius_profile[0].0, tolerance, max_cells - orientation_work, measure,
     )?;
     Ok(WorkspaceMinimumClearance {
         gap_bounds: [lower, witness.0],
