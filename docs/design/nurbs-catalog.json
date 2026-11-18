@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 837,
-  "unallocatedCount": 163,
+  "specifiedCount": 838,
+  "unallocatedCount": 162,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19618,6 +19618,25 @@
       "remainingQualification": [
         "Preserve coincident placements where each is backed by a distinct explicit product usage path.",
         "Check two distinct coincident occurrence identities, one shared definition, reported interference and rejection of a reused product usage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0838",
+      "name": "Центр объёма STEP-сборки с общими NURBS-определениями",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::StepSharedAssembly::material_centroid_mm",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-838-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-838-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Integrate once per definition, transform each centroid and weight it by the placed material volume.",
+        "Check analytic weighted centroid after STEP round-trip with reflected and scaled placement and invalid integration budget.",
         "WASM and application integration are separate."
       ]
     }

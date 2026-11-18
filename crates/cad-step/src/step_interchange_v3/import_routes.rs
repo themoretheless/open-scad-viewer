@@ -940,22 +940,57 @@ impl StepSharedAssembly {
         relative_tolerance: f64,
         max_evaluations_per_definition: usize,
     ) -> Result<f64> {
-        let volumes = self.definitions.iter().map(|model| {
-            brep_core::analysis::mass_properties(model, relative_tolerance, max_evaluations_per_definition)
-                .map(|mass| mass.signed_volume_mm3)
-        }).collect::<Result<Vec<_>>>()?;
-        let mut total = 0.;
-        for occurrence in &self.occurrences {
-            let scale = placement_determinant(occurrence.transform).abs();
-            if !scale.is_finite() || scale == 0. {
-                return Err(refuse("STEP assembly volume requires finite nonsingular placements"));
+        let properties = self.definition_mass_properties(relative_tolerance, max_evaluations_per_definition)?;
+        self.occurrences.iter().try_fold(0., |total, occurrence| {
+            let volume = placed_material_volume(occurrence, properties[occurrence.definition].signed_volume_mm3)?;
+            let total: f64 = total + volume;
+            if !total.is_finite() {
+                return Err(refuse("STEP assembly volume exceeds the finite range"));
             }
-            total += scale * volumes[occurrence.definition];
+            Ok(total)
+        })
+    }
+
+    /// Estimate the centroid in assembly coordinates, weighted by each
+    /// occurrence's material volume. Overlapping volumes count separately.
+    pub fn material_centroid_mm(
+        &self,
+        relative_tolerance: f64,
+        max_evaluations_per_definition: usize,
+    ) -> Result<[f64; 3]> {
+        let properties = self.definition_mass_properties(relative_tolerance, max_evaluations_per_definition)?;
+        let mut placed = Vec::with_capacity(self.occurrences.len());
+        for occurrence in &self.occurrences {
+            let mass = &properties[occurrence.definition];
+            let volume = placed_material_volume(occurrence, mass.signed_volume_mm3)?;
+            let center: [f64; 3] = std::array::from_fn(|axis| {
+                let row = occurrence.transform[axis];
+                row[..3].iter().zip(mass.centroid)
+                    .fold(row[3], |offset, (coefficient, coordinate)| coefficient.mul_add(coordinate, offset))
+            });
+            placed.push((volume, center));
         }
+        let total: f64 = placed.iter().map(|entry| entry.0).sum();
         if !total.is_finite() || total <= 0. {
             return Err(refuse("STEP assembly volume is outside the finite positive range"));
         }
-        Ok(total)
+        let center = std::array::from_fn(|axis| {
+            placed.iter().map(|(volume, point)| (volume / total) * point[axis]).sum::<f64>()
+        });
+        if !center.iter().all(|coordinate| coordinate.is_finite()) {
+            return Err(refuse("STEP assembly centroid exceeds finite coordinates"));
+        }
+        Ok(center)
+    }
+
+    fn definition_mass_properties(
+        &self,
+        relative_tolerance: f64,
+        max_evaluations_per_definition: usize,
+    ) -> Result<Vec<brep_core::analysis::MassProperties>> {
+        self.definitions.iter().map(|model| {
+            brep_core::analysis::mass_properties(model, relative_tolerance, max_evaluations_per_definition)
+        }).collect()
     }
 
     pub fn materialize(&self, index: usize) -> Result<Model> {
@@ -963,6 +998,14 @@ impl StepSharedAssembly {
             .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
         brep_core::transform::affine(&self.definitions[occurrence.definition], occurrence.transform)
     }
+}
+
+fn placed_material_volume(occurrence: &StepAssemblyOccurrence, local_volume: f64) -> Result<f64> {
+    let volume = placement_determinant(occurrence.transform).abs() * local_volume;
+    if !volume.is_finite() || volume <= 0. {
+        return Err(refuse("STEP occurrence volume is outside the finite positive range"));
+    }
+    Ok(volume)
 }
 
 fn definition_control_bounds(model: &Model) -> [[f64; 3]; 2] {

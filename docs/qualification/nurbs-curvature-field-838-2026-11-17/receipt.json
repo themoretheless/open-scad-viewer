@@ -1,0 +1,26 @@
+{
+  "id": "NURBS-0838",
+  "testedBase": "8fda926e016fd428e36f40bfa0503ee19ba6402d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--lib"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 187,
+  "scope": [
+    "Integrate once per definition, transform each centroid and weight it by the placed material volume.",
+    "Check analytic weighted centroid after STEP round-trip with reflected and scaled placement and invalid integration budget."
+  ],
+  "logSha256": "9d18524863ef872bd062ee7a2a676855f3b2f8b4ccd826b3a55cc511ae3d0cda",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "8f226151e6eb5d453285e9a9e5f2a239c89a21ce5ac76771e3ee1b290b5500d9",
+    "crates/cad-step/src/tests/step_interchange_v3.rs": "07ca8e22d1fe8a2cfb92fd02eee86952ae8d2e7bfbeb62256d6c4f5da8dd2da9"
+  }
+}

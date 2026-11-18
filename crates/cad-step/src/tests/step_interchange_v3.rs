@@ -2829,6 +2829,32 @@ fn shared_step_round_trips_explicit_coincident_product_occurrences() {
 }
 
 #[test]
+fn shared_step_material_centroid_weights_reflected_scaled_occurrences() {
+    let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
+    let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
+    let step = crate::export_planet_gear_occurrences_step(&planets).unwrap();
+    let mut assembly = crate::import_step_shared_assembly(&step).unwrap();
+    let solid = brep_core::extrude_polygon(&[[0., 0.], [2., 0.], [2., 2.], [0., 2.]], 0., 2.).unwrap();
+    assembly.replace_definition(0, solid).unwrap();
+    let identity = [
+        [1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.],
+    ];
+    let reflected = [
+        [0., -3., 0., 25.], [2., 0., 0., -8.], [0., 0., -4., 40.], [0., 0., 0., 1.],
+    ];
+    assembly.set_occurrence_placement(0, identity).unwrap();
+    assembly.set_occurrence_orthogonal_placement(1, reflected).unwrap();
+    let exported = crate::export_step_shared_assembly(&assembly).unwrap();
+    let back = crate::import_step_shared_assembly(&exported).unwrap();
+    assert!(back.material_centroid_mm(1e-8, 0).is_err());
+    let center = back.material_centroid_mm(1e-8, 100_000).unwrap();
+    let expected = [22., -6., 36.].map(|coordinate| (1. + 24. * coordinate) / 25.);
+    for (actual, expected) in center.into_iter().zip(expected) {
+        assert!((actual - expected).abs() < 1e-9);
+    }
+}
+
+#[test]
 fn shared_step_material_volume_accounts_for_scale_and_reflection() {
     let spec = brep_core::GearSpec { teeth: 4, ..Default::default() };
     let planets = brep_core::gear::planetary_gear_occurrences(&spec, 32, &[0., 180.]).unwrap();
