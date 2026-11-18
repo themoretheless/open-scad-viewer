@@ -65,3 +65,18 @@ fn independently_routed_tubes_include_skew_interiors_and_end_caps() {
     assert!(report.signed_margin_mm[0] <= -1. && report.signed_margin_mm[1] >= -1.);
     assert!(tube_pair_clearance((&a,-1.),(&b,0.),1e-5,100).is_err());
 }
+
+#[test]
+fn tube_bundle_bottleneck_depends_on_radii_and_respects_shared_budget() {
+    use nurbs_core::analysis::curve_measure::tube_bundle_clearance;
+    let route = |y| segment([0.,y,0.],[4.,y,0.]);
+    let (a,b,c) = (route(0.),route(2.),route(6.));
+    let tubes = [(&a,0.25),(&b,0.25),(&c,4.)];
+    let r = tube_bundle_clearance(&tubes,1e-5,3).unwrap();
+    assert_eq!(r.witness_pair,[1,2]);
+    assert_eq!(r.work_cells,3);
+    assert!(r.signed_margin_mm[0] <= -0.25 && r.signed_margin_mm[1] >= -0.25);
+    assert!(r.signed_margin_mm[1] < 0.);
+    assert!(tube_bundle_clearance(&tubes,1e-5,2).is_err());
+    assert!(tube_bundle_clearance(&[(&a,0.),(&b,f64::NAN)],1e-5,3).is_err());
+}

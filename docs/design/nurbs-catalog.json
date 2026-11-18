@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 912,
-  "unallocatedCount": 88,
+  "specifiedCount": 913,
+  "unallocatedCount": 87,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -20974,6 +20974,23 @@
       ],
       "remainingQualification": [
         "Two independent full spatial curves with constant radii and spherical caps. Work limits can leave the sign unresolved."
+      ]
+    },
+    {
+      "id": "NURBS-0913",
+      "name": "Поиск минимального монтажного зазора в пучке трубок разных диаметров",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Измерения",
+      "nativeApi": "nurbs_core::analysis::curve_measure::tube_bundle_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/curve_pair_distance.rs",
+        "docs/qualification/nurbs-spatial-clearance-913-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-spatial-clearance-913-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Independent full spatial curves with constant radii and spherical caps. Witness pair attains the upper bound. Overlapping intervals can leave the closest pair nonunique."
       ]
     }
   ],

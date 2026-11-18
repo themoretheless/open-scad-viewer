@@ -2433,6 +2433,7 @@ fn measure_validated_contour_pairs(
                 report.witness_contours = [i, j];
                 report.witness_parameters = distance.parameters;
             }
+            Ok(())
     })?;
     report.converged = (report.bounds[1] - report.bounds[0]).next_up() <= tolerance;
     Ok(report)
@@ -2440,7 +2441,7 @@ fn measure_validated_contour_pairs(
 
 fn visit_contour_pairs(
     first: &[&Curve], second: &[&Curve], tolerance: f64, max_cells: usize, distinct_members: bool,
-    mut visit: impl FnMut([usize;2], crate::curve_distance::CurveDistance),
+    mut visit: impl FnMut([usize;2], crate::curve_distance::CurveDistance) -> Result<()>,
 ) -> Result<()> {
     let counts = [first, second].map(|set| {
         set.iter().map(|curve| active_spans(curve, curve.domain()).count()).collect::<Vec<_>>()
@@ -2461,7 +2462,7 @@ fn visit_contour_pairs(
             let distance = crate::curve_distance::distance(a, b, tolerance, reserved + extra / pairs)?;
             pairs -= 1;
             extra -= distance.cells.saturating_sub(reserved);
-            visit([i,j],distance);
+            visit([i,j],distance)?;
         }
     }
     Ok(())
@@ -2591,9 +2592,56 @@ pub fn tube_pair_clearance(
         check(curve.control_points.first().is_some_and(|p| p.len() == 3), "Expected spatial tube centerline")?;
     }
     let centerline_distance = crate::curve_distance::distance(first.0, second.0, tolerance, max_cells)?;
-    let [lo, hi] = centerline_distance.distance_interval_mm;
-    let margin = Interval::new(lo, hi)?.sub(Interval::point(first.1))?.sub(Interval::point(second.1))?;
-    Ok(TubePairClearance { signed_margin_mm: [margin.lo, margin.hi], centerline_distance })
+    let signed_margin_mm = tube_margin(centerline_distance.distance_interval_mm, first.1, second.1)?;
+    Ok(TubePairClearance { signed_margin_mm, centerline_distance })
+}
+
+fn tube_margin([lo, hi]: [f64; 2], a: f64, b: f64) -> Result<[f64; 2]> {
+    let margin = Interval::new(lo, hi)?.sub(Interval::point(a))?.sub(Interval::point(b))?;
+    Ok([margin.lo, margin.hi])
+}
+
+#[derive(Debug)]
+pub struct TubeBundleClearance {
+    pub signed_margin_mm: [f64; 2],
+    /// Pair that furnished the global upper bound; other pairs may tie or overlap its interval.
+    pub witness_pair: [usize; 2],
+    pub witness_parameters: [f64; 2],
+    pub work_cells: usize,
+}
+
+/// Find the least signed clearance among all distinct routed tubes under one cell budget.
+pub fn tube_bundle_clearance(
+    tubes: &[(&Curve, f64)], tolerance: f64, max_cells: usize,
+) -> Result<TubeBundleClearance> {
+    validate(tolerance, max_cells)?;
+    check(tubes.len() >= 2, "Expected at least two tubes")?;
+    if tubes.len().saturating_mul(tubes.len()-1)/2 > max_cells {
+        return Err(resource("Tube budget must cover every pair"));
+    }
+    let mut curves = Vec::with_capacity(tubes.len());
+    for &(curve, radius) in tubes {
+        curve.validate()?;
+        check(curve.control_points[0].len() == 3, "Expected spatial tube centerline")?;
+        check(radius.is_finite() && radius >= 0., "Expected finite nonnegative tube radius")?;
+        curves.push(curve);
+    }
+    let mut report = TubeBundleClearance {
+        signed_margin_mm: [f64::INFINITY; 2], witness_pair: [0, 1],
+        witness_parameters: [0.; 2], work_cells: 0,
+    };
+    visit_contour_pairs(&curves, &curves, tolerance, max_cells, true, |[i,j], distance| {
+        let [lo, hi] = tube_margin(distance.distance_interval_mm, tubes[i].1, tubes[j].1)?;
+        report.signed_margin_mm[0] = report.signed_margin_mm[0].min(lo);
+        if hi < report.signed_margin_mm[1] {
+            report.signed_margin_mm[1] = hi;
+            report.witness_pair = [i, j];
+            report.witness_parameters = distance.parameters;
+        }
+        report.work_cells += distance.cells;
+        Ok(())
+    })?;
+    Ok(report)
 }
 
 /// Check clearance to the entire untrimmed tensor patch. The distance report
@@ -2709,6 +2757,7 @@ pub fn inspect_spatial_contour_clearances(
         };
         checks.push(ContourClearanceCheck { contours: indices, bounds:[lo,hi],
             witness_parameters:parameters,cells:distance.cells,decision });
+        Ok(())
     })?;
     Ok(checks)
 }
