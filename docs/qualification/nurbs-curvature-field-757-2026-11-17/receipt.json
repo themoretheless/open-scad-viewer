@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0757",
+  "testedBase": "796637185a0f86ec62fdc7d84e9c788a47dc3b68",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 382,
+  "scope": [
+    "Classify mixed-obstacle clearance with a continuous piecewise-linear tool radius.",
+    "Check a radius peak with clear endpoints, nonmatching curve knots and radius breaks, and mandatory combined span coverage."
+  ],
+  "logSha256": "83d5102a901a9adaedaeae1702df6e3039ab3466ca98fff19f6e22168ba399d1",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "f0aa859bb5ae0dcaeda83abc5a1402ab890b478f1c55772dd78a8c30a0f00bc8",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "b8ddf9ff92b31d53f3fb175cb1b9489edaa4c8b0751651321e4c23a21820c9c2"
+  }
+}

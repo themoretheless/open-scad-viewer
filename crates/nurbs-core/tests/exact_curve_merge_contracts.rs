@@ -11498,3 +11498,38 @@ fn minimum_variable_radius_mixed_clearance_finds_a_box_corner_witness() {
     assert!((fine.witness_parameter - (0.5 + 1. / (4. * 3_f64.sqrt()))).abs() < 0.01);
     assert!(fine.work_obstacle_cells <= 8192);
 }
+
+#[test]
+fn profiled_radius_clearance_preserves_radius_breaks_and_curve_knots() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, SphericalObstacle, ToolpathObstacle,
+        partition_profiled_radius_toolpath_clearance,
+    };
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 0.25, 1., 1.],
+        control_points: vec![vec![0., 2.], vec![1., 2.], vec![4., 2.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let obstacles = [ToolpathObstacle::Sphere(SphericalObstacle {
+        center: &[2., 0.], radius: 0.5,
+    })];
+    let check = |profile: &[(f64, f64)], budget| {
+        partition_profiled_radius_toolpath_clearance(&curve, profile, &obstacles, 0.01, budget)
+    };
+    let profile = [(0., 0.), (0.5, 3.), (1., 0.)];
+    assert!(check(&profile, 2).is_err());
+    assert!(check(&[(0., 0.), (0., 1.), (1., 0.)], 128).is_err());
+    let report = check(&profile, 128).unwrap();
+    assert_eq!(report.cells.first().unwrap().status, Status::Within);
+    assert_eq!(report.cells.last().unwrap().status, Status::Within);
+    for boundary in [0.25, 0.5] {
+        assert!(report.cells.iter().any(|cell| cell.parameter_interval[1] == boundary));
+        assert!(report.cells.iter().any(|cell| cell.parameter_interval[0] == boundary));
+    }
+    assert!(report.cells.iter().any(|cell| {
+        cell.parameter_interval[0] == 0.5 && cell.status == Status::Exceeds
+    }));
+    assert!(report.work_obstacle_cells <= 128);
+}

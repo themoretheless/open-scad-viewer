@@ -4581,14 +4581,72 @@ fn partition_variable_radial_clearance(
     base_gap: impl Fn(&[Interval], usize) -> Result<Interval>,
 ) -> Result<SphericalClearancePartition> {
     let radius_range = linear_tool_radius(interval, tool_radii)?;
-    let initial = active_spans(curve, interval).map(|span| (span, [
+    let initial = active_spans(curve, interval).map(|span| ([span, 0], [
         curve.knots[span].max(interval[0]),
         curve.knots[span + 1].min(interval[1]),
     ]));
+    partition_profile_clearance_cells(
+        curve, initial, parameter_tolerance, max_cells, obstacle_count,
+        |_, domain| radius_range(domain), base_gap,
+    )
+}
+
+/// Check a continuous piecewise-linear radius profile against a mixed scene.
+/// Each entry is `(source parameter, radius)`. The first and last entries
+/// define the traversal window; parameters must be strictly increasing.
+pub fn partition_profiled_radius_toolpath_clearance(
+    curve: &Curve,
+    radius_profile: &[(f64, f64)],
+    obstacles: &[ToolpathObstacle<'_>],
+    parameter_tolerance: f64,
+    max_obstacle_cells: usize,
+) -> Result<SphericalClearancePartition> {
+    validate(parameter_tolerance, max_obstacle_cells)?;
+    check(radius_profile.len() >= 2, "Radius profile requires at least two entries")?;
+    check(!obstacles.is_empty(), "Toolpath clearance requires at least one obstacle")?;
+    let max_cells = max_obstacle_cells / obstacles.len();
+    if radius_profile.len() - 1 > max_cells {
+        return Err(resource("Clearance budget must cover every radius profile span"));
+    }
+    curve.validate()?;
+    check(radius_profile.iter().all(|(u, radius)| {
+        u.is_finite() && radius.is_finite() && *radius >= 0.
+    }), "Radius profile entries must have finite parameters and nonnegative finite radii")?;
+    let mut initial = Vec::new();
+    let mut profiles = Vec::with_capacity(radius_profile.len() - 1);
+    for (index, pair) in radius_profile.windows(2).enumerate() {
+        let [(a, r0), (b, r1)] = [pair[0], pair[1]];
+        let interval = [a, b];
+        validate_travel_interval(curve, interval)?;
+        for span in active_spans(curve, interval) {
+            if initial.len() == max_cells {
+                return Err(resource("Clearance budget must cover the combined knot and radius spans"));
+            }
+            initial.push(([span, index], [a.max(curve.knots[span]), b.min(curve.knots[span + 1])]));
+        }
+        profiles.push(linear_tool_radius(interval, [r0, r1])?);
+    }
+    let obstacles = prepare_toolpath_obstacles(curve, obstacles, 0.)?;
+    partition_profile_clearance_cells(
+        curve, initial, parameter_tolerance, max_cells, obstacles.len(),
+        |index, domain| profiles[index](domain),
+        |point, index| obstacles[index].gap(point, 0.),
+    )
+}
+
+fn partition_profile_clearance_cells(
+    curve: &Curve,
+    initial: impl IntoIterator<Item = ([usize; 2], [f64; 2])>,
+    parameter_tolerance: f64,
+    max_cells: usize,
+    obstacle_count: usize,
+    radius_range: impl Fn(usize, [f64; 2]) -> Result<Interval>,
+    base_gap: impl Fn(&[Interval], usize) -> Result<Interval>,
+) -> Result<SphericalClearancePartition> {
     let (cells, work_cells) = partition_enclosed_cells(
         initial, parameter_tolerance, max_cells,
-        |span, domain| {
-            let tool = radius_range(domain)?;
+        |[span, profile], domain| {
+            let tool = radius_range(profile, domain)?;
             let jets = curve_jets::enclose(curve, span, domain)?;
             let gaps = (0..obstacle_count).map(|index| {
                 let gap = base_gap(&jets[0], index)?.sub(tool)?;
