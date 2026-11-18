@@ -12605,3 +12605,24 @@ fn relative_planar_angular_travel_encloses_opposing_rotation() {
     assert_eq!(zero.net_bounds, [0.; 2]);
     assert_eq!(zero.total_bounds, [0.; 2]);
 }
+
+#[test]
+fn planar_orientation_winding_certifies_both_directions_and_refuses_open_rays() {
+    use nurbs_core::analysis::curve_measure::measure_planar_orientation_winding;
+    let mut direction = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 2., 3., 4., 4.],
+        control_points: vec![vec![1., 0.], vec![0., 1.], vec![-1., 0.], vec![0., -1.], vec![2., 0.]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let ccw = measure_planar_orientation_winding(&direction, 0.025, 1020).unwrap();
+    assert_eq!(ccw.winding, Some(1));
+    assert!(ccw.travel.net_bounds[0] <= std::f64::consts::TAU);
+    assert!(std::f64::consts::TAU <= ccw.travel.net_bounds[1]);
+    direction.control_points.reverse();
+    let cw = measure_planar_orientation_winding(&direction, 0.025, 1020).unwrap();
+    assert_eq!(cw.winding, Some(-1));
+    direction.control_points[4] = vec![0., 1.];
+    assert!(measure_planar_orientation_winding(&direction, 0.025, 1020).is_err());
+}

@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0789",
+  "testedBase": "3e01d6ae61b7df30895b4bea39eaea48d27c628f",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 415,
+  "scope": [
+    "Certify winding by exact endpoint ray agreement, knot continuity and an enclosed signed angular integral.",
+    "Check clockwise and counterclockwise winding, unequal positive endpoint magnitudes and rejection of an open direction."
+  ],
+  "logSha256": "8689aa29a4c0a133bd0481d939891ed63f64c3762a6ef58dd07b512220138471",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "c7b4bd76de9762e796d78eb5f629043d2c8f38174819ae2f2d0a3814736d1982",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "c84a764a1b218475d0fbe1754bd5562fbc4d3a47e236589f43bc9c2906cb2215"
+  }
+}

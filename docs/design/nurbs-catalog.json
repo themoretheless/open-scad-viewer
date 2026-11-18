@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 788,
-  "unallocatedCount": 212,
+  "specifiedCount": 789,
+  "unallocatedCount": 211,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -18664,6 +18664,25 @@
       "remainingQualification": [
         "Enclose relative net rotation and total angular travel across two synchronized knot grids.",
         "Check opposing rotations with analytic relative travel, independent knots and exact self-reference cancellation.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0789",
+      "name": "Подтверждение числа оборотов замкнутой плоской NURBS-ориентации",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_planar_orientation_winding",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-789-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-789-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify winding by exact endpoint ray agreement, knot continuity and an enclosed signed angular integral.",
+        "Check clockwise and counterclockwise winding, unequal positive endpoint magnitudes and rejection of an open direction.",
         "WASM and application integration are separate."
       ]
     }

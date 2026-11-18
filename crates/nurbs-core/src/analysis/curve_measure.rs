@@ -1941,6 +1941,63 @@ pub fn measure_planar_angular_travel(
     accumulate_angular_travel(cells.into_iter().map(|(_, _, speed)| speed), work_cells)
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct PlanarOrientationWindingReport {
+    /// Positive winding is counterclockwise. None means more than one
+    /// integer is compatible with the current angular enclosure.
+    pub winding: Option<i64>,
+    pub travel: PlanarAngularTravelReport,
+}
+
+/// Certify winding over the complete domain of a clamped planar direction
+/// curve. The endpoint rays must agree exactly and interior knots must
+/// guarantee positional continuity. Direction magnitude may vary.
+pub fn measure_planar_orientation_winding(
+    direction: &Curve,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<PlanarOrientationWindingReport> {
+    direction.validate()?;
+    check(direction.control_points[0].len() == 2, "Orientation winding requires a planar direction curve")?;
+    let domain = direction.domain();
+    let degree = direction.degree;
+    let last = direction.control_points.len();
+    check(
+        direction.knots[..=degree].iter().all(|&knot| knot == domain[0])
+            && direction.knots[degree + 1] > domain[0]
+            && direction.knots[last - 1] < domain[1]
+            && direction.knots[last..].iter().all(|&knot| knot == domain[1]),
+        "Orientation winding requires clamped endpoints",
+    )?;
+    let mut run = 0;
+    let mut previous = domain[0];
+    for &knot in &direction.knots[degree + 1..last] {
+        run = if knot == previous { run + 1 } else { 1 };
+        check(run <= degree, "Interior direction knots must guarantee continuity")?;
+        previous = knot;
+    }
+    let first = &direction.control_points[0];
+    let end = &direction.control_points[last - 1];
+    let [ax, ay, bx, by] = [
+        exact_motion_operand(first[0])?, exact_motion_operand(first[1])?,
+        exact_motion_operand(end[0])?, exact_motion_operand(end[1])?,
+    ];
+    let zero = exact_motion_operand(0.)?;
+    check(
+        &ax * &by == &ay * &bx && ax * bx + ay * by > zero,
+        "Orientation winding requires identical nonzero endpoint rays",
+    )?;
+    let travel = measure_planar_angular_travel(direction, domain, parameter_tolerance, max_cells)?;
+    let tau = std::f64::consts::TAU;
+    let turns = Interval::new(travel.net_bounds[0], travel.net_bounds[1])?
+        .div(Interval::new(tau.next_down(), tau.next_up())?)?;
+    let first = turns.lo.ceil();
+    let last = turns.hi.floor();
+    check(first <= last, "Closed orientation winding enclosure contains no integer")?;
+    let winding = (first == last && first.abs() < i64::MAX as f64).then_some(first as i64);
+    Ok(PlanarOrientationWindingReport { winding, travel })
+}
+
 /// Bound relative angular travel for two directions on the same clock.
 /// Both original knot grids participate in integration. Discontinuous
 /// jumps are excluded, and a possible zero direction prevents a report.
