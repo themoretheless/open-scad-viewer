@@ -752,7 +752,7 @@ fn certify_original_cover(
 mod shared_boundary;
 pub use shared_boundary::certify_shared_natural_boundary;
 mod seam_glued;
-pub use seam_glued::{AngularRingReport, RadialTensor, certify_angular_ring, factor_radial_tensor};
+pub use seam_glued::{AngularRingReport, RadialBandPairReport, RadialTensor, certify_angular_ring, certify_radial_band_pair, factor_radial_tensor};
 pub use seam_glued::{GluedRectangleReport,certify_seam_glued_rectangle,PeriodicExtrusionReport,certify_periodic_extrusion};
 
 #[path = "surface_injectivity/original_cover.rs"]

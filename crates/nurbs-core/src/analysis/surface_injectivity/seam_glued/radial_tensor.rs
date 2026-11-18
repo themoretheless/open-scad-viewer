@@ -244,3 +244,165 @@ fn angular_span_direction(span: &Curve) -> Option<bool> {
     }
     Some(positive)
 }
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RadialBandPairReport {
+    pub proven: bool,
+    pub cells: usize,
+    pub pairs: usize,
+}
+
+/// Complete source-carrier embedding for two compatible radial bands.
+/// The only contacts are corresponding azimuths at the two opposite
+/// meridian joins. The caller must still bind those joins and periodic
+/// shores to the actual trim loops, world edges, and shell incidence.
+pub fn certify_radial_band_pair(
+    surfaces: [&Surface; 2],
+    periodic_axes: [usize; 2],
+    height_axis: usize,
+    max_cells: usize,
+    max_pairs: usize,
+) -> Result<RadialBandPairReport> {
+    check(
+        max_cells <= 100000 && max_pairs <= 100000,
+        "Invalid radial band budget",
+    )?;
+    let mut out = RadialBandPairReport::default();
+    let mut factors = Vec::new();
+    for (surface, axis) in surfaces.into_iter().zip(periodic_axes) {
+        surface.validate()?;
+        let cost = surface
+            .control_points
+            .len()
+            .saturating_mul(surface.control_points[0].len());
+        if cost > max_cells - out.cells {
+            return Ok(out);
+        }
+        out.cells += cost;
+        let Some(factor) = factor_radial_tensor(surface, axis, height_axis, cost)? else {
+            return Ok(out);
+        };
+        factors.push(factor);
+    }
+    let left = &factors[0];
+    let right = &factors[1];
+    if left.center != right.center || !same_angular_curve(&left.angular, &right.angular) {
+        return Ok(out);
+    }
+    let angular = certify_angular_ring(&left.angular, max_cells - out.cells, max_pairs)?;
+    out.cells += angular.cells;
+    out.pairs += angular.pairs;
+    if !angular.proven {
+        return Ok(out);
+    }
+    let mut meridians = Vec::new();
+    for factor in factors {
+        let meridian = factor.meridian;
+        if meridian.periodic {
+            return Ok(out);
+        }
+        let regularity = crate::curve_regularity::inspect(&meridian, max_cells - out.cells)?;
+        out.cells += regularity.cells;
+        if !regularity.spanwise_regular {
+            return Ok(out);
+        }
+        let cost = meridian
+            .knots
+            .len()
+            .saturating_mul(meridian.control_points.len());
+        if cost > max_cells - out.cells {
+            return Ok(out);
+        }
+        out.cells += cost;
+        let Some(spans) = crate::curve_partition_agreement::exact_bezier_span_partition(&meridian)?
+        else {
+            return Ok(out);
+        };
+        meridians.extend(spans);
+    }
+    if !(2..=256).contains(&meridians.len()) || out.cells == max_cells || out.pairs == max_pairs {
+        return Ok(out);
+    }
+    let meridian = crate::trim_simplicity::inspect(
+        &meridians,
+        1e-10,
+        max_pairs - out.pairs,
+        max_cells - out.cells,
+    )?;
+    out.cells += meridian.cells;
+    out.pairs += meridian.pairs.len();
+    out.proven = meridian.proven_simple;
+    Ok(out)
+}
+
+fn same_angular_curve(a: &Curve, b: &Curve) -> bool {
+    a.degree == b.degree
+        && a.knots == b.knots
+        && a.control_points == b.control_points
+        && a.weights.iter().zip(&b.weights).all(|(&u, &v)| {
+            crate::exact_products::sum_sign(&[(u, b.weights[0]), (-v, a.weights[0])])
+                == std::cmp::Ordering::Equal
+        })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn band(meridian: [[f64; 2]; 5]) -> Surface {
+        let angular = [
+            [1., -1.],
+            [1., 0.],
+            [1., 1.],
+            [0., 1.],
+            [-1., 1.],
+            [-1., 0.],
+            [-1., -1.],
+            [0., -1.],
+            [1., -1.],
+            [1., 0.],
+        ];
+        let w = [0.5, 1., 0.5, 1., 0.5, 1., 0.5, 1., 0.5, 1.];
+        Surface {
+            degree_u: 2,
+            degree_v: 2,
+            knots_u: vec![-1., -1., 0., 0., 1., 1., 2., 2., 3., 3., 4., 4., 5.],
+            knots_v: vec![0., 0., 0., 1., 1., 2., 2., 2.],
+            control_points: angular
+                .iter()
+                .map(|&[x, y]| {
+                    meridian
+                        .iter()
+                        .map(|&[r, z]| vec![x * r, y * r, z])
+                        .collect()
+                })
+                .collect(),
+            weights: w
+                .iter()
+                .map(|&u| [1., 0.5, 1., 0.5, 1.].map(|v| u * v).to_vec())
+                .collect(),
+            periodic_u: true,
+            periodic_v: false,
+        }
+    }
+
+    #[test]
+    fn radial_band_pair_requires_a_simple_regular_closed_meridian() {
+        let upper = band([[5., 0.], [5., 1.], [4., 1.], [3., 1.], [3., 0.]]);
+        let lower = band([[3., 0.], [3., -1.], [4., -1.], [5., -1.], [5., 0.]]);
+        let report = certify_radial_band_pair([&upper, &lower], [0; 2], 2, 10000, 100).unwrap();
+        assert!(report.proven, "{report:?}");
+        let short =
+            certify_radial_band_pair([&upper, &lower], [0; 2], 2, report.cells - 1, 100).unwrap();
+        assert!(!short.proven);
+        let mut disconnected = lower;
+        for point in disconnected.control_points.iter_mut().flatten() {
+            point[2] += 0.25;
+        }
+        assert!(
+            !certify_radial_band_pair([&upper, &disconnected], [0; 2], 2, 10000, 100)
+                .unwrap()
+                .proven
+        );
+    }
+}
