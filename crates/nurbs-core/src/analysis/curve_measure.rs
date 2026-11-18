@@ -2885,6 +2885,19 @@ impl ScheduledToolsClearancePartition {
     /// contribute inward-rounded intervals to the lower bound; all nonclear
     /// cells contribute outward-rounded intervals to the upper bound.
     pub fn contact_duration_bounds(&self) -> Result<[f64; 2]> {
+        self.contact_duration_bounds_with(|total, next| total + next)
+    }
+
+    /// Bound the longest continuous interval with contact on at least one
+    /// pair, including transitions between different pairs.
+    pub fn longest_contact_duration_bounds(&self) -> Result<[f64; 2]> {
+        self.contact_duration_bounds_with(num_rational::BigRational::max)
+    }
+
+    fn contact_duration_bounds_with(
+        &self,
+        combine: impl Fn(num_rational::BigRational, num_rational::BigRational) -> num_rational::BigRational,
+    ) -> Result<[f64; 2]> {
         let mut confirmed = Vec::new();
         let mut possible = Vec::new();
         let mut unbounded_upper = false;
@@ -2903,11 +2916,11 @@ impl ScheduledToolsClearancePartition {
                 }
             }
         }
-        let lower = round_motion_duration(&time_interval_union_duration(confirmed)?, false)?;
+        let lower = round_motion_duration(&time_interval_union_duration(confirmed, &combine)?, false)?;
         let upper = if unbounded_upper {
             f64::INFINITY
         } else {
-            round_motion_duration(&time_interval_union_duration(possible)?, true)?
+            round_motion_duration(&time_interval_union_duration(possible, &combine)?, true)?
         };
         Ok([lower, upper])
     }
@@ -2967,6 +2980,7 @@ impl ScheduledToolsClearancePartition {
 
 fn time_interval_union_duration(
     mut intervals: Vec<[f64; 2]>,
+    combine: impl Fn(num_rational::BigRational, num_rational::BigRational) -> num_rational::BigRational,
 ) -> Result<num_rational::BigRational> {
     intervals.sort_by(|a, b| a[0].total_cmp(&b[0]));
     let mut total = num_rational::BigRational::default();
@@ -2975,14 +2989,14 @@ fn time_interval_union_duration(
         match current {
             Some([a, b]) if start <= b => current = Some([a, b.max(end)]),
             Some([a, b]) => {
-                total += exact_motion_operand(b)? - exact_motion_operand(a)?;
+                total = combine(total, exact_motion_operand(b)? - exact_motion_operand(a)?);
                 current = Some([start, end]);
             }
             None => current = Some([start, end]),
         }
     }
     if let Some([a, b]) = current {
-        total += exact_motion_operand(b)? - exact_motion_operand(a)?;
+        total = combine(total, exact_motion_operand(b)? - exact_motion_operand(a)?);
     }
     Ok(total)
 }

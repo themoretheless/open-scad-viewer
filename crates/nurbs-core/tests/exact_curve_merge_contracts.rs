@@ -11179,3 +11179,32 @@ fn scheduled_contact_duration_counts_overlapping_pairs_once() {
     report.cells.clear();
     assert_eq!(report.contact_duration_bounds().unwrap(), [0.; 2]);
 }
+
+#[test]
+fn longest_scheduled_contact_duration_handles_pair_handoffs_and_uncertain_bridges() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, ScheduledClearanceCell, ScheduledToolPairCell,
+        ScheduledToolsClearancePartition,
+    };
+    let cell = |tools, start, end, status| ScheduledToolPairCell {
+        tools,
+        clearance: ScheduledClearanceCell {
+            time_endpoint_bounds: [start, end],
+            gap_bounds: if status == Status::Exceeds { [-2., -1.] } else { [-1., 1.] },
+            status,
+        },
+    };
+    let mut report = ScheduledToolsClearancePartition {
+        cells: vec![
+            cell([0, 1], [0., 0.25], [2., 2.25], Status::Exceeds),
+            cell([0, 2], [1., 1.25], [3., 3.25], Status::Exceeds),
+            cell([1, 2], [5.; 2], [7.; 2], Status::Exceeds),
+            cell([0, 1], [3.25; 2], [5.; 2], Status::Undetermined),
+        ],
+        work_cells: 4,
+    };
+    assert_eq!(report.longest_contact_duration_bounds().unwrap(), [2.75, 7.]);
+    report.cells.pop();
+    assert_eq!(report.longest_contact_duration_bounds().unwrap(), [2.75, 3.25]);
+    assert_eq!(report.contact_duration_bounds().unwrap(), [4.75, 5.25]);
+}
