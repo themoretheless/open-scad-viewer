@@ -2880,6 +2880,25 @@ pub enum LastScheduledToolContact {
 }
 
 impl ScheduledToolsClearancePartition {
+    /// Bound the maximum number of distinct pairs in simultaneous contact
+    /// across the represented timelines. Contacts include shared endpoints.
+    pub fn peak_contact_pair_count_bounds(&self) -> [usize; 2] {
+        let mut confirmed = Vec::new();
+        let mut possible = Vec::new();
+        for cell in &self.cells {
+            let [[start_lo, start_hi], [end_lo, end_hi]] = cell.clearance.time_endpoint_bounds;
+            if cell.clearance.status == DirectionalMotionStatus::Exceeds
+                && start_hi.is_finite() && end_lo.is_finite() && start_hi <= end_lo
+            {
+                confirmed.push((cell.tools, [start_hi, end_lo]));
+            }
+            if cell.clearance.status != DirectionalMotionStatus::Within {
+                possible.push((cell.tools, [start_lo, end_hi]));
+            }
+        }
+        [peak_active_contact_pairs(confirmed), peak_active_contact_pairs(possible)]
+    }
+
     /// Bound the total duration of contact across the represented pair
     /// timelines. Simultaneous contacts contribute once. Confirmed cells
     /// contribute inward-rounded intervals to the lower bound; all nonclear
@@ -2976,6 +2995,32 @@ impl ScheduledToolsClearancePartition {
             (None, _) => FirstScheduledToolContact::Clear,
         }
     }
+}
+
+fn peak_active_contact_pairs(intervals: Vec<([usize; 2], [f64; 2])>) -> usize {
+    let mut events = Vec::with_capacity(2 * intervals.len());
+    for (pair, [start, end]) in intervals {
+        events.push((if start == 0. { 0. } else { start }, false, pair));
+        events.push((if end == 0. { 0. } else { end }, true, pair));
+    }
+    // Starts precede ends at the same instant because the cells are closed.
+    events.sort_unstable_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
+    let mut active = BTreeMap::<[usize; 2], usize>::new();
+    let mut peak = 0;
+    for (_, ending, pair) in events {
+        if ending {
+            if let std::collections::btree_map::Entry::Occupied(mut entry) = active.entry(pair) {
+                *entry.get_mut() -= 1;
+                if *entry.get() == 0 {
+                    entry.remove();
+                }
+            }
+        } else {
+            *active.entry(pair).or_default() += 1;
+            peak = peak.max(active.len());
+        }
+    }
+    peak
 }
 
 fn time_interval_union_duration(

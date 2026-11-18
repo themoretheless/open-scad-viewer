@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 747,
-  "unallocatedCount": 253,
+  "specifiedCount": 748,
+  "unallocatedCount": 252,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17885,6 +17885,25 @@
       "remainingQualification": [
         "Bound the longest continuous contact across scheduled pairs, including pair handoffs.",
         "Check pair handoffs, an unresolved bridge, separate episodes, and unchanged total duration.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0748",
+      "name": "Пиковое число одновременно контактирующих пар инструментов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::ScheduledToolsClearancePartition::peak_contact_pair_count_bounds",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-748-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-748-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bound maximum simultaneous contact multiplicity over distinct scheduled tool pairs.",
+        "Check distinct pairs, adjacent cells, instantaneous contact, signed zero endpoints and unresolved contacts.",
         "WASM and application integration are separate."
       ]
     }

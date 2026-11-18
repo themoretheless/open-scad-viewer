@@ -1,0 +1,27 @@
+{
+  "id": "NURBS-0748",
+  "testedBase": "9bc1d356bce788b526eeb0d3bbf774d95acd1735",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 373,
+  "scope": [
+    "Bound maximum simultaneous contact multiplicity over distinct scheduled tool pairs.",
+    "Check distinct pairs, adjacent cells, instantaneous contact, signed zero endpoints and unresolved contacts."
+  ],
+  "logSha256": "75dabf1be481764a63c96f166b8ad1972a12fe2b5f8dd0747191c63bc57bb1ff",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/curve_measure.rs": "bd14bb3a0e8a76e7fea4a120fbefa1970b7880077715f0b4eb7cbe0a7817d50e",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "31cb29fea45335a25c46d1bba22911613e0993dc0b87b541bcd977c7a16bc0a9"
+  }
+}

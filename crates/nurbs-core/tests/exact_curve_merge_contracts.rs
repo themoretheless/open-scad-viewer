@@ -11208,3 +11208,29 @@ fn longest_scheduled_contact_duration_handles_pair_handoffs_and_uncertain_bridge
     assert_eq!(report.longest_contact_duration_bounds().unwrap(), [2.75, 3.25]);
     assert_eq!(report.contact_duration_bounds().unwrap(), [4.75, 5.25]);
 }
+
+#[test]
+fn peak_scheduled_contact_pairs_counts_distinct_pairs_at_shared_endpoints() {
+    use nurbs_core::analysis::curve_measure::{
+        DirectionalMotionStatus as Status, ScheduledClearanceCell, ScheduledToolPairCell,
+        ScheduledToolsClearancePartition,
+    };
+    let cell = |tools, start, end, status| ScheduledToolPairCell {
+        tools,
+        clearance: ScheduledClearanceCell {
+            time_endpoint_bounds: [start, end],
+            gap_bounds: if status == Status::Exceeds { [-2., -1.] } else { [-1., 1.] },
+            status,
+        },
+    };
+    let report = ScheduledToolsClearancePartition {
+        cells: vec![
+            cell([0, 1], [-1.; 2], [-0.; 2], Status::Exceeds),
+            cell([0, 1], [0.; 2], [1.; 2], Status::Exceeds),
+            cell([0, 2], [0.; 2], [0.; 2], Status::Exceeds),
+            cell([1, 2], [-0.25, 0.25], [0.5; 2], Status::Undetermined),
+        ],
+        work_cells: 4,
+    };
+    assert_eq!(report.peak_contact_pair_count_bounds(), [2, 3]);
+}
