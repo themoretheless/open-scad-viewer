@@ -211,20 +211,39 @@ impl Sweep<'_> {
                             self.path,self.options.normal,max_exact_work-out.exact_work)?;
                         out.exact_work += plane.exact_work;
                         if !plane.proved {
-                            out.reason = plane.reason;
-                            return Ok(out);
+                            if plane.reason != Some("source-plane-coefficients-nonzero")
+                                || self.contact_point.is_some()
+                            {
+                                out.reason = plane.reason;
+                                return Ok(out);
+                            }
+                            if !knot_continuity(self.path, order + 2, &mut out.exact_work, max_exact_work)? {
+                                out.reason = Some("original-frame-path-knot-continuity-unproved");
+                                return Ok(out);
+                            }
+                            let (regular, work) = authored_error::certify_corrected_regular_branch(
+                                self.path, max_cells.min((max_exact_work - out.exact_work) as usize),
+                            )?;
+                            out.cells += work;
+                            out.exact_work += work as u64;
+                            if !regular {
+                                out.reason = Some("original-corrected-regular-branch-unproved");
+                                return Ok(out);
+                            }
+                            frame::certify_frenet_cover(self.path, self.twist, max_cells - work)?
+                        } else {
+                            // A regular C(k+1) planar path has a Ck tangent T.
+                            // For its constant plane normal B, B x T extends the
+                            // signed principal normal through curvature zeros.
+                            // Planar RMF fallback preserves this basis (or any
+                            // constant transverse phase on an entirely straight
+                            // path). Thus no nonzero-curvature premise is needed.
+                            // Use this cover only to prove speed/nondegeneracy;
+                            // its T/B jets are not corrected-Frenet frame jets.
+                            // Retained arithmetic/correspondence is not certified.
+                            frame::certify_fixed_normal_cover(
+                                self.path,self.options.normal,self.twist,max_cells)?
                         }
-                        // A regular C(k+1) planar path has a Ck tangent T.
-                        // For its constant plane normal B, B x T extends the
-                        // signed principal normal through curvature zeros.
-                        // Planar RMF fallback preserves this basis (or any
-                        // constant transverse phase on an entirely straight
-                        // path). Thus no nonzero-curvature premise is needed.
-                        // Use this cover only to prove speed/nondegeneracy;
-                        // its T/B jets are not corrected-Frenet frame jets.
-                        // Retained arithmetic/correspondence is not certified.
-                        frame::certify_fixed_normal_cover(
-                            self.path,self.options.normal,self.twist,max_cells)?
                     }
                 }
             }

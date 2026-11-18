@@ -2,6 +2,7 @@
 //! normalized source-parameter maps. No inverse derivative is guessed.
 use super::*;
 mod frenet_spans;
+pub(super) use frenet_spans::certify as certify_frenet_arc;
 pub(super) mod frenet_rates;
 /// Prepared inputs an arc-station frame proof may draw on besides the sweep itself.
 #[derive(Clone, Copy)]

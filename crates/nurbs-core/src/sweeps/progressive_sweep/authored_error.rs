@@ -582,6 +582,14 @@ pub(super) fn rmf_spatial_patch_error_with_transport(sweep:&Sweep<'_>,count:usiz
 
 
 
+pub(super) fn certify_corrected_regular_branch(
+    path: &Curve,
+    max_cells: usize,
+) -> Result<(bool, usize)> {
+    let report = corrected_regular::certify(path, max_cells)?;
+    Ok((report.certified, report.cells))
+}
+
 pub(super) fn corrected_regular_frame_values(sweep:&Sweep<'_>,twist:&Curve,t:[f64;2],budget:usize)->Result<authored_frame_certificate::ValuesReport>{
  let refused=|cells|authored_frame_certificate::ValuesReport{status:Status::Unresolved,cells,longitudinal:None,transverse:None,binormal:None};
  if sweep.options.orientation!=Orientation::CorrectedFrenet||sweep.path.periodic||path_is_closed(sweep.path)?||sweep.frame_laws.is_some()||sweep.orientation_guide.is_some()||sweep.contact_point.is_some(){return Ok(refused(0));}

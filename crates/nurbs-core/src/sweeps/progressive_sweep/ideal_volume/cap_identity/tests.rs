@@ -342,3 +342,50 @@ fn corrected_frenet_proves_the_filled_original_through_a_planar_inflection() {
             && !exhausted.parameter_topology_preserved && exhausted.exact_work == 0, "{exhausted:?}");
     }
 }
+
+#[test]
+fn spatial_corrected_frenet_regular_principal_frame_owns_filled_volume() {
+    let caps = caps(false);
+    let profile = crate::primitives::line([-0.5, -0.5, 0.03125], [0.5, -0.5, -0.03125]).unwrap();
+    let path = crate::paths::bezier(
+        vec![
+            vec![0., 0., 0.],
+            vec![0., 0., 2.],
+            vec![0.125, 0., 4.],
+            vec![0.375, 0.03125, 6.],
+        ],
+        None,
+    )
+    .unwrap();
+    let scale = constant_vector_law([1., 0., 0.]).unwrap();
+    let twist = crate::primitives::line([0.; 3], [0.015625, 0., 0.]).unwrap();
+    let axes = constant_vector_law([1.25, 0.75, 1.]).unwrap();
+    let center = constant_vector_law([0.03125, 0., 0.]).unwrap();
+    for spacing in [Spacing::Parameter, Spacing::ArcLength { tolerance: 1e-5, max_cells: 10000 }] {
+        let sweep = MultiSweep::new(
+            std::slice::from_ref(&profile), &path, &scale, &twist,
+            Options {
+                orientation: Orientation::CorrectedFrenet,
+                normal: [0., 1., 0.],
+                spacing,
+                initial_sections: 3,
+                max_sections: 9,
+                max_deviation: 0.05,
+            },
+        )
+        .unwrap()
+        .with_affine_laws(&axes, &center)
+        .unwrap();
+        let smooth = sweep.certify_original_frame_smoothness(2, 100000, 1000000).unwrap();
+        assert!(smooth.source_frame_smoothness_certified, "{spacing:?}: {smooth:?}");
+        let audit = |exact| sweep.certify_ideal_volume_atlas(
+            [&caps[0], &caps[1]], ledger().projection, 100000, exact,
+        ).unwrap();
+        let report = audit(1000000);
+        assert!(report.embedding_certified && report.regularity_certified
+            && report.parameter_topology_preserved, "{spacing:?}: {report:?}");
+        let exhausted = audit(0);
+        assert!(!exhausted.embedding_certified && !exhausted.regularity_certified
+            && !exhausted.parameter_topology_preserved && exhausted.exact_work == 0, "{exhausted:?}");
+    }
+}

@@ -166,6 +166,7 @@ pub(super) fn margin(columns: [V3; 3], projection: [[f64; 3]; 3]) -> Result<f64>
 #[derive(Clone, Copy)]
 pub(super) enum CorrectedFrame {
     ForwardLine,
+    RegularPrincipal,
     Planar { principal_sign: Option<f64> },
 }
 
@@ -199,7 +200,17 @@ pub(super) fn prepare_corrected_frame(
     )?;
     out.exact_work += plane.exact_work;
     if !plane.proved {
-        return Ok(None);
+        if plane.reason != Some("source-plane-coefficients-nonzero") || s.contact_point.is_some() {
+            return Ok(None);
+        }
+        let remaining = (max_cells - out.cells)
+            .min(100000)
+            .min((max_exact_work - out.exact_work) as usize);
+        let (regular, work) =
+            super::super::authored_error::certify_corrected_regular_branch(s.path, remaining)?;
+        out.cells += work;
+        out.exact_work += work as u64;
+        return Ok(regular.then_some(CorrectedFrame::RegularPrincipal));
     }
     let principal_sign = if s.affine_laws.is_some() {
         let remaining = (max_cells - out.cells)

@@ -5,7 +5,7 @@ use super::*;
 fn unknown(cells:usize,reason:Option<&'static str>)->frame::Report {
     frame::Report{status:Status::Unresolved,cells,longitudinal:None,transverse:None,binormal:None,single_span:false,reason}
 }
-pub(super) fn certify(s:&Sweep<'_>,station:[f64;2],p:frame::PathPhase,length:I,max:usize)->Result<frame::Report> {
+pub(in crate::sweeps::progressive_sweep::ideal_volume) fn certify(s:&Sweep<'_>,station:[f64;2],p:frame::PathPhase,length:I,max:usize)->Result<frame::Report> {
     let [a,b]=s.path.domain();let width=I::point(b).sub(I::point(a))?;
     let raw=I::point(a).add(width.mul(I::new(p.traversal[0],p.traversal[1])?)?)?.intersect(a,b)?;
     let mut spent=0;let mut answer:Option<frame::Report>=None;let mut count=0;

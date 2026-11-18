@@ -57,6 +57,14 @@ impl Context<'_, '_> {
                     frame::certify_fixed_path(s.path, s.options.normal, s.twist, station, max)
                         .map(Some)
                 }
+                CorrectedFrame::RegularPrincipal => {
+                    if let Some(arc) = &self.arc {
+                        arc_frames::certify_frenet_arc(s, station, phase, arc.length(), max)
+                            .map(Some)
+                    } else {
+                        frame::certify_frenet_path(s.path, s.twist, station, max).map(Some)
+                    }
+                }
                 CorrectedFrame::Planar { principal_sign } => {
                     let (twist, traversal) = if self.arc.is_some() {
                         (&self.zero, phase.traversal)
