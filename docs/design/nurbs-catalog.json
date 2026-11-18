@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 935,
-  "unallocatedCount": 65,
+  "specifiedCount": 936,
+  "unallocatedCount": 64,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21398,6 +21398,25 @@
       ],
       "remainingQualification": [
         "One closed solid revision for selected occurrences of a single definition, specified in part-local coordinates."
+      ]
+    },
+    {
+      "id": "NURBS-0936",
+      "name": "Объединение именованных STEP-сборок с переносом позиций спецификации",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::NamedStepAssembly::append_named_assembly",
+      "evidence": [
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-named-assembly-append-936-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-named-assembly-append-936-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Flattened assembly with proper rigid source placements. Destination name retained. Nested product hierarchy not retained."
       ]
     }
   ],

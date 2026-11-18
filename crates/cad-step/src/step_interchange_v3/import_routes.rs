@@ -2044,6 +2044,22 @@ pub struct StepPartsListRow<'a> {
 }
 
 impl NamedStepAssembly {
+    /// Place another named assembly under a rigid transform. The resulting
+    /// flat parts list retains separate definitions even when labels coincide.
+    /// The returned range maps source definition indices into the destination.
+    pub fn append_named_assembly(&mut self, source: Self, placement: [[f64; 4]; 4])
+        -> Result<std::ops::Range<usize>> {
+        for assembly in [&*self, &source] {
+            if assembly.definition_names.len() != assembly.assembly.definitions().len() {
+                return Err(refuse("Expected one label per appended part definition"));
+            }
+        }
+        let start = self.definition_names.len();
+        self.assembly.append_assembly(source.assembly, placement)?;
+        self.definition_names.extend(source.definition_names);
+        Ok(start..self.definition_names.len())
+    }
+
     /// Apply one named local-space geometry revision to selected occurrences.
     /// Selecting the whole part revises its existing definition and label in place.
     pub fn replace_named_variant(&mut self, selection: &[usize], model: Model, name: String) -> Result<usize> {

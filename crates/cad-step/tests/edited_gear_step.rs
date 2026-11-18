@@ -197,3 +197,29 @@ fn named_variant_keeps_part_labels_geometry_and_quantities_aligned() {
         assert_eq!(width,if wide {3.} else {1.});
     }
 }
+
+#[test]
+fn append_named_assembly_composes_placements_and_keeps_distinct_part_rows() {
+    use cad_step::{NamedStepAssembly,StepSharedAssembly,StepAssemblyOccurrence,import_named_step_assembly};
+    let shift = |x| [[1.,0.,0.,x],[0.,1.,0.,0.],[0.,0.,1.,0.],[0.,0.,0.,1.]];
+    let group = |width, xs:&[f64]| NamedStepAssembly {name:"Узел".into(),definition_names:vec!["Вставка".into()],
+        assembly:StepSharedAssembly::from_placed_solids(vec![brep_core::cuboid([0.;3],[width,2.,3.]).unwrap()],
+            xs.iter().map(|&x| StepAssemblyOccurrence {definition:0,transform:shift(x)}).collect()).unwrap()};
+    let mut parent = group(1.,&[0.]);
+    let rotation = [[0.,-1.,0.,10.],[1.,0.,0.,20.],[0.,0.,1.,0.],[0.,0.,0.,1.]];
+    assert_eq!(parent.append_named_assembly(group(4.,&[2.,5.]),rotation).unwrap(),1..2);
+    let mut invalid = rotation;
+    invalid[0][0] = f64::NAN;
+    assert!(parent.append_named_assembly(group(6.,&[1.]),invalid).is_err());
+    let restored = import_named_step_assembly(&parent.export_selected_parts(&[0,1],"Корпус").unwrap()).unwrap();
+    let rows = restored.parts_list().unwrap();
+    assert_eq!(rows.len(),2);
+    for row in rows {
+        assert_eq!(row.name,"Вставка");
+        let width = restored.assembly.definitions()[row.definition].vertices.iter().map(|v| v.point[0]).fold(0.,f64::max);
+        let locations:Vec<_> = restored.assembly.occurrences().iter().filter(|o| o.definition==row.definition)
+            .map(|o| [o.transform[0][3],o.transform[1][3]]).collect();
+        if width==1. { assert_eq!(locations,[[0.,0.]]); }
+        else { assert_eq!(width,4.); assert_eq!(locations,[[10.,22.],[10.,25.]]); }
+    }
+}

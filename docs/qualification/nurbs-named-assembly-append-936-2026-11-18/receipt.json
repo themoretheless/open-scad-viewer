@@ -1,0 +1,44 @@
+{
+  "id": "NURBS-0936",
+  "testedBase": "860f12c503cb85b0240ea39754f6f28f80597ee2",
+  "gearCommand": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "gear_profile",
+    "--test",
+    "gear_verified_profile"
+  ],
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--test",
+    "edited_gear_step",
+    "--",
+    "--nocapture"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 18,
+  "scope": [
+    "Append repeated instances with a same-name distinct part under a quarter turn and translation. Verify geometry, placement and source index range, and reject invalid transform atomically."
+  ],
+  "logSha256": "3c044202e81a01abf8eb092fbe7901d6783de06c9cc571862f923b0bdfe15a2f",
+  "sourceSha256": {
+    "crates/cad-step/src/step_interchange_v3/import_routes.rs": "1ec709f0abba2df0c0b6ca6aa40ae1e195c1d33b890ca6944fad18777619a2d6",
+    "crates/cad-step/src/step_interchange_v3.rs": "7ce4b347ee9924e877883caf3f8350ddf4bd71d2d35cd223cccf02d14118a630",
+    "crates/cad-step/src/lib.rs": "424954bc627e81bf3e7ab962a4eeb8be65ba8af45e212d2b240562fa297411fb",
+    "crates/cad-step/tests/edited_gear_step.rs": "2ca37934b95f104735c3333162d211bdd9507bf3f921ddae1843ea6c7823bb9d"
+  }
+}
