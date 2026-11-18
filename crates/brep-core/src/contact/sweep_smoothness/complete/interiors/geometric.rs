@@ -857,7 +857,7 @@ mod tests {
         for contact in contacts.shared {
             assert_eq!(contact.edges.len(),1);
         }
-        let admission = crate::closed_solid::qualify(model, crate::closed_solid::AdmissionPolicy {
+        let policy = crate::closed_solid::AdmissionPolicy {
             tolerance_uv: 1e-8,
             max_linear_cells: 100000,
             geometry: crate::volume_validity::Limits {
@@ -873,7 +873,16 @@ mod tests {
                 orientation_cells: 100000, orientation_domain_cells: 100000,
                 orientation_spans: 1000,
             },
-        }).unwrap();
+        };
+        let mut limited_policy = policy;
+        limited_policy.geometry.boundary.contacts.pairs = 5;
+        let limited = crate::closed_solid::qualify(model.clone(), limited_policy).unwrap();
+        let limited_pairs = &limited.geometry().boundary.intersections.pairs;
+        assert_eq!(limited_pairs.next_pair, Some([2, 3]));
+        assert!(!limited_pairs.all_pairs_classified);
+        assert!(limited.solid().is_none());
+
+        let admission = crate::closed_solid::qualify(model, policy).unwrap();
         let geometry = admission.geometry();
         let disjoint = geometry.boundary.intersections.pairs.pairs.iter()
             .filter(|pair| pair.radial_disjoint)
