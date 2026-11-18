@@ -10745,3 +10745,27 @@ fn longest_toolpath_violation_brackets_a_run_across_segment_boundaries() {
     let report = toolpath_chain_clearance_timeline(&segments, &free, 0., 0., 0.001, 2).unwrap();
     assert_eq!(report.longest_violation_duration(), [0.; 2]);
 }
+
+#[test]
+fn synchronized_curve_clearance_measures_simultaneous_positions_with_distinct_knots() {
+    use nurbs_core::analysis::curve_measure::{StopReason, measure_synchronized_curve_clearance};
+    let first = Curve {
+        degree: 1,
+        knots: vec![0., 0., 0.25, 1., 1.],
+        control_points: vec![vec![0., 0.], vec![1., 0.], vec![4., 0.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let mut second = first.clone();
+    second.knots[2] = 0.75;
+    second.control_points = vec![vec![4., 1.], vec![1., 1.], vec![0., 1.]];
+    let verify = |budget| {
+        measure_synchronized_curve_clearance([&first, &second], [0., 1.], [0.2, 0.3], 1e-6, budget)
+    };
+    assert!(verify(2).is_err());
+    let report = verify(64).unwrap();
+    assert_eq!(report.stop_reason, StopReason::Tolerance);
+    assert!(report.gap_bounds[0] <= 0.5 && 0.5 <= report.gap_bounds[1]);
+    assert_eq!(report.witness_parameter, 0.5);
+    assert!(report.work_cells <= 64);
+}

@@ -2406,9 +2406,6 @@ fn measure_minimum_radial_clearance(
     obstacle_count: usize,
     gap: impl Fn(&[Interval], usize) -> Result<Interval>,
 ) -> Result<SphericalMinimumClearance> {
-    let mut pending = BTreeMap::new();
-    let mut cells = 0;
-    let mut witness = (f64::INFINITY, interval[0], 0);
     let measure = |span, domain: [f64; 2], witness: &mut (f64, f64, usize)| -> Result<f64> {
         let jets = curve_jets::enclose(curve, span, domain)?;
         let start = curve_jets::endpoint(curve, span, domain, false)?;
@@ -2425,13 +2422,41 @@ fn measure_minimum_radial_clearance(
         }
         Ok(lower)
     };
+    let initial = active_spans(curve, interval).map(|span| {
+        (span, [curve.knots[span].max(interval[0]), curve.knots[span + 1].min(interval[1])])
+    });
+    let (lower, witness, cells, stop_reason) =
+        refine_minimum_clearance(initial, interval[0], tolerance, max_cells, measure)?;
+    Ok(SphericalMinimumClearance {
+        gap_bounds: [lower, witness.0],
+        witness_parameter: witness.1,
+        witness_obstacle: witness.2,
+        work_obstacle_cells: cells * obstacle_count,
+        stop_reason,
+    })
+}
+
+type ClearanceWitness = (f64, f64, usize);
+
+fn refine_minimum_clearance<Span: Copy>(
+    initial: impl IntoIterator<Item = (Span, [f64; 2])>,
+    start: f64,
+    tolerance: f64,
+    max_cells: usize,
+    measure: impl Fn(Span, [f64; 2], &mut ClearanceWitness) -> Result<f64>,
+) -> Result<(f64, ClearanceWitness, usize, StopReason)> {
+    let mut pending = BTreeMap::new();
+    let mut cells = 0;
+    let mut witness = (f64::INFINITY, start, 0);
     // Map finite signed floats to unsigned keys preserving ascending order.
     let order = |value: f64| {
         let bits = value.to_bits();
         if value.is_sign_negative() { !bits } else { bits ^ (1 << 63) }
     };
-    for span in active_spans(curve, interval) {
-        let domain = [curve.knots[span].max(interval[0]), curve.knots[span + 1].min(interval[1])];
+    for (span, domain) in initial {
+        if cells == max_cells {
+            return Err(resource("Clearance budget must cover every initial cell"));
+        }
         let lower = measure(span, domain, &mut witness)?;
         pending.insert((order(lower), cells), (lower, span, domain));
         cells += 1;
@@ -2456,11 +2481,78 @@ fn measure_minimum_radial_clearance(
             cells += 1;
         }
     };
-    Ok(SphericalMinimumClearance {
+    Ok((lower, witness, cells, stop_reason))
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct SynchronizedCurveClearance {
+    pub gap_bounds: [f64; 2],
+    pub witness_parameter: f64,
+    pub work_cells: usize,
+    pub stop_reason: StopReason,
+}
+
+/// Enclose the minimum signed gap between balls moving on two curves with
+/// the same parameter clock. Both curves must contain the requested window.
+pub fn measure_synchronized_curve_clearance(
+    curves: [&Curve; 2],
+    interval: [f64; 2],
+    radii: [f64; 2],
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<SynchronizedCurveClearance> {
+    validate(tolerance, max_cells)?;
+    check(radii.iter().all(|radius| radius.is_finite() && *radius >= 0.),
+        "Tool radii must be finite and nonnegative")?;
+    let [first, second] = curves;
+    for curve in curves {
+        curve.validate()?;
+        validate_travel_interval(curve, interval)?;
+    }
+    check(first.control_points[0].len() == second.control_points[0].len(),
+        "Synchronized curves must have matching dimensions")?;
+    let radius = Interval::point(radii[0]).add(Interval::point(radii[1]))?;
+    let mut first_spans = active_spans(first, interval).peekable();
+    let mut second_spans = active_spans(second, interval).peekable();
+    let mut initial = Vec::new();
+    let mut start = interval[0];
+    while let (Some(&a), Some(&b)) = (first_spans.peek(), second_spans.peek()) {
+        let first_end = first.knots[a + 1];
+        let second_end = second.knots[b + 1];
+        let end = first_end.min(second_end).min(interval[1]);
+        initial.push(([a, b], [start, end]));
+        start = end;
+        if end == interval[1] {
+            break;
+        }
+        if end == first_end {
+            first_spans.next();
+        }
+        if end == second_end {
+            second_spans.next();
+        }
+    }
+    let measure = |[a, b]: [usize; 2], domain: [f64; 2], witness: &mut ClearanceWitness| {
+        let left = curve_jets::enclose(first, a, domain)?;
+        let right = curve_jets::enclose(second, b, domain)?;
+        let (lo, hi) = box_distance(&left[0], &right[0])?;
+        for (end, parameter) in [(false, domain[0]), (true, domain[1])] {
+            let left = curve_jets::endpoint(first, a, domain, end)?;
+            let right = curve_jets::endpoint(second, b, domain, end)?;
+            let (lo, hi) = box_distance(&left[0], &right[0])?;
+            let upper = Interval::new(lo, hi)?.sub(radius)?.hi;
+            if upper < witness.0 {
+                *witness = (upper, parameter, 0);
+            }
+        }
+        Ok(Interval::new(lo, hi)?.sub(radius)?.lo)
+    };
+    let (lower, witness, work_cells, stop_reason) =
+        refine_minimum_clearance(initial, interval[0], tolerance, max_cells, measure)?;
+    Ok(SynchronizedCurveClearance {
         gap_bounds: [lower, witness.0],
         witness_parameter: witness.1,
-        witness_obstacle: witness.2,
-        work_obstacle_cells: cells * obstacle_count,
+        work_cells,
         stop_reason,
     })
 }

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 733,
-  "unallocatedCount": 267,
+  "specifiedCount": 734,
+  "unallocatedCount": 266,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -17619,6 +17619,25 @@
       "remainingQualification": [
         "Bound the longest contiguous clearance violation across segment boundaries.",
         "Check a confirmed run spanning independent clocks, a separated shorter run, coarse uncertainty, and a wholly clear chain.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0734",
+      "name": "Сертифицированный минимальный зазор между синхронными NURBS-траекториями",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::measure_synchronized_curve_clearance",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-734-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-734-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose minimum instantaneous gap for two spherical tools sharing a curve clock.",
+        "Check simultaneous motion, different knot grids, the closest time, radius subtraction, and initial budget refusal.",
         "WASM and application integration are separate."
       ]
     }
