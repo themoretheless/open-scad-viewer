@@ -888,7 +888,7 @@ fn trimmed_144_classifies_explicit_inner_loop_and_normalizes_direction() {
 }
 
 #[test]
-fn trimmed_3d_only_and_natural_outer_are_typed_refusals_with_ids() {
+fn trimmed_3d_only_is_refused_and_natural_outer_reuses_cuboid_edges() {
     let (text, trimmed, outer) = trimmed_outer_fixture();
     let (entities, _, _) = parse(&text).unwrap();
     let mut boundary = entities[&outer].values.clone();
@@ -900,9 +900,16 @@ fn trimmed_3d_only_and_natural_outer_are_typed_refusals_with_ids() {
     let mut trimmed_values = entities[&trimmed].values.clone();
     trimmed_values[2] = "0".into();
     trimmed_values[4] = "0".into();
-    let error = import_iges_v2(&replace_parameters(&text, trimmed, trimmed_values)).unwrap_err();
-    assert_eq!(error.code, "BREP_IGES_V2_TRIMMED_UNSUPPORTED");
-    assert!(error.message.contains(&format!("DE {trimmed}")));
+    let text = set_status(&text, outer, "01000000");
+    let text = replace_parameters(&text, trimmed, trimmed_values);
+    let model = import_iges_v2(&text).unwrap().0;
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
+    assert_eq!((model.faces.len(), model.edges.len()), (6,12));
+    assert!(loop_uv_area(&model, model.faces.last().unwrap().outer) > 0.);
+    if let Some(path) = std::env::var_os("CAD_IGES_NATURAL_BOUNDARY_STEP") {
+        std::fs::write(path, crate::export_step_v9(&model).unwrap().0).unwrap();
+    }
+
 }
 
 #[test]
@@ -1280,3 +1287,37 @@ fn rational_sphere_and_torus_round_trip_through_126_and_128() {
 
 mod circular_arcs;
 mod placements;
+
+#[test]
+fn natural_boundary_with_explicit_hole_keeps_opposite_windings() {
+    let (text, trimmed) = trimmed_hole_fixture();
+    let (entities, _, _) = parse(&text).unwrap();
+    let mut data = entities[&trimmed].values.clone();
+    let outer = data[4].parse().unwrap();
+    data[2] = "0".into();
+    data[4] = "0".into();
+    let text = replace_parameters(&set_status(&text, outer, "01000000"), trimmed, data);
+    let model = import_iges_v2(&text).unwrap().0;
+    let face = model.faces.last().unwrap();
+    assert_eq!(face.holes.len(), 1);
+    assert!(loop_uv_area(&model, face.outer) > 0.);
+    assert!(loop_uv_area(&model, face.holes[0]) < 0.);
+}
+
+#[test]
+fn natural_rational_patch_builds_four_edges_without_a_boundary_entity() {
+    let cylinder = brep_core::cylinder(3., 5.).unwrap();
+    let patch = &cylinder.faces.iter().find(|face| {
+        face.surface.weights.iter().flatten().any(|w| *w != 1.)
+    }).unwrap().surface;
+    let mut writer = Writer::new();
+    let surface = writer.emit(128, surface_values(patch).unwrap());
+    let face = writer.emit(144, vec!["144".into(), surface.to_string(), "0".into(), "0".into(), "0".into()]);
+    let shell = writer.emit(514, vec!["514".into(), "1".into(), face.to_string(), "1".into()]);
+    writer.entities[(shell-1)/2].form = 1;
+    let model = import_iges_v2(&render(writer).unwrap()).unwrap().0;
+    assert_eq!((model.vertices.len(), model.edges.len(), model.faces.len()), (4,4,1));
+    assert_eq!(model.validate().unwrap().boundary_edge_count, 4);
+    assert_eq!(model.faces[0].surface, *patch);
+    assert_eq!(model.edges.iter().filter(|e| e.curve.weights.iter().any(|w| *w != 1.)).count(), 2);
+}

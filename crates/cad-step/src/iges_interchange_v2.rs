@@ -909,6 +909,7 @@ enum CompositeVisit {
 
 mod circular_arc;
 mod placement;
+mod natural_boundary;
 mod composite_join;
 
 struct CurveDispatcher<'a> {
@@ -1825,6 +1826,7 @@ impl<'a> Builder<'a> {
     ) -> Result<()> {
         let referenced_boundaries = referenced_trimmed_boundaries(self.e);
         let mut owned_edges = BTreeSet::new();
+        let mut natural_work = 0;
         let entities: &'a BTreeMap<usize, Entity> = self.e;
         for (&de, e) in entities {
             if !matches!(e.directory.ty, 143 | 144)
@@ -1834,6 +1836,10 @@ impl<'a> Builder<'a> {
             }
             let (surface_de, boundaries) = trimmed_face_boundaries(de, e)?;
             let mut loops = Vec::with_capacity(boundaries.len());
+            let surface = surface128(self.e, surface_de, self.scale)?;
+            if e.directory.ty == 144 && u(&e.values, 2, "trimmed surface outer flag")? == 0 {
+                loops.push(self.natural_outer_loop(de, &surface, &mut natural_work)?);
+            }
             for boundary in boundaries {
                 let index =
                     self.trimmed_loop(boundary, surface_de, curve_edges, &mut owned_edges)?;
@@ -1845,7 +1851,6 @@ impl<'a> Builder<'a> {
                 Self::orient_trimmed_loop(boundary, coedges, loops.is_empty())?;
                 loops.push(index);
             }
-            let surface = surface128(self.e, surface_de, self.scale)?;
             self.verify_face_loops(&loops, &surface).map_err(|error| {
                 trimmed_error(
                     "BREP_IGES_V2_TRIMMED_DANGLING",
@@ -2097,11 +2102,9 @@ fn trimmed_face_boundaries(de: usize, e: &Entity) -> Result<(usize, Vec<usize>)>
             format!("Malformed IGES trimmed surface DE {de}"),
         ));
     }
-    if u(v, 2, "trimmed surface outer flag")? != 1 {
-        return Err(trimmed_unsupported(
-            de,
-            "natural outer boundary without an explicit 143/142 loop",
-        ));
+    let flag = u(v, 2, "trimmed surface outer flag")?;
+    if flag > 1 {
+        return Err(trimmed_unsupported(de, "invalid outer boundary flag"));
     }
     let n = u(v, 3, "trimmed surface inner boundary count")?;
     if n > MAX_TOPOLOGY || v.len() != 5 + n {
@@ -2111,15 +2114,15 @@ fn trimmed_face_boundaries(de: usize, e: &Entity) -> Result<(usize, Vec<usize>)>
         ));
     }
     let outer = u(v, 4, "trimmed surface outer boundary")?;
-    if outer == 0 {
+    if (outer == 0) != (flag == 0) {
         return Err(trimmed_error(
             "BREP_IGES_V2_TRIMMED_DANGLING",
-            format!("Missing outer boundary in IGES trimmed surface DE {de}"),
+            format!("Inconsistent outer boundary in IGES trimmed surface DE {de}"),
         ));
     }
     Ok((
         u(v, 1, "trimmed surface geometry")?,
-        (4..5 + n)
+        ((if flag == 0 { 5 } else { 4 })..5 + n)
             .map(|at| u(v, at, "trimmed boundary"))
             .collect::<Result<Vec<_>>>()?,
     ))
