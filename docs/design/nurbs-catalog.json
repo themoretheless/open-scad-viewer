@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 817,
-  "unallocatedCount": 183,
+  "specifiedCount": 818,
+  "unallocatedCount": 182,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -19217,6 +19217,27 @@
       "remainingQualification": [
         "Export sun, ring and shared planet definitions with twenty AP242 occurrences.",
         "Check three serialized herringbone gear bodies, twenty occurrences and closed spur round-trip topology.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0818",
+      "name": "Импорт сборки STEP AP242 без дублирования геометрии экземпляров",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Сборки",
+      "nativeApi": "cad_step::import_step_shared_assembly",
+      "evidence": [
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/step_interchange_v3/import_routes.rs",
+        "crates/cad-step/src/tests/step_interchange_v3.rs",
+        "docs/qualification/nurbs-curvature-field-818-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-818-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Import three shared herringbone definitions with twenty placements and materialize one closed planet on demand.",
+        "Verify that all eighteen planet placements share one definition and that materialization preserves closed B-rep topology.",
         "WASM and application integration are separate."
       ]
     }

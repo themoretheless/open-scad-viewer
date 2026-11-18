@@ -2830,4 +2830,12 @@ fn planetary_gear_set_step_exports_twenty_herringbone_occurrences() {
     let text = crate::export_planetary_gear_set_step(&sun, &ring, &planets).unwrap();
     assert_eq!(text.matches("MANIFOLD_SOLID_BREP(").count(), 3);
     assert_eq!(text.matches("NEXT_ASSEMBLY_USAGE_OCCURRENCE(").count(), 20);
+    let imported = crate::import_step_shared_assembly(&text).unwrap();
+    assert_eq!(imported.definitions().len(), 3);
+    assert_eq!(imported.occurrences().len(), 20);
+    let planet_index = imported.occurrences()[2].definition;
+    assert!(imported.occurrences()[2..].iter().all(|item| item.definition == planet_index));
+    let first_planet = imported.materialize(2).unwrap();
+    assert_eq!(first_planet.faces.len(), planets.prototype().faces.len());
+    assert_eq!(first_planet.validate().unwrap().boundary_edge_count, 0);
 }

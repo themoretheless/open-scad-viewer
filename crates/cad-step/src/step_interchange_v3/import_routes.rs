@@ -602,6 +602,106 @@ fn product_hierarchy_entry(id: usize, ty: &str, args: &[Value]) -> Option<String
     }
 }
 
+type InspectedDirectGraph = (
+    Vec<RepresentationOccurrence>, BTreeSet<usize>, Vec<usize>, Vec<String>, bool,
+);
+
+fn inspect_direct_graph(route: &DirectImportRoute<'_>) -> Result<InspectedDirectGraph> {
+    let mut auxiliary_selections = BTreeSet::new();
+    let representations = route.select_representations(&mut auxiliary_selections)?;
+    let all_bodies = route.all_bodies();
+    let graph_roots = if representations.is_empty() { all_bodies.clone() } else { representations.clone() };
+    if graph_roots.is_empty() {
+        return Err(refuse("STEP /3 requires a manifold advanced B-rep root"));
+    }
+    let occurrences = route.occurrences(&representations)?;
+    let mut linked = route.linked_graph(&graph_roots, &occurrences)?;
+    let roots: Vec<_> = all_bodies.into_iter().filter(|id| linked.contains(id)).collect();
+    if roots.is_empty() {
+        return Err(refuse("Selected representation contains no manifold B-rep body"));
+    }
+    route.extend_auxiliary(&representations, &mut auxiliary_selections)?;
+    let auxiliary_linked = if auxiliary_selections.is_empty() {
+        BTreeSet::new()
+    } else {
+        reachable(route.entities, &auxiliary_selections.into_iter().collect::<Vec<_>>())?
+    };
+    linked.retain(|id| !auxiliary_linked.contains(id));
+    route.check_reachable_types(&linked)?;
+    let ignored = route.ignored_entities(&linked, &auxiliary_linked)?;
+    Ok((occurrences, linked, roots, ignored.into_iter().collect(), !auxiliary_linked.is_empty()))
+}
+
+/// One placement of a shared STEP definition.
+#[derive(Clone, Copy, Debug)]
+pub struct StepAssemblyOccurrence {
+    pub definition: usize,
+    pub transform: [[f64; 4]; 4],
+}
+
+/// Validated STEP geometry kept by definition. Standalone bodies are
+/// materialized only when requested by a consumer.
+pub struct StepSharedAssembly {
+    definitions: Vec<Model>,
+    occurrences: Vec<StepAssemblyOccurrence>,
+}
+
+impl StepSharedAssembly {
+    pub fn definitions(&self) -> &[Model] {
+        &self.definitions
+    }
+
+    pub fn occurrences(&self) -> &[StepAssemblyOccurrence] {
+        &self.occurrences
+    }
+
+    pub fn materialize(&self, index: usize) -> Result<Model> {
+        let occurrence = self.occurrences.get(index)
+            .ok_or_else(|| refuse("STEP assembly occurrence index out of range"))?;
+        brep_core::transform::affine(&self.definitions[occurrence.definition], occurrence.transform)
+    }
+}
+
+/// Import an AP242 assembly without expanding all of its placements into
+/// a single B-rep. Each distinct definition is built and validated once.
+pub fn import_step_shared_assembly(text: &str) -> Result<StepSharedAssembly> {
+    validate_exchange_structure(text)?;
+    let entities = parse(data_payload(text)?)?;
+    let route = DirectImportRoute {
+        entities: &entities, capability: STEP_INTERCHANGE_V9_CAPABILITY,
+        analytic_surfaces: true, ap242_composition: true, allow_degenerate: true,
+    };
+    let (placements, _, _, _, _) = inspect_direct_graph(&route)?;
+    if placements.is_empty() {
+        return Err(refuse("Selected placement graph contains no manifold B-rep occurrence"));
+    }
+    let mut definition_indices = BTreeMap::new();
+    let mut definitions = Vec::new();
+    let mut occurrences = Vec::with_capacity(placements.len());
+    for placement in placements {
+        let scale = length_scale(&entities, &placement.linked, false)?;
+        let tolerance = uncertainty_mm(&entities, &placement.linked)?.unwrap_or(DEFAULT_STEP_TOLERANCE_MM);
+        let key = (placement.representation, placement.bodies, scale.to_bits(), tolerance.to_bits());
+        let definition = match definition_indices.get(&key) {
+            Some(&index) => index,
+            None => {
+                let (mut model, identity) = build_direct_roots(
+                    &entities, &key.1, scale, route.build_options(true),
+                )?;
+                model.tolerance_mm = tolerance;
+                restore_identity(&entities, &identity, &mut model)?;
+                model.validate()?;
+                let index = definitions.len();
+                definitions.push(model);
+                definition_indices.insert(key, index);
+                index
+            }
+        };
+        occurrences.push(StepAssemblyOccurrence { definition, transform: placement.transform });
+    }
+    Ok(StepSharedAssembly { definitions, occurrences })
+}
+
 fn import_step_direct_impl(
     text: &str,
     analytic_surfaces: bool,
@@ -618,32 +718,11 @@ fn import_step_direct_impl(
     }
     let entities = parse(if ap242_composition { data_payload(text)? } else { text })?;
     let route = DirectImportRoute { entities: &entities, capability, analytic_surfaces, ap242_composition, allow_degenerate };
-    let mut auxiliary_selections = BTreeSet::new();
-    let representations = route.select_representations(&mut auxiliary_selections)?;
-    let all_bodies = route.all_bodies();
-    let graph_roots = if representations.is_empty() { all_bodies.clone() } else { representations.clone() };
-    if graph_roots.is_empty() {
-        return Err(refuse("STEP /3 requires a manifold advanced B-rep root"));
-    }
-    let occurrences = route.occurrences(&representations)?;
+    let (occurrences, linked, roots, ignored, has_auxiliary) = inspect_direct_graph(&route)?;
     let occurrence_count = occurrences.len();
     let (definition_identities, occurrence_identities) = route.occurrence_identities(&occurrences)?;
     let product_hierarchy = route.product_hierarchy();
     let external_references = route.external_references();
-    let mut linked = route.linked_graph(&graph_roots, &occurrences)?;
-    let roots: Vec<_> = all_bodies.into_iter().filter(|id| linked.contains(id)).collect();
-    if roots.is_empty() {
-        return Err(refuse("Selected representation contains no manifold B-rep body"));
-    }
-    route.extend_auxiliary(&representations, &mut auxiliary_selections)?;
-    let auxiliary_linked = if auxiliary_selections.is_empty() {
-        BTreeSet::new()
-    } else {
-        reachable(&entities, &auxiliary_selections.into_iter().collect::<Vec<_>>())?
-    };
-    linked.retain(|id| !auxiliary_linked.contains(id));
-    route.check_reachable_types(&linked)?;
-    let ignored = route.ignored_entities(&linked, &auxiliary_linked)?;
     let (mut model, identity_map) = if ap242_composition {
         route.build_occurrence_model(occurrences)?
     } else {
@@ -651,7 +730,7 @@ fn import_step_direct_impl(
     };
     let identity = route.identity_report(occurrence_count, &identity_map, &mut model)?;
     model.validate()?;
-    let metadata_loss = route.metadata_loss(identity.preserved, !auxiliary_linked.is_empty());
+    let metadata_loss = route.metadata_loss(identity.preserved, has_auxiliary);
     let mut certificate_notes = route.certificate_notes();
     let semantic = include_semantic.then(|| route.semantic_metadata(&identity_map)).transpose()?;
     if semantic.is_some() {
