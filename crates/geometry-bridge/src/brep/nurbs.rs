@@ -1447,7 +1447,8 @@ pub fn exact_periodic_trim_patch_set_density_request(
     use crate::field;
     use nurbs_core::{
         analysis::surface_measure::{
-            bound_radius_of_gyration, periodic_trim_patch_set_mass_with_density,
+            bound_distance_to_principal_axis, bound_radius_of_gyration,
+            periodic_trim_patch_set_mass_with_density,
         },
         editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
     };
@@ -1481,6 +1482,18 @@ pub fn exact_periodic_trim_patch_set_density_request(
     if include_principal_axes && moment_tolerance.is_none() {
         return Err(input("Principal axes require a moment tolerance"));
     }
+    let axis_probe = request
+        .get("principalAxisProbePointMm")
+        .map(|_| -> Result<[f64; 3]> {
+            let point: [f64; 3] = field(request, "principalAxisProbePointMm")?;
+            if !point.iter().all(|value| value.is_finite()) || !include_principal_axes {
+                return Err(input(
+                    "Principal axis probe requires a finite point and requested axes",
+                ));
+            }
+            Ok(point)
+        })
+        .transpose()?;
     let inertia_axis = optional_inertia_axis(request)?;
     let include_axis_radius = include_axis_radius(request, inertia_axis.is_some())?;
     let center_plane = request
@@ -1593,14 +1606,27 @@ pub fn exact_periodic_trim_patch_set_density_request(
         response["principalMomentBoundsKgMm2"] = json!(bounds);
         response["withinMomentTolerance"] = json!(within_tolerance);
         if include_principal_axes {
-            let axes = report.bound_principal_axes(tolerance)?.map(|axes| {
-                axes.map(|axis| {
-                    axis.map(|axis| {
-                        json!({"direction": axis.direction, "sinAngleUpper": axis.sin_angle_upper})
-                    })
-                })
-            });
-            response["principalAxes"] = json!(axes);
+            if let Some(axes) = report.bound_principal_axes(tolerance)?
+                && let Some(properties) = &report.mass_properties
+            {
+                let mut values = [Value::Null, Value::Null, Value::Null];
+                for (value, axis) in values.iter_mut().zip(axes) {
+                    if let Some(axis) = axis {
+                        *value = json!({
+                            "direction": axis.direction,
+                            "sinAngleUpper": axis.sin_angle_upper,
+                        });
+                        if let Some(point) = axis_probe {
+                            value["distanceBoundsMm"] = json!(bound_distance_to_principal_axis(
+                                axis,
+                                properties.centroid_bounds,
+                                point,
+                            )?);
+                        }
+                    }
+                }
+                response["principalAxes"] = json!(values);
+            }
         }
     }
     response["massBoundsKg"] = json!(report.total_mass_bounds);
