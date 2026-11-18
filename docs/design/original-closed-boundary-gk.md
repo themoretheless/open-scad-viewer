@@ -359,3 +359,9 @@ shell face list. The closed material audit proves the four neighboring rim
 contacts and the two exact disjoint non-neighbor pairs, then checks outward
 orientation and point parity. A five-pair allowance leaves the sixth pair
 pending and cannot admit the body.
+
+The radial factorization can also derive a common exact affine height
+coordinate from the source sections and a common center drift. The native
+four-band fixtures pass complete G2 and Solid admission after an exact
+axis shear and after also tilting the section planes. Both use the actual
+transformed BRep, including its original trim clocks and owned rims.
