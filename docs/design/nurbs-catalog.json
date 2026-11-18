@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 943,
-  "unallocatedCount": 57,
+  "specifiedCount": 944,
+  "unallocatedCount": 56,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21556,6 +21556,24 @@
       ],
       "remainingQualification": [
         "Closed shell; proves wall-face connectivity and exact rim-edge membership for two selected cap holes. Geometry, radial clearance and Boolean sewing are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0944",
+      "name": "Построение проверенной UV-кривой пространственного ребра на аффинном торце",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "brep_core::profile_certificate::original_restriction::plane::pullback::stored_affine_trim",
+      "evidence": [
+        "crates/brep-core/src/profile/profile_certificate/original_restriction/plane/pullback.rs",
+        "crates/brep-core/tests/full_round_source_caps.rs",
+        "crates/brep-core/tests/spinner_bore_boolean.rs",
+        "docs/qualification/nurbs-stored-cap-trim-944-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-stored-cap-trim-944-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Horizontal injective affine caps. Returns stored UV knots and weights with a continuous world-space agreement certificate. Loop sewing and the Boolean operation remain separate."
       ]
     }
   ],

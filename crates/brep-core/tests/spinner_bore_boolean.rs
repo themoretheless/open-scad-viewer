@@ -41,6 +41,24 @@ fn spinner_bore_difference_preserves_teeth_or_reports_unproved_coverage() {
     assert_eq!(inside + outside + 2, sun.faces.len());
     eprintln!("Whole wall radial certificates: {inside} inside, {outside} outside");
     let cutter = cylinder(22., 10.).unwrap();
+    // All four rational arcs at each end of the cutter must transfer to
+    // the existing gear cap, retaining the spatial edge's parameterization.
+    let mut certified_arcs = 0;
+    for (face_index, _) in ends {
+        let cap = &sun.faces[face_index].surface;
+        let z = cap.control_points[0][0][2];
+        for edge in &cutter.edges {
+            if edge.curve.control_points.iter().all(|p| p[2] == z) {
+                let proof = brep_core::profile_certificate::original_restriction::plane::pullback::
+                    stored_affine_trim(cap, &edge.curve, sun.tolerance_mm).unwrap();
+                proof.reverify().unwrap();
+                assert_eq!(proof.pcurve().weights, edge.curve.weights);
+                assert_eq!(proof.pcurve().knots, edge.curve.knots);
+                certified_arcs += 1;
+            }
+        }
+    }
+    assert_eq!(certified_arcs, 8);
     let reference = gear(&GearSpec { bore: 44., ..spec }).unwrap();
     assert_eq!(reference.validate().unwrap().boundary_edge_count, 0);
     match boolean(&sun, &cutter, "difference") {

@@ -1,7 +1,7 @@
 //! Unique inverse-chart boundary expressions on the UNCHANGED native carrier.
 //! The world curve is primary. No rounded UV controls are manufactured.
 use super::*;
-use num_traits::Signed;
+use num_traits::{Signed, ToPrimitive};
 #[derive(Clone, Debug)]
 pub struct Pullback {
     chart: Chart,
@@ -63,6 +63,35 @@ pub fn qualify(surface: &Surface, world: &Curve) -> Result<Pullback> {
     contained(&chart, &world)?;
     Ok(Pullback { chart, world })
 }
+/// Construct a stored UV trim for an existing spatial edge on a horizontal
+/// affine cap. The returned proof bounds the rounded trim's displacement over
+/// every knot span. Coordinates along the cap normal must agree exactly.
+pub fn stored_affine_trim(surface: &Surface, edge: &Curve, tolerance: f64) -> Result<Boundary> {
+    surface.validate()?;
+    edge.validate()?;
+    let height = surface.control_points[0][0][2];
+    if edge.control_points.iter().any(|p| p.len() != 3 || p[2] != height) {
+        return Err(refused("Spatial edge does not lie at the cap height"));
+    }
+    let mut xy = edge.clone();
+    for point in &mut xy.control_points { point.truncate(2); }
+    let owner = qualify(surface, &xy)?;
+    let coefficients = &owner.chart.coefficients;
+    if coefficients[3].iter().any(|v| !v.is_zero()) {
+        return Err(refused("Stored affine trim requires an affine chart"));
+    }
+    let mut uv = xy.clone();
+    for point in &mut uv.control_points {
+        let offset = [q(point[0])? - &coefficients[0][0], q(point[1])? - &coefficients[0][1]];
+        let inverse = owner.affine_inverse(&offset);
+        for (coordinate, range) in point.iter_mut().zip(inverse) {
+            *coordinate = range[0].to_f64().filter(|v| v.is_finite())
+                .ok_or_else(|| refused("Cap UV coordinate is outside binary64 range"))?;
+        }
+    }
+    super::qualify(surface, &uv, &xy, tolerance)
+}
+
 fn native_box(chart: &Chart, p: [[Q; 2]; 2]) -> [[Q; 2]; 2] {
     std::array::from_fn(|k| {
         p[k].each_ref()

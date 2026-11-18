@@ -1,0 +1,14 @@
+{
+  "id": "NURBS-0944",
+  "testedBase": "0e0171ac57accc596f5a726823095448d8736902",
+  "testTargets": [
+    "brep-core --test spinner_bore_boolean --test full_round_source_caps"
+  ],
+  "certifiedSpinnerArcs": 8,
+  "sourceSha256": {
+    "crates/brep-core/src/profile/profile_certificate/original_restriction/plane/pullback.rs": "54bb4285e40d8eca926f028f99bde353b8b70fdb6dd771572fbc6564f708843a",
+    "crates/brep-core/tests/full_round_source_caps.rs": "0b469cc420e36f4584cd7b7179cb8d10f165703545b8ae4e420753eda85fe3e3",
+    "crates/brep-core/tests/spinner_bore_boolean.rs": "548bd30acc092d6d9e49a68bcca143e8fe16867c83919bd8f80663de45b1f052"
+  },
+  "logSha256": "d962068be4293e36a5ac02d08845c2459221e4caa7f4832bf678bdf9cb28b85d"
+}
