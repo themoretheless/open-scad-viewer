@@ -286,6 +286,7 @@ fn export_step_direct_impl(
     capability: &'static str,
     semantic: Option<&StepSemanticMetadata>,
     assembly: Option<AssemblyExport<'_>>,
+    share_points: bool,
 ) -> Result<(String, FeatureCertificate, StepV3Report)> {
     if let Some(semantic) = semantic {
         semantic.presentation.validate_for_model(model)?;
@@ -309,7 +310,7 @@ fn export_step_direct_impl(
         return Err(refuse("STEP /9 export requires a solid body or open shell"));
     }
     let mut w = Writer::new();
-    if assembly.is_some() {
+    if share_points || assembly.is_some() {
         w.shared_points = Some(BTreeMap::new());
     }
     let mut vertex_entities = Vec::new();
@@ -791,7 +792,7 @@ pub(crate) fn export_step_direct(
     allow_degenerate: bool,
     capability: &'static str,
 ) -> Result<(String, FeatureCertificate, StepV3Report)> {
-    export_step_direct_impl(model, ap242_composition, allow_degenerate, capability, None, None)
+    export_step_direct_impl(model, ap242_composition, allow_degenerate, capability, None, None, false)
 }
 
 pub fn export_step_v3(model: &Model) -> Result<(String, FeatureCertificate, StepV3Report)> {
@@ -833,6 +834,16 @@ pub fn export_step_v8(model: &Model) -> Result<(String, StepV8Certificate, StepV
     Ok((text, certificate, report))
 }
 pub fn export_step_v9(model: &Model) -> Result<(String, StepV8Certificate, StepV3Report)> {
+    export_v9_points(model, false)
+}
+
+/// AP242 export sharing Cartesian point entities with bit-identical coordinates.
+/// Topological vertices, parameter-space dimensions and authored charts remain distinct.
+pub fn export_step_v9_shared_points(model: &Model) -> Result<(String, StepV8Certificate, StepV3Report)> {
+    export_v9_points(model, true)
+}
+
+fn export_v9_points(model: &Model, share_points: bool) -> Result<(String, StepV8Certificate, StepV3Report)> {
     // Compatibility API follows STEP /9 source-preserving chart semantics.
     let mut certificate = certify_step_v8_topology(model)?;
     certificate.capability = STEP_INTERCHANGE_V9_CAPABILITY;
@@ -844,7 +855,7 @@ pub fn export_step_v9(model: &Model) -> Result<(String, StepV8Certificate, StepV
         "authored_nurbs_charts_preserved",
     ]);
     let (text, _, report) =
-        export_step_direct(model, true, true, STEP_INTERCHANGE_V9_CAPABILITY)?;
+        export_step_direct_impl(model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, None, share_points)?;
     Ok((text, certificate, report))
 }
 
@@ -855,7 +866,7 @@ pub fn export_planet_gear_occurrences_step(
     let placements: Vec<_> = assembly.placements().iter().copied().map(|matrix| (0, matrix)).collect();
     let (text, _, _) = export_step_direct_impl(
         assembly.prototype(), true, true, STEP_INTERCHANGE_V9_CAPABILITY,
-        None, Some(AssemblyExport { placements: &placements, definition_tolerances: &[assembly.prototype().tolerance_mm] }),
+        None, Some(AssemblyExport { placements: &placements, definition_tolerances: &[assembly.prototype().tolerance_mm] }), false,
     )?;
     Ok(text)
 }
@@ -900,7 +911,7 @@ pub fn export_step_shared_assembly(assembly: &crate::StepSharedAssembly) -> Resu
     let model = crate::compose_step_v7_occurrences(definitions)?;
     let tolerances: Vec<_> = definitions.iter().map(|model| model.tolerance_mm).collect();
     let (text, _, _) = export_step_direct_impl(
-        &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(AssemblyExport { placements: &placements, definition_tolerances: &tolerances }),
+        &model, true, true, STEP_INTERCHANGE_V9_CAPABILITY, None, Some(AssemblyExport { placements: &placements, definition_tolerances: &tolerances }), false,
     )?;
     Ok(text)
 }
@@ -923,6 +934,7 @@ pub fn export_step_v9_with_metadata(
         STEP_INTERCHANGE_V9_CAPABILITY,
         Some(semantic),
         None,
+        false,
     )?;
     Ok((text, certificate, report))
 }

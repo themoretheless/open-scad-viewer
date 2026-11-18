@@ -26,3 +26,41 @@ fn step_keeps_the_edited_flank_of_the_full_spinner_sun() {
     assert!(has_edit);
     eprintln!("edited spinner sun STEP: {} bytes, {} faces",step.len(),restored.faces.len());
 }
+
+#[test]
+fn shared_step_points_reduce_spinner_size_and_preserve_authored_geometry() {
+    let spec = GearSpec { teeth:32, module:1.5, clearance:0.1, bore:5., height:5.,
+        helix_angle_deg:-35., herringbone:true, ..GearSpec::default() };
+    let (loops,_) = profile_with_report(&spec).unwrap();
+    let packed = LosslessSectorPattern::encode(&loops[0],6).unwrap();
+    let rebuilt = (0..32).map(|i| packed.sector(i).unwrap()).flatten().collect();
+    let restored_loops = vec![rebuilt,loops[1].clone()];
+    let (_,profile) = brep_core::gear::certify_grouped_profile_embedding(
+        &restored_loops,32,6,0,1e-7,ProfileEmbeddingLimits::default()).unwrap();
+    let rebuilt_body = gear_from_verified_profile(&profile,&spec).unwrap();
+    let original = brep_core::gear::gear(&spec).unwrap();
+    let (baseline,..) = cad_step::export_step_v9(&original).unwrap();
+    let (expanded,..) = cad_step::export_step_v9(&rebuilt_body).unwrap();
+    assert_eq!(baseline.as_bytes(),expanded.as_bytes());
+    let (compact,..) = cad_step::export_step_v9_shared_points(&rebuilt_body).unwrap();
+    assert!(compact.len() < expanded.len());
+    let (a,..) = cad_step::import_step_v9(&expanded).unwrap();
+    let (b,..) = cad_step::import_step_v9(&compact).unwrap();
+    assert_eq!(a.edges.len(),b.edges.len());
+    for (left,right) in a.edges.iter().zip(&b.edges) {
+        assert_eq!(left.curve.control_points,right.curve.control_points);
+        assert_eq!(left.curve.weights,right.curve.weights);
+        assert_eq!(left.curve.knots,right.curve.knots);
+        assert_eq!(left.vertices,right.vertices);
+    }
+    assert_eq!(a.faces.len(),b.faces.len());
+    for (left,right) in a.faces.iter().zip(&b.faces) {
+        assert_eq!(left.surface.control_points,right.surface.control_points);
+        assert_eq!(left.surface.weights,right.surface.weights);
+        assert_eq!(left.surface.knots_u,right.surface.knots_u);
+        assert_eq!(left.surface.knots_v,right.surface.knots_v);
+    }
+    assert_eq!(b.bodies.len(),1);
+    assert_eq!(b.validate().unwrap().boundary_edge_count,0);
+    eprintln!("spinner STEP bytes: original {}, reconstructed {}, shared {}",baseline.len(),expanded.len(),compact.len());
+}

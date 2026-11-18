@@ -1,0 +1,44 @@
+{
+  "id": "NURBS-0929",
+  "testedBase": "7d1e80d41fbf61918b67d90aee04b77d3a0f7a7b",
+  "gearCommand": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "--test",
+    "gear_profile",
+    "--test",
+    "gear_verified_profile"
+  ],
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "cad-step",
+    "--test",
+    "edited_gear_step",
+    "--",
+    "--nocapture"
+  ],
+  "newContractsPassed": 1,
+  "regressionContractsPassed": 11,
+  "scope": [
+    "Compare original STEP to lossless profile reconstruction and optional shared points. Re-import and compare edge and face geometry, edge connectivity and closed body."
+  ],
+  "logSha256": "5081329903d3f4f25af69e4370fb8e1bebe5a555db435e91c4aa2962becb015b",
+  "sourceSha256": {
+    "crates/cad-step/src/step_v3_export.rs": "29e773aaa0df47c444920e24a5c58d8d623c3d6842ea4f0139e6ea210bb64151",
+    "crates/cad-step/src/step_interchange_v3.rs": "41f949d9617d373a5479f66596190d4696f6bc10e9bf6aae2368d34f1ca59e1a",
+    "crates/cad-step/src/lib.rs": "b99da5d5f1a99e929fb8358a9adfe5dac986ee39931c8338c48f79af409410ca",
+    "crates/cad-step/tests/edited_gear_step.rs": "e6838da008b8dbe3bdaa7841ee1251a94f50582c6f5fd652dc27b7cc9a3c8932"
+  }
+}

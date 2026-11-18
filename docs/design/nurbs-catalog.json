@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 928,
-  "unallocatedCount": 72,
+  "specifiedCount": 929,
+  "unallocatedCount": 71,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -21264,6 +21264,25 @@
       ],
       "remainingQualification": [
         "Validated model topology and edited base profile; no global solid intersection or original involute fit claim."
+      ]
+    },
+    {
+      "id": "NURBS-0929",
+      "name": "Компактный STEP AP242 для отдельного NURBS-тела с общими декартовыми точками",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Зубчатые передачи",
+      "nativeApi": "cad_step::export_step_v9_shared_points",
+      "evidence": [
+        "crates/cad-step/src/step_v3_export.rs",
+        "crates/cad-step/src/step_interchange_v3.rs",
+        "crates/cad-step/src/lib.rs",
+        "crates/cad-step/tests/edited_gear_step.rs",
+        "docs/qualification/nurbs-single-body-shared-points-929-2026-11-18/receipt.json",
+        "docs/qualification/nurbs-single-body-shared-points-929-2026-11-18/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Qualified on the full spinner sun with bore using the native AP242 v9 importer. Size savings depend on shared coordinates."
       ]
     }
   ],
