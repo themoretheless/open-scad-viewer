@@ -991,10 +991,10 @@ pub fn directional_peak_speed(
 }
 
 #[derive(Clone, Debug)]
-pub struct DirectionalPeakLocations {
-    pub peak: DirectionalPeakSpeedReport,
+pub struct DirectionalPeakLocations<Peak = DirectionalPeakSpeedReport> {
+    pub peak: Peak,
     /// Sorted, merged source intervals covering every possible maximizer.
-    /// Width depends on peak separation, speed tolerance and cell budget.
+    /// Width depends on peak separation, measurement tolerance and cell budget.
     pub parameter_intervals: Vec<[f64; 2]>,
 }
 
@@ -1008,13 +1008,32 @@ pub fn locate_directional_peak_speed(
     parameter_tolerance: f64,
     max_cells: usize,
 ) -> Result<DirectionalPeakLocations> {
-    check(
-        parameter_tolerance.is_finite() && parameter_tolerance > 0.,
-        "Peak parameter tolerance must be positive and finite",
-    )?;
     measure_directional_derivative_peak(
         curve, interval, direction, tolerance, max_cells, Some(parameter_tolerance), 1,
     )
+}
+
+/// Enclose all locations that can attain the peak absolute axial acceleration.
+/// A knot is included when either one-sided derivative can attain the peak.
+pub fn locate_directional_peak_acceleration(
+    curve: &Curve,
+    interval: [f64; 2],
+    direction: &[f64],
+    tolerance: f64,
+    parameter_tolerance: f64,
+    max_cells: usize,
+) -> Result<DirectionalPeakLocations<DirectionalPeakAccelerationReport>> {
+    let report = measure_directional_derivative_peak(
+        curve, interval, direction, tolerance, max_cells, Some(parameter_tolerance), 2,
+    )?;
+    Ok(DirectionalPeakLocations {
+        peak: DirectionalPeakAccelerationReport {
+            bounds: report.peak.bounds,
+            cells: report.peak.cells,
+            stop_reason: report.peak.stop_reason,
+        },
+        parameter_intervals: report.parameter_intervals,
+    })
 }
 
 fn measure_directional_derivative_peak(
@@ -1026,6 +1045,12 @@ fn measure_directional_derivative_peak(
     parameter_tolerance: Option<f64>,
     derivative_order: usize,
 ) -> Result<DirectionalPeakLocations> {
+    if let Some(parameter_tolerance) = parameter_tolerance {
+        check(
+            parameter_tolerance.is_finite() && parameter_tolerance > 0.,
+            "Peak parameter tolerance must be positive and finite",
+        )?;
+    }
     curve.validate()?;
     validate(tolerance, max_cells)?;
     validate_travel_interval(curve, interval)?;

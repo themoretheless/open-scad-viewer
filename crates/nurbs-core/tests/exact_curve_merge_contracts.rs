@@ -8583,3 +8583,50 @@ fn directional_peak_jerk_encloses_rational_linear_support() {
     }
     assert!(directional_peak_jerk(&curve, [3., 4.], &[0., 0.], 1e-5, 32).is_err());
 }
+
+#[test]
+fn locate_directional_peak_acceleration_brackets_interior_maximum_under_shared_budget() {
+    use nurbs_core::analysis::curve_measure::locate_directional_peak_acceleration;
+    let curve = Curve {
+        degree: 4,
+        knots: vec![2., 2., 2., 2., 2., 4., 4., 4., 4., 4.],
+        control_points: vec![vec![0., 0.], vec![0., 0.], vec![0., 0.], vec![1., 0.], vec![2., 0.]],
+        weights: vec![1.; 5],
+        periodic: false,
+    };
+    let locate = |cells| {
+        locate_directional_peak_acceleration(&curve, [2., 4.], &[1., 0.], 1e-5, 0.02, cells)
+            .unwrap()
+    };
+    let fine = locate(2048);
+    assert_eq!(fine.parameter_intervals.len(), 1, "{fine:?}");
+    let [lo, hi] = fine.parameter_intervals[0];
+    assert!(lo <= 3. && 3. <= hi && hi - lo < 0.1, "{fine:?}");
+    assert!(fine.peak.bounds[0] <= 1.5 && 1.5 <= fine.peak.bounds[1]);
+    let coarse = locate(1);
+    assert_eq!(coarse.parameter_intervals, vec![[2., 4.]]);
+    assert_eq!(coarse.peak.cells, 1);
+}
+
+#[test]
+fn locate_directional_peak_acceleration_keeps_a_one_sided_knot_maximum() {
+    use nurbs_core::analysis::curve_measure::locate_directional_peak_acceleration;
+    let curve = Curve {
+        degree: 3,
+        knots: vec![0., 0., 0., 0., 1., 1., 1., 2., 2., 2., 2.],
+        control_points: [0., 0., 0., 1., 2., 3., 4.].map(|x| vec![x, 0.]).into(),
+        weights: vec![1.; 7],
+        periodic: false,
+    };
+    let report =
+        locate_directional_peak_acceleration(&curve, [0., 2.], &[1., 0.], 1e-5, 0.01, 128)
+            .unwrap();
+    assert_eq!(report.parameter_intervals.len(), 1, "{report:?}");
+    let [lo, hi] = report.parameter_intervals[0];
+    assert!(0.98 < lo && lo <= 1. && hi == 1., "{report:?}");
+    assert!(report.peak.bounds[0] <= 6. && 6. <= report.peak.bounds[1]);
+    assert!(
+        locate_directional_peak_acceleration(&curve, [0., 2.], &[1., 0.], 1e-5, 0., 128)
+            .is_err()
+    );
+}

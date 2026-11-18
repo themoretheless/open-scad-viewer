@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 683,
-  "unallocatedCount": 317,
+  "specifiedCount": 684,
+  "unallocatedCount": 316,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -16669,6 +16669,25 @@
       "remainingQualification": [
         "Enclose the maximum absolute axial third derivative on the original parameter interval.",
         "Check cubed source width, rational linear support jerk, coarse budget coverage and invalid directions.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0684",
+      "name": "Локализация пикового осевого ускорения NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::curve_measure::locate_directional_peak_acceleration",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/curve_measure.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-684-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-684-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose every possible source parameter that attains the peak absolute axial acceleration.",
+        "Check localization of an analytic interior maximum and a one-sided knot maximum, shared cell limits, conservative coarse coverage, and invalid parameter tolerance.",
         "WASM and application integration are separate."
       ]
     }
